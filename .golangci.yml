@@ -1,0 +1,189 @@
+# GoLangCI-Lint configuration for GOTRS
+# Documentation: https://golangci-lint.run/usage/configuration/
+
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  build-tags:
+    - integration
+  skip-dirs:
+    - vendor
+    - web
+    - node_modules
+    - scripts
+  skip-files:
+    - ".*_test.go"
+  modules-download-mode: readonly
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true
+
+linters-settings:
+  # Error checks
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    exclude-functions:
+      - io/ioutil.ReadFile
+      - io.Copy(*bytes.Buffer)
+      - io.Copy(os.Stdout)
+
+  # Security and vulnerability checks
+  gosec:
+    severity: medium
+    confidence: medium
+    excludes:
+      - G104 # Audit errors not checked - we handle this with errcheck
+    config:
+      G306: "0666" # Allow file permissions for config files
+
+  # Code complexity
+  gocyclo:
+    min-complexity: 15
+
+  gocognit:
+    min-complexity: 20
+
+  # Function length
+  funlen:
+    lines: 100
+    statements: 50
+
+  # Line length
+  lll:
+    line-length: 120
+    tab-width: 4
+
+  # Import organization
+  goimports:
+    local-prefixes: github.com/gotrs-io/gotrs-ce
+
+  # Naming conventions
+  stylecheck:
+    checks: ["all", "-ST1000", "-ST1003", "-ST1016", "-ST1020", "-ST1021", "-ST1022"]
+
+  # Unused code detection
+  unused:
+    check-exported: false
+
+  # Struct field alignment
+  maligned:
+    suggest-new: true
+
+  # Interface usage
+  interfacebloat:
+    max: 10
+
+  # Database-specific linting
+  rowserrcheck:
+    packages:
+      - github.com/jmoiron/sqlx
+
+  # HTTP-specific linting
+  noctx:
+    require-reason: true
+
+  # Performance
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: false
+
+linters:
+  disable-all: true
+  enable:
+    # Error detection
+    - errcheck          # Check for unchecked errors
+    - gosimple         # Suggest code simplifications
+    - govet            # Go vet examiner
+    - ineffassign      # Detect ineffectual assignments
+    - staticcheck      # Advanced Go linting
+    - typecheck        # Type checking
+    - unused           # Detect unused constants, variables, functions and types
+
+    # Security
+    - gosec            # Security audit
+    - rowserrcheck     # Check SQL rows.Err
+    - sqlclosecheck    # Check SQL Close() calls
+
+    # Code quality
+    - dupl             # Code clone detection
+    - gocyclo          # Cyclomatic complexity
+    - gocognit         # Cognitive complexity
+    - godot            # Check comments end with period
+    - gofmt            # Check gofmt formatting
+    - goimports        # Check import formatting
+    - misspell         # Spelling mistakes
+    - unparam          # Unused function parameters
+    - unconvert        # Unnecessary type conversions
+
+    # Style and naming
+    - stylecheck       # Stylecheck is a replacement for golint
+    - revive           # Fast, configurable, extensible linter
+
+    # Performance
+    - prealloc         # Find slice declarations with non-zero initial length
+    - bodyclose        # Check HTTP response body is closed
+
+    # Bugs
+    - nilerr           # Find nil error returns
+    - nilnil           # Check nil interface returns
+    - tparallel        # Detect inappropriate usage of t.Parallel()
+
+    # Maintainability
+    - funlen           # Tool for detection of long functions
+    - lll              # Line length limit
+    - nestif           # Report deeply nested if statements
+    - whitespace       # Whitespace linter
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+        - funlen
+        - lll
+
+    # Exclude some staticcheck messages
+    - linters:
+        - staticcheck
+      text: "SA9003:"
+
+    # Exclude lll issues for long lines with go:generate
+    - linters:
+        - lll
+      source: "^//go:generate "
+
+    # Exclude gosec for test files
+    - path: _test\.go
+      text: "G404:"  # Use of weak random number generator
+
+    # Allow embedding in main.go
+    - path: cmd/server/main\.go
+      linters:
+        - gochecknoinits
+
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+
+severity:
+  default-severity: error
+  case-sensitive: false
+  rules:
+    - linters:
+        - dupl
+      severity: info
+    - linters:
+        - misspell
+      severity: warning

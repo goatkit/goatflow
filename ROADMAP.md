@@ -16,7 +16,7 @@ This roadmap outlines the development phases for GOTRS from MVP to enterprise-re
 - [x] Basic Go project structure (cmd/server/main.go, go.mod)
 - [x] React project initialization (web/ with Vite + TypeScript)
 - [x] Database migrations setup (PostgreSQL with OTRS-compatible schema)
-- [ ] CI/CD pipeline with GitHub Actions
+- [x] CI/CD pipeline with GitHub Actions
 
 **Deliverables**:
 - ✅ Complete documentation set (quickstart, troubleshooting, dev guides)

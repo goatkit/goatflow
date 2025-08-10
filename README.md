@@ -1,5 +1,13 @@
 # GOTRS - Modern Open Source Ticketing System
 
+[![Security & Code Quality](https://github.com/gotrs-io/gotrs-ce/actions/workflows/security.yml/badge.svg)](https://github.com/gotrs-io/gotrs-ce/actions/workflows/security.yml)
+[![Tests](https://github.com/gotrs-io/gotrs-ce/actions/workflows/test.yml/badge.svg)](https://github.com/gotrs-io/gotrs-ce/actions/workflows/test.yml)
+[![Build & Release](https://github.com/gotrs-io/gotrs-ce/actions/workflows/build.yml/badge.svg)](https://github.com/gotrs-io/gotrs-ce/actions/workflows/build.yml)
+[![codecov](https://codecov.io/gh/gotrs-io/gotrs-ce/branch/main/graph/badge.svg)](https://codecov.io/gh/gotrs-io/gotrs-ce)
+[![Go Report Card](https://goreportcard.com/badge/github.com/gotrs-io/gotrs-ce)](https://goreportcard.com/report/github.com/gotrs-io/gotrs-ce)
+[![License](https://img.shields.io/github/license/gotrs-io/gotrs-ce)](LICENSE)
+[![SLSA 2](https://slsa.dev/images/gh-badge-level2.svg)](https://slsa.dev)
+
 GOTRS (Go Open Ticket Request System) is a modern, secure, cloud-native ticketing and service management platform built as a next-generation replacement for OTRS. Written in Go with a microservices architecture, GOTRS provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
 
 ## Key Features
@@ -102,6 +110,35 @@ GOTRS uses a modular architecture that scales from single-server deployments to 
 - **Message Queue**: Event-driven architecture for async processing
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation.
+
+## CI/CD & Quality
+
+GOTRS maintains high code quality and security standards through comprehensive automated testing:
+
+### 🔒 Security Pipeline
+- **Vulnerability Scanning**: Go (`govulncheck`), NPM dependencies (`npm audit`), container images (Trivy)
+- **Static Analysis**: Security (gosec, Semgrep), code quality (golangci-lint, ESLint)
+- **Secret Detection**: GitLeaks scans for accidentally committed secrets
+- **License Compliance**: Automated license checking for all dependencies
+- **SAST**: GitHub CodeQL for comprehensive static application security testing
+
+### 🧪 Testing Pipeline  
+- **Unit Tests**: Go backend with race detection, React frontend
+- **Integration Tests**: End-to-end API testing with test database
+- **Coverage**: Automated coverage reporting via Codecov
+- **Database**: Full PostgreSQL schema validation
+
+### 🚀 Build Pipeline
+- **Multi-arch**: AMD64 and ARM64 container builds
+- **Supply Chain Security**: SLSA Level 2 attestations, container signing
+- **Automated Releases**: Tagged releases with comprehensive release notes
+- **Manual Builds**: On-demand builds without registry pushing
+
+### 📊 Quality Metrics
+- All pipelines complete in under 5 minutes
+- Zero-cost (GitHub Actions free tier + open source tools)
+- Comprehensive security scanning (10+ tools)
+- SLSA Level 2 compliant build process
 
 ## Installation
 
