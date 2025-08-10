@@ -88,10 +88,12 @@ frontend/coverage/
 .env.*.local
 
 # Configuration files with secrets
+config/config.yaml
 config/local.yaml
 config/local.yml
 config/secret.yaml
 config/secret.yml
+config/*.local.yaml
 configs/local.yaml
 configs/production.yaml
 *.secret
