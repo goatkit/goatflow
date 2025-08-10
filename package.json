@@ -1,0 +1,33 @@
+{
+  "name": "gotrs-ce",
+  "version": "0.1.0",
+  "description": "Modern Open Source Ticketing System",
+  "private": true,
+  "scripts": {
+    "generate-types": "node scripts/generate-types.js",
+    "generate-docs": "node scripts/generate-docs.js", 
+    "validate-api": "swagger-codegen validate -i api/openapi.yaml",
+    "serve-docs": "swagger-ui-serve api/openapi.yaml",
+    "test:contract": "npm run generate-types && npm run validate-api && npm run generate-docs",
+    "contracts:all": "npm run generate-types && npm run generate-docs && cd web && npm run test:contracts"
+  },
+  "devDependencies": {
+    "js-yaml": "^4.1.0",
+    "swagger-ui-serve": "^0.1.3"
+  },
+  "keywords": [
+    "ticketing",
+    "helpdesk",
+    "otrs",
+    "support",
+    "typescript",
+    "go",
+    "react"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gotrs-io/gotrs-ce.git"
+  },
+  "license": "AGPL-3.0",
+  "author": "GOTRS Team"
+}

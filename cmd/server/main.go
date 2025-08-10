@@ -7,6 +7,7 @@ import (
 	"os"
 	
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
 
 func main() {
@@ -17,6 +18,9 @@ func main() {
 
 	// Create router
 	r := gin.Default()
+
+	// Add OpenAPI contract validation middleware
+	r.Use(middleware.LoadOpenAPIMiddleware())
 
 	// Health check endpoint
 	r.GET("/health", func(c *gin.Context) {

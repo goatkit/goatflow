@@ -130,12 +130,18 @@ jobs:
       - name: Run TypeScript compilation
         run: npx tsc --noEmit
 
-      - name: Run tests with coverage
+      - name: Run frontend unit tests
         run: |
-          # Note: Add actual test command when tests are implemented
-          # npm test -- --coverage --watchAll=false
-          echo "Frontend tests would run here - placeholder for MVP phase"
+          # Note: Add actual unit tests when implemented  
+          echo "Frontend unit tests would run here - placeholder for MVP phase"
           echo "TypeScript compilation successful ✓"
+
+      - name: Run contract tests
+        run: |
+          # Install frontend dependencies if not cached
+          npm ci
+          # Run Pact consumer tests
+          npm run test:contracts
 
       - name: Build application
         run: npm run build
@@ -239,15 +245,44 @@ jobs:
           # Note: Add actual integration tests when implemented
           echo "Integration tests would run here - placeholder for MVP phase"
           echo "Database connectivity test:"
+          
+          # Start server in background
           go run -tags integration cmd/server/main.go &
           SERVER_PID=$!
-          sleep 5
           
-          # Test health endpoint
+          # Wait for server to be ready with retry loop (30 second timeout)
+          echo "Waiting for server to be ready..."
+          MAX_ATTEMPTS=30
+          ATTEMPT=0
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+              echo "Server is ready after $((ATTEMPT + 1)) attempts"
+              break
+            fi
+            
+            if [ $ATTEMPT -eq $((MAX_ATTEMPTS - 1)) ]; then
+              echo "Server failed to start within 30 seconds"
+              kill $SERVER_PID 2>/dev/null || true
+              exit 1
+            fi
+            
+            echo -n "."
+            sleep 1
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+          
+          # Run actual tests once server is ready
+          echo ""
+          echo "Testing health endpoint:"
           curl -f http://localhost:8080/health || exit 1
+          
+          echo "Testing API status endpoint:"
           curl -f http://localhost:8080/api/v1/status || exit 1
           
+          # Clean shutdown
           kill $SERVER_PID
+          wait $SERVER_PID 2>/dev/null || true
           echo "Basic integration tests passed ✓"
 
   test-summary:
