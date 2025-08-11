@@ -32,7 +32,7 @@ jobs:
       valkey:
         image: valkey/valkey:7-alpine
         ports:
-          - 6379:6379
+          - 6380:6379
         options: >-
           --health-cmd "valkey-cli ping"
           --health-interval 10s
@@ -76,7 +76,7 @@ jobs:
           DB_USER: gotrs_test
           DB_PASSWORD: gotrs_test_password
           VALKEY_HOST: localhost
-          VALKEY_PORT: 6379
+          VALKEY_PORT: 6380
           JWT_SECRET: test-secret-key
           APP_ENV: test
         run: |
@@ -177,7 +177,7 @@ jobs:
       valkey:
         image: valkey/valkey:7-alpine
         ports:
-          - 6379:6379
+          - 6380:6379
         options: >-
           --health-cmd "valkey-cli ping"
           --health-interval 10s
@@ -238,7 +238,7 @@ jobs:
           DB_USER: gotrs_integration
           DB_PASSWORD: gotrs_integration_password
           VALKEY_HOST: localhost
-          VALKEY_PORT: 6379
+          VALKEY_PORT: 6380
           JWT_SECRET: integration-test-secret
           APP_ENV: integration
         run: |

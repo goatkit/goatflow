@@ -27,7 +27,7 @@ services:
     image: valkey/valkey:7-alpine
     container_name: gotrs-valkey
     ports:
-      - "${VALKEY_PORT:-6379}:6379"
+      - "${VALKEY_PORT:-6380}:6379"
     volumes:
       - valkey_data:/data
     healthcheck:
