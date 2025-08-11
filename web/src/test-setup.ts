@@ -3,8 +3,7 @@
  * Configures the test environment and global test utilities
  */
 
-// Polyfill fetch for Node.js test environment
-import 'whatwg-fetch';
+// Note: Node.js 18+ has native fetch support, no polyfill needed
 
 // Mock console methods in tests to reduce noise
 const originalError = console.error;
