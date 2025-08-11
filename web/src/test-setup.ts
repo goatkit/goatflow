@@ -3,7 +3,10 @@
  * Configures the test environment and global test utilities
  */
 
-// Note: Node.js 18+ has native fetch support, no polyfill needed
+// Polyfill fetch for Jest test environment
+// Note: While Node.js 18+ has native fetch, Jest runs in a different environment
+import fetch from 'node-fetch';
+(global as any).fetch = fetch;
 
 // Mock console methods in tests to reduce noise
 const originalError = console.error;
