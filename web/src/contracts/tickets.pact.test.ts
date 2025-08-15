@@ -4,7 +4,8 @@
  */
 
 import { Pact } from '@pact-foundation/pact';
-import { like, eachLike, term } from '@pact-foundation/pact/src/dsl/matchers';
+import { Matchers } from '@pact-foundation/pact';
+const { like, eachLike, term } = Matchers;
 import { resolve } from 'path';
 
 // Mock API client for testing

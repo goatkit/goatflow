@@ -3,10 +3,12 @@
  * Configures the test environment and global test utilities
  */
 
-// Polyfill fetch for Jest test environment
-// Note: While Node.js 18+ has native fetch, Jest runs in a different environment
-import fetch from 'node-fetch';
-(global as any).fetch = fetch;
+// Setup fetch for Jest test environment
+// Using native fetch if available (Node 18+) or polyfill
+if (!global.fetch) {
+  // @ts-ignore
+  global.fetch = require('cross-fetch');
+}
 
 // Mock console methods in tests to reduce noise
 const originalError = console.error;
