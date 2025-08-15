@@ -202,6 +202,18 @@ test-coverage-html:
 	$(COMPOSE_CMD) cp backend:/app/generated/coverage.html ./generated/coverage.html
 	@echo "Coverage report generated: generated/coverage.html"
 
+# Frontend test commands
+test-frontend:
+	@echo "Running frontend tests..."
+	$(COMPOSE_CMD) exec frontend npm test
+
+test-contracts:
+	@echo "Running Pact contract tests..."
+	$(COMPOSE_CMD) exec frontend npm run test:contracts
+
+test-all: test test-frontend test-contracts
+	@echo "All tests completed!"
+
 # Build for production
 build:
 	$(CONTAINER_CMD) build -f Dockerfile -t gotrs:latest .
