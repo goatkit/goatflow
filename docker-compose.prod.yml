@@ -1,0 +1,47 @@
+# Production Docker Compose Configuration
+# SAFETY: This file explicitly sets APP_ENV=production to prevent test database creation
+
+services:
+  postgres:
+    environment:
+      # PRODUCTION: Ensures test databases are NEVER created
+      APP_ENV: production
+      # Remove the init script mount in production for extra safety
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # NO init scripts in production - database should be pre-configured
+
+  backend:
+    environment:
+      APP_ENV: production
+      # Production settings
+      GIN_MODE: release
+      LOG_LEVEL: warn
+    restart: always
+
+  frontend:
+    environment:
+      NODE_ENV: production
+    restart: always
+
+  nginx:
+    restart: always
+
+  # Remove development tools in production
+  mailhog:
+    profiles:
+      - never  # Disabled in production
+
+  adminer:
+    profiles:
+      - never  # Disabled in production
+
+# Production volume configuration
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      # Mount to a specific production data directory
+      device: /var/lib/gotrs/postgres

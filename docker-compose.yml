@@ -10,10 +10,14 @@ services:
       POSTGRES_DB: ${DB_NAME:-gotrs}
       POSTGRES_USER: ${DB_USER:-gotrs}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-gotrs_password}
+      # Pass APP_ENV to prevent test database creation in production
+      APP_ENV: ${APP_ENV:-development}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Init script handles any username and creates test database safely
+      - ./docker/postgres/01-init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro,Z
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-gotrs}"]
       interval: 10s

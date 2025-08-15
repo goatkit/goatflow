@@ -24,27 +24,40 @@ GOTRS (Go Open Ticket Request System) is a modern, secure, cloud-native ticketin
 ## Quick Start
 
 ### Prerequisites
-- Docker & Docker Compose OR Podman & podman-compose
+- Docker with Compose plugin OR Docker Compose standalone OR Podman with Compose
 - Git
 - 4GB RAM minimum
 
-**Note**: Full Podman support including rootless containers. SELinux labels configured for Fedora/RHEL systems.
+**Container Runtime Support:**
+- ✅ Docker with `docker compose` plugin (v2) - Recommended
+- ✅ `docker-compose` standalone (v1) - Legacy support
+- ✅ Podman with `podman compose` plugin
+- ✅ `podman-compose` standalone
+- ✅ Full rootless container support
+- ✅ SELinux labels configured for Fedora/RHEL systems
 
-### Using Containers (Docker or Podman)
+### Using Containers (Auto-detected)
 
 ```bash
 # Clone the repository
 git clone https://github.com/gotrs-io/gotrs-ce.git
-cd gotrs
+cd gotrs-ce
 
 # Copy environment configuration
 cp .env.example .env
 
-# Start all services (PostgreSQL, Valkey, Backend, Frontend, Mailhog)
+# Start all services (auto-detects docker/podman compose command)
 make up
-# OR directly with:
-# docker-compose up
-# podman-compose up
+
+# Alternative methods:
+./compose.sh up          # Auto-detect wrapper script
+docker compose up        # Modern Docker
+docker-compose up        # Legacy Docker
+podman compose up        # Podman plugin
+podman-compose up        # Podman standalone
+
+# Check which commands are available on your system
+make debug-env
 
 # Services will be available at:
 # - Frontend: http://localhost
