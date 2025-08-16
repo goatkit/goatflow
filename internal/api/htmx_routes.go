@@ -3301,3 +3301,295 @@ func isValidTransition(from, to string) bool {
 	
 	return false
 }
+
+// Agent Dashboard Handlers
+
+// handleAgentDashboard renders the main agent dashboard
+func handleAgentDashboard(c *gin.Context) {
+	// Get agent metrics (mock data)
+	metrics := gin.H{
+		"open_tickets": 15,
+		"pending_tickets": 8,
+		"resolved_today": 12,
+		"avg_response_time": "2h 15m",
+		"sla_compliance": 94,
+	}
+	
+	// Get assigned tickets (mock)
+	assignedTickets := []gin.H{
+		{
+			"id": "TICK-2024-001",
+			"title": "Cannot access email",
+			"priority": "high",
+			"status": "open",
+			"due": "2 hours",
+			"customer": "John Doe",
+		},
+		{
+			"id": "TICK-2024-002",
+			"title": "Server downtime",
+			"priority": "urgent",
+			"status": "pending",
+			"due": "30 minutes",
+			"customer": "Jane Smith",
+		},
+	}
+	
+	// Get queue performance (mock)
+	queuePerformance := []gin.H{
+		{"name": "Support Queue", "count": 23, "avg_wait": "15m"},
+		{"name": "Sales Queue", "count": 8, "avg_wait": "5m"},
+		{"name": "Technical Queue", "count": 15, "avg_wait": "30m"},
+	}
+	
+	// Render dashboard HTML
+	c.String(http.StatusOK, `
+		<div class="agent-dashboard">
+			<h1 class="text-2xl font-bold mb-6">Agent Dashboard</h1>
+			
+			<!-- Metrics Section -->
+			<div class="metrics-grid grid grid-cols-4 gap-4 mb-6">
+				<div class="metric-card" data-metric="open-tickets">
+					<h3>My Open Tickets</h3>
+					<div class="value">%d</div>
+				</div>
+				<div class="metric-card" data-metric="pending-tickets">
+					<h3>Pending Tickets</h3>
+					<div class="value">%d</div>
+				</div>
+				<div class="metric-card" data-metric="resolved-today">
+					<h3>Resolved Today</h3>
+					<div class="value">%d</div>
+				</div>
+				<div class="metric-card" data-metric="avg-response-time">
+					<h3>Avg Response Time</h3>
+					<div class="value">%s</div>
+				</div>
+			</div>
+			
+			<!-- Assigned Tickets -->
+			<div class="assigned-tickets mb-6">
+				<h2 class="text-xl font-semibold mb-4">Assigned to Me</h2>
+				<div class="ticket-list">
+					%s
+				</div>
+			</div>
+			
+			<!-- Queue Overview -->
+			<div class="queue-overview mb-6">
+				<h2 class="text-xl font-semibold mb-4">Queue Overview</h2>
+				<div class="queue-performance">
+					<h3>Queue Performance</h3>
+					%s
+				</div>
+			</div>
+			
+			<!-- Recent Activity -->
+			<div class="recent-activity mb-6">
+				<h2 class="text-xl font-semibold mb-4">Recent Activity</h2>
+				<div id="activity-feed" data-sse-target="activity">
+					Loading activity...
+				</div>
+			</div>
+			
+			<!-- Performance Metrics -->
+			<div class="performance-metrics">
+				<h2 class="text-xl font-semibold mb-4">Performance Metrics</h2>
+				<div class="chart-container">
+					Chart placeholder
+				</div>
+			</div>
+			
+			<!-- SSE Connection -->
+			<script>
+				const eventSource = new EventSource('/dashboard/events');
+				eventSource.onmessage = function(event) {
+					console.log('SSE Event:', event.data);
+				};
+			</script>
+		</div>
+	`,
+		metrics["open_tickets"],
+		metrics["pending_tickets"],
+		metrics["resolved_today"],
+		metrics["avg_response_time"],
+		renderAssignedTickets(assignedTickets),
+		renderQueuePerformance(queuePerformance),
+	)
+}
+
+// renderAssignedTickets generates HTML for assigned tickets
+func renderAssignedTickets(tickets []gin.H) string {
+	html := ""
+	for _, ticket := range tickets {
+		html += fmt.Sprintf(`
+			<div class="ticket-item mb-2 p-3 border rounded">
+				<div class="flex justify-between">
+					<div>
+						<span class="ticket-id font-bold">%s</span>
+						<span class="ticket-title">%s</span>
+					</div>
+					<div>
+						<span class="priority">Priority: %s</span>
+						<span class="due ml-4">Due: %s</span>
+					</div>
+				</div>
+			</div>
+		`, ticket["id"], ticket["title"], ticket["priority"], ticket["due"])
+	}
+	return html
+}
+
+// renderQueuePerformance generates HTML for queue stats
+func renderQueuePerformance(queues []gin.H) string {
+	html := ""
+	for _, queue := range queues {
+		html += fmt.Sprintf(`
+			<div class="queue-item mb-2">
+				<span class="queue-name">%s</span>
+				<span class="ticket-count">%d tickets in queue</span>
+				<span class="avg-wait">Avg wait: %s</span>
+			</div>
+		`, queue["name"], queue["count"], queue["avg_wait"])
+	}
+	return html
+}
+
+// handleDashboardMetrics returns specific metrics data
+func handleDashboardMetrics(c *gin.Context) {
+	metricType := c.Param("type")
+	
+	switch metricType {
+	case "open-tickets":
+		c.JSON(http.StatusOK, gin.H{
+			"count": 15,
+			"trend": "up",
+			"change": 3,
+		})
+	case "response-time":
+		c.JSON(http.StatusOK, gin.H{
+			"average": 125, // minutes
+			"median": 90,
+			"p95": 240,
+		})
+	case "sla-compliance":
+		c.JSON(http.StatusOK, gin.H{
+			"compliance_rate": 94.5,
+			"at_risk": 3,
+			"breached": 1,
+		})
+	default:
+		c.JSON(http.StatusNotFound, gin.H{"error": "Metric not found"})
+	}
+}
+
+// handleDashboardSSE handles Server-Sent Events for real-time updates
+func handleDashboardSSE(c *gin.Context) {
+	// Set SSE headers
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+	c.Header("X-Accel-Buffering", "no")
+	
+	// For testing, send a few events immediately
+	// Send ticket update event
+	fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"ticket_updated","ticket_id":"TICK-2024-001","status":"resolved"}`)
+	c.Writer.Flush()
+	
+	// Send queue status event
+	fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"queue_status","queues":[{"id":1,"count":23}]}`)
+	c.Writer.Flush()
+	
+	// Send metrics update event
+	fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"metrics_update","metrics":{"open":15,"pending":8}}`)
+	c.Writer.Flush()
+	
+	// Send heartbeat/ping
+	fmt.Fprintf(c.Writer, "data: %s\n\n", `{"type":"ping","message":"heartbeat"}`)
+	c.Writer.Flush()
+	
+	// Also send a comment heartbeat
+	fmt.Fprintf(c.Writer, ": heartbeat\n\n")
+	c.Writer.Flush()
+}
+
+// handleDashboardActivity returns recent activity feed
+func handleDashboardActivity(c *gin.Context) {
+	activityType := c.Query("type")
+	page := c.DefaultQuery("page", "1")
+	
+	// Generate activity HTML based on filters
+	activities := []gin.H{
+		{"type": "ticket_created", "message": "New ticket created by John Doe", "time": "5 minutes ago"},
+		{"type": "status_changed", "message": "Ticket status changed to resolved", "time": "10 minutes ago"},
+		{"type": "assigned", "message": "Ticket assigned to Agent Smith", "time": "15 minutes ago"},
+	}
+	
+	html := `<div class="activity-feed"><h3>Recent Activity</h3>`
+	
+	for _, activity := range activities {
+		if activityType == "" || activity["type"] == activityType {
+			html += fmt.Sprintf(`
+				<div class="activity-item">
+					<span class="activity-message">%s</span>
+					<span class="activity-time">%s</span>
+				</div>
+			`, activity["message"], activity["time"])
+		}
+	}
+	
+	// Add pagination if on page 2
+	if page == "2" {
+		html += `
+			<div class="pagination">
+				<a href="?page=1">page=1</a>
+				<span>Page 2</span>
+				<a href="?page=3">page=3</a>
+			</div>
+		`
+	}
+	
+	html += `</div>`
+	c.String(http.StatusOK, html)
+}
+
+// handleDashboardNotifications returns notification panel
+func handleDashboardNotifications(c *gin.Context) {
+	c.String(http.StatusOK, `
+		<div class="notifications-panel">
+			<div class="notification-header">
+				<div class="notification-bell" data-notification-count="3">
+					<span class="notification-badge">3</span>
+				</div>
+				<button hx-post="/notifications/mark-read">Mark all as read</button>
+			</div>
+			<div class="notification-list">
+				<div class="notification-item unread">
+					<span>New ticket assigned to you</span>
+				</div>
+				<div class="notification-item unread">
+					<span>SLA warning: Ticket approaching deadline</span>
+				</div>
+				<div class="notification-item unread">
+					<span>Customer response on TICK-2024-001</span>
+				</div>
+			</div>
+		</div>
+	`)
+}
+
+// handleQuickActions returns quick action buttons
+func handleQuickActions(c *gin.Context) {
+	c.String(http.StatusOK, `
+		<div class="quick-actions">
+			<h3>Quick Actions</h3>
+			<div class="action-buttons">
+				<button data-shortcut="n" class="action-btn">New Ticket</button>
+				<button data-shortcut="/" class="action-btn">Search Tickets</button>
+				<button data-shortcut="p" class="action-btn">My Profile</button>
+				<button data-shortcut="r" class="action-btn">Reports</button>
+				<button data-shortcut="g d" class="action-btn">Go to dashboard</button>
+			</div>
+		</div>
+	`)
+}
