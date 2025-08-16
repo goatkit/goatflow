@@ -1,0 +1,61 @@
+# Temporal dynamic configuration for development
+# This file configures Temporal server behavior
+
+# Limit number of concurrent workflow tasks
+limit.maxIDLength:
+  - value: 255
+    constraints: {}
+
+# Set default namespace retention
+limit.historyCount:
+  - value: 1000
+    constraints: {}
+
+# Frontend rate limiting
+frontend.rps:
+  - value: 2400
+    constraints: {}
+
+# Namespace creation rate limiting  
+frontend.namespaceRPS:
+  - value: 100
+    constraints: {}
+
+# History service RPS
+history.rps:
+  - value: 3000
+    constraints: {}
+
+# Matching service RPS
+matching.rps:
+  - value: 3000
+    constraints: {}
+
+# Worker service RPS
+worker.rps:
+  - value: 1000
+    constraints: {}
+
+# Default workflow execution retention
+system.defaultRetentionDays:
+  - value: 7
+    constraints: {}
+
+# Enable advanced visibility features for development
+system.advancedVisibilityWritingMode:
+  - value: "on"
+    constraints: {}
+
+# Set archival state
+system.archivalState:
+  - value: "disabled"
+    constraints: {}
+
+# Increase workflow size limits for development
+limit.maxWorkflowTaskPayloadSize:
+  - value: 2097152  # 2MB
+    constraints: {}
+
+limit.maxActivityTaskPayloadSize:
+  - value: 2097152  # 2MB
+    constraints: {}

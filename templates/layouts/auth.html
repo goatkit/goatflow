@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{block "title" .}}GOTRS - Sign In{{end}}</title>
+    
+    <!-- Tailwind CSS -->
+    <link href="/static/css/tailwind.css" rel="stylesheet">
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.13.3/dist/cdn.min.js"></script>
+    
+    <style>
+        .htmx-indicator {
+            opacity: 0;
+            transition: opacity 200ms ease-in;
+        }
+        .htmx-request .htmx-indicator {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="h-full">
+    <div class="flex min-h-full flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div class="sm:mx-auto sm:w-full sm:max-w-md">
+            <h1 class="text-center text-3xl font-bold text-indigo-600">GOTRS</h1>
+            <h2 class="mt-6 text-center text-2xl font-bold tracking-tight text-gray-900">
+                {{block "heading" .}}Sign in to your account{{end}}
+            </h2>
+        </div>
+
+        <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+            <div class="bg-white px-6 py-8 shadow sm:rounded-lg sm:px-10">
+                {{block "content" .}}{{end}}
+            </div>
+            
+            <p class="mt-4 text-center text-sm text-gray-600">
+                {{block "footer" .}}{{end}}
+            </p>
+        </div>
+    </div>
+    
+    <!-- Toast notifications -->
+    <div id="toast-container" class="fixed bottom-0 right-0 p-6 space-y-4 z-50"></div>
+    
+    <script>
+        // HTMX error handling
+        document.body.addEventListener('htmx:responseError', (event) => {
+            const errorHtml = `
+                <div class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg" 
+                     x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)">
+                    <p class="font-medium">Error occurred</p>
+                    <p class="text-sm mt-1">${event.detail.xhr.statusText || 'Please try again'}</p>
+                </div>
+            `;
+            document.getElementById('toast-container').insertAdjacentHTML('afterbegin', errorHtml);
+        });
+    </script>
+</body>
+</html>

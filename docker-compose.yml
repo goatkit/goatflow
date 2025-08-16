@@ -116,6 +116,60 @@ services:
     networks:
       - gotrs-network
 
+  # Temporal Workflow Engine
+  temporal:
+    image: temporalio/auto-setup:1.22.4
+    container_name: gotrs-temporal
+    depends_on:
+      - postgres
+    environment:
+      - DB=postgresql
+      - DB_PORT=5432
+      - POSTGRES_USER=${DB_USER:-gotrs}
+      - POSTGRES_PWD=${DB_PASSWORD:-gotrs_password}
+      - POSTGRES_SEEDS=postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig.yaml
+    ports:
+      - "${TEMPORAL_PORT:-7233}:7233"
+    volumes:
+      - ./docker/temporal/dynamicconfig.yaml:/etc/temporal/config/dynamicconfig.yaml:ro,Z
+    networks:
+      - gotrs-network
+
+  # Temporal Web UI
+  temporal-ui:
+    image: temporalio/ui:2.21.3
+    container_name: gotrs-temporal-ui
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "${TEMPORAL_UI_PORT:-8088}:8080"
+    networks:
+      - gotrs-network
+
+  # Zinc Search Engine (Elasticsearch compatible)
+  zinc:
+    image: public.ecr.aws/zinclabs/zinc:0.4.9
+    container_name: gotrs-zinc
+    environment:
+      - ZINC_FIRST_ADMIN_USER=${ZINC_USER:-admin}
+      - ZINC_FIRST_ADMIN_PASSWORD=${ZINC_PASSWORD:-admin123}
+      - ZINC_DATA_PATH=/data
+    ports:
+      - "${ZINC_PORT:-4080}:4080"
+    volumes:
+      - zinc_data:/data
+    networks:
+      - gotrs-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Adminer for Database Management (Optional)
   adminer:
     image: adminer:latest
@@ -137,3 +191,5 @@ volumes:
   postgres_data:
   valkey_data:
   go_modules:
+  zinc_data:
+  temporal_data:
