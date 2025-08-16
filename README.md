@@ -10,6 +10,10 @@
 
 GOTRS (Go Open Ticket Request System) is a modern, secure, cloud-native ticketing and service management platform built as a next-generation replacement for OTRS. Written in Go with a microservices architecture, GOTRS provides enterprise-grade support ticketing, ITSM capabilities, and extensive customization options.
 
+## Legal and Compatibility Notice
+
+GOTRS-CE is an **independent, original implementation** of a ticket management system. While we maintain database compatibility for interoperability purposes, all code is originally written. We are not affiliated with OTRS AG. See [LEGAL.md](LEGAL.md) for important legal information.
+
 ## Key Features
 
 - 🔒 **Security-First Design** - Built with zero-trust principles, comprehensive audit logging, and enterprise security standards

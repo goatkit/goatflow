@@ -27,7 +27,7 @@ func (r *TicketRepository) GetDB() *sql.DB {
 // Create creates a new ticket in the database
 func (r *TicketRepository) Create(ticket *models.Ticket) error {
 	// Generate ticket number
-	ticket.TN = r.generateTicketNumber()
+	ticket.TicketNumber = r.generateTicketNumber()
 	ticket.CreateTime = time.Now()
 	ticket.ChangeTime = time.Now()
 	
@@ -47,7 +47,7 @@ func (r *TicketRepository) Create(ticket *models.Ticket) error {
 	
 	err := r.db.QueryRow(
 		query,
-		ticket.TN,
+		ticket.TicketNumber,
 		ticket.Title,
 		ticket.QueueID,
 		ticket.TicketLockID,
@@ -92,7 +92,7 @@ func (r *TicketRepository) GetByID(id uint) (*models.Ticket, error) {
 	var ticket models.Ticket
 	err := r.db.QueryRow(query, id).Scan(
 		&ticket.ID,
-		&ticket.TN,
+		&ticket.TicketNumber,
 		&ticket.Title,
 		&ticket.QueueID,
 		&ticket.TicketLockID,
@@ -141,7 +141,7 @@ func (r *TicketRepository) GetByTN(tn string) (*models.Ticket, error) {
 	var ticket models.Ticket
 	err := r.db.QueryRow(query, tn).Scan(
 		&ticket.ID,
-		&ticket.TN,
+		&ticket.TicketNumber,
 		&ticket.Title,
 		&ticket.QueueID,
 		&ticket.TicketLockID,
@@ -523,7 +523,7 @@ func (r *TicketRepository) GetTicketWithRelations(id uint) (*models.Ticket, erro
 	
 	err := r.db.QueryRow(query, id).Scan(
 		&ticket.ID,
-		&ticket.TN,
+		&ticket.TicketNumber,
 		&ticket.Title,
 		&ticket.QueueID,
 		&ticket.TicketLockID,

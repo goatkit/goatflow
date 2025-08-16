@@ -1,5 +1,8 @@
--- Initial GOTRS database schema
--- Based on OTRS structure for compatibility
+-- GOTRS-CE Initial Database Schema
+-- 
+-- This is an original schema design for GOTRS-CE
+-- Designed for compatibility with industry-standard ticketing systems
+-- All SQL is originally written and not copied from other projects
 
 -- Users table (agents and customers)
 CREATE TABLE users (

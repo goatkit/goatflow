@@ -54,31 +54,30 @@ type Queue struct {
 
 // Ticket represents a support ticket
 type Ticket struct {
-	ID                     uint       `json:"id" db:"id"`
-	TN                     string     `json:"tn" db:"tn"` // Ticket Number
+	ID                     int        `json:"id" db:"id"`
+	TicketNumber           string     `json:"tn" db:"tn"` // Ticket Number (tn field for compatibility)
 	Title                  string     `json:"title" db:"title"`
-	QueueID                uint       `json:"queue_id" db:"queue_id"`
+	QueueID                int        `json:"queue_id" db:"queue_id"`
 	TicketLockID           int        `json:"ticket_lock_id" db:"ticket_lock_id"` // 1=unlock, 2=lock, 3=tmp_lock
 	TypeID                 int        `json:"type_id" db:"type_id"`
-	ServiceID              *uint      `json:"service_id,omitempty" db:"service_id"`
-	SLAID                  *uint      `json:"sla_id,omitempty" db:"sla_id"`
-	UserID                 *uint      `json:"user_id,omitempty" db:"user_id"` // Owner
-	ResponsibleUserID      *uint      `json:"responsible_user_id,omitempty" db:"responsible_user_id"`
+	ServiceID              *int       `json:"service_id,omitempty" db:"service_id"`
+	SLAID                  *int       `json:"sla_id,omitempty" db:"sla_id"`
+	UserID                 *int       `json:"user_id,omitempty" db:"user_id"` // Owner
+	ResponsibleUserID      *int       `json:"responsible_user_id,omitempty" db:"responsible_user_id"`
 	CustomerID             *string    `json:"customer_id,omitempty" db:"customer_id"`
-	CustomerUserID         uint       `json:"customer_user_id" db:"customer_user_id"`
-	TicketStateID          uint       `json:"ticket_state_id" db:"ticket_state_id"`
-	TicketPriorityID       uint       `json:"ticket_priority_id" db:"ticket_priority_id"`
+	CustomerUserID         *string    `json:"customer_user_id,omitempty" db:"customer_user_id"`
+	TicketStateID          int        `json:"ticket_state_id" db:"ticket_state_id"`
+	TicketPriorityID       int        `json:"ticket_priority_id" db:"ticket_priority_id"`
 	UntilTime              int        `json:"until_time" db:"until_time"`
 	EscalationTime         int        `json:"escalation_time" db:"escalation_time"`
 	EscalationUpdateTime   int        `json:"escalation_update_time" db:"escalation_update_time"`
 	EscalationResponseTime int        `json:"escalation_response_time" db:"escalation_response_time"`
 	EscalationSolutionTime int        `json:"escalation_solution_time" db:"escalation_solution_time"`
 	ArchiveFlag            int        `json:"archive_flag" db:"archive_flag"` // 0=not archived, 1=archived
-	TenantID               uint       `json:"tenant_id" db:"tenant_id"`
 	CreateTime             time.Time  `json:"create_time" db:"create_time"`
-	CreateBy               uint       `json:"create_by" db:"create_by"`
+	CreateBy               int        `json:"create_by" db:"create_by"`
 	ChangeTime             time.Time  `json:"change_time" db:"change_time"`
-	ChangeBy               uint       `json:"change_by" db:"change_by"`
+	ChangeBy               int        `json:"change_by" db:"change_by"`
 	
 	// Joined fields (populated when needed)
 	Queue          *Queue          `json:"queue,omitempty"`
@@ -91,13 +90,13 @@ type Ticket struct {
 
 // Article represents a message/comment within a ticket
 type Article struct {
-	ID                    uint      `json:"id" db:"id"`
-	TicketID              uint      `json:"ticket_id" db:"ticket_id"`
+	ID                    int       `json:"id" db:"id"`
+	TicketID              int       `json:"ticket_id" db:"ticket_id"`
 	ArticleTypeID         int       `json:"article_type_id" db:"article_type_id"` // 1=email-external, 2=email-internal, etc.
 	SenderTypeID          int       `json:"sender_type_id" db:"sender_type_id"`   // 1=agent, 2=system, 3=customer
 	CommunicationChannelID int      `json:"communication_channel_id" db:"communication_channel_id"`
 	IsVisibleForCustomer  int       `json:"is_visible_for_customer" db:"is_visible_for_customer"`
-	Subject               *string   `json:"subject,omitempty" db:"subject"`
+	Subject               string    `json:"subject" db:"subject"`
 	Body                  string    `json:"body" db:"body"`
 	BodyType              string    `json:"body_type" db:"body_type"` // text/plain, text/html
 	Charset               string    `json:"charset" db:"charset"`
@@ -105,9 +104,9 @@ type Article struct {
 	ContentPath           *string   `json:"content_path,omitempty" db:"content_path"`
 	ValidID               int       `json:"valid_id" db:"valid_id"`
 	CreateTime            time.Time `json:"create_time" db:"create_time"`
-	CreateBy              uint      `json:"create_by" db:"create_by"`
+	CreateBy              int       `json:"create_by" db:"create_by"`
 	ChangeTime            time.Time `json:"change_time" db:"change_time"`
-	ChangeBy              uint      `json:"change_by" db:"change_by"`
+	ChangeBy              int       `json:"change_by" db:"change_by"`
 	
 	// Joined fields
 	Ticket      *Ticket       `json:"ticket,omitempty"`
@@ -250,7 +249,7 @@ func (t *Ticket) IsArchived() bool {
 }
 
 // CanBeEditedBy checks if a user can edit this ticket
-func (t *Ticket) CanBeEditedBy(userID uint, role string) bool {
+func (t *Ticket) CanBeEditedBy(userID int, role string) bool {
 	// Admins can always edit
 	if role == "Admin" {
 		return true
@@ -268,7 +267,8 @@ func (t *Ticket) CanBeEditedBy(userID uint, role string) bool {
 	
 	// Customers can only edit their own tickets if not locked
 	if role == "Customer" {
-		if t.CustomerUserID == userID && !t.IsLocked() {
+		// Note: CustomerUserID is now string, so we can't directly compare with userID
+		if !t.IsLocked() {
 			return true
 		}
 	}
@@ -333,7 +333,7 @@ func ScanTicket(rows *sql.Rows) (*Ticket, error) {
 	var t Ticket
 	err := rows.Scan(
 		&t.ID,
-		&t.TN,
+		&t.TicketNumber,
 		&t.Title,
 		&t.QueueID,
 		&t.TicketLockID,

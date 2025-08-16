@@ -6,11 +6,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/gotrs-io/gotrs-ce/internal/email"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
+
+// EmailConfig holds email service configuration
+type EmailConfig = email.EmailConfig
 
 type Router struct {
 	engine         *gin.Engine
@@ -19,11 +23,15 @@ type Router struct {
 	authMiddleware *middleware.AuthMiddleware
 	authHandler    *AuthHandler
 	ticketHandler  *TicketHandler
+	emailService   *email.EmailService
 }
 
-func NewRouter(db *sql.DB, jwtSecret string) *Router {
+func NewRouter(db *sql.DB, jwtSecret string, emailConfig EmailConfig) *Router {
 	// Initialize JWT manager with 24 hour token duration
 	jwtManager := auth.NewJWTManager(jwtSecret, 24*time.Hour)
+	
+	// Initialize email service
+	emailService := email.NewEmailService(db, emailConfig)
 	
 	// Initialize repositories
 	ticketRepo := repository.NewTicketRepository(db)
@@ -45,6 +53,9 @@ func NewRouter(db *sql.DB, jwtSecret string) *Router {
 		db,
 	)
 	
+	// Set email service on ticket service
+	ticketService.SetEmailService(emailService)
+	
 	// Initialize handlers
 	authHandler := NewAuthHandler(authService)
 	ticketHandler := NewTicketHandler(ticketService, ticketRepo)
@@ -59,6 +70,7 @@ func NewRouter(db *sql.DB, jwtSecret string) *Router {
 		authMiddleware: authMiddleware,
 		authHandler:    authHandler,
 		ticketHandler:  ticketHandler,
+		emailService:   emailService,
 	}
 }
 

@@ -10,6 +10,12 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
+// EmailService interface for email notifications
+type EmailService interface {
+	SendTicketNotification(ticket *models.Ticket, notificationType string, recipients []string) error
+	SendArticleNotification(article *models.Article, ticket *models.Ticket, recipients []string) error
+}
+
 // TicketService handles business logic for tickets
 type TicketService struct {
 	ticketRepo   *repository.TicketRepository
@@ -19,6 +25,7 @@ type TicketService struct {
 	stateRepo    *repository.TicketStateRepository
 	priorityRepo *repository.TicketPriorityRepository
 	db           *sql.DB
+	emailService EmailService
 }
 
 // NewTicketService creates a new ticket service
@@ -40,6 +47,11 @@ func NewTicketService(
 		priorityRepo: priorityRepo,
 		db:           db,
 	}
+}
+
+// SetEmailService sets the email service for notifications
+func (s *TicketService) SetEmailService(emailService EmailService) {
+	s.emailService = emailService
 }
 
 // CreateTicket creates a new ticket with initial article
@@ -93,7 +105,7 @@ func (s *TicketService) CreateTicket(req *models.CreateTicketRequest) (*models.T
 
 	// Create ticket
 	ticket := &models.Ticket{
-		TN:               tn,
+		TicketNumber:     tn,
 		Title:            req.Title,
 		QueueID:          queueID,
 		TicketStateID:    stateID,
@@ -176,6 +188,18 @@ func (s *TicketService) CreateTicket(req *models.CreateTicketRequest) (*models.T
 		return nil, fmt.Errorf("failed to reload ticket: %w", err)
 	}
 
+	// Send email notification if service is configured
+	if s.emailService != nil {
+		// Get recipients (queue agents, customer if provided)
+		recipients := s.getTicketRecipients(fullTicket, "created")
+		if len(recipients) > 0 {
+			if err := s.emailService.SendTicketNotification(fullTicket, "created", recipients); err != nil {
+				// Log error but don't fail the ticket creation
+				fmt.Printf("Failed to send email notification: %v\n", err)
+			}
+		}
+	}
+
 	return fullTicket, nil
 }
 
@@ -220,6 +244,16 @@ func (s *TicketService) UpdateTicket(id uint, req *models.UpdateTicketRequest) (
 	// Save updates
 	if err := s.ticketRepo.Update(ticket); err != nil {
 		return nil, err
+	}
+
+	// Send email notification if service is configured
+	if s.emailService != nil {
+		recipients := s.getTicketRecipients(ticket, "updated")
+		if len(recipients) > 0 {
+			if err := s.emailService.SendTicketNotification(ticket, "updated", recipients); err != nil {
+				fmt.Printf("Failed to send email notification: %v\n", err)
+			}
+		}
 	}
 
 	return ticket, nil
@@ -304,6 +338,16 @@ func (s *TicketService) AddArticle(ticketID uint, req *models.CreateArticleReque
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Send email notification for new article
+	if s.emailService != nil {
+		recipients := s.getArticleRecipients(ticket, article)
+		if len(recipients) > 0 {
+			if err := s.emailService.SendArticleNotification(article, ticket, recipients); err != nil {
+				fmt.Printf("Failed to send article notification: %v\n", err)
+			}
+		}
+	}
+
 	return article, nil
 }
 
@@ -343,8 +387,8 @@ func (s *TicketService) MergeTickets(targetID, sourceID uint, userID uint) error
 		TicketID:      targetID,
 		ArticleTypeID: 1, // note
 		SenderTypeID:  1, // agent
-		Subject:       fmt.Sprintf("Merged ticket %s", sourceTicket.TN),
-		Body:          fmt.Sprintf("Ticket %s has been merged into this ticket.", sourceTicket.TN),
+		Subject:       fmt.Sprintf("Merged ticket %s", sourceTicket.TicketNumber),
+		Body:          fmt.Sprintf("Ticket %s has been merged into this ticket.", sourceTicket.TicketNumber),
 		BodyType:      "text/plain",
 		Charset:       "utf-8",
 		MimeType:      "text/plain",
@@ -577,4 +621,41 @@ func (s *TicketService) canEscalateTicket(ticket *models.Ticket, userID uint) bo
 		return false
 	}
 	return user.Role == "Agent" || user.Role == "Admin"
+}
+
+func (s *TicketService) getTicketRecipients(ticket *models.Ticket, action string) []string {
+	recipients := make([]string, 0)
+	
+	// Add customer email if available
+	if ticket.CustomerUserID != nil && *ticket.CustomerUserID != "" {
+		// In a real implementation, look up customer email
+		recipients = append(recipients, *ticket.CustomerUserID)
+	}
+	
+	// Add assigned agent email
+	if ticket.UserID != nil {
+		if user, err := s.userRepo.GetByID(uint(*ticket.UserID)); err == nil {
+			recipients = append(recipients, user.Email)
+		}
+	}
+	
+	return recipients
+}
+
+func (s *TicketService) getArticleRecipients(ticket *models.Ticket, article *models.Article) []string {
+	recipients := make([]string, 0)
+	
+	// If article is visible to customer, add customer email
+	if article.IsVisibleForCustomer == 1 && ticket.CustomerUserID != nil {
+		recipients = append(recipients, *ticket.CustomerUserID)
+	}
+	
+	// Add assigned agent if article is from customer
+	if article.SenderTypeID == 3 && ticket.UserID != nil { // Customer sender
+		if user, err := s.userRepo.GetByID(uint(*ticket.UserID)); err == nil {
+			recipients = append(recipients, user.Email)
+		}
+	}
+	
+	return recipients
 }

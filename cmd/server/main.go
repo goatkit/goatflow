@@ -96,8 +96,27 @@ func main() {
 		log.Println("WARNING: Using default JWT secret. Change this in production!")
 	}
 
+	// Email configuration (using Mailhog in development)
+	emailConfig := api.EmailConfig{
+		SMTPHost:     os.Getenv("SMTP_HOST"),
+		SMTPPort:     os.Getenv("SMTP_PORT"),
+		SMTPUsername: os.Getenv("SMTP_USERNAME"),
+		SMTPPassword: os.Getenv("SMTP_PASSWORD"),
+		SMTPFrom:     os.Getenv("SMTP_FROM"),
+		UseTLS:       os.Getenv("SMTP_USE_TLS") == "true",
+	}
+
+	// Default to Mailhog settings for development
+	if emailConfig.SMTPHost == "" {
+		emailConfig.SMTPHost = "mailhog"
+		emailConfig.SMTPPort = "1025"
+		emailConfig.SMTPFrom = "noreply@gotrs.local"
+		emailConfig.UseTLS = false
+		log.Println("Using Mailhog for email (development mode)")
+	}
+
 	// Create API router with all routes
-	router := api.NewRouter(db, jwtSecret)
+	router := api.NewRouter(db, jwtSecret, emailConfig)
 	router.SetupRoutes()
 	
 	// Get the Gin engine
