@@ -6,7 +6,7 @@
     <title>{{block "title" .}}GOTRS - Sign In{{end}}</title>
     
     <!-- Tailwind CSS -->
-    <link href="/static/css/tailwind.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
@@ -26,22 +26,82 @@
     </style>
 </head>
 <body class="h-full">
-    <div class="flex min-h-full flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <div class="sm:mx-auto sm:w-full sm:max-w-md">
-            <h1 class="text-center text-3xl font-bold text-indigo-600">GOTRS</h1>
-            <h2 class="mt-6 text-center text-2xl font-bold tracking-tight text-gray-900">
-                {{block "heading" .}}Sign in to your account{{end}}
-            </h2>
+    <div class="flex min-h-full">
+        <!-- Left side - Branding -->
+        <div class="hidden lg:flex lg:flex-1 lg:flex-col lg:justify-center lg:px-20 xl:px-24 bg-gradient-to-br from-indigo-900 via-indigo-800 to-purple-900">
+            <div class="mx-auto w-full max-w-sm">
+                <div class="text-center">
+                    <!-- Logo -->
+                    <div class="mx-auto h-20 w-20 bg-white rounded-2xl flex items-center justify-center shadow-lg mb-8">
+                        <svg class="h-10 w-10 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                        </svg>
+                    </div>
+                    
+                    <h1 class="text-4xl font-bold text-white mb-4">GOTRS</h1>
+                    <p class="text-xl text-indigo-200 mb-8">Go Open Ticket Request System</p>
+                    <p class="text-indigo-300 leading-relaxed">
+                        Modern, efficient customer support management. 
+                        Built for teams that care about excellent service delivery.
+                    </p>
+                    
+                    <!-- Features -->
+                    <div class="mt-12 space-y-4">
+                        <div class="flex items-center text-indigo-200">
+                            <svg class="h-5 w-5 text-green-400 mr-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Real-time ticket management
+                        </div>
+                        <div class="flex items-center text-indigo-200">
+                            <svg class="h-5 w-5 text-green-400 mr-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Automated workflows
+                        </div>
+                        <div class="flex items-center text-indigo-200">
+                            <svg class="h-5 w-5 text-green-400 mr-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Enterprise security
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-            <div class="bg-white px-6 py-8 shadow sm:rounded-lg sm:px-10">
-                {{block "content" .}}{{end}}
+        <!-- Right side - Login form -->
+        <div class="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+            <div class="mx-auto w-full max-w-sm lg:w-96">
+                <!-- Mobile logo -->
+                <div class="lg:hidden text-center mb-8">
+                    <div class="mx-auto h-16 w-16 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg mb-4">
+                        <svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                        </svg>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-900">GOTRS</h1>
+                </div>
+
+                <div>
+                    <h2 class="text-3xl font-bold tracking-tight text-gray-900">
+                        {{block "heading" .}}Welcome back{{end}}
+                    </h2>
+                    <p class="mt-2 text-sm text-gray-600">
+                        Sign in to access your support dashboard
+                    </p>
+                </div>
+
+                <div class="mt-8">
+                    {{block "content" .}}{{end}}
+                    
+                    <div class="mt-6 text-center">
+                        <p class="text-sm text-gray-600">
+                            {{block "footer" .}}{{end}}
+                        </p>
+                    </div>
+                </div>
             </div>
-            
-            <p class="mt-4 text-center text-sm text-gray-600">
-                {{block "footer" .}}{{end}}
-            </p>
         </div>
     </div>
     
