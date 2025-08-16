@@ -8,6 +8,8 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
 
 type Router struct {
@@ -16,17 +18,36 @@ type Router struct {
 	jwtManager     *auth.JWTManager
 	authMiddleware *middleware.AuthMiddleware
 	authHandler    *AuthHandler
+	ticketHandler  *TicketHandler
 }
 
 func NewRouter(db *sql.DB, jwtSecret string) *Router {
 	// Initialize JWT manager with 24 hour token duration
 	jwtManager := auth.NewJWTManager(jwtSecret, 24*time.Hour)
 	
+	// Initialize repositories
+	ticketRepo := repository.NewTicketRepository(db)
+	articleRepo := repository.NewArticleRepository(db)
+	userRepo := repository.NewUserRepository(db)
+	queueRepo := repository.NewQueueRepository(db)
+	stateRepo := repository.NewTicketStateRepository(db)
+	priorityRepo := repository.NewTicketPriorityRepository(db)
+	
 	// Initialize services
 	authService := auth.NewAuthService(db, jwtManager)
+	ticketService := service.NewTicketService(
+		ticketRepo,
+		articleRepo,
+		userRepo,
+		queueRepo,
+		stateRepo,
+		priorityRepo,
+		db,
+	)
 	
 	// Initialize handlers
 	authHandler := NewAuthHandler(authService)
+	ticketHandler := NewTicketHandler(ticketService, ticketRepo)
 	
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager)
@@ -37,6 +58,7 @@ func NewRouter(db *sql.DB, jwtSecret string) *Router {
 		jwtManager:     jwtManager,
 		authMiddleware: authMiddleware,
 		authHandler:    authHandler,
+		ticketHandler:  ticketHandler,
 	}
 }
 
@@ -80,18 +102,23 @@ func (r *Router) SetupRoutes() {
 		ticketGroup := v1.Group("/tickets")
 		ticketGroup.Use(r.authMiddleware.RequireAuth())
 		{
-			// TODO: Implement ticket endpoints
-			ticketGroup.GET("", r.placeholderHandler("List tickets"))
-			ticketGroup.GET("/:id", r.placeholderHandler("Get ticket"))
-			ticketGroup.POST("", r.authMiddleware.RequirePermission(auth.PermissionTicketCreate), r.placeholderHandler("Create ticket"))
-			ticketGroup.PUT("/:id", r.authMiddleware.RequirePermission(auth.PermissionTicketUpdate), r.placeholderHandler("Update ticket"))
-			ticketGroup.DELETE("/:id", r.authMiddleware.RequirePermission(auth.PermissionTicketDelete), r.placeholderHandler("Delete ticket"))
+			// Basic CRUD operations
+			ticketGroup.GET("", r.ticketHandler.ListTickets)
+			ticketGroup.GET("/:id", r.ticketHandler.GetTicket)
+			ticketGroup.POST("", r.authMiddleware.RequirePermission(auth.PermissionTicketCreate), r.ticketHandler.CreateTicket)
+			ticketGroup.PUT("/:id", r.authMiddleware.RequirePermission(auth.PermissionTicketUpdate), r.ticketHandler.UpdateTicket)
+			
+			// Ticket articles (messages)
+			ticketGroup.POST("/:id/articles", r.ticketHandler.AddArticle)
+			ticketGroup.GET("/:id/articles", r.ticketHandler.GetArticles)
 			
 			// Ticket actions
-			ticketGroup.POST("/:id/assign", r.authMiddleware.RequirePermission(auth.PermissionTicketAssign), r.placeholderHandler("Assign ticket"))
-			ticketGroup.POST("/:id/close", r.authMiddleware.RequirePermission(auth.PermissionTicketClose), r.placeholderHandler("Close ticket"))
-			ticketGroup.POST("/:id/messages", r.placeholderHandler("Add ticket message"))
-			ticketGroup.GET("/:id/messages", r.placeholderHandler("Get ticket messages"))
+			ticketGroup.POST("/:id/assign", r.authMiddleware.RequirePermission(auth.PermissionTicketAssign), r.ticketHandler.AssignTicket)
+			ticketGroup.POST("/:id/escalate", r.authMiddleware.RequirePermission(auth.PermissionTicketUpdate), r.ticketHandler.EscalateTicket)
+			ticketGroup.POST("/merge", r.authMiddleware.RequirePermission(auth.PermissionTicketUpdate), r.ticketHandler.MergeTickets)
+			
+			// Ticket history
+			ticketGroup.GET("/:id/history", r.ticketHandler.GetTicketHistory)
 		}
 		
 		// Queue routes (agent and admin)

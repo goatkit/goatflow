@@ -10,6 +10,7 @@ type TicketState struct {
 	ID         uint      `json:"id" db:"id"`
 	Name       string    `json:"name" db:"name"`
 	TypeID     int       `json:"type_id" db:"type_id"` // 1=new, 2=open, 3=closed, 4=removed, 5=pending
+	Comments   *string   `json:"comments,omitempty" db:"comments"`
 	ValidID    int       `json:"valid_id" db:"valid_id"`
 	CreateTime time.Time `json:"create_time" db:"create_time"`
 	CreateBy   uint      `json:"create_by" db:"create_by"`
@@ -32,8 +33,15 @@ type TicketPriority struct {
 type Queue struct {
 	ID              uint      `json:"id" db:"id"`
 	Name            string    `json:"name" db:"name"`
+	SystemAddressID *uint     `json:"system_address_id,omitempty" db:"system_address_id"`
+	CalendarID      *uint     `json:"calendar_id,omitempty" db:"calendar_id"`
+	DefaultSignKey  *string   `json:"default_sign_key,omitempty" db:"default_sign_key"`
+	SalutationID    *uint     `json:"salutation_id,omitempty" db:"salutation_id"`
+	SignatureID     *uint     `json:"signature_id,omitempty" db:"signature_id"`
 	GroupID         uint      `json:"group_id" db:"group_id"`
-	Comment         *string   `json:"comment,omitempty" db:"comment"`
+	Email           *string   `json:"email,omitempty" db:"email"`
+	RealName        *string   `json:"realname,omitempty" db:"realname"`
+	Comments        *string   `json:"comments,omitempty" db:"comments"`
 	UnlockTimeout   int       `json:"unlock_timeout" db:"unlock_timeout"`
 	FollowUpID      int       `json:"follow_up_id" db:"follow_up_id"`
 	FollowUpLock    int       `json:"follow_up_lock" db:"follow_up_lock"`
@@ -56,8 +64,8 @@ type Ticket struct {
 	SLAID                  *uint      `json:"sla_id,omitempty" db:"sla_id"`
 	UserID                 *uint      `json:"user_id,omitempty" db:"user_id"` // Owner
 	ResponsibleUserID      *uint      `json:"responsible_user_id,omitempty" db:"responsible_user_id"`
-	CustomerID             *uint      `json:"customer_id,omitempty" db:"customer_id"`
-	CustomerUserID         *string    `json:"customer_user_id,omitempty" db:"customer_user_id"`
+	CustomerID             *string    `json:"customer_id,omitempty" db:"customer_id"`
+	CustomerUserID         uint       `json:"customer_user_id" db:"customer_user_id"`
 	TicketStateID          uint       `json:"ticket_state_id" db:"ticket_state_id"`
 	TicketPriorityID       uint       `json:"ticket_priority_id" db:"ticket_priority_id"`
 	UntilTime              int        `json:"until_time" db:"until_time"`
@@ -66,6 +74,7 @@ type Ticket struct {
 	EscalationResponseTime int        `json:"escalation_response_time" db:"escalation_response_time"`
 	EscalationSolutionTime int        `json:"escalation_solution_time" db:"escalation_solution_time"`
 	ArchiveFlag            int        `json:"archive_flag" db:"archive_flag"` // 0=not archived, 1=archived
+	TenantID               uint       `json:"tenant_id" db:"tenant_id"`
 	CreateTime             time.Time  `json:"create_time" db:"create_time"`
 	CreateBy               uint       `json:"create_by" db:"create_by"`
 	ChangeTime             time.Time  `json:"change_time" db:"change_time"`
@@ -259,7 +268,7 @@ func (t *Ticket) CanBeEditedBy(userID uint, role string) bool {
 	
 	// Customers can only edit their own tickets if not locked
 	if role == "Customer" {
-		if t.CustomerID != nil && *t.CustomerID == userID && !t.IsLocked() {
+		if t.CustomerUserID == userID && !t.IsLocked() {
 			return true
 		}
 	}

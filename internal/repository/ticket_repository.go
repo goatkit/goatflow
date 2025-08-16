@@ -19,6 +19,11 @@ func NewTicketRepository(db *sql.DB) *TicketRepository {
 	return &TicketRepository{db: db}
 }
 
+// GetDB returns the database connection
+func (r *TicketRepository) GetDB() *sql.DB {
+	return r.db
+}
+
 // Create creates a new ticket in the database
 func (r *TicketRepository) Create(ticket *models.Ticket) error {
 	// Generate ticket number
@@ -544,7 +549,7 @@ func (r *TicketRepository) GetTicketWithRelations(id uint) (*models.Ticket, erro
 		&queue.ID,
 		&queue.Name,
 		&queue.GroupID,
-		&queue.Comment,
+		&queue.Comments,
 		&state.ID,
 		&state.Name,
 		&state.TypeID,
@@ -678,7 +683,7 @@ func (r *TicketRepository) GetQueues() ([]models.Queue, error) {
 			&q.ID,
 			&q.Name,
 			&q.GroupID,
-			&q.Comment,
+			&q.Comments,
 			&q.UnlockTimeout,
 			&q.FollowUpID,
 			&q.FollowUpLock,
