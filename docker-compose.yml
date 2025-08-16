@@ -59,6 +59,8 @@ services:
       VALKEY_HOST: valkey
       VALKEY_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-development-secret-change-in-production}
+      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-admin@gotrs.local}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-admin123}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:

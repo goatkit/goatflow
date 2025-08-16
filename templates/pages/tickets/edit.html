@@ -1,0 +1,241 @@
+{{define "edit.html"}}
+{{template "base.html" .}}
+{{end}}
+
+{{define "title"}}Edit Ticket #{{.TicketID}} - GOTRS{{end}}
+
+{{define "content"}}
+<div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Page header -->
+    <div class="md:flex md:items-center md:justify-between mb-8">
+        <div class="min-w-0 flex-1">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:truncate sm:text-3xl sm:tracking-tight">
+                Edit Ticket #{{.TicketID}}
+            </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{.Ticket.TicketNumber}}
+            </p>
+        </div>
+        <div class="mt-4 flex md:ml-4 md:mt-0">
+            <a href="/tickets/{{.TicketID}}" 
+               class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7.793 2.232a.75.75 0 01-.025 1.06L3.622 7.25h10.003a5.375 5.375 0 010 10.75H10.75a.75.75 0 010-1.5h2.875a3.875 3.875 0 000-7.75H3.622l4.146 3.957a.75.75 0 01-1.036 1.085l-5.5-5.25a.75.75 0 010-1.085l5.5-5.25a.75.75 0 011.06.025z" clip-rule="evenodd" />
+                </svg>
+                Cancel
+            </a>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <form hx-put="/api/tickets/{{.TicketID}}" 
+              hx-ext="json-enc"
+              hx-target="#form-messages"
+              hx-on::after-request="if(event.detail.successful) { showSuccess(); setTimeout(() => window.location.href = '/tickets/{{.TicketID}}', 1500); }"
+              class="space-y-6 p-6">
+            
+            <!-- Form Messages -->
+            <div id="form-messages"></div>
+
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <!-- Left Column -->
+                <div class="space-y-6">
+                    <!-- Subject -->
+                    <div>
+                        <label for="subject" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Subject <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-2">
+                            <input type="text" 
+                                   name="subject" 
+                                   id="subject" 
+                                   value="{{.Ticket.Subject}}"
+                                   required
+                                   maxlength="255"
+                                   class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                        </div>
+                    </div>
+
+                    <!-- Priority -->
+                    <div>
+                        <label for="priority" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Priority
+                        </label>
+                        <div class="mt-2">
+                            <select name="priority" 
+                                    id="priority"
+                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                <option value="1 very low" {{if eq .Ticket.Priority "1 very low"}}selected{{end}}>Very Low</option>
+                                <option value="2 low" {{if eq .Ticket.Priority "2 low"}}selected{{end}}>Low</option>
+                                <option value="3 normal" {{if eq .Ticket.Priority "3 normal"}}selected{{end}}>Normal</option>
+                                <option value="4 high" {{if eq .Ticket.Priority "4 high"}}selected{{end}}>High</option>
+                                <option value="5 very high" {{if eq .Ticket.Priority "5 very high"}}selected{{end}}>Very High</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Status
+                        </label>
+                        <div class="mt-2">
+                            <select name="status" 
+                                    id="status"
+                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                <option value="new" {{if eq .Ticket.Status "new"}}selected{{end}}>New</option>
+                                <option value="open" {{if eq .Ticket.Status "open"}}selected{{end}}>Open</option>
+                                <option value="pending" {{if eq .Ticket.Status "pending"}}selected{{end}}>Pending</option>
+                                <option value="closed" {{if eq .Ticket.Status "closed"}}selected{{end}}>Closed</option>
+                            </select>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Note: Closed tickets cannot be edited after saving.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="space-y-6">
+                    <!-- Queue -->
+                    <div>
+                        <label for="queue_id" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Queue
+                        </label>
+                        <div class="mt-2">
+                            <select name="queue_id" 
+                                    id="queue_id"
+                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                <option value="1" {{if eq .Ticket.QueueID 1}}selected{{end}}>General Support</option>
+                                <option value="2" {{if eq .Ticket.QueueID 2}}selected{{end}}>Technical Issues</option>
+                                <option value="3" {{if eq .Ticket.QueueID 3}}selected{{end}}>Billing</option>
+                                <option value="4" {{if eq .Ticket.QueueID 4}}selected{{end}}>Feature Requests</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Type -->
+                    <div>
+                        <label for="type_id" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Type
+                        </label>
+                        <div class="mt-2">
+                            <select name="type_id" 
+                                    id="type_id"
+                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                <option value="1" {{if eq .Ticket.TypeID 1}}selected{{end}}>Incident</option>
+                                <option value="2" {{if eq .Ticket.TypeID 2}}selected{{end}}>Service Request</option>
+                                <option value="3" {{if eq .Ticket.TypeID 3}}selected{{end}}>Change Request</option>
+                                <option value="4" {{if eq .Ticket.TypeID 4}}selected{{end}}>Problem</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Customer Info (Read-only) -->
+                    <div>
+                        <label for="customer_email" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Customer Email
+                        </label>
+                        <div class="mt-2">
+                            <input type="email" 
+                                   id="customer_email" 
+                                   value="{{.Ticket.CustomerEmail}}"
+                                   disabled
+                                   class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 sm:text-sm sm:leading-6">
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Customer information cannot be changed.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <a href="/tickets/{{.TicketID}}" 
+                   class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="htmx-indicator absolute left-0 inset-y-0 flex items-center pl-3">
+                        <svg class="animate-spin h-4 w-4 text-gotrs-300" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Change History -->
+    <div class="mt-8 bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                Change History
+            </h3>
+        </div>
+        <div class="px-4 py-5 sm:p-6">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Change history will be displayed here after implementation.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+function showSuccess() {
+    document.getElementById('form-messages').innerHTML = `
+        <div class="rounded-md bg-green-50 dark:bg-green-900/20 p-4 mb-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.236 4.53L7.53 10.361a.75.75 0 00-1.06 1.06l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-green-800 dark:text-green-200">
+                        Ticket updated successfully! Redirecting...
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Handle form errors
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    if (evt.detail.xhr.status >= 400) {
+        let errorMessage = 'An error occurred while updating the ticket.';
+        try {
+            const response = JSON.parse(evt.detail.xhr.response);
+            if (response.error) {
+                errorMessage = response.error;
+            }
+        } catch (e) {
+            // Use default message
+        }
+        
+        document.getElementById('form-messages').innerHTML = `
+            <div class="rounded-md bg-red-50 dark:bg-red-900/20 p-4 mb-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm font-medium text-red-800 dark:text-red-200">
+                            ${errorMessage}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+});
+</script>
+{{end}}

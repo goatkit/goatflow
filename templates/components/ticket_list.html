@@ -1,17 +1,65 @@
+<!-- Title -->
+{{if .Title}}
+<div class="mb-4">
+    <h3 class="text-lg font-medium text-gray-900">{{.Title}}</h3>
+    {{if .SearchTerm}}
+    <p class="text-sm text-gray-600">Search results for: "{{.SearchTerm}}"</p>
+    {{end}}
+</div>
+{{end}}
+
+<!-- Filter badges -->
+{{if or .StatusFilter .PriorityFilter .AssignedFilter}}
+<div class="mb-4 flex flex-wrap gap-2">
+    {{if .StatusFilter}}
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+        {{.StatusFilter}}
+        <button class="ml-2 text-blue-600 hover:text-blue-800">×</button>
+    </span>
+    {{end}}
+    {{if .PriorityFilter}}
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+        {{.PriorityFilter}}
+        <button class="ml-2 text-red-600 hover:text-red-800">×</button>
+    </span>
+    {{end}}
+    {{if .AssignedFilter}}
+    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+        {{.AssignedFilter}}
+        <button class="ml-2 text-gray-600 hover:text-gray-800">×</button>
+    </span>
+    {{end}}
+</div>
+{{end}}
+
+<!-- Tickets list -->
+{{if .NoTicketsMessage}}
+<div class="text-center py-8">
+    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+    <p class="mt-2 text-sm text-gray-500">{{.NoTicketsMessage}}</p>
+</div>
+{{else}}
 {{range .Tickets}}
-<div class="border-l-4 border-{{if eq .status "open"}}blue{{else if eq .status "new"}}green{{else if eq .status "pending"}}yellow{{else}}gray{{end}}-400 bg-white p-4 border-b">
+<div class="border-l-4 border-{{if eq .status "open"}}blue{{else if eq .status "new"}}green{{else if eq .status "pending"}}orange{{else if eq .status "closed"}}gray{{else}}gray{{end}}-400 bg-white p-4 border-b">
     <div class="flex items-center justify-between">
         <div class="flex-1">
             <div class="flex items-center space-x-3">
                 <h3 class="text-sm font-medium text-gray-900">
                     <a href="/tickets/{{.id}}" class="hover:text-indigo-600">{{.number}}</a>
                 </h3>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{if eq .status "open"}}blue{{else if eq .status "new"}}green{{else if eq .status "pending"}}yellow{{else}}gray{{end}}-100 text-{{if eq .status "open"}}blue{{else if eq .status "new"}}green{{else if eq .status "pending"}}yellow{{else}}gray{{end}}-800">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{if eq .status "open"}}blue{{else if eq .status "new"}}green{{else if eq .status "pending"}}orange{{else if eq .status "closed"}}gray{{else}}gray{{end}}-100 text-{{if eq .status "open"}}blue{{else if eq .status "new"}}green{{else if eq .status "pending"}}orange{{else if eq .status "closed"}}gray{{else}}gray{{end}}-800">
                     {{.status}}
                 </span>
                 {{if .priority}}
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{if eq .priority "high"}}red{{else if eq .priority "medium"}}yellow{{else}}green{{end}}-100 text-{{if eq .priority "high"}}red{{else if eq .priority "medium"}}yellow{{else}}green{{end}}-800">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{{if eq .priority "high"}}red{{else if eq .priority "critical"}}red{{else if eq .priority "medium"}}orange{{else if eq .priority "low"}}green{{else}}green{{end}}-100 text-{{if eq .priority "high"}}red{{else if eq .priority "critical"}}red{{else if eq .priority "medium"}}orange{{else if eq .priority "low"}}green{{else}}green{{end}}-800">
                     {{.priority}}
+                </span>
+                {{end}}
+                {{if .queue}}
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    {{.queue}}
                 </span>
                 {{end}}
             </div>
@@ -39,11 +87,64 @@
         </div>
     </div>
 </div>
-{{else}}
-<div class="text-center py-8">
-    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-    <p class="mt-2 text-sm text-gray-500">No tickets found</p>
+{{end}}
+
+<!-- Pagination controls -->
+{{if .Pagination}}
+{{if or .Pagination.has_next .Pagination.has_prev}}
+<div class="pagination bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+    <div class="flex-1 flex justify-between sm:hidden">
+        {{if .Pagination.has_prev}}
+        <a hx-get="?page={{.Pagination.prev_page}}" hx-target="#ticket-container" hx-swap="innerHTML" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Previous
+        </a>
+        {{else}}
+        <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed">
+            Previous
+        </span>
+        {{end}}
+        {{if .Pagination.has_next}}
+        <a hx-get="?page={{.Pagination.next_page}}" hx-target="#ticket-container" hx-swap="innerHTML" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Next
+        </a>
+        {{else}}
+        <span class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-100 cursor-not-allowed">
+            Next
+        </span>
+        {{end}}
+    </div>
+    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div>
+            <p class="text-sm text-gray-700">
+                Showing <span class="font-medium">page {{.Page}}</span> of <span class="font-medium">{{.Pagination.total_pages}}</span>
+                ({{.Total}} total results)
+            </p>
+        </div>
+        <div>
+            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                {{if .Pagination.has_prev}}
+                <a hx-get="?page={{.Pagination.prev_page}}" hx-target="#ticket-container" hx-swap="innerHTML" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    Previous
+                </a>
+                {{else}}
+                <span class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+                    Previous
+                </span>
+                {{end}}
+                {{if .Pagination.has_next}}
+                <a hx-get="?page={{.Pagination.next_page}}" hx-target="#ticket-container" hx-swap="innerHTML" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                    Next
+                </a>
+                {{else}}
+                <span class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+                    Next
+                </span>
+                {{end}}
+            </nav>
+        </div>
+    </div>
 </div>
+{{end}}
+{{end}}
+
 {{end}}

@@ -6,7 +6,15 @@ import (
 
 // Simplified router for HTMX demo
 func NewSimpleRouter() *gin.Engine {
-	r := gin.Default()
+	// Create router without default middleware
+	r := gin.New()
+	
+	// Add logging and recovery middleware
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+	
+	// Setup HTMX routes with dynamic template loading
 	SetupHTMXRoutes(r)
+	
 	return r
 }

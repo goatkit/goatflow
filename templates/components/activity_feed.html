@@ -1,0 +1,31 @@
+{{range .Activities}}
+<div class="py-3 border-b border-gray-200 last:border-b-0">
+    <div class="flex space-x-3">
+        <div class="flex-shrink-0">
+            <div class="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center">
+                <span class="text-xs font-medium text-white">{{.user | slice 0 1 | upper}}</span>
+            </div>
+        </div>
+        <div class="min-w-0 flex-1">
+            <p class="text-sm text-gray-900">
+                <span class="font-medium">{{.user}}</span>
+                {{if eq .action "created"}}
+                <span class="text-green-600">created</span>
+                {{else if eq .action "updated"}}
+                <span class="text-blue-600">updated</span>
+                {{else if eq .action "closed"}}
+                <span class="text-gray-600">closed</span>
+                {{else}}
+                <span class="text-gray-600">{{.action}}</span>
+                {{end}}
+                <a href="/tickets/{{.target | replace "TICKET-" ""}}" class="font-medium text-indigo-600 hover:text-indigo-500">{{.target}}</a>
+            </p>
+            <p class="text-sm text-gray-500">{{.time}}</p>
+        </div>
+    </div>
+</div>
+{{else}}
+<div class="text-center py-4">
+    <p class="text-sm text-gray-500">No recent activity</p>
+</div>
+{{end}}

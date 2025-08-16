@@ -1,0 +1,54 @@
+{{define "sla_status.html"}}
+<div class="flex items-center space-x-2">
+    {{if eq .sla_status "not_applicable"}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-200">
+            N/A - Ticket Closed
+        </span>
+    {{else if eq .sla_status "overdue"}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200">
+            <svg class="-ml-0.5 mr-1 h-3 w-3 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            </svg>
+            Overdue
+        </span>
+        <span class="text-xs text-red-600 dark:text-red-400">
+            {{.time_remaining}}
+        </span>
+    {{else if eq .sla_status "warning"}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+            <svg class="-ml-0.5 mr-1 h-3 w-3 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+            Warning
+        </span>
+        <span class="text-xs text-yellow-600 dark:text-yellow-400">
+            {{.time_remaining}} ({{printf "%.0f" .sla_percent_used}}% used)
+        </span>
+    {{else}}
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200">
+            <svg class="-ml-0.5 mr-1 h-3 w-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            Within SLA
+        </span>
+        <span class="text-xs text-gray-600 dark:text-gray-400">
+            {{.time_remaining}} remaining
+        </span>
+    {{end}}
+    
+    <!-- Progress bar -->
+    {{if and (ne .sla_status "not_applicable") .sla_percent_used}}
+    <div class="flex-1 max-w-xs">
+        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            {{if gt .sla_percent_used 100}}
+            <div class="bg-red-600 h-2 rounded-full" style="width: 100%"></div>
+            {{else if gt .sla_percent_used 75}}
+            <div class="bg-yellow-600 h-2 rounded-full" style="width: {{.sla_percent_used}}%"></div>
+            {{else}}
+            <div class="bg-green-600 h-2 rounded-full" style="width: {{.sla_percent_used}}%"></div>
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+</div>
+{{end}}

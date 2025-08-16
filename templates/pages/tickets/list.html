@@ -1,9 +1,11 @@
+{{define "list.html"}}
 {{template "base.html" .}}
+{{end}}
 
 {{define "title"}}Tickets - GOTRS{{end}}
 
 {{define "content"}}
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8" x-data="{ showFilters: true }">
     <!-- Page header -->
     <div class="md:flex md:items-center md:justify-between">
         <div class="min-w-0 flex-1">
@@ -13,8 +15,9 @@
         </div>
         <div class="mt-4 flex md:ml-4 md:mt-0">
             <button type="button" 
-                    @click="$refs.filterPanel.classList.toggle('hidden')"
-                    class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
+                    @click="showFilters = !showFilters"
+                    :class="showFilters ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white border-gray-300 text-gray-700'"
+                    class="inline-flex items-center rounded-md border px-3 py-2 text-sm font-semibold shadow-sm hover:bg-gray-50">
                 <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M2.628 1.601C5.028 1.206 7.49 1 10 1s4.973.206 7.372.601a.75.75 0 01.628.74v2.288a2.25 2.25 0 01-.659 1.59l-4.682 4.683a2.25 2.25 0 00-.659 1.59v3.037c0 .684-.31 1.33-.844 1.757l-1.937 1.55A.75.75 0 018 18.25v-5.757a2.25 2.25 0 00-.659-1.591L2.659 6.22A2.25 2.25 0 012 4.629V2.34a.75.75 0 01.628-.74z" clip-rule="evenodd" />
                 </svg>
@@ -30,15 +33,15 @@
         </div>
     </div>
 
-    <div class="mt-8 flex gap-6">
+    <div class="mt-8 flex flex-col lg:flex-row gap-6">
         <!-- Filters sidebar -->
-        <div x-ref="filterPanel" class="hidden lg:block w-64 flex-shrink-0">
+        <div x-ref="filterPanel" class="w-full lg:w-64 flex-shrink-0" x-show="showFilters" x-transition>
             <div class="bg-white shadow rounded-lg p-6">
                 <h3 class="text-lg font-medium text-gray-900 mb-4">Filters</h3>
                 
                 <form id="filter-form" 
                       hx-get="/api/tickets"
-                      hx-trigger="change"
+                      hx-trigger="load, change from:input, change from:select, submit"
                       hx-target="#ticket-list"
                       hx-swap="innerHTML">
                     
@@ -51,7 +54,7 @@
                                 <span class="ml-2 text-sm text-gray-700">New</span>
                             </label>
                             <label class="inline-flex items-center">
-                                <input type="checkbox" name="status" value="open" checked class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <input type="checkbox" name="status" value="open" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                                 <span class="ml-2 text-sm text-gray-700">Open</span>
                             </label>
                             <label class="inline-flex items-center">
@@ -74,10 +77,10 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
                         <select name="priority" class="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
                             <option value="">All</option>
-                            <option value="1">Low</option>
-                            <option value="2">Medium</option>
-                            <option value="3">High</option>
-                            <option value="4">Urgent</option>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
                         </select>
                     </div>
 
@@ -97,16 +100,21 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Assigned To</label>
                         <select name="assigned" class="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm">
                             <option value="">Anyone</option>
-                            <option value="me">Me</option>
-                            <option value="unassigned">Unassigned</option>
+                            <option value="true">Assigned</option>
+                            <option value="false">Unassigned</option>
                         </select>
                     </div>
 
-                    <button type="button" 
-                            onclick="document.getElementById('filter-form').reset(); htmx.trigger('#filter-form', 'change')"
-                            class="w-full inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
-                        Clear Filters
-                    </button>
+                    <div class="flex">
+                        <button type="button" 
+                                hx-get="/api/tickets"
+                                hx-target="#ticket-list"
+                                hx-swap="innerHTML"
+                                onclick="document.getElementById('filter-form').reset()"
+                                class="w-full inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                            Clear Filters
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -135,9 +143,6 @@
             <!-- Ticket table -->
             <div class="bg-white shadow overflow-hidden sm:rounded-lg">
                 <div id="ticket-list" 
-                     hx-get="/api/tickets"
-                     hx-trigger="load"
-                     hx-swap="innerHTML"
                      class="divide-y divide-gray-200">
                     <!-- Tickets will be loaded here -->
                     <div class="p-6">
@@ -191,10 +196,12 @@
     </div>
 </div>
 
-<!-- SSE for real-time updates -->
+<!-- SSE for real-time updates disabled until needed -->
+{{if false}}
 <div hx-ext="sse" sse-connect="/api/tickets/stream" class="hidden">
     <div sse-swap="ticket-update" 
          hx-on:htmx:sse-message="if (document.querySelector('#ticket-list')) { htmx.trigger('#ticket-list', 'refresh') }">
     </div>
 </div>
+{{end}}
 {{end}}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -157,9 +158,12 @@ func SetupHTMXRoutes(r *gin.Engine) {
 	{
 		dashboard.GET("/dashboard", handleDashboard)
 		dashboard.GET("/tickets", handleTicketsList)
-		dashboard.GET("/tickets/new", handleNewTicket)
+		dashboard.GET("/tickets/new", handleTicketNew)
+		dashboard.POST("/tickets/create", handleTicketCreate)
 		dashboard.GET("/tickets/:id", handleTicketDetail)
 		dashboard.GET("/tickets/:id/edit", handleTicketEditForm)
+		dashboard.POST("/tickets/:id/quick-action", handleTicketQuickAction)
+		dashboard.POST("/tickets/bulk-action", handleTicketBulkAction)
 		dashboard.GET("/queues", handleQueuesList)
 		dashboard.GET("/queues/:id", handleQueueDetailPage)
 		dashboard.GET("/queues/:id/edit", handleEditQueueForm)
@@ -290,16 +294,142 @@ func handleDashboard(c *gin.Context) {
 
 // Tickets list page
 func handleTicketsList(c *gin.Context) {
-	// Pass some mock queues for testing
-	queues := []gin.H{
-		{"ID": 1, "Name": "General Support"},
-		{"ID": 2, "Name": "Technical Support"},
-		{"ID": 3, "Name": "Billing"},
+	// Get filter parameters
+	status := c.Query("status")
+	priority := c.Query("priority")
+	queueID := c.Query("queue_id")
+	assignedTo := c.Query("assigned_to")
+	search := c.Query("search")
+	sort := c.DefaultQuery("sort", "created")
+	page := 1
+	if p := c.Query("page"); p != "" {
+		if parsedPage, err := strconv.Atoi(p); err == nil && parsedPage > 0 {
+			page = parsedPage
+		}
+	}
+	perPage := 10
+	if pp := c.Query("per_page"); pp != "" {
+		if parsedPerPage, err := strconv.Atoi(pp); err == nil && parsedPerPage > 0 {
+			if parsedPerPage > 100 {
+				perPage = 100
+			} else {
+				perPage = parsedPerPage
+			}
+		}
 	}
 	
+	// Mock ticket data
+	tickets := getMockTickets()
+	
+	// Apply filters
+	filteredTickets := []gin.H{}
+	for _, ticket := range tickets {
+		// Status filter
+		if status != "" && status != "all" && ticket["status"] != status {
+			continue
+		}
+		// Priority filter
+		if priority != "" && priority != "all" && ticket["priority"] != priority {
+			continue
+		}
+		// Queue filter
+		if queueID != "" {
+			if qID, err := strconv.Atoi(queueID); err == nil && ticket["queue_id"] != qID {
+				continue
+			}
+		}
+		// Assigned filter
+		if assignedTo == "me" && ticket["assigned_to"] != "Demo User" {
+			continue
+		}
+		// Search filter
+		if search != "" {
+			searchLower := strings.ToLower(search)
+			titleMatch := strings.Contains(strings.ToLower(ticket["title"].(string)), searchLower)
+			numberMatch := strings.Contains(strings.ToLower(ticket["number"].(string)), searchLower)
+			emailMatch := false
+			if email, ok := ticket["customer_email"].(string); ok {
+				emailMatch = strings.Contains(strings.ToLower(email), searchLower)
+			}
+			if !titleMatch && !numberMatch && !emailMatch {
+				continue
+			}
+		}
+		filteredTickets = append(filteredTickets, ticket)
+	}
+	
+	// Sort tickets
+	sortTickets(filteredTickets, sort)
+	
+	// Pagination
+	total := len(filteredTickets)
+	totalPages := (total + perPage - 1) / perPage
+	if page > totalPages && totalPages > 0 {
+		page = totalPages
+	}
+	
+	start := (page - 1) * perPage
+	end := start + perPage
+	if end > total {
+		end = total
+	}
+	
+	var paginatedTickets []gin.H
+	if start < total {
+		paginatedTickets = filteredTickets[start:end]
+	}
+	
+	// Build pagination info
+	pagination := gin.H{
+		"Page":     page,
+		"PerPage":  perPage,
+		"Total":    total,
+		"Start":    start + 1,
+		"End":      end,
+		"HasPrev":  page > 1,
+		"HasNext":  page < totalPages,
+		"PrevPage": page - 1,
+		"NextPage": page + 1,
+	}
+	
+	// Pass some mock queues for filtering
+	queues := []gin.H{
+		{"id": 1, "name": "Raw"},
+		{"id": 2, "name": "Junk"},
+		{"id": 3, "name": "Misc"},
+		{"id": 4, "name": "Support"},
+	}
+	
+	// Check if this is an HTMX request
+	if c.GetHeader("HX-Request") != "" {
+		// Return just the ticket list fragment
+		tmpl, err := loadTemplate("templates/components/ticket_list.html")
+		if err != nil {
+			c.String(http.StatusInternalServerError, "Template error: %v", err)
+			return
+		}
+		
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		if err := tmpl.ExecuteTemplate(c.Writer, "ticket_list.html", gin.H{
+			"Tickets":       paginatedTickets,
+			"Pagination":    pagination,
+			"SearchTerm":    search,
+			"StatusFilter":  status,
+			"PriorityFilter": priority,
+			"QueueFilter":   queueID,
+			"AssignedFilter": assignedTo,
+			"SortBy":        sort,
+		}); err != nil {
+			c.String(http.StatusInternalServerError, "Render error: %v", err)
+		}
+		return
+	}
+	
+	// Full page load
 	tmpl, err := loadTemplate(
 		"templates/layouts/base.html",
 		"templates/pages/tickets/list.html",
+		"templates/components/ticket_list.html",
 	)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Template error: %v", err)
@@ -308,17 +438,33 @@ func handleTicketsList(c *gin.Context) {
 	
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(c.Writer, "list.html", gin.H{
-		"Title":  "Tickets - GOTRS",
-		"Queues": queues,
-		"User":   gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
-		"ActivePage": "tickets",
+		"Title":          "Tickets - GOTRS",
+		"Tickets":        paginatedTickets,
+		"Queues":         queues,
+		"Pagination":     pagination,
+		"SearchTerm":     search,
+		"StatusFilter":   status,
+		"PriorityFilter": priority,
+		"QueueFilter":    queueID,
+		"AssignedFilter": assignedTo,
+		"SortBy":         sort,
+		"User":           gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"ActivePage":     "tickets",
 	}); err != nil {
 		c.String(http.StatusInternalServerError, "Render error: %v", err)
 	}
 }
 
 // New ticket page
-func handleNewTicket(c *gin.Context) {
+func handleTicketNew(c *gin.Context) {
+	// Get queues for dropdown
+	queues := []gin.H{
+		{"id": 1, "name": "Raw"},
+		{"id": 2, "name": "Junk"},
+		{"id": 3, "name": "Misc"},
+		{"id": 4, "name": "Support"},
+	}
+	
 	tmpl, err := loadTemplate(
 		"templates/layouts/base.html",
 		"templates/pages/tickets/new.html",
@@ -330,12 +476,185 @@ func handleNewTicket(c *gin.Context) {
 	
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(c.Writer, "new.html", gin.H{
-		"Title": "New Ticket - GOTRS",
-		"User":  gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"Title":  "New Ticket - GOTRS",
+		"Queues": queues,
+		"User":   gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
 		"ActivePage": "tickets",
 	}); err != nil {
 		c.String(http.StatusInternalServerError, "Render error: %v", err)
 	}
+}
+
+// Handle ticket creation
+func handleTicketCreate(c *gin.Context) {
+	// Get form data
+	title := strings.TrimSpace(c.PostForm("title"))
+	queueID := c.PostForm("queue_id")
+	priority := c.PostForm("priority")
+	// description := c.PostForm("description") // Will be used when creating actual ticket
+	customerEmail := strings.TrimSpace(c.PostForm("customer_email"))
+	autoAssign := c.PostForm("auto_assign") == "true"
+	
+	// Validation
+	errors := []string{}
+	
+	if title == "" {
+		errors = append(errors, "Title is required")
+	} else if len(title) > 200 {
+		errors = append(errors, "Title must be less than 200 characters")
+	}
+	
+	if queueID == "" {
+		errors = append(errors, "Queue selection is required")
+	}
+	
+	validPriorities := map[string]bool{"low": true, "normal": true, "high": true, "urgent": true}
+	if priority != "" && !validPriorities[priority] {
+		errors = append(errors, "Invalid priority")
+	}
+	if priority == "" {
+		priority = "normal" // Default priority
+	}
+	
+	if customerEmail != "" {
+		// Simple email validation
+		if !strings.Contains(customerEmail, "@") || !strings.Contains(customerEmail, ".") {
+			errors = append(errors, "Invalid email format")
+		}
+	}
+	
+	// Return errors if validation failed
+	if len(errors) > 0 {
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		errorHTML := "<div class='text-red-600'>"
+		for _, err := range errors {
+			errorHTML += "<p>" + err + "</p>"
+		}
+		errorHTML += "</div>"
+		c.String(http.StatusBadRequest, errorHTML)
+		return
+	}
+	
+	// Create ticket (mock implementation)
+	ticketNumber := fmt.Sprintf("TICK-2024-%03d", rand.Intn(999)+1)
+	
+	// Build success message
+	successMsg := fmt.Sprintf("Ticket created successfully: Ticket #%s", ticketNumber)
+	if autoAssign {
+		successMsg = fmt.Sprintf("Ticket created and assigned to you: Ticket #%s", ticketNumber)
+	}
+	
+	// Return success response with HX-Trigger
+	c.Header("HX-Trigger", "ticket-created")
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, `
+		<div class="rounded-md bg-green-50 p-4">
+			<div class="flex">
+				<div class="flex-shrink-0">
+					<svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+						<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+					</svg>
+				</div>
+				<div class="ml-3">
+					<p class="text-sm font-medium text-green-800">%s</p>
+				</div>
+			</div>
+		</div>
+	`, successMsg)
+}
+
+// Handle ticket quick actions
+func handleTicketQuickAction(c *gin.Context) {
+	ticketID := c.Param("id")
+	action := c.PostForm("action")
+	
+	var message string
+	switch action {
+	case "assign":
+		message = fmt.Sprintf("Ticket #%s assigned to you", ticketID)
+	case "close":
+		message = fmt.Sprintf("Ticket #%s closed", ticketID)
+	case "priority-high":
+		message = "Priority updated to high"
+	case "priority-urgent":
+		message = "Priority updated to urgent"
+	case "priority-normal":
+		message = "Priority updated to normal"
+	case "priority-low":
+		message = "Priority updated to low"
+	default:
+		c.String(http.StatusBadRequest, "Invalid action")
+		return
+	}
+	
+	// Return success message with trigger to refresh list
+	c.Header("HX-Trigger", "ticket-updated")
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, `
+		<div class="text-sm text-green-600">%s</div>
+	`, message)
+}
+
+// Handle bulk ticket actions
+func handleTicketBulkAction(c *gin.Context) {
+	ticketIDs := c.PostForm("ticket_ids")
+	action := c.PostForm("action")
+	
+	// Parse ticket IDs
+	ids := strings.Split(ticketIDs, ",")
+	count := len(ids)
+	
+	if count == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No tickets selected"})
+		return
+	}
+	
+	var message string
+	switch action {
+	case "assign":
+		agentID := c.PostForm("agent_id")
+		if agentID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Agent ID required"})
+			return
+		}
+		message = fmt.Sprintf("%d tickets assigned", count)
+		
+	case "close":
+		message = fmt.Sprintf("%d tickets closed", count)
+		
+	case "set_priority":
+		priority := c.PostForm("priority")
+		if priority == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Priority required"})
+			return
+		}
+		message = fmt.Sprintf("Priority updated for %d tickets", count)
+		
+	case "move_queue":
+		queueID := c.PostForm("queue_id")
+		if queueID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Queue ID required"})
+			return
+		}
+		message = fmt.Sprintf("%d tickets moved to queue", count)
+		
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action"})
+		return
+	}
+	
+	// Return success response
+	c.Header("HX-Trigger", "tickets-updated")
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, `
+		<div class="rounded-md bg-green-50 p-4">
+			<div class="flex">
+				<div class="ml-3">
+					<p class="text-sm font-medium text-green-800">%s</p>
+				</div>
+			</div>
+		</div>
+	`, message)
 }
 
 // Ticket detail page
@@ -1025,6 +1344,156 @@ func handleQueuesJSON(c *gin.Context) {
 		"success": true,
 		"data":    queues,
 	})
+}
+
+// Helper function to get mock tickets
+func getMockTickets() []gin.H {
+	return []gin.H{
+		{
+			"id":             1,
+			"number":         "TICK-2024-001",
+			"title":          "Server is down",
+			"status":         "open",
+			"priority":       "high",
+			"queue_id":       1,
+			"queue_name":     "Raw",
+			"customer_email": "customer@example.com",
+			"assigned_to":    "Demo User",
+			"created_at":     "2024-01-15 10:00",
+			"updated_at":     "2024-01-15 14:30",
+			"has_new_message": true,
+			"sla_status":     "warning",
+			"due_in":         "2 hours",
+		},
+		{
+			"id":             2,
+			"number":         "TICK-2024-002",
+			"title":          "Cannot login to system",
+			"status":         "pending",
+			"priority":       "normal",
+			"queue_id":       4,
+			"queue_name":     "Support",
+			"customer_email": "user@company.com",
+			"assigned_to":    "",
+			"created_at":     "2024-01-15 11:00",
+			"updated_at":     "2024-01-15 11:00",
+			"has_new_message": false,
+			"sla_status":     "ok",
+			"due_in":         "4 hours",
+		},
+		{
+			"id":             3,
+			"number":         "TICK-2024-003",
+			"title":          "Feature request: Dark mode",
+			"status":         "new",
+			"priority":       "low",
+			"queue_id":       3,
+			"queue_name":     "Misc",
+			"customer_email": "feedback@example.org",
+			"assigned_to":    "",
+			"created_at":     "2024-01-15 09:00",
+			"updated_at":     "2024-01-15 09:00",
+			"has_new_message": false,
+			"sla_status":     "ok",
+			"due_in":         "24 hours",
+		},
+		{
+			"id":             4,
+			"number":         "TICK-2024-004",
+			"title":          "Database connection error",
+			"status":         "open",
+			"priority":       "urgent",
+			"queue_id":       1,
+			"queue_name":     "Raw",
+			"customer_email": "admin@enterprise.com",
+			"assigned_to":    "Demo User",
+			"created_at":     "2024-01-15 08:00",
+			"updated_at":     "2024-01-15 15:00",
+			"has_new_message": false,
+			"sla_status":     "breach",
+			"due_in":         "-1 hour",
+		},
+		{
+			"id":             5,
+			"number":         "TICK-2024-005",
+			"title":          "Password reset request",
+			"status":         "resolved",
+			"priority":       "normal",
+			"queue_id":       4,
+			"queue_name":     "Support",
+			"customer_email": "john@example.com",
+			"assigned_to":    "Agent Smith",
+			"created_at":     "2024-01-14 10:00",
+			"updated_at":     "2024-01-14 10:30",
+			"has_new_message": false,
+			"sla_status":     "ok",
+			"due_in":         "",
+		},
+		{
+			"id":             6,
+			"number":         "TICK-2024-006",
+			"title":          "Billing inquiry",
+			"status":         "closed",
+			"priority":       "normal",
+			"queue_id":       2,
+			"queue_name":     "Junk",
+			"customer_email": "billing@company.net",
+			"assigned_to":    "Agent Jones",
+			"created_at":     "2024-01-13 14:00",
+			"updated_at":     "2024-01-13 16:00",
+			"has_new_message": false,
+			"sla_status":     "ok",
+			"due_in":         "",
+		},
+	}
+}
+
+// Helper function to sort tickets
+func sortTickets(tickets []gin.H, sortBy string) {
+	switch sortBy {
+	case "priority":
+		// Sort by priority (urgent > high > normal > low)
+		priorityOrder := map[string]int{
+			"urgent": 0,
+			"high":   1,
+			"normal": 2,
+			"low":    3,
+		}
+		sort.Slice(tickets, func(i, j int) bool {
+			pi := priorityOrder[tickets[i]["priority"].(string)]
+			pj := priorityOrder[tickets[j]["priority"].(string)]
+			return pi < pj
+		})
+	case "status":
+		// Sort by status (new > open > pending > resolved > closed)
+		statusOrder := map[string]int{
+			"new":      0,
+			"open":     1,
+			"pending":  2,
+			"resolved": 3,
+			"closed":   4,
+		}
+		sort.Slice(tickets, func(i, j int) bool {
+			si := statusOrder[tickets[i]["status"].(string)]
+			sj := statusOrder[tickets[j]["status"].(string)]
+			return si < sj
+		})
+	case "title":
+		// Sort alphabetically by title
+		sort.Slice(tickets, func(i, j int) bool {
+			return tickets[i]["title"].(string) < tickets[j]["title"].(string)
+		})
+	case "updated":
+		// Sort by last updated (most recent first)
+		sort.Slice(tickets, func(i, j int) bool {
+			return tickets[i]["updated_at"].(string) > tickets[j]["updated_at"].(string)
+		})
+	default: // "created"
+		// Sort by creation date (most recent first)
+		sort.Slice(tickets, func(i, j int) bool {
+			return tickets[i]["created_at"].(string) > tickets[j]["created_at"].(string)
+		})
+	}
 }
 
 // Sort queues based on the sort parameter
@@ -2473,4 +2942,362 @@ func handleBulkQueueDelete(c *gin.Context) {
 		"deleted": deleted,
 		"skipped": skipped,
 	})
+}
+
+// Ticket Workflow Handlers
+
+// Workflow state constants
+const (
+	StateNew      = "new"
+	StateOpen     = "open"
+	StatePending  = "pending"
+	StateResolved = "resolved"
+	StateClosed   = "closed"
+)
+
+// handleTicketWorkflow displays the workflow state diagram and transition options
+func handleTicketWorkflow(c *gin.Context) {
+	ticketID := c.Param("id")
+	
+	// Get ticket data (mock)
+	ticket := getMockTicketByID(ticketID)
+	if ticket == nil {
+		c.String(http.StatusNotFound, "Ticket not found")
+		return
+	}
+	
+	// Get current state from ticket
+	currentState := ticket["state"].(string)
+	
+	// Get available transitions based on current state
+	transitions := getAvailableTransitions(currentState)
+	
+	// Get state history
+	history := getTicketStateHistory(ticketID)
+	
+	// Return workflow view with cleaner formatting
+	c.String(http.StatusOK, renderWorkflowView(currentState, ticketID, transitions, history))
+}
+
+// renderWorkflowView generates the workflow HTML
+func renderWorkflowView(currentState, ticketID string, transitions []gin.H, history []gin.H) string {
+	return fmt.Sprintf(`
+		<div class="ticket-workflow" data-current-state="%s">
+			<h3 class="text-lg font-semibold mb-4">Workflow State</h3>
+			
+			<!-- State Diagram -->
+			<div class="state-diagram mb-6">
+				<div class="flex justify-between items-center">
+					<div class="state-badge state-new">New</div>
+					<div class="arrow">→</div>
+					<div class="state-badge state-open">Open</div>
+					<div class="arrow">→</div>
+					<div class="state-badge state-pending">Pending</div>
+					<div class="arrow">→</div>
+					<div class="state-badge state-resolved">Resolved</div>
+					<div class="arrow">→</div>
+					<div class="state-badge state-closed">Closed</div>
+				</div>
+			</div>
+			
+			<!-- Available Transitions -->
+			<div class="transitions mb-6">
+				<h4 class="font-medium mb-2">Available Actions</h4>
+				<div class="space-y-2">
+					%s
+				</div>
+			</div>
+			
+			<!-- State History -->
+			<div class="history">
+				<h4 class="font-medium mb-2">State History</h4>
+				%s
+			</div>
+		</div>
+		
+		<style>
+		.state-badge {
+			padding: 4px 12px;
+			border-radius: 9999px;
+			font-size: 0.875rem;
+			font-weight: 500;
+		}
+		.state-new { background: #3B82F6; color: white; }
+		.state-open { background: #10B981; color: white; }
+		.state-pending { background: #F59E0B; color: white; }
+		.state-resolved { background: #8B5CF6; color: white; }
+		.state-closed { background: #6B7280; color: white; }
+		.arrow { color: #9CA3AF; }
+		</style>
+	`, currentState, renderTransitions(transitions, ticketID), renderHistory(history))
+}
+
+// handleTicketTransition processes state transition requests
+func handleTicketTransition(c *gin.Context) {
+	ticketID := c.Param("id")
+	_ = ticketID // for future use
+	
+	// Parse request
+	currentState := c.PostForm("current_state")
+	newState := c.PostForm("new_state")
+	reason := c.PostForm("reason")
+	
+	// Default current state if not provided (for testing)
+	if currentState == "" {
+		currentState = StateOpen
+	}
+	
+	// Check user permissions
+	if err := checkTransitionPermission(c, newState); err != nil {
+		if err.Error() == "reopen_requested" {
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": "Reopen request submitted",
+				"new_state": "reopen_requested",
+			})
+		} else {
+			c.JSON(http.StatusForbidden, gin.H{
+				"success": false,
+				"error": err.Error(),
+			})
+		}
+		return
+	}
+	
+	// Validate state transition
+	if !isValidTransition(currentState, newState) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error": getTransitionError(currentState, newState),
+		})
+		return
+	}
+	
+	// Validate required fields
+	if err := validateTransitionReason(newState, reason); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+	
+	// Build and send response
+	c.JSON(http.StatusOK, buildTransitionResponse(currentState, newState, reason))
+}
+
+// checkTransitionPermission checks if user has permission for the transition
+func checkTransitionPermission(c *gin.Context, newState string) error {
+	userRole, exists := c.Get("user_role")
+	if !exists {
+		userRole = "agent" // Default for testing
+	}
+	
+	if userRole == "customer" {
+		if newState == StateResolved {
+			return fmt.Errorf("Permission denied")
+		}
+		if newState == "reopen_requested" {
+			return fmt.Errorf("reopen_requested")
+		}
+	}
+	return nil
+}
+
+// validateTransitionReason checks if required reasons are provided
+func validateTransitionReason(newState, reason string) error {
+	if newState == StatePending && reason == "" {
+		return fmt.Errorf("Reason required for pending state")
+	}
+	if newState == StateResolved && reason == "" {
+		return fmt.Errorf("Resolution notes required")
+	}
+	return nil
+}
+
+// buildTransitionResponse creates the response for a successful transition
+func buildTransitionResponse(currentState, newState, reason string) gin.H {
+	response := gin.H{
+		"success":   true,
+		"new_state": newState,
+	}
+	
+	switch newState {
+	case StateOpen:
+		if currentState == StateNew {
+			response["message"] = "Ticket opened"
+		} else if currentState == StateClosed {
+			response["message"] = "Ticket reopened"
+		} else {
+			response["message"] = "Ticket marked as open"
+		}
+	case StatePending:
+		response["message"] = "Ticket marked as pending"
+		response["reason"] = reason
+	case StateResolved:
+		response["message"] = "Ticket resolved"
+		response["resolution"] = reason
+	case StateClosed:
+		response["message"] = "Ticket closed"
+	}
+	
+	return response
+}
+
+// getTransitionError returns appropriate error message for invalid transitions
+func getTransitionError(from, to string) string {
+	if from == StateNew && to == StateClosed {
+		return "Cannot close ticket that hasn't been resolved"
+	}
+	return "Invalid state transition"
+}
+
+// handleTicketHistory returns the state transition history
+func handleTicketHistory(c *gin.Context) {
+	_ = c.Param("id") // ticketID - for future use
+	
+	// Get ticket history (mock)
+	c.String(http.StatusOK, `
+		<div class="state-history">
+			<h4 class="font-medium mb-2">State History</h4>
+			<div class="timeline">
+				<div class="history-item">
+					<div class="text-sm text-gray-500">2 hours ago</div>
+					<div>Changed to open by Demo User</div>
+					<div class="text-sm text-gray-600">Reason: Agent started working on ticket</div>
+				</div>
+				<div class="history-item mt-3">
+					<div class="text-sm text-gray-500">3 hours ago</div>
+					<div>Created as new by customer@example.com</div>
+				</div>
+			</div>
+		</div>
+	`)
+}
+
+// handleTicketAutoTransition handles automatic state transitions
+func handleTicketAutoTransition(c *gin.Context) {
+	_ = c.Param("id") // ticketID - for future use
+	trigger := c.PostForm("trigger")
+	
+	var newState string
+	var message string
+	
+	switch trigger {
+	case "agent_response":
+		newState = "open"
+		message = "Ticket automatically opened on agent response"
+	case "customer_response":
+		newState = "open"
+		message = "Ticket reopened due to customer response"
+	case "auto_close_timeout":
+		newState = "closed"
+		message = "Ticket auto-closed after resolution timeout"
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error": "Invalid trigger",
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"new_state": newState,
+		"message": message,
+	})
+}
+
+// Helper functions for workflow
+
+func getMockTicketByID(id string) gin.H {
+	// Return mock ticket data
+	return gin.H{
+		"id": id,
+		"state": "open",
+		"title": "Test Ticket",
+	}
+}
+
+// getAvailableTransitions returns possible transitions for a given state
+func getAvailableTransitions(currentState string) []gin.H {
+	transitionMap := map[string][]gin.H{
+		StateNew: {
+			{"to": StateOpen, "label": "Open Ticket"},
+		},
+		StateOpen: {
+			{"to": StatePending, "label": "Mark as Pending"},
+			{"to": StateResolved, "label": "Resolve Ticket"},
+			{"to": StateClosed, "label": "Close Ticket"},
+		},
+		StatePending: {
+			{"to": StateOpen, "label": "Reopen"},
+		},
+		StateResolved: {
+			{"to": StateClosed, "label": "Close Ticket"},
+		},
+		StateClosed: {
+			{"to": StateOpen, "label": "Reopen Ticket"},
+		},
+	}
+	
+	if transitions, exists := transitionMap[currentState]; exists {
+		return transitions
+	}
+	return []gin.H{}
+}
+
+func getTicketStateHistory(ticketID string) []gin.H {
+	// Return mock history
+	return []gin.H{
+		{"from": "new", "to": "open", "by": "Demo User", "time": "2 hours ago"},
+	}
+}
+
+func renderTransitions(transitions []gin.H, ticketID string) string {
+	html := ""
+	for _, t := range transitions {
+		html += fmt.Sprintf(`
+			<button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+				hx-post="/tickets/%s/transition"
+				hx-vals='{"new_state": "%s"}'>
+				%s
+			</button>
+		`, ticketID, t["to"], t["label"])
+	}
+	return html
+}
+
+func renderHistory(history []gin.H) string {
+	html := ""
+	for _, h := range history {
+		html += fmt.Sprintf(`
+			<div class="history-item mb-2">
+				<div class="text-sm text-gray-500">%s</div>
+				<div>Changed from %s to %s by %s</div>
+			</div>
+		`, h["time"], h["from"], h["to"], h["by"])
+	}
+	return html
+}
+
+// isValidTransition checks if a state transition is allowed
+func isValidTransition(from, to string) bool {
+	validTransitions := map[string][]string{
+		StateNew:      {StateOpen},
+		StateOpen:     {StatePending, StateResolved, StateClosed},
+		StatePending:  {StateOpen},
+		StateResolved: {StateClosed, StateOpen},
+		StateClosed:   {StateOpen},
+	}
+	
+	allowed, exists := validTransitions[from]
+	if !exists {
+		return false
+	}
+	
+	for _, state := range allowed {
+		if state == to {
+			return true
+		}
+	}
+	
+	return false
 }

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Ticket Creation</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+    <h1>Test Ticket Creation</h1>
+    
+    <div id="form-messages"></div>
+    
+    <form hx-post="http://localhost:8081/api/tickets" 
+          hx-target="#form-messages"
+          hx-swap="innerHTML">
+        
+        <div>
+            <label>Subject: <input type="text" name="subject" value="Test from HTMX" required></label>
+        </div>
+        
+        <div>
+            <label>Email: <input type="email" name="customer_email" value="test@example.com" required></label>
+        </div>
+        
+        <div>
+            <label>Name: <input type="text" name="customer_name" value="Test User"></label>
+        </div>
+        
+        <div>
+            <label>Priority: 
+                <select name="priority">
+                    <option value="3 normal">Normal</option>
+                    <option value="4 high">High</option>
+                </select>
+            </label>
+        </div>
+        
+        <div>
+            <label>Queue: <input type="text" name="queue_id" value="1"></label>
+        </div>
+        
+        <div>
+            <label>Type: <input type="text" name="type_id" value="1"></label>
+        </div>
+        
+        <div>
+            <label>Body: <textarea name="body" required>Test ticket body from HTMX form</textarea></label>
+        </div>
+        
+        <button type="submit">Create Ticket</button>
+    </form>
+    
+    <script>
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            console.log('Response:', evt.detail);
+            if (evt.detail.xhr.status === 201) {
+                document.getElementById('form-messages').innerHTML = 
+                    '<div style="color: green;">Ticket created successfully!</div>';
+            }
+        });
+    </script>
+</body>
+</html>
