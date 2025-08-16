@@ -132,12 +132,10 @@ func handleHTMXLogin(c *gin.Context) {
 	demoEmail := os.Getenv("DEMO_ADMIN_EMAIL")
 	demoPassword := os.Getenv("DEMO_ADMIN_PASSWORD")
 	
-	// Fallback to default if env vars not set (for development)
-	if demoEmail == "" {
-		demoEmail = "admin@gotrs.local"
-	}
-	if demoPassword == "" {
-		demoPassword = "admin123"
+	// Require environment variables to be set (no hardcoded fallbacks)
+	if demoEmail == "" || demoPassword == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Demo credentials not configured"})
+		return
 	}
 	
 	if loginReq.Email == demoEmail && loginReq.Password == demoPassword {
