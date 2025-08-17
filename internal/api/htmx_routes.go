@@ -342,6 +342,22 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		// Note Templates
 		api.GET("/internal-notes/templates", noteHandlers.GetTemplates)
 		api.POST("/internal-notes/templates", noteHandlers.CreateTemplate)
+		
+		// Search API - Using comprehensive search handlers
+		searchHandlers := NewSearchHandlers()
+		api.GET("/search/tickets", searchHandlers.SearchTickets)
+		api.POST("/search/advanced", searchHandlers.AdvancedSearch)
+		api.GET("/search/suggestions", searchHandlers.GetSearchSuggestions)
+		api.POST("/search/saved", searchHandlers.SaveSearch)
+		api.GET("/search/saved", searchHandlers.GetSavedSearches)
+		api.GET("/search/saved/:id", searchHandlers.GetSavedSearch)
+		api.POST("/search/saved/:id/execute", searchHandlers.ExecuteSavedSearch)
+		api.GET("/search/history", searchHandlers.GetSearchHistory)
+		api.GET("/search/analytics", searchHandlers.GetSearchAnalytics)
+		api.POST("/search/reindex", searchHandlers.ReindexTickets)
+		api.POST("/search/index/ticket", searchHandlers.IndexTicket)
+		api.PUT("/search/index/ticket", searchHandlers.UpdateTicketIndex)
+		api.DELETE("/search/index/ticket/:ticket_number", searchHandlers.DeleteTicketFromIndex)
 		api.PUT("/internal-notes/templates/:template_id", noteHandlers.UpdateTemplate)
 		api.DELETE("/internal-notes/templates/:template_id", noteHandlers.DeleteTemplate)
 		api.GET("/internal-notes/categories", noteHandlers.GetCategories)

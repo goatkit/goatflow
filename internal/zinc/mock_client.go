@@ -196,20 +196,32 @@ func (c *MockZincClient) GetDocument(ctx context.Context, index string, id strin
 		result = v
 	case models.TicketSearchDocument:
 		result["id"] = v.ID
+		result["ticket_number"] = v.TicketNumber
 		result["title"] = v.Title
 		result["content"] = v.Content
 		result["status"] = v.Status
 		result["priority"] = v.Priority
 		result["queue"] = v.Queue
 		result["tags"] = v.Tags
+		result["customer_name"] = v.CustomerName
+		result["customer_email"] = v.CustomerEmail
+		result["agent_name"] = v.AgentName
+		result["created_at"] = v.CreatedAt
+		result["updated_at"] = v.UpdatedAt
 	case *models.TicketSearchDocument:
 		result["id"] = v.ID
+		result["ticket_number"] = v.TicketNumber
 		result["title"] = v.Title
 		result["content"] = v.Content
 		result["status"] = v.Status
 		result["priority"] = v.Priority
 		result["queue"] = v.Queue
 		result["tags"] = v.Tags
+		result["customer_name"] = v.CustomerName
+		result["customer_email"] = v.CustomerEmail
+		result["agent_name"] = v.AgentName
+		result["created_at"] = v.CreatedAt
+		result["updated_at"] = v.UpdatedAt
 	}
 
 	return result, nil
