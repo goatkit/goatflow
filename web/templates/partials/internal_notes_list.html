@@ -1,0 +1,171 @@
+{{define "internal-notes-list"}}
+{{if .notes}}
+    <div class="space-y-3">
+        {{range .notes}}
+        <div class="bg-white rounded-lg border {{if .IsPinned}}border-indigo-300 ring-1 ring-indigo-200{{else if .IsImportant}}border-red-300{{else}}border-gray-200{{end}} p-4 {{if .IsPinned}}order-first{{end}}" 
+             id="note-{{.ID}}">
+            <!-- Note Header -->
+            <div class="flex items-start justify-between">
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                            <span class="text-xs font-medium text-gray-600">
+                                {{.AuthorInitials}}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center space-x-2">
+                            <p class="text-sm font-medium text-gray-900">{{.AuthorName}}</p>
+                            {{if .IsPinned}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
+                                <svg class="w-3 h-3 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M5 5a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2V5z"/>
+                                </svg>
+                                Pinned
+                            </span>
+                            {{end}}
+                            {{if .IsImportant}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                <svg class="w-3 h-3 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                Important
+                            </span>
+                            {{end}}
+                            {{if .IsInternal}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                Internal
+                            </span>
+                            {{end}}
+                            {{if .Category}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                {{.Category}}
+                            </span>
+                            {{end}}
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">
+                            {{.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}
+                            {{if .EditHistory}}
+                            <span class="text-gray-400">• Edited {{len .EditHistory}} time(s)</span>
+                            {{end}}
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="flex items-center space-x-1">
+                    <button onclick="togglePinNote({{.ID}}, {{.IsPinned}})"
+                            title="{{if .IsPinned}}Unpin{{else}}Pin{{end}} note"
+                            class="p-1 text-gray-400 hover:text-indigo-600">
+                        <svg class="w-4 h-4" fill="{{if .IsPinned}}currentColor{{else}}none{{end}}" stroke="currentColor" viewBox="0 0 20 20">
+                            <path d="M5 5a2 2 0 012-2h6a2 2 0 012 2v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2V9a2 2 0 012-2V5z"/>
+                        </svg>
+                    </button>
+                    <button onclick="toggleImportantNote({{.ID}}, {{.IsImportant}})"
+                            title="{{if .IsImportant}}Unmark{{else}}Mark{{end}} as important"
+                            class="p-1 text-gray-400 hover:text-red-600">
+                        <svg class="w-4 h-4" fill="{{if .IsImportant}}currentColor{{else}}none{{end}}" stroke="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                    {{if .CanEdit}}
+                    <button onclick="openInternalNoteModal({{.ID}})"
+                            title="Edit note"
+                            class="p-1 text-gray-400 hover:text-blue-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                        </svg>
+                    </button>
+                    <button onclick="deleteInternalNote({{.ID}})"
+                            title="Delete note"
+                            class="p-1 text-gray-400 hover:text-red-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                    {{end}}
+                </div>
+            </div>
+            
+            <!-- Note Content -->
+            <div class="mt-3 text-sm text-gray-700 prose prose-sm max-w-none">
+                {{.FormattedContent}}
+            </div>
+            
+            <!-- Mentions -->
+            {{if .Mentions}}
+            <div class="mt-3 flex items-center space-x-2">
+                <span class="text-xs text-gray-500">Mentioned:</span>
+                {{range .Mentions}}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                    @{{.Username}}
+                </span>
+                {{end}}
+            </div>
+            {{end}}
+            
+            <!-- Attachments -->
+            {{if .Attachments}}
+            <div class="mt-3 border-t pt-3">
+                <p class="text-xs font-medium text-gray-500 mb-2">Attachments</p>
+                <div class="flex flex-wrap gap-2">
+                    {{range .Attachments}}
+                    <a href="{{.URL}}" 
+                       target="_blank"
+                       class="inline-flex items-center px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-xs text-gray-700">
+                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clip-rule="evenodd"/>
+                        </svg>
+                        {{.Name}}
+                    </a>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+            
+            <!-- Edit History -->
+            {{if .ShowEditHistory}}
+            <div class="mt-3 border-t pt-3">
+                <button onclick="toggleEditHistory({{.ID}})"
+                        class="text-xs text-gray-500 hover:text-gray-700">
+                    View edit history ({{len .EditHistory}} edits)
+                </button>
+                <div id="edit-history-{{.ID}}" class="hidden mt-2 space-y-1">
+                    {{range .EditHistory}}
+                    <div class="text-xs text-gray-500">
+                        {{.EditedAt.Format "Jan 2, 3:04 PM"}} by {{.EditorName}}
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+{{else}}
+    <div class="text-center py-8">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No internal notes</h3>
+        <p class="mt-1 text-sm text-gray-500">Add notes to track internal information about this ticket.</p>
+        <div class="mt-6">
+            <button onclick="openInternalNoteModal()"
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                Add Internal Note
+            </button>
+        </div>
+    </div>
+{{end}}
+
+<script>
+function toggleEditHistory(noteId) {
+    const historyDiv = document.getElementById(`edit-history-${noteId}`);
+    historyDiv.classList.toggle('hidden');
+}
+</script>
+{{end}}

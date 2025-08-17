@@ -1,0 +1,238 @@
+{{define "canned-responses"}}
+<div id="canned-responses-panel" class="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div class="p-4 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Canned Responses</h3>
+            <div class="flex space-x-2">
+                <button onclick="openCannedResponseModal()" 
+                        class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    New Response
+                </button>
+                <button hx-get="/api/canned-responses" 
+                        hx-target="#canned-responses-list"
+                        hx-trigger="click"
+                        class="p-2 text-gray-400 hover:text-gray-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Search and Filter -->
+        <div class="mt-3 flex space-x-2">
+            <input type="text" 
+                   id="canned-search"
+                   placeholder="Search responses..."
+                   hx-get="/api/canned-responses/search"
+                   hx-trigger="keyup changed delay:500ms"
+                   hx-target="#canned-responses-list"
+                   hx-include="[name='category']"
+                   class="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            
+            <select name="category"
+                    hx-get="/api/canned-responses/category"
+                    hx-trigger="change"
+                    hx-target="#canned-responses-list"
+                    class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                <option value="">All Categories</option>
+                <option value="greeting">Greeting</option>
+                <option value="troubleshooting">Troubleshooting</option>
+                <option value="closure">Closure</option>
+                <option value="escalation">Escalation</option>
+                <option value="information">Information</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Responses List -->
+    <div id="canned-responses-list" class="max-h-96 overflow-y-auto">
+        <div hx-get="/api/canned-responses/quick" 
+             hx-trigger="load"
+             hx-swap="outerHTML">
+            <div class="p-4 text-center text-gray-500">
+                <div class="animate-spin inline-block w-6 h-6 border-2 border-gray-300 border-t-indigo-600 rounded-full"></div>
+                <p class="mt-2 text-sm">Loading responses...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Canned Response Modal -->
+<div id="canned-response-modal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Create Canned Response</h3>
+                <button onclick="closeCannedResponseModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <form hx-post="/api/canned-responses" 
+                  hx-target="#canned-responses-list"
+                  hx-on="htmx:afterRequest: closeCannedResponseModal()"
+                  class="p-6 space-y-4">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Name *</label>
+                    <input type="text" name="name" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Category *</label>
+                        <select name="category" required
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <option value="greeting">Greeting</option>
+                            <option value="troubleshooting">Troubleshooting</option>
+                            <option value="closure">Closure</option>
+                            <option value="escalation">Escalation</option>
+                            <option value="information">Information</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Shortcut</label>
+                        <input type="text" name="shortcut" placeholder="e.g., /hello"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Content *</label>
+                    <textarea name="content" rows="6" required
+                              placeholder="Use {{customer_name}}, {{ticket_number}}, {{agent_name}} for variables"
+                              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500"></textarea>
+                    <p class="mt-1 text-xs text-gray-500">
+                        Available variables: {{customer_name}}, {{ticket_number}}, {{agent_name}}, {{date}}, {{time}}
+                    </p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tags</label>
+                    <input type="text" name="tags" placeholder="Comma-separated tags"
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" name="is_shared" value="true"
+                               class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">Share with team</span>
+                    </label>
+                    
+                    <label class="flex items-center">
+                        <input type="checkbox" name="is_active" value="true" checked
+                               class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">Active</span>
+                    </label>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button type="button" onclick="closeCannedResponseModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700">
+                        Create Response
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openCannedResponseModal() {
+    document.getElementById('canned-response-modal').classList.remove('hidden');
+}
+
+function closeCannedResponseModal() {
+    document.getElementById('canned-response-modal').classList.add('hidden');
+    document.querySelector('#canned-response-modal form').reset();
+}
+
+function insertCannedResponse(responseId) {
+    // Get the response content and insert into the reply field
+    fetch(`/api/canned-responses/${responseId}`)
+        .then(response => response.json())
+        .then(data => {
+            const replyField = document.getElementById('reply-content') || document.querySelector('textarea[name="content"]');
+            if (replyField) {
+                // Apply variable substitutions
+                let content = data.content;
+                content = content.replace(/{{customer_name}}/g, window.currentTicket?.customer_name || 'Customer');
+                content = content.replace(/{{ticket_number}}/g, window.currentTicket?.ticket_number || 'TICKET-XXX');
+                content = content.replace(/{{agent_name}}/g, window.currentUser?.name || 'Agent');
+                content = content.replace(/{{date}}/g, new Date().toLocaleDateString());
+                content = content.replace(/{{time}}/g, new Date().toLocaleTimeString());
+                
+                // Insert at cursor position or append
+                const cursorPos = replyField.selectionStart;
+                const textBefore = replyField.value.substring(0, cursorPos);
+                const textAfter = replyField.value.substring(cursorPos);
+                replyField.value = textBefore + content + textAfter;
+                
+                // Update cursor position
+                replyField.selectionStart = replyField.selectionEnd = cursorPos + content.length;
+                replyField.focus();
+                
+                // Track usage
+                fetch(`/api/canned-responses/${responseId}/use`, { method: 'POST' });
+            }
+        });
+}
+
+function editCannedResponse(responseId) {
+    // Load response data and open edit modal
+    fetch(`/api/canned-responses/${responseId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Populate form with existing data
+            const form = document.querySelector('#canned-response-modal form');
+            form.querySelector('[name="name"]').value = data.name;
+            form.querySelector('[name="category"]').value = data.category;
+            form.querySelector('[name="shortcut"]').value = data.shortcut || '';
+            form.querySelector('[name="content"]').value = data.content;
+            form.querySelector('[name="tags"]').value = data.tags ? data.tags.join(', ') : '';
+            form.querySelector('[name="is_shared"]').checked = data.is_shared;
+            form.querySelector('[name="is_active"]').checked = data.is_active;
+            
+            // Change form action to update
+            form.setAttribute('hx-put', `/api/canned-responses/${responseId}`);
+            
+            // Update modal title
+            document.querySelector('#canned-response-modal h3').textContent = 'Edit Canned Response';
+            
+            // Open modal
+            openCannedResponseModal();
+        });
+}
+
+function deleteCannedResponse(responseId) {
+    if (confirm('Are you sure you want to delete this canned response?')) {
+        htmx.ajax('DELETE', `/api/canned-responses/${responseId}`, {
+            target: '#canned-responses-list',
+            swap: 'innerHTML'
+        });
+    }
+}
+
+// Keyboard shortcuts for quick access
+document.addEventListener('keydown', function(e) {
+    // Ctrl+Shift+R to open canned responses
+    if (e.ctrlKey && e.shiftKey && e.key === 'R') {
+        e.preventDefault();
+        document.getElementById('canned-responses-panel').scrollIntoView({ behavior: 'smooth' });
+    }
+});
+</script>
+{{end}}
