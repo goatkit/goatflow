@@ -266,12 +266,22 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		api.PUT("/tickets/search/saved/:id", handleUpdateSavedSearch)
 		api.DELETE("/tickets/search/saved/:id", handleDeleteSavedSearch)
 		
-		// Canned Responses
-		api.POST("/canned-responses", handleCreateCannedResponse)
-		api.GET("/canned-responses", handleGetCannedResponses)
-		api.PUT("/canned-responses/:id", handleUpdateCannedResponse)
-		api.DELETE("/canned-responses/:id", handleDeleteCannedResponse)
-		api.POST("/canned-responses/:id/use", handleUseCannedResponse)
+		// Canned Responses - Using new comprehensive handlers
+		cannedHandlers := NewCannedResponseHandlers()
+		api.GET("/canned-responses", cannedHandlers.GetResponses)
+		api.GET("/canned-responses/quick", cannedHandlers.GetQuickResponses)
+		api.GET("/canned-responses/popular", cannedHandlers.GetPopularResponses)
+		api.GET("/canned-responses/categories", cannedHandlers.GetCategories)
+		api.GET("/canned-responses/category/:category", cannedHandlers.GetResponsesByCategory)
+		api.GET("/canned-responses/search", cannedHandlers.SearchResponses)
+		api.GET("/canned-responses/user", cannedHandlers.GetResponsesForUser)
+		api.GET("/canned-responses/:id", cannedHandlers.GetResponseByID)
+		api.POST("/canned-responses", cannedHandlers.CreateResponse)
+		api.PUT("/canned-responses/:id", cannedHandlers.UpdateResponse)
+		api.DELETE("/canned-responses/:id", cannedHandlers.DeleteResponse)
+		api.POST("/canned-responses/apply", cannedHandlers.ApplyResponse)
+		api.GET("/canned-responses/export", cannedHandlers.ExportResponses)
+		api.POST("/canned-responses/import", cannedHandlers.ImportResponses)
 		
 		// Lookup Data Endpoints
 		api.GET("/lookups/queues", handleGetQueues)
@@ -310,12 +320,6 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		api.POST("/templates/apply", handleApplyTemplate)
 		api.GET("/templates/:id/load", handleLoadTemplateIntoForm)
 		api.GET("/templates/modal", handleTemplateSelectionModal)
-		api.GET("/canned-responses/categories", handleGetCannedResponseCategories)
-		api.GET("/canned-responses/statistics", handleGetCannedResponseStatistics)
-		api.POST("/canned-responses/:id/share", handleShareCannedResponse)
-		api.POST("/canned-responses/:id/copy", handleCopyCannedResponse)
-		api.GET("/canned-responses/export", handleExportCannedResponses)
-		api.POST("/canned-responses/import", handleImportCannedResponses)
 		
 		// Internal Notes
 		api.POST("/tickets/:id/internal-notes", handleCreateInternalNote)
