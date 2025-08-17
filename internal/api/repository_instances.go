@@ -11,6 +11,7 @@ var (
 	ticketRepo        repository.ITicketRepository
 	simpleTicketService *service.SimpleTicketService
 	storageService    service.StorageService
+	lookupService     *service.LookupService
 	once              sync.Once
 )
 
@@ -22,6 +23,9 @@ func InitializeServices() {
 		
 		// Initialize services
 		simpleTicketService = service.NewSimpleTicketService(ticketRepo)
+		
+		// Initialize lookup service
+		lookupService = service.NewLookupService()
 		
 		// Initialize storage service
 		var err error
@@ -49,4 +53,10 @@ func GetStorageService() service.StorageService {
 func GetTicketRepository() repository.ITicketRepository {
 	InitializeServices()
 	return ticketRepo
+}
+
+// GetLookupService returns the singleton lookup service instance
+func GetLookupService() *service.LookupService {
+	InitializeServices()
+	return lookupService
 }

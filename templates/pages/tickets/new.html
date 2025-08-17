@@ -97,10 +97,9 @@
                             <select name="priority" 
                                     id="priority"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                <option value="normal" selected>Normal</option>
-                                <option value="high">High</option>
-                                <option value="urgent">Urgent</option>
-                                <option value="low">Low</option>
+                                {{range .Priorities}}
+                                <option value="{{.Value}}" {{if eq .Value "normal"}}selected{{end}}>{{.Label}}</option>
+                                {{end}}
                             </select>
                         </div>
                     </div>
@@ -114,10 +113,9 @@
                             <select name="queue_id" 
                                     id="queue_id"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                <option value="1">General Support</option>
-                                <option value="2">Technical Issues</option>
-                                <option value="3">Billing</option>
-                                <option value="4">Feature Requests</option>
+                                {{range .Queues}}
+                                <option value="{{.ID}}" {{if eq .ID 1}}selected{{end}}>{{.Name}}</option>
+                                {{end}}
                             </select>
                         </div>
                     </div>
@@ -131,10 +129,9 @@
                             <select name="type_id" 
                                     id="type_id"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                <option value="1">Incident</option>
-                                <option value="2">Service Request</option>
-                                <option value="3">Change Request</option>
-                                <option value="4">Problem</option>
+                                {{range .Types}}
+                                <option value="{{.ID}}" {{if eq .ID 1}}selected{{end}}>{{.Label}}</option>
+                                {{end}}
                             </select>
                         </div>
                     </div>

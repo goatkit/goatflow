@@ -205,12 +205,7 @@ timeline
 
 #### Week 7-8: Enhanced Ticketing (Aug 17-30, 2025)
 - [ ] Advanced ticket search and filtering with Zinc
-- [ ] File attachments (upload, download, preview)
-  - [x] Local filesystem storage implementation
-  - [ ] S3-compatible storage backend with AWS SDK v2
-  - [ ] Storage backend factory pattern
-  - [ ] Pre-signed URL generation for cloud storage
-  - [ ] MinIO for local S3 testing in docker-compose
+- [x] File attachments (local filesystem storage)
 - [ ] Ticket templates for common issues
 - [ ] Canned responses for agents
 - [ ] Internal notes and comments
@@ -247,14 +242,6 @@ timeline
 #### Week 14-16: Integrations & API
 - [ ] REST API v1 complete
 - [ ] GraphQL API
-- [ ] Cloud Storage Backends
-  - [ ] AWS S3 implementation with SDK v2
-  - [ ] Azure Blob Storage support
-  - [ ] Google Cloud Storage (GCS) support
-  - [ ] MinIO for self-hosted S3-compatible storage
-  - [ ] DigitalOcean Spaces support
-  - [ ] Storage migration utilities
-  - [ ] Multi-backend support (different storage per file type)
 - [ ] Webhook system
 - [ ] OAuth2 provider
 - [ ] LDAP/Active Directory integration
@@ -282,13 +269,6 @@ timeline
 
 #### Month 5: Performance & Scale
 - [ ] Microservices separation
-- [ ] Storage Optimization
-  - [ ] CDN integration (CloudFront, Cloudflare)
-  - [ ] Storage tiering (hot/cold storage)
-  - [ ] Automatic file compression
-  - [ ] Image optimization and thumbnailing
-  - [ ] Storage failover and redundancy
-  - [ ] Distributed file storage with sharding
 - [ ] Horizontal scaling implementation
 - [ ] Advanced caching strategies
 - [ ] Database optimization
@@ -298,13 +278,6 @@ timeline
 
 #### Month 6: Security & Compliance
 - [ ] Advanced security features
-- [ ] Storage Security
-  - [ ] Client-side encryption for sensitive files
-  - [ ] Virus scanning integration (ClamAV, cloud services)
-  - [ ] File type validation and sanitization
-  - [ ] Storage access audit logs
-  - [ ] GDPR-compliant file retention policies
-  - [ ] Secure file sharing with expiring links
 - [ ] SAML 2.0 support
 - [ ] Multi-factor authentication
 - [ ] Field-level encryption
@@ -363,9 +336,34 @@ timeline
 - [ ] Community plugins
 - [ ] Enterprise plugin store
 
-#### Month 11: Cloud & DevOps
+#### Month 11: Cloud Storage & DevOps
 - [ ] Multi-tenant architecture
 - [ ] SaaS deployment options
+- [ ] Cloud Storage Backends
+  - [ ] AWS S3 implementation with SDK v2
+  - [ ] Azure Blob Storage support
+  - [ ] Google Cloud Storage (GCS) support
+  - [ ] MinIO for self-hosted S3-compatible storage
+  - [ ] DigitalOcean Spaces support
+  - [ ] Backblaze B2 support
+  - [ ] Storage backend factory pattern
+  - [ ] Pre-signed URL generation for cloud storage
+  - [ ] Storage migration utilities
+  - [ ] Multi-backend support (different storage per file type)
+- [ ] Storage Optimization
+  - [ ] CDN integration (CloudFront, Cloudflare)
+  - [ ] Storage tiering (hot/cold storage)
+  - [ ] Automatic file compression
+  - [ ] Image optimization and thumbnailing
+  - [ ] Storage failover and redundancy
+  - [ ] Distributed file storage with sharding
+- [ ] Storage Security
+  - [ ] Client-side encryption for sensitive files
+  - [ ] Virus scanning integration (ClamAV, cloud services)
+  - [ ] File type validation and sanitization
+  - [ ] Storage access audit logs
+  - [ ] GDPR-compliant file retention policies
+  - [ ] Secure file sharing with expiring links
 - [ ] Automated provisioning
 - [ ] Billing integration
 - [ ] Usage analytics
@@ -407,9 +405,9 @@ timeline
 - [ ] 99.9% uptime
 - [ ] Support for 10,000+ concurrent users
 - [ ] < 2 second page load time
-- [ ] Support for 1TB+ file storage across multiple backends
-- [ ] < 100ms pre-signed URL generation
-- [ ] 99.99% storage availability
+- [ ] Support for 1TB+ file storage across multiple backends (Phase 6)
+- [ ] < 100ms pre-signed URL generation (Phase 6)
+- [ ] 99.99% storage availability (Phase 6)
 
 ### Business Metrics
 - [ ] 10+ production deployments

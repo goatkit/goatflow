@@ -41,6 +41,10 @@ func handleTicketEditForm(c *gin.Context) {
 		"AssignedTo":   nil,
 	}
 	
+	// Get dynamic form data from lookup service
+	lookupService := GetLookupService()
+	formData := lookupService.GetTicketFormData()
+	
 	// Load edit form template
 	tmpl, err := loadTemplate(
 		"templates/layouts/base.html",
@@ -69,10 +73,14 @@ func handleTicketEditForm(c *gin.Context) {
 	
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(c.Writer, "edit.html", gin.H{
-		"Title":    fmt.Sprintf("Edit Ticket #%s", ticketID),
-		"Ticket":   ticket,
-		"TicketID": ticketID,
-		"User":     gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"Title":      fmt.Sprintf("Edit Ticket #%s", ticketID),
+		"Ticket":     ticket,
+		"TicketID":   ticketID,
+		"Queues":     formData.Queues,
+		"Priorities": formData.Priorities,
+		"Types":      formData.Types,
+		"Statuses":   formData.Statuses,
+		"User":       gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
 		"ActivePage": "tickets",
 	}); err != nil {
 		c.String(http.StatusInternalServerError, "Template error: %v", err)

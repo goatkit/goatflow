@@ -188,6 +188,7 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		dashboard.GET("/queues/clear-search", handleClearQueueSearch)
 		dashboard.GET("/queues/bulk-toolbar", handleBulkActionsToolbar)
 		dashboard.GET("/admin", handleAdminDashboard)
+		dashboard.GET("/admin/lookups", handleAdminLookups)
 	}
 	
 	// HTMX API endpoints (return HTML fragments)
@@ -270,6 +271,31 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		api.PUT("/canned-responses/:id", handleUpdateCannedResponse)
 		api.DELETE("/canned-responses/:id", handleDeleteCannedResponse)
 		api.POST("/canned-responses/:id/use", handleUseCannedResponse)
+		
+		// Lookup Data Endpoints
+		api.GET("/lookups/queues", handleGetQueues)
+		api.GET("/lookups/priorities", handleGetPriorities)
+		api.GET("/lookups/types", handleGetTypes)
+		api.GET("/lookups/statuses", handleGetStatuses)
+		api.GET("/lookups/form-data", handleGetFormData)
+		api.POST("/lookups/cache/invalidate", handleInvalidateLookupCache)
+		
+		// Lookup CRUD Endpoints
+		api.POST("/lookups/queues", handleCreateLookupQueue)
+		api.PUT("/lookups/queues/:id", handleUpdateLookupQueue)
+		api.DELETE("/lookups/queues/:id", handleDeleteLookupQueue)
+		
+		api.POST("/lookups/types", handleCreateType)
+		api.PUT("/lookups/types/:id", handleUpdateType)
+		api.DELETE("/lookups/types/:id", handleDeleteType)
+		
+		api.PUT("/lookups/priorities/:id", handleUpdatePriority)
+		api.PUT("/lookups/statuses/:id", handleUpdateStatus)
+		
+		// Audit and Export/Import
+		api.GET("/lookups/audit", handleGetAuditLogs)
+		api.GET("/lookups/export", handleExportConfiguration)
+		api.POST("/lookups/import", handleImportConfiguration)
 		api.GET("/canned-responses/categories", handleGetCannedResponseCategories)
 		api.GET("/canned-responses/statistics", handleGetCannedResponseStatistics)
 		api.POST("/canned-responses/:id/share", handleShareCannedResponse)
@@ -452,13 +478,9 @@ func handleTicketsList(c *gin.Context) {
 		"NextPage": page + 1,
 	}
 	
-	// Pass some mock queues for filtering
-	queues := []gin.H{
-		{"id": 1, "name": "Raw"},
-		{"id": 2, "name": "Junk"},
-		{"id": 3, "name": "Misc"},
-		{"id": 4, "name": "Support"},
-	}
+	// Get dynamic form data from lookup service
+	lookupService := GetLookupService()
+	formData := lookupService.GetTicketFormData()
 	
 	// Check if this is an HTMX request
 	if c.GetHeader("HX-Request") != "" {
@@ -500,7 +522,9 @@ func handleTicketsList(c *gin.Context) {
 	if err := tmpl.ExecuteTemplate(c.Writer, "list.html", gin.H{
 		"Title":          "Tickets - GOTRS",
 		"Tickets":        paginatedTickets,
-		"Queues":         queues,
+		"Queues":         formData.Queues,
+		"Priorities":     formData.Priorities,
+		"Statuses":       formData.Statuses,
 		"Pagination":     pagination,
 		"SearchTerm":     search,
 		"StatusFilter":   status,
@@ -517,13 +541,9 @@ func handleTicketsList(c *gin.Context) {
 
 // New ticket page
 func handleTicketNew(c *gin.Context) {
-	// Get queues for dropdown
-	queues := []gin.H{
-		{"id": 1, "name": "Raw"},
-		{"id": 2, "name": "Junk"},
-		{"id": 3, "name": "Misc"},
-		{"id": 4, "name": "Support"},
-	}
+	// Get dynamic form data from lookup service
+	lookupService := GetLookupService()
+	formData := lookupService.GetTicketFormData()
 	
 	tmpl, err := loadTemplate(
 		"templates/layouts/base.html",
@@ -536,9 +556,12 @@ func handleTicketNew(c *gin.Context) {
 	
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(c.Writer, "new.html", gin.H{
-		"Title":  "New Ticket - GOTRS",
-		"Queues": queues,
-		"User":   gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"Title":      "New Ticket - GOTRS",
+		"Queues":     formData.Queues,
+		"Priorities": formData.Priorities,
+		"Types":      formData.Types,
+		"Statuses":   formData.Statuses,
+		"User":       gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
 		"ActivePage": "tickets",
 	}); err != nil {
 		c.String(http.StatusInternalServerError, "Render error: %v", err)

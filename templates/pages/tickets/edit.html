@@ -66,11 +66,9 @@
                             <select name="priority" 
                                     id="priority"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                <option value="1 very low" {{if eq .Ticket.Priority "1 very low"}}selected{{end}}>Very Low</option>
-                                <option value="2 low" {{if eq .Ticket.Priority "2 low"}}selected{{end}}>Low</option>
-                                <option value="3 normal" {{if eq .Ticket.Priority "3 normal"}}selected{{end}}>Normal</option>
-                                <option value="4 high" {{if eq .Ticket.Priority "4 high"}}selected{{end}}>High</option>
-                                <option value="5 very high" {{if eq .Ticket.Priority "5 very high"}}selected{{end}}>Very High</option>
+                                {{range .Priorities}}
+                                <option value="{{.Value}}" {{if eq .Value $.Ticket.Priority}}selected{{end}}>{{.Label}}</option>
+                                {{end}}
                             </select>
                         </div>
                     </div>
@@ -84,10 +82,9 @@
                             <select name="status" 
                                     id="status"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                <option value="new" {{if eq .Ticket.Status "new"}}selected{{end}}>New</option>
-                                <option value="open" {{if eq .Ticket.Status "open"}}selected{{end}}>Open</option>
-                                <option value="pending" {{if eq .Ticket.Status "pending"}}selected{{end}}>Pending</option>
-                                <option value="closed" {{if eq .Ticket.Status "closed"}}selected{{end}}>Closed</option>
+                                {{range .Statuses}}
+                                <option value="{{.Value}}" {{if eq .Value $.Ticket.Status}}selected{{end}}>{{.Label}}</option>
+                                {{end}}
                             </select>
                         </div>
                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -107,10 +104,9 @@
                             <select name="queue_id" 
                                     id="queue_id"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                <option value="1" {{if eq .Ticket.QueueID 1}}selected{{end}}>General Support</option>
-                                <option value="2" {{if eq .Ticket.QueueID 2}}selected{{end}}>Technical Issues</option>
-                                <option value="3" {{if eq .Ticket.QueueID 3}}selected{{end}}>Billing</option>
-                                <option value="4" {{if eq .Ticket.QueueID 4}}selected{{end}}>Feature Requests</option>
+                                {{range .Queues}}
+                                <option value="{{.ID}}" {{if eq .ID $.Ticket.QueueID}}selected{{end}}>{{.Name}}</option>
+                                {{end}}
                             </select>
                         </div>
                     </div>
@@ -124,10 +120,9 @@
                             <select name="type_id" 
                                     id="type_id"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                <option value="1" {{if eq .Ticket.TypeID 1}}selected{{end}}>Incident</option>
-                                <option value="2" {{if eq .Ticket.TypeID 2}}selected{{end}}>Service Request</option>
-                                <option value="3" {{if eq .Ticket.TypeID 3}}selected{{end}}>Change Request</option>
-                                <option value="4" {{if eq .Ticket.TypeID 4}}selected{{end}}>Problem</option>
+                                {{range .Types}}
+                                <option value="{{.ID}}" {{if eq .ID $.Ticket.TypeID}}selected{{end}}>{{.Label}}</option>
+                                {{end}}
                             </select>
                         </div>
                     </div>
