@@ -110,9 +110,9 @@ timeline
 - ✅ Activity feed and notifications
 - ✅ Quick actions with shortcuts
 - ✅ File attachments with local storage
-- ✅ Canned responses with variable substitution (backend)
-- ✅ Internal notes and comments system (backend)
-- ✅ Ticket templates with categories (backend)
+- ✅ Canned responses with variable substitution (backend + API)
+- ✅ Internal notes and comments system (backend + API)
+- ✅ Ticket templates with categories (backend + API)
 
 #### For Customers  
 - ✅ Self-service portal
