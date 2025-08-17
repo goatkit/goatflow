@@ -1,0 +1,582 @@
+type Query {
+  # User queries
+  me: User!
+  user(id: ID!): User
+  users(filter: UserFilter, pagination: Pagination): UserConnection!
+  
+  # Ticket queries
+  ticket(id: ID!): Ticket
+  tickets(filter: TicketFilter, pagination: Pagination): TicketConnection!
+  myTickets(status: TicketStatus, pagination: Pagination): TicketConnection!
+  
+  # Queue queries
+  queue(id: ID!): Queue
+  queues(filter: QueueFilter, pagination: Pagination): QueueConnection!
+  
+  # Organization queries
+  organization(id: ID!): Organization
+  organizations(filter: OrganizationFilter, pagination: Pagination): OrganizationConnection!
+  
+  # Workflow queries
+  workflow(id: ID!): Workflow
+  workflows(filter: WorkflowFilter, pagination: Pagination): WorkflowConnection!
+  workflowTemplates: [WorkflowTemplate!]!
+  workflowAnalytics(period: AnalyticsPeriod!): WorkflowAnalytics!
+  
+  # Search queries
+  search(query: String!, type: SearchType): SearchResults!
+  suggestions(query: String!): [String!]!
+  
+  # Report queries
+  dashboardStats: DashboardStats!
+  ticketMetrics(period: AnalyticsPeriod!): TicketMetrics!
+  agentPerformance(agentId: ID, period: AnalyticsPeriod!): AgentPerformance!
+  
+  # System queries
+  systemStatus: SystemStatus!
+  permissions: [Permission!]!
+  roles: [Role!]!
+  integrations: [Integration!]!
+}
+
+type Mutation {
+  # Authentication mutations
+  login(email: String!, password: String!): AuthPayload!
+  logout: Boolean!
+  refreshToken(token: String!): AuthPayload!
+  
+  # User mutations
+  createUser(input: CreateUserInput!): User!
+  updateUser(id: ID!, input: UpdateUserInput!): User!
+  deleteUser(id: ID!): Boolean!
+  changePassword(oldPassword: String!, newPassword: String!): Boolean!
+  
+  # Ticket mutations
+  createTicket(input: CreateTicketInput!): Ticket!
+  updateTicket(id: ID!, input: UpdateTicketInput!): Ticket!
+  assignTicket(id: ID!, userId: ID!): Ticket!
+  closeTicket(id: ID!, resolution: String!): Ticket!
+  reopenTicket(id: ID!, reason: String!): Ticket!
+  mergeTickets(sourceIds: [ID!]!, targetId: ID!): Ticket!
+  splitTicket(id: ID!, items: [SplitTicketItem!]!): [Ticket!]!
+  
+  # Message mutations
+  addTicketMessage(ticketId: ID!, input: CreateMessageInput!): Message!
+  updateMessage(id: ID!, content: String!): Message!
+  deleteMessage(id: ID!): Boolean!
+  
+  # Note mutations
+  addTicketNote(ticketId: ID!, input: CreateNoteInput!): Note!
+  updateNote(id: ID!, content: String!): Note!
+  deleteNote(id: ID!): Boolean!
+  
+  # Attachment mutations
+  uploadAttachment(ticketId: ID!, file: Upload!): Attachment!
+  deleteAttachment(id: ID!): Boolean!
+  
+  # Queue mutations
+  createQueue(input: CreateQueueInput!): Queue!
+  updateQueue(id: ID!, input: UpdateQueueInput!): Queue!
+  deleteQueue(id: ID!): Boolean!
+  
+  # Workflow mutations
+  createWorkflow(input: CreateWorkflowInput!): Workflow!
+  updateWorkflow(id: ID!, input: UpdateWorkflowInput!): Workflow!
+  deleteWorkflow(id: ID!): Boolean!
+  activateWorkflow(id: ID!): Workflow!
+  deactivateWorkflow(id: ID!): Workflow!
+  testWorkflow(id: ID!, testData: JSON!): WorkflowTestResult!
+  
+  # Integration mutations
+  configureSlack(input: SlackConfigInput!): Integration!
+  configureTeams(input: TeamsConfigInput!): Integration!
+  configureLDAP(input: LDAPConfigInput!): Integration!
+  testIntegration(id: ID!): IntegrationTestResult!
+  deleteIntegration(id: ID!): Boolean!
+  
+  # Webhook mutations
+  createWebhook(input: CreateWebhookInput!): Webhook!
+  updateWebhook(id: ID!, input: UpdateWebhookInput!): Webhook!
+  deleteWebhook(id: ID!): Boolean!
+  testWebhook(id: ID!): WebhookTestResult!
+}
+
+type Subscription {
+  # Ticket subscriptions
+  ticketUpdated(id: ID!): Ticket!
+  ticketCreated(queueId: ID): Ticket!
+  ticketAssigned(userId: ID!): Ticket!
+  
+  # Message subscriptions
+  messageAdded(ticketId: ID!): Message!
+  
+  # Notification subscriptions
+  notificationReceived(userId: ID!): Notification!
+  
+  # System subscriptions
+  systemAlert: SystemAlert!
+  workflowTriggered: WorkflowEvent!
+}
+
+# Core Types
+
+type User {
+  id: ID!
+  email: String!
+  name: String!
+  role: Role!
+  groups: [Group!]!
+  organization: Organization
+  avatar: String
+  locale: String!
+  timezone: String!
+  isActive: Boolean!
+  lastLogin: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  tickets(filter: TicketFilter, pagination: Pagination): TicketConnection!
+  notifications(unreadOnly: Boolean): [Notification!]!
+  preferences: UserPreferences!
+}
+
+type Ticket {
+  id: ID!
+  number: String!
+  subject: String!
+  description: String!
+  status: TicketStatus!
+  priority: TicketPriority!
+  queue: Queue!
+  assignee: User
+  customer: User!
+  organization: Organization
+  tags: [String!]!
+  watchers: [User!]!
+  messages(pagination: Pagination): MessageConnection!
+  notes(internalOnly: Boolean): [Note!]!
+  attachments: [Attachment!]!
+  history: [TicketHistory!]!
+  sla: SLAStatus
+  escalationLevel: Int
+  mergedInto: Ticket
+  splitFrom: Ticket
+  relatedTickets: [Ticket!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  closedAt: DateTime
+  responseTime: Duration
+  resolutionTime: Duration
+}
+
+type Queue {
+  id: ID!
+  name: String!
+  description: String
+  email: String
+  isActive: Boolean!
+  agents: [User!]!
+  tickets(filter: TicketFilter, pagination: Pagination): TicketConnection!
+  slaPolicy: SLAPolicy
+  businessHours: BusinessHours
+  autoAssignment: Boolean!
+  autoResponse: CannedResponse
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  stats: QueueStats!
+}
+
+type Organization {
+  id: ID!
+  name: String!
+  domain: String
+  logo: String
+  isActive: Boolean!
+  users: [User!]!
+  tickets(filter: TicketFilter, pagination: Pagination): TicketConnection!
+  customFields: [CustomField!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Workflow {
+  id: ID!
+  name: String!
+  description: String
+  status: WorkflowStatus!
+  triggers: [Trigger!]!
+  conditions: [Condition!]!
+  actions: [Action!]!
+  priority: Int!
+  isSystem: Boolean!
+  createdBy: User!
+  lastRunAt: DateTime
+  runCount: Int!
+  errorCount: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  executions(pagination: Pagination): WorkflowExecutionConnection!
+  analytics: WorkflowAnalytics!
+}
+
+type Message {
+  id: ID!
+  ticket: Ticket!
+  author: User!
+  content: String!
+  contentType: ContentType!
+  isInternal: Boolean!
+  attachments: [Attachment!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Note {
+  id: ID!
+  ticket: Ticket!
+  author: User!
+  content: String!
+  isInternal: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Attachment {
+  id: ID!
+  filename: String!
+  contentType: String!
+  size: Int!
+  url: String!
+  thumbnailUrl: String
+  uploadedBy: User!
+  createdAt: DateTime!
+}
+
+# Workflow Types
+
+type Trigger {
+  id: ID!
+  type: TriggerType!
+  config: JSON!
+  enabled: Boolean!
+}
+
+type Condition {
+  id: ID!
+  field: String!
+  operator: ConditionOperator!
+  value: JSON!
+  logic: LogicOperator!
+}
+
+type Action {
+  id: ID!
+  type: ActionType!
+  config: JSON!
+  order: Int!
+  continueOnError: Boolean!
+  delaySeconds: Int
+}
+
+type WorkflowExecution {
+  id: ID!
+  workflow: Workflow!
+  ticket: Ticket
+  triggerType: TriggerType!
+  status: ExecutionStatus!
+  startedAt: DateTime!
+  completedAt: DateTime
+  duration: Duration
+  actionsRun: Int!
+  actionsFailed: Int!
+  errorMessage: String
+  executionLog: [ExecutionLogEntry!]!
+}
+
+type ExecutionLogEntry {
+  timestamp: DateTime!
+  action: String!
+  status: String!
+  message: String
+  duration: Duration
+}
+
+# Integration Types
+
+type Integration {
+  id: ID!
+  type: IntegrationType!
+  name: String!
+  description: String
+  status: IntegrationStatus!
+  enabled: Boolean!
+  config: JSON!
+  lastSync: DateTime
+  error: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Webhook {
+  id: ID!
+  name: String!
+  url: String!
+  events: [String!]!
+  headers: JSON
+  secret: String
+  isActive: Boolean!
+  failureCount: Int!
+  lastTriggered: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  logs(limit: Int): [WebhookLog!]!
+}
+
+type WebhookLog {
+  id: ID!
+  webhook: Webhook!
+  event: String!
+  statusCode: Int!
+  success: Boolean!
+  error: String
+  duration: Duration!
+  deliveredAt: DateTime!
+}
+
+# Analytics Types
+
+type WorkflowAnalytics {
+  totalWorkflows: Int!
+  activeWorkflows: Int!
+  totalExecutions: Int!
+  successRate: Float!
+  averageExecutionTime: Duration!
+  topWorkflows: [WorkflowSummary!]!
+  executionTrends: [ExecutionTrend!]!
+  errorAnalysis: ErrorAnalysis!
+  roiMetrics: ROIMetrics!
+}
+
+type TicketMetrics {
+  totalTickets: Int!
+  openTickets: Int!
+  closedTickets: Int!
+  averageResponseTime: Duration!
+  averageResolutionTime: Duration!
+  satisfactionScore: Float!
+  ticketsByPriority: [PriorityCount!]!
+  ticketsByStatus: [StatusCount!]!
+  trendsOverTime: [TicketTrend!]!
+}
+
+type DashboardStats {
+  openTickets: Int!
+  pendingTickets: Int!
+  overdueTickets: Int!
+  todayCreated: Int!
+  todayClosed: Int!
+  averageResponseTime: Duration!
+  slaCompliance: Float!
+  agentActivity: [AgentActivity!]!
+  recentTickets: [Ticket!]!
+}
+
+# Enums
+
+enum TicketStatus {
+  NEW
+  OPEN
+  PENDING
+  ON_HOLD
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+  CRITICAL
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum TriggerType {
+  TICKET_CREATED
+  TICKET_UPDATED
+  TICKET_ASSIGNED
+  STATUS_CHANGED
+  PRIORITY_CHANGED
+  CUSTOMER_REPLY
+  AGENT_REPLY
+  TIME_BASED
+  SCHEDULED
+}
+
+enum ActionType {
+  ASSIGN_TICKET
+  CHANGE_STATUS
+  CHANGE_PRIORITY
+  SEND_EMAIL
+  SEND_NOTIFICATION
+  ADD_TAG
+  REMOVE_TAG
+  ADD_NOTE
+  ESCALATE
+  WEBHOOK_CALL
+}
+
+enum IntegrationType {
+  SLACK
+  TEAMS
+  DISCORD
+  GITHUB
+  JIRA
+  LDAP
+  OAUTH
+  SAML
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  PENDING
+}
+
+enum AnalyticsPeriod {
+  DAY
+  WEEK
+  MONTH
+  QUARTER
+  YEAR
+}
+
+# Input Types
+
+input CreateTicketInput {
+  subject: String!
+  description: String!
+  priority: TicketPriority
+  queueId: ID!
+  customerId: ID
+  tags: [String!]
+  attachments: [Upload!]
+}
+
+input UpdateTicketInput {
+  subject: String
+  description: String
+  status: TicketStatus
+  priority: TicketPriority
+  queueId: ID
+  assigneeId: ID
+  tags: [String!]
+}
+
+input CreateUserInput {
+  email: String!
+  name: String!
+  password: String!
+  roleId: ID!
+  organizationId: ID
+  groupIds: [ID!]
+}
+
+input UpdateUserInput {
+  name: String
+  email: String
+  roleId: ID
+  organizationId: ID
+  groupIds: [ID!]
+  isActive: Boolean
+}
+
+input CreateWorkflowInput {
+  name: String!
+  description: String
+  triggers: [TriggerInput!]!
+  conditions: [ConditionInput!]
+  actions: [ActionInput!]!
+  priority: Int
+}
+
+input TriggerInput {
+  type: TriggerType!
+  config: JSON!
+  enabled: Boolean
+}
+
+input ConditionInput {
+  field: String!
+  operator: ConditionOperator!
+  value: JSON!
+  logic: LogicOperator
+}
+
+input ActionInput {
+  type: ActionType!
+  config: JSON!
+  order: Int
+  continueOnError: Boolean
+  delaySeconds: Int
+}
+
+# Filter and Pagination
+
+input TicketFilter {
+  status: TicketStatus
+  priority: TicketPriority
+  queueId: ID
+  assigneeId: ID
+  customerId: ID
+  organizationId: ID
+  tags: [String!]
+  search: String
+  createdAfter: DateTime
+  createdBefore: DateTime
+}
+
+input Pagination {
+  page: Int
+  limit: Int
+  sortBy: String
+  sortOrder: SortOrder
+}
+
+enum SortOrder {
+  ASC
+  DESC
+}
+
+# Connection Types (Relay-style pagination)
+
+type TicketConnection {
+  edges: [TicketEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type TicketEdge {
+  node: Ticket!
+  cursor: String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+# Scalar Types
+
+scalar DateTime
+scalar Duration
+scalar JSON
+scalar Upload
