@@ -183,7 +183,7 @@ func (s *TicketService) createArticle(tx *sql.Tx, article *models.Article) error
 
 // GetTicket retrieves a ticket by ID
 func (s *TicketService) GetTicket(ticketID int) (*models.Ticket, error) {
-	return s.ticketRepo.GetByID(ticketID)
+	return s.ticketRepo.GetByID(uint(ticketID))
 }
 
 // ListTickets retrieves a paginated list of tickets

@@ -62,11 +62,15 @@ services:
       DEMO_MODE: ${DEMO_MODE}
       DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL}
       DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD}
+      STORAGE_LOCAL_PATH: ./storage
+      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
+      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     volumes:
       - .:/app:Z
       - go_modules:/go/pkg/mod:Z
+      - ./storage:/app/storage:Z
     depends_on:
       postgres:
         condition: service_healthy

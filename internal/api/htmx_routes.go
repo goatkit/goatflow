@@ -228,6 +228,9 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		api.GET("/tickets/:id/attachments/:attachment_id", handleDownloadAttachment)
 		api.DELETE("/tickets/:id/attachments/:attachment_id", handleDeleteAttachment)
 		
+		// File serving endpoint (for stored attachments)
+		api.GET("/files/*path", handleServeFile)
+		
 		// Advanced Search (using different endpoints to avoid conflicts)
 		api.GET("/tickets/advanced-search", handleAdvancedTicketSearch)
 		api.GET("/tickets/search/suggestions", handleSearchSuggestions)
