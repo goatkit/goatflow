@@ -48,6 +48,8 @@ help:
 	@echo "  make test-check        - Quick sanity check"
 	@echo "  make test-coverage-html - Coverage report and open in browser"
 	@echo "  make test-frontend     - Run React frontend tests"
+	@echo "  make test-ldap         - Run LDAP integration tests"
+	@echo "  make test-ldap-perf    - Run LDAP performance benchmarks"
 	@echo ""
 	@echo "Security commands:"
 	@echo "  make scan-secrets      - Scan current code for secrets"
@@ -63,6 +65,8 @@ help:
 	@echo "  make frontend-logs - View frontend logs"
 	@echo "  make db-shell      - PostgreSQL shell"
 	@echo "  make valkey-cli    - Valkey CLI"
+	@echo "  make ldap-admin    - Open phpLDAPadmin (requires tools profile)"
+	@echo "  make ldap-logs     - View OpenLDAP logs"
 	@echo ""
 	@echo "Database migration commands:"
 	@echo "  make db-migrate    - Run all pending migrations"
@@ -336,3 +340,98 @@ gen-migration:
 	echo "Created migration files:"; \
 	echo "  migrations/$$timestamp\_$$name.up.sql"; \
 	echo "  migrations/$$timestamp\_$$name.down.sql"
+
+# LDAP testing and administration commands
+.PHONY: test-ldap test-ldap-perf ldap-admin ldap-logs ldap-setup ldap-test-user
+
+# Run LDAP integration tests
+test-ldap:
+	@echo "Running LDAP integration tests..."
+	@echo "Starting LDAP server if not running..."
+	$(COMPOSE_CMD) up -d openldap
+	@echo "Waiting for LDAP server to be ready..."
+	@sleep 30
+	@echo "Running integration tests..."
+	$(COMPOSE_CMD) exec -e LDAP_INTEGRATION_TESTS=true -e LDAP_HOST=openldap backend go test -v ./internal/service -run TestLDAPIntegration
+
+# Run LDAP performance benchmarks
+test-ldap-perf:
+	@echo "Running LDAP performance benchmarks..."
+	$(COMPOSE_CMD) up -d openldap
+	@echo "Waiting for LDAP server..."
+	@sleep 30
+	$(COMPOSE_CMD) exec -e LDAP_INTEGRATION_TESTS=true -e LDAP_HOST=openldap backend go test -v ./internal/service -bench=BenchmarkLDAP -run=^$$
+
+# Open phpLDAPadmin in browser
+ldap-admin:
+	@echo "Starting phpLDAPadmin..."
+	$(COMPOSE_CMD) --profile tools up -d phpldapadmin
+	@echo "Opening phpLDAPadmin at http://localhost:8091"
+	@echo "Login with:"
+	@echo "  Login DN: cn=admin,dc=gotrs,dc=local"
+	@echo "  Password: admin123"
+	@open http://localhost:8091 || xdg-open http://localhost:8091 || echo "Open http://localhost:8091"
+
+# View OpenLDAP logs
+ldap-logs:
+	$(COMPOSE_CMD) logs -f openldap
+
+# Setup LDAP for development (start services and wait)
+ldap-setup:
+	@echo "Setting up LDAP development environment..."
+	$(COMPOSE_CMD) up -d openldap
+	@echo "Waiting for LDAP server to initialize (this may take up to 60 seconds)..."
+	@timeout=60; \
+	while [ $$timeout -gt 0 ]; do \
+		if $(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost -b "dc=gotrs,dc=local" -D "cn=admin,dc=gotrs,dc=local" -w "admin123" "(objectclass=*)" dn > /dev/null 2>&1; then \
+			echo "✓ LDAP server is ready!"; \
+			break; \
+		else \
+			echo "Waiting for LDAP server... ($$timeout seconds remaining)"; \
+			sleep 5; \
+			timeout=$$((timeout-5)); \
+		fi; \
+	done; \
+	if [ $$timeout -le 0 ]; then \
+		echo "⚠ LDAP server startup timeout. Check logs with 'make ldap-logs'"; \
+		exit 1; \
+	fi
+	@echo ""
+	@echo "LDAP Server Configuration:"
+	@echo "========================="
+	@echo "Host: localhost:389"
+	@echo "Base DN: dc=gotrs,dc=local"
+	@echo "Admin DN: cn=admin,dc=gotrs,dc=local"
+	@echo "Admin Password: admin123"
+	@echo "Readonly DN: cn=readonly,dc=gotrs,dc=local"
+	@echo "Readonly Password: readonly123"
+	@echo ""
+	@echo "Test Users (password: password123):"
+	@echo "==================================="
+	@echo "jadmin     - john.admin@gotrs.local (System Administrator)"
+	@echo "smitchell  - sarah.mitchell@gotrs.local (IT Manager)"
+	@echo "mwilson    - mike.wilson@gotrs.local (Senior Support Agent)"
+	@echo "lchen      - lisa.chen@gotrs.local (Support Agent)"
+	@echo "djohnson   - david.johnson@gotrs.local (Junior Support Agent)"
+	@echo ""
+	@echo "Web Interface:"
+	@echo "=============="
+	@echo "phpLDAPadmin: http://localhost:8091 (run 'make ldap-admin')"
+
+# Test LDAP authentication with a specific user
+ldap-test-user:
+	@read -p "Username to test: " username; \
+	echo "Testing LDAP authentication for user: $$username"; \
+	$(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost \
+		-D "cn=readonly,dc=gotrs,dc=local" -w "readonly123" \
+		-b "ou=Users,dc=gotrs,dc=local" \
+		"(&(objectClass=inetOrgPerson)(uid=$$username))" \
+		uid mail displayName telephoneNumber departmentNumber title
+
+# Quick LDAP connectivity test
+ldap-test:
+	@echo "Testing LDAP connectivity..."
+	$(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost \
+		-D "cn=admin,dc=gotrs,dc=local" -w "admin123" \
+		-b "dc=gotrs,dc=local" \
+		"(objectclass=*)" dn | head -20

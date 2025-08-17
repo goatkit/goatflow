@@ -1,0 +1,121 @@
+# Update group memberships with test users
+
+# Domain Admins Group
+dn: cn=Domain Admins,ou=Groups,dc=gotrs,dc=local
+changetype: modify
+add: member
+member: cn=John Admin,ou=Users,dc=gotrs,dc=local
+
+# IT Team Group
+dn: cn=IT Team,ou=Groups,dc=gotrs,dc=local
+changetype: modify
+add: member
+member: cn=John Admin,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Sarah Mitchell,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Alex Rodriguez,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Emma Thompson,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Robert Taylor,ou=Users,dc=gotrs,dc=local
+
+# Support Team Group
+dn: cn=Support Team,ou=Groups,dc=gotrs,dc=local
+changetype: modify
+add: member
+member: cn=Mike Wilson,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Lisa Chen,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=David Johnson,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Chris Anderson,ou=Users,dc=gotrs,dc=local
+
+# Agents Group (all ticket handling staff)
+dn: cn=Agents,ou=Groups,dc=gotrs,dc=local
+changetype: modify
+add: member
+member: cn=Mike Wilson,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Lisa Chen,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=David Johnson,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Sarah Mitchell,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Chris Anderson,ou=Users,dc=gotrs,dc=local
+
+# Managers Group
+dn: cn=Managers,ou=Groups,dc=gotrs,dc=local
+changetype: modify
+add: member
+member: cn=Sarah Mitchell,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Mike Wilson,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Jennifer Davis,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Chris Anderson,ou=Users,dc=gotrs,dc=local
+
+# Users Group (all authenticated users)
+dn: cn=Users,ou=Groups,dc=gotrs,dc=local
+changetype: modify
+add: member
+member: cn=John Admin,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Sarah Mitchell,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Mike Wilson,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Lisa Chen,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=David Johnson,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Alex Rodriguez,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Emma Thompson,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Robert Taylor,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Jennifer Davis,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Chris Anderson,ou=Users,dc=gotrs,dc=local
+
+# Developers Group
+dn: cn=Developers,ou=Groups,dc=gotrs,dc=local
+changetype: modify
+add: member
+member: cn=Alex Rodriguez,ou=Users,dc=gotrs,dc=local
+-
+add: member
+member: cn=Robert Taylor,ou=Users,dc=gotrs,dc=local
+
+# QA Team Group
+dn: cn=QA Team,ou=Groups,dc=gotrs,dc=local
+changetype: modify
+add: member
+member: cn=Emma Thompson,ou=Users,dc=gotrs,dc=local

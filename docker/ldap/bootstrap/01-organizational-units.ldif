@@ -1,0 +1,35 @@
+# Create Organizational Units
+dn: ou=Users,dc=gotrs,dc=local
+objectClass: organizationalUnit
+ou: Users
+description: All GOTRS users
+
+dn: ou=Groups,dc=gotrs,dc=local
+objectClass: organizationalUnit
+ou: Groups
+description: All GOTRS groups
+
+dn: ou=Departments,dc=gotrs,dc=local
+objectClass: organizationalUnit
+ou: Departments
+description: Company departments
+
+dn: ou=IT,ou=Departments,dc=gotrs,dc=local
+objectClass: organizationalUnit
+ou: IT
+description: Information Technology Department
+
+dn: ou=Support,ou=Departments,dc=gotrs,dc=local
+objectClass: organizationalUnit
+ou: Support
+description: Customer Support Department
+
+dn: ou=Sales,ou=Departments,dc=gotrs,dc=local
+objectClass: organizationalUnit
+ou: Sales
+description: Sales Department
+
+dn: ou=Management,ou=Departments,dc=gotrs,dc=local
+objectClass: organizationalUnit
+ou: Management
+description: Management Team
