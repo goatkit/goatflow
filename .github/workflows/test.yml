@@ -73,6 +73,7 @@ jobs:
 
       - name: Generate secure test configuration
         run: |
+          # Use the synthesize binary directly for faster CI
           go run cmd/gotrs/main.go synthesize
           
       - name: Run tests with coverage

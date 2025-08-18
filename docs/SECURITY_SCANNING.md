@@ -168,7 +168,7 @@ For one-time exceptions, add a comment:
 
 ```go
 // gitleaks:allow
-testAPIKey := "example-key-do-not-use" // This is a test key
+testAPIKey := "example-test-key-do-not-use" // This is a test key
 ```
 
 ### Global Allowlist

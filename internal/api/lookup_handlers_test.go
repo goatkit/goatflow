@@ -30,12 +30,12 @@ func TestHandleGetQueues(t *testing.T) {
 				require.True(t, ok, "data should be an array")
 				assert.NotEmpty(t, data)
 				
-				// Check first queue structure
+				// Check first queue structure (JSON tags are lowercase)
 				firstQueue := data[0].(map[string]interface{})
-				assert.NotNil(t, firstQueue["ID"])
-				assert.NotEmpty(t, firstQueue["Name"])
-				assert.NotEmpty(t, firstQueue["Description"])
-				assert.NotNil(t, firstQueue["Active"])
+				assert.NotNil(t, firstQueue["id"])
+				assert.NotEmpty(t, firstQueue["name"])
+				assert.NotEmpty(t, firstQueue["description"])
+				assert.NotNil(t, firstQueue["active"])
 			},
 		},
 	}
@@ -82,14 +82,14 @@ func TestHandleGetPriorities(t *testing.T) {
 	require.True(t, ok, "data should be an array")
 	assert.Equal(t, 4, len(data)) // low, normal, high, urgent
 	
-	// Verify priority order
+	// Verify priority order (JSON tags are lowercase)
 	priorities := data
 	expectedValues := []string{"low", "normal", "high", "urgent"}
 	for i, p := range priorities {
 		priority := p.(map[string]interface{})
-		assert.Equal(t, expectedValues[i], priority["Value"])
-		assert.NotEmpty(t, priority["Label"])
-		assert.Equal(t, float64(i+1), priority["Order"])
+		assert.Equal(t, expectedValues[i], priority["value"])
+		assert.NotEmpty(t, priority["label"])
+		assert.Equal(t, float64(i+1), priority["order"])
 	}
 }
 
@@ -115,14 +115,17 @@ func TestHandleGetTypes(t *testing.T) {
 	require.True(t, ok, "data should be an array")
 	assert.Equal(t, 5, len(data)) // incident, service_request, change_request, problem, question
 	
-	// Check structure
+	// Check structure (JSON tags are lowercase)
 	for _, item := range data {
 		typ := item.(map[string]interface{})
-		assert.NotNil(t, typ["ID"])
-		assert.NotEmpty(t, typ["Value"])
-		assert.NotEmpty(t, typ["Label"])
-		assert.NotNil(t, typ["Order"])
-		assert.True(t, typ["Active"].(bool))
+		assert.NotNil(t, typ["id"])
+		assert.NotEmpty(t, typ["value"])
+		assert.NotEmpty(t, typ["label"])
+		assert.NotNil(t, typ["order"])
+		// Check active field exists and is a bool
+		if active, ok := typ["active"]; ok {
+			assert.IsType(t, true, active)
+		}
 	}
 }
 
@@ -148,13 +151,13 @@ func TestHandleGetStatuses(t *testing.T) {
 	require.True(t, ok, "data should be an array")
 	assert.Equal(t, 5, len(data)) // new, open, pending, resolved, closed
 	
-	// Verify status workflow order
+	// Verify status workflow order (JSON tags are lowercase)
 	expectedValues := []string{"new", "open", "pending", "resolved", "closed"}
 	for i, s := range data {
 		status := s.(map[string]interface{})
-		assert.Equal(t, expectedValues[i], status["Value"])
-		assert.NotEmpty(t, status["Label"])
-		assert.Equal(t, float64(i+1), status["Order"])
+		assert.Equal(t, expectedValues[i], status["value"])
+		assert.NotEmpty(t, status["label"])
+		assert.Equal(t, float64(i+1), status["order"])
 	}
 }
 

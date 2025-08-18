@@ -22,7 +22,7 @@ COMPOSE_CMD := $(shell \
 		echo "docker compose"; \
 	fi)
 
-.PHONY: help up down logs restart clean setup test build debug-env
+.PHONY: help up down logs restart clean setup test build debug-env toolbox-build toolbox-run toolbox-test
 
 # Default target
 help:
@@ -41,6 +41,14 @@ help:
 	@echo "  make synthesize       - Generate new .env with secure secrets"
 	@echo "  make rotate-secrets   - Rotate secrets in existing .env"
 	@echo "  make synthesize-force - Force regenerate .env (overwrite existing)"
+	@echo ""
+	@echo "Toolbox commands (fast, containerized dev tools):"
+	@echo "  make toolbox-build    - Build toolbox container (auto-runs before use)"
+	@echo "  make toolbox-run      - Interactive shell with all tools"
+	@echo "  make toolbox-test     - Run all tests quickly"
+	@echo "  make toolbox-test-run TEST=TestName - Run specific test"
+	@echo "  make toolbox-lint     - Run Go linters"
+	@echo "  make toolbox-security - Run security scan"
 	@echo ""
 	@echo "Test commands:"
 	@echo "  make test              - Run Go backend tests"
@@ -109,6 +117,12 @@ debug-env:
 	@echo ""
 	@echo "Selected commands will be used for all make targets."
 
+# Build the toolbox container (cached after first build)
+toolbox-build:
+	@echo "🔧 Building GOTRS toolbox container..."
+	@$(CONTAINER_CMD) build -f Dockerfile.toolbox -t gotrs-toolbox:latest .
+	@echo "✅ Toolbox container ready"
+
 # Initial setup with secure secret generation
 setup:
 	@echo "🔬 Synthesizing secure configuration..."
@@ -123,15 +137,14 @@ setup:
 
 # Generate secure .env file with random secrets (runs in container)
 synthesize:
+	@$(MAKE) toolbox-build
 	@echo "🔬 Synthesizing secure configuration..."
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
-		-e GOCACHE=/tmp/.cache/go-build \
-		-e GOMODCACHE=/tmp/.cache/go-mod \
 		-u "$$(id -u):$$(id -g)" \
-		golang:1.22-alpine \
-		sh -c "go run cmd/gotrs/main.go synthesize"
+		gotrs-toolbox:latest \
+		gotrs synthesize
 	@if [ -d .git ]; then \
 		echo ""; \
 		echo "💡 To enable secret scanning in git commits, run:"; \
@@ -140,27 +153,98 @@ synthesize:
 
 # Rotate secrets in existing .env file (runs in container)
 rotate-secrets:
+	@$(MAKE) toolbox-build
 	@echo "🔄 Rotating secrets..."
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
-		-e GOCACHE=/tmp/.cache/go-build \
-		-e GOMODCACHE=/tmp/.cache/go-mod \
 		-u "$$(id -u):$$(id -g)" \
-		golang:1.22-alpine \
-		sh -c "go run cmd/gotrs/main.go synthesize --rotate-secrets"
+		gotrs-toolbox:latest \
+		gotrs synthesize --rotate-secrets
 
 # Force regenerate .env file (runs in container)
 synthesize-force:
+	@$(MAKE) toolbox-build
 	@echo "⚠️  Force regenerating .env file..."
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
-		-e GOCACHE=/tmp/.cache/go-build \
-		-e GOMODCACHE=/tmp/.cache/go-mod \
 		-u "$$(id -u):$$(id -g)" \
-		golang:1.22-alpine \
-		sh -c "go run cmd/gotrs/main.go synthesize --force"
+		gotrs-toolbox:latest \
+		gotrs synthesize --force
+
+# Run interactive shell in toolbox container
+toolbox-run:
+	@$(MAKE) toolbox-build
+	@echo "🔧 Starting toolbox shell..."
+	@$(CONTAINER_CMD) run --rm -it \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-u "$$(id -u):$$(id -g)" \
+		gotrs-toolbox:latest \
+		/bin/bash
+
+# Run tests directly in toolbox (faster than compose exec)
+toolbox-test:
+	@$(MAKE) toolbox-build
+	@echo "🧪 Running tests in toolbox..."
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-u "$$(id -u):$$(id -g)" \
+		--network host \
+		-e DB_HOST=localhost \
+		-e DB_PORT=5432 \
+		-e DB_NAME=gotrs_test \
+		-e DB_USER=gotrs_test \
+		-e DB_PASSWORD=gotrs_test_password \
+		-e VALKEY_HOST=localhost \
+		-e VALKEY_PORT=6380 \
+		-e APP_ENV=test \
+		gotrs-toolbox:latest \
+		sh -c "source .env 2>/dev/null || true && go test -v ./..."
+
+# Run specific test with toolbox
+toolbox-test-run:
+	@$(MAKE) toolbox-build
+	@echo "🧪 Running specific test: $(TEST)"
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-u "$$(id -u):$$(id -g)" \
+		--network host \
+		-e DB_HOST=localhost \
+		-e DB_PORT=5432 \
+		-e DB_NAME=gotrs_test \
+		-e DB_USER=gotrs_test \
+		-e DB_PASSWORD=gotrs_test_password \
+		-e VALKEY_HOST=localhost \
+		-e VALKEY_PORT=6380 \
+		-e APP_ENV=test \
+		gotrs-toolbox:latest \
+		sh -c "source .env 2>/dev/null || true && go test -v -run '$(TEST)' ./..."
+
+# Run linting with toolbox
+toolbox-lint:
+	@$(MAKE) toolbox-build
+	@echo "🔍 Running linters..."
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-u "$$(id -u):$$(id -g)" \
+		gotrs-toolbox:latest \
+		golangci-lint run ./...
+
+# Run security scan with toolbox
+toolbox-security:
+	@$(MAKE) toolbox-build
+	@echo "🔒 Running security scan..."
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-u "$$(id -u):$$(id -g)" \
+		gotrs-toolbox:latest \
+		gosec ./...
 
 # Start all services
 up:

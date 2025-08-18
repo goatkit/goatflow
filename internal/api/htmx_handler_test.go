@@ -246,5 +246,6 @@ func TestSSEEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "text/event-stream", w.Header().Get("Content-Type"))
-	assert.Contains(t, w.Body.String(), "event: ticket-update")
+	// Gin's SSEvent doesn't add space after colon
+	assert.Contains(t, w.Body.String(), "event:ticket-update")
 }

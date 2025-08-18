@@ -2,6 +2,7 @@ package auth
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestJWTIntegration(t *testing.T) {
@@ -51,21 +53,21 @@ func TestJWTIntegration(t *testing.T) {
 }
 
 func TestAuthServiceLogin(t *testing.T) {
-	// Create mock database
-	db, mock, err := sqlmock.New()
-	require.NoError(t, err)
-	defer db.Close()
-
-	jwtManager := NewJWTManager("test-secret", 1*time.Hour)
-	authService := NewAuthService(db, jwtManager)
-
 	t.Run("Successful login", func(t *testing.T) {
-		email := "test@example.com"
-		password := "password123"
+		// Create fresh mock for this test
+		db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
+		require.NoError(t, err)
+		defer db.Close()
+
+		jwtManager := NewJWTManager("test-secret", 1*time.Hour)
+		authService := NewAuthService(db, jwtManager)
+		// Generate random test credentials
+		email := fmt.Sprintf("test-%d@example.com", time.Now().UnixNano())
+		password := fmt.Sprintf("password-%d", time.Now().UnixNano())
 
 		// Create user with proper hashed password
 		user := &models.User{Email: email}
-		err := user.SetPassword(password)
+		err = user.SetPassword(password)
 		require.NoError(t, err)
 
 		// Mock user query
@@ -101,9 +103,19 @@ func TestAuthServiceLogin(t *testing.T) {
 	})
 
 	t.Run("Invalid credentials", func(t *testing.T) {
-		email := "wrong@example.com"
-		password := "wrongpass"
+		// Create fresh mock for this test
+		db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
+		require.NoError(t, err)
+		defer db.Close()
 
+		jwtManager := NewJWTManager("test-secret", 1*time.Hour)
+		authService := NewAuthService(db, jwtManager)
+
+		// Generate random test credentials that don't exist
+		email := fmt.Sprintf("nonexistent-%d@example.com", time.Now().UnixNano())
+		password := fmt.Sprintf("wrongpass-%d", time.Now().UnixNano())
+
+		// When user is not found, it returns ErrInvalidCredentials immediately
 		mock.ExpectQuery("SELECT (.+) FROM users WHERE email = (.+)").
 			WithArgs(email).
 			WillReturnError(sql.ErrNoRows)
@@ -112,6 +124,57 @@ func TestAuthServiceLogin(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, resp)
 		assert.Equal(t, ErrInvalidCredentials, err)
+		
+		// Verify all expectations were met
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("Wrong password", func(t *testing.T) {
+		// Create fresh mock for this test
+		db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherRegexp))
+		require.NoError(t, err)
+		defer db.Close()
+
+		jwtManager := NewJWTManager("test-secret", 1*time.Hour)
+		authService := NewAuthService(db, jwtManager)
+
+		// Generate random test credentials
+		email := fmt.Sprintf("test-%d@example.com", time.Now().UnixNano())
+		correctPassword := fmt.Sprintf("correct-%d", time.Now().UnixNano())
+		wrongPassword := fmt.Sprintf("wrong-%d", time.Now().UnixNano())
+		
+		// Generate a proper bcrypt hash for the correct password
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(correctPassword), bcrypt.DefaultCost)
+		require.NoError(t, err)
+
+		rows := sqlmock.NewRows([]string{
+			"id", "login", "email", "pw", "title", "first_name", "last_name",
+			"valid_id", "create_time", "create_by", "change_time", "change_by",
+		}).AddRow(
+			1, "testuser", email, string(hashedPassword), "Mr", "Test", "User",
+			1, time.Now(), 1, time.Now(), 1,
+		)
+
+		mock.ExpectQuery("SELECT (.+) FROM users WHERE email = (.+)").
+			WithArgs(email).
+			WillReturnRows(rows)
+
+		// Expect role determination
+		mock.ExpectQuery("SELECT g.name FROM groups").
+			WithArgs(uint(1)).
+			WillReturnError(sql.ErrNoRows)
+
+		// When password is wrong, it increments failed attempts
+		// But updateUserLoginAttempts only executes UPDATE if LastLogin is set
+		// Since we didn't set LastLogin in our mock data, no UPDATE will occur
+
+		resp, err := authService.Login(email, wrongPassword)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+		assert.Equal(t, ErrInvalidCredentials, err)
+		
+		// Verify all expectations were met
+		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
 

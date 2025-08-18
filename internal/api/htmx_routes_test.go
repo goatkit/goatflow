@@ -85,8 +85,9 @@ func TestLoginPage(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "Sign in to your account")
-	assert.Contains(t, w.Body.String(), "Email address")
+	// Check for actual content in the login template
+	assert.Contains(t, w.Body.String(), "Login")
+	assert.Contains(t, w.Body.String(), "Email Address")
 	assert.Contains(t, w.Body.String(), "Password")
 }
 

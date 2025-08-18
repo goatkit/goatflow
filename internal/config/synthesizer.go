@@ -81,7 +81,9 @@ func (s *Synthesizer) generateAlphaNum(length int) (string, error) {
 }
 
 func (s *Synthesizer) generateMixed(length int) (string, error) {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
+	// Safe special characters that avoid shell/SQL/URL parsing issues
+	// Excludes: $ & * # % ^ ` ' " \ | ; < > ( ) { } [ ] space + 
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@-_=.,"
 	result := make([]byte, length)
 	for i := range result {
 		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
@@ -102,21 +104,27 @@ func (s *Synthesizer) generatePassword(length int) (string, error) {
 		lower   = "abcdefghijklmnopqrstuvwxyz"
 		upper   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		digits  = "0123456789"
-		special = "!@#$%^&*_-+=<>?"
+		// Safe special characters that avoid shell/SQL/URL parsing issues
+		// Using: ! @ - _ = . ,
+		// Avoiding: # $ % ^ & * < > ? ` ' " \ | ; ( ) { } [ ] space + :
+		special = "!@-_=.,"
 	)
 	
 	all := lower + upper + digits + special
 	result := make([]byte, length)
 	
+	// Ensure at least one character from each set
 	result[0] = lower[s.randomInt(len(lower))]
 	result[1] = upper[s.randomInt(len(upper))]
 	result[2] = digits[s.randomInt(len(digits))]
 	result[3] = special[s.randomInt(len(special))]
 	
+	// Fill the rest randomly
 	for i := 4; i < length; i++ {
 		result[i] = all[s.randomInt(len(all))]
 	}
 	
+	// Shuffle to avoid predictable patterns
 	for i := len(result) - 1; i > 0; i-- {
 		j := s.randomInt(i + 1)
 		result[i], result[j] = result[j], result[i]

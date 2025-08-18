@@ -1,0 +1,60 @@
+# GOTRS Toolbox - All-in-one container for development tasks
+# Pre-cached dependencies for faster execution of one-off commands
+FROM golang:1.22-alpine AS toolbox
+
+# Install common build and runtime dependencies
+RUN apk add --no-cache \
+    git \
+    bash \
+    make \
+    gcc \
+    musl-dev \
+    postgresql-client \
+    curl \
+    jq \
+    openssl \
+    ca-certificates
+
+# Install additional dev tools
+RUN apk add --no-cache \
+    ripgrep \
+    fd \
+    tree
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+
+# Download all Go dependencies - this layer will be cached
+RUN go mod download
+
+# Install Go tools (minimal set for now)
+# Note: Additional tools can be installed later as needed
+RUN go install -v golang.org/x/tools/cmd/goimports@latest || true
+
+# Copy source code
+COPY . .
+
+# Build all binaries
+RUN go build -o /usr/local/bin/gotrs cmd/gotrs/main.go && \
+    go build -o /usr/local/bin/gotrs-babelfish cmd/gotrs-babelfish/main.go && \
+    go build -o /usr/local/bin/gotrs-server cmd/server/main.go
+
+# Create non-root user
+RUN adduser -D -u 1000 gotrs
+
+# Set up proper permissions for workspace
+RUN mkdir -p /tmp/.cache/go-build /tmp/.cache/go-mod && \
+    chown -R gotrs:gotrs /tmp/.cache
+
+# Switch to non-root user
+USER gotrs
+
+# Set environment for Go caching
+ENV GOCACHE=/tmp/.cache/go-build
+ENV GOMODCACHE=/tmp/.cache/go-mod
+
+# Default to bash shell for interactive use
+CMD ["/bin/bash"]

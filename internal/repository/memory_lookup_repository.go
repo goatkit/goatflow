@@ -437,7 +437,7 @@ func (r *MemoryLookupRepository) ImportConfiguration(ctx context.Context, config
 	}
 	r.nextID["status"] = maxStatusID + 1
 	
-	// Log the import
+	// Log the import (directly append since we already hold the lock)
 	log := LookupAuditLog{
 		EntityType: "system",
 		EntityID:   0,
@@ -446,7 +446,7 @@ func (r *MemoryLookupRepository) ImportConfiguration(ctx context.Context, config
 		UserEmail:  config.ExportedBy,
 		Timestamp:  time.Now(),
 	}
-	r.LogChange(ctx, &log)
+	r.auditLogs = append(r.auditLogs, log)
 	
 	return nil
 }
