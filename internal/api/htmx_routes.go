@@ -41,7 +41,11 @@ func getUserFromContext(c *gin.Context) gin.H {
 	userID, hasID := c.Get("user_id")
 	if !hasID {
 		// Return demo user if not authenticated
-		return gin.H{"FirstName": "Demo", "LastName": "User", "Email": "test-user@example.com", "Role": "Admin"}
+		demoEmail := os.Getenv("DEMO_USER_EMAIL")
+		if demoEmail == "" {
+			demoEmail = "test-user@example.com"
+		}
+		return gin.H{"FirstName": "Demo", "LastName": "User", "Email": demoEmail, "Role": "Admin"}
 	}
 	
 	// Build user object from context

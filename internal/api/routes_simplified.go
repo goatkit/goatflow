@@ -1,6 +1,8 @@
 package api
 
 import (
+	"os"
+	
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
@@ -39,12 +41,16 @@ func NewSimpleRouter() *gin.Engine {
 		})
 	})
 	apiV1.GET("/users/me", func(c *gin.Context) {
+		demoEmail := os.Getenv("DEMO_USER_EMAIL")
+		if demoEmail == "" {
+			demoEmail = "test-user@example.com"
+		}
 		c.JSON(200, gin.H{
 			"success": true,
 			"message": "Endpoint /api/v1/users/me is under construction", 
 			"data": gin.H{
 				"id":    1,
-				"email": "test-user@example.com",
+				"email": demoEmail,
 				"name":  "Demo User",
 				"role":  "Admin",
 			},
