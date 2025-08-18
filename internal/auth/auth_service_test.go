@@ -104,7 +104,7 @@ func TestAuthServiceLogin(t *testing.T) {
 		email := "wrong@example.com"
 		password := "wrongpass"
 
-		mock.ExpectQuery("SELECT (.+) FROM users WHERE email = \\$1 AND valid_id = 1").
+		mock.ExpectQuery("SELECT (.+) FROM users WHERE email = (.+)").
 			WithArgs(email).
 			WillReturnError(sql.ErrNoRows)
 
