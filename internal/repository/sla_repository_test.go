@@ -251,7 +251,7 @@ func TestSLARepository(t *testing.T) {
 		repo.CreateBusinessCalendar(ctx, calendar)
 		
 		// Add holiday
-		holiday := &models.Holiday{
+		holiday := &models.SLAHoliday{
 			CalendarID:  calendar.ID,
 			Name:        "New Year",
 			Date:        time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),

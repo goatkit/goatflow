@@ -88,3 +88,27 @@ func (m *JWTManager) GenerateRefreshToken(userID uint, email string) (string, er
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(m.secretKey)
 }
+
+func (m *JWTManager) ValidateRefreshToken(tokenString string) (*jwt.RegisteredClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, ErrInvalidToken
+		}
+		return m.secretKey, nil
+	})
+
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	claims, ok := token.Claims.(*jwt.RegisteredClaims)
+	if !ok || !token.Valid {
+		return nil, ErrInvalidToken
+	}
+
+	if time.Now().After(claims.ExpiresAt.Time) {
+		return nil, ErrExpiredToken
+	}
+
+	return claims, nil
+}

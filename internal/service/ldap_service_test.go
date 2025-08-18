@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository/memory"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -113,10 +114,10 @@ func TestLDAPService_UserMapping(t *testing.T) {
 	groupRepo := memory.NewGroupRepository()
 
 	// Create service
-	ldapService := NewLDAPService(userRepo, roleRepo, groupRepo)
+	_ = NewLDAPService(userRepo, roleRepo, groupRepo)
 
 	t.Run("MapLDAPUser_Complete", func(t *testing.T) {
-		config := &LDAPConfig{
+		_ = &LDAPConfig{
 			AttributeMap: LDAPAttributeMap{
 				Username:    "sAMAccountName",
 				Email:       "mail",
@@ -197,7 +198,7 @@ func TestLDAPService_UserMapping(t *testing.T) {
 	})
 
 	t.Run("MapLDAPUser_MinimalAttributes", func(t *testing.T) {
-		config := &LDAPConfig{
+		_ = &LDAPConfig{
 			AttributeMap: LDAPAttributeMap{
 				Username: "uid",
 				Email:    "mail",
@@ -298,7 +299,7 @@ func TestLDAPService_RoleMapping(t *testing.T) {
 		CreatedBy:   1,
 		ChangedBy:   1,
 	}
-	roleRepo.Create(adminRole)
+	roleRepo.CreateRole(nil, adminRole)
 
 	userRole := &models.Role{
 		Name:        "user",
@@ -308,7 +309,7 @@ func TestLDAPService_RoleMapping(t *testing.T) {
 		CreatedBy:   1,
 		ChangedBy:   1,
 	}
-	roleRepo.Create(userRole)
+	roleRepo.CreateRole(nil, userRole)
 
 	// Configure LDAP with role mappings
 	config := &LDAPConfig{
@@ -428,7 +429,7 @@ func TestLDAPService_SyncResult(t *testing.T) {
 
 func TestLDAPService_AttributeMapping(t *testing.T) {
 	t.Run("GetUserAttributes_Complete", func(t *testing.T) {
-		config := &LDAPConfig{
+		_ = &LDAPConfig{
 			AttributeMap: LDAPAttributeMap{
 				Username:    "sAMAccountName",
 				Email:       "mail",
@@ -499,7 +500,7 @@ func TestLDAPService_AttributeMapping(t *testing.T) {
 	})
 
 	t.Run("GetAttributes_EmptyAttributesFiltered", func(t *testing.T) {
-		config := &LDAPConfig{
+		_ = &LDAPConfig{
 			AttributeMap: LDAPAttributeMap{
 				Username:   "sAMAccountName",
 				Email:      "mail",

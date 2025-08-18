@@ -82,7 +82,7 @@ func (s *AuthService) Login(email, password string) (*models.LoginResponse, erro
 
 func (s *AuthService) RefreshToken(refreshToken string) (*models.LoginResponse, error) {
 	// Validate refresh token
-	claims, err := s.jwtManager.ValidateToken(refreshToken)
+	claims, err := s.jwtManager.ValidateRefreshToken(refreshToken)
 	if err != nil {
 		return nil, err
 	}
