@@ -71,6 +71,10 @@ jobs:
           psql -h localhost -U gotrs_test -d gotrs_test < migrations/000001_initial_schema.up.sql
           psql -h localhost -U gotrs_test -d gotrs_test < migrations/000002_initial_data.up.sql
 
+      - name: Generate secure test configuration
+        run: |
+          go run cmd/gotrs/main.go synthesize
+          
       - name: Run tests with coverage
         env:
           DB_HOST: localhost
@@ -80,9 +84,12 @@ jobs:
           DB_PASSWORD: gotrs_test_password
           VALKEY_HOST: localhost
           VALKEY_PORT: 6380
-          JWT_SECRET: test-secret-key
           APP_ENV: test
         run: |
+          # Source the generated .env file for additional variables
+          if [ -f .env ]; then
+            export $(grep -v '^#' .env | xargs)
+          fi
           go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Generate coverage report
