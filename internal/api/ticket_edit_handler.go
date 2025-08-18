@@ -82,7 +82,7 @@ func handleTicketEditForm(c *gin.Context) {
 		"Priorities": formData.Priorities,
 		"Types":      formData.Types,
 		"Statuses":   formData.Statuses,
-		"User":       gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"User":       getUserFromContext(c),
 		"ActivePage": "tickets",
 	}); err != nil {
 		c.String(http.StatusInternalServerError, "Template error: %v", err)

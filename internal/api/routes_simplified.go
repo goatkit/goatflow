@@ -29,5 +29,44 @@ func NewSimpleRouter() *gin.Engine {
 	apiV1 := r.Group("/api/v1")
 	i18nHandlers.RegisterRoutes(apiV1)
 	
+	// Add v1 API stub endpoints (under construction)
+	// These are expected by the SDK but not yet implemented
+	apiV1.GET("/tickets", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"success": true,
+			"message": "Endpoint /api/v1/tickets is under construction",
+			"data":    []interface{}{},
+		})
+	})
+	apiV1.GET("/users/me", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"success": true,
+			"message": "Endpoint /api/v1/users/me is under construction", 
+			"data": gin.H{
+				"id":    1,
+				"email": "test-user@example.com",
+				"name":  "Demo User",
+				"role":  "Admin",
+			},
+		})
+	})
+	apiV1.GET("/queues", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"success": true,
+			"message": "Endpoint /api/v1/queues is under construction",
+			"data":    []interface{}{},
+		})
+	})
+	apiV1.GET("/search", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"success": true,
+			"message": "Endpoint /api/v1/search is under construction",
+			"data": gin.H{
+				"results": []interface{}{},
+				"total":   0,
+			},
+		})
+	})
+	
 	return r
 }

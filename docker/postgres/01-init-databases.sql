@@ -18,6 +18,14 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = current_user)\gexec
 SELECT 'CREATE DATABASE ' || :'db_name'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = :'db_name')\gexec
 
+-- Create Temporal workflow engine databases
+\echo 'Creating Temporal databases...'
+SELECT 'CREATE DATABASE temporal'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'temporal')\gexec
+
+SELECT 'CREATE DATABASE temporal_visibility'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'temporal_visibility')\gexec
+
 -- Create test database ONLY in development/test environments
 -- NEVER create test database in production
 \set app_env `echo "${APP_ENV:-development}"`
@@ -46,6 +54,10 @@ BEGIN
     -- Grant privileges on user-named database
     EXECUTE format('GRANT ALL PRIVILEGES ON DATABASE %I TO %I', 
                    current_user, current_user);
+    
+    -- Grant privileges on Temporal databases
+    EXECUTE format('GRANT ALL PRIVILEGES ON DATABASE temporal TO %I', current_user);
+    EXECUTE format('GRANT ALL PRIVILEGES ON DATABASE temporal_visibility TO %I', current_user);
     
     -- Grant privileges on test database (if not production)
     IF '${APP_ENV:-development}' != 'production' THEN

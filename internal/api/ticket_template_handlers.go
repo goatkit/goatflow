@@ -54,7 +54,7 @@ func handleTemplatesPage(c *gin.Context) {
 		"Title":      "Ticket Templates - GOTRS",
 		"Templates":  templates,
 		"Categories": categories,
-		"User":       gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"User":       getUserFromContext(c),
 		"ActivePage": "templates",
 	}); err != nil {
 		c.String(http.StatusInternalServerError, "Render error: %v", err)

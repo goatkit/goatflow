@@ -35,6 +35,63 @@ func init() {
 	pongo2Renderer = tmpl.NewPongo2Renderer(templateDir, true)
 }
 
+// getUserFromContext builds a User object from authentication context
+func getUserFromContext(c *gin.Context) gin.H {
+	// Check if user is authenticated
+	userID, hasID := c.Get("user_id")
+	if !hasID {
+		// Return demo user if not authenticated
+		return gin.H{"FirstName": "Demo", "LastName": "User", "Email": "test-user@example.com", "Role": "Admin"}
+	}
+	
+	// Build user object from context
+	user := gin.H{}
+	
+	// Get user ID
+	if id, ok := userID.(uint); ok {
+		user["ID"] = id
+	}
+	
+	// Get email
+	if email, exists := c.Get("user_email"); exists {
+		user["Email"] = email
+	}
+	
+	// Get role - IMPORTANT: This determines admin button visibility
+	if role, exists := c.Get("user_role"); exists {
+		user["Role"] = role
+	} else {
+		// Default to Agent if role not set
+		user["Role"] = "Agent"
+	}
+	
+	// Parse name from email if not available
+	// In production, this should come from user profile
+	if emailStr, ok := user["Email"].(string); ok {
+		parts := strings.Split(emailStr, "@")
+		if len(parts) > 0 {
+			nameParts := strings.Split(parts[0], ".")
+			if len(nameParts) >= 2 {
+				user["FirstName"] = strings.Title(nameParts[0])
+				user["LastName"] = strings.Title(nameParts[1])
+			} else {
+				user["FirstName"] = strings.Title(nameParts[0])
+				user["LastName"] = "User"
+			}
+		}
+	}
+	
+	// Set defaults if not available
+	if user["FirstName"] == nil {
+		user["FirstName"] = "User"
+	}
+	if user["LastName"] == nil {
+		user["LastName"] = ""
+	}
+	
+	return user
+}
+
 // DummyTemplate is a wrapper for html/template
 type DummyTemplate struct {
 	tmpl *template.Template
@@ -227,6 +284,11 @@ func SetupHTMXRoutes(r *gin.Engine) {
 	// Serve static files
 	r.Static("/static", "./static")
 	
+	// Serve favicon specifically (browsers often request this)
+	r.GET("/favicon.ico", func(c *gin.Context) {
+		c.File("./static/favicon.ico")
+	})
+	
 	// Test i18n endpoint
 	r.GET("/test-i18n", func(c *gin.Context) {
 		pongo2Renderer.HTML(c, http.StatusOK, "test-i18n.pongo2", pongo2.Context{
@@ -242,6 +304,8 @@ func SetupHTMXRoutes(r *gin.Engine) {
 	// Authentication pages
 	r.GET("/login", handleLoginPage)
 	r.GET("/register", handleRegisterPage)
+	r.POST("/logout", handleLogout)
+	r.GET("/logout", handleLogoutGET)
 	
 	// Protected dashboard routes
 	dashboard := r.Group("/")
@@ -265,6 +329,17 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		dashboard.GET("/templates", handleTemplatesPage)
 		dashboard.GET("/admin", handleAdminDashboard)
 		dashboard.GET("/admin/lookups", handleAdminLookups)
+		
+		// User pages (under construction)
+		dashboard.GET("/profile", underConstruction("Profile"))
+		dashboard.GET("/settings", underConstruction("Settings"))
+		
+		// Additional admin pages (under construction)
+		dashboard.GET("/admin/users", underConstruction("User Management"))
+		dashboard.GET("/admin/settings", underConstruction("System Settings"))
+		dashboard.GET("/admin/templates", underConstruction("Template Management"))
+		dashboard.GET("/admin/reports", underConstruction("Reports"))
+		dashboard.GET("/admin/backup", underConstruction("Backup & Restore"))
 	}
 	
 	// HTMX API endpoints (return HTML fragments)
@@ -273,11 +348,16 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		// Authentication
 		api.POST("/auth/login", handleHTMXLogin)
 		api.POST("/auth/logout", handleHTMXLogout)
+		api.POST("/auth/refresh", underConstructionAPI("/auth/refresh"))
+		api.POST("/auth/register", underConstructionAPI("/auth/register"))
 		
 		// Dashboard data
 		api.GET("/dashboard/stats", handleDashboardStats)
 		api.GET("/dashboard/recent-tickets", handleRecentTickets)
 		api.GET("/dashboard/activity", handleActivityFeed)
+		
+		// Notifications
+		api.GET("/notifications", underConstructionAPI("/notifications"))
 		
 		// Queue operations
 		api.GET("/queues", handleQueuesAPI)
@@ -303,6 +383,7 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		api.POST("/tickets/:id/reply", handleTicketReply)
 		api.POST("/tickets/:id/priority", handleUpdateTicketPriority)
 		api.POST("/tickets/:id/queue", handleUpdateTicketQueue)
+		api.GET("/tickets/:id/messages", underConstructionAPI("/tickets/:id/messages"))
 		
 		// SLA and Escalation
 		api.GET("/tickets/:id/sla", handleGetTicketSLA)
@@ -462,7 +543,7 @@ func handleDashboard(c *gin.Context) {
 	// Use Pongo2 renderer with i18n support
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/dashboard.pongo2", pongo2.Context{
 		"Title":      "Dashboard - GOTRS",
-		"User":       gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"User":       getUserFromContext(c),
 		"ActivePage": "dashboard",
 	})
 }
@@ -611,7 +692,7 @@ func handleTicketsList(c *gin.Context) {
 		"QueueFilter":    queueID,
 		"AssignedFilter": assignedTo,
 		"SortBy":         sort,
-		"User":           gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"User":           getUserFromContext(c),
 		"ActivePage":     "tickets",
 	})
 }
@@ -639,7 +720,7 @@ func handleTicketNew(c *gin.Context) {
 		"Priorities": formData.Priorities,
 		"Types":      formData.Types,
 		"Statuses":   formData.Statuses,
-		"User":       gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"User":       getUserFromContext(c),
 		"ActivePage": "tickets",
 	}); err != nil {
 		c.String(http.StatusInternalServerError, "Render error: %v", err)
@@ -1016,7 +1097,7 @@ func handleTicketDetail(c *gin.Context) {
 		"Ticket":     ticket,
 		"Articles":   articles,
 		"Activities": activities,
-		"User":       gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"User":       getUserFromContext(c),
 		"ActivePage": "tickets",
 		"Messages":   articles, // Use articles as messages for now
 	})
@@ -1069,10 +1150,69 @@ func handleHTMXLogin(c *gin.Context) {
 	c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 }
 
-// HTMX Logout handler
+// HTMX Logout handler for API endpoint
 func handleHTMXLogout(c *gin.Context) {
 	// TODO: Invalidate token
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}
+
+// handleLogout handles the main logout route that redirects to login
+func handleLogout(c *gin.Context) {
+	// TODO: Clear session/token
+	// For now, just redirect to login page
+	c.Header("HX-Redirect", "/login")
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}
+
+// handleLogoutGET handles GET requests to logout (for regular links)
+func handleLogoutGET(c *gin.Context) {
+	// TODO: Clear session/token
+	// For regular GET requests, do a standard redirect
+	c.Redirect(http.StatusFound, "/login")
+}
+
+// underConstruction returns a simple under construction page
+func underConstruction(pageName string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		html := fmt.Sprintf(`
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<title>%s - Under Construction</title>
+			<script src="https://cdn.tailwindcss.com"></script>
+		</head>
+		<body class="bg-gray-100 dark:bg-gray-900">
+			<div class="min-h-screen flex items-center justify-center">
+				<div class="text-center">
+					<svg class="mx-auto h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+					</svg>
+					<h1 class="mt-4 text-3xl font-bold text-gray-900 dark:text-white">%s</h1>
+					<p class="mt-2 text-lg text-gray-600 dark:text-gray-400">This page is under construction</p>
+					<p class="mt-1 text-sm text-gray-500 dark:text-gray-500">Coming soon...</p>
+					<div class="mt-6">
+						<a href="/dashboard" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+							← Back to Dashboard
+						</a>
+					</div>
+				</div>
+			</div>
+		</body>
+		</html>
+		`, pageName, pageName)
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+	}
+}
+
+// underConstructionAPI returns a JSON response for API endpoints under construction
+func underConstructionAPI(endpoint string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": fmt.Sprintf("Endpoint %s is under construction", endpoint),
+			"data":    []interface{}{},
+		})
+	}
 }
 
 // Dashboard stats (returns HTML fragment)
@@ -1947,7 +2087,7 @@ func renderQueueList(c *gin.Context, queues []gin.H) {
 		
 		// Add page-level template data
 		templateData["Title"] = "Queues - GOTRS"
-		templateData["User"] = gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"}
+		templateData["User"] = getUserFromContext(c)
 		templateData["ActivePage"] = "queues"
 		
 		c.Header("Content-Type", "text/html; charset=utf-8")
@@ -1988,7 +2128,7 @@ func renderQueueDetail(c *gin.Context, queue gin.H) {
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		if err := tmpl.ExecuteTemplate(c.Writer, "detail.html", gin.H{
 			"Title":      queue["name"].(string) + " - Queue Details - GOTRS",
-			"User":       gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+			"User":       getUserFromContext(c),
 			"ActivePage": "queues",
 			"Queue":      queue,
 		}); err != nil {
@@ -2233,7 +2373,7 @@ func handleQueueDetailPage(c *gin.Context) {
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	if err := tmpl.ExecuteTemplate(c.Writer, "detail.html", gin.H{
 		"Title":      queue["name"].(string) + " - Queue Details - GOTRS",
-		"User":       gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"User":       getUserFromContext(c),
 		"ActivePage": "queues",
 		"Queue":      queue,
 	}); err != nil {
@@ -2344,7 +2484,7 @@ func handleQueuesList(c *gin.Context) {
 	// Full page load - use Pongo2 renderer
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/queues/list.pongo2", pongo2.Context{
 		"Title":        "Queues - GOTRS",
-		"User":         gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"User":         getUserFromContext(c),
 		"ActivePage":   "queues",
 		"Queues":       paginatedQueues,
 		"SearchTerm":   search,
@@ -2360,7 +2500,7 @@ func handleAdminDashboard(c *gin.Context) {
 	// Use Pongo2 renderer with i18n support
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/dashboard.pongo2", pongo2.Context{
 		"Title":         "Admin - GOTRS",
-		"User":          gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"User":          getUserFromContext(c),
 		"ActivePage":    "admin",
 		"UserCount":     42,
 		"ActiveTickets": 24,

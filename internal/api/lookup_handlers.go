@@ -32,7 +32,7 @@ func handleAdminLookups(c *gin.Context) {
 		"Priorities": formData.Priorities,
 		"Types":      formData.Types,
 		"Statuses":   formData.Statuses,
-		"User":       gin.H{"FirstName": "Demo", "LastName": "User", "Email": "demo@gotrs.local", "Role": "Admin"},
+		"User":       getUserFromContext(c),
 		"ActivePage": "admin",
 	}); err != nil {
 		c.String(http.StatusInternalServerError, "Render error: %v", err)

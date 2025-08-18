@@ -222,7 +222,8 @@ func (s *LookupService) GetStatuses() []models.LookupItem {
 func (s *LookupService) InvalidateCache() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.cache = nil
+	s.cache = make(map[string]*models.TicketFormData)
+	s.cacheTime = make(map[string]time.Time)
 }
 
 // GetQueueByID returns a specific queue by ID

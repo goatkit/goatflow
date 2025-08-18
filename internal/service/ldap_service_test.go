@@ -7,7 +7,6 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository/memory"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestLDAPService_Configuration(t *testing.T) {
@@ -238,13 +237,7 @@ func TestLDAPService_UserMapping(t *testing.T) {
 
 func TestLDAPService_GroupMapping(t *testing.T) {
 	t.Run("MapLDAPGroup_Complete", func(t *testing.T) {
-		config := &LDAPConfig{
-			GroupMemberAttribute: "member",
-			AttributeMap: LDAPAttributeMap{
-				ObjectGUID: "objectGUID",
-				ObjectSID:  "objectSid",
-			},
-		}
+		// config variable is unused, removing it
 
 		attributes := map[string]string{
 			"cn":          "IT Team",
@@ -292,22 +285,22 @@ func TestLDAPService_RoleMapping(t *testing.T) {
 
 	// Setup test data
 	adminRole := &models.Role{
+		ID:          "admin",
 		Name:        "admin",
-		ValidID:     1,
-		CreateTime:  time.Now(),
-		ChangeTime:  time.Now(),
-		CreatedBy:   1,
-		ChangedBy:   1,
+		Description: "Administrator role",
+		IsActive:    true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 	roleRepo.CreateRole(nil, adminRole)
 
 	userRole := &models.Role{
+		ID:          "user", 
 		Name:        "user",
-		ValidID:     1,
-		CreateTime:  time.Now(),
-		ChangeTime:  time.Now(),
-		CreatedBy:   1,
-		ChangedBy:   1,
+		Description: "Regular user role",
+		IsActive:    true,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 	roleRepo.CreateRole(nil, userRole)
 
@@ -322,8 +315,9 @@ func TestLDAPService_RoleMapping(t *testing.T) {
 	t.Run("UpdateUserRole_AdminGroup", func(t *testing.T) {
 		user := &models.User{
 			Email:      "admin@example.com",
-			Name:       "Admin User",
-			RoleID:     userRole.ID, // Start as user
+			FirstName:  "Admin",
+			LastName:   "User",
+			Role:       string(models.RoleUser), // Start as user
 			ValidID:    1,
 			CreateTime: time.Now(),
 			ChangeTime: time.Now(),
@@ -340,15 +334,16 @@ func TestLDAPService_RoleMapping(t *testing.T) {
 
 		ldapService.updateUserRole(user, ldapUser)
 
-		// Should be promoted to admin
-		assert.Equal(t, adminRole.ID, user.RoleID)
+		// Should be promoted to admin (LDAP service uses lowercase)
+		assert.Equal(t, "admin", user.Role)
 	})
 
 	t.Run("UpdateUserRole_UserGroup", func(t *testing.T) {
 		user := &models.User{
 			Email:      "user@example.com",
-			Name:       "Regular User",
-			RoleID:     0, // No role initially
+			FirstName:  "Regular",
+			LastName:   "User",
+			Role:       "", // No role initially
 			ValidID:    1,
 			CreateTime: time.Now(),
 			ChangeTime: time.Now(),
@@ -365,15 +360,16 @@ func TestLDAPService_RoleMapping(t *testing.T) {
 
 		ldapService.updateUserRole(user, ldapUser)
 
-		// Should be assigned user role
-		assert.Equal(t, userRole.ID, user.RoleID)
+		// Should be assigned user role from Domain Users group
+		assert.Equal(t, "user", user.Role)
 	})
 
 	t.Run("UpdateUserRole_NoMatchingGroups", func(t *testing.T) {
 		user := &models.User{
 			Email:      "contractor@example.com",
-			Name:       "Contractor",
-			RoleID:     userRole.ID, // Start with user role
+			FirstName:  "Contractor",
+			LastName:   "User",
+			Role:       string(models.RoleUser), // Start with user role
 			ValidID:    1,
 			CreateTime: time.Now(),
 			ChangeTime: time.Now(),
@@ -388,11 +384,11 @@ func TestLDAPService_RoleMapping(t *testing.T) {
 			},
 		}
 
-		originalRoleID := user.RoleID
+		originalRole := user.Role
 		ldapService.updateUserRole(user, ldapUser)
 
 		// Role should remain unchanged
-		assert.Equal(t, originalRoleID, user.RoleID)
+		assert.Equal(t, originalRole, user.Role)
 	})
 }
 
@@ -429,7 +425,7 @@ func TestLDAPService_SyncResult(t *testing.T) {
 
 func TestLDAPService_AttributeMapping(t *testing.T) {
 	t.Run("GetUserAttributes_Complete", func(t *testing.T) {
-		_ = &LDAPConfig{
+		config := &LDAPConfig{
 			AttributeMap: LDAPAttributeMap{
 				Username:    "sAMAccountName",
 				Email:       "mail",
@@ -500,7 +496,7 @@ func TestLDAPService_AttributeMapping(t *testing.T) {
 	})
 
 	t.Run("GetAttributes_EmptyAttributesFiltered", func(t *testing.T) {
-		_ = &LDAPConfig{
+		config := &LDAPConfig{
 			AttributeMap: LDAPAttributeMap{
 				Username:   "sAMAccountName",
 				Email:      "mail",

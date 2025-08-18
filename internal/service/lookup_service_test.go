@@ -14,7 +14,8 @@ func TestNewLookupService(t *testing.T) {
 	
 	assert.NotNil(t, service)
 	assert.Equal(t, 5*time.Minute, service.cacheTTL)
-	assert.Nil(t, service.cache)
+	assert.NotNil(t, service.cache)
+	assert.Empty(t, service.cache)
 }
 
 func TestGetTicketFormData(t *testing.T) {
@@ -38,7 +39,12 @@ func TestGetTicketFormData(t *testing.T) {
 				
 				// Verify cache was populated
 				assert.NotNil(t, s.cache)
-				assert.WithinDuration(t, time.Now(), s.cacheTime, time.Second)
+				assert.NotEmpty(t, s.cacheTime)
+				// Check that at least one cache time entry exists and is recent
+				for _, cacheTime := range s.cacheTime {
+					assert.WithinDuration(t, time.Now(), cacheTime, time.Second)
+					break
+				}
 			},
 		},
 		{
@@ -48,7 +54,7 @@ func TestGetTicketFormData(t *testing.T) {
 				s.GetTicketFormData()
 				// Mark cache time for comparison
 				s.mu.Lock()
-				s.cacheTime = time.Now()
+				s.cacheTime["en"] = time.Now()
 				s.mu.Unlock()
 			},
 			validate: func(t *testing.T, s *LookupService) {
@@ -66,17 +72,17 @@ func TestGetTicketFormData(t *testing.T) {
 				// Populate cache with old timestamp
 				s.GetTicketFormData()
 				s.mu.Lock()
-				s.cacheTime = time.Now().Add(-6 * time.Minute)
+				s.cacheTime["en"] = time.Now().Add(-6 * time.Minute)
 				s.mu.Unlock()
 			},
 			validate: func(t *testing.T, s *LookupService) {
-				oldCacheTime := s.cacheTime
+				oldCacheTime := s.cacheTime["en"]
 				data := s.GetTicketFormData()
 				
 				require.NotNil(t, data)
 				// Cache time should be updated
-				assert.True(t, s.cacheTime.After(oldCacheTime))
-				assert.WithinDuration(t, time.Now(), s.cacheTime, time.Second)
+				assert.True(t, s.cacheTime["en"].After(oldCacheTime))
+				assert.WithinDuration(t, time.Now(), s.cacheTime["en"], time.Second)
 			},
 		},
 	}
@@ -171,13 +177,13 @@ func TestInvalidateCache(t *testing.T) {
 	// Invalidate cache
 	service.InvalidateCache()
 	
-	// Cache should be cleared
-	assert.Nil(t, service.cache)
+	// Cache should be cleared (empty map, not nil)
+	assert.Empty(t, service.cache)
 	
 	// Next call should repopulate
 	data := service.GetTicketFormData()
 	assert.NotNil(t, data)
-	assert.NotNil(t, service.cache)
+	assert.NotEmpty(t, service.cache)
 }
 
 func TestGetQueueByID(t *testing.T) {
@@ -370,17 +376,17 @@ func TestCacheTTL(t *testing.T) {
 	// Get initial data
 	data1 := service.GetTicketFormData()
 	require.NotNil(t, data1)
-	cacheTime1 := service.cacheTime
+	cacheTime1 := service.cacheTime["en"]
 	
 	// Access within TTL - should use cache
 	time.Sleep(50 * time.Millisecond)
 	data2 := service.GetTicketFormData()
-	assert.Equal(t, cacheTime1, service.cacheTime)
+	assert.Equal(t, cacheTime1, service.cacheTime["en"])
 	assert.Equal(t, data1, data2)
 	
 	// Access after TTL - should refresh
 	time.Sleep(60 * time.Millisecond)
 	data3 := service.GetTicketFormData()
-	assert.True(t, service.cacheTime.After(cacheTime1))
+	assert.True(t, service.cacheTime["en"].After(cacheTime1))
 	assert.NotNil(t, data3)
 }

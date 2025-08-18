@@ -318,7 +318,7 @@ func validateLanguage(i18n *i18n.I18n, lang string, verbose bool) {
 
 func validateAll(i18n *i18n.I18n, verbose bool) {
 	fmt.Println("Validating All Languages")
-	fmt.Println("========================\n")
+	fmt.Println("========================")
 
 	for _, lang := range i18n.GetSupportedLanguages() {
 		validateLanguage(i18n, lang, false)
