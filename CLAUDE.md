@@ -159,8 +159,17 @@ make up
 - Always provide containerized alternatives for host commands
 - Test with `make test-containerized` to verify compliance
 
-### Secret Management
+### Secret Management (Updated Aug 18, 2025)
 - All secrets exclusively in environment variables
 - Use `make synthesize` to generate secure .env files
 - Never hardcode even test secrets - use obvious prefixes (test-, mock-, dummy-)
 - Pre-commit hooks essential for preventing accidental secret commits
+- **CI/CD should use synthesize**: Run synthesize in CI to generate secrets rather than hardcoding test values
+- **This is the way**: Let the application generate its own secure configuration
+
+### Test Stabilization Approach (Aug 18, 2025)
+- **Fix compilation errors first** - Can't test if it doesn't build
+- **Address panics before logic errors** - Runtime failures block everything
+- **Make tests flexible for environments** - Tests should handle DB vs fallback data
+- **Use proper test data setup** - Don't assume global state exists
+- **Mock expectations must be flexible** - SQL regex patterns shouldn't be too strict
