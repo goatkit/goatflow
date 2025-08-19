@@ -2616,10 +2616,10 @@ func validateQueueData(name, systemAddress *string, firstResponseTime, updateTim
 
 // Centralized mock queue data
 var mockQueueData = []gin.H{
-	{"id": 1, "name": "Raw", "comment": "All new tickets are placed in this queue by default", "ticket_count": 2, "status": "active"},
-	{"id": 2, "name": "Junk", "comment": "Spam and junk emails", "ticket_count": 1, "status": "active"},
-	{"id": 3, "name": "Misc", "comment": "Miscellaneous tickets", "ticket_count": 0, "status": "active"},
-	{"id": 4, "name": "Support", "comment": "General support requests", "ticket_count": 3, "status": "active"},
+	{"id": 1, "name": "Raw", "comment": "All new tickets are placed in this queue by default", "ticket_count": 2, "status": "active", "active": true},
+	{"id": 2, "name": "Junk", "comment": "Spam and junk emails", "ticket_count": 1, "status": "active", "active": true},
+	{"id": 3, "name": "Misc", "comment": "Miscellaneous tickets", "ticket_count": 0, "status": "active", "active": true},
+	{"id": 4, "name": "Support", "comment": "General support requests", "ticket_count": 3, "status": "active", "active": true},
 }
 
 // Helper function to check if queue name exists
