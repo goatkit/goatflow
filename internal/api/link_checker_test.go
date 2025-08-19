@@ -18,10 +18,7 @@ func TestAllLinksReturn200(t *testing.T) {
 	// Setup router with all routes (includes health, v1 API, etc)
 	router := NewSimpleRouter()
 	
-	// Add health check route (normally in main.go)
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "service": "gotrs-htmx"})
-	})
+	// Note: /health route is already included in NewSimpleRouter()
 	
 	// Define pages to crawl for links
 	startPages := []string{
@@ -171,9 +168,7 @@ func TestAllLinksReturn200(t *testing.T) {
 func TestLogoutRouteExists(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
+	// Note: /health route is already included in NewSimpleRouter()
 	
 	tests := []struct {
 		name           string
@@ -241,9 +236,7 @@ func TestLogoutRouteExists(t *testing.T) {
 func TestAllFormsHaveValidActions(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
+	// Note: /health route is already included in NewSimpleRouter()
 	
 	// Pages that contain forms
 	formPages := []string{
@@ -295,9 +288,7 @@ func TestAllFormsHaveValidActions(t *testing.T) {
 func TestHTMXEndpointsExist(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
+	// Note: /health route is already included in NewSimpleRouter()
 	
 	// Common HTMX patterns in our app
 	htmxEndpoints := []struct {
@@ -341,9 +332,7 @@ type BrokenLink struct {
 func TestNoOrphanedRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
+	// Note: /health route is already included in NewSimpleRouter()
 	
 	// Get all routes from the router
 	routes := router.Routes()
@@ -433,9 +422,7 @@ func TestNoOrphanedRoutes(t *testing.T) {
 func TestLinkConsistency(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
+	// Note: /health route is already included in NewSimpleRouter()
 	
 	// Map of link text to expected URL
 	expectedLinks := map[string]string{
@@ -484,9 +471,7 @@ func TestLinkConsistency(t *testing.T) {
 func BenchmarkLinkChecker(b *testing.B) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
+	// Note: /health route is already included in NewSimpleRouter()
 	
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

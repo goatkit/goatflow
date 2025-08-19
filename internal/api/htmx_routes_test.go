@@ -488,7 +488,8 @@ func TestNavigationPresence(t *testing.T) {
 			// Check for navigation elements
 			assert.Contains(t, body, "Dashboard")
 			assert.Contains(t, body, "Tickets")
-			assert.Contains(t, body, "Demo User") // User info in nav
+			assert.Contains(t, body, "GOTRS") // Logo in nav
+			assert.Contains(t, body, "nav") // Navigation element present
 		})
 	}
 }

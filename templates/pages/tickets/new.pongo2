@@ -1,10 +1,8 @@
-{{define "new.html"}}
-{{template "base.html" .}}
-{{end}}
+{% extends "../../layouts/base.pongo2" %}
 
-{{define "title"}}New Ticket - GOTRS{{end}}
+{% block title %}New Ticket - GOTRS{% endblock %}
 
-{{define "content"}}
+{% block content %}
 <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
     <!-- Page header -->
     <div class="md:flex md:items-center md:justify-between mb-8">
@@ -97,9 +95,9 @@
                             <select name="priority" 
                                     id="priority"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                {{range .Priorities}}
-                                <option value="{{.Value}}" {{if eq .Value "normal"}}selected{{end}}>{{.Label}}</option>
-                                {{end}}
+                                {% for priority in Priorities %}
+                                <option value="{{ priority.Value }}" {% if priority.Value == "normal" %}selected{% endif %}>{{ priority.Label }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                     </div>
@@ -113,9 +111,9 @@
                             <select name="queue_id" 
                                     id="queue_id"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                {{range .Queues}}
-                                <option value="{{.ID}}" {{if eq .ID 1}}selected{{end}}>{{.Name}}</option>
-                                {{end}}
+                                {% for queue in Queues %}
+                                <option value="{{ queue.ID }}" {% if queue.ID == 1 %}selected{% endif %}>{{ queue.Name }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                     </div>
@@ -129,9 +127,9 @@
                             <select name="type_id" 
                                     id="type_id"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                {{range .Types}}
-                                <option value="{{.ID}}" {{if eq .ID 1}}selected{{end}}>{{.Label}}</option>
-                                {{end}}
+                                {% for type in Types %}
+                                <option value="{{ type.ID }}" {% if type.ID == 1 %}selected{% endif %}>{{ type.Label }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                     </div>
@@ -201,7 +199,9 @@
         </form>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <!-- Handle form response and file uploads -->
 <script>
     // Handle file selection
@@ -292,4 +292,4 @@
         }
     });
 </script>
-{{end}}
+{% endblock %}

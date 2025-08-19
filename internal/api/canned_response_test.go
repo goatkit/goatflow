@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -613,6 +614,9 @@ func TestCannedResponseSharing(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("Share personal response with team", func(t *testing.T) {
+		// Reset mock data state before each test
+		resetCannedResponsesTestData()
+		
 		router := gin.New()
 		router.Use(func(c *gin.Context) {
 			c.Set("user_id", 1)
@@ -640,6 +644,9 @@ func TestCannedResponseSharing(t *testing.T) {
 	})
 
 	t.Run("Copy shared response to personal", func(t *testing.T) {
+		// Reset mock data state before each test
+		resetCannedResponsesTestData()
+		
 		router := gin.New()
 		router.Use(func(c *gin.Context) {
 			c.Set("user_id", 1)
@@ -718,4 +725,69 @@ func TestCannedResponseImportExport(t *testing.T) {
 		assert.Contains(t, response, "imported_count")
 		assert.Contains(t, response, "skipped_count")
 	})
+}
+
+// resetCannedResponsesTestData resets the mock data to its initial state for test isolation
+func resetCannedResponsesTestData() {
+	cannedResponses = map[int]*CannedResponse{
+		1: {
+			ID:         1,
+			Name:       "Thank You",
+			Category:   "General",
+			Content:    "Thank you for contacting support. We'll review your request and respond shortly.",
+			ContentType: "text",
+			Tags:       []string{"greeting", "acknowledgment"},
+			Scope:      "personal",
+			OwnerID:    1,
+			UsageCount: 5,
+			CreatedAt:  time.Now().Add(-30 * 24 * time.Hour),
+			UpdatedAt:  time.Now().Add(-30 * 24 * time.Hour),
+		},
+		2: {
+			ID:           2,
+			Name:         "Password Reset Instructions",
+			Category:     "Account",
+			Content:      "Hello {{customer_name}}, thank you for ticket #{{ticket_id}}",
+			ContentType:  "text",
+			Tags:         []string{"password", "account"},
+			Scope:        "team",
+			OwnerID:      1,
+			TeamID:       1,
+			Placeholders: []string{"customer_name", "ticket_id"},
+			UsageCount:   10,
+			CreatedAt:    time.Now().Add(-20 * 24 * time.Hour),
+			UpdatedAt:    time.Now().Add(-20 * 24 * time.Hour),
+		},
+		3: {
+			ID:         3,
+			Name:       "Another User Response",
+			Category:   "General",
+			Content:    "This belongs to another user",
+			ContentType: "text",
+			Scope:      "personal",
+			OwnerID:    2, // Different user
+			CreatedAt:  time.Now().Add(-10 * 24 * time.Hour),
+			UpdatedAt:  time.Now().Add(-10 * 24 * time.Hour),
+		},
+		4: {
+			ID:         4,
+			Name:       "Service Maintenance",
+			Category:   "System",
+			Content:    "We are currently performing scheduled maintenance.",
+			ContentType: "text",
+			Scope:      "global",
+			OwnerID:    1,
+			UsageCount: 20,
+			CreatedAt:  time.Now().Add(-15 * 24 * time.Hour),
+			UpdatedAt:  time.Now().Add(-15 * 24 * time.Hour),
+		},
+	}
+
+	nextCannedResponseID = 5
+	cannedResponsesByName = map[string][]int{
+		"Thank You":                   {1},
+		"Password Reset Instructions": {2},
+		"Another User Response":       {3},
+		"Service Maintenance":         {4},
+	}
 }

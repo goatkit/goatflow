@@ -13,9 +13,6 @@ func TestAllStubRoutesReturn200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	
 	router := NewSimpleRouter()
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
-	})
 	
 	// Test all the routes we added
 	routes := []struct {

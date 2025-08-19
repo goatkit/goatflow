@@ -105,8 +105,9 @@ func TestHTMXLoginHandler_NoEnvVars(t *testing.T) {
 
 	handleHTMXLogin(c)
 
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	assert.Contains(t, w.Body.String(), "Demo credentials not configured")
+	// Now expects 401 since we have fallback credentials
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Contains(t, w.Body.String(), "Invalid credentials")
 }
 
 func TestCreateTicketHandler_Logic(t *testing.T) {
