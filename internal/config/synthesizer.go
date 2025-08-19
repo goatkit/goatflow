@@ -149,6 +149,20 @@ func (s *Synthesizer) SynthesizeEnv(rotateOnly bool) error {
 	return nil
 }
 
+// SynthesizeTestData generates test data SQL and CSV files
+func (s *Synthesizer) SynthesizeTestData() error {
+	generator := NewTestDataGenerator(s)
+	
+	if err := generator.Generate(); err != nil {
+		return fmt.Errorf("failed to generate test data: %w", err)
+	}
+	
+	fmt.Printf("✅ Generated test data SQL: migrations/000004_generated_test_data.up.sql\n")
+	fmt.Printf("📝 Generated credentials CSV: test_credentials.csv\n")
+	
+	return nil
+}
+
 func (s *Synthesizer) loadExistingEnv() map[string]string {
 	vars := make(map[string]string)
 	

@@ -111,6 +111,15 @@ backups/
 # Migration lock files
 migrations/*.lock
 
+# Generated test data (NEVER commit these)
+migrations/*_generated.up.sql
+migrations/*_generated.down.sql
+migrations/*.generated.sql
+migrations/*.bak
+test_credentials.csv
+test-credentials.csv
+*.credentials.csv
+
 # ============================================
 # Docker
 # ============================================

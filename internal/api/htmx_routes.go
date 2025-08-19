@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -41,12 +42,18 @@ func getUserFromContext(c *gin.Context) gin.H {
 	// Check if user is authenticated
 	userID, hasID := c.Get("user_id")
 	if !hasID {
-		// Return demo user if not authenticated
-		demoEmail := os.Getenv("DEMO_USER_EMAIL")
-		if demoEmail == "" {
-			demoEmail = "test-user@example.com"
+		// Return demo user if not authenticated and in demo mode
+		if os.Getenv("DEMO_MODE") == "true" {
+			demoEmail := os.Getenv("DEMO_USER_EMAIL")
+			if demoEmail == "" {
+				// In demo mode, require demo email to be configured
+				log.Printf("WARNING: Demo mode enabled but DEMO_USER_EMAIL not set")
+				demoEmail = "demo@gotrs.local" // Use a clearly demo email
+			}
+			return gin.H{"FirstName": "Demo", "LastName": "User", "Email": demoEmail, "Role": "Admin"}
 		}
-		return gin.H{"FirstName": "Demo", "LastName": "User", "Email": demoEmail, "Role": "Admin"}
+		// Not in demo mode and not authenticated - return guest user
+		return gin.H{"FirstName": "Guest", "LastName": "User", "Email": "guest@gotrs.local", "Role": "Guest"}
 	}
 	
 	// Build user object from context
@@ -1133,54 +1140,102 @@ func handleHTMXLogin(c *gin.Context) {
 		// Return a simple success response for GET requests
 		c.JSON(http.StatusOK, gin.H{
 			"message": "Login endpoint ready",
-			"method": "Please use POST with email and password",
+			"method": "Please use POST with username/email and password",
 		})
 		return
 	}
 	
 	var loginReq struct {
-		Email    string `json:"email" form:"email" binding:"required,email"`
+		Username string `json:"username" form:"username"`
+		Email    string `json:"email" form:"email"`
 		Password string `json:"password" form:"password" binding:"required"`
 	}
 	
-	// Try to bind as JSON first, then form data
-	if err := c.ShouldBindJSON(&loginReq); err != nil {
-		// If JSON binding fails, try form binding
-		if err := c.ShouldBind(&loginReq); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-	}
-	
-	// TODO: Implement actual authentication
-	// For now, accept demo credentials from environment variables or test credentials
-	demoEmail := os.Getenv("DEMO_ADMIN_EMAIL")
-	demoPassword := os.Getenv("DEMO_ADMIN_PASSWORD")
-	
-	// Use test credentials if environment variables not set (for testing)
-	if demoEmail == "" || demoPassword == "" {
-		demoEmail = "admin@gotrs.local"
-		demoPassword = "admin123"
-	}
-	
-	if loginReq.Email == demoEmail && loginReq.Password == demoPassword {
-		// For HTMX, set the redirect header
-		c.Header("HX-Redirect", "/dashboard")
-		c.JSON(http.StatusOK, gin.H{
-			"access_token":  "demo_token_123",
-			"refresh_token": "demo_refresh_123",
-			"user": gin.H{
-				"id":         1,
-				"email":      loginReq.Email,
-				"first_name": "Demo",
-				"last_name":  "Admin",
-				"role":       "admin",
-			},
-		})
+	// Bind request data (handles both JSON and form data)
+	if err := c.ShouldBind(&loginReq); err != nil {
+		log.Printf("Login binding error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format: " + err.Error()})
 		return
 	}
 	
-	c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+	// Use username if provided, otherwise use email
+	loginIdentifier := loginReq.Username
+	if loginIdentifier == "" {
+		loginIdentifier = loginReq.Email
+	}
+	
+	if loginIdentifier == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Username or email is required"})
+		return
+	}
+	
+	// Get auth service
+	authService := GetAuthService()
+	if authService == nil {
+		// Check if demo mode is enabled
+		demoMode := os.Getenv("DEMO_MODE") == "true"
+		if demoMode {
+			// In demo mode, require demo credentials from environment
+			demoEmail := os.Getenv("DEMO_ADMIN_EMAIL")
+			demoPassword := os.Getenv("DEMO_ADMIN_PASSWORD")
+			
+			if demoEmail == "" || demoPassword == "" {
+				// Refuse to start without demo credentials when demo mode is enabled
+				log.Printf("ERROR: Demo mode enabled but DEMO_ADMIN_EMAIL or DEMO_ADMIN_PASSWORD not set")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Server configuration error: Demo credentials not configured"})
+				return
+			}
+			
+			if loginIdentifier == demoEmail && loginReq.Password == demoPassword {
+				c.Header("HX-Redirect", "/dashboard")
+				c.JSON(http.StatusOK, gin.H{
+					"access_token":  "demo_token_123",
+					"refresh_token": "demo_refresh_123",
+					"user": gin.H{
+						"id":         1,
+						"email":      loginIdentifier,
+						"first_name": "Demo",
+						"last_name":  "Admin",
+						"role":       "admin",
+					},
+				})
+				return
+			}
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+			return
+		}
+		// Auth service not available and not in demo mode
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Authentication service unavailable"})
+		return
+	}
+	
+	// Authenticate using the service
+	log.Printf("Attempting login for user: %s", loginIdentifier)
+	user, accessToken, refreshToken, err := authService.Login(c.Request.Context(), loginIdentifier, loginReq.Password)
+	if err != nil {
+		log.Printf("Login failed for %s: %v", loginIdentifier, err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+	
+	// Set session cookie with the access token
+	c.SetCookie("access_token", accessToken, 86400, "/", "", false, true)
+	
+	// For HTMX, set the redirect header
+	c.Header("HX-Redirect", "/dashboard")
+	
+	c.JSON(http.StatusOK, gin.H{
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+		"user": gin.H{
+			"id":         user.ID,
+			"email":      user.Email,
+			"username":   user.Login,
+			"first_name": user.FirstName,
+			"last_name":  user.LastName,
+			"role":       user.Role,
+		},
+	})
 }
 
 // HTMX Logout handler for API endpoint

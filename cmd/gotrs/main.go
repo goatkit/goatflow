@@ -41,12 +41,14 @@ var (
 	rotateSecretsFlag bool
 	outputPathFlag    string
 	forceFlag        bool
+	testDataOnlyFlag  bool
 )
 
 func init() {
 	synthesizeCmd.Flags().BoolVar(&rotateSecretsFlag, "rotate-secrets", false, "Rotate only secret values, keeping other settings")
 	synthesizeCmd.Flags().StringVar(&outputPathFlag, "output", ".env", "Output path for the generated .env file")
 	synthesizeCmd.Flags().BoolVar(&forceFlag, "force", false, "Overwrite existing .env without prompting")
+	synthesizeCmd.Flags().BoolVar(&testDataOnlyFlag, "test-data-only", false, "Generate only test data SQL and CSV files")
 	
 	rootCmd.AddCommand(synthesizeCmd)
 	rootCmd.AddCommand(versionCmd)
@@ -61,6 +63,14 @@ var versionCmd = &cobra.Command{
 }
 
 func runSynthesize(cmd *cobra.Command, args []string) error {
+	synth := config.NewSynthesizer(".env")
+	
+	// If only generating test data
+	if testDataOnlyFlag {
+		fmt.Println("🔬 Generating test data...")
+		return synth.SynthesizeTestData()
+	}
+	
 	outputPath := outputPathFlag
 	if !filepath.IsAbs(outputPath) {
 		cwd, err := os.Getwd()
@@ -77,7 +87,7 @@ func runSynthesize(cmd *cobra.Command, args []string) error {
 	
 	fmt.Println("🔬 Synthesizing secure configuration...")
 	
-	synth := config.NewSynthesizer(outputPath)
+	synth = config.NewSynthesizer(outputPath)
 	
 	if err := synth.SynthesizeEnv(rotateSecretsFlag); err != nil {
 		return fmt.Errorf("failed to synthesize environment: %w", err)
@@ -91,6 +101,12 @@ func runSynthesize(cmd *cobra.Command, args []string) error {
 	} else {
 		fmt.Printf("✅ Generated %d secure secrets\n", generatedCount)
 		fmt.Printf("📝 Created %s with secure configuration\n", outputPathFlag)
+		
+		// Also generate test data when creating new .env
+		fmt.Println("\n🔬 Generating test data...")
+		if err := synth.SynthesizeTestData(); err != nil {
+			return fmt.Errorf("failed to generate test data: %w", err)
+		}
 	}
 	
 	if !rotateSecretsFlag {

@@ -20,18 +20,18 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 // GetByID retrieves a user by ID
 func (r *UserRepository) GetByID(id uint) (*models.User, error) {
 	query := `
-		SELECT id, login, email, pw, title, first_name, last_name,
+		SELECT id, login, pw, title, first_name, last_name,
 		       valid_id, create_time, create_by, change_time, change_by
 		FROM users
 		WHERE id = $1`
 
 	var user models.User
+	var title sql.NullString
 	err := r.db.QueryRow(query, id).Scan(
 		&user.ID,
 		&user.Login,
-		&user.Email,
 		&user.Password,
-		&user.Title,
+		&title,
 		&user.FirstName,
 		&user.LastName,
 		&user.ValidID,
@@ -40,6 +40,10 @@ func (r *UserRepository) GetByID(id uint) (*models.User, error) {
 		&user.ChangeTime,
 		&user.ChangeBy,
 	)
+	
+	if title.Valid {
+		user.Title = title.String
+	}
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")
@@ -57,19 +61,26 @@ func (r *UserRepository) GetByID(id uint) (*models.User, error) {
 
 // GetByEmail retrieves a user by email
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
+	// OTRS schema doesn't have email in users table for agents
+	// Agents use login only
+	return nil, fmt.Errorf("email lookup not supported for agents")
+}
+
+// GetByLogin retrieves a user by login username
+func (r *UserRepository) GetByLogin(login string) (*models.User, error) {
 	query := `
-		SELECT id, login, email, pw, title, first_name, last_name,
+		SELECT id, login, pw, title, first_name, last_name,
 		       valid_id, create_time, create_by, change_time, change_by
 		FROM users
-		WHERE email = $1 AND valid_id = 1`
+		WHERE login = $1 AND valid_id = 1`
 
 	var user models.User
-	err := r.db.QueryRow(query, email).Scan(
+	var title sql.NullString
+	err := r.db.QueryRow(query, login).Scan(
 		&user.ID,
 		&user.Login,
-		&user.Email,
 		&user.Password,
-		&user.Title,
+		&title,
 		&user.FirstName,
 		&user.LastName,
 		&user.ValidID,
@@ -78,6 +89,10 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 		&user.ChangeTime,
 		&user.ChangeBy,
 	)
+	
+	if title.Valid {
+		user.Title = title.String
+	}
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("user not found")

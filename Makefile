@@ -138,13 +138,14 @@ setup:
 # Generate secure .env file with random secrets (runs in container)
 synthesize:
 	@$(MAKE) toolbox-build
-	@echo "🔬 Synthesizing secure configuration..."
+	@echo "🔬 Synthesizing secure configuration and test data..."
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		gotrs-toolbox:latest \
 		gotrs synthesize
+	@echo "📝 Test credentials saved to test_credentials.csv"
 	@if [ -d .git ]; then \
 		echo ""; \
 		echo "💡 To enable secret scanning in git commits, run:"; \
@@ -172,6 +173,17 @@ synthesize-force:
 		-u "$$(id -u):$$(id -g)" \
 		gotrs-toolbox:latest \
 		gotrs synthesize --force
+
+# Generate only test data (SQL and CSV)
+gen-test-data:
+	@$(MAKE) toolbox-build
+	@echo "🔄 Regenerating test data only..."
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-u "$$(id -u):$$(id -g)" \
+		gotrs-toolbox:latest \
+		gotrs synthesize --test-data-only
 
 # Run interactive shell in toolbox container
 toolbox-run:

@@ -16,6 +16,7 @@ var (
 	simpleTicketService *service.SimpleTicketService
 	storageService    service.StorageService
 	lookupService     *service.LookupService
+	authService       *service.AuthService
 	once              sync.Once
 )
 
@@ -47,6 +48,11 @@ func InitializeServices() {
 		if err != nil {
 			// Fallback to temp directory if storage dir can't be created
 			storageService, _ = service.NewLocalStorageService("/tmp/gotrs-storage")
+		}
+		
+		// Initialize auth service if database is available
+		if db != nil {
+			authService = service.NewAuthService(db)
 		}
 	})
 }
@@ -85,4 +91,10 @@ func GetQueueRepository() *repository.QueueRepository {
 func GetUserRepository() *repository.UserRepository {
 	InitializeServices()
 	return userRepo
+}
+
+// GetAuthService returns the singleton auth service instance
+func GetAuthService() *service.AuthService {
+	InitializeServices()
+	return authService
 }
