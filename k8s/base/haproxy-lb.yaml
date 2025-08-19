@@ -1,0 +1,383 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: haproxy-config
+  namespace: default
+data:
+  haproxy.cfg: |
+    global
+        log stdout local0
+        maxconn 4096
+        daemon
+        
+        # Performance tuning
+        tune.ssl.default-dh-param 2048
+        tune.bufsize 32768
+        tune.maxrewrite 1024
+        
+        # Enable multi-threading
+        nbproc 1
+        nbthread 4
+        cpu-map auto:1/1-4 0-3
+        
+    defaults
+        log     global
+        mode    http
+        option  httplog
+        option  dontlognull
+        option  http-server-close
+        option  forwardfor except 127.0.0.0/8
+        option  redispatch
+        retries 3
+        timeout connect 10s
+        timeout client  30s
+        timeout server  30s
+        timeout http-request 10s
+        timeout queue   1m
+        timeout check   10s
+        maxconn 3000
+        
+    # Statistics and health check
+    frontend stats
+        bind *:8404
+        stats enable
+        stats uri /stats
+        stats refresh 30s
+        stats show-node
+        stats show-legends
+        stats auth admin:admin
+        
+    # Health check endpoint
+    frontend health
+        bind *:8081
+        mode http
+        monitor-uri /health
+        
+    # Main HTTP frontend with rate limiting
+    frontend http_front
+        bind *:80
+        mode http
+        
+        # Rate limiting by source IP
+        stick-table type ip size 100k expire 30s store http_req_rate(10s)
+        http-request track-sc0 src
+        http-request deny if { sc_http_req_rate(0) gt 100 }
+        
+        # ACL definitions
+        acl is_api path_beg /api/
+        acl is_auth path_beg /api/v1/auth/
+        acl is_websocket hdr(Upgrade) -i WebSocket
+        acl is_static path_beg /static/
+        
+        # Request routing
+        use_backend api_servers if is_api !is_auth
+        use_backend auth_servers if is_auth
+        use_backend websocket_servers if is_websocket
+        use_backend static_servers if is_static
+        default_backend web_servers
+        
+    # gRPC frontend
+    frontend grpc_front
+        bind *:9090 proto h2
+        mode tcp
+        option tcplog
+        
+        # ACL for different services
+        acl is_ticket_service req.ssl_sni -i ticket.gotrs.local
+        acl is_user_service req.ssl_sni -i user.gotrs.local
+        
+        use_backend grpc_ticket_servers if is_ticket_service
+        use_backend grpc_user_servers if is_user_service
+        default_backend grpc_default_servers
+        
+    # API backend with health checks
+    backend api_servers
+        mode http
+        balance leastconn
+        option httpchk GET /health/ready HTTP/1.1\r\nHost:\ api
+        
+        # Circuit breaker settings
+        option allbackups
+        option httpclose
+        option abortonclose
+        
+        # Session stickiness
+        cookie SERVERID insert indirect nocache
+        
+        # Dynamic server discovery via DNS
+        server-template api 10 api-gateway.default.svc.cluster.local:8080 \
+            check inter 2s rise 2 fall 3 \
+            cookie api \
+            maxconn 100 \
+            weight 100
+            
+    # Auth backend with stricter rate limiting
+    backend auth_servers
+        mode http
+        balance roundrobin
+        option httpchk GET /health/ready HTTP/1.1\r\nHost:\ auth
+        
+        # Stricter rate limiting for auth
+        stick-table type ip size 10k expire 60s store http_req_rate(60s)
+        http-request track-sc1 src
+        http-request deny if { sc_http_req_rate(1) gt 10 }
+        
+        server-template auth 3 auth-service.default.svc.cluster.local:8080 \
+            check inter 2s rise 2 fall 3 \
+            maxconn 50
+            
+    # WebSocket backend
+    backend websocket_servers
+        mode http
+        balance source
+        option http-server-close
+        option forceclose
+        
+        # WebSocket specific settings
+        timeout tunnel 1h
+        timeout client-fin 30s
+        
+        server-template ws 5 websocket-service.default.svc.cluster.local:8080 \
+            check inter 5s rise 2 fall 3 \
+            maxconn 200
+            
+    # Static file backend with caching headers
+    backend static_servers
+        mode http
+        balance roundrobin
+        
+        # Add cache headers
+        http-response set-header Cache-Control "public, max-age=2592000"
+        http-response set-header Expires %[date(2592000),http_date]
+        
+        server-template static 2 static-service.default.svc.cluster.local:80 \
+            check inter 10s rise 2 fall 3 \
+            maxconn 500
+            
+    # Web application backend
+    backend web_servers
+        mode http
+        balance roundrobin
+        option httpchk GET / HTTP/1.1\r\nHost:\ web
+        
+        # Compression
+        compression algo gzip
+        compression type text/html text/plain text/css text/javascript application/javascript application/json
+        
+        server-template web 5 web-service.default.svc.cluster.local:3000 \
+            check inter 2s rise 2 fall 3 \
+            cookie web \
+            maxconn 200
+            
+    # gRPC ticket service backend
+    backend grpc_ticket_servers
+        mode tcp
+        balance leastconn
+        
+        # gRPC health check
+        option tcp-check
+        tcp-check connect
+        tcp-check send-binary 00000000 # gRPC magic
+        tcp-check expect binary 00000000
+        
+        server-template ticket-grpc 10 ticket-service.default.svc.cluster.local:50051 \
+            check inter 2s rise 2 fall 3 \
+            maxconn 100
+            
+    # gRPC user service backend
+    backend grpc_user_servers
+        mode tcp
+        balance leastconn
+        
+        option tcp-check
+        tcp-check connect
+        
+        server-template user-grpc 10 user-service.default.svc.cluster.local:50051 \
+            check inter 2s rise 2 fall 3 \
+            maxconn 100
+            
+    # Default gRPC backend
+    backend grpc_default_servers
+        mode tcp
+        balance roundrobin
+        
+        server-template grpc-default 5 api-gateway.default.svc.cluster.local:50051 \
+            check inter 5s rise 2 fall 3 \
+            maxconn 50
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: haproxy-lb
+  labels:
+    app: haproxy-lb
+    component: loadbalancer
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: haproxy-lb
+  template:
+    metadata:
+      labels:
+        app: haproxy-lb
+        version: v1
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - haproxy-lb
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - name: haproxy
+        image: haproxy:2.9-alpine
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        - name: health
+          containerPort: 8081
+          protocol: TCP
+        - name: stats
+          containerPort: 8404
+          protocol: TCP
+        - name: grpc
+          containerPort: 9090
+          protocol: TCP
+        volumeMounts:
+        - name: haproxy-config
+          mountPath: /usr/local/etc/haproxy/haproxy.cfg
+          subPath: haproxy.cfg
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "2000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: health
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: health
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - NET_BIND_SERVICE
+      volumes:
+      - name: haproxy-config
+        configMap:
+          name: haproxy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: haproxy-lb
+  labels:
+    app: haproxy-lb
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "60"
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app: haproxy-lb
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  - name: stats
+    port: 8404
+    targetPort: stats
+    protocol: TCP
+  - name: grpc
+    port: 9090
+    targetPort: grpc
+    protocol: TCP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: haproxy-lb-hpa
+  labels:
+    app: haproxy-lb
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: haproxy-lb
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 60
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15
+      - type: Pods
+        value: 2
+        periodSeconds: 15
+      selectPolicy: Max
+---
+apiVersion: v1
+kind: ServiceMonitor
+metadata:
+  name: haproxy-metrics
+  labels:
+    app: haproxy-lb
+spec:
+  selector:
+    matchLabels:
+      app: haproxy-lb
+  endpoints:
+  - port: stats
+    path: /stats;csv
+    interval: 30s
