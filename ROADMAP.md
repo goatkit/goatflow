@@ -346,14 +346,14 @@ timeline
   - [x] Data type conversion utilities
   - [x] OTRS-to-GOTRS migration planning framework
 
-#### Week 16: Integrations & API
-- [ ] REST API v1 complete
-- [ ] GraphQL API
-- [ ] Webhook system
-- [ ] OAuth2 provider
-- [ ] LDAP/Active Directory integration
-- [ ] Third-party integrations (Slack, Teams)
-- [ ] API documentation and SDK
+#### Week 16: Integrations & API ✅ Completed Aug 19, 2025
+- [x] **REST API v1 complete** - Comprehensive endpoints with RBAC integration
+- [x] **Webhook system** - Event-driven integrations with retry logic and HMAC signatures
+- [x] **OAuth2 provider** - Authorization server with authorization code, client credentials, refresh token grants
+- [x] **LDAP/Active Directory integration** - Enterprise authentication with group-based role mapping
+- [ ] GraphQL API (deferred to Phase 4)
+- [ ] Third-party integrations (Slack, Teams) (deferred to Phase 4)  
+- [ ] API documentation and SDK (deferred to Phase 4)
 
 **Deliverables**:
 - **Database abstraction layer** with multi-backend support stubs
