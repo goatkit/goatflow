@@ -155,7 +155,7 @@ GOTRS maps LDAP groups to three roles:
 ```bash
 curl -X POST http://localhost:8080/api/v1/admin/ldap/test \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $$$JWT_TOKEN"
+  -H "Authorization: Bearer $$JWT_TOKEN"
 ```
 
 2. **Check TLS settings**:
@@ -175,7 +175,7 @@ curl -X POST http://localhost:8080/api/v1/admin/ldap/test \
 curl -X POST http://localhost:8080/api/v1/admin/ldap/test-auth \
   -H "Content-Type: application/json" \
   -d '{"username":"testuser","password":"testpass"}' \
-  -H "Authorization: Bearer $$$JWT_TOKEN"
+  -H "Authorization: Bearer $$JWT_TOKEN"
 ```
 
 2. **Check user filter**:
@@ -186,7 +186,7 @@ curl -X POST http://localhost:8080/api/v1/admin/ldap/test-auth \
 3. **Verify group memberships**:
 ```bash
 curl -X GET http://localhost:8080/api/v1/admin/ldap/users/testuser/groups \
-  -H "Authorization: Bearer $$$JWT_TOKEN"
+  -H "Authorization: Bearer $$JWT_TOKEN"
 ```
 
 ### Common Error Messages
