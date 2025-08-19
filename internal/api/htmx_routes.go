@@ -18,6 +18,7 @@ import (
 	
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
@@ -28,6 +29,27 @@ import (
 
 // Global Pongo2 renderer
 var pongo2Renderer *tmpl.Pongo2Renderer
+
+// Global JWT manager (initialized once)
+var jwtManagerInstance *auth.JWTManager
+
+// getJWTManager returns the singleton JWT manager instance, or nil if JWT is not configured
+func getJWTManager() *auth.JWTManager {
+	if jwtManagerInstance == nil {
+		// JWT secret MUST be set via environment variable
+		jwtSecret := os.Getenv("JWT_SECRET")
+		if jwtSecret == "" {
+			// If auth is required, fail fast
+			if os.Getenv("AUTH_REQUIRED") == "true" {
+				log.Fatal("FATAL: JWT_SECRET environment variable is not set. Server cannot start without a JWT secret when AUTH_REQUIRED=true")
+			}
+			// Return nil to indicate auth is not configured
+			return nil
+		}
+		jwtManagerInstance = auth.NewJWTManager(jwtSecret, 24*time.Hour)
+	}
+	return jwtManagerInstance
+}
 
 // Initialize Pongo2 renderer
 func init() {
@@ -338,7 +360,16 @@ func SetupHTMXRoutes(r *gin.Engine) {
 	
 	// Protected dashboard routes
 	dashboard := r.Group("/")
-	// TODO: Add auth middleware
+	
+	// Add auth middleware if JWT manager is available OR if in demo mode
+	if jwtManager := getJWTManager(); jwtManager != nil {
+		dashboard.Use(middleware.SessionMiddleware(jwtManager))
+	} else if os.Getenv("DEMO_MODE") == "true" {
+		// In demo mode without JWT, still use session middleware for demo tokens
+		// Pass nil for JWT manager - the middleware will handle demo tokens
+		dashboard.Use(middleware.SessionMiddleware(nil))
+	}
+	// TODO: Remove this comment when auth is fully integrated
 	{
 		dashboard.GET("/dashboard", handleDashboard)
 		dashboard.GET("/tickets", handleTicketsList)
@@ -1226,9 +1257,14 @@ func handleHTMXLogin(c *gin.Context) {
 			}
 			
 			if loginIdentifier == demoEmail && loginReq.Password == demoPassword {
+				// In demo mode, create a simple demo token
+				// Note: This is only for demo purposes, not secure for production
+				demoToken := "demo_session_" + fmt.Sprintf("%d", time.Now().Unix())
+				c.SetCookie("access_token", demoToken, 86400, "/", "", false, true)
+				
 				c.Header("HX-Redirect", "/dashboard")
 				c.JSON(http.StatusOK, gin.H{
-					"access_token":  "demo_token_123",
+					"access_token":  demoToken,
 					"refresh_token": "demo_refresh_123",
 					"user": gin.H{
 						"id":         1,
@@ -1285,15 +1321,19 @@ func handleHTMXLogout(c *gin.Context) {
 
 // handleLogout handles the main logout route that redirects to login
 func handleLogout(c *gin.Context) {
-	// TODO: Clear session/token
-	// For now, just redirect to login page
+	// Clear the session cookie
+	c.SetCookie("access_token", "", -1, "/", "", false, true)
+	
+	// For HTMX requests, send redirect header
 	c.Header("HX-Redirect", "/login")
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 
 // handleLogoutGET handles GET requests to logout (for regular links)
 func handleLogoutGET(c *gin.Context) {
-	// TODO: Clear session/token
+	// Clear the session cookie
+	c.SetCookie("access_token", "", -1, "/", "", false, true)
+	
 	// For regular GET requests, do a standard redirect
 	c.Redirect(http.StatusFound, "/login")
 }
