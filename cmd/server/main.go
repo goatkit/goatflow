@@ -17,13 +17,8 @@ func main() {
 		gin.SetMode(gin.DebugMode)
 	}
 
-	// Create a simple router with HTMX routes
+	// Create a simple router with HTMX routes (includes health check)
 	r := api.NewSimpleRouter()
-	
-	// Health check
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "service": "gotrs-htmx"})
-	})
 
 	// Start server
 	port := os.Getenv("APP_PORT")

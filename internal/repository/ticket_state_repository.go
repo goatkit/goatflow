@@ -22,7 +22,7 @@ func (r *TicketStateRepository) GetByID(id uint) (*models.TicketState, error) {
 	query := `
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
-		FROM ticket_states
+		FROM ticket_state
 		WHERE id = $1`
 
 	var state models.TicketState
@@ -50,7 +50,7 @@ func (r *TicketStateRepository) GetByName(name string) (*models.TicketState, err
 	query := `
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
-		FROM ticket_states
+		FROM ticket_state
 		WHERE name = $1 AND valid_id = 1`
 
 	var state models.TicketState
@@ -78,7 +78,7 @@ func (r *TicketStateRepository) GetByTypeID(typeID uint) ([]*models.TicketState,
 	query := `
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
-		FROM ticket_states
+		FROM ticket_state
 		WHERE type_id = $1 AND valid_id = 1
 		ORDER BY name`
 
@@ -116,7 +116,7 @@ func (r *TicketStateRepository) List() ([]*models.TicketState, error) {
 	query := `
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
-		FROM ticket_states
+		FROM ticket_state
 		WHERE valid_id = 1
 		ORDER BY name`
 
@@ -152,7 +152,7 @@ func (r *TicketStateRepository) List() ([]*models.TicketState, error) {
 // Create creates a new ticket state
 func (r *TicketStateRepository) Create(state *models.TicketState) error {
 	query := `
-		INSERT INTO ticket_states (
+		INSERT INTO ticket_state (
 			name, type_id, comments, valid_id,
 			create_time, create_by, change_time, change_by
 		) VALUES (
@@ -177,7 +177,7 @@ func (r *TicketStateRepository) Create(state *models.TicketState) error {
 // Update updates a ticket state
 func (r *TicketStateRepository) Update(state *models.TicketState) error {
 	query := `
-		UPDATE ticket_states SET
+		UPDATE ticket_state SET
 			name = $2,
 			type_id = $3,
 			comments = $4,
@@ -221,7 +221,7 @@ func (r *TicketStateRepository) GetOpenStates() ([]*models.TicketState, error) {
 	query := `
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
-		FROM ticket_states
+		FROM ticket_state
 		WHERE type_id = ANY($1) AND valid_id = 1
 		ORDER BY name`
 
@@ -262,7 +262,7 @@ func (r *TicketStateRepository) GetClosedStates() ([]*models.TicketState, error)
 	query := `
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
-		FROM ticket_states
+		FROM ticket_state
 		WHERE type_id = ANY($1) AND valid_id = 1
 		ORDER BY name`
 

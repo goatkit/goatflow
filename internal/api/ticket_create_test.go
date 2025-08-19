@@ -92,7 +92,7 @@ func TestTicketCreation(t *testing.T) {
 				var resp map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &resp)
 				require.NoError(t, err)
-				assert.Contains(t, resp["error"], "subject")
+				assert.Contains(t, strings.ToLower(resp["error"].(string)), "subject")
 			},
 		},
 		{
@@ -106,7 +106,7 @@ func TestTicketCreation(t *testing.T) {
 				var resp map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &resp)
 				require.NoError(t, err)
-				assert.Contains(t, resp["error"], "customer_email")
+				assert.Contains(t, strings.ToLower(resp["error"].(string)), "customeremail")
 			},
 		},
 		{

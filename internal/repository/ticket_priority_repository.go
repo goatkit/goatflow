@@ -21,7 +21,7 @@ func NewTicketPriorityRepository(db *sql.DB) *TicketPriorityRepository {
 func (r *TicketPriorityRepository) GetByID(id uint) (*models.TicketPriority, error) {
 	query := `
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
-		FROM ticket_priorities
+		FROM ticket_priority
 		WHERE id = $1`
 
 	var priority models.TicketPriority
@@ -46,7 +46,7 @@ func (r *TicketPriorityRepository) GetByID(id uint) (*models.TicketPriority, err
 func (r *TicketPriorityRepository) GetByName(name string) (*models.TicketPriority, error) {
 	query := `
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
-		FROM ticket_priorities
+		FROM ticket_priority
 		WHERE name = $1 AND valid_id = 1`
 
 	var priority models.TicketPriority
@@ -71,7 +71,7 @@ func (r *TicketPriorityRepository) GetByName(name string) (*models.TicketPriorit
 func (r *TicketPriorityRepository) List() ([]*models.TicketPriority, error) {
 	query := `
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
-		FROM ticket_priorities
+		FROM ticket_priority
 		WHERE valid_id = 1
 		ORDER BY id`  // Order by ID to maintain priority order (1=very low, 5=very high)
 
@@ -105,7 +105,7 @@ func (r *TicketPriorityRepository) List() ([]*models.TicketPriority, error) {
 // Create creates a new ticket priority
 func (r *TicketPriorityRepository) Create(priority *models.TicketPriority) error {
 	query := `
-		INSERT INTO ticket_priorities (
+		INSERT INTO ticket_priority (
 			name, valid_id, create_time, create_by, change_time, change_by
 		) VALUES (
 			$1, $2, $3, $4, $5, $6
@@ -127,7 +127,7 @@ func (r *TicketPriorityRepository) Create(priority *models.TicketPriority) error
 // Update updates a ticket priority
 func (r *TicketPriorityRepository) Update(priority *models.TicketPriority) error {
 	query := `
-		UPDATE ticket_priorities SET
+		UPDATE ticket_priority SET
 			name = $2,
 			valid_id = $3,
 			change_time = $4,
@@ -168,7 +168,7 @@ func (r *TicketPriorityRepository) GetDefault() (*models.TicketPriority, error) 
 func (r *TicketPriorityRepository) GetHighPriorities() ([]*models.TicketPriority, error) {
 	query := `
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
-		FROM ticket_priorities
+		FROM ticket_priority
 		WHERE id >= 4 AND valid_id = 1
 		ORDER BY id`
 

@@ -50,8 +50,11 @@ make clean                 # Reset everything
 
 ## Database
 - PostgreSQL with OTRS-compatible schema
-- Main tables: users, tickets, ticket_messages, attachments
-- Use migrations for schema changes
+- **CRITICAL: Schema is FROZEN for OTRS compatibility - see SCHEMA_FREEZE.md**
+- **DO NOT modify existing tables**
+- **DO NOT add ANY new tables until production release**
+- Main tables: ticket, article, queue, customer_user, customer_company (singular names!)
+- Work within OTRS schema constraints only - no extensions until v1.0
 
 ## API Patterns
 - REST endpoints: /api/v1/*

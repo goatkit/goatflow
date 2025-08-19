@@ -59,7 +59,7 @@ type Ticket struct {
 	Title                  string     `json:"title" db:"title"`
 	QueueID                int        `json:"queue_id" db:"queue_id"`
 	TicketLockID           int        `json:"ticket_lock_id" db:"ticket_lock_id"` // 1=unlock, 2=lock, 3=tmp_lock
-	TypeID                 int        `json:"type_id" db:"type_id"`
+	TypeID                 int        `json:"type_id" db:"ticket_type_id"`
 	ServiceID              *int       `json:"service_id,omitempty" db:"service_id"`
 	SLAID                  *int       `json:"sla_id,omitempty" db:"sla_id"`
 	UserID                 *int       `json:"user_id,omitempty" db:"user_id"` // Owner

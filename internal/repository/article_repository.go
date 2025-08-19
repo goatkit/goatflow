@@ -47,7 +47,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	}
 	
 	query := `
-		INSERT INTO articles (
+		INSERT INTO article (
 			ticket_id, article_type_id, sender_type_id,
 			communication_channel_id, is_visible_for_customer,
 			subject, body, body_type, charset, mime_type,
@@ -84,7 +84,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	
 	// Update ticket's change_time when an article is added
 	updateTicketQuery := `
-		UPDATE tickets 
+		UPDATE ticket 
 		SET change_time = $2, change_by = $3
 		WHERE id = $1`
 	
@@ -102,7 +102,7 @@ func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
 			subject, body, body_type, charset, mime_type,
 			content_path, valid_id,
 			create_time, create_by, change_time, change_by
-		FROM articles
+		FROM article
 		WHERE id = $1`
 	
 	var article models.Article
@@ -142,7 +142,7 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 			subject, body, body_type, charset, mime_type,
 			content_path, valid_id,
 			create_time, create_by, change_time, change_by
-		FROM articles
+		FROM article
 		WHERE ticket_id = $1 AND valid_id = 1`
 	
 	if !includeInternal {
@@ -193,7 +193,7 @@ func (r *ArticleRepository) Update(article *models.Article) error {
 	article.ChangeTime = time.Now()
 	
 	query := `
-		UPDATE articles SET
+		UPDATE article SET
 			article_type_id = $2,
 			sender_type_id = $3,
 			communication_channel_id = $4,
@@ -242,7 +242,7 @@ func (r *ArticleRepository) Update(article *models.Article) error {
 	
 	// Update ticket's change_time when an article is updated
 	updateTicketQuery := `
-		UPDATE tickets 
+		UPDATE ticket 
 		SET change_time = $2, change_by = $3
 		WHERE id = $1`
 	
@@ -255,7 +255,7 @@ func (r *ArticleRepository) Update(article *models.Article) error {
 func (r *ArticleRepository) Delete(id uint, userID uint) error {
 	// First get the ticket ID for updating change_time
 	var ticketID uint
-	getTicketQuery := `SELECT ticket_id FROM articles WHERE id = $1`
+	getTicketQuery := `SELECT ticket_id FROM article WHERE id = $1`
 	err := r.db.QueryRow(getTicketQuery, id).Scan(&ticketID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -266,7 +266,7 @@ func (r *ArticleRepository) Delete(id uint, userID uint) error {
 	
 	// Soft delete the article
 	query := `
-		UPDATE articles 
+		UPDATE article 
 		SET valid_id = 0, change_time = $2, change_by = $3
 		WHERE id = $1`
 	
@@ -286,7 +286,7 @@ func (r *ArticleRepository) Delete(id uint, userID uint) error {
 	
 	// Update ticket's change_time
 	updateTicketQuery := `
-		UPDATE tickets 
+		UPDATE ticket 
 		SET change_time = $2, change_by = $3
 		WHERE id = $1`
 	
@@ -309,7 +309,7 @@ func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Ar
 			subject, body, body_type, charset, mime_type,
 			content_path, valid_id,
 			create_time, create_by, change_time, change_by
-		FROM articles
+		FROM article
 		WHERE ticket_id = $1 AND valid_id = 1
 		ORDER BY create_time DESC
 		LIMIT 1`
@@ -346,7 +346,7 @@ func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Ar
 func (r *ArticleRepository) CountArticlesForTicket(ticketID uint, includeInternal bool) (int, error) {
 	query := `
 		SELECT COUNT(*) 
-		FROM articles 
+		FROM article 
 		WHERE ticket_id = $1 AND valid_id = 1`
 	
 	if !includeInternal {

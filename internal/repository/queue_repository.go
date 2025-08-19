@@ -24,7 +24,7 @@ func (r *QueueRepository) GetByID(id uint) (*models.Queue, error) {
 		       salutation_id, signature_id, follow_up_id, follow_up_lock,
 		       unlock_timeout, group_id, email, realname, comment,
 		       valid_id, create_time, create_by, change_time, change_by
-		FROM queues
+		FROM queue
 		WHERE id = $1`
 
 	var queue models.Queue
@@ -64,7 +64,7 @@ func (r *QueueRepository) GetByName(name string) (*models.Queue, error) {
 		       salutation_id, signature_id, follow_up_id, follow_up_lock,
 		       unlock_timeout, group_id, email, realname, comment,
 		       valid_id, create_time, create_by, change_time, change_by
-		FROM queues
+		FROM queue
 		WHERE name = $1 AND valid_id = 1`
 
 	var queue models.Queue
@@ -104,7 +104,7 @@ func (r *QueueRepository) List() ([]*models.Queue, error) {
 		       salutation_id, signature_id, follow_up_id, follow_up_lock,
 		       unlock_timeout, group_id, email, realname, comment,
 		       valid_id, create_time, create_by, change_time, change_by
-		FROM queues
+		FROM queue
 		WHERE valid_id = 1
 		ORDER BY name`
 
@@ -150,7 +150,7 @@ func (r *QueueRepository) List() ([]*models.Queue, error) {
 // Create creates a new queue
 func (r *QueueRepository) Create(queue *models.Queue) error {
 	query := `
-		INSERT INTO queues (
+		INSERT INTO queue (
 			name, system_address_id, calendar_id, default_sign_key,
 			salutation_id, signature_id, follow_up_id, follow_up_lock,
 			unlock_timeout, group_id, email, realname, comment,
@@ -187,7 +187,7 @@ func (r *QueueRepository) Create(queue *models.Queue) error {
 // Update updates a queue
 func (r *QueueRepository) Update(queue *models.Queue) error {
 	query := `
-		UPDATE queues SET
+		UPDATE queue SET
 			name = $2,
 			system_address_id = $3,
 			calendar_id = $4,
