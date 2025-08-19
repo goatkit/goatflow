@@ -305,6 +305,8 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		c.File("./static/favicon.ico")
 	})
 	
+	// Note: favicon.svg is served via the /static route above
+	
 	// Test i18n endpoint
 	r.GET("/test-i18n", func(c *gin.Context) {
 		pongo2Renderer.HTML(c, http.StatusOK, "test-i18n.pongo2", pongo2.Context{
@@ -362,9 +364,12 @@ func SetupHTMXRoutes(r *gin.Engine) {
 	api := r.Group("/api")
 	{
 		// Authentication
+		api.GET("/auth/login", handleHTMXLogin)  // Also support GET for the form
 		api.POST("/auth/login", handleHTMXLogin)
 		api.POST("/auth/logout", handleHTMXLogout)
+		api.GET("/auth/refresh", underConstructionAPI("/auth/refresh"))  // GET for testing
 		api.POST("/auth/refresh", underConstructionAPI("/auth/refresh"))
+		api.GET("/auth/register", underConstructionAPI("/auth/register"))  // GET for form
 		api.POST("/auth/register", underConstructionAPI("/auth/register"))
 		
 		// Dashboard data
@@ -374,6 +379,9 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		
 		// Notifications
 		api.GET("/notifications", underConstructionAPI("/notifications"))
+		
+		// Lookups
+		api.GET("/lookups/cache/invalidate", underConstructionAPI("/lookups/cache/invalidate"))
 		
 		// Queue operations
 		api.GET("/queues", handleQueuesAPI)
