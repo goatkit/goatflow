@@ -42,7 +42,7 @@ func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			// In demo mode, accept demo tokens
 			c.Set("user_id", uint(1))
 			c.Set("user_email", "demo@example.com")
-			c.Set("user_role", "admin")
+			c.Set("user_role", "Admin")
 			c.Set("user_name", "Demo Admin")
 			c.Set("is_demo", true)
 			c.Next()
@@ -188,4 +188,134 @@ func OptionalAuth(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		
 		c.Next()
 	}
+}
+
+// RequirePermission checks if the user has the required permission
+func RequirePermission(rbac *auth.RBAC, permission auth.Permission) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userRole, exists := c.Get("user_role")
+		if !exists {
+			if isAPIRequest(c) {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			} else {
+				c.Redirect(http.StatusSeeOther, "/login?error=access_denied")
+			}
+			c.Abort()
+			return
+		}
+		
+		roleStr, ok := userRole.(string)
+		if !ok {
+			if isAPIRequest(c) {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Invalid role"})
+			} else {
+				c.Redirect(http.StatusSeeOther, "/login?error=invalid_role")
+			}
+			c.Abort()
+			return
+		}
+		
+		// Check if user has the required permission
+		if !rbac.HasPermission(roleStr, permission) {
+			if isAPIRequest(c) {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+			} else {
+				// For now, redirect to a simple error page or use JSON
+				c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this resource"})
+			}
+			c.Abort()
+			return
+		}
+		
+		c.Next()
+	}
+}
+
+// RequireAnyPermission checks if the user has any of the required permissions
+func RequireAnyPermission(rbac *auth.RBAC, permissions ...auth.Permission) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userRole, exists := c.Get("user_role")
+		if !exists {
+			if isAPIRequest(c) {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+			} else {
+				c.Redirect(http.StatusSeeOther, "/login?error=access_denied")
+			}
+			c.Abort()
+			return
+		}
+		
+		roleStr, ok := userRole.(string)
+		if !ok {
+			if isAPIRequest(c) {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Invalid role"})
+			} else {
+				c.Redirect(http.StatusSeeOther, "/login?error=invalid_role")
+			}
+			c.Abort()
+			return
+		}
+		
+		// Check if user has any of the required permissions
+		for _, permission := range permissions {
+			if rbac.HasPermission(roleStr, permission) {
+				c.Next()
+				return
+			}
+		}
+		
+		if isAPIRequest(c) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
+		} else {
+			// For now, use JSON response for web routes too
+			c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this resource"})
+		}
+		c.Abort()
+	}
+}
+
+// RequireTicketAccess checks if the user can access a specific ticket
+func RequireTicketAccess(rbac *auth.RBAC) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, userRole, _, hasUser := GetCurrentUser(c)
+		if !hasUser {
+			if isAPIRequest(c) {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+			} else {
+				c.Redirect(http.StatusSeeOther, "/login")
+			}
+			c.Abort()
+			return
+		}
+		
+		// For now, we'll implement basic ticket access control
+		// This could be enhanced to check actual ticket ownership from database
+		ticketOwnerID := userID // Simplified - in practice, get from ticket in DB
+		
+		if !rbac.CanAccessTicket(userRole, ticketOwnerID, userID) {
+			if isAPIRequest(c) {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Cannot access this ticket"})
+			} else {
+				// For now, use JSON response for web routes too
+				c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to access this ticket"})
+			}
+			c.Abort()
+			return
+		}
+		
+		c.Next()
+	}
+}
+
+// RequireAdminAccess is a convenience function for admin-only routes
+func RequireAdminAccess(rbac *auth.RBAC) gin.HandlerFunc {
+	return RequirePermission(rbac, auth.PermissionAdminAccess)
+}
+
+// RequireAgentAccess allows both admins and agents
+func RequireAgentAccess(rbac *auth.RBAC) gin.HandlerFunc {
+	return RequireAnyPermission(rbac, 
+		auth.PermissionAdminAccess,
+		auth.PermissionTicketRead,
+	)
 }

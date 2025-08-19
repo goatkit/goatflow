@@ -29,8 +29,9 @@ import (
 // Global Pongo2 renderer
 var pongo2Renderer *tmpl.Pongo2Renderer
 
-// Global JWT manager (initialized once)
+// Global JWT manager and RBAC (initialized once)
 var jwtManagerInstance *auth.JWTManager
+var rbacInstance *auth.RBAC
 
 // getJWTManager returns the singleton JWT manager instance, or nil if JWT is not configured
 func getJWTManager() *auth.JWTManager {
@@ -48,6 +49,14 @@ func getJWTManager() *auth.JWTManager {
 		jwtManagerInstance = auth.NewJWTManager(jwtSecret, 24*time.Hour)
 	}
 	return jwtManagerInstance
+}
+
+// getRBAC returns the singleton RBAC instance
+func getRBAC() *auth.RBAC {
+	if rbacInstance == nil {
+		rbacInstance = auth.NewRBAC()
+	}
+	return rbacInstance
 }
 
 // Initialize Pongo2 renderer
@@ -361,50 +370,92 @@ func SetupHTMXRoutes(r *gin.Engine) {
 	dashboard := r.Group("/")
 	
 	// Add auth middleware if JWT manager is available OR if in demo mode
-	if jwtManager := getJWTManager(); jwtManager != nil {
+	jwtManager := getJWTManager()
+	rbac := getRBAC()
+	
+	if jwtManager != nil {
 		dashboard.Use(middleware.SessionMiddleware(jwtManager))
 	} else if os.Getenv("DEMO_MODE") == "true" {
 		// In demo mode without JWT, still use session middleware for demo tokens
 		// Pass nil for JWT manager - the middleware will handle demo tokens
 		dashboard.Use(middleware.SessionMiddleware(nil))
 	}
-	// TODO: Remove this comment when auth is fully integrated
+	// Basic dashboard - accessible to all authenticated users
 	{
 		dashboard.GET("/dashboard", handleDashboard)
-		dashboard.GET("/tickets", handleTicketsList)
-		dashboard.GET("/tickets/new", handleTicketNew)
-		dashboard.POST("/tickets/create", handleTicketCreate)
-		dashboard.GET("/tickets/:id", handleTicketDetail)
-		dashboard.GET("/tickets/:id/edit", handleTicketEditForm)
-		dashboard.POST("/tickets/:id/quick-action", handleTicketQuickAction)
-		dashboard.POST("/tickets/bulk-action", handleTicketBulkAction)
-		dashboard.GET("/queues", handleQueuesList)
-		dashboard.GET("/queues/:id", handleQueueDetailPage)
-		dashboard.GET("/queues/:id/edit", handleEditQueueForm)
-		dashboard.GET("/queues/new", handleNewQueueForm)
-		dashboard.GET("/queues/:id/delete", handleDeleteQueueConfirmation)
-		dashboard.GET("/queues/clear-search", handleClearQueueSearch)
-		dashboard.GET("/queues/bulk-toolbar", handleBulkActionsToolbar)
-		dashboard.GET("/templates", handleTemplatesPage)
-		dashboard.GET("/admin", handleAdminDashboard)
-		dashboard.GET("/admin/lookups", handleAdminLookups)
-		
-		// User pages (under construction)
 		dashboard.GET("/profile", underConstruction("Profile"))
 		dashboard.GET("/settings", underConstruction("Settings"))
-		
-		// Additional admin pages (under construction)
-		dashboard.GET("/admin/users", underConstruction("User Management"))
-		dashboard.GET("/admin/settings", underConstruction("System Settings"))
-		dashboard.GET("/admin/templates", underConstruction("Template Management"))
-		dashboard.GET("/admin/reports", underConstruction("Reports"))
-		dashboard.GET("/admin/backup", underConstruction("Backup & Restore"))
+	}
+	
+	// Ticket routes - require ticket permissions
+	ticketRoutes := dashboard.Group("/tickets")
+	ticketRoutes.Use(middleware.RequireAnyPermission(rbac, auth.PermissionTicketRead, auth.PermissionOwnTicketRead))
+	{
+		ticketRoutes.GET("", handleTicketsList)
+		ticketRoutes.GET("/:id", middleware.RequireTicketAccess(rbac), handleTicketDetail)
+		ticketRoutes.GET("/:id/edit", middleware.RequirePermission(rbac, auth.PermissionTicketUpdate), handleTicketEditForm)
+	}
+	
+	// Ticket creation and modification - require create/update permissions
+	ticketWriteRoutes := dashboard.Group("/tickets")
+	ticketWriteRoutes.Use(middleware.RequireAnyPermission(rbac, auth.PermissionTicketCreate, auth.PermissionOwnTicketCreate))
+	{
+		ticketWriteRoutes.GET("/new", handleTicketNew)
+		ticketWriteRoutes.POST("/create", handleTicketCreate)
+	}
+	
+	// Ticket actions - require specific permissions
+	ticketActionRoutes := dashboard.Group("/tickets")
+	ticketActionRoutes.Use(middleware.RequirePermission(rbac, auth.PermissionTicketUpdate))
+	{
+		ticketActionRoutes.POST("/:id/quick-action", handleTicketQuickAction)
+		ticketActionRoutes.POST("/bulk-action", handleTicketBulkAction)
+	}
+	
+	// Queue management - agent access required
+	queueRoutes := dashboard.Group("/queues")
+	queueRoutes.Use(middleware.RequireAgentAccess(rbac))
+	{
+		queueRoutes.GET("", handleQueuesList)
+		queueRoutes.GET("/:id", handleQueueDetailPage)
+		queueRoutes.GET("/clear-search", handleClearQueueSearch)
+		queueRoutes.GET("/bulk-toolbar", handleBulkActionsToolbar)
+	}
+	
+	// Queue administration - admin only
+	queueAdminRoutes := dashboard.Group("/queues")
+	queueAdminRoutes.Use(middleware.RequireAdminAccess(rbac))
+	{
+		queueAdminRoutes.GET("/:id/edit", handleEditQueueForm)
+		queueAdminRoutes.GET("/new", handleNewQueueForm)
+		queueAdminRoutes.GET("/:id/delete", handleDeleteQueueConfirmation)
+	}
+	
+	// Templates - agent access
+	templateRoutes := dashboard.Group("/templates")
+	templateRoutes.Use(middleware.RequireAgentAccess(rbac))
+	{
+		templateRoutes.GET("", handleTemplatesPage)
+	}
+	
+	// Admin panel - admin only
+	adminRoutes := dashboard.Group("/admin")
+	adminRoutes.Use(middleware.RequireAdminAccess(rbac))
+	{
+		adminRoutes.GET("", handleAdminDashboard)
+		adminRoutes.GET("/lookups", handleAdminLookups)
+		adminRoutes.GET("/users", underConstruction("User Management"))
+		adminRoutes.GET("/settings", underConstruction("System Settings"))
+		adminRoutes.GET("/templates", underConstruction("Template Management"))
+		adminRoutes.GET("/reports", underConstruction("Reports"))
+		adminRoutes.GET("/backup", underConstruction("Backup & Restore"))
 	}
 	
 	// HTMX API endpoints (return HTML fragments)
 	api := r.Group("/api")
+	
+	// Authentication endpoints (no auth required)
 	{
-		// Authentication
 		api.GET("/auth/login", handleHTMXLogin)  // Also support GET for the form
 		api.POST("/auth/login", handleHTMXLogin)
 		api.POST("/auth/logout", handleHTMXLogout)
@@ -412,182 +463,161 @@ func SetupHTMXRoutes(r *gin.Engine) {
 		api.POST("/auth/refresh", underConstructionAPI("/auth/refresh"))
 		api.GET("/auth/register", underConstructionAPI("/auth/register"))  // GET for form
 		api.POST("/auth/register", underConstructionAPI("/auth/register"))
+	}
+	
+	// Protected API endpoints - require authentication
+	protectedAPI := api.Group("")
+	if jwtManager != nil {
+		protectedAPI.Use(middleware.SessionMiddleware(jwtManager))
+	} else if os.Getenv("DEMO_MODE") == "true" {
+		protectedAPI.Use(middleware.SessionMiddleware(nil))
+	}
+	
+	// Dashboard data - accessible to all authenticated users
+	{
+		protectedAPI.GET("/dashboard/stats", handleDashboardStats)
+		protectedAPI.GET("/dashboard/recent-tickets", handleRecentTickets)
+		protectedAPI.GET("/dashboard/activity", handleActivityFeed)
+		protectedAPI.GET("/notifications", underConstructionAPI("/notifications"))
+	}
+	
+	// Admin-only API endpoints
+	adminAPI := protectedAPI.Group("")
+	adminAPI.Use(middleware.RequireAdminAccess(rbac))
+	{
+		adminAPI.GET("/lookups/cache/invalidate", underConstructionAPI("/lookups/cache/invalidate"))
+		adminAPI.POST("/lookups/cache/invalidate", handleInvalidateLookupCache)
+		adminAPI.PUT("/admin/sla-config", handleUpdateSLAConfig)
 		
-		// Dashboard data
-		api.GET("/dashboard/stats", handleDashboardStats)
-		api.GET("/dashboard/recent-tickets", handleRecentTickets)
-		api.GET("/dashboard/activity", handleActivityFeed)
-		
-		// Notifications
-		api.GET("/notifications", underConstructionAPI("/notifications"))
-		
-		// Lookups
-		api.GET("/lookups/cache/invalidate", underConstructionAPI("/lookups/cache/invalidate"))
-		
+		// Lookup CRUD Endpoints - Admin only
+		adminAPI.POST("/lookups/queues", handleCreateLookupQueue)
+		adminAPI.PUT("/lookups/queues/:id", handleUpdateLookupQueue)
+		adminAPI.DELETE("/lookups/queues/:id", handleDeleteLookupQueue)
+		adminAPI.POST("/lookups/types", handleCreateType)
+		adminAPI.PUT("/lookups/types/:id", handleUpdateType)
+		adminAPI.DELETE("/lookups/types/:id", handleDeleteType)
+		adminAPI.PUT("/lookups/priorities/:id", handleUpdatePriority)
+		adminAPI.PUT("/lookups/statuses/:id", handleUpdateStatus)
+	}
+	
+	// Agent-level API endpoints (agents and admins)
+	agentAPI := protectedAPI.Group("")
+	agentAPI.Use(middleware.RequireAgentAccess(rbac))
+	{
 		// Queue operations
-		api.GET("/queues", handleQueuesAPI)
-		api.POST("/queues", handleCreateQueueWithHTMX)
-		api.GET("/queues/:id", handleQueueDetail)
-		api.PUT("/queues/:id", handleUpdateQueueWithHTMX)
-		api.DELETE("/queues/:id", handleDeleteQueue)
-		api.GET("/queues/:id/tickets", handleQueueTicketsWithHTMX)
+		agentAPI.GET("/queues", handleQueuesAPI)
+		agentAPI.POST("/queues", handleCreateQueueWithHTMX)
+		agentAPI.GET("/queues/:id", handleQueueDetail)
+		agentAPI.PUT("/queues/:id", handleUpdateQueueWithHTMX)
+		agentAPI.DELETE("/queues/:id", handleDeleteQueue)
+		agentAPI.GET("/queues/:id/tickets", handleQueueTicketsWithHTMX)
 		
 		// Bulk queue operations
-		api.PUT("/queues/bulk/:action", handleBulkQueueAction)
-		api.DELETE("/queues/bulk", handleBulkQueueDelete)
+		agentAPI.PUT("/queues/bulk/:action", handleBulkQueueAction)
+		agentAPI.DELETE("/queues/bulk", handleBulkQueueDelete)
 		
-		// Ticket operations
-		// Note: Specific routes must be registered before parameterized routes
-		api.GET("/tickets", handleTicketsAPI)
-		api.GET("/tickets/filter", handleTicketsAPI)  // Filter uses same handler as list
-		api.GET("/tickets/search", handleTicketSearch)
-		api.GET("/search", handleTicketSearch)  // General search endpoint
-		api.PUT("/tickets/bulk", handleBulkUpdateTickets)
-		api.POST("/tickets", handleCreateTicket)
-		api.PUT("/tickets/:id", handleUpdateTicketEnhanced)
-		api.POST("/tickets/:id/status", handleUpdateTicketStatus)
-		api.POST("/tickets/:id/assign", handleAssignTicket)
-		api.POST("/tickets/:id/reply", handleTicketReply)
-		api.POST("/tickets/:id/priority", handleUpdateTicketPriority)
-		api.POST("/tickets/:id/queue", handleUpdateTicketQueue)
-		api.GET("/tickets/:id/messages", underConstructionAPI("/tickets/:id/messages"))
+		// Ticket operations - require ticket permissions
+		agentAPI.GET("/tickets", handleTicketsAPI)
+		agentAPI.GET("/tickets/filter", handleTicketsAPI)  // Filter uses same handler as list
+		agentAPI.GET("/tickets/search", handleTicketSearch)
+		agentAPI.GET("/search", handleTicketSearch)  // General search endpoint
+		agentAPI.PUT("/tickets/bulk", handleBulkUpdateTickets)
+		agentAPI.POST("/tickets", handleCreateTicket)
+		agentAPI.PUT("/tickets/:id", handleUpdateTicketEnhanced)
+		agentAPI.POST("/tickets/:id/status", handleUpdateTicketStatus)
+		agentAPI.POST("/tickets/:id/assign", handleAssignTicket)
+		agentAPI.POST("/tickets/:id/reply", handleTicketReply)
+		agentAPI.POST("/tickets/:id/priority", handleUpdateTicketPriority)
+		agentAPI.POST("/tickets/:id/queue", handleUpdateTicketQueue)
+		agentAPI.GET("/tickets/:id/messages", underConstructionAPI("/tickets/:id/messages"))
 		
 		// SLA and Escalation
-		api.GET("/tickets/:id/sla", handleGetTicketSLA)
-		api.POST("/tickets/:id/escalate", handleEscalateTicket)
-		api.GET("/reports/sla", handleSLAReport)
-		api.PUT("/admin/sla-config", handleUpdateSLAConfig)
+		agentAPI.GET("/tickets/:id/sla", handleGetTicketSLA)
+		agentAPI.POST("/tickets/:id/escalate", handleEscalateTicket)
+		agentAPI.GET("/reports/sla", handleSLAReport)
 		
 		// Ticket Merge
-		api.POST("/tickets/:id/merge", handleMergeTickets)
-		api.POST("/tickets/:id/unmerge", handleUnmergeTicket)
-		api.GET("/tickets/:id/merge-history", handleGetMergeHistory)
+		agentAPI.POST("/tickets/:id/merge", handleMergeTickets)
+		agentAPI.POST("/tickets/:id/unmerge", handleUnmergeTicket)
+		agentAPI.GET("/tickets/:id/merge-history", handleGetMergeHistory)
 		
 		// Ticket Attachments
-		api.POST("/tickets/:id/attachments", handleUploadAttachment)
-		api.GET("/tickets/:id/attachments", handleGetAttachments)
-		api.GET("/tickets/:id/attachments/:attachment_id", handleDownloadAttachment)
-		api.DELETE("/tickets/:id/attachments/:attachment_id", handleDeleteAttachment)
+		agentAPI.POST("/tickets/:id/attachments", handleUploadAttachment)
+		agentAPI.GET("/tickets/:id/attachments", handleGetAttachments)
+		agentAPI.GET("/tickets/:id/attachments/:attachment_id", handleDownloadAttachment)
+		agentAPI.DELETE("/tickets/:id/attachments/:attachment_id", handleDeleteAttachment)
 		
 		// File serving endpoint (for stored attachments)
-		api.GET("/files/*path", handleServeFile)
+		agentAPI.GET("/files/*path", handleServeFile)
 		
 		// Advanced Search (using different endpoints to avoid conflicts)
-		api.GET("/tickets/advanced-search", handleAdvancedTicketSearch)
-		api.GET("/tickets/search/suggestions", handleSearchSuggestions)
-		api.GET("/tickets/search/export", handleExportSearchResults)
+		agentAPI.GET("/tickets/advanced-search", handleAdvancedTicketSearch)
+		agentAPI.GET("/tickets/search/suggestions", handleSearchSuggestions)
+		agentAPI.GET("/tickets/search/export", handleExportSearchResults)
 		
 		// Search History
-		api.POST("/tickets/search/history", handleSaveSearchHistory)
-		api.GET("/tickets/search/history", handleGetSearchHistory)
-		api.DELETE("/tickets/search/history/:id", handleDeleteSearchHistory)
+		agentAPI.POST("/tickets/search/history", handleSaveSearchHistory)
+		agentAPI.GET("/tickets/search/history", handleGetSearchHistory)
+		agentAPI.DELETE("/tickets/search/history/:id", handleDeleteSearchHistory)
 		
 		// Saved Searches
-		api.POST("/tickets/search/saved", handleCreateSavedSearch)
-		api.GET("/tickets/search/saved", handleGetSavedSearches)
-		api.GET("/tickets/search/saved/:id/execute", handleExecuteSavedSearch)
-		api.PUT("/tickets/search/saved/:id", handleUpdateSavedSearch)
-		api.DELETE("/tickets/search/saved/:id", handleDeleteSavedSearch)
+		agentAPI.POST("/tickets/search/saved", handleCreateSavedSearch)
+		agentAPI.GET("/tickets/search/saved", handleGetSavedSearches)
+		agentAPI.GET("/tickets/search/saved/:id/execute", handleExecuteSavedSearch)
+		agentAPI.PUT("/tickets/search/saved/:id", handleUpdateSavedSearch)
+		agentAPI.DELETE("/tickets/search/saved/:id", handleDeleteSavedSearch)
 		
 		// Canned Responses - Using new comprehensive handlers
 		cannedHandlers := NewCannedResponseHandlers()
-		api.GET("/canned-responses", cannedHandlers.GetResponses)
-		api.GET("/canned-responses/quick", cannedHandlers.GetQuickResponses)
-		api.GET("/canned-responses/popular", cannedHandlers.GetPopularResponses)
-		api.GET("/canned-responses/categories", cannedHandlers.GetCategories)
-		api.GET("/canned-responses/category/:category", cannedHandlers.GetResponsesByCategory)
-		api.GET("/canned-responses/search", cannedHandlers.SearchResponses)
-		api.GET("/canned-responses/user", cannedHandlers.GetResponsesForUser)
-		api.GET("/canned-responses/:id", cannedHandlers.GetResponseByID)
-		api.POST("/canned-responses", cannedHandlers.CreateResponse)
-		api.PUT("/canned-responses/:id", cannedHandlers.UpdateResponse)
-		api.DELETE("/canned-responses/:id", cannedHandlers.DeleteResponse)
-		api.POST("/canned-responses/apply", cannedHandlers.ApplyResponse)
-		api.GET("/canned-responses/export", cannedHandlers.ExportResponses)
-		api.POST("/canned-responses/import", cannedHandlers.ImportResponses)
+		agentAPI.GET("/canned-responses", cannedHandlers.GetResponses)
+		agentAPI.GET("/canned-responses/quick", cannedHandlers.GetQuickResponses)
+		agentAPI.GET("/canned-responses/popular", cannedHandlers.GetPopularResponses)
+		agentAPI.GET("/canned-responses/categories", cannedHandlers.GetCategories)
+		agentAPI.GET("/canned-responses/category/:category", cannedHandlers.GetResponsesByCategory)
+		agentAPI.GET("/canned-responses/search", cannedHandlers.SearchResponses)
+		agentAPI.GET("/canned-responses/user", cannedHandlers.GetResponsesForUser)
+		agentAPI.GET("/canned-responses/:id", cannedHandlers.GetResponseByID)
+		agentAPI.POST("/canned-responses", cannedHandlers.CreateResponse)
+		agentAPI.PUT("/canned-responses/:id", cannedHandlers.UpdateResponse)
+		agentAPI.DELETE("/canned-responses/:id", cannedHandlers.DeleteResponse)
+		agentAPI.POST("/canned-responses/apply", cannedHandlers.ApplyResponse)
+		agentAPI.GET("/canned-responses/export", cannedHandlers.ExportResponses)
+		agentAPI.POST("/canned-responses/import", cannedHandlers.ImportResponses)
 		
 		// Lookup Data Endpoints
-		api.GET("/lookups/queues", handleGetQueues)
-		api.GET("/lookups/priorities", handleGetPriorities)
-		api.GET("/lookups/types", handleGetTypes)
-		api.GET("/lookups/statuses", handleGetStatuses)
-		api.GET("/lookups/form-data", handleGetFormData)
-		api.POST("/lookups/cache/invalidate", handleInvalidateLookupCache)
-		
-		// Lookup CRUD Endpoints
-		api.POST("/lookups/queues", handleCreateLookupQueue)
-		api.PUT("/lookups/queues/:id", handleUpdateLookupQueue)
-		api.DELETE("/lookups/queues/:id", handleDeleteLookupQueue)
-		
-		api.POST("/lookups/types", handleCreateType)
-		api.PUT("/lookups/types/:id", handleUpdateType)
-		api.DELETE("/lookups/types/:id", handleDeleteType)
-		
-		api.PUT("/lookups/priorities/:id", handleUpdatePriority)
-		api.PUT("/lookups/statuses/:id", handleUpdateStatus)
-		
-		// Audit and Export/Import
-		api.GET("/lookups/audit", handleGetAuditLogs)
-		api.GET("/lookups/export", handleExportConfiguration)
-		api.POST("/lookups/import", handleImportConfiguration)
-		
-		// Ticket Templates
-		api.GET("/templates", handleGetTemplates)
-		api.GET("/templates/:id", handleGetTemplate)
-		api.POST("/templates", handleCreateTemplate)
-		api.PUT("/templates/:id", handleUpdateTemplate)
-		api.DELETE("/templates/:id", handleDeleteTemplate)
-		api.GET("/templates/search", handleSearchTemplates)
-		api.GET("/templates/categories", handleGetTemplateCategories)
-		api.GET("/templates/popular", handleGetPopularTemplates)
-		api.POST("/templates/apply", handleApplyTemplate)
-		api.GET("/templates/:id/load", handleLoadTemplateIntoForm)
-		api.GET("/templates/modal", handleTemplateSelectionModal)
-		
-		// Internal Notes - Using comprehensive handlers
-		noteHandlers := NewInternalNoteHandlers()
-		api.POST("/tickets/:id/internal-notes", noteHandlers.CreateNote)
-		api.GET("/tickets/:id/internal-notes", noteHandlers.GetNotes)
-		api.GET("/tickets/:id/internal-notes/pinned", noteHandlers.GetPinnedNotes)
-		api.GET("/tickets/:id/internal-notes/important", noteHandlers.GetImportantNotes)
-		api.GET("/tickets/:id/internal-notes/search", noteHandlers.SearchNotes)
-		api.GET("/tickets/:id/internal-notes/stats", noteHandlers.GetNoteStatistics)
-		api.GET("/tickets/:id/internal-notes/activity", noteHandlers.GetRecentActivity)
-		api.GET("/tickets/:id/internal-notes/export", noteHandlers.ExportNotes)
-		api.POST("/tickets/:id/internal-notes/from-template", noteHandlers.CreateNoteFromTemplate)
-		api.GET("/tickets/:id/internal-notes/:note_id", noteHandlers.GetNoteByID)
-		api.PUT("/tickets/:id/internal-notes/:note_id", noteHandlers.UpdateNote)
-		api.DELETE("/tickets/:id/internal-notes/:note_id", noteHandlers.DeleteNote)
-		api.POST("/tickets/:id/internal-notes/:note_id/pin", noteHandlers.PinNote)
-		api.POST("/tickets/:id/internal-notes/:note_id/important", noteHandlers.MarkImportant)
-		api.GET("/tickets/:id/internal-notes/:note_id/history", noteHandlers.GetEditHistory)
-		
-		// Note Templates
-		api.GET("/internal-notes/templates", noteHandlers.GetTemplates)
-		api.POST("/internal-notes/templates", noteHandlers.CreateTemplate)
-		
-		// Search API - Using comprehensive search handlers
-		searchHandlers := NewSearchHandlers()
-		api.GET("/search/tickets", searchHandlers.SearchTickets)
-		api.POST("/search/advanced", searchHandlers.AdvancedSearch)
-		api.GET("/search/suggestions", searchHandlers.GetSearchSuggestions)
-		api.POST("/search/saved", searchHandlers.SaveSearch)
-		api.GET("/search/saved", searchHandlers.GetSavedSearches)
-		api.GET("/search/saved/:id", searchHandlers.GetSavedSearch)
-		api.POST("/search/saved/:id/execute", searchHandlers.ExecuteSavedSearch)
-		api.GET("/search/history", searchHandlers.GetSearchHistory)
-		api.GET("/search/analytics", searchHandlers.GetSearchAnalytics)
-		api.POST("/search/reindex", searchHandlers.ReindexTickets)
-		api.POST("/search/index/ticket", searchHandlers.IndexTicket)
-		api.PUT("/search/index/ticket", searchHandlers.UpdateTicketIndex)
-		api.DELETE("/search/index/ticket/:ticket_number", searchHandlers.DeleteTicketFromIndex)
-		api.PUT("/internal-notes/templates/:template_id", noteHandlers.UpdateTemplate)
-		api.DELETE("/internal-notes/templates/:template_id", noteHandlers.DeleteTemplate)
-		api.GET("/internal-notes/categories", noteHandlers.GetCategories)
-		
-		// Real-time updates
-		api.GET("/tickets/stream", handleTicketStream)
-		api.GET("/dashboard/activity-stream", handleActivityStream)
+		agentAPI.GET("/lookups/queues", handleGetQueues)
+		agentAPI.GET("/lookups/priorities", handleGetPriorities)
+		agentAPI.GET("/lookups/types", handleGetTypes)
+		agentAPI.GET("/lookups/statuses", handleGetStatuses)
+		agentAPI.GET("/lookups/form-data", handleGetFormData)
+	}
+	
+	// Additional admin endpoints for audit and configuration
+	{
+		adminAPI.GET("/lookups/audit", handleGetAuditLogs)
+		adminAPI.GET("/lookups/export", handleExportConfiguration)
+		adminAPI.POST("/lookups/import", handleImportConfiguration)
+	}
+	
+	// Template endpoints - Agent access
+	{
+		agentAPI.GET("/templates", handleGetTemplates)
+		agentAPI.GET("/templates/:id", handleGetTemplate)
+		agentAPI.POST("/templates", handleCreateTemplate)
+		agentAPI.PUT("/templates/:id", handleUpdateTemplate)
+		agentAPI.DELETE("/templates/:id", handleDeleteTemplate)
+		agentAPI.GET("/templates/search", handleSearchTemplates)
+		agentAPI.GET("/templates/categories", handleGetTemplateCategories)
+		agentAPI.GET("/templates/popular", handleGetPopularTemplates)
+		agentAPI.POST("/templates/apply", handleApplyTemplate)
+		agentAPI.GET("/templates/:id/load", handleLoadTemplateIntoForm)
+		agentAPI.GET("/templates/modal", handleTemplateSelectionModal)
+	}
+	
+	// Real-time endpoints - accessible to authenticated users
+	{
+		protectedAPI.GET("/tickets/stream", handleTicketStream)
+		protectedAPI.GET("/dashboard/activity-stream", handleActivityStream)
 	}
 }
 
