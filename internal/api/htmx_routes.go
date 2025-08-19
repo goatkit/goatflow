@@ -763,6 +763,9 @@ func handleTicketNew(c *gin.Context) {
 
 // Handle ticket creation from UI form
 func handleTicketCreate(c *gin.Context) {
+	// Debug: Write to file immediately
+	os.WriteFile("/tmp/handler-called.log", []byte("Handler called at " + time.Now().String() + "\n"), 0644)
+	
 	// Get form data
 	title := strings.TrimSpace(c.PostForm("title"))
 	queueIDStr := c.PostForm("queue_id")
@@ -770,6 +773,10 @@ func handleTicketCreate(c *gin.Context) {
 	description := c.PostForm("description")
 	customerEmail := strings.TrimSpace(c.PostForm("customer_email"))
 	autoAssign := c.PostForm("auto_assign") == "true"
+	
+	// Debug: Write form data to file
+	debugMsg := fmt.Sprintf("Form data: title=%s, desc=%s, desc_len=%d\n", title, description, len(description))
+	os.WriteFile("/tmp/form-data.log", []byte(debugMsg), 0644)
 	
 	// Validation
 	errors := []string{}
@@ -843,9 +850,21 @@ func handleTicketCreate(c *gin.Context) {
 		ticket.TicketStateID = 2 // Open
 	}
 	
-	// Save the ticket
-	ticketService := GetTicketService()
-	if err := ticketService.CreateTicket(ticket); err != nil {
+	// Get database connection for real operations
+	db, err := database.GetDB()
+	if err != nil {
+		c.Header("Content-Type", "text/html; charset=utf-8")
+		c.String(http.StatusInternalServerError, `
+			<div class="text-red-600">
+				<p>Database connection failed</p>
+			</div>
+		`)
+		return
+	}
+	
+	// Save the ticket using real database
+	ticketRepo := repository.NewTicketRepository(db)
+	if err := ticketRepo.Create(ticket); err != nil {
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		c.String(http.StatusInternalServerError, `
 			<div class="text-red-600">
@@ -855,15 +874,31 @@ func handleTicketCreate(c *gin.Context) {
 		return
 	}
 	
-	// Add initial message if description provided
+	// Add initial article if description provided
 	if description != "" {
-		message := &service.SimpleTicketMessage{
-			TicketID:  uint(ticket.ID),
-			Body:      description,
-			CreatedBy: 1,
-			IsPublic:  true,
+		// Write debug to file for testing
+		os.WriteFile("/tmp/debug.log", []byte(fmt.Sprintf("Creating article for ticket %d with desc: %s\n", ticket.ID, description)), 0644)
+		
+		articleRepo := repository.NewArticleRepository(db)
+		article := &models.Article{
+			TicketID:             ticket.ID,
+			Subject:              title,
+			Body:                 description,
+			SenderTypeID:         3, // Customer
+			CommunicationChannelID: 1, // Email
+			IsVisibleForCustomer: 1,
+			CreateBy:            1,
+			ChangeBy:            1,
 		}
-		ticketService.AddMessage(uint(ticket.ID), message)
+		
+		if err := articleRepo.Create(article); err != nil {
+			// Log error but don't fail the ticket creation
+			fmt.Printf("ERROR: Failed to add initial article for ticket %d: %v\n", ticket.ID, err)
+		} else {
+			fmt.Printf("SUCCESS: Created article for ticket %d\n", ticket.ID)
+		}
+	} else {
+		fmt.Printf("DEBUG: No description provided, skipping article creation\n")
 	}
 	
 	// Build success message
