@@ -82,8 +82,8 @@ func (s *Synthesizer) generateAlphaNum(length int) (string, error) {
 
 func (s *Synthesizer) generateMixed(length int) (string, error) {
 	// Safe special characters that avoid shell/SQL/URL parsing issues
-	// Excludes: $ & * # % ^ ` ' " \ | ; < > ( ) { } [ ] space + 
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@-_=.,"
+	// Excludes: $ & * # % ^ ` ' " \ | ; < > ( ) { } [ ] space + , :
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@-_=."
 	result := make([]byte, length)
 	for i := range result {
 		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
@@ -105,9 +105,9 @@ func (s *Synthesizer) generatePassword(length int) (string, error) {
 		upper   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		digits  = "0123456789"
 		// Safe special characters that avoid shell/SQL/URL parsing issues
-		// Using: ! @ - _ = . ,
-		// Avoiding: # $ % ^ & * < > ? ` ' " \ | ; ( ) { } [ ] space + :
-		special = "!@-_=.,"
+		// Using: ! @ - _ = .
+		// Avoiding: # $ % ^ & * < > ? ` ' " \ | ; ( ) { } [ ] space + : ,
+		special = "!@-_=."
 	)
 	
 	all := lower + upper + digits + special

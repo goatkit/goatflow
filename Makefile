@@ -320,13 +320,50 @@ db-shell:
 
 db-migrate:
 	@echo "Running database migrations..."
-	$(COMPOSE_CMD) exec -e PGPASSWORD=$(DB_PASSWORD) backend psql -h postgres -U $(DB_USER) -d $(DB_NAME) -f /app/migrations/000001_initial_schema.up.sql
-	$(COMPOSE_CMD) exec -e PGPASSWORD=$(DB_PASSWORD) backend psql -h postgres -U $(DB_USER) -d $(DB_NAME) -f /app/migrations/000002_initial_data.up.sql
+	$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" up
 	@echo "Migrations completed successfully!"
 
 db-migrate-schema-only:
 	@echo "Running schema migration only..."
-	$(COMPOSE_CMD) exec -e PGPASSWORD=$(DB_PASSWORD) backend psql -h postgres -U $(DB_USER) -d $(DB_NAME) -f /app/migrations/000001_initial_schema.up.sql
+	$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" up 3
+	@echo "Schema and initial data applied (no test data)"
+
+db-seed-dev:
+	@echo "Seeding development database with comprehensive test data..."
+	@$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" up
+	@echo "✅ Development database seeded with:"
+	@echo "   - 10 organizations"
+	@echo "   - 50 customer users"
+	@echo "   - 15 support agents"
+	@echo "   - 100 ITSM tickets"
+	@echo "   - Knowledge base articles"
+
+db-seed-test:
+	@echo "Seeding test database with comprehensive test data..."
+	@$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$${DB_NAME}_test?sslmode=disable" up
+	@echo "✅ Test database ready for testing"
+
+db-reset-dev:
+	@echo "⚠️  This will DELETE all data and recreate the development database!"
+	@echo -n "Are you sure? [y/N]: "; \
+	read confirm; \
+	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
+		echo "Resetting development database..."; \
+		$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" down -all; \
+		$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" up; \
+		echo "✅ Fresh development environment ready with test data!"; \
+	else \
+		echo "Reset cancelled."; \
+	fi
+
+db-reset-test:
+	@echo "Resetting test database..."
+	@$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$${DB_NAME}_test?sslmode=disable" down -all
+	@$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$${DB_NAME}_test?sslmode=disable" up
+	@echo "✅ Test database reset with fresh test data"
+
+db-refresh: db-reset-dev
+	@echo "✅ Database refreshed for new development cycle"
 
 db-rollback:
 	$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" down 1

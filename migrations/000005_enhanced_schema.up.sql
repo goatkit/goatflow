@@ -3,9 +3,9 @@
 -- All SQL is originally written for GOTRS-CE
 
 -- Modify tickets table for broader compatibility
--- Using VARCHAR for customer identifiers is an industry standard practice
-ALTER TABLE tickets 
-ALTER COLUMN customer_id TYPE VARCHAR(150) USING customer_id::VARCHAR;
+-- Note: Keeping customer_id as INTEGER to maintain foreign key relationships
+-- ALTER TABLE tickets 
+-- ALTER COLUMN customer_id TYPE VARCHAR(150) USING customer_id::VARCHAR;
 
 -- Enhanced ticket state types for comprehensive workflow support
 ALTER TABLE ticket_states 
@@ -27,10 +27,18 @@ ADD COLUMN IF NOT EXISTS resolution_deadline TIMESTAMP,
 ADD COLUMN IF NOT EXISTS last_customer_contact TIMESTAMP,
 ADD COLUMN IF NOT EXISTS last_agent_contact TIMESTAMP;
 
+-- Add missing columns to users table for organization support
+ALTER TABLE users ADD COLUMN IF NOT EXISTS organization_id INTEGER;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_customer BOOLEAN DEFAULT false;
+
 -- Organization management for B2B support
 CREATE TABLE IF NOT EXISTS organizations (
-    id VARCHAR(150) PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(200) NOT NULL,
+    domain VARCHAR(100),
+    support_level VARCHAR(50),
+    industry VARCHAR(100),
+    size VARCHAR(50),
     address_line1 VARCHAR(200),
     address_line2 VARCHAR(200),
     city VARCHAR(100),
@@ -39,19 +47,23 @@ CREATE TABLE IF NOT EXISTS organizations (
     country VARCHAR(100),
     website VARCHAR(200),
     notes TEXT,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by INTEGER NOT NULL,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_by INTEGER NOT NULL
+    active BOOLEAN DEFAULT true,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    create_by INTEGER NOT NULL,
+    change_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    change_by INTEGER NOT NULL
 );
+
+-- Add foreign key constraint to users table now that organizations table exists
+ALTER TABLE users ADD CONSTRAINT users_organization_id_fkey 
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE SET NULL;
 
 -- Customer accounts linked to organizations
 CREATE TABLE IF NOT EXISTS customer_accounts (
     id SERIAL PRIMARY KEY,
     username VARCHAR(200) NOT NULL UNIQUE,
     email VARCHAR(150) NOT NULL,
-    organization_id VARCHAR(150) REFERENCES organizations(id),
+    organization_id INTEGER REFERENCES organizations(id),
     password_hash VARCHAR(255),
     full_name VARCHAR(200),
     phone_number VARCHAR(50),

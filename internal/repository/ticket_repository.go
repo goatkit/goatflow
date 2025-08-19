@@ -774,3 +774,73 @@ func (r *TicketRepository) GetTicketPriorities() ([]models.TicketPriority, error
 	
 	return priorities, nil
 }
+
+// GetByTicketNumber retrieves a ticket by its ticket number
+func (r *TicketRepository) GetByTicketNumber(ticketNumber string) (*models.Ticket, error) {
+	var ticket models.Ticket
+	query := `
+		SELECT 
+			id, ticket_number, title, queue_id, ticket_lock_id, type_id,
+			service_id, sla_id, user_id, responsible_user_id, customer_id,
+			customer_user_id, ticket_state_id, ticket_priority_id, until_time,
+			escalation_time, escalation_update_time, escalation_response_time,
+			escalation_solution_time, archive_flag, create_time, create_by,
+			change_time, change_by
+		FROM tickets
+		WHERE ticket_number = $1
+	`
+	
+	err := r.db.QueryRow(query, ticketNumber).Scan(
+		&ticket.ID,
+		&ticket.TicketNumber,
+		&ticket.Title,
+		&ticket.QueueID,
+		&ticket.TicketLockID,
+		&ticket.TypeID,
+		&ticket.ServiceID,
+		&ticket.SLAID,
+		&ticket.UserID,
+		&ticket.ResponsibleUserID,
+		&ticket.CustomerID,
+		&ticket.CustomerUserID,
+		&ticket.TicketStateID,
+		&ticket.TicketPriorityID,
+		&ticket.UntilTime,
+		&ticket.EscalationTime,
+		&ticket.EscalationUpdateTime,
+		&ticket.EscalationResponseTime,
+		&ticket.EscalationSolutionTime,
+		&ticket.ArchiveFlag,
+		&ticket.CreateTime,
+		&ticket.CreateBy,
+		&ticket.ChangeTime,
+		&ticket.ChangeBy,
+	)
+	
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("ticket not found")
+	}
+	
+	return &ticket, err
+}
+
+// Count returns the total number of tickets
+func (r *TicketRepository) Count() (int, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM tickets`
+	err := r.db.QueryRow(query).Scan(&count)
+	return count, err
+}
+
+// CountByStatus returns the number of tickets with a specific status
+func (r *TicketRepository) CountByStatus(status string) (int, error) {
+	var count int
+	query := `
+		SELECT COUNT(*) 
+		FROM tickets t
+		JOIN ticket_states ts ON t.ticket_state_id = ts.id
+		WHERE ts.name = $1
+	`
+	err := r.db.QueryRow(query, status).Scan(&count)
+	return count, err
+}

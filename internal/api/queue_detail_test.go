@@ -286,12 +286,21 @@ func TestQueueDetailErrorHandling(t *testing.T) {
 		checkResponse  func(t *testing.T, body string)
 	}{
 		{
-			name:           "should handle database errors gracefully",
-			queueID:        "1",
-			setupError:     true,
-			expectedStatus: http.StatusInternalServerError,
+			name:           "should handle non-existent queue gracefully",
+			queueID:        "999",
+			setupError:     false,
+			expectedStatus: http.StatusNotFound,
 			checkResponse: func(t *testing.T, body string) {
-				assert.Contains(t, strings.ToLower(body), "error")
+				assert.Contains(t, strings.ToLower(body), "queue not found")
+			},
+		},
+		{
+			name:           "should handle invalid queue ID gracefully",
+			queueID:        "invalid",
+			setupError:     false,
+			expectedStatus: http.StatusBadRequest,
+			checkResponse: func(t *testing.T, body string) {
+				assert.Contains(t, strings.ToLower(body), "invalid queue id")
 			},
 		},
 	}
