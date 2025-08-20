@@ -215,9 +215,16 @@ func (r *GroupSQLRepository) Update(group *models.Group) error {
 	return nil
 }
 
-// Delete soft deletes a group (sets valid_id = 2)
+// Delete permanently deletes a group and removes all member associations
 func (r *GroupSQLRepository) Delete(id uint) error {
-	query := `UPDATE groups SET valid_id = 2, change_time = CURRENT_TIMESTAMP WHERE id = $1`
+	// First, remove all group members
+	_, err := r.db.Exec(`DELETE FROM user_groups WHERE group_id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("failed to remove group members: %w", err)
+	}
+	
+	// Then delete the group itself
+	query := `DELETE FROM groups WHERE id = $1`
 	
 	result, err := r.db.Exec(query, id)
 	if err != nil {
