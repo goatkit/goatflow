@@ -41,12 +41,20 @@ help:
 	@echo "  make synthesize       - Generate new .env with secure secrets"
 	@echo "  make rotate-secrets   - Rotate secrets in existing .env"
 	@echo "  make synthesize-force - Force regenerate .env (overwrite existing)"
+	@echo "  make k8s-secrets      - Generate k8s/secrets.yaml from template"
 	@echo ""
 	@echo "Toolbox commands (fast, containerized dev tools):"
 	@echo "  make toolbox-build    - Build toolbox container (auto-runs before use)"
 	@echo "  make toolbox-run      - Interactive shell with all tools"
 	@echo "  make toolbox-test     - Run all tests quickly"
 	@echo "  make toolbox-test-run TEST=TestName - Run specific test"
+	@echo ""
+	@echo "E2E Testing (Playwright):"
+	@echo "  make test-e2e         - Run E2E tests headless"
+	@echo "  make test-e2e-debug   - Run E2E tests with visible browser"
+	@echo "  make test-e2e-watch   - Run E2E tests in watch mode"
+	@echo "  make test-e2e-report  - View test results summary"
+	@echo "  make clean-test-results - Clean test artifacts"
 	@echo "  make toolbox-lint     - Run Go linters"
 	@echo "  make toolbox-security - Run security scan"
 	@echo ""
@@ -146,6 +154,8 @@ synthesize:
 		gotrs-toolbox:latest \
 		gotrs synthesize
 	@echo "📝 Test credentials saved to test_credentials.csv"
+	@echo "🔐 Generating Kubernetes secrets from template..."
+	@./scripts/generate-k8s-secrets.sh
 	@if [ -d .git ]; then \
 		echo ""; \
 		echo "💡 To enable secret scanning in git commits, run:"; \
@@ -184,6 +194,11 @@ gen-test-data:
 		-u "$$(id -u):$$(id -g)" \
 		gotrs-toolbox:latest \
 		gotrs synthesize --test-data-only
+
+# Generate Kubernetes secrets from template with secure random values
+k8s-secrets:
+	@echo "🔐 Generating Kubernetes secrets from template..."
+	@./scripts/generate-k8s-secrets.sh
 
 # Run interactive shell in toolbox container
 toolbox-run:
@@ -494,8 +509,66 @@ test-contracts:
 	@echo "Running Pact contract tests..."
 	$(COMPOSE_CMD) exec frontend npm run test:contracts
 
-test-all: test test-frontend test-contracts
+test-all: test test-frontend test-contracts test-e2e
 	@echo "All tests completed!"
+
+# E2E Testing Commands
+.PHONY: test-e2e test-e2e-watch test-e2e-debug test-e2e-report playwright-build
+
+# Build Playwright test container
+playwright-build:
+	@echo "Building Playwright test container..."
+	@$(COMPOSE_CMD) build playwright
+
+# Run E2E tests
+test-e2e: playwright-build
+	@echo "Running E2E tests with Playwright..."
+	@mkdir -p test-results/screenshots test-results/videos
+	@$(COMPOSE_CMD) run --rm \
+		-e HEADLESS=true \
+		playwright
+
+# Run E2E tests in watch mode (for development)
+test-e2e-watch: playwright-build
+	@echo "Running E2E tests in watch mode..."
+	@mkdir -p test-results/screenshots test-results/videos
+	@$(COMPOSE_CMD) run --rm \
+		-e HEADLESS=false \
+		-e SLOW_MO=100 \
+		playwright go test ./tests/e2e/... -v -watch
+
+# Check for untranslated keys in UI
+check-translations:
+	@echo "Checking for untranslated keys in UI..."
+	@./scripts/check-translations.sh
+
+# Run E2E tests with headed browser for debugging
+test-e2e-debug: playwright-build
+	@echo "Running E2E tests in debug mode (headed browser)..."
+	@mkdir -p test-results/screenshots test-results/videos
+	@$(COMPOSE_CMD) run --rm \
+		-e HEADLESS=false \
+		-e SLOW_MO=500 \
+		-e SCREENSHOTS=true \
+		-e VIDEOS=true \
+		playwright go test ./tests/e2e/... -v
+
+# Generate HTML test report
+test-e2e-report:
+	@echo "Generating E2E test report..."
+	@if [ -d "test-results" ]; then \
+		echo "Test results:"; \
+		echo "Screenshots: $$(find test-results/screenshots -name "*.png" 2>/dev/null | wc -l) files"; \
+		echo "Videos: $$(find test-results/videos -name "*.webm" 2>/dev/null | wc -l) files"; \
+		ls -la test-results/ 2>/dev/null || true; \
+	else \
+		echo "No test results found. Run test-e2e first."; \
+	fi
+
+# Clean test results
+clean-test-results:
+	@echo "Cleaning test results..."
+	@rm -rf test-results/
 
 # Security scanning commands
 .PHONY: scan-secrets scan-secrets-history scan-secrets-precommit scan-vulnerabilities security-scan
