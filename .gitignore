@@ -355,3 +355,4 @@ development.sqlite3
 .claude/*.local.json
 CLAUDE.local.md
 *.local.md
+internal/api/storage/
