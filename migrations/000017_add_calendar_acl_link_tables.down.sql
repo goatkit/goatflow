@@ -1,0 +1,10 @@
+-- Rollback: Remove calendar, ACL and link tables
+DROP TABLE IF EXISTS link_relation CASCADE;
+DROP TABLE IF EXISTS link_object CASCADE;
+DROP TABLE IF EXISTS link_state CASCADE;
+DROP TABLE IF EXISTS link_type CASCADE;
+DROP TABLE IF EXISTS acl_sync CASCADE;
+DROP TABLE IF EXISTS acl CASCADE;
+DROP TABLE IF EXISTS calendar_appointment_ticket CASCADE;
+DROP TABLE IF EXISTS calendar_appointment CASCADE;
+DROP TABLE IF EXISTS calendar CASCADE;
