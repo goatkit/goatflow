@@ -1,0 +1,363 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Standard Attachment Management - GOTRS Admin{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg mb-6">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
+                        <i class="fas fa-paperclip mr-2"></i>Standard Attachment Management
+                    </h1>
+                    <button onclick="openCreateModal()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Attachment
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter Bar -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg mb-6">
+            <div class="px-6 py-4">
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <label for="searchInput" class="sr-only">Search attachments</label>
+                        <div class="relative">
+                            <input type="text" id="searchInput" value="{{ SearchQuery }}" placeholder="Search attachments..." 
+                                   onkeypress="if(event.key === 'Enter') applyFilters()"
+                                   class="block w-full pr-10 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                {% if SearchQuery %}
+                                <button type="button" onclick="clearSearch()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                                {% else %}
+                                <svg class="h-5 w-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <select id="validFilter" class="block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
+                            <option value="all" {% if ValidFilter == "all" %}selected{% endif %}>All Status</option>
+                            <option value="valid" {% if ValidFilter == "valid" %}selected{% endif %}>Valid Only</option>
+                            <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>Invalid Only</option>
+                        </select>
+                    </div>
+                    <button onclick="applyFilters()" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Apply Filters
+                    </button>
+                    <button onclick="clearFilters()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attachments Table -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Filename</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Size</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Comments</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for attachment in Attachments %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                {{ attachment.Name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                {{ attachment.Filename }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                <div class="max-w-xs truncate" title="{{ attachment.ContentType }}">
+                                    {{ attachment.ContentType }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                {{ attachment.ContentSizeFormatted }}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">
+                                {% if attachment.Comments %}{{ attachment.Comments }}{% else %}-{% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if attachment.ValidID == 1 %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                                    Valid
+                                </span>
+                                {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                                    Invalid
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex space-x-2">
+                                    <a href="/admin/attachments/{{ attachment.ID }}/download" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300" title="Download">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                                        </svg>
+                                    </a>
+                                    <button onclick="openEditModal({{ attachment.ID }}, '{{ attachment.Name }}', '{{ attachment.Comments|default:"" }}', {{ attachment.ValidID }})" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300" title="Edit">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                    </button>
+                                    <button onclick="toggleValidity({{ attachment.ID }}, {{ attachment.ValidID }})" class="{% if attachment.ValidID == 1 %}text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300{% else %}text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300{% endif %}" title="{% if attachment.ValidID == 1 %}Deactivate{% else %}Activate{% endif %}">
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M{% if attachment.ValidID == 1 %}18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636{% else %}9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z{% endif %}" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                                No attachments found. Click "Add Attachment" to create one.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Modal -->
+<div id="createModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Add New Attachment</h3>
+            </div>
+            <form id="createForm" enctype="multipart/form-data">
+                <div class="px-6 py-4 space-y-4">
+                    <div>
+                        <label for="createName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                        <input type="text" id="createName" name="name" required class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="createFile" class="block text-sm font-medium text-gray-700 dark:text-gray-300">File</label>
+                        <input type="file" id="createFile" name="file" required class="mt-1 block w-full text-sm text-gray-900 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer focus:outline-none dark:bg-gray-700">
+                    </div>
+                    <div>
+                        <label for="createComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Comments</label>
+                        <textarea id="createComments" name="comments" rows="3" class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"></textarea>
+                    </div>
+                    <div>
+                        <label for="createValid" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                        <select id="createValid" name="valid_id" class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                            <option value="1">Valid</option>
+                            <option value="2">Invalid</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-3">
+                    <button type="button" onclick="closeCreateModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-600 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Create
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Edit Attachment</h3>
+            </div>
+            <form id="editForm" enctype="multipart/form-data">
+                <input type="hidden" id="editId" name="id">
+                <div class="px-6 py-4 space-y-4">
+                    <div>
+                        <label for="editName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                        <input type="text" id="editName" name="name" required class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="editFile" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Replace File (optional)</label>
+                        <input type="file" id="editFile" name="file" class="mt-1 block w-full text-sm text-gray-900 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer focus:outline-none dark:bg-gray-700">
+                    </div>
+                    <div>
+                        <label for="editComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Comments</label>
+                        <textarea id="editComments" name="comments" rows="3" class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"></textarea>
+                    </div>
+                    <div>
+                        <label for="editValid" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+                        <select id="editValid" name="valid_id" class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                            <option value="1">Valid</option>
+                            <option value="2">Invalid</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-3">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-600 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Update
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Modal management
+function openCreateModal() {
+    document.getElementById('createModal').classList.remove('hidden');
+    document.getElementById('createForm').reset();
+}
+
+function closeCreateModal() {
+    document.getElementById('createModal').classList.add('hidden');
+}
+
+function openEditModal(id, name, comments, validId) {
+    document.getElementById('editModal').classList.remove('hidden');
+    document.getElementById('editId').value = id;
+    document.getElementById('editName').value = name;
+    document.getElementById('editComments').value = comments;
+    document.getElementById('editValid').value = validId;
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').classList.add('hidden');
+}
+
+// Filter management
+function applyFilters() {
+    const search = document.getElementById('searchInput').value;
+    const valid = document.getElementById('validFilter').value;
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (valid !== 'all') params.set('valid', valid);
+    window.location.href = '/admin/attachments?' + params.toString();
+}
+
+function clearFilters() {
+    window.location.href = '/admin/attachments';
+}
+
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    applyFilters();
+}
+
+// Create attachment
+document.getElementById('createForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch('/admin/attachments/create', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Attachment created successfully', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast(data.error || 'Failed to create attachment', 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Error creating attachment', 'error');
+    });
+});
+
+// Update attachment
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const id = document.getElementById('editId').value;
+    const formData = new FormData(this);
+    
+    fetch(`/admin/attachments/${id}/update`, {
+        method: 'PUT',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Attachment updated successfully', 'success');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            showToast(data.error || 'Failed to update attachment', 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Error updating attachment', 'error');
+    });
+});
+
+// Toggle validity
+function toggleValidity(id, currentValidId) {
+    const newValidId = currentValidId === 1 ? 2 : 1;
+    const action = newValidId === 1 ? 'activate' : 'deactivate';
+    
+    if (confirm(`Are you sure you want to ${action} this attachment?`)) {
+        fetch(`/admin/attachments/${id}/toggle`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ valid_id: newValidId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`Attachment ${action}d successfully`, 'success');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                showToast(data.error || `Failed to ${action} attachment`, 'error');
+            }
+        })
+        .catch(error => {
+            showToast(`Error ${action}ing attachment`, 'error');
+        });
+    }
+}
+
+
+// Toast notification
+function showToast(message, type) {
+    // Implementation would use a toast library or custom toast component
+    console.log(`${type}: ${message}`);
+    alert(message); // Temporary fallback
+}
+
+// Enter key submission for modals
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeCreateModal();
+        closeEditModal();
+    }
+});
+</script>
+{% endblock %}

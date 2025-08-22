@@ -146,9 +146,6 @@ func handleAdminStates(c *gin.Context) {
 		stateTypes = append(stateTypes, st)
 	}
 
-	// Get user from context for navigation
-	user := getUserFromContext(c)
-
 	// Convert typeFilter to int for template comparison
 	var typeFilterInt int
 	if typeFilter != "" {

@@ -1,0 +1,391 @@
+package api
+
+import (
+	"database/sql"
+	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/flosch/pongo2/v6"
+	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/lib/pq"
+)
+
+// Service represents a service in OTRS
+type Service struct {
+	ID         int       `json:"id"`
+	Name       string    `json:"name"`
+	Comments   *string   `json:"comments,omitempty"`
+	ValidID    int       `json:"valid_id"`
+	CreateTime time.Time `json:"create_time"`
+	CreateBy   int       `json:"create_by"`
+	ChangeTime time.Time `json:"change_time"`
+	ChangeBy   int       `json:"change_by"`
+}
+
+// ServiceWithStats includes additional statistics
+type ServiceWithStats struct {
+	Service
+	TicketCount int `json:"ticket_count"`
+	SLACount    int `json:"sla_count"`
+}
+
+// handleAdminServices renders the admin services management page
+func handleAdminServices(c *gin.Context) {
+	db, err := database.GetDB()
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Database connection failed")
+		return
+	}
+
+	// Get search and filter parameters
+	searchQuery := c.Query("search")
+	validFilter := c.DefaultQuery("valid", "all")
+	sortBy := c.DefaultQuery("sort", "name")
+	sortOrder := c.DefaultQuery("order", "asc")
+
+	// Build query with filters
+	query := `
+		SELECT 
+			s.id, s.name, s.comments, s.valid_id,
+			s.create_time, s.create_by, s.change_time, s.change_by,
+			COUNT(DISTINCT t.id) as ticket_count,
+			COUNT(DISTINCT sla.id) as sla_count
+		FROM service s
+		LEFT JOIN ticket t ON t.service_id = s.id
+		LEFT JOIN sla ON sla.id IN (
+			SELECT id FROM sla WHERE valid_id = 1
+		)
+		WHERE 1=1
+	`
+	
+	var args []interface{}
+	argCount := 1
+
+	if searchQuery != "" {
+		query += fmt.Sprintf(" AND (LOWER(s.name) LIKE $%d OR LOWER(s.comments) LIKE $%d)", argCount, argCount+1)
+		searchPattern := "%" + strings.ToLower(searchQuery) + "%"
+		args = append(args, searchPattern, searchPattern)
+		argCount += 2
+	}
+
+	if validFilter != "all" {
+		if validFilter == "valid" {
+			query += fmt.Sprintf(" AND s.valid_id = $%d", argCount)
+			args = append(args, 1)
+		} else if validFilter == "invalid" {
+			query += fmt.Sprintf(" AND s.valid_id = $%d", argCount)
+			args = append(args, 2)
+		} else if validFilter == "invalid-temporarily" {
+			query += fmt.Sprintf(" AND s.valid_id = $%d", argCount)
+			args = append(args, 3)
+		}
+		argCount++
+	}
+
+	query += " GROUP BY s.id, s.name, s.comments, s.valid_id, s.create_time, s.create_by, s.change_time, s.change_by"
+
+	// Add sorting
+	validSortColumns := map[string]bool{
+		"id": true, "name": true, "valid_id": true, "ticket_count": true,
+	}
+	if !validSortColumns[sortBy] {
+		sortBy = "name"
+	}
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "asc"
+	}
+	query += fmt.Sprintf(" ORDER BY %s %s", sortBy, sortOrder)
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to fetch services")
+		return
+	}
+	defer rows.Close()
+
+	var services []ServiceWithStats
+	for rows.Next() {
+		var s ServiceWithStats
+		var comments sql.NullString
+		
+		err := rows.Scan(
+			&s.ID, &s.Name, &comments, &s.ValidID,
+			&s.CreateTime, &s.CreateBy, &s.ChangeTime, &s.ChangeBy,
+			&s.TicketCount, &s.SLACount,
+		)
+		if err != nil {
+			continue
+		}
+		
+		if comments.Valid {
+			s.Comments = &comments.String
+		}
+		
+		services = append(services, s)
+	}
+
+	// Render the template
+	pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/services.pongo2", pongo2.Context{
+		"Title":       "Service Management",
+		"Services":    services,
+		"SearchQuery": searchQuery,
+		"ValidFilter": validFilter,
+		"SortBy":      sortBy,
+		"SortOrder":   sortOrder,
+		"User":        getUserMapForTemplate(c),
+		"ActivePage":  "admin",
+	})
+}
+
+// handleAdminServiceCreate creates a new service
+func handleAdminServiceCreate(c *gin.Context) {
+	var input struct {
+		Name     string  `json:"name" form:"name" binding:"required"`
+		Comments *string `json:"comments" form:"comments"`
+		ValidID  int     `json:"valid_id" form:"valid_id"`
+	}
+
+	// Default valid_id to 1 if not provided
+	input.ValidID = 1
+
+	if err := c.ShouldBind(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Name is required",
+		})
+		return
+	}
+
+	// Validate name is not empty
+	if strings.TrimSpace(input.Name) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Name is required",
+		})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection failed",
+		})
+		return
+	}
+
+	// Check for duplicate name
+	var exists bool
+	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM service WHERE name = $1)", input.Name).Scan(&exists)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to check for duplicate",
+		})
+		return
+	}
+
+	if exists {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Service with this name already exists",
+		})
+		return
+	}
+
+	// Insert the new service
+	var id int
+	err = db.QueryRow(`
+		INSERT INTO service (name, comments, valid_id, create_time, create_by, change_time, change_by)
+		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+		RETURNING id
+	`, input.Name, input.Comments, input.ValidID).Scan(&id)
+
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Service with this name already exists",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to create service",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Service created successfully",
+		"data": gin.H{
+			"id":   id,
+			"name": input.Name,
+		},
+	})
+}
+
+// handleAdminServiceUpdate updates an existing service
+func handleAdminServiceUpdate(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid service ID",
+		})
+		return
+	}
+
+	var input struct {
+		Name     string  `json:"name" form:"name"`
+		Comments *string `json:"comments" form:"comments"`
+		ValidID  *int    `json:"valid_id" form:"valid_id"`
+	}
+
+	if err := c.ShouldBind(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid input",
+		})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection failed",
+		})
+		return
+	}
+
+	// Build update query dynamically
+	updates := []string{"change_time = CURRENT_TIMESTAMP", "change_by = 1"}
+	args := []interface{}{}
+	argCount := 1
+
+	if input.Name != "" {
+		updates = append(updates, fmt.Sprintf("name = $%d", argCount))
+		args = append(args, input.Name)
+		argCount++
+	}
+
+	if input.Comments != nil {
+		updates = append(updates, fmt.Sprintf("comments = $%d", argCount))
+		args = append(args, *input.Comments)
+		argCount++
+	}
+
+	if input.ValidID != nil {
+		updates = append(updates, fmt.Sprintf("valid_id = $%d", argCount))
+		args = append(args, *input.ValidID)
+		argCount++
+	}
+
+	args = append(args, id)
+	query := fmt.Sprintf("UPDATE service SET %s WHERE id = $%d", strings.Join(updates, ", "), argCount)
+
+	result, err := db.Exec(query, args...)
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Service with this name already exists",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to update service",
+		})
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "Service not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Service updated successfully",
+	})
+}
+
+// handleAdminServiceDelete soft deletes a service (sets valid_id = 2)
+func handleAdminServiceDelete(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid service ID",
+		})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection failed",
+		})
+		return
+	}
+
+	// Check if service has associated tickets
+	var ticketCount int
+	err = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE service_id = $1", id).Scan(&ticketCount)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to check ticket dependencies",
+		})
+		return
+	}
+
+	// In OTRS, services are typically soft-deleted (marked invalid) rather than hard deleted
+	// This preserves referential integrity with existing tickets
+	result, err := db.Exec(`
+		UPDATE service 
+		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
+		WHERE id = $1
+	`, id)
+	
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to delete service",
+		})
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"success": false,
+			"error":   "Service not found",
+		})
+		return
+	}
+
+	message := "Service deleted successfully"
+	if ticketCount > 0 {
+		message = fmt.Sprintf("Service deactivated successfully (has %d associated tickets)", ticketCount)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": message,
+	})
+}

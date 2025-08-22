@@ -530,6 +530,7 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		adminRoutes.GET("/queues", handleAdminQueues)
 		adminRoutes.GET("/priorities", handleAdminPriorities)
 		adminRoutes.GET("/lookups", handleAdminLookups)
+		adminRoutes.GET("/roadmap", handleAdminRoadmap)
 		
 		// User management routes
 		adminRoutes.GET("/users/new", handleNewUser)
@@ -602,8 +603,22 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		adminRoutes.POST("/types/:id/update", handleAdminTypeUpdate)
 		adminRoutes.POST("/types/:id/delete", handleAdminTypeDelete)
 		adminRoutes.GET("/roles", underConstruction("Role Management"))
-		adminRoutes.GET("/services", underConstruction("Service Catalog"))
-		adminRoutes.GET("/slas", underConstruction("Service Level Agreements"))
+		adminRoutes.GET("/services", handleAdminServices)
+		adminRoutes.POST("/services/create", handleAdminServiceCreate)
+		adminRoutes.PUT("/services/:id/update", handleAdminServiceUpdate)
+		adminRoutes.DELETE("/services/:id/delete", handleAdminServiceDelete)
+		adminRoutes.GET("/sla", handleAdminSLA)
+		adminRoutes.POST("/sla/create", handleAdminSLACreate)
+		adminRoutes.PUT("/sla/:id/update", handleAdminSLAUpdate)
+		adminRoutes.DELETE("/sla/:id/delete", handleAdminSLADelete)
+		
+		// Attachment management
+		adminRoutes.GET("/attachments", handleAdminAttachment)
+		adminRoutes.POST("/attachments/create", handleAdminAttachmentCreate)
+		adminRoutes.PUT("/attachments/:id/update", handleAdminAttachmentUpdate)
+		adminRoutes.DELETE("/attachments/:id/delete", handleAdminAttachmentDelete)
+		adminRoutes.GET("/attachments/:id/download", handleAdminAttachmentDownload)
+		adminRoutes.PUT("/attachments/:id/toggle", handleAdminAttachmentToggle)
 		
 		// Communication templates
 		adminRoutes.GET("/signatures", underConstruction("Email Signatures"))

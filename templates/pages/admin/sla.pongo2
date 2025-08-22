@@ -1,0 +1,424 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}SLA Management{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">SLA Management</h1>
+                <button onclick="openSLAModal()" class="bg-gotrs-blue hover:bg-gotrs-blue-dark text-white px-4 py-2 rounded-lg flex items-center" title="Add new SLA">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                    Add SLA
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <form method="GET" action="/admin/sla" class="flex flex-wrap gap-4">
+                <div class="flex-1 min-w-[200px]">
+                    <input type="text" name="search" value="{{ SearchQuery }}" 
+                           placeholder="Search SLAs..." 
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                </div>
+                <div>
+                    <select name="valid" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="all" {% if ValidFilter == "all" %}selected{% endif %}>All Status</option>
+                        <option value="valid" {% if ValidFilter == "valid" %}selected{% endif %}>Valid Only</option>
+                        <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>Invalid Only</option>
+                    </select>
+                </div>
+                <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" title="Apply filters">
+                    Filter
+                </button>
+                {% if SearchQuery or ValidFilter != "all" %}
+                <a href="/admin/sla" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg" title="Clear all filters">
+                    Clear
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- SLA List -->
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <a href="?sort=id&order={% if SortBy == 'id' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
+                                ID {% if SortBy == 'id' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <a href="?sort=name&order={% if SortBy == 'name' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
+                                Name {% if SortBy == 'name' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <a href="?sort=first_response_time&order={% if SortBy == 'first_response_time' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
+                                First Response {% if SortBy == 'first_response_time' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <a href="?sort=solution_time&order={% if SortBy == 'solution_time' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
+                                Solution Time {% if SortBy == 'solution_time' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Calendar</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <a href="?sort=ticket_count&order={% if SortBy == 'ticket_count' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
+                                Tickets {% if SortBy == 'ticket_count' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for sla in SLAs %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{{ sla.ID }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{{ sla.Name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {% if sla.FirstResponseTime %}
+                                {{ sla.FirstResponseTime }} min
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {% if sla.SolutionTime %}
+                                {{ sla.SolutionTime }} min
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {% if sla.CalendarName %}
+                                {{ sla.CalendarName }}
+                            {% else %}
+                                <span class="text-gray-400">24x7</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {% if sla.TicketCount > 0 %}
+                                <span class="text-gotrs-blue">{{ sla.TicketCount }}</span>
+                            {% else %}
+                                <span class="text-gray-400">0</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if sla.ValidID == 1 %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">Valid</span>
+                            {% else %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">Invalid</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="editSLA({
+                                id: {{ sla.ID }},
+                                name: '{{ sla.Name }}',
+                                calendar_name: {% if sla.CalendarName %}'{{ sla.CalendarName }}'{% else %}null{% endif %},
+                                first_response_time: {% if sla.FirstResponseTime %}{{ sla.FirstResponseTime }}{% else %}null{% endif %},
+                                first_response_notify: {% if sla.FirstResponseNotify %}{{ sla.FirstResponseNotify }}{% else %}null{% endif %},
+                                update_time: {% if sla.UpdateTime %}{{ sla.UpdateTime }}{% else %}null{% endif %},
+                                update_notify: {% if sla.UpdateNotify %}{{ sla.UpdateNotify }}{% else %}null{% endif %},
+                                solution_time: {% if sla.SolutionTime %}{{ sla.SolutionTime }}{% else %}null{% endif %},
+                                solution_notify: {% if sla.SolutionNotify %}{{ sla.SolutionNotify }}{% else %}null{% endif %},
+                                comments: {% if sla.Comments %}'{{ sla.Comments }}'{% else %}null{% endif %},
+                                valid_id: {{ sla.ValidID }}
+                            })" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="Edit SLA">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="toggleSLAStatus({{ sla.ID }}, {{ sla.ValidID }}, '{{ sla.Name }}')" 
+                                    class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300" 
+                                    title="{% if sla.ValidID == 1 %}Deactivate SLA{% else %}Activate SLA{% endif %}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {% if sla.ValidID == 1 %}
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                                    {% else %}
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    {% endif %}
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            No SLAs found. Click "Add SLA" to create one.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- SLA Modal -->
+<div id="slaModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900 dark:text-white">Add SLA</h2>
+        </div>
+        <form id="slaForm" onsubmit="saveSLA(event)">
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="slaId" name="id">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
+                    <input type="text" id="slaName" name="name" required
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Calendar</label>
+                    <select id="slaCalendar" name="calendar_name"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="">24x7 (Default)</option>
+                        {% for calendar in Calendars %}
+                        <option value="{{ calendar }}">{{ calendar }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Response Time (minutes)</label>
+                        <input type="number" id="slaFirstResponse" name="first_response_time" min="0"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notify Before (% of time)</label>
+                        <input type="number" id="slaFirstResponseNotify" name="first_response_notify" min="0" max="100"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Update Time (minutes)</label>
+                        <input type="number" id="slaUpdateTime" name="update_time" min="0"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notify Before (% of time)</label>
+                        <input type="number" id="slaUpdateNotify" name="update_notify" min="0" max="100"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Solution Time (minutes)</label>
+                        <input type="number" id="slaSolutionTime" name="solution_time" min="0"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notify Before (% of time)</label>
+                        <input type="number" id="slaSolutionNotify" name="solution_notify" min="0" max="100"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comments</label>
+                    <textarea id="slaComments" name="comments" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                    <select id="slaValidId" name="valid_id"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="1">Valid</option>
+                        <option value="2">Invalid</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+                <button type="button" onclick="closeSLAModal()" 
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        class="px-4 py-2 bg-gotrs-blue hover:bg-gotrs-blue-dark text-white rounded-lg">
+                    Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script>
+// SLA Modal Functions
+function openSLAModal() {
+    document.getElementById('modalTitle').textContent = 'Add SLA';
+    document.getElementById('slaForm').reset();
+    document.getElementById('slaId').value = '';
+    const modal = document.getElementById('slaModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function editSLA(sla) {
+    document.getElementById('modalTitle').textContent = 'Edit SLA';
+    document.getElementById('slaId').value = sla.id;
+    document.getElementById('slaName').value = sla.name;
+    document.getElementById('slaCalendar').value = sla.calendar_name || '';
+    document.getElementById('slaFirstResponse').value = sla.first_response_time || '';
+    document.getElementById('slaFirstResponseNotify').value = sla.first_response_notify || '';
+    document.getElementById('slaUpdateTime').value = sla.update_time || '';
+    document.getElementById('slaUpdateNotify').value = sla.update_notify || '';
+    document.getElementById('slaSolutionTime').value = sla.solution_time || '';
+    document.getElementById('slaSolutionNotify').value = sla.solution_notify || '';
+    document.getElementById('slaComments').value = sla.comments || '';
+    document.getElementById('slaValidId').value = sla.valid_id;
+    
+    const modal = document.getElementById('slaModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function closeSLAModal() {
+    const modal = document.getElementById('slaModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function saveSLA(event) {
+    event.preventDefault();
+    
+    // Disable submit button to prevent double submission
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+    
+    const formData = new FormData(event.target);
+    const id = formData.get('id');
+    
+    // Convert form data to JSON - handle empty values properly
+    const data = {};
+    formData.forEach((value, key) => {
+        if (key !== 'id') {
+            // Convert numeric fields - keep empty as undefined to send null
+            if (['first_response_time', 'first_response_notify', 'update_time', 'update_notify', 
+                 'solution_time', 'solution_notify'].includes(key)) {
+                if (value && value.trim() !== '') {
+                    data[key] = parseInt(value);
+                }
+                // Don't set key at all if empty (backend will use NULL)
+            } else if (key === 'valid_id') {
+                // Always send valid_id (defaults to 1)
+                data[key] = parseInt(value) || 1;
+            } else {
+                // For string fields, only set if not empty (except name which is required)
+                if (key === 'name' || (value && value.trim() !== '')) {
+                    data[key] = value;
+                }
+            }
+        }
+    });
+    
+    const url = id ? `/admin/sla/${id}/update` : '/admin/sla/create';
+    const method = id ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(result => {
+        if (result.success) {
+            showToast(result.message, 'success');
+            closeSLAModal();
+            // Immediate reload for better UX
+            window.location.reload();
+        } else {
+            showToast(result.error || 'An error occurred', 'error');
+            // Re-enable button on error
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save';
+        }
+    })
+    .catch(error => {
+        console.error('Save error:', error);
+        showToast('An error occurred: ' + error.message, 'error');
+        // Re-enable button on error
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save';
+    });
+}
+
+function toggleSLAStatus(id, currentStatus, name) {
+    const newStatus = currentStatus === 1 ? 2 : 1;
+    const action = newStatus === 1 ? 'activate' : 'deactivate';
+    
+    if (confirm(`Are you sure you want to ${action} the SLA "${name}"?`)) {
+        fetch(`/admin/sla/${id}/update`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ valid_id: newStatus })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                showToast(`SLA ${action}d successfully`, 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            } else {
+                showToast(result.error || 'An error occurred', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Toggle error:', error);
+            showToast('An error occurred: ' + error.message, 'error');
+        });
+    }
+}
+
+// Handle ESC key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeSLAModal();
+    }
+});
+
+// Handle Enter key in forms
+document.getElementById('slaForm').addEventListener('keypress', function(event) {
+    if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
+        event.preventDefault();
+        this.dispatchEvent(new Event('submit'));
+    }
+});
+</script>
+{% endblock %}

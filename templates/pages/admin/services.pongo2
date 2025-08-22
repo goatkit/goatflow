@@ -80,11 +80,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="text-sm text-gray-600 dark:text-gray-400">
-                                    {% if service.Comments.Valid %}
-                                        {{ service.Comments.String|default:"-" }}
-                                    {% else %}
-                                        <span class="text-gray-400">-</span>
-                                    {% endif %}
+                                    {{ service.Comments|default:"-" }}
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
@@ -114,10 +110,15 @@
                                 {% endif %}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="editService({{ service.ID }}, '{{ service.Name|escapejs }}', '{{ service.Comments.String|default:""|escapejs }}', {{ service.ValidID }})" 
-                                        class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-3"
+                                <button onclick="editService({{ service.ID }}, '{{ service.Name|escapejs }}', '{{ service.Comments|default:""|escapejs }}', {{ service.ValidID }})" 
+                                        class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
                                         title="Edit Service">
                                     <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="toggleServiceValidity({{ service.ID }}, {{ service.ValidID }})" 
+                                        class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+                                        title="{% if service.ValidID == 1 %}Set Invalid{% else %}Set Valid{% endif %}">
+                                    <i class="fas fa-{% if service.ValidID == 1 %}toggle-on{% else %}toggle-off{% endif %}"></i>
                                 </button>
                             </td>
                         </tr>
@@ -236,20 +237,35 @@ function saveService(event) {
     event.preventDefault();
     
     const formData = new FormData(event.target);
+    const data = {
+        name: formData.get('name'),
+        comments: formData.get('comments'),
+        valid_id: parseInt(formData.get('valid_id'))
+    };
+    
     const url = currentServiceId 
         ? `/admin/services/${currentServiceId}/update`
         : '/admin/services/create';
+    const method = currentServiceId ? 'PUT' : 'POST';
     
     fetch(url, {
-        method: 'POST',
-        body: formData
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success || data.id) {
-            showToast(currentServiceId ? 'Service updated successfully' : 'Service created successfully');
+            showToast(currentServiceId ? 'Service updated successfully' : 'Service created successfully', 'success');
             closeModal();
-            setTimeout(() => location.reload(), 1500);
+            setTimeout(() => location.reload(), 1000);
         } else {
             showToast(data.error || 'Failed to save service', 'error');
         }
@@ -317,6 +333,40 @@ function sortTable(columnIndex) {
     
     // Re-append sorted rows
     sortedRows.forEach(row => tbody.appendChild(row));
+}
+
+function toggleServiceValidity(id, currentValidId) {
+    const newValidId = currentValidId === 1 ? 2 : 1;
+    const action = newValidId === 1 ? 'activate' : 'deactivate';
+    
+    if (confirm(`Are you sure you want to ${action} this service?`)) {
+        fetch(`/admin/services/${id}/update`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                valid_id: newValidId
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                showToast(`Service ${action}d successfully`, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast(data.error || `Failed to ${action} service`, 'error');
+            }
+        })
+        .catch(error => {
+            showToast('An error occurred: ' + error, 'error');
+        });
+    }
 }
 
 // Close modal on Escape key
