@@ -18,32 +18,11 @@
         }
     </script>
     
-    <!-- Tailwind CSS with dark mode -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        gotrs: {
-                            50: '#eff6ff',
-                            100: '#dbeafe',
-                            200: '#bfdbfe',
-                            300: '#93c5fd',
-                            400: '#60a5fa',
-                            500: '#3b82f6',
-                            600: '#2563eb',
-                            700: '#1d4ed8',
-                            800: '#1e40af',
-                            900: '#1e3a8a',
-                            950: '#172554'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <!-- Tailwind CSS (production build) -->
+    <link rel="stylesheet" href="/static/css/output.css">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Alpine.js for interactivity -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -111,6 +90,11 @@
                             <a href="/queues" class="{% if ActivePage == 'queues' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
                                 Queues
                             </a>
+                            {% if User and User.Role == "Admin" %}
+                            <a href="/admin" class="{% if ActivePage == 'admin' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                                Admin
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:items-center">
@@ -148,6 +132,12 @@
         </main>
     </div>
 
+    <!-- Toast container for notifications -->
+    <div id="toast-container" class="fixed bottom-0 right-0 p-6 space-y-4 z-50"></div>
+
+    <!-- Include Guru Meditation component for error handling -->
+    {% include "components/guru_meditation.pongo2" %}
+
     <!-- Dark mode toggle script -->
     <script>
         function toggleDarkMode() {
@@ -159,6 +149,104 @@
                 localStorage.theme = 'dark';
             }
         }
+
+        // Handle HTMX target errors - show Guru Meditation
+        document.body.addEventListener('htmx:targetError', (event) => {
+            console.error('HTMX target error full details:', {
+                event: event,
+                detail: event.detail,
+                target: event.detail.target,
+                xhr: event.detail.xhr,
+                targetElement: document.querySelector(event.detail.target)
+            });
+            
+            // Show Amiga-style Guru Meditation error
+            const errorCode = '00000007.DEADBEEF';
+            const guruHtml = `
+                <div id="guru-meditation" class="relative cursor-pointer" onclick="this.remove()">
+                    <style>
+                        @keyframes flash-border {
+                            0%, 50% { border-color: #ff0000; }
+                            25%, 75% { border-color: #000000; }
+                        }
+                        #guru-meditation {
+                            animation: flash-border 0.8s infinite;
+                        }
+                    </style>
+                    <div class="bg-black border-8 p-8 font-mono">
+                        <div class="text-center">
+                            <div class="text-white text-xl mb-2">Software Failure.    Press left mouse button to continue.</div>
+                            <div class="text-white text-2xl font-bold">Guru Meditation #${errorCode}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Insert at the top of the page, before main content
+            const mainContent = document.querySelector('main') || document.body.firstChild;
+            if (mainContent) {
+                mainContent.insertAdjacentHTML('beforebegin', guruHtml);
+            } else {
+                document.body.insertAdjacentHTML('afterbegin', guruHtml);
+            }
+        });
+
+        // Add debugging for all htmx events
+        document.body.addEventListener('htmx:beforeRequest', (event) => {
+            console.log('HTMX request starting:', event.detail.pathInfo.requestPath);
+        });
+        
+        document.body.addEventListener('htmx:afterRequest', (event) => {
+            console.log('HTMX request completed:', {
+                path: event.detail.pathInfo.requestPath,
+                successful: event.detail.successful,
+                failed: event.detail.failed,
+                xhr: event.detail.xhr
+            });
+        });
+        
+        // Also handle response errors (like redirects)
+        document.body.addEventListener('htmx:responseError', (event) => {
+            console.error('HTMX response error full details:', {
+                event: event,
+                detail: event.detail,
+                xhr: event.detail.xhr,
+                status: event.detail.xhr.status,
+                responseText: event.detail.xhr.responseText?.substring(0, 200)
+            });
+            
+            // Show Guru Meditation error for auth redirects
+            if (event.detail.xhr && event.detail.xhr.status === 303) {
+                const errorCode = '00000008.CAFEBABE';
+                const guruHtml = `
+                    <div id="guru-meditation-auth" class="relative cursor-pointer" onclick="window.location.href='/login';">
+                        <style>
+                            @keyframes flash-border-auth {
+                                0%, 50% { border-color: #ff0000; }
+                                25%, 75% { border-color: #000000; }
+                            }
+                            #guru-meditation-auth {
+                                animation: flash-border-auth 0.8s infinite;
+                            }
+                        </style>
+                        <div class="bg-black border-8 p-8 font-mono">
+                            <div class="text-center">
+                                <div class="text-white text-xl mb-2">Software Failure.    Press left mouse button to continue.</div>
+                                <div class="text-white text-2xl font-bold">Guru Meditation #${errorCode}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Insert at the top of the page, before main content
+                const mainContent = document.querySelector('main') || document.body.firstChild;
+                if (mainContent) {
+                    mainContent.insertAdjacentHTML('beforebegin', guruHtml);
+                } else {
+                    document.body.insertAdjacentHTML('afterbegin', guruHtml);
+                }
+            }
+        });
     </script>
     
     {% block scripts %}{% endblock %}

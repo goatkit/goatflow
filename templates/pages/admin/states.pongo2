@@ -1,0 +1,561 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ Title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <!-- Header -->
+        <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                    {{ Title }}
+                </h2>
+                <button id="addStateBtn" 
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onclick="openStateModal()"
+                        aria-label="Add new state">
+                    <i class="fas fa-plus mr-2"></i>Add New State
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex flex-wrap gap-4">
+                <!-- Search -->
+                <div class="flex-1 min-w-[200px]">
+                    <div class="relative">
+                        <input type="text" 
+                               id="searchInput"
+                               value="{{ SearchQuery }}"
+                               placeholder="Search states..."
+                               class="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                               onkeyup="debounceSearch(this.value)">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </div>
+                        <button id="clearSearchBtn"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center {% if not SearchQuery %}hidden{% endif %}"
+                                onclick="clearSearch()">
+                            <i class="fas fa-times text-gray-400 hover:text-gray-600"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Type Filter -->
+                <div class="min-w-[200px]">
+                    <select id="typeFilter" 
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onchange="filterByType(this.value)">
+                        <option value="">All Types</option>
+                        {% for type in StateTypes %}
+                        <option value="{{ type.ID }}" {% if TypeFilter == type.ID %}selected{% endif %}>
+                            {{ type.Name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+            <table class="w-full" data-states-table>
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+                            onclick="sortTable('id')">
+                            ID <i class="fas fa-sort text-gray-400"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+                            onclick="sortTable('name')">
+                            Name <i class="fas fa-sort text-gray-400"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+                            onclick="sortTable('type_name')">
+                            Type <i class="fas fa-sort text-gray-400"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Comments
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Validity
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+                            onclick="sortTable('ticket_count')">
+                            Tickets <i class="fas fa-sort text-gray-400"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for state in States %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {{ state.ID }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">
+                                {{ state.Name }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200">
+                                {{ state.TypeName }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {{ state.Comments|default:"-" }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if state.ValidID == 1 %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                    valid
+                                </span>
+                            {% elif state.ValidID == 2 %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
+                                    invalid
+                                </span>
+                            {% elif state.ValidID == 3 %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
+                                    invalid-temporarily
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {% if state.TicketCount > 0 %}
+                                <span class="text-blue-600 dark:text-blue-400">{{ state.TicketCount }}</span>
+                            {% else %}
+                                <span class="text-gray-400">0</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="editStateFromRow(this)"
+                                    data-id="{{ state.ID }}"
+                                    data-name="{{ state.Name }}"
+                                    data-type="{{ state.TypeID }}"
+                                    data-comments="{{ state.Comments|default:"" }}"
+                                    data-valid="{{ state.ValidID }}"
+                                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                    aria-label="Edit state">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            No states found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- State Modal -->
+<div id="stateModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 id="modalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Add New State
+                </h3>
+            </div>
+            
+            <form id="stateForm" onsubmit="saveState(event)">
+                <div class="px-6 py-4 space-y-4">
+                    <input type="hidden" id="stateId">
+                    
+                    <div>
+                        <label for="stateName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" 
+                               id="stateName" 
+                               name="name"
+                               required
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <span id="nameError" class="text-red-500 text-sm hidden"></span>
+                    </div>
+                    
+                    <div>
+                        <label for="stateType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Type <span class="text-red-500">*</span>
+                        </label>
+                        <select id="stateType" 
+                                name="type_id"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select a type...</option>
+                            {% for type in StateTypes %}
+                            <option value="{{ type.ID }}">{{ type.Name }}</option>
+                            {% endfor %}
+                        </select>
+                        <span id="typeError" class="text-red-500 text-sm hidden"></span>
+                    </div>
+                    
+                    <div>
+                        <label for="stateValidity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Validity <span class="text-red-500">*</span>
+                        </label>
+                        <select id="stateValidity" 
+                                name="valid_id"
+                                required
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="1">valid</option>
+                            <option value="2">invalid</option>
+                            <option value="3">invalid-temporarily</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="stateComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Comments
+                        </label>
+                        <textarea id="stateComments" 
+                                  name="comments"
+                                  rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                </div>
+                
+                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+                    <button type="button" 
+                            onclick="closeStateModal()"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        Save State
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- Toast Container -->
+<div id="toastContainer" class="fixed top-4 right-4 z-50"></div>
+
+<script>
+// Global variables
+let deleteStateId = null;
+let searchTimeout = null;
+let currentSort = '{{ SortBy }}';
+let currentOrder = '{{ SortOrder }}';
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    restoreSearchState();
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeStateModal();
+            closeDeleteModal();
+        }
+    });
+    
+    // Modal keyboard support
+    document.getElementById('stateForm').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            saveState(event);
+        }
+    });
+});
+
+// Search functionality
+function debounceSearch(value) {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        performSearch(value);
+    }, 300);
+}
+
+function performSearch(value) {
+    const params = new URLSearchParams(window.location.search);
+    if (value) {
+        params.set('search', value);
+        document.getElementById('clearSearchBtn').classList.remove('hidden');
+    } else {
+        params.delete('search');
+        document.getElementById('clearSearchBtn').classList.add('hidden');
+    }
+    
+    // Save to session storage
+    sessionStorage.setItem('stateSearch', value);
+    
+    window.location.search = params.toString();
+}
+
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    performSearch('');
+}
+
+// Filter functionality
+function filterByType(typeId) {
+    const params = new URLSearchParams(window.location.search);
+    if (typeId) {
+        params.set('type', typeId);
+    } else {
+        params.delete('type');
+    }
+    
+    sessionStorage.setItem('stateTypeFilter', typeId);
+    window.location.search = params.toString();
+}
+
+// Sorting functionality
+function sortTable(column) {
+    const params = new URLSearchParams(window.location.search);
+    
+    if (currentSort === column) {
+        currentOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort = column;
+        currentOrder = 'asc';
+    }
+    
+    params.set('sort', currentSort);
+    params.set('order', currentOrder);
+    
+    window.location.search = params.toString();
+}
+
+// State management modal
+function openStateModal() {
+    document.getElementById('modalTitle').textContent = 'Add New State';
+    document.getElementById('stateForm').reset();
+    document.getElementById('stateId').value = '';
+    clearErrors();
+    document.getElementById('stateModal').classList.remove('hidden');
+    document.getElementById('stateName').focus();
+}
+
+function editState(id, name, typeId, comments, validId) {
+    document.getElementById('modalTitle').textContent = 'Edit State';
+    document.getElementById('stateId').value = id;
+    document.getElementById('stateName').value = name;
+    document.getElementById('stateType').value = typeId;
+    document.getElementById('stateComments').value = comments || '';
+    document.getElementById('stateValidity').value = validId || 1;
+    clearErrors();
+    document.getElementById('stateModal').classList.remove('hidden');
+    document.getElementById('stateName').focus();
+}
+
+
+function editStateFromRow(btn) {
+    const id = parseInt(btn.dataset.id);
+    const name = btn.dataset.name || '';
+    const typeId = parseInt(btn.dataset.type);
+    const comments = btn.dataset.comments || '';
+    const validId = parseInt(btn.dataset.valid) || 1;
+    
+    console.log('Edit state data:', { id, name, typeId, comments, validId });
+    editState(id, name, typeId, comments, validId);
+}
+
+function closeStateModal() {
+    document.getElementById('stateModal').classList.add('hidden');
+    document.getElementById('stateForm').reset();
+    clearErrors();
+}
+
+function saveState(event) {
+    event.preventDefault();
+    
+    if (!validateForm()) {
+        return;
+    }
+    
+    const stateId = document.getElementById('stateId').value;
+    const isEdit = !!stateId;
+    
+    const data = {
+        name: document.getElementById('stateName').value.trim(),
+        type_id: parseInt(document.getElementById('stateType').value),
+        comments: document.getElementById('stateComments').value.trim() || null,
+        valid_id: parseInt(document.getElementById('stateValidity').value)
+    };
+    
+    const url = isEdit 
+        ? `/admin/states/${stateId}/update`
+        : '/admin/states/create';
+    
+    console.log('Saving state:', { isEdit, data, url });
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(result => {
+        console.log('Response data:', result);
+        if (result.success) {
+            showSuccess(isEdit ? 'State updated successfully' : 'State created successfully');
+            closeStateModal();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showError(result.error || 'Failed to save state');
+        }
+    })
+    .catch(error => {
+        console.error('Save error:', error);
+        showError('An error occurred: ' + error.message);
+    });
+}
+
+// Delete functionality
+function confirmDelete(id, name, ticketCount) {
+    deleteStateId = id;
+    const message = `Are you sure you want to delete the state "${name}"?`;
+    document.getElementById('deleteMessage').textContent = message;
+    
+    if (ticketCount > 0) {
+        document.getElementById('deleteWarning').textContent = 
+            `Warning: This state is used by ${ticketCount} ticket(s). Deletion will fail.`;
+        document.getElementById('deleteWarning').classList.remove('hidden');
+    } else {
+        document.getElementById('deleteWarning').classList.add('hidden');
+    }
+    
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+
+function confirmDeleteFromRow(btn) {
+    const id = parseInt(btn.dataset.id);
+    const name = btn.dataset.name || '';
+    const count = parseInt(btn.dataset.count);
+    
+    console.log('Delete state data:', { id, name, count });
+    confirmDelete(id, name, count);
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+    deleteStateId = null;
+}
+
+function deleteState() {
+    if (!deleteStateId) return;
+    
+    fetch(`/admin/states/${deleteStateId}/delete`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showSuccess('State deleted successfully');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showError(result.error || 'Failed to delete state');
+            closeDeleteModal();
+        }
+    })
+    .catch(error => {
+        showError('An error occurred: ' + error.message);
+        closeDeleteModal();
+    });
+}
+
+// Form validation
+function validateForm() {
+    let isValid = true;
+    clearErrors();
+    
+    const name = document.getElementById('stateName').value.trim();
+    const typeId = document.getElementById('stateType').value;
+    
+    if (!name) {
+        document.getElementById('nameError').textContent = 'Name is required';
+        document.getElementById('nameError').classList.remove('hidden');
+        isValid = false;
+    }
+    
+    if (!typeId) {
+        document.getElementById('typeError').textContent = 'Type is required';
+        document.getElementById('typeError').classList.remove('hidden');
+        isValid = false;
+    }
+    
+    return isValid;
+}
+
+function clearErrors() {
+    document.getElementById('nameError').classList.add('hidden');
+    document.getElementById('typeError').classList.add('hidden');
+}
+
+// Session storage
+function restoreSearchState() {
+    const savedSearch = sessionStorage.getItem('stateSearch');
+    const savedType = sessionStorage.getItem('stateTypeFilter');
+    
+    if (savedSearch && !document.getElementById('searchInput').value) {
+        document.getElementById('searchInput').value = savedSearch;
+    }
+    
+    if (savedType && !document.getElementById('typeFilter').value) {
+        document.getElementById('typeFilter').value = savedType;
+    }
+}
+
+// Toast notifications
+function showSuccess(message) {
+    showToast(message, 'success');
+}
+
+function showError(message) {
+    showToast(message, 'error');
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `px-4 py-3 rounded-lg shadow-lg mb-4 transform transition-all duration-300 ${
+        type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+    }`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.getElementById('toastContainer').appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('opacity-0');
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
+}
+</script>
+{% endblock %}

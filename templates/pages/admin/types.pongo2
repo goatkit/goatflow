@@ -1,0 +1,348 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Ticket Type Management{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Ticket Type Management</h1>
+            <button onclick="openTypeModal()" 
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors">
+                <i class="fas fa-plus mr-2"></i>Add New Type
+            </button>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="mb-6 flex gap-4">
+            <div class="flex-1">
+                <input type="text" 
+                       id="searchInput"
+                       placeholder="Search types..." 
+                       value="{{ Search }}"
+                       class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+                       onkeyup="debounceSearch()">
+            </div>
+            <button onclick="clearSearch()" 
+                    class="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-md transition-colors">
+                <i class="fas fa-times"></i> Clear
+            </button>
+        </div>
+
+        <!-- Types Table -->
+        <div class="overflow-x-auto">
+            <table class="table w-full">
+                <thead>
+                    <tr class="bg-gray-50 dark:bg-gray-700">
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+                            onclick="sortTable('name')">
+                            Name 
+                            {% if Sort == "name" %}
+                                <i class="fas fa-sort-{{ Order == 'asc' and 'up' or 'down' }}"></i>
+                            {% endif %}
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+                            onclick="sortTable('tickets')">
+                            Tickets
+                            {% if Sort == "tickets" %}
+                                <i class="fas fa-sort-{{ Order == 'asc' and 'up' or 'down' }}"></i>
+                            {% endif %}
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Validity
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for type in Types %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                            {{ type.Name }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                            {{ type.TicketCount }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if type.ValidID == 1 %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                    valid
+                                </span>
+                            {% elif type.ValidID == 2 %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
+                                    invalid
+                                </span>
+                            {% elif type.ValidID == 3 %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
+                                    invalid-temporarily
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editType(this)"
+                                    data-id="{{ type.ID }}"
+                                    data-name="{{ type.Name }}"
+                                    data-valid="{{ type.ValidID }}"
+                                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                    title="Edit type">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                            No ticket types found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Type Modal -->
+<div id="typeModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4" id="modalTitle">Add New Type</h3>
+            <form id="typeForm" onsubmit="saveType(event)">
+                <input type="hidden" id="typeId" value="">
+                
+                <div class="mb-4">
+                    <label for="typeName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" 
+                           id="typeName" 
+                           name="name"
+                           required
+                           maxlength="200"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100">
+                    <div id="nameError" class="text-red-500 text-sm mt-1 hidden"></div>
+                </div>
+
+                <div class="mb-4">
+                    <label for="typeValidity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Validity <span class="text-red-500">*</span>
+                    </label>
+                    <select id="typeValidity" 
+                            name="valid_id"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100">
+                        <option value="1">valid</option>
+                        <option value="2">invalid</option>
+                        <option value="3">invalid-temporarily</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-end gap-3">
+                    <button type="button" 
+                            onclick="closeTypeModal()"
+                            class="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<script>
+let searchTimeout;
+
+// Toast notification function
+function showToast(message, type) {
+    // Create toast container if it doesn't exist
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'fixed top-4 right-4 z-50';
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `px-4 py-3 rounded-lg shadow-lg mb-4 transform transition-all duration-300 ${
+        type === 'success' 
+            ? 'bg-green-500 text-white' 
+            : 'bg-red-500 text-white'
+    }`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.add('opacity-0');
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
+}
+
+function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        const search = document.getElementById('searchInput').value;
+        const params = new URLSearchParams(window.location.search);
+        params.set('search', search);
+        window.location.search = params.toString();
+    }, 500);
+}
+
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    const params = new URLSearchParams(window.location.search);
+    params.delete('search');
+    window.location.search = params.toString();
+}
+
+function sortTable(column) {
+    const params = new URLSearchParams(window.location.search);
+    const currentSort = params.get('sort');
+    const currentOrder = params.get('order');
+    
+    params.set('sort', column);
+    if (currentSort === column && currentOrder === 'asc') {
+        params.set('order', 'desc');
+    } else {
+        params.set('order', 'asc');
+    }
+    
+    window.location.search = params.toString();
+}
+
+function openTypeModal() {
+    document.getElementById('modalTitle').textContent = 'Add New Type';
+    document.getElementById('typeForm').reset();
+    document.getElementById('typeId').value = '';
+    document.getElementById('nameError').classList.add('hidden');
+    document.getElementById('typeModal').classList.remove('hidden');
+    document.getElementById('typeName').focus();
+}
+
+function editType(button) {
+    const id = button.dataset.id;
+    const name = button.dataset.name;
+    const validId = button.dataset.valid || '1';
+    
+    document.getElementById('modalTitle').textContent = 'Edit Type';
+    document.getElementById('typeId').value = id;
+    document.getElementById('typeName').value = name;
+    document.getElementById('typeValidity').value = validId;
+    document.getElementById('nameError').classList.add('hidden');
+    document.getElementById('typeModal').classList.remove('hidden');
+    document.getElementById('typeName').focus();
+}
+
+function closeTypeModal() {
+    document.getElementById('typeModal').classList.add('hidden');
+    document.getElementById('typeForm').reset();
+    document.getElementById('nameError').classList.add('hidden');
+}
+
+function saveType(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('typeId').value;
+    const name = document.getElementById('typeName').value.trim();
+    
+    if (!name) {
+        document.getElementById('nameError').textContent = 'Name is required';
+        document.getElementById('nameError').classList.remove('hidden');
+        return;
+    }
+    const validId = document.getElementById('typeValidity').value;
+    
+    const url = id ? `/admin/types/${id}/update` : '/admin/types/create';
+    const method = 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `name=${encodeURIComponent(name)}&valid_id=${encodeURIComponent(validId)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(id ? 'Type updated successfully' : 'Type created successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            document.getElementById('nameError').textContent = data.error || 'An error occurred';
+            document.getElementById('nameError').classList.remove('hidden');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('nameError').textContent = 'An error occurred';
+        document.getElementById('nameError').classList.remove('hidden');
+    });
+}
+
+function deleteType(id, name) {
+    document.getElementById('deleteTypeId').value = id;
+    document.getElementById('deleteTypeName').textContent = name;
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+}
+
+function confirmDelete() {
+    const id = document.getElementById('deleteTypeId').value;
+    
+    fetch(`/admin/types/${id}/delete`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Type deleted successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.error || 'Failed to delete type', 'error');
+        }
+        closeDeleteModal();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('An error occurred', 'error');
+        closeDeleteModal();
+    });
+}
+
+// Allow Enter key to submit form
+document.getElementById('typeForm').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        saveType(e);
+    }
+});
+
+// Close modals with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeTypeModal();
+        closeDeleteModal();
+    }
+});
+
+</script>
+{% endblock %}

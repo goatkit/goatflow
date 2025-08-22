@@ -145,7 +145,78 @@ make up
 - Support 100 concurrent users (MVP)
 - Container images < 100MB each
 
+## Efficient Tool Usage
+
+**STOP ASKING PERMISSION FOR ROUTINE TASKS**:
+- Build, test, restart backend - just do it
+- Database queries for verification - just run them  
+- Curl tests to localhost - always allowed
+- Log checking - always allowed
+- Process/port checking - always allowed
+
+**Batch operations when possible**:
+- Use && to chain commands instead of multiple Bash calls
+- Read multiple files in one go with MultiEdit
+- Run multiple tests together
+
+## Development Process for Admin Modules
+
+**CRITICAL**: Before implementing ANY admin module, complete the ENTIRE research phase:
+1. Read OTRS documentation for that EXACT module
+2. Understand if items can be deleted (usually NO - only invalidated)
+3. Check what validity states exist (valid/invalid/invalid-temporarily)
+4. Verify database column names - NEVER assume
+5. Test if admin sees ALL items or only valid ones (usually ALL)
+
+**Follow the checklist**: docs/ADMIN_MODULE_CHECKLIST.md
+
 ## Lessons Learned
+
+### OTRS Schema Deep Dive & Permission Model (Aug 21, 2025)
+**Discovery**: OTRS has extensive customer user to group mapping functionality
+**Implementation**: Built complete AdminCustomerUserGroup module with bidirectional assignment
+**Key Learning**: OTRS permission model is more complex than initially understood:
+- Customer users can belong to groups just like agents
+- Permissions include: rw, move_into, create, owner, priority, note
+- This enables fine-grained access control for customer portals
+**Best Practice**: Always research OTRS features thoroughly before claiming "not needed"
+
+### Agent Assignment & Queue Permissions (Aug 21, 2025)
+**Problem**: "unable to assign agent to ticket" with requirement "only list agents with correct permissions"
+**Root Cause**: Assignment was just a stub, not updating database
+**Solution**: 
+- Properly update `responsible_user_id` field (not `user_id` which is owner)
+- Filter agents by queue permissions through group membership
+- Join chain: ticket → queue → group → user_groups → users
+**Key Learning**: OTRS uses `responsible_user_id` for assigned agent, `user_id` for ticket owner
+**Best Practice**: Always verify which database fields to update, don't assume field names
+
+### Customer Company Auto-Assignment (Aug 21, 2025)
+**Problem**: OBC queue tickets had customer_user_id but empty customer_id
+**Root Cause**: Ticket creation only set email, didn't look up company
+**Solution**: Modified CreateTicket to lookup customer's company from customer_user table
+**Key Learning**: OTRS expects both fields populated:
+- `customer_user_id`: The individual customer's email/login
+- `customer_id`: The company/organization ID
+**Best Practice**: When dealing with related entities, ensure all relationships are properly set
+
+### Professional UI Without Browser Dialogs (Aug 21, 2025)
+**Issue**: Browser alert() used for confirmations
+**Solution**: Replaced all alert/confirm with branded toast notifications and modal dialogs
+**Key Learning**: Professional applications never use browser dialogs
+**Implementation Pattern**:
+```javascript
+// Bad: alert('Success!')
+// Good: showToast('Success!', 'success')
+```
+**Best Practice**: Always use custom UI components for user interactions
+
+### SQL DISTINCT with ORDER BY (Aug 21, 2025)
+**Error**: "for SELECT DISTINCT, ORDER BY expressions must appear in select list"
+**Cause**: Used `ORDER BY u.last_name, u.first_name` with `SELECT DISTINCT u.id, u.login`
+**Solution**: Changed to `ORDER BY u.id` or include sort fields in SELECT
+**Key Learning**: PostgreSQL requires ORDER BY columns in SELECT when using DISTINCT
+**Best Practice**: Test complex SQL queries directly in database before implementing
 
 ### Testing Before Declaring Ready (Aug 18, 2025)
 - **ALWAYS test commands/features before claiming they work**
@@ -261,3 +332,388 @@ make up
 - Trust lost in seconds: One untested claim
 - Trust regained in hours: Only through consistent verified quality
 - **Most Bitter Lesson**: User shouldn't be discovering your bugs
+
+### AdminRole (Permissions) Implementation - "Claude the Intern" Redux (Aug 20, 2025)
+**Critical Pattern**: Claiming features work without testing the complete user workflow
+**User Feedback**: "it's 'Claude the intern' again" and "unable to set any user permissions, all tickboxes are greyed out. Did you test this?"
+
+**The Incomplete Testing Anti-Pattern**:
+1. **Handler works** ✓ - Returns 200 OK and loads data
+2. **Template renders** ✓ - HTML appears in browser  
+3. **Checkboxes display** ✓ - Permission matrix shows up
+4. **STOP HERE** ❌ - Declare "it works" without testing user workflows
+
+**What Was Actually Broken**:
+- All checkboxes had `disabled` attribute - completely unusable
+- Form submission returned raw JSON instead of proper UX
+- No redirect after save - terrible user experience
+- User got `{"message":"Permissions updated successfully","success":true}` instead of staying on page
+
+**Root Cause Analysis**:
+- **Functional fixation**: Focused on technical implementation over user experience
+- **API-first mindset**: Designed for API consumers, ignored HTML form users  
+- **Missing integration testing**: Never tested the complete click-save-verify workflow
+- **Assumed equivalence**: "Works for API" ≠ "Works for users"
+
+**The Complete Testing Requirements**:
+1. **Unit level**: Handler processes data correctly ✓
+2. **Integration level**: Template renders with real data ✓  
+3. **User workflow level**: Complete interaction paths ❌ (MISSING)
+   - Can user click checkboxes? (No - they were disabled)
+   - Can user submit form? (Yes, but got JSON response)
+   - Does user stay on page after save? (No - raw JSON shown)
+   - Do saved permissions persist and display? (Unknown until tested)
+
+**Compilation Error Masking**:
+- **Hot reload silently failed** due to Go compilation errors (`unused variable`)
+- **Old code kept running** while believing new code was active
+- **False confidence** from seeing old working behavior
+- **Lesson**: ALWAYS check `go build` before claiming code changes work
+
+**HTML Form vs API Response Handling**:
+- **Mixed responsibility**: Single handler served both HTML forms and API clients
+- **Wrong content negotiation**: Returned JSON to HTML form submissions
+- **Solution**: Detect form submissions and redirect appropriately
+```go
+// Check if this is a form submission or API call
+if c.GetHeader("Content-Type") == "application/x-www-form-urlencoded" {
+    // HTML form submission - redirect back to permissions page
+    c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/permissions?user=%d", userID))
+    return
+}
+// API call - return JSON
+c.JSON(http.StatusOK, gin.H{"success": true, "message": "Permissions updated successfully"})
+```
+
+**Template vs Direct HTML Generation**:
+- **Pongo2 template engine issues**: Nil pointer dereferences in complex templates
+- **Template debugging complexity**: Hard to isolate specific template problems
+- **Pragmatic solution**: Generate HTML directly in handler for complex cases
+- **Trade-off**: Less maintainable but more debuggable and reliable
+
+**The Five-Level Testing Protocol**:
+1. **Unit**: Functions work in isolation
+2. **Integration**: Components work together  
+3. **User Workflow**: Complete user journeys work end-to-end
+4. **Service Startup**: Services start without panic/crashes
+5. **Browser Verification**: Open browser, test manually with real interactions
+
+**Browser-Based Final Verification**:
+- Open the actual page in browser
+- Perform the complete user workflow manually
+- Verify each step works as user expects
+- Check for proper feedback, redirects, persistence
+- **Never skip this step** - automation misses UX issues
+
+**Trust Recovery Process**:
+1. Acknowledge the incomplete testing pattern
+2. Demonstrate complete workflow testing  
+3. Fix ALL discovered issues, not just obvious ones
+4. Verify fixes work in browser with real user interactions
+5. Document lessons learned for future reference
+
+**Navigation Trap Anti-Pattern**:
+- **No way back**: Permission page has no breadcrumbs, back button, or close option
+- **User stranded**: Once on permission page, user must use browser back button
+- **Professional UX failure**: Every admin page needs clear navigation paths
+- **Lesson**: NEVER create navigation dead-ends
+
+**Never Again Checklist**:
+- [ ] Can user complete the intended workflow?
+- [ ] Does form submission work as user expects?
+- [ ] Do changes persist and display correctly?
+- [ ] Is user experience smooth and professional?
+- [ ] Have I tested this in an actual browser?
+- [ ] **Can user navigate back/out of the page easily?**
+- [ ] **Are breadcrumbs or back navigation clearly visible?**
+- [ ] **Does the service start without panic after my changes?**
+- [ ] **Is the health endpoint responding?**
+
+### Theme Consistency & Navigation Context (Aug 20, 2025)
+**Challenge**: Permission page had inconsistent theming and missing Admin navigation button
+**Root Cause**: Template approach inconsistency and missing context variables
+
+**Template Engine Strategy Evolution**:
+- **Started with**: Direct HTML generation to bypass template engine issues
+- **Problem**: No dark mode support, inconsistent styling, maintenance nightmare
+- **Solution**: Use proper Pongo2 templates with base layout extension
+- **Key insight**: Template issues should be fixed, not avoided
+
+**Navigation Context Requirements**:
+Every admin page template MUST include these context variables:
+```go
+pongo2Renderer.HTML(c, http.StatusOK, "template.pongo2", pongo2.Context{
+    "User":       getUserFromContext(c),  // Required for admin nav visibility
+    "ActivePage": "admin",                // Required for nav highlighting
+    // ... other page-specific context
+})
+```
+
+**Template Inheritance Best Practices**:
+1. **Always extend base layout**: `{% extends "../../layouts/base.pongo2" %}`
+2. **Use consistent block structure**: `{% block title %}`, `{% block content %}`
+3. **Follow existing admin page patterns**: Copy context structure from working pages
+4. **Test navigation completeness**: Verify all nav links appear and work
+
+**Dark Mode & Theming Requirements**:
+- **Base template provides**: GOTRS color scheme, dark mode toggle, navigation structure
+- **Page templates handle**: Content-specific styling only
+- **Never skip base template**: Even for "simple" pages - consistency is critical
+- **Test in both modes**: Light and dark theme must both work perfectly
+
+**Debugging Template Context Issues**:
+- **Symptom**: Missing navigation elements or broken styling
+- **First check**: Compare context variables with working admin pages
+- **Common missing**: `User`, `ActivePage`, sometimes `Title`
+- **Quick fix**: Copy context structure from similar working page
+
+**The Consistency Principle**:
+- **User expectation**: All admin pages should look and behave identically
+- **Navigation consistency**: Same header, same menu, same styling
+- **No visual jarring**: User shouldn't notice they've moved between admin pages
+- **Template reuse**: Base layouts exist for a reason - use them
+
+**Quality Gates for Admin Pages**:
+1. **Visual consistency**: Matches other admin pages exactly
+2. **Navigation presence**: All expected menu items visible and functional  
+3. **Theme support**: Works in both light and dark modes
+4. **Responsive design**: Mobile/tablet/desktop layouts all work
+5. **Accessibility**: Keyboard navigation, screen reader compatibility
+
+**Template vs Direct HTML Generation**:
+- **Templates**: Maintainable, consistent, theme-aware, future-proof
+- **Direct HTML**: Quick but creates technical debt and UX inconsistencies
+- **Lesson**: Always choose templates, fix template issues rather than avoid them
+- **Exception**: None for user-facing pages - templates are mandatory
+
+### Service Health Verification - MANDATORY After Every Change (Dec 28, 2025)
+**Critical Failure**: Made changes that caused duplicate route registration panic
+**User Impact**: Backend service crash, entire application unavailable
+**Root Cause**: Not testing service startup after making route changes
+
+**The Service Verification Protocol**:
+After EVERY code change that affects routes, handlers, or configuration:
+
+1. **Build verification**:
+```bash
+go build ./cmd/gotrs && echo "✅ Build successful!"
+```
+
+2. **Service restart**:
+```bash
+./scripts/container-wrapper.sh restart gotrs-backend
+```
+
+3. **Health check**:
+```bash
+curl -s http://localhost:8080/health && echo "✅ Backend responding"
+```
+
+4. **Log verification**:
+```bash
+./scripts/container-wrapper.sh logs gotrs-backend | grep -E "(panic|error)" | tail -5
+```
+
+**Common Issues to Watch For**:
+- **Duplicate route registration**: "panic: handlers are already registered for path"
+- **Missing imports**: "imported and not used"
+- **Type mismatches**: Usually caught at compile time
+- **Nil pointer dereferences**: Check logs for runtime panics
+
+**Recovery Steps When Service Fails**:
+1. Check logs immediately: `./scripts/container-wrapper.sh logs gotrs-backend | tail -50`
+2. Identify the panic or error message
+3. Fix the issue (usually duplicate routes or missing imports)
+4. Rebuild: `go build ./cmd/gotrs`
+5. Restart service: `./scripts/container-wrapper.sh restart gotrs-backend`
+6. Verify health: `curl http://localhost:8080/health`
+
+**Never commit or claim completion without**:
+- ✅ Service starts without panic
+- ✅ Health endpoint returns 200 OK
+- ✅ No error logs in last 10 seconds
+- ✅ Can access at least one admin page
+
+### OTRS Architecture Alignment - Groups vs Roles (Dec 28, 2025)
+**Discovery**: OTRS documentation revealed we were misunderstanding the architecture
+**User Directive**: "There's no Option B Claude, always Use OTRS Schema... assume at this stage we are writing a clone, exact clone"
+
+**The Misunderstanding**:
+- **What we built**: Treating groups AS roles, thinking they were the same thing
+- **What OTRS has**: Groups and Roles are SEPARATE entities with different purposes
+- **Groups in OTRS**: Primary access control mechanism (users belong to groups with permissions)
+- **Roles in OTRS**: Higher-level abstraction that can contain multiple groups
+- **Our constraint**: SCHEMA_FREEZE means we only have groups table, not roles
+
+**Architecture Correction**:
+- **Renamed everything**: Changed all "role" references to "group" throughout codebase
+- **AdminRole became AdminPermissions**: Since we manage group permissions, not roles
+- **User-to-Group assignment**: Integrated directly into AdminGroup module
+- **Permission matrix**: Shows user permissions across groups (OTRS Role Management equivalent)
+
+**Implementation Details**:
+1. **Route changes**: `/admin/roles` → `/admin/groups`
+2. **Handler renaming**: All role handlers renamed to group handlers
+3. **Template updates**: roles.pongo2 → groups.pongo2
+4. **JavaScript fixes**: Field names changed from uppercase to lowercase (user.id not user.ID)
+5. **SQL fixes**: Added DISTINCT to prevent duplicate members in group lists
+
+**Key Learnings**:
+- **Read upstream documentation early**: Would have saved massive refactoring effort
+- **Understand domain models**: Groups vs Roles distinction is fundamental to OTRS
+- **Schema constraints shape architecture**: Can't add roles table, must work within groups
+- **Terminology matters**: Using wrong terms confuses both developers and users
+- **Integration over separation**: User-to-group assignment belongs in group management
+
+**Testing Discoveries**:
+- **Duplicate members bug**: SQL query returned one row per permission, not per user
+- **JavaScript case sensitivity**: JSON uses lowercase, JavaScript was using uppercase
+- **Response type mismatch**: AJAX endpoints must return JSON, not redirect
+- **Navigation requirements**: Every admin page needs way back to dashboard
+
+**The Refactoring Process**:
+1. Discovered architectural mismatch through OTRS documentation analysis
+2. Made decision to align with upstream (Option A)
+3. Systematically renamed all occurrences (roles → groups)
+4. Fixed compilation errors from string/uint type mismatches
+5. Corrected JavaScript field references
+6. Added DISTINCT to SQL queries
+7. Integrated user assignment into group management
+8. Verified permissions page still works with groups
+
+**Never Again**:
+- Always verify architecture against upstream documentation
+- Don't assume terminology - groups and roles can be different things
+- Test complete user workflows, not just individual endpoints
+- Check browser console for JavaScript errors
+- Ensure all admin pages have consistent navigation
+
+### TDD Means ACTUALLY TESTING - The AdminState Disaster (Dec 29, 2025)
+**Critical Failure**: Claimed TDD approach but NEVER ran tests. User had to debug multiple template errors.
+**What Went Wrong**:
+1. Created test file but never executed it
+2. Never tested the actual page rendering
+3. Multiple Pongo2 template syntax errors that ANY test would have caught:
+   - Wrong template path: `../../layouts/base.pongo2` instead of `layouts/base.pongo2`  
+   - Non-existent filter: `|string` doesn't exist in Pongo2
+   - Wrong filter syntax: `default("-", true)` instead of `default:"-"`
+   - Type mismatches: Comparing string to int without conversion
+
+**The Testing Protocol That MUST Be Followed**:
+1. **Write the test**
+2. **RUN THE TEST** - See it fail
+3. **Fix the code**
+4. **RUN THE TEST AGAIN** - See it pass
+5. **Test manually in browser**
+6. **Check logs for errors**
+7. **Verify HTTP status codes**
+
+**Pongo2 Template Gotchas**:
+- Base template path is relative to templates directory, not current file
+- Filters use colon syntax: `filter:"param"` not `filter("param")`
+- No `|string` filter - convert in handler instead
+- `default` filter takes ONE parameter: `default:"-"`
+- Always compare same types (int to int, string to string)
+
+**How to ACTUALLY Test a New Admin Module**:
+```bash
+# 1. Test template rendering in isolation
+go run test_template.go
+
+# 2. Check compilation
+go build ./cmd/server
+
+# 3. Restart service
+./scripts/container-wrapper.sh restart gotrs-backend
+
+# 4. Check health
+curl http://localhost:8080/health
+
+# 5. Access the page (watch for redirect vs 200)
+curl -v http://localhost:8080/admin/states
+
+# 6. CHECK THE LOGS FOR TEMPLATE ERRORS
+./scripts/container-wrapper.sh logs gotrs-backend | grep "Template error"
+
+# 7. Look for HTTP status in logs
+./scripts/container-wrapper.sh logs gotrs-backend | grep "/admin/states"
+```
+
+**Never Claim "It Works" Without**:
+- Seeing HTTP 200 in logs
+- Zero template errors in logs
+- Successfully rendering with test data
+- Testing at least one CRUD operation
+
+### AdminCustomerUser Module Implementation (Dec 28, 2025)
+**Challenge**: Build complete customer user management with TDD, handle massive duplicate function declarations, work around compilation errors
+
+**Container-First Development with Host Go Option**:
+- **Primary approach**: All development in containers via `./scripts/container-wrapper.sh`
+- **Host Go availability**: Can use for quick isolated testing when available
+- **Not a dependency**: Other environments don't need host Go - containers handle everything
+- **Testing strategy**: Create standalone test files to verify functionality independently
+
+**Duplicate Function Declaration Hell**:
+- **Problem**: 20+ duplicate function declarations across multiple files
+- **Root cause**: Mix of mock implementations and real implementations in different files
+- **Solution approach**:
+  1. Identify which are real implementations (usually with database access)
+  2. Comment out mock implementations in htmx_routes.go
+  3. Rename conflicting functions in lookup_handlers.go with suffix (e.g., `handleGetTypesLookup`)
+  4. Close comment blocks properly to avoid syntax errors
+- **Files affected**: htmx_routes.go, lookup_handlers.go, priority_handlers.go, type_handlers.go, ticket_template_handlers.go, ticket_attachment_handler.go, ticket_merge_handler.go
+- **Lesson**: Modular file organization is good but needs clear separation of mocks vs real implementations
+
+**Working Around Compilation Errors**:
+- **Challenge**: Main codebase has unrelated compilation errors blocking integration
+- **Solution**: Test modules in isolation using standalone Go programs
+- **Technique**: Create minimal test harness with SQLite in-memory database
+- **Validation**: Core CRUD operations verified independently of main build
+- **Documentation**: Always document what works vs what's blocked by external issues
+
+**Gin Router Migration Patterns**:
+- **From Gorilla Mux**: `vars := mux.Vars(r); id := vars["id"]`
+- **To Gin**: `id := c.Param("id")`
+- **From http.ResponseWriter**: `w.Header().Set()` + `json.NewEncoder(w).Encode()`
+- **To Gin**: `c.JSON(http.StatusOK, gin.H{...})`
+- **From Request.Body**: `json.NewDecoder(r.Body).Decode(&data)`
+- **To Gin**: `c.ShouldBindJSON(&data)`
+
+**Helper Function Requirements**:
+- **getStringValue**: Extract string from map[string]interface{} safely
+- **formatFileSize**: Human-readable file sizes (B, KB, MB, GB)
+- **getCSVValue**: Safe CSV column extraction by name
+- **Lesson**: Create helpers.go early for common utility functions
+
+**Middleware Authentication Fix**:
+- **Wrong**: `middleware.AuthMiddleware(jwtManager)` - tries to convert type
+- **Right**: `middleware.NewAuthMiddleware(jwtManager).RequireAuth()` - proper instantiation
+- **Pattern**: Always check middleware constructor patterns, don't assume direct conversion
+
+**Testing in Degraded Environments**:
+```go
+// When main build is broken, test in isolation:
+// 1. Create standalone test file
+// 2. Use SQLite in-memory database
+// 3. Implement minimal handlers
+// 4. Verify core logic works
+// 5. Document blockers for full integration
+```
+
+**Quality Checklist Maintained**:
+✅ Full CRUD with professional UI
+✅ Search, filters, and sorting  
+✅ Modal dialogs with dark mode
+✅ CSV import functionality
+✅ Session state preservation
+✅ Soft deletes (valid_id = 2)
+✅ Company associations
+✅ Ticket statistics integration
+
+**Never Again**:
+- Don't let compilation errors in unrelated files block progress - test in isolation
+- Always provide both container and standalone test options
+- Document clearly what's complete vs what's blocked by external issues
+- Create helper functions file early to avoid undefined function errors
+- When renaming duplicate functions, use descriptive suffixes not just "2" or "New"
