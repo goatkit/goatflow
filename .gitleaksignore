@@ -4,13 +4,13 @@
 
 # John Doe test JWT tokens in Pact contract tests
 # These are well-known example tokens used for API contract testing
-672dd5fb1d5eae0d18ed4e4473319ee20d7373ec:web/src/contracts/auth.pact.test.ts:jwt:155
-672dd5fb1d5eae0d18ed4e4473319ee20d7373ec:web/src/contracts/auth.pact.test.ts:jwt:159
-672dd5fb1d5eae0d18ed4e4473319ee20d7373ec:web/src/contracts/auth.pact.test.ts:jwt:303
-672dd5fb1d5eae0d18ed4e4473319ee20d7373ec:web/src/contracts/auth.pact.test.ts:jwt:307
-672dd5fb1d5eae0d18ed4e4473319ee20d7373ec:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:754
-672dd5fb1d5eae0d18ed4e4473319ee20d7373ec:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:755
-672dd5fb1d5eae0d18ed4e4473319ee20d7373ec:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:804
-672dd5fb1d5eae0d18ed4e4473319ee20d7373ec:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:805
+7523fcf607a642be97d177335acd696212379696:web/src/contracts/auth.pact.test.ts:jwt:155
+7523fcf607a642be97d177335acd696212379696:web/src/contracts/auth.pact.test.ts:jwt:159
+7523fcf607a642be97d177335acd696212379696:web/src/contracts/auth.pact.test.ts:jwt:303
+7523fcf607a642be97d177335acd696212379696:web/src/contracts/auth.pact.test.ts:jwt:307
+7523fcf607a642be97d177335acd696212379696:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:754
+7523fcf607a642be97d177335acd696212379696:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:755
+7523fcf607a642be97d177335acd696212379696:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:804
+7523fcf607a642be97d177335acd696212379696:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:805
 
 # Documentation placeholder in API README
