@@ -1,6 +1,15 @@
 # GOTRS .gitignore
 
 # ============================================
+# Security - NEVER commit secrets!
+# ============================================
+k8s/secrets.yaml
+.env
+*.key
+*.pem
+*.crt
+
+# ============================================
 # Go / Backend
 # ============================================
 
@@ -28,8 +37,13 @@ vendor/
 # Build directories
 dist/
 build/
-bin/
+bin/           # All compiled binaries should go here!
+
+# Individual binaries (in case they're built in root by mistake)
 gotrs
+gotrs-*
+server
+*.test
 
 # Go build cache
 .cache/

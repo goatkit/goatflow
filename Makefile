@@ -37,6 +37,11 @@ help:
 	@echo "  make setup    - Initial project setup with secure secrets"
 	@echo "  make build    - Build production images"
 	@echo ""
+	@echo "CSS/Frontend build commands:"
+	@echo "  make css-build  - Build production CSS from Tailwind"
+	@echo "  make css-watch  - Watch and rebuild CSS on changes"
+	@echo "  make css-deps   - Install CSS build dependencies"
+	@echo ""
 	@echo "Secrets management:"
 	@echo "  make synthesize       - Generate new .env with secure secrets"
 	@echo "  make rotate-secrets   - Rotate secrets in existing .env"
@@ -414,7 +419,7 @@ valkey-cli:
 # i18n Tools
 babelfish:
 	@echo "Building gotrs-babelfish..."
-	$(COMPOSE_CMD) exec backend go build -o /tmp/gotrs-babelfish cmd/gotrs-babelfish/main.go
+	$(COMPOSE_CMD) exec backend go build -o /tmp/bin/gotrs-babelfish cmd/gotrs-babelfish/main.go
 	@echo "✨ gotrs-babelfish built successfully!"
 	@echo "Run it with: docker exec gotrs-backend /tmp/gotrs-babelfish"
 
@@ -779,3 +784,23 @@ ldap-test:
 .PHONY: test-containerized
 test-containerized:
 	@bash scripts/test-containerized.sh
+
+# CSS Build Commands
+.PHONY: css-deps css-build css-watch
+
+# Install CSS build dependencies (in container with user permissions)
+css-deps:
+	@echo "📦 Installing CSS build dependencies..."
+	@$(CONTAINER_CMD) run --rm -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm install
+	@echo "✅ CSS dependencies installed"
+
+# Build production CSS (in container with user permissions)
+css-build: css-deps
+	@echo "🎨 Building production CSS..."
+	@$(CONTAINER_CMD) run --rm -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm run build-css
+	@echo "✅ CSS built to static/css/output.css"
+
+# Watch and rebuild CSS on changes (in container with user permissions)
+css-watch: css-deps
+	@echo "👁️  Watching for CSS changes..."
+	@$(CONTAINER_CMD) run --rm -it -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm run watch-css
