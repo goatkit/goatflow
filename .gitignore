@@ -356,3 +356,28 @@ development.sqlite3
 CLAUDE.local.md
 *.local.md
 internal/api/storage/
+
+# ============================================
+# Development artifacts and temporary files
+# ============================================
+
+# Test output directories
+tests/
+test-results/
+
+# Docker test configs
+docker/playwright/
+
+# Old documentation and notes
+ROADMAP.old.md
+LOOKUP_FIXES.md
+*.old.md
+*.fixes.md
+
+# Disabled/backup code files
+*.disabled
+*.bak.go
+*.backup.go
+
+# Internal test storage
+internal/api/storage/
