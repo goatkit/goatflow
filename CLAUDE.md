@@ -42,7 +42,7 @@ make clean                 # Reset everything
 ## Container Services
 - **postgres**: PostgreSQL 15 Alpine
 - **valkey**: Valkey 7 Alpine  
-- **backend**: Go with Air hot reload (non-root)
+- **backend**: Go application (non-root)
 - **nginx**: Reverse proxy with static assets
 - **mailhog**: Email testing
 - **temporal**: Workflow orchestration engine
@@ -73,7 +73,7 @@ make clean                 # Reset everything
 ✅ Project structure created with Go backend and HTMX frontend
 ✅ Docker/Podman containers working with rootless support
 ✅ Frontend (HTMX + Alpine.js + Tailwind) with server-side rendering
-✅ Backend (Go + Gin + Air) with hot reload
+✅ Backend (Go + Gin)
 ✅ PostgreSQL database with OTRS-compatible schema (14 tables)
 ✅ Database migration system with make commands
 ✅ Development environment fully functional
@@ -118,12 +118,16 @@ make up
 - CSS: Tailwind utility classes
 - SQL: Lowercase with underscores
 - Git: Conventional commits (feat:, fix:, docs:)
+- **UI Colors: MUST follow docs/UI_COLOR_POLICY.md**
+  - Edit = Blue, Enable = Green, Disable = Orange/Yellow, Delete = Red
+  - Text-only styling for action buttons (no backgrounds)
+  - Always include dark mode variants
 
 ## Development Environment
 - **Primary Platform**: Fedora Kinoite with Podman
 - **Also Supports**: Any OS with Docker/Podman
 - **No Local Dependencies**: Everything runs in containers
-- **Hot Reload**: Both backend (Air) and frontend (Vite)
+- **Frontend Hot Reload**: Vite (backend requires manual restart)
 - **Email Testing**: Mailhog catches all emails locally
 
 ## Security Requirements

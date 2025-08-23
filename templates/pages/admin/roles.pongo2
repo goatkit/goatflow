@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Role Management - GOTRS{% endblock %}
+{% block title %}Role Management - GOTRS Admin{% endblock %}
 
 {% block content %}
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -112,17 +112,22 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                                         </svg>
                                     </button>
-                                    {% if not role.IsSystem %}
+                                    <!-- Toggle Valid/Invalid status -->
                                     <button
-                                        onclick="deleteRole('{{ role.ID }}')"
-                                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                        title="Delete role"
+                                        onclick="toggleRoleStatus('{{ role.ID }}', {{ role.ValidID }})"
+                                        class="{% if role.ValidID == 1 %}text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300{% else %}text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300{% endif %}"
+                                        title="{% if role.ValidID == 1 %}Deactivate Role{% else %}Activate Role{% endif %}"
                                     >
+                                        {% if role.ValidID == 1 %}
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                                         </svg>
+                                        {% else %}
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        {% endif %}
                                     </button>
-                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -319,7 +324,12 @@ function editRole(roleId) {
     document.getElementById('saveButtonText').textContent = 'Update Role';
     
     // Fetch role data and populate form
-    fetch(`/admin/roles/${roleId}`)
+    fetch(`/admin/roles/${roleId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -346,7 +356,10 @@ function editRole(roleId) {
         })
         .catch(error => {
             console.error('Error:', error);
-            showToast('error', 'Failed to load role');
+            showGuruMeditation('00000404.DEADBEEF', 'Failed to load role data', {
+                task: 'ROLE.LOAD',
+                location: 'roles.pongo2:editRole'
+            });
         });
 }
 
@@ -375,13 +388,14 @@ function saveRole(event) {
         is_active: formData.get('is_active') === 'on'
     };
     
-    const url = currentRoleId ? `/admin/roles/${currentRoleId}` : '/admin/roles';
+    const url = currentRoleId ? `/admin/roles/${currentRoleId}` : '/admin/roles/create';
     const method = currentRoleId ? 'PUT' : 'POST';
     
     fetch(url, {
         method: method,
         headers: {
             'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify(roleData)
     })
@@ -402,27 +416,36 @@ function saveRole(event) {
     });
 }
 
-// Delete role
-function deleteRole(roleId) {
-    if (confirm('Are you sure you want to delete this role? This action cannot be undone.')) {
-        fetch(`/admin/roles/${roleId}`, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast('success', data.message);
-                // Reload page to show updated data
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                showToast('error', data.error || 'Failed to delete role');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('error', 'Failed to delete role');
+// Toggle role status (active/inactive)
+function toggleRoleStatus(roleId, currentValidId) {
+    const newValidId = currentValidId == 1 ? 2 : 1;
+    const action = newValidId == 1 ? 'activate' : 'deactivate';
+    
+    fetch(`/admin/roles/${roleId}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ valid_id: newValidId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('success', `Role ${action}d successfully`);
+            // Reload page to show updated data
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('error', data.error || `Failed to ${action} role`);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showGuruMeditation('00000500.DEADBEEF', `Failed to ${action} role`, {
+            task: 'ROLE.STATUS.TOGGLE',
+            location: 'roles.pongo2:toggleRoleStatus'
         });
-    }
+    });
 }
 
 // View and manage role users
@@ -458,7 +481,7 @@ function viewRoleUsers(roleId) {
                                 </svg>
                             </div>
                         `;
-                        li.onclick = () => removeUserFromRole(user.id);
+                        li.onclick = () => removeUserFromRole(user.user_id);
                         membersList.appendChild(li);
                     });
                 } else {
@@ -469,8 +492,8 @@ function viewRoleUsers(roleId) {
                 const availableList = document.getElementById('availableUsersList');
                 availableList.innerHTML = '';
                 
-                if (data.available_users && data.available_users.length > 0) {
-                    data.available_users.forEach(user => {
+                if (data.available && data.available.length > 0) {
+                    data.available.forEach(user => {
                         const li = document.createElement('li');
                         li.className = 'px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer';
                         li.innerHTML = `
@@ -484,7 +507,7 @@ function viewRoleUsers(roleId) {
                                 </svg>
                             </div>
                         `;
-                        li.onclick = () => addUserToRole(user.id);
+                        li.onclick = () => addUserToRole(user.user_id);
                         availableList.appendChild(li);
                     });
                 } else {
@@ -531,7 +554,10 @@ function addUserToRole(userId) {
 // Remove user from role
 function removeUserFromRole(userId) {
     fetch(`/admin/roles/${currentManagedRoleId}/users/${userId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
     })
     .then(response => response.json())
     .then(data => {

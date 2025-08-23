@@ -1,0 +1,670 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Claude Ticket Monitor{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                    🤖 Claude Ticket Monitor
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400">
+                    Monitor and manage tickets in the Claude Code queue
+                </p>
+            </div>
+            <div>
+                <a href="/dev" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors">
+                    ← Back to Dev Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div class="text-sm text-gray-500 dark:text-gray-400">New Tickets</div>
+            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="new-count">0</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div class="text-sm text-gray-500 dark:text-gray-400">In Progress</div>
+            <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400" id="open-count">0</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div class="text-sm text-gray-500 dark:text-gray-400">Pending</div>
+            <div class="text-2xl font-bold text-orange-600 dark:text-orange-400" id="pending-count">0</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div class="text-sm text-gray-500 dark:text-gray-400">Closed</div>
+            <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="closed-count">0</div>
+        </div>
+    </div>
+
+    <!-- Tickets List -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow ticket-list">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Tickets</h2>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Ticket #
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Title
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Customer
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            State
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Assigned To
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Created
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for ticket in tickets %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onclick="toggleTicketDetails('{{ ticket.ID }}')">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                            <div class="flex items-center space-x-2">
+                                <span>#{{ ticket.Number }}</span>
+                                <button onclick="event.stopPropagation(); copyTicketNumber('#{{ ticket.Number }}')" 
+                                        class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                        title="Copy ticket number">
+                                    <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                            {{ ticket.Title }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {{ ticket.Customer }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                {% if ticket.State == "new" or ticket.State == "Updated New" %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300
+                                {% elif ticket.State == "open" or ticket.State == "closed unsuccessful" %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300
+                                {% elif ticket.State == "pending" %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300
+                                {% elif ticket.State == "closed" or ticket.State == "closed successful" %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300
+                                {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300{% endif %}">
+                                {{ ticket.State }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {{ ticket.AssignedTo }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {{ ticket.CreateTime }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="event.stopPropagation(); assignToMe('{{ ticket.Number }}')" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3">
+                                Assign to Me
+                            </button>
+                            <button onclick="event.stopPropagation(); updateStatus('{{ ticket.Number }}')" class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
+                                Update Status
+                            </button>
+                        </td>
+                    </tr>
+                    
+                    <!-- Expandable ticket details -->
+                    <tr id="details-{{ ticket.ID }}" class="hidden">
+                        <td colspan="7" class="px-6 py-4 bg-gray-50 dark:bg-gray-900">
+                            <div class="space-y-4">
+                                <h3 class="font-semibold text-gray-900 dark:text-white">Articles / Communication</h3>
+                                {% for article in ticket.Articles %}
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium text-gray-900 dark:text-white">{{ article.From }}</span>
+                                        <span class="text-sm text-gray-500 dark:text-gray-400">{{ article.Time }}</span>
+                                    </div>
+                                    <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ article.Subject }}</div>
+                                    <div class="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{{ article.Body|truncatechars:500 }}</div>
+                                </div>
+                                {% endfor %}
+                                
+                                <!-- Add response form -->
+                                <div class="mt-4">
+                                    <textarea id="response-{{ ticket.ID }}" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white" rows="3" placeholder="Add a response..."></textarea>
+                                    <button onclick="addResponse('{{ ticket.Number }}', '{{ ticket.ID }}')" class="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors">
+                                        Add Response
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            {% if not tickets %}
+            <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                No tickets found in the Claude Code queue
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Auto-refresh indicator -->
+    <div class="mt-4 text-right text-sm text-gray-500 dark:text-gray-400">
+        <span id="refresh-status">Auto-refresh: ON</span>
+        <button onclick="toggleAutoRefresh()" class="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+            Toggle
+        </button>
+    </div>
+</div>
+
+<script>
+let autoRefresh = true;
+let refreshInterval;
+
+// Count tickets by state
+function updateCounts() {
+    const states = {
+        'new': 0,
+        'Updated New': 0,
+        'open': 0,
+        'closed unsuccessful': 0,
+        'pending': 0,
+        'closed': 0,
+        'closed successful': 0
+    };
+    
+    {% for ticket in tickets %}
+    states['{{ ticket.State }}'] = (states['{{ ticket.State }}'] || 0) + 1;
+    {% endfor %}
+    
+    document.getElementById('new-count').textContent = states['new'] + states['Updated New'];
+    document.getElementById('open-count').textContent = states['open'] + states['closed unsuccessful'];
+    document.getElementById('pending-count').textContent = states['pending'];
+    document.getElementById('closed-count').textContent = states['closed'] + states['closed successful'];
+}
+
+// Toggle ticket details
+function toggleTicketDetails(ticketId) {
+    const detailsRow = document.getElementById('details-' + ticketId);
+    detailsRow.classList.toggle('hidden');
+}
+
+// Assign ticket to Claude
+function assignToMe(ticketNumber) {
+    if (!confirm('Assign ticket #' + ticketNumber + ' to Claude?')) return;
+    
+    fetch('/dev/action/assign-ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket: ticketNumber, user: 'claude' })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to assign ticket: ' + data.message);
+        }
+    });
+}
+
+// Update ticket status - show modal with dropdown
+function updateStatus(ticketNumber) {
+    // First fetch available states
+    fetch('/dev/action/get-ticket-states', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.states) {
+            showStatusModal(ticketNumber, data.states);
+        } else {
+            alert('Failed to fetch ticket states');
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching states:', error);
+        alert('Failed to fetch ticket states');
+    });
+}
+
+// Show status update modal
+function showStatusModal(ticketNumber, states) {
+    // Remove existing modal if any
+    const existingModal = document.getElementById('status-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Create modal HTML
+    const modalHTML = `
+        <div id="status-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+                <div class="mt-3">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                        Update Ticket Status
+                    </h3>
+                    <div class="mt-2 px-7 py-3">
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                            Ticket: #${ticketNumber}
+                        </p>
+                        <label for="status-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Select New Status:
+                        </label>
+                        <select id="status-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            ${states.map(state => `<option value="${state.name}">${state.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="items-center px-4 py-3">
+                        <button onclick="submitStatusUpdate('${ticketNumber}')" class="px-4 py-2 bg-blue-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                            Update Status
+                        </button>
+                        <button onclick="closeStatusModal()" class="mt-3 px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+// Submit status update
+function submitStatusUpdate(ticketNumber) {
+    const statusSelect = document.getElementById('status-select');
+    const newStatus = statusSelect.value;
+    
+    fetch('/dev/action/update-ticket-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket: ticketNumber, status: newStatus })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to update status: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating status:', error);
+        alert('Failed to update ticket status');
+    });
+}
+
+// Close status modal
+function closeStatusModal() {
+    const modal = document.getElementById('status-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Add response to ticket
+function addResponse(ticketNumber, ticketId) {
+    const response = document.getElementById('response-' + ticketId).value;
+    if (!response) return;
+    
+    fetch('/dev/action/add-ticket-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticket: ticketNumber, response: response })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to add response: ' + data.message);
+        }
+    });
+}
+
+// Toggle auto-refresh
+function toggleAutoRefresh() {
+    autoRefresh = !autoRefresh;
+    document.getElementById('refresh-status').textContent = 'Auto-refresh: ' + (autoRefresh ? 'ON' : 'OFF');
+    
+    if (autoRefresh) {
+        startAutoRefresh();
+    } else {
+        stopAutoRefresh();
+    }
+}
+
+// Start auto-refresh
+function startAutoRefresh() {
+    refreshInterval = setInterval(() => {
+        // Don't refresh if user is typing or has unsaved changes
+        if (hasUserInput()) {
+            console.log('Skipping refresh - user has unsaved input');
+            return;
+        }
+        refreshTicketList();
+    }, 30000); // Refresh every 30 seconds
+}
+
+// Stop auto-refresh
+function stopAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+}
+
+// Check if user has unsaved input
+function hasUserInput() {
+    // Check if user is actively editing
+    if (userIsEditing) {
+        return true;
+    }
+    
+    // Check all input fields and textareas
+    const inputs = document.querySelectorAll('input[type="text"], textarea, input[type="email"]');
+    for (let input of inputs) {
+        if (input.value && input.value.trim() !== '') {
+            return true;
+        }
+    }
+    
+    // Check if any modal is open
+    const modals = document.querySelectorAll('[id$="-modal"]');
+    for (let modal of modals) {
+        if (modal && modal.style.display !== 'none') {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// Refresh only the ticket list via AJAX
+function refreshTicketList() {
+    fetch(window.location.href, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        // Parse the HTML and extract just the ticket list
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newTicketList = doc.querySelector('.ticket-list');
+        const currentTicketList = document.querySelector('.ticket-list');
+        
+        if (newTicketList && currentTicketList) {
+            // Store scroll position
+            const scrollPos = window.scrollY;
+            
+            // Update only the ticket list
+            currentTicketList.innerHTML = newTicketList.innerHTML;
+            
+            // Restore scroll position
+            window.scrollTo(0, scrollPos);
+            
+            // Show subtle refresh indicator
+            showRefreshIndicator();
+        }
+    })
+    .catch(error => {
+        console.error('Failed to refresh tickets:', error);
+    });
+}
+
+// Show subtle refresh indicator
+function showRefreshIndicator() {
+    const indicator = document.createElement('div');
+    indicator.className = 'fixed top-4 right-4 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-lg text-sm transition-opacity duration-500';
+    indicator.textContent = 'Tickets refreshed';
+    indicator.style.opacity = '0';
+    
+    document.body.appendChild(indicator);
+    
+    // Fade in
+    setTimeout(() => {
+        indicator.style.opacity = '1';
+    }, 10);
+    
+    // Fade out and remove
+    setTimeout(() => {
+        indicator.style.opacity = '0';
+        setTimeout(() => {
+            document.body.removeChild(indicator);
+        }, 500);
+    }, 2000);
+}
+
+// Connect to Server-Sent Events stream
+function connectToEventStream() {
+    if (eventSource) {
+        eventSource.close();
+    }
+    
+    eventSource = new EventSource('/dev/tickets/events');
+    
+    eventSource.addEventListener('connected', function(e) {
+        console.log('Connected to ticket event stream');
+        showEventIndicator('Connected to live updates', 'success');
+    });
+    
+    eventSource.addEventListener('ticket-update', function(e) {
+        try {
+            const data = JSON.parse(e.data);
+            console.log('Received ticket update:', data);
+            
+            // Only refresh if user is not actively editing
+            if (!hasUserInput()) {
+                refreshTicketList();
+                showEventIndicator(`Ticket ${data.type}`, 'info');
+            } else {
+                // Queue the update for later
+                showEventIndicator('Update pending (you have unsaved changes)', 'warning');
+            }
+        } catch (err) {
+            console.error('Failed to parse ticket update:', err);
+        }
+    });
+    
+    eventSource.addEventListener('heartbeat', function(e) {
+        console.log('Heartbeat received');
+    });
+    
+    eventSource.onerror = function(err) {
+        console.error('EventSource error:', err);
+        showEventIndicator('Connection lost - reconnecting...', 'error');
+        
+        // Reconnect after 5 seconds
+        setTimeout(() => {
+            connectToEventStream();
+        }, 5000);
+    };
+}
+
+// Show event indicator
+function showEventIndicator(message, type) {
+    const indicator = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-green-100 dark:bg-green-900' :
+                    type === 'error' ? 'bg-red-100 dark:bg-red-900' :
+                    type === 'warning' ? 'bg-yellow-100 dark:bg-yellow-900' :
+                    'bg-blue-100 dark:bg-blue-900';
+    const textColor = type === 'success' ? 'text-green-800 dark:text-green-200' :
+                     type === 'error' ? 'text-red-800 dark:text-red-200' :
+                     type === 'warning' ? 'text-yellow-800 dark:text-yellow-200' :
+                     'text-blue-800 dark:text-blue-200';
+    
+    indicator.className = `fixed bottom-4 left-4 px-3 py-2 ${bgColor} ${textColor} rounded-lg text-sm transition-all duration-500 flex items-center space-x-2`;
+    
+    // Add icon
+    const icon = type === 'success' ? '✓' :
+                 type === 'error' ? '✗' :
+                 type === 'warning' ? '⚠' :
+                 '●';
+    
+    indicator.innerHTML = `<span class="text-lg">${icon}</span><span>${message}</span>`;
+    indicator.style.opacity = '0';
+    indicator.style.transform = 'translateY(20px)';
+    
+    document.body.appendChild(indicator);
+    
+    // Animate in
+    setTimeout(() => {
+        indicator.style.opacity = '1';
+        indicator.style.transform = 'translateY(0)';
+    }, 10);
+    
+    // Animate out and remove
+    setTimeout(() => {
+        indicator.style.opacity = '0';
+        indicator.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            if (indicator.parentNode) {
+                document.body.removeChild(indicator);
+            }
+        }, 500);
+    }, 4000);
+}
+
+// Copy ticket number to clipboard
+function copyTicketNumber(ticketNumber) {
+    // Use modern clipboard API if available
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(ticketNumber).then(() => {
+            showCopyFeedback(ticketNumber, true);
+        }).catch(err => {
+            // Fallback to older method
+            fallbackCopyToClipboard(ticketNumber);
+        });
+    } else {
+        // Fallback for older browsers
+        fallbackCopyToClipboard(ticketNumber);
+    }
+}
+
+// Fallback copy method for older browsers
+function fallbackCopyToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.top = "-9999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        showCopyFeedback(text, successful);
+    } catch (err) {
+        showCopyFeedback(text, false);
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+// Show visual feedback when copying
+function showCopyFeedback(ticketNumber, success) {
+    // Find the button that was clicked
+    const button = event.target.closest('button');
+    if (!button) return;
+    
+    // Store original content
+    const originalHTML = button.innerHTML;
+    
+    if (success) {
+        // Change icon to checkmark temporarily
+        button.innerHTML = `
+            <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+        `;
+        button.classList.add('bg-green-100', 'dark:bg-green-900');
+        
+        // Show toast notification
+        showToast(`Copied ${ticketNumber} to clipboard`, 'success');
+    } else {
+        // Show error feedback
+        button.classList.add('bg-red-100', 'dark:bg-red-900');
+        showToast('Failed to copy to clipboard', 'error');
+    }
+    
+    // Restore original state after 2 seconds
+    setTimeout(() => {
+        button.innerHTML = originalHTML;
+        button.classList.remove('bg-green-100', 'dark:bg-green-900', 'bg-red-100', 'dark:bg-red-900');
+    }, 2000);
+}
+
+// Simple toast notification
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white transition-all transform translate-y-0 z-50 ${
+        type === 'success' ? 'bg-green-600' : 
+        type === 'error' ? 'bg-red-600' : 
+        'bg-blue-600'
+    }`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+        toast.classList.add('opacity-100');
+    }, 10);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
+// Track if user is actively editing
+let userIsEditing = false;
+let eventSource = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    updateCounts();
+    
+    // Connect to Server-Sent Events for real-time updates
+    connectToEventStream();
+    
+    // Add focus/blur handlers to all input fields
+    document.addEventListener('focusin', function(e) {
+        if (e.target.matches('input, textarea, select')) {
+            userIsEditing = true;
+            console.log('User started editing');
+        }
+    });
+    
+    document.addEventListener('focusout', function(e) {
+        // Small delay to check if focus moved to another input
+        setTimeout(() => {
+            if (!document.activeElement.matches('input, textarea, select')) {
+                userIsEditing = false;
+                console.log('User stopped editing');
+            }
+        }, 100);
+    });
+});
+</script>
+{% endblock %}

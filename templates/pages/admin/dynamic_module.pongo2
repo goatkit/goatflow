@@ -1,0 +1,974 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ module.Plural }} Management{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="mb-6">
+        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ module.Plural }} Management</h1>
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ module.Description }}</p>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="mb-4 flex justify-between items-center">
+        <div class="flex space-x-2">
+            <button onclick="openCreateModal()" 
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                <i class="fas fa-plus icon-sm mr-2"></i>
+                New {{ module.Singular }}
+            </button>
+            {% if features.ImportCSV %}
+            <button onclick="openImportModal()" 
+                    class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                <i class="fas fa-file-upload icon-sm mr-2"></i>
+                Import CSV
+            </button>
+            {% endif %}
+            {% if features.ExportCSV %}
+            <button onclick="exportToCSV()" 
+                    class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
+                <i class="fas fa-file-download icon-sm mr-2"></i>
+                Export CSV
+            </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        {% if features.Search %}
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-1 relative">
+                    <!-- Magnifying glass icon -->
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search icon-sm text-gray-400"></i>
+                    </div>
+                    <input type="text" 
+                           id="searchInput"
+                           placeholder="Search by name, login, email, group..."
+                           onkeyup="filterTable()"
+                           class="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
+                    <!-- Clear button (X icon) -->
+                    <button id="clearSearchBtn"
+                            onclick="clearSearch()"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            style="display: none;">
+                        <i class="fas fa-times icon-sm"></i>
+                    </button>
+                </div>
+                <div class="flex gap-2">
+                    {% if module.Name == "users" %}
+                    <!-- Status Filter -->
+                    <select id="statusFilter" onchange="filterTable()" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
+                        <option value="">All Status</option>
+                        <option value="1">Active</option>
+                        <option value="2">Inactive</option>
+                    </select>
+                    <!-- Group Filter -->
+                    <select id="groupFilter" onchange="filterTable()" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
+                        <option value="">All Groups</option>
+                        <!-- Groups will be populated dynamically -->
+                    </select>
+                    {% endif %}
+                </div>
+                <span class="text-sm text-gray-600 dark:text-gray-400 self-center">
+                    <span id="filteredCount">{{ items|length }}</span> items
+                </span>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="overflow-x-auto">
+            <table id="dataTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        {% if allFields %}
+                            {% for field in allFields %}
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                {{ field.Label }}
+                            </th>
+                            {% endfor %}
+                        {% else %}
+                            {% for field in fields %}
+                            {% if field.ShowInList %}
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                {{ field.Label }}
+                            </th>
+                            {% endif %}
+                            {% endfor %}
+                            {% if module.Name == "users" %}
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Groups
+                            </th>
+                            {% endif %}
+                        {% endif %}
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for item in items %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" data-id="{{ item.id }}" data-status="{{ item.valid_id|default:1 }}">
+                        {% if allFields %}
+                            {% for field in allFields %}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                {% if field.Name == "valid_id" %}
+                                    {% if item[field.Name] == 1 %}
+                                    <span class="status-badge px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>
+                                    {% else %}
+                                    <span class="status-badge px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Inactive</span>
+                                    {% endif %}
+                                {% elif field.Type == "password" %}
+                                    <span class="text-gray-400 dark:text-gray-500">••••••••</span>
+                                {% elif field.Type == "color" %}
+                                    <div class="flex items-center">
+                                        <div class="w-6 h-6 rounded" style="background-color: {{ item[field.Name] }}"></div>
+                                        <span class="ml-2">{{ item[field.Name] }}</span>
+                                    </div>
+                                {% elif field.Name == "group_names" %}
+                                    {% if item.Groups %}
+                                    <div class="flex flex-wrap gap-1">
+                                        {% for group in item.Groups %}
+                                        <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ group }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <span class="text-gray-400">-</span>
+                                    {% endif %}
+                                {% elif field.Type == "datetime" %}
+                                    <span class="datetime-field" data-utc="{{ item[field.Name] }}">{{ item[field.Name]|default:"-" }}</span>
+                                {% else %}
+                                    {{ item[field.Name]|default:"-" }}
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        {% else %}
+                            {% for field in fields %}
+                            {% if field.ShowInList %}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                {% if field.Name == "valid_id" %}
+                                    {% if item[field.Name] == 1 %}
+                                    <span class="status-badge px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>
+                                    {% else %}
+                                    <span class="status-badge px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Inactive</span>
+                                    {% endif %}
+                                {% elif field.Type == "password" %}
+                                    <span class="text-gray-400 dark:text-gray-500">••••••••</span>
+                                {% elif field.Type == "color" %}
+                                    <div class="flex items-center">
+                                        <div class="w-6 h-6 rounded" style="background-color: {{ item[field.Name] }}"></div>
+                                        <span class="ml-2">{{ item[field.Name] }}</span>
+                                    </div>
+                                {% elif field.Type == "datetime" %}
+                                    <span class="datetime-field" data-utc="{{ item[field.Name] }}">{{ item[field.Name]|default:"-" }}</span>
+                                {% else %}
+                                    {{ item[field.Name]|default:"-" }}
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                            {% endfor %}
+                            {% if module.Name == "users" %}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                                {% if item.Groups %}
+                                <div class="flex flex-wrap gap-1">
+                                    {% for group in item.Groups %}
+                                    <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ group }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <span class="text-gray-400">-</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
+                        {% endif %}
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editItem({{ item.id }})" 
+                                    title="Edit"
+                                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-2">
+                                <i class="fas fa-edit icon-sm"></i>
+                            </button>
+                            {% if features.SoftDelete %}
+                                {% if item.valid_id == 1 %}
+                                <button onclick="toggleStatus({{ item.id }}, {{ item.valid_id }})" 
+                                        title="Disable"
+                                        class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300">
+                                    <i class="fas fa-times-circle icon-sm"></i>
+                                </button>
+                                {% else %}
+                                <button onclick="toggleStatus({{ item.id }}, {{ item.valid_id }})" 
+                                        title="Enable"
+                                        class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
+                                    <i class="fas fa-check-circle icon-sm"></i>
+                                </button>
+                                {% endif %}
+                            {% else %}
+                                <button onclick="deleteItem({{ item.id }})" 
+                                        title="Delete"
+                                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
+                                    <i class="fas fa-trash icon-sm"></i>
+                                </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="100%" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            No data available
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div id="moduleModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+            <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
+        </div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form id="moduleForm" onsubmit="saveItem(event)">
+                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 id="modalTitle" class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 mb-4">
+                        New {{ module.Singular }}
+                    </h3>
+                    <div class="mt-4 space-y-4">
+                        {% for field in fields %}
+                        {% if field.ShowInForm %}
+                        <div>
+                            <label for="{{ field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {{ field.Label }}
+                                {% if field.Required %}<span class="text-red-500">*</span>{% endif %}
+                            </label>
+                            {% if field.Type == "text" or field.Type == "textarea" or field.Type == "notes" %}
+                                <textarea id="{{ field.Name }}" name="{{ field.Name }}" rows="{{ field.Rows|default:3 }}" {% if field.Required %}required{% endif %}
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                                    placeholder="{{ field.Placeholder|default:'' }}"></textarea>
+                            {% elif field.Type == "select" %}
+                                <select id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                    <option value="">-- Select --</option>
+                                    {% for option in field.Options %}
+                                    <option value="{{ option.Value }}">{{ option.Label }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% elif field.Type == "color" %}
+                                <input type="color" id="{{ field.Name }}" name="{{ field.Name }}" value="{{ field.Default|default:'#000000' }}"
+                                    class="mt-1 block h-10 w-20 border-gray-300 dark:border-gray-600 rounded-md shadow-sm">
+                            {% elif field.Type == "password" %}
+                                <div class="relative">
+                                    <input type="password" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
+                                        class="mt-1 block w-full pr-10 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                    <button type="button" onclick="togglePassword('{{ field.Name }}')" 
+                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                        <i id="{{ field.Name }}_eye" class="fas fa-eye icon-sm"></i>
+                                        <i id="{{ field.Name }}_eye_off" class="fas fa-eye-slash icon-sm hidden"></i>
+                                    </button>
+                                </div>
+                            {% elif field.Type == "radio" %}
+                                <div class="mt-1 space-y-2">
+                                    {% for option in field.Options %}
+                                    <label class="inline-flex items-center mr-4">
+                                        <input type="radio" id="{{ field.Name }}_{{ option.Value }}" name="{{ field.Name }}" value="{{ option.Value }}" {% if field.Required %}required{% endif %}
+                                            class="rounded-full border-gray-300 dark:border-gray-600 text-blue-600 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
+                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ option.Label }}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            {% elif field.Type == "file" %}
+                                <input type="file" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
+                                    {% if field.Accept %}accept="{{ field.Accept }}"{% endif %}
+                                    {% if field.Multiple %}multiple{% endif %}
+                                    class="mt-1 block w-full text-sm text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer focus:outline-none focus:border-blue-500 dark:bg-gray-700">
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ field.Help|default:"Max file size: 10MB" }}</p>
+                            {% elif field.Type == "files" or field.Type == "filelist" %}
+                                <div class="mt-1">
+                                    <input type="file" id="{{ field.Name }}" name="{{ field.Name }}[]" multiple {% if field.Required %}required{% endif %}
+                                        {% if field.Accept %}accept="{{ field.Accept }}"{% endif %}
+                                        class="block w-full text-sm text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer focus:outline-none focus:border-blue-500 dark:bg-gray-700">
+                                    <div id="{{ field.Name }}_list" class="mt-2 space-y-1"></div>
+                                </div>
+                            {% elif field.Type == "date" %}
+                                <input type="date" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
+                                    min="{{ field.Min|default:'' }}" max="{{ field.Max|default:'' }}"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                            {% elif field.Type == "datetime" or field.Type == "datetime-local" %}
+                                <input type="datetime-local" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
+                                    min="{{ field.Min|default:'' }}" max="{{ field.Max|default:'' }}"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                            {% elif field.Type == "time" %}
+                                <input type="time" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                            {% elif field.Type == "email" %}
+                                <input type="email" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
+                                    placeholder="{{ field.Placeholder|default:'user@example.com' }}"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                            {% elif field.Type == "url" %}
+                                <input type="url" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
+                                    placeholder="{{ field.Placeholder|default:'https://example.com' }}"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                            {% elif field.Type == "tel" or field.Type == "phone" %}
+                                <input type="tel" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
+                                    pattern="{{ field.Pattern|default:'[0-9]{3}-[0-9]{3}-[0-9]{4}' }}"
+                                    placeholder="{{ field.Placeholder|default:'123-456-7890' }}"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                            {% elif field.Type == "range" %}
+                                <div class="mt-1">
+                                    <input type="range" id="{{ field.Name }}" name="{{ field.Name }}"
+                                        min="{{ field.Min|default:0 }}" max="{{ field.Max|default:100 }}" step="{{ field.Step|default:1 }}"
+                                        value="{{ field.Default|default:50 }}"
+                                        oninput="document.getElementById('{{ field.Name }}_value').textContent = this.value"
+                                        class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
+                                    <span id="{{ field.Name }}_value" class="text-sm text-gray-600 dark:text-gray-400">{{ field.Default|default:50 }}</span>
+                                </div>
+                            {% elif field.Type == "bool" or field.Type == "boolean" or field.Type == "checkbox" %}
+                                <input type="checkbox" id="{{ field.Name }}" name="{{ field.Name }}" value="1"
+                                    class="mt-1 rounded border-gray-300 dark:border-gray-600 text-blue-600 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
+                            {% elif field.Type == "int" or field.Type == "integer" or field.Type == "number" %}
+                                <input type="number" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
+                                    min="{{ field.Min|default:'' }}" max="{{ field.Max|default:'' }}" step="{{ field.Step|default:1 }}"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                            {% elif field.Type == "float" or field.Type == "decimal" %}
+                                <input type="number" id="{{ field.Name }}" name="{{ field.Name }}" step="0.01" {% if field.Required %}required{% endif %}
+                                    min="{{ field.Min|default:'' }}" max="{{ field.Max|default:'' }}"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                            {% else %}
+                                <input type="text" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
+                                    placeholder="{{ field.Placeholder|default:'' }}"
+                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                            {% endif %}
+                            {% if field.Help %}
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ field.Help }}</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if module.Name == "users" %}
+                        <!-- Groups assignment for users -->
+                        <div>
+                            <label for="groups" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Groups
+                            </label>
+                            <select id="groups" name="groups" multiple size="6"
+                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                <!-- Groups will be populated dynamically -->
+                            </select>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Hold Ctrl/Cmd to select multiple groups</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Save
+                    </button>
+                    <button type="button" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+            <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
+        </div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div id="confirmIcon" class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 sm:mx-0 sm:h-10 sm:w-10">
+                        <i class="fas fa-exclamation-triangle icon-lg text-yellow-600 dark:text-yellow-400"></i>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 id="confirmTitle" class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
+                            Confirm Action
+                        </h3>
+                        <div class="mt-2">
+                            <p id="confirmMessage" class="text-sm text-gray-500 dark:text-gray-400">
+                                Are you sure you want to proceed with this action?
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" id="confirmButton" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-yellow-600 text-base font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    Confirm
+                </button>
+                <button type="button" onclick="closeConfirmModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Dynamic module configuration passed from server  
+const moduleConfig = JSON.parse('{{ config_json|escapejs }}');
+const moduleName = '{{ module.Name }}';
+// Support both /admin/users and /admin/dynamic/users paths
+const currentPath = window.location.pathname;
+const API_BASE = currentPath.includes('/dynamic/') ? '/admin/dynamic/' + moduleName : '/admin/' + moduleName;
+let currentEditId = null;
+
+function openCreateModal() {
+    currentEditId = null;
+    document.getElementById('modalTitle').textContent = 'New {{ module.Singular }}';
+    document.getElementById('moduleForm').reset();
+    openModal();
+}
+
+function editItem(id) {
+    currentEditId = id;
+    document.getElementById('modalTitle').textContent = 'Edit {{ module.Singular }}';
+    
+    fetch(`${API_BASE}/${id}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Populate form fields
+            {% for field in fields %}
+            {% if field.ShowInForm %}
+            {% if field.Type == "password" %}
+            // Password fields are not populated for security
+            document.getElementById('{{ field.Name }}').value = '';
+            document.getElementById('{{ field.Name }}').placeholder = 'Leave blank to keep existing';
+            {% elif field.Type == "radio" %}
+            // Handle radio buttons
+            if (data.data.{{ field.Name }} !== undefined) {
+                const radio = document.getElementById('{{ field.Name }}_' + data.data.{{ field.Name }});
+                if (radio) radio.checked = true;
+            }
+            {% elif field.Type == "checkbox" or field.Type == "bool" or field.Type == "boolean" %}
+            // Handle checkboxes
+            if (data.data.{{ field.Name }} !== undefined) {
+                document.getElementById('{{ field.Name }}').checked = !!data.data.{{ field.Name }};
+            }
+            {% elif field.Type == "file" or field.Type == "files" or field.Type == "filelist" %}
+            // File fields cannot be pre-populated for security reasons
+            {% elif field.Type == "range" %}
+            // Handle range inputs
+            if (data.data.{{ field.Name }} !== undefined) {
+                document.getElementById('{{ field.Name }}').value = data.data.{{ field.Name }};
+                document.getElementById('{{ field.Name }}_value').textContent = data.data.{{ field.Name }};
+            }
+            {% else %}
+            // Handle all other input types
+            if (data.data.{{ field.Name }} !== undefined) {
+                document.getElementById('{{ field.Name }}').value = data.data.{{ field.Name }};
+            }
+            {% endif %}
+            {% endif %}
+            {% endfor %}
+            
+            // Handle groups for users module
+            if (moduleName === 'users' && data.data.Groups) {
+                // First load the groups, then select the user's groups
+                loadGroups().then(() => {
+                    const groupSelect = document.getElementById('groups');
+                    if (groupSelect) {
+                        // Select the user's groups
+                        data.data.Groups.forEach(groupName => {
+                            for (let option of groupSelect.options) {
+                                if (option.textContent === groupName) {
+                                    option.selected = true;
+                                    break;
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+            
+            openModal();
+        }
+    });
+}
+
+function saveItem(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(document.getElementById('moduleForm'));
+    const url = currentEditId ? `${API_BASE}/${currentEditId}` : API_BASE;
+    const method = currentEditId ? 'PUT' : 'POST';
+    
+    // Handle multi-select groups for users module
+    if (moduleName === 'users') {
+        const groupSelect = document.getElementById('groups');
+        if (groupSelect) {
+            // Remove any existing groups entries from formData
+            formData.delete('groups');
+            
+            // Collect selected group IDs
+            const selectedGroups = [];
+            for (let option of groupSelect.options) {
+                if (option.selected) {
+                    selectedGroups.push(option.value);
+                }
+            }
+            
+            // Add as comma-separated string
+            if (selectedGroups.length > 0) {
+                formData.append('groups', selectedGroups.join(','));
+            }
+        }
+    }
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeModal();
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.error || 'An error occurred', 'error');
+        }
+    });
+}
+
+// Confirmation modal functions
+function showConfirmModal(title, message, onConfirm) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    
+    const confirmBtn = document.getElementById('confirmButton');
+    // Remove old event listeners by cloning the button
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    
+    newConfirmBtn.addEventListener('click', function() {
+        closeConfirmModal();
+        onConfirm();
+    });
+    
+    document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').classList.add('hidden');
+}
+
+function toggleStatus(id, currentStatus) {
+    const newStatus = currentStatus == 1 ? 2 : 1;
+    const action = newStatus == 1 ? 'activate' : 'deactivate';
+    
+    showConfirmModal(
+        `${action.charAt(0).toUpperCase() + action.slice(1)} {{ module.Singular }}`,
+        `Are you sure you want to ${action} this {{ module.Singular }}?`,
+        function() {
+        fetch(`${API_BASE}/${id}`, {
+            method: 'PUT',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ valid_id: newStatus })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`{{ module.Singular }} ${action}d successfully`, 'success');
+                
+                // Update the UI dynamically instead of reloading
+                const row = document.querySelector(`tr[data-id="${id}"]`);
+                if (row) {
+                    // Update the status badge
+                    const statusBadge = row.querySelector('.status-badge');
+                    if (statusBadge) {
+                        if (newStatus == 1) {
+                            statusBadge.className = 'status-badge px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+                            statusBadge.textContent = 'Active';
+                        } else {
+                            statusBadge.className = 'status-badge px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+                            statusBadge.textContent = 'Inactive';
+                        }
+                    }
+                    
+                    // Update the button
+                    const toggleBtn = row.querySelector(`button[onclick*="toggleStatus(${id}"]`);
+                    if (toggleBtn) {
+                        toggleBtn.setAttribute('onclick', `toggleStatus(${id}, ${newStatus})`);
+                        if (newStatus == 1) {
+                            toggleBtn.className = 'text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300';
+                            toggleBtn.title = 'Disable';
+                            // Update the icon to X circle
+                            const svg = toggleBtn.querySelector('svg path');
+                            if (svg) {
+                                svg.setAttribute('d', 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z');
+                            }
+                        } else {
+                            toggleBtn.className = 'text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300';
+                            toggleBtn.title = 'Enable';
+                            // Update the icon to check circle
+                            const svg = toggleBtn.querySelector('svg path');
+                            if (svg) {
+                                svg.setAttribute('d', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z');
+                            }
+                        }
+                    }
+                    
+                    // Store the new status in the row data attribute
+                    row.setAttribute('data-status', newStatus);
+                }
+                
+            }
+        });
+        }
+    );
+}
+
+function deleteItem(id) {
+    if (confirm('Are you sure you want to delete this {{ module.Singular }}?')) {
+        fetch(`${API_BASE}/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            }
+        });
+    }
+}
+
+function clearSearch() {
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.value = '';
+        filterTable();
+        updateClearButton();
+    }
+}
+
+function updateClearButton() {
+    const searchInput = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    if (searchInput && clearBtn) {
+        clearBtn.style.display = searchInput.value.length > 0 ? 'flex' : 'none';
+    }
+}
+
+function filterTable() {
+    const searchInput = document.getElementById('searchInput');
+    const searchFilter = searchInput ? searchInput.value.toUpperCase() : '';
+    const groupFilter = document.getElementById('groupFilter');
+    const groupValue = groupFilter ? groupFilter.value : '';
+    const statusFilter = document.getElementById('statusFilter');
+    const statusValue = statusFilter ? statusFilter.value : '';
+    
+    // Update clear button visibility
+    updateClearButton();
+    
+    const table = document.getElementById('dataTable');
+    const tbody = table.querySelector('tbody');
+    const rows = tbody.getElementsByTagName('tr');
+    
+    let visibleCount = 0;
+    
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName('td');
+        
+        // Skip empty row
+        if (cells.length === 1 && cells[0].getAttribute('colspan')) {
+            continue;
+        }
+        
+        let matchSearch = searchFilter === '';
+        let matchGroup = groupValue === '';
+        let matchStatus = statusValue === '';
+        
+        // Search filter
+        if (searchFilter !== '') {
+            for (let j = 0; j < cells.length - 1; j++) {
+                const cell = cells[j];
+                if (cell) {
+                    const text = cell.textContent || cell.innerText;
+                    if (text.toUpperCase().indexOf(searchFilter) > -1) {
+                        matchSearch = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Status filter (for users module)
+        if (statusValue !== '' && moduleName === 'users') {
+            // Check the row's data-status attribute
+            const rowStatus = row.getAttribute('data-status');
+            if (rowStatus) {
+                matchStatus = (rowStatus === statusValue);
+            }
+        }
+        
+        // Group filter (for users module)
+        if (groupValue !== '' && moduleName === 'users') {
+            // Find the groups cell
+            for (let j = 0; j < cells.length; j++) {
+                const cell = cells[j];
+                if (cell && cell.querySelector && cell.querySelector('.px-2.py-1.text-xs.rounded')) {
+                    const groupText = cell.textContent || cell.innerText;
+                    if (groupText.toLowerCase().includes(groupValue.toLowerCase())) {
+                        matchGroup = true;
+                    }
+                    break;
+                }
+            }
+        }
+        
+        // Show/hide row based on all filters
+        const shouldShow = matchSearch && matchGroup && matchStatus;
+        row.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) visibleCount++;
+    }
+    
+    // Update count
+    const countElement = document.getElementById('filteredCount');
+    if (countElement) {
+        countElement.textContent = visibleCount;
+    }
+}
+
+function openModal() {
+    document.getElementById('moduleModal').classList.remove('hidden');
+    
+    // Load groups if this is the users module
+    if (moduleName === 'users') {
+        loadGroups();
+    }
+}
+
+function loadGroups() {
+    return fetch('/api/groups', {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const groupSelect = document.getElementById('groups');
+        if (groupSelect && data.groups) {
+            groupSelect.innerHTML = '';
+            data.groups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.id;
+                option.textContent = group.name;
+                groupSelect.appendChild(option);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Failed to load groups:', error);
+    });
+}
+
+function closeModal() {
+    document.getElementById('moduleModal').classList.add('hidden');
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white shadow-lg transition-opacity duration-500 ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// Toggle password visibility
+function togglePassword(fieldName) {
+    const input = document.getElementById(fieldName);
+    const eyeIcon = document.getElementById(fieldName + '_eye');
+    const eyeOffIcon = document.getElementById(fieldName + '_eye_off');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        eyeIcon.classList.add('hidden');
+        eyeOffIcon.classList.remove('hidden');
+    } else {
+        input.type = 'password';
+        eyeIcon.classList.remove('hidden');
+        eyeOffIcon.classList.add('hidden');
+    }
+}
+
+// Handle file list display
+// Format datetime to local timezone
+function formatLocalDateTime(utcDateStr) {
+    if (!utcDateStr || utcDateStr === '-') return '-';
+    
+    try {
+        // Parse the UTC date string
+        const date = new Date(utcDateStr);
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) return utcDateStr;
+        
+        // Format options for local timezone
+        const options = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        };
+        
+        // Format to local timezone
+        const localStr = date.toLocaleString(undefined, options);
+        
+        // Add relative time (e.g., "2 hours ago")
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        
+        let relativeTime = '';
+        if (diffDays > 365) {
+            relativeTime = Math.floor(diffDays / 365) + ' year' + (Math.floor(diffDays / 365) > 1 ? 's' : '') + ' ago';
+        } else if (diffDays > 30) {
+            relativeTime = Math.floor(diffDays / 30) + ' month' + (Math.floor(diffDays / 30) > 1 ? 's' : '') + ' ago';
+        } else if (diffDays > 0) {
+            relativeTime = diffDays + ' day' + (diffDays > 1 ? 's' : '') + ' ago';
+        } else if (diffHours > 0) {
+            relativeTime = diffHours + ' hour' + (diffHours > 1 ? 's' : '') + ' ago';
+        } else if (diffMins > 0) {
+            relativeTime = diffMins + ' minute' + (diffMins > 1 ? 's' : '') + ' ago';
+        } else {
+            relativeTime = 'just now';
+        }
+        
+        // Return formatted string with tooltip showing relative time
+        return `<span title="${relativeTime}">${localStr}</span>`;
+    } catch (e) {
+        console.error('Error formatting date:', e);
+        return utcDateStr;
+    }
+}
+
+// Apply datetime formatting to all datetime fields
+function formatAllDateTimes() {
+    document.querySelectorAll('.datetime-field').forEach(element => {
+        const utcDate = element.getAttribute('data-utc');
+        if (utcDate) {
+            element.innerHTML = formatLocalDateTime(utcDate);
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Format all datetime fields to local timezone
+    formatAllDateTimes();
+    
+    // Initialize clear button visibility
+    updateClearButton();
+    
+    // Setup file list handlers
+    document.querySelectorAll('input[type="file"][multiple]').forEach(input => {
+        input.addEventListener('change', function() {
+            const listId = this.id + '_list';
+            const listEl = document.getElementById(listId);
+            if (listEl) {
+                listEl.innerHTML = '';
+                Array.from(this.files).forEach(file => {
+                    const div = document.createElement('div');
+                    div.className = 'text-sm text-gray-600 dark:text-gray-400';
+                    div.innerHTML = `
+                        <i class="fas fa-file icon-sm mr-1"></i>
+                        ${file.name} (${formatFileSize(file.size)})
+                    `;
+                    listEl.appendChild(div);
+                });
+            }
+        });
+    });
+});
+
+// Populate group filter on page load for users module
+if (moduleName === 'users') {
+    document.addEventListener('DOMContentLoaded', function() {
+        populateGroupFilter();
+    });
+}
+
+// Populate group filter dropdown
+function populateGroupFilter() {
+    fetch('/api/groups', {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const groupFilter = document.getElementById('groupFilter');
+        if (groupFilter && data.groups) {
+            // Keep the "All Groups" option
+            groupFilter.innerHTML = '<option value="">All Groups</option>';
+            data.groups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.name.toLowerCase();
+                option.textContent = group.name;
+                groupFilter.appendChild(option);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Failed to load groups for filter:', error);
+    });
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// ESC key to close modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeModal();
+    }
+});
+</script>
+{% endblock %}

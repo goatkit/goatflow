@@ -78,7 +78,7 @@ services:
         condition: service_healthy
     networks:
       - gotrs-network
-    command: air
+    command: go run ./cmd/server
 
   # Nginx Reverse Proxy (serves static assets and proxies to backend)
   nginx:

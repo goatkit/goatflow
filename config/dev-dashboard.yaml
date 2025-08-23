@@ -1,0 +1,183 @@
+# GOTRS Developer Dashboard Configuration
+# The future of Application as a Service starts here!
+
+apiVersion: gotrs.io/v1alpha1
+kind: DeveloperDashboard
+metadata:
+  name: claude-dev-dashboard
+  version: "1.0.0"
+  created: "2025-08-23"
+  description: "Claude's revolutionary YAML-driven developer dashboard"
+
+spec:
+  dashboard:
+    title: "🛠️ Developer Dashboard"
+    subtitle: "Claude's development tools and monitoring utilities"
+    theme: "gotrs-dark"
+    
+    # Quick stats displayed at top
+    stats:
+      - name: "Claude Tickets"
+        query: "SELECT COUNT(*) FROM ticket WHERE queue_id = 14 AND ticket_state_id IN (1, 4, 6)"
+        icon: "clipboard-document-list"
+        color: "blue"
+      - name: "Tests Passing"
+        command: "go test -short ./..."
+        parser: "test_status"
+        icon: "check-circle"
+        color: "green"
+      - name: "Build Status"
+        command: "go build ./cmd/server"
+        parser: "build_status"
+        icon: "cpu-chip"
+        color: "yellow"
+      - name: "Services"
+        query: "docker ps --format 'table {{.Names}}' | grep gotrs | wc -l"
+        suffix: "/7"
+        icon: "server"
+        color: "purple"
+
+    # Tool tiles in grid layout
+    tiles:
+      - name: "Claude Tickets"
+        description: "Monitor and manage Claude Code queue tickets"
+        url: "/dev/claude-tickets"
+        icon: "clipboard-document-list"
+        color: "blue"
+        category: "monitoring"
+        
+      - name: "Database Explorer"
+        description: "Browse and query the GOTRS database"
+        url: "/dev/database"
+        icon: "circle-stack"
+        color: "green"
+        category: "development"
+        
+      - name: "API Tester"
+        description: "Test API endpoints with live requests"
+        url: "/dev/api-tester"
+        icon: "command-line"
+        color: "purple"
+        category: "development"
+        
+      - name: "Template Playground"
+        description: "Test Pongo2 templates with live preview"
+        url: "/dev/templates"
+        icon: "document-text"
+        color: "yellow"
+        category: "development"
+        
+      - name: "Service Monitor"
+        description: "Monitor container health and logs"
+        url: "/dev/services"
+        icon: "cpu-chip"
+        color: "red"
+        category: "monitoring"
+        
+      - name: "Migration Manager"
+        description: "Manage database migrations and schema"
+        url: "/dev/migrations"
+        icon: "arrow-up-down"
+        color: "indigo"
+        category: "database"
+        
+      - name: "Schema Discovery"
+        description: "Compare dynamic vs static admin modules side-by-side"
+        url: "/admin/schema-discovery"
+        icon: "document-duplicate"
+        color: "pink"
+        category: "development"
+        featured: true
+        
+      - name: "Dynamic Admin Modules"
+        description: "YAML-driven admin modules powered by schema discovery"
+        url: "/admin/dynamic/"
+        icon: "sparkles"
+        color: "purple"
+        category: "admin"
+        featured: true
+        
+      - name: "WebSocket Test"
+        description: "Test real-time WebSocket connections"
+        url: "/dev/websocket"
+        icon: "wifi"
+        color: "teal"
+        category: "development"
+        
+      - name: "Test Runner"
+        description: "Run and monitor test suites"
+        url: "/dev/tests"
+        icon: "beaker"
+        color: "orange"
+        category: "development"
+        
+      - name: "Log Viewer"
+        description: "View and search application logs"
+        url: "/dev/logs"
+        icon: "document-magnifying-glass"
+        color: "gray"
+        category: "monitoring"
+
+    # Quick action buttons
+    quick_actions:
+      - name: "Restart Backend"
+        action: "restart-backend"
+        icon: "arrow-path"
+        color: "blue"
+        confirm: "Restart the backend service?"
+        
+      - name: "Clear Cache"
+        action: "clear-cache"
+        icon: "trash"
+        color: "green"
+        confirm: "Clear all caches?"
+        
+      - name: "Run Tests"
+        action: "run-tests"
+        icon: "beaker"
+        color: "purple"
+        url: "/dev/tests?run=true"
+        
+      - name: "Health Check"
+        action: "check-health"
+        icon: "heart"
+        color: "yellow"
+        endpoint: "/health"
+        
+      - name: "View Logs"
+        action: "view-logs"
+        icon: "document-text"
+        color: "red"
+        url: "/dev/logs"
+
+  # Color palette definitions
+  colors:
+    blue: { bg: "bg-blue-100 dark:bg-blue-900", text: "text-blue-600 dark:text-blue-300", button: "bg-blue-600 hover:bg-blue-700" }
+    green: { bg: "bg-green-100 dark:bg-green-900", text: "text-green-600 dark:text-green-300", button: "bg-green-600 hover:bg-green-700" }
+    purple: { bg: "bg-purple-100 dark:bg-purple-900", text: "text-purple-600 dark:text-purple-300", button: "bg-purple-600 hover:bg-purple-700" }
+    yellow: { bg: "bg-yellow-100 dark:bg-yellow-900", text: "text-yellow-600 dark:text-yellow-300", button: "bg-yellow-600 hover:bg-yellow-700" }
+    red: { bg: "bg-red-100 dark:bg-red-900", text: "text-red-600 dark:text-red-300", button: "bg-red-600 hover:bg-red-700" }
+    indigo: { bg: "bg-indigo-100 dark:bg-indigo-900", text: "text-indigo-600 dark:text-indigo-300", button: "bg-indigo-600 hover:bg-indigo-700" }
+    pink: { bg: "bg-pink-100 dark:bg-pink-900", text: "text-pink-600 dark:text-pink-300", button: "bg-pink-600 hover:bg-pink-700" }
+    teal: { bg: "bg-teal-100 dark:bg-teal-900", text: "text-teal-600 dark:text-teal-300", button: "bg-teal-600 hover:bg-teal-700" }
+    orange: { bg: "bg-orange-100 dark:bg-orange-900", text: "text-orange-600 dark:text-orange-300", button: "bg-orange-600 hover:bg-orange-700" }
+    gray: { bg: "bg-gray-100 dark:bg-gray-700", text: "text-gray-600 dark:text-gray-300", button: "bg-gray-600 hover:bg-gray-700" }
+
+  # Icon mappings (Heroicons)
+  icons:
+    clipboard-document-list: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+    circle-stack: "M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
+    command-line: "M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+    document-text: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+    cpu-chip: "M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+    arrow-up-down: "M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+    document-duplicate: "M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
+    wifi: "M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"
+    beaker: "M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.611L5 14.5"
+    document-magnifying-glass: "M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h11.25c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+    check-circle: "M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+    server: "M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3V6.75a3 3 0 013-3h13.5a3 3 0 013 3v4.5a3 3 0 01-3 3m-16.5 0a3 3 0 003 3h13.5a3 3 0 003-3"
+    arrow-path: "M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+    trash: "M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+    heart: "M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+    sparkles: "M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"

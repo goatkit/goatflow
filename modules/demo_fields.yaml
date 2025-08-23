@@ -1,0 +1,233 @@
+# Demo Module - Showcases all supported field types
+module:
+  name: demo_fields
+  singular: Demo
+  plural: Demos
+  table: demos
+  description: Demonstration of all supported field types in dynamic modules
+  route_prefix: /admin/dynamic/demo_fields
+
+fields:
+  # Basic Text Fields
+  - name: id
+    type: int
+    db_column: id
+    label: ID
+    show_in_list: true
+    show_in_form: false
+    sortable: true
+
+  - name: title
+    type: string
+    db_column: title
+    label: Title
+    required: true
+    show_in_list: true
+    show_in_form: true
+    placeholder: "Enter a title"
+
+  - name: description
+    type: textarea
+    db_column: description
+    label: Description
+    show_in_list: false
+    show_in_form: true
+    rows: 5
+    placeholder: "Enter a detailed description"
+    help: "Provide a comprehensive description"
+
+  - name: notes
+    type: notes
+    db_column: notes
+    label: Internal Notes
+    show_in_list: false
+    show_in_form: true
+    rows: 3
+    help: "These notes are for internal use only"
+
+  # Password Field
+  - name: secret
+    type: password
+    db_column: secret
+    label: Secret Code
+    show_in_list: false
+    show_in_form: true
+    help: "Enter a secure password"
+
+  # Selection Fields
+  - name: status
+    type: select
+    db_column: status
+    label: Status
+    show_in_list: true
+    show_in_form: true
+    required: true
+    options:
+      - value: "draft"
+        label: "Draft"
+      - value: "pending"
+        label: "Pending Review"
+      - value: "approved"
+        label: "Approved"
+      - value: "rejected"
+        label: "Rejected"
+
+  - name: priority
+    type: radio
+    db_column: priority
+    label: Priority Level
+    show_in_list: true
+    show_in_form: true
+    required: true
+    options:
+      - value: "low"
+        label: "Low"
+      - value: "medium"
+        label: "Medium"
+      - value: "high"
+        label: "High"
+      - value: "urgent"
+        label: "Urgent"
+
+  # Boolean Field
+  - name: is_active
+    type: checkbox
+    db_column: is_active
+    label: Active
+    show_in_list: true
+    show_in_form: true
+    help: "Check to activate this item"
+
+  # Numeric Fields
+  - name: quantity
+    type: integer
+    db_column: quantity
+    label: Quantity
+    show_in_list: true
+    show_in_form: true
+    min: 0
+    max: 1000
+    step: 1
+
+  - name: price
+    type: decimal
+    db_column: price
+    label: Price
+    show_in_list: true
+    show_in_form: true
+    min: 0
+    max: 10000
+    help: "Enter price in dollars"
+
+  - name: progress
+    type: range
+    db_column: progress
+    label: Progress
+    show_in_list: false
+    show_in_form: true
+    min: 0
+    max: 100
+    step: 5
+    default: 0
+    help: "Slide to set progress percentage"
+
+  # Date/Time Fields
+  - name: start_date
+    type: date
+    db_column: start_date
+    label: Start Date
+    show_in_list: true
+    show_in_form: true
+    required: true
+
+  - name: deadline
+    type: datetime
+    db_column: deadline
+    label: Deadline
+    show_in_list: true
+    show_in_form: true
+    help: "Set the deadline for this task"
+
+  - name: reminder_time
+    type: time
+    db_column: reminder_time
+    label: Daily Reminder Time
+    show_in_list: false
+    show_in_form: true
+
+  # Contact Fields
+  - name: email
+    type: email
+    db_column: email
+    label: Email Address
+    show_in_list: true
+    show_in_form: true
+    placeholder: "user@example.com"
+    help: "Enter a valid email address"
+
+  - name: website
+    type: url
+    db_column: website
+    label: Website
+    show_in_list: false
+    show_in_form: true
+    placeholder: "https://example.com"
+
+  - name: phone
+    type: phone
+    db_column: phone
+    label: Phone Number
+    show_in_list: true
+    show_in_form: true
+    pattern: "[0-9]{3}-[0-9]{3}-[0-9]{4}"
+    placeholder: "123-456-7890"
+
+  # File Fields
+  - name: attachment
+    type: file
+    db_column: attachment
+    label: Single Attachment
+    show_in_list: false
+    show_in_form: true
+    accept: ".pdf,.doc,.docx"
+    help: "Upload a single document (PDF or Word)"
+
+  - name: images
+    type: files
+    db_column: images
+    label: Image Gallery
+    show_in_list: false
+    show_in_form: true
+    accept: "image/*"
+    multiple: true
+    help: "Upload multiple images"
+
+  # Color Field
+  - name: theme_color
+    type: color
+    db_column: theme_color
+    label: Theme Color
+    show_in_list: true
+    show_in_form: true
+    default: "#3B82F6"
+    help: "Choose a theme color"
+
+features:
+  soft_delete: true
+  search: true
+  import_csv: true
+  export_csv: true
+  status_toggle: true
+
+permissions:
+  - view
+  - create
+  - update
+  - delete
+
+validation:
+  required_fields:
+    - title
+    - status
+    - priority
+    - start_date

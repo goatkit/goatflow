@@ -25,6 +25,7 @@ type User struct {
 	LastLogin        *time.Time `json:"last_login,omitempty"`
 	FailedLoginCount int       `json:"-"`
 	LockedUntil      *time.Time `json:"-"`
+	Groups           []string  `json:"groups,omitempty"` // Group names for the user
 }
 
 type UserRole string

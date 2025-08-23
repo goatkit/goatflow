@@ -96,14 +96,17 @@
                                 Admin
                             </a>
                             {% endif %}
+                            {% if User and User.IsInAdminGroup %}
+                            <a href="/dev" class="{% if ActivePage == 'dev' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                                Dev
+                            </a>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:items-center">
                         <!-- Dark mode toggle -->
                         <button type="button" onclick="toggleDarkMode()" class="rounded-md p-1 text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200">
-                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                            </svg>
+                            <i class="fas fa-moon icon-md"></i>
                         </button>
                         
                         <!-- User menu -->
@@ -251,5 +254,8 @@
     </script>
     
     {% block scripts %}{% endblock %}
+    
+    <!-- Claude Code Chat Assistant -->
+    <script src="/static/js/claude-chat.js"></script>
 </body>
 </html>

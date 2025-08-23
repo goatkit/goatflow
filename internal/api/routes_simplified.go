@@ -5,6 +5,7 @@ import (
 	
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
+	"github.com/gotrs-io/gotrs-ce/internal/config"
 )
 
 // Simplified router for HTMX demo
@@ -19,6 +20,9 @@ func NewSimpleRouter() *gin.Engine {
 	// Add i18n middleware for language detection
 	i18nMiddleware := middleware.NewI18nMiddleware()
 	r.Use(i18nMiddleware.Handle())
+	
+	// Initialize dashboard manager
+	config.InitializeDashboardManager("./config")
 	
 	// Setup HTMX routes with dynamic template loading
 	SetupHTMXRoutes(r)

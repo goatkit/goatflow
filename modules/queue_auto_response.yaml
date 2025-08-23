@@ -1,0 +1,110 @@
+module:
+    name: queue_auto_response
+    singular: Queue_auto_response
+    plural: Queue_auto_responses
+    table: queue_auto_response
+    description: Manage Queue_auto_responses
+    route_prefix: /admin/dynamic/queue_auto_response
+fields:
+    - name: queue_id
+      type: integer
+      db_column: queue_id
+      label: Queue Id
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: auto_response_id
+      type: integer
+      db_column: auto_response_id
+      label: Auto Response Id
+      required: true
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: auto_response_type_id
+      type: integer
+      db_column: auto_response_type_id
+      label: Auto Response Type Id
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: create_time
+      type: datetime
+      db_column: create_time
+      label: Create Time
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: create_by
+      type: integer
+      db_column: create_by
+      label: Create By
+      required: true
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: change_time
+      type: datetime
+      db_column: change_time
+      label: Change Time
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: change_by
+      type: integer
+      db_column: change_by
+      label: Change By
+      required: true
+      searchable: false
+      sortable: true
+      show_in_list: false
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+features:
+    soft_delete: false
+    search: true
+    import_csv: false
+    export_csv: true
+    status_toggle: false
+    color_picker: false
+permissions: []
+validation:
+    unique_fields: []
+    required_fields: []

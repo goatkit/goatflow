@@ -1,0 +1,265 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Log Viewer - Developer Tools{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Log Viewer</h1>
+                <p class="text-gray-600 dark:text-gray-400">View and search application logs</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="/dev" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Controls -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Log Controls</h3>
+        </div>
+        <div class="p-6">
+            <form method="get" class="flex flex-wrap items-center gap-4">
+                <div>
+                    <label for="service" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Service
+                    </label>
+                    <select name="service" id="service" class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="gotrs-backend" {% if service == "gotrs-backend" %}selected{% endif %}>Backend</option>
+                        <option value="gotrs-postgres" {% if service == "gotrs-postgres" %}selected{% endif %}>Database</option>
+                        <option value="nginx" {% if service == "nginx" %}selected{% endif %}>Nginx</option>
+                        <option value="valkey" {% if service == "valkey" %}selected{% endif %}>Valkey</option>
+                        <option value="mailhog" {% if service == "mailhog" %}selected{% endif %}>MailHog</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="lines" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Lines
+                    </label>
+                    <select name="lines" id="lines" class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                        <option value="50" {% if lines == "50" %}selected{% endif %}>50</option>
+                        <option value="100" {% if lines == "100" %}selected{% endif %}>100</option>
+                        <option value="200" {% if lines == "200" %}selected{% endif %}>200</option>
+                        <option value="500" {% if lines == "500" %}selected{% endif %}>500</option>
+                        <option value="1000" {% if lines == "1000" %}selected{% endif %}>1000</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-end space-x-2">
+                    <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Refresh
+                    </button>
+                    
+                    <button type="button" onclick="toggleAutoRefresh()" id="autoRefreshBtn" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Auto Refresh: OFF
+                    </button>
+                    
+                    <button type="button" onclick="clearLogs()" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Clear Display
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+        <div class="px-6 py-4">
+            <div class="flex items-center space-x-4">
+                <div class="flex-1">
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search logs (regex supported)..."
+                        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-sm"
+                        onkeyup="searchLogs()"
+                    >
+                </div>
+                <div class="text-sm text-gray-500 dark:text-gray-400" id="searchStats">
+                    Ready to search
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Display -->
+    <div class="bg-black rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-700 bg-gray-900">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium text-white">{{ service }} Logs ({{ lines }} lines)</h3>
+                <div class="flex items-center space-x-2 text-sm text-gray-400">
+                    <span id="logTimestamp">Last updated: --</span>
+                    <div class="w-2 h-2 bg-green-400 rounded-full" id="statusIndicator"></div>
+                </div>
+            </div>
+        </div>
+        <div class="p-0">
+            <div class="bg-black text-green-400 font-mono text-xs leading-relaxed overflow-x-auto" style="max-height: 600px; overflow-y: auto;" id="logContainer">
+                <pre id="logContent" class="p-6 whitespace-pre-wrap">{% if logs %}{{ logs }}{% else %}No logs available{% endif %}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let autoRefreshInterval = null;
+let isAutoRefresh = false;
+
+function toggleAutoRefresh() {
+    const btn = document.getElementById('autoRefreshBtn');
+    const indicator = document.getElementById('statusIndicator');
+    
+    if (isAutoRefresh) {
+        // Turn off auto refresh
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        isAutoRefresh = false;
+        btn.innerHTML = btn.innerHTML.replace('Auto Refresh: ON', 'Auto Refresh: OFF');
+        indicator.className = 'w-2 h-2 bg-green-400 rounded-full';
+    } else {
+        // Turn on auto refresh
+        autoRefreshInterval = setInterval(refreshLogs, 5000); // Refresh every 5 seconds
+        isAutoRefresh = true;
+        btn.innerHTML = btn.innerHTML.replace('Auto Refresh: OFF', 'Auto Refresh: ON');
+        indicator.className = 'w-2 h-2 bg-blue-400 rounded-full animate-pulse';
+    }
+}
+
+function refreshLogs() {
+    const form = document.querySelector('form');
+    const formData = new FormData(form);
+    const params = new URLSearchParams(formData);
+    
+    fetch(`/dev/logs?${params}`)
+        .then(response => response.text())
+        .then(html => {
+            // Extract log content from response
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newLogContent = doc.getElementById('logContent');
+            if (newLogContent) {
+                document.getElementById('logContent').textContent = newLogContent.textContent;
+                document.getElementById('logTimestamp').textContent = 'Last updated: ' + new Date().toLocaleString();
+                
+                // Apply current search filter if active
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput.value) {
+                    searchLogs();
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Auto refresh failed:', error);
+            document.getElementById('statusIndicator').className = 'w-2 h-2 bg-red-400 rounded-full';
+        });
+}
+
+function clearLogs() {
+    document.getElementById('logContent').textContent = 'Log display cleared...';
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchStats').textContent = 'Ready to search';
+}
+
+function searchLogs() {
+    const searchTerm = document.getElementById('searchInput').value;
+    const logContent = document.getElementById('logContent');
+    const searchStats = document.getElementById('searchStats');
+    
+    if (!searchTerm) {
+        // Show all logs
+        logContent.innerHTML = logContent.textContent;
+        searchStats.textContent = 'Ready to search';
+        return;
+    }
+    
+    try {
+        const regex = new RegExp(searchTerm, 'gi');
+        const originalText = logContent.textContent;
+        const lines = originalText.split('\n');
+        
+        let matchedLines = [];
+        let totalMatches = 0;
+        
+        lines.forEach(line => {
+            const matches = line.match(regex);
+            if (matches) {
+                // Highlight matches
+                const highlightedLine = line.replace(regex, match => `<mark class="bg-yellow-300 text-black">${match}</mark>`);
+                matchedLines.push(highlightedLine);
+                totalMatches += matches.length;
+            }
+        });
+        
+        if (matchedLines.length > 0) {
+            logContent.innerHTML = matchedLines.join('\n');
+            searchStats.textContent = `Found ${totalMatches} matches in ${matchedLines.length} lines`;
+        } else {
+            logContent.innerHTML = '<span class="text-gray-500">No matches found</span>';
+            searchStats.textContent = 'No matches found';
+        }
+        
+    } catch (e) {
+        // Invalid regex
+        searchStats.textContent = 'Invalid search pattern';
+    }
+}
+
+// Auto-scroll to bottom when logs are refreshed
+function scrollToBottom() {
+    const container = document.getElementById('logContainer');
+    container.scrollTop = container.scrollHeight;
+}
+
+// Scroll to bottom on load if there are logs
+window.addEventListener('load', () => {
+    const logContent = document.getElementById('logContent');
+    if (logContent.textContent.trim() && logContent.textContent !== 'No logs available') {
+        scrollToBottom();
+    }
+});
+</script>
+
+<style>
+mark {
+    background-color: #fef08a;
+    color: #000;
+    padding: 0;
+}
+
+#logContainer::-webkit-scrollbar {
+    width: 8px;
+}
+
+#logContainer::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+#logContainer::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 4px;
+}
+
+#logContainer::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+</style>
+{% endblock %}

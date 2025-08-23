@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.40.0-focal
+    container_name: gotrs-playwright
+    networks:
+      - gotrs-network
+    volumes:
+      - ./tests:/tests
+      - ./test-results:/test-results
+    working_dir: /tests
+    command: tail -f /dev/null  # Keep container running
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+      - NODE_ENV=test
+    depends_on:
+      - nginx
+
+networks:
+  gotrs-network:
+    external: true

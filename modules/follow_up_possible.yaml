@@ -1,0 +1,124 @@
+module:
+    name: follow_up_possible
+    singular: Follow_up_possible
+    plural: Follow_up_possibles
+    table: follow_up_possible
+    description: Manage Follow_up_possibles
+    route_prefix: /admin/dynamic/follow_up_possible
+fields:
+    - name: id
+      type: integer
+      db_column: id
+      label: Id
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: name
+      type: string
+      db_column: name
+      label: Name
+      required: true
+      searchable: true
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: comments
+      type: string
+      db_column: comments
+      label: Comments
+      required: false
+      searchable: true
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: valid_id
+      type: integer
+      db_column: valid_id
+      label: Valid Id
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: create_time
+      type: datetime
+      db_column: create_time
+      label: Create Time
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: create_by
+      type: integer
+      db_column: create_by
+      label: Create By
+      required: true
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: change_time
+      type: datetime
+      db_column: change_time
+      label: Change Time
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: change_by
+      type: integer
+      db_column: change_by
+      label: Change By
+      required: true
+      searchable: false
+      sortable: true
+      show_in_list: false
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+features:
+    soft_delete: true
+    search: true
+    import_csv: false
+    export_csv: true
+    status_toggle: false
+    color_picker: false
+permissions: []
+validation:
+    unique_fields:
+        - name
+    required_fields: []

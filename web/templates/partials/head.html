@@ -1,0 +1,84 @@
+{{define "head"}}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .title}}{{.title}} - {{end}}GOTRS</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    
+    <!-- Dark mode detection script (must be inline to avoid flash) -->
+    <script>
+        // Set dark mode class before Tailwind loads to prevent flash
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+    
+    <!-- Tailwind CSS (production build with icon fixes) -->
+    <link rel="stylesheet" href="/static/css/output.css">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Alpine.js for interactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- HTMX for dynamic updates -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- HTMX extensions -->
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+    
+    <!-- Custom styles -->
+    <style>
+        /* Smooth transitions for dark mode */
+        * {
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        
+        /* Icon size override for better UX */
+        .icon-fixed-sm {
+            width: 1.125rem !important;
+            height: 1.125rem !important;
+            min-width: 1.125rem;
+            min-height: 1.125rem;
+        }
+        
+        .icon-fixed-md {
+            width: 1.375rem !important;
+            height: 1.375rem !important;
+            min-width: 1.375rem;
+            min-height: 1.375rem;
+        }
+        
+        .icon-fixed-lg {
+            width: 2.125rem !important;
+            height: 2.125rem !important;
+            min-width: 2.125rem;
+            min-height: 2.125rem;
+        }
+    </style>
+</head>
+{{end}}

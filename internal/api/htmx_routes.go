@@ -1,7 +1,10 @@
 package api
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -22,6 +25,47 @@ import (
 	"github.com/xeonx/timeago"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// hashPasswordSHA256 hashes a password using SHA256 (compatible with OTRS)
+func hashPasswordSHA256(password string) string {
+	hash := sha256.Sum256([]byte(password))
+	return hex.EncodeToString(hash[:])
+}
+
+// generateSalt generates a random salt for password hashing
+func generateSalt() string {
+	// Generate 16 random bytes
+	salt := make([]byte, 16)
+	_, err := rand.Read(salt)
+	if err != nil {
+		// Fallback to timestamp-based salt if crypto/rand fails
+		data := fmt.Sprintf("%d", time.Now().UnixNano())
+		hash := sha256.Sum256([]byte(data))
+		return hex.EncodeToString(hash[:16])
+	}
+	return hex.EncodeToString(salt)
+}
+
+// verifyPassword checks if a password matches a hashed password (with or without salt)
+func verifyPassword(password, hashedPassword string) bool {
+	// Check if it's a salted hash (format: sha256$salt$hash)
+	parts := strings.Split(hashedPassword, "$")
+	if len(parts) == 3 && parts[0] == "sha256" {
+		// Extract salt and hash
+		salt := parts[1]
+		expectedHash := parts[2]
+		
+		// Hash the password with the salt
+		combined := password + salt
+		hash := sha256.Sum256([]byte(combined))
+		actualHash := hex.EncodeToString(hash[:])
+		
+		return actualHash == expectedHash
+	}
+	
+	// Otherwise, treat as unsalted SHA256 hash (legacy)
+	return hashPasswordSHA256(password) == hashedPassword
+}
 
 // Global variable to store pongo2 renderer
 var pongo2Renderer *Pongo2Renderer
@@ -265,29 +309,85 @@ func getUserMapForTemplate(c *gin.Context) gin.H {
 	if userID, ok := c.Get("user_id"); ok {
 		userEmail, _ := c.Get("user_email")
 		userRole, _ := c.Get("user_role")
-		userName, _ := c.Get("user_name")
 		
-		// Parse name into first and last
-		nameParts := strings.Fields(fmt.Sprintf("%v", userName))
+		// Try to load user details from database
 		firstName := ""
 		lastName := ""
-		if len(nameParts) > 0 {
-			firstName = nameParts[0]
+		login := fmt.Sprintf("%v", userEmail)
+		isInAdminGroup := false
+		
+		// Get database connection and load user details
+		if db, err := database.GetDB(); err == nil {
+			var dbFirstName, dbLastName, dbLogin sql.NullString
+			userIDVal := uint(0)
+			
+			// Convert userID to uint
+			switch v := userID.(type) {
+			case uint:
+				userIDVal = v
+			case int:
+				userIDVal = uint(v)
+			case float64:
+				userIDVal = uint(v)
+			}
+			
+			if userIDVal > 0 {
+				err := db.QueryRow(`
+					SELECT login, first_name, last_name 
+					FROM users 
+					WHERE id = $1`,
+					userIDVal).Scan(&dbLogin, &dbFirstName, &dbLastName)
+				
+				if err == nil {
+					if dbFirstName.Valid {
+						firstName = dbFirstName.String
+					}
+					if dbLastName.Valid {
+						lastName = dbLastName.String
+					}
+					if dbLogin.Valid {
+						login = dbLogin.String
+					}
+				}
+				
+				// Check if user is in admin group for Dev menu access
+				var count int
+				err = db.QueryRow(`
+					SELECT COUNT(*) 
+					FROM user_groups ug 
+					JOIN groups g ON ug.group_id = g.id 
+					WHERE ug.user_id = $1 AND g.name = 'admin'`,
+					userIDVal).Scan(&count)
+				if err == nil && count > 0 {
+					isInAdminGroup = true
+				}
+			}
 		}
-		if len(nameParts) > 1 {
-			lastName = strings.Join(nameParts[1:], " ")
+		
+		// If we still don't have names, try to parse from userName
+		if firstName == "" && lastName == "" {
+			userName, _ := c.Get("user_name")
+			nameParts := strings.Fields(fmt.Sprintf("%v", userName))
+			if len(nameParts) > 0 {
+				firstName = nameParts[0]
+			}
+			if len(nameParts) > 1 {
+				lastName = strings.Join(nameParts[1:], " ")
+			}
 		}
 		
 		isAdmin := userRole == "Admin"
+		
 		return gin.H{
-			"ID":        userID,
-			"Login":     fmt.Sprintf("%v", userEmail),
-			"FirstName": firstName,
-			"LastName":  lastName,
-			"Email":     fmt.Sprintf("%v", userEmail),
-			"IsActive":  true,
-			"IsAdmin":   isAdmin,
-			"Role":      fmt.Sprintf("%v", userRole),
+			"ID":            userID,
+			"Login":         login,
+			"FirstName":     firstName,
+			"LastName":      lastName,
+			"Email":         fmt.Sprintf("%v", userEmail),
+			"IsActive":      true,
+			"IsAdmin":       isAdmin,
+			"IsInAdminGroup": isInAdminGroup,
+			"Role":          fmt.Sprintf("%v", userRole),
 		}
 	}
 	
@@ -340,6 +440,22 @@ func checkAdmin() gin.HandlerFunc {
 			if userID == 1 || userID == 2 { // User ID 1 and 2 are admins
 				c.Next()
 				return
+			}
+			
+			// Check if user is in admin group
+			db, err := database.GetDB()
+			if err == nil {
+				var count int
+				err = db.QueryRow(`
+					SELECT COUNT(*) 
+					FROM user_groups ug 
+					JOIN groups g ON ug.group_id = g.id 
+					WHERE ug.user_id = $1 AND g.name = 'admin'`,
+					userID).Scan(&count)
+				if err == nil && count > 0 {
+					c.Next()
+					return
+				}
 			}
 		}
 		
@@ -513,11 +629,22 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 	protected.GET("/tickets", handleTickets)
 	protected.GET("/ticket/new", handleNewTicket)
 	protected.GET("/tickets/new", handleNewTicket)  // Plural URL pattern
+	protected.GET("/claude-chat-demo", handleClaudeChatDemo)  // Claude chat demo page
+	
+	// WebSocket for real-time chat
+	protected.GET("/ws/chat", handleWebSocketChat)
 	protected.GET("/ticket/:id", handleTicketDetail)
 	protected.GET("/queues", handleQueues)
 	protected.GET("/queues/:id", handleQueueDetail)
 	protected.GET("/profile", handleProfile)
 	protected.GET("/settings", handleSettings)
+
+	// Developer routes - for Claude's development tools
+	devRoutes := protected.Group("/dev")
+	devRoutes.Use(checkAdmin()) // For now, require admin access
+	{
+		RegisterDevRoutes(devRoutes)
+	}
 
 	// Admin routes group - require admin privileges
 	adminRoutes := protected.Group("/admin")
@@ -526,21 +653,93 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		// Admin dashboard and main sections
 		adminRoutes.GET("", handleAdminDashboard)
 		adminRoutes.GET("/dashboard", handleAdminDashboard)
-		adminRoutes.GET("/users", handleAdminUsers)
+		// Users now uses the dynamic module system
+		adminRoutes.GET("/users", func(c *gin.Context) {
+			c.Params = append(c.Params, gin.Param{Key: "module", Value: "users"})
+			if dynamicHandler != nil {
+				dynamicHandler.ServeModule(c)
+			} else {
+				c.JSON(500, gin.H{"error": "Dynamic module system not initialized"})
+			}
+		})
 		adminRoutes.GET("/queues", handleAdminQueues)
 		adminRoutes.GET("/priorities", handleAdminPriorities)
 		adminRoutes.GET("/lookups", handleAdminLookups)
 		adminRoutes.GET("/roadmap", handleAdminRoadmap)
+		adminRoutes.GET("/schema-discovery", handleSchemaDiscovery)
+		adminRoutes.GET("/schema-monitoring", handleSchemaMonitoring)
 		
-		// User management routes
-		adminRoutes.GET("/users/new", handleNewUser)
-		adminRoutes.POST("/users", handleCreateUser)
-		adminRoutes.GET("/users/:id", handleGetUser)
-		adminRoutes.GET("/users/:id/edit", handleEditUser)
-		adminRoutes.PUT("/users/:id", handleUpdateUser)
-		adminRoutes.DELETE("/users/:id", handleDeleteUser)
-		adminRoutes.PUT("/users/:id/status", handleUpdateUserStatus)
-		adminRoutes.POST("/users/:id/reset-password", handleResetUserPassword)
+		// User management routes - now handled by dynamic module
+		adminRoutes.GET("/users/new", func(c *gin.Context) {
+			c.Params = []gin.Param{{Key: "module", Value: "users"}, {Key: "id", Value: "new"}}
+			if dynamicHandler != nil {
+				dynamicHandler.ServeModule(c)
+			} else {
+				c.JSON(500, gin.H{"error": "Dynamic module system not initialized"})
+			}
+		})
+		adminRoutes.POST("/users", func(c *gin.Context) {
+			c.Params = append(c.Params, gin.Param{Key: "module", Value: "users"})
+			if dynamicHandler != nil {
+				dynamicHandler.ServeModule(c)
+			} else {
+				c.JSON(500, gin.H{"error": "Dynamic module system not initialized"})
+			}
+		})
+		adminRoutes.GET("/users/:id", func(c *gin.Context) {
+			id := c.Param("id")
+			c.Params = []gin.Param{{Key: "module", Value: "users"}, {Key: "id", Value: id}}
+			if dynamicHandler != nil {
+				dynamicHandler.ServeModule(c)
+			} else {
+				c.JSON(500, gin.H{"error": "Dynamic module system not initialized"})
+			}
+		})
+		adminRoutes.GET("/users/:id/edit", func(c *gin.Context) {
+			id := c.Param("id")
+			c.Params = []gin.Param{{Key: "module", Value: "users"}, {Key: "id", Value: id}, {Key: "action", Value: "edit"}}
+			if dynamicHandler != nil {
+				dynamicHandler.ServeModule(c)
+			} else {
+				c.JSON(500, gin.H{"error": "Dynamic module system not initialized"})
+			}
+		})
+		adminRoutes.PUT("/users/:id", func(c *gin.Context) {
+			id := c.Param("id")
+			c.Params = []gin.Param{{Key: "module", Value: "users"}, {Key: "id", Value: id}}
+			if dynamicHandler != nil {
+				dynamicHandler.ServeModule(c)
+			} else {
+				c.JSON(500, gin.H{"error": "Dynamic module system not initialized"})
+			}
+		})
+		adminRoutes.DELETE("/users/:id", func(c *gin.Context) {
+			id := c.Param("id")
+			c.Params = []gin.Param{{Key: "module", Value: "users"}, {Key: "id", Value: id}}
+			if dynamicHandler != nil {
+				dynamicHandler.ServeModule(c)
+			} else {
+				c.JSON(500, gin.H{"error": "Dynamic module system not initialized"})
+			}
+		})
+		adminRoutes.PUT("/users/:id/status", func(c *gin.Context) {
+			id := c.Param("id")
+			c.Params = []gin.Param{{Key: "module", Value: "users"}, {Key: "id", Value: id}, {Key: "action", Value: "status"}}
+			if dynamicHandler != nil {
+				dynamicHandler.ServeModule(c)
+			} else {
+				c.JSON(500, gin.H{"error": "Dynamic module system not initialized"})
+			}
+		})
+		adminRoutes.POST("/users/:id/reset-password", func(c *gin.Context) {
+			id := c.Param("id")
+			c.Params = []gin.Param{{Key: "module", Value: "users"}, {Key: "id", Value: id}, {Key: "action", Value: "reset-password"}}
+			if dynamicHandler != nil {
+				dynamicHandler.ServeModule(c)
+			} else {
+				c.JSON(500, gin.H{"error": "Dynamic module system not initialized"})
+			}
+		})
 		
 		// Queue management routes (disabled - handlers not implemented)
 		// adminRoutes.GET("/queues/:id", handleGetQueue)
@@ -585,6 +784,18 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		adminRoutes.POST("/groups/:id/users", handleAddUserToGroup)
 		adminRoutes.DELETE("/groups/:id/users/:userId", handleRemoveUserFromGroup)
 		
+		// Role Management (Higher level than groups)
+		adminRoutes.GET("/roles", handleAdminRoles)
+		adminRoutes.GET("/roles/:id", handleAdminRoleGet)
+		adminRoutes.POST("/roles/create", handleAdminRoleCreate)
+		adminRoutes.PUT("/roles/:id", handleAdminRoleUpdate)
+		adminRoutes.DELETE("/roles/:id", handleAdminRoleDelete)
+		adminRoutes.GET("/roles/:id/users", handleAdminRoleUsers)
+		adminRoutes.POST("/roles/:id/users", handleAdminRoleUserAdd)
+		adminRoutes.DELETE("/roles/:id/users/:userId", handleAdminRoleUserRemove)
+		adminRoutes.GET("/roles/:id/permissions", handleAdminRolePermissions)
+		adminRoutes.PUT("/roles/:id/permissions", handleAdminRolePermissions)
+		
 		// Customer management routes
 		adminRoutes.GET("/customer-users", underConstruction("Customer Users"))
 		adminRoutes.GET("/customer-companies", underConstruction("Customer Companies"))
@@ -602,7 +813,6 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		adminRoutes.POST("/types/create", handleAdminTypeCreate)
 		adminRoutes.POST("/types/:id/update", handleAdminTypeUpdate)
 		adminRoutes.POST("/types/:id/delete", handleAdminTypeDelete)
-		adminRoutes.GET("/roles", underConstruction("Role Management"))
 		adminRoutes.GET("/services", handleAdminServices)
 		adminRoutes.POST("/services/create", handleAdminServiceCreate)
 		adminRoutes.PUT("/services/:id/update", handleAdminServiceUpdate)
@@ -630,6 +840,17 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		adminRoutes.GET("/templates", underConstruction("Template Management"))
 		adminRoutes.GET("/reports", underConstruction("Reports"))
 		adminRoutes.GET("/backup", underConstruction("Backup & Restore"))
+		
+		// Dynamic Module System for side-by-side testing
+		if db, err := database.GetDB(); err == nil {
+			if err := SetupDynamicModules(adminRoutes, db); err != nil {
+				log.Printf("WARNING: Failed to setup dynamic modules: %v", err)
+			} else {
+				log.Println("✅ Dynamic Module System integrated successfully")
+			}
+		} else {
+			log.Printf("WARNING: Cannot setup dynamic modules without database: %v", err)
+		}
 	}
 	
 	// HTMX API endpoints (return HTML fragments)
@@ -691,6 +912,7 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		protectedAPI.GET("/files/*path", handleServeFile)
 		
 		// Group management API endpoints
+		protectedAPI.GET("/groups", handleGetGroups)
 		protectedAPI.GET("/groups/:id/members", handleGetGroupMembers)
 		protectedAPI.GET("/groups/:id", handleGetGroupAPI)
 		
@@ -706,6 +928,9 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		protectedAPI.GET("/tickets/search/saved/:id/execute", handleExecuteSavedSearch)
 		protectedAPI.PUT("/tickets/search/saved/:id", handleUpdateSavedSearch)
 		protectedAPI.DELETE("/tickets/search/saved/:id", handleDeleteSavedSearch)
+		
+		// Claude Code feedback endpoint
+		protectedAPI.POST("/claude-feedback", handleClaudeFeedback)
 
 		// Canned responses endpoints
 		cannedResponseHandlers := NewCannedResponseHandlers()
@@ -877,19 +1102,73 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		username := c.PostForm("username")
 		password := c.PostForm("password")
 		
-		// For demo purposes, accept specific credentials
+		// Authenticate against database
 		validLogin := false
 		userID := uint(1)
 		
-		// Check demo credentials
-		if (username == "admin" && password == "admin123") ||
-			(username == "demo" && password == "demo123") ||
-			(username == "agent" && password == "agent123") {
-			validLogin = true
-			if username == "demo" {
-				userID = 2
-			} else if username == "agent" {
-				userID = 3
+		// Get database connection
+		db, err := database.GetDB()
+		if err != nil {
+			// Fall back to demo credentials if DB not available
+			if (username == "admin" && password == "admin123") ||
+				(username == "demo" && password == "demo123") ||
+				(username == "agent" && password == "agent123") {
+				validLogin = true
+				if username == "demo" {
+					userID = 2
+				} else if username == "agent" {
+					userID = 3
+				}
+			}
+		} else {
+			// Check credentials against database
+			var dbUserID int
+			var dbPassword string
+			var validID int
+			
+			// Query user and verify password
+			err := db.QueryRow(`
+				SELECT id, pw, valid_id 
+				FROM users 
+				WHERE login = $1 
+				AND valid_id = 1`,
+				username).Scan(&dbUserID, &dbPassword, &validID)
+			
+			if err == nil && validID == 1 {
+				// Verify the password (handles both salted and unsalted)
+				if verifyPassword(password, dbPassword) {
+					validLogin = true
+					userID = uint(dbUserID)
+				}
+			} else {
+				// If database check fails, try legacy plain text (for migration period)
+				// This should be removed once all passwords are migrated
+				err = db.QueryRow(`
+					SELECT id, pw, valid_id 
+					FROM users 
+					WHERE login = $1 
+					AND pw = $2
+					AND valid_id = 1`,
+					username, password).Scan(&dbUserID, &dbPassword, &validID)
+				
+				if err == nil && validID == 1 {
+					validLogin = true
+					userID = uint(dbUserID)
+					
+					// Update the password to use salted hashing
+					// Generate salt and hash the password
+					salt := generateSalt()
+					combined := password + salt
+					hash := sha256.Sum256([]byte(combined))
+					hashedPassword := fmt.Sprintf("sha256$%s$%s", salt, hex.EncodeToString(hash[:]))
+					
+					_, _ = db.Exec(`
+						UPDATE users 
+						SET pw = $1,
+						    change_time = CURRENT_TIMESTAMP
+						WHERE id = $2`,
+						hashedPassword, dbUserID)
+				}
 			}
 		}
 		
@@ -922,8 +1201,8 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			}
 			token = tokenStr
 		} else {
-			// Use simple session token in demo mode
-			token = fmt.Sprintf("demo_session_%d", time.Now().Unix())
+			// Use simple session token in demo mode - include user ID in token
+			token = fmt.Sprintf("demo_session_%d_%d", userID, time.Now().Unix())
 		}
 		
 		// Set cookie
@@ -2771,6 +3050,24 @@ func handleAdminDashboard(c *gin.Context) {
 	})
 }
 
+// handleSchemaDiscovery shows the schema discovery page
+func handleSchemaDiscovery(c *gin.Context) {
+	pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/schema_discovery.pongo2", pongo2.Context{
+		"User":       getUserMapForTemplate(c),
+		"ActivePage": "admin",
+		"Title":      "Schema Discovery",
+	})
+}
+
+// handleSchemaMonitoring shows the schema monitoring dashboard
+func handleSchemaMonitoring(c *gin.Context) {
+	pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/schema_monitoring.pongo2", pongo2.Context{
+		"User":       getUserMapForTemplate(c),
+		"ActivePage": "admin",
+		"Title":      "Schema Discovery Monitor",
+	})
+}
+
 // handleAdminUsers shows the admin users page
 func handleAdminUsers(c *gin.Context) {
 	db, err := database.GetDB()
@@ -2779,9 +3076,9 @@ func handleAdminUsers(c *gin.Context) {
 		return
 	}
 	
-	// Get users from database
+	// Get users from database with their groups
 	userRepo := repository.NewUserRepository(db)
-	users, err := userRepo.List()
+	users, err := userRepo.ListWithGroups()
 	if err != nil {
 		sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch users")
 		return
@@ -2864,7 +3161,14 @@ func handleNewUser(c *gin.Context) {
 	})
 }
 
-// handleCreateUser creates a new user
+// ============================================================================
+// ARCHIVED USER HANDLERS - Replaced by Dynamic Module System
+// These handlers are no longer used. The /admin/users routes now forward to
+// the dynamic module system. Kept here temporarily for reference.
+// TODO: Remove these functions once migration is fully verified
+// ============================================================================
+
+// handleCreateUser creates a new user - ARCHIVED: Use dynamic module instead
 func handleCreateUser(c *gin.Context) {
 	var userForm struct {
 		Login     string   `form:"login" binding:"required"`
@@ -4481,6 +4785,58 @@ func getPriorityLabel(priorityID int) string {
 	}
 }
 
+// handleGetGroups returns all groups as JSON for API requests
+func handleGetGroups(c *gin.Context) {
+	// Get database connection
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error": "Database connection failed",
+		})
+		return
+	}
+	
+	// Query for all groups
+	query := `
+		SELECT id, name, valid_id
+		FROM groups
+		WHERE valid_id = 1
+		ORDER BY name`
+	
+	rows, err := db.Query(query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error": "Failed to fetch groups",
+		})
+		return
+	}
+	defer rows.Close()
+	
+	groups := []map[string]interface{}{}
+	for rows.Next() {
+		var id, validID int
+		var name string
+		err := rows.Scan(&id, &name, &validID)
+		if err != nil {
+			continue
+		}
+		
+		group := map[string]interface{}{
+			"id": id,
+			"name": name,
+			"valid_id": validID,
+		}
+		groups = append(groups, group)
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"groups": groups,
+	})
+}
+
 // handleGetGroupMembers returns group members as JSON for API requests
 func handleGetGroupMembers(c *gin.Context) {
 	groupID := c.Param("id")
@@ -4583,5 +4939,226 @@ func handleGetGroupAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": group,
+	})
+}
+
+// handleClaudeChatDemo shows the Claude chat demo page
+func handleClaudeChatDemo(c *gin.Context) {
+	pongo2Renderer.HTML(c, http.StatusOK, "pages/claude_chat_demo.pongo2", pongo2.Context{
+		"User":       getUserMapForTemplate(c),
+		"ActivePage": "demo",
+		"Title":      "Claude Chat Demo",
+	})
+}
+
+// handleClaudeFeedback handles feedback from the Claude Code chat component and creates tickets
+func handleClaudeFeedback(c *gin.Context) {
+	var feedback struct {
+		Message string `json:"message"`
+		Context struct {
+			Page             string `json:"page"`
+			URL              string `json:"url"`
+			Timestamp        string `json:"timestamp"`
+			UserAgent        string `json:"userAgent"`
+			ScreenResolution string `json:"screenResolution"`
+			ViewportSize     string `json:"viewportSize"`
+			User             string `json:"user"`
+			MousePosition    struct {
+				X int `json:"x"`
+				Y int `json:"y"`
+			} `json:"mousePosition"`
+			SelectedElement *struct {
+				Selector   string `json:"selector"`
+				TagName    string `json:"tagName"`
+				ID         string `json:"id"`
+				ClassName  string `json:"className"`
+				Text       string `json:"text"`
+				Position   struct {
+					Top    float64 `json:"top"`
+					Left   float64 `json:"left"`
+					Width  float64 `json:"width"`
+					Height float64 `json:"height"`
+				} `json:"position"`
+				Attributes []struct {
+					Name  string `json:"name"`
+					Value string `json:"value"`
+				} `json:"attributes"`
+			} `json:"selectedElement"`
+			Forms  []interface{} `json:"forms"`
+			Errors []string      `json:"errors"`
+			Tables []struct {
+				ID      string `json:"id"`
+				Rows    int    `json:"rows"`
+				Columns int    `json:"columns"`
+			} `json:"tables"`
+		} `json:"context"`
+		Timestamp string `json:"timestamp"`
+	}
+
+	if err := c.ShouldBindJSON(&feedback); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid feedback format",
+		})
+		return
+	}
+
+	// Log the feedback with full context
+	log.Printf("===== CLAUDE CODE FEEDBACK =====")
+	log.Printf("Message: %s", feedback.Message)
+	log.Printf("Page: %s", feedback.Context.Page)
+	log.Printf("URL: %s", feedback.Context.URL)
+	log.Printf("User: %s", feedback.Context.User)
+	log.Printf("Timestamp: %s", feedback.Timestamp)
+	
+	if feedback.Context.SelectedElement != nil {
+		log.Printf("Selected Element: %s", feedback.Context.SelectedElement.Selector)
+		log.Printf("  Tag: %s, ID: %s, Class: %s", 
+			feedback.Context.SelectedElement.TagName,
+			feedback.Context.SelectedElement.ID,
+			feedback.Context.SelectedElement.ClassName)
+		log.Printf("  Position: top=%f, left=%f, width=%f, height=%f",
+			feedback.Context.SelectedElement.Position.Top,
+			feedback.Context.SelectedElement.Position.Left,
+			feedback.Context.SelectedElement.Position.Width,
+			feedback.Context.SelectedElement.Position.Height)
+	}
+	
+	if len(feedback.Context.Errors) > 0 {
+		log.Printf("Page Errors: %v", feedback.Context.Errors)
+	}
+	
+	log.Printf("Mouse Position: x=%d, y=%d", 
+		feedback.Context.MousePosition.X, 
+		feedback.Context.MousePosition.Y)
+	log.Printf("================================")
+
+	// Create a ticket in the Claude Code queue
+	db, err := database.GetDB()
+	if err != nil {
+		log.Printf("Failed to get database: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection failed",
+		})
+		return
+	}
+
+	// Generate ticket number (format: YYYYMMDDHHMMSS)
+	ticketNumber := time.Now().Format("20060102150405")
+	
+	// Build ticket title
+	title := fmt.Sprintf("Claude Code: %s", feedback.Message)
+	if len(title) > 255 {
+		title = title[:252] + "..."
+	}
+	
+	// Build detailed description with context
+	var description strings.Builder
+	description.WriteString(fmt.Sprintf("Message: %s\n\n", feedback.Message))
+	description.WriteString(fmt.Sprintf("Page: %s\n", feedback.Context.Page))
+	description.WriteString(fmt.Sprintf("URL: %s\n", feedback.Context.URL))
+	description.WriteString(fmt.Sprintf("Timestamp: %s\n", feedback.Timestamp))
+	description.WriteString(fmt.Sprintf("User Agent: %s\n", feedback.Context.UserAgent))
+	description.WriteString(fmt.Sprintf("Screen: %s, Viewport: %s\n", 
+		feedback.Context.ScreenResolution, feedback.Context.ViewportSize))
+	
+	if feedback.Context.SelectedElement != nil {
+		description.WriteString("\n=== Selected Element ===\n")
+		description.WriteString(fmt.Sprintf("Selector: %s\n", feedback.Context.SelectedElement.Selector))
+		description.WriteString(fmt.Sprintf("Tag: %s, ID: %s, Class: %s\n",
+			feedback.Context.SelectedElement.TagName,
+			feedback.Context.SelectedElement.ID,
+			feedback.Context.SelectedElement.ClassName))
+		description.WriteString(fmt.Sprintf("Position: top=%f, left=%f, width=%f, height=%f\n",
+			feedback.Context.SelectedElement.Position.Top,
+			feedback.Context.SelectedElement.Position.Left,
+			feedback.Context.SelectedElement.Position.Width,
+			feedback.Context.SelectedElement.Position.Height))
+		if feedback.Context.SelectedElement.Text != "" {
+			description.WriteString(fmt.Sprintf("Text: %s\n", feedback.Context.SelectedElement.Text))
+		}
+	}
+	
+	if len(feedback.Context.Errors) > 0 {
+		description.WriteString("\n=== Page Errors ===\n")
+		for _, err := range feedback.Context.Errors {
+			description.WriteString(fmt.Sprintf("- %s\n", err))
+		}
+	}
+	
+	description.WriteString(fmt.Sprintf("\nMouse Position: x=%d, y=%d\n",
+		feedback.Context.MousePosition.X,
+		feedback.Context.MousePosition.Y))
+
+	// Get current user ID or default to 1 (admin)
+	userID := 1
+	if userVal, exists := c.Get("user_id"); exists {
+		if uid, ok := userVal.(uint); ok {
+			userID = int(uid)
+		}
+	}
+
+	// Create ticket in database
+	var ticketID int64
+	err = db.QueryRow(`
+		INSERT INTO ticket (
+			tn, title, queue_id, ticket_lock_id, ticket_type_id,
+			user_id, responsible_user_id, ticket_priority_id, ticket_state_id,
+			customer_id, customer_user_id, 
+			create_time, create_by, change_time, change_by
+		) VALUES (
+			$1, $2, 14, 1, 1,
+			$3, $3, 3, 1,
+			'Claude Code', $4,
+			CURRENT_TIMESTAMP, $3, CURRENT_TIMESTAMP, $3
+		) RETURNING id`,
+		ticketNumber, title, userID, feedback.Context.User).Scan(&ticketID)
+	
+	if err != nil {
+		log.Printf("Failed to create ticket: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to create ticket",
+		})
+		return
+	}
+
+	// Create article (ticket body) with the detailed description
+	_, err = db.Exec(`
+		INSERT INTO article (
+			ticket_id, article_type_id, article_sender_type_id,
+			a_from, a_to, a_subject, a_body,
+			a_content_type, incoming_time,
+			create_time, create_by, change_time, change_by
+		) VALUES (
+			$1, 1, 3,
+			$2, 'Claude Code Queue', $3, $4,
+			'text/plain', 0,
+			CURRENT_TIMESTAMP, $5, CURRENT_TIMESTAMP, $5
+		)`,
+		ticketID, feedback.Context.User, title, description.String(), userID)
+	
+	if err != nil {
+		log.Printf("Failed to create article: %v", err)
+	}
+
+	log.Printf("Created ticket #%s (ID: %d) in Claude Code queue", ticketNumber, ticketID)
+
+	// Return success with ticket number
+	response := fmt.Sprintf("Ticket #%s created! I'll review this issue. ", ticketNumber)
+	
+	if feedback.Context.SelectedElement != nil {
+		response += fmt.Sprintf("I can see you're pointing at '%s'. ", 
+			feedback.Context.SelectedElement.Selector)
+	}
+	
+	response += "You can track progress in the Claude Code queue."
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":      true,
+		"response":     response,
+		"ticket_number": ticketNumber,
+		"ticket_id":    ticketID,
 	})
 }

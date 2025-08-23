@@ -177,6 +177,55 @@ func (r *UserRepository) Update(user *models.User) error {
 	return nil
 }
 
+// ListWithGroups retrieves all users with their associated groups
+func (r *UserRepository) ListWithGroups() ([]*models.User, error) {
+	users, err := r.List()
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch groups for each user
+	for _, user := range users {
+		groups, err := r.GetUserGroups(user.ID)
+		if err != nil {
+			// Log error but continue - we don't want to fail the entire list
+			// just because one user's groups couldn't be fetched
+			continue
+		}
+		user.Groups = groups
+	}
+
+	return users, nil
+}
+
+// GetUserGroups retrieves the group names for a specific user
+func (r *UserRepository) GetUserGroups(userID uint) ([]string, error) {
+	query := `
+		SELECT g.name 
+		FROM groups g
+		INNER JOIN user_groups ug ON g.id = ug.group_id
+		WHERE ug.user_id = $1 AND g.valid_id = 1
+		ORDER BY g.name`
+
+	rows, err := r.db.Query(query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var groups []string
+	for rows.Next() {
+		var groupName string
+		err := rows.Scan(&groupName)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, groupName)
+	}
+
+	return groups, nil
+}
+
 // List retrieves all users (both active and inactive)
 func (r *UserRepository) List() ([]*models.User, error) {
 	query := `
@@ -225,4 +274,24 @@ func (r *UserRepository) List() ([]*models.User, error) {
 	}
 
 	return users, nil
+}
+
+// Delete deletes a user by ID
+func (r *UserRepository) Delete(id uint) error {
+	query := `DELETE FROM users WHERE id = $1`
+	result, err := r.db.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
 }

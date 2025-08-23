@@ -127,6 +127,35 @@ func TestUserRole(t *testing.T) {
 	})
 }
 
+func TestUserGroups(t *testing.T) {
+	t.Run("Groups field exists and can be populated", func(t *testing.T) {
+		user := &User{
+			ID:        1,
+			Login:     "testuser",
+			FirstName: "Test",
+			LastName:  "User",
+			Groups:    []string{"admin", "users"},
+		}
+		
+		assert.Len(t, user.Groups, 2)
+		assert.Contains(t, user.Groups, "admin")
+		assert.Contains(t, user.Groups, "users")
+	})
+
+	t.Run("Groups field can be empty", func(t *testing.T) {
+		user := &User{
+			ID:        1,
+			Login:     "testuser",
+			FirstName: "Test",
+			LastName:  "User",
+			Groups:    []string{},
+		}
+		
+		assert.Len(t, user.Groups, 0)
+		assert.Empty(t, user.Groups)
+	})
+}
+
 func TestUserSecurity(t *testing.T) {
 	t.Run("Different passwords produce different hashes", func(t *testing.T) {
 		user1 := &User{}

@@ -1,0 +1,196 @@
+# Dynamic Users Module - For side-by-side testing with static /admin/users
+module:
+  name: users
+  singular: User
+  plural: Users
+  table: users
+  description: User management - Dynamic version for testing
+  route_prefix: /admin/dynamic/users
+
+fields:
+  - name: id
+    type: int
+    db_column: id
+    label: ID
+    show_in_list: true
+    show_in_form: false
+    sortable: true
+
+  - name: login
+    type: string
+    db_column: login
+    label: Login
+    required: true
+    searchable: true
+    sortable: true
+    show_in_list: true
+    show_in_form: true
+    validation: "^[a-zA-Z0-9_.-]+$"
+    help: "Username for login (alphanumeric, underscore, dot, dash)"
+
+  - name: pw
+    type: password
+    db_column: pw
+    label: Password
+    required: false  # Only required on create, not update
+    show_in_list: false
+    show_in_form: true
+    help: "Leave blank to keep existing password"
+
+  - name: title
+    type: select
+    db_column: title
+    label: Title
+    show_in_list: false
+    show_in_form: true
+    options:
+      - value: ""
+        label: "None"
+      - value: "Mr"
+        label: "Mr"
+      - value: "Ms"
+        label: "Ms"
+      - value: "Mrs"
+        label: "Mrs"
+      - value: "Dr"
+        label: "Dr"
+
+  - name: first_name
+    type: string
+    db_column: first_name
+    label: First Name
+    required: true
+    searchable: true
+    sortable: true
+    show_in_list: true
+    show_in_form: true
+
+  - name: last_name
+    type: string
+    db_column: last_name
+    label: Last Name
+    required: true
+    searchable: true
+    sortable: true
+    show_in_list: true
+    show_in_form: true
+
+  - name: valid_id
+    type: int
+    db_column: valid_id
+    label: Status
+    show_in_list: true
+    show_in_form: false
+    default: 1
+    display_map:
+      1: "Active"
+      2: "Inactive"
+      3: "Temporarily Invalid"
+
+  - name: create_time
+    type: datetime
+    db_column: create_time
+    label: Created
+    show_in_list: true
+    show_in_form: false
+    sortable: true
+
+  - name: create_by
+    type: int
+    db_column: create_by
+    label: Created By
+    show_in_list: false
+    show_in_form: false
+
+  - name: change_time
+    type: datetime
+    db_column: change_time
+    label: Last Login
+    show_in_list: true
+    show_in_form: false
+    sortable: true
+
+  - name: change_by
+    type: int
+    db_column: change_by
+    label: Modified By
+    show_in_list: false
+    show_in_form: false
+
+# Additional computed/joined fields (handled by handler)
+computed_fields:
+  - name: full_name
+    label: Name
+    show_in_list: true
+    show_in_form: false
+    source: "CONCAT first_name, last_name"
+    
+  - name: group_names
+    label: Groups
+    show_in_list: true
+    show_in_form: false
+    source: "JOIN user_groups"
+
+features:
+  soft_delete: true      # Use valid_id for soft deletes
+  search: true           # Enable search functionality
+  import_csv: true       # Show import button
+  export_csv: true       # Show export button
+  status_toggle: true    # Toggle valid/invalid status
+  password_reset: true   # Allow password reset
+  group_assignment: true # Manage group membership
+  filters:              # Advanced filtering
+    - status
+    - groups
+    - created_date
+
+permissions:
+  - view
+  - create
+  - update
+  - delete
+  - reset_password
+  - manage_groups
+
+validation:
+  unique_fields:
+    - login
+  required_fields:
+    - login
+    - first_name
+    - last_name
+
+# UI customization
+ui:
+  list_columns:
+    - full_name       # User's full name
+    - login           # Login username
+    - group_names     # Groups
+    - valid_id        # Status (Active/Inactive)
+    - change_time     # Last Login/Activity
+  
+  form_sections:
+    - title: "Basic Information"
+      fields:
+        - title
+        - first_name
+        - last_name
+        - login
+    
+    - title: "Security"
+      fields:
+        - pw
+    
+    - title: "Groups & Roles"
+      type: "custom"  # Handler will inject group/role management UI
+
+  actions:
+    - name: "Reset Password"
+      icon: "key"
+      endpoint: "/admin/dynamic/users/{id}/reset-password"
+      confirm: "Reset password for this user?"
+    
+    - name: "Manage Groups"
+      icon: "users"
+      modal: true
+      endpoint: "/admin/dynamic/users/{id}/groups"

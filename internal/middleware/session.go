@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -40,11 +41,22 @@ func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		
 		// Check for demo token (only in demo mode)
 		if strings.HasPrefix(token, "demo_session_") {
-			// In demo mode, accept demo tokens
-			c.Set("user_id", uint(1))
+			// In demo mode, accept demo tokens and extract user ID
+			// Token format: demo_session_{userID}_{timestamp}
+			parts := strings.Split(token, "_")
+			userID := uint(1) // default to admin
+			if len(parts) >= 3 {
+				// Try to parse the user ID from the token
+				if id, err := strconv.Atoi(parts[2]); err == nil {
+					userID = uint(id)
+				}
+			}
+			
+			// Set basic user info - getUserMapForTemplate will load full details
+			c.Set("user_id", userID)
 			c.Set("user_email", "demo@example.com")
 			c.Set("user_role", "Admin")
-			c.Set("user_name", "Demo Admin")
+			c.Set("user_name", "Demo User")
 			c.Set("is_demo", true)
 			c.Next()
 			return
@@ -155,6 +167,15 @@ func GetCurrentUser(c *gin.Context) (uint, string, string, bool) {
 
 // isAPIRequest checks if the request is for an API endpoint
 func isAPIRequest(c *gin.Context) bool {
+	// Check for AJAX request header
+	if c.GetHeader("X-Requested-With") == "XMLHttpRequest" {
+		return true
+	}
+	// Check for JSON content type in Accept header
+	if strings.Contains(c.GetHeader("Accept"), "application/json") {
+		return true
+	}
+	// Check if path is an API endpoint
 	return strings.HasPrefix(c.Request.URL.Path, "/api/")
 }
 

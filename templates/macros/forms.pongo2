@@ -1,0 +1,238 @@
+{# Form Field Macros - Shared across all admin modules #}
+
+{# Text Input Field #}
+{% macro text_input(name, label, value="", required=false, placeholder="", help="") %}
+<div class="mb-4">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <input type="text" 
+           id="{{ name }}" 
+           name="{{ name }}"
+           value="{{ value }}"
+           {% if required %}required{% endif %}
+           {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+    {% if help %}
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ help }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# Number Input Field #}
+{% macro number_input(name, label, value="", min="", max="", required=false) %}
+<div class="mb-4">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <input type="number" 
+           id="{{ name }}" 
+           name="{{ name }}"
+           value="{{ value }}"
+           {% if min %}min="{{ min }}"{% endif %}
+           {% if max %}max="{{ max }}"{% endif %}
+           {% if required %}required{% endif %}
+           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+</div>
+{% endmacro %}
+
+{# Textarea Field #}
+{% macro textarea(name, label, value="", rows=4, required=false, placeholder="") %}
+<div class="mb-4">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <textarea id="{{ name }}" 
+              name="{{ name }}"
+              rows="{{ rows }}"
+              {% if required %}required{% endif %}
+              {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">{{ value }}</textarea>
+</div>
+{% endmacro %}
+
+{# Select Dropdown #}
+{% macro select(name, label, options, selected="", required=false, help="") %}
+<div class="mb-4">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <select id="{{ name }}" 
+            name="{{ name }}"
+            {% if required %}required{% endif %}
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+        <option value="">-- Select --</option>
+        {% for option in options %}
+        <option value="{{ option.value }}" {% if option.value == selected %}selected{% endif %}>
+            {{ option.label }}
+        </option>
+        {% endfor %}
+    </select>
+    {% if help %}
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ help }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# Checkbox Field #}
+{% macro checkbox(name, label, checked=false, value="1", help="") %}
+<div class="mb-4">
+    <label class="flex items-center">
+        <input type="checkbox" 
+               id="{{ name }}" 
+               name="{{ name }}"
+               value="{{ value }}"
+               {% if checked %}checked{% endif %}
+               class="mr-2 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-700">
+        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ label }}</span>
+    </label>
+    {% if help %}
+    <p class="mt-1 ml-6 text-sm text-gray-500 dark:text-gray-400">{{ help }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# Radio Button Group #}
+{% macro radio_group(name, label, options, selected="", required=false) %}
+<div class="mb-4">
+    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <div class="space-y-2">
+        {% for option in options %}
+        <label class="flex items-center">
+            <input type="radio" 
+                   name="{{ name }}"
+                   value="{{ option.value }}"
+                   {% if option.value == selected %}checked{% endif %}
+                   {% if required %}required{% endif %}
+                   class="mr-2 border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 dark:bg-gray-700">
+            <span class="text-sm text-gray-700 dark:text-gray-300">{{ option.label }}</span>
+        </label>
+        {% endfor %}
+    </div>
+</div>
+{% endmacro %}
+
+{# Color Picker #}
+{% macro color_picker(name, label, value="#000000", required=false) %}
+<div class="mb-4">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <div class="flex items-center space-x-2">
+        <input type="color" 
+               id="{{ name }}" 
+               name="{{ name }}"
+               value="{{ value }}"
+               {% if required %}required{% endif %}
+               class="h-10 w-20 border border-gray-300 dark:border-gray-600 rounded cursor-pointer">
+        <input type="text" 
+               id="{{ name }}_text" 
+               value="{{ value }}"
+               readonly
+               class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white">
+    </div>
+    <script>
+        document.getElementById('{{ name }}').addEventListener('change', function(e) {
+            document.getElementById('{{ name }}_text').value = e.target.value;
+        });
+    </script>
+</div>
+{% endmacro %}
+
+{# Date Picker #}
+{% macro date_picker(name, label, value="", required=false, min="", max="") %}
+<div class="mb-4">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <input type="date" 
+           id="{{ name }}" 
+           name="{{ name }}"
+           value="{{ value }}"
+           {% if min %}min="{{ min }}"{% endif %}
+           {% if max %}max="{{ max }}"{% endif %}
+           {% if required %}required{% endif %}
+           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+</div>
+{% endmacro %}
+
+{# Time Picker #}
+{% macro time_picker(name, label, value="", required=false) %}
+<div class="mb-4">
+    <label for="{{ name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {{ label }}
+        {% if required %}<span class="text-red-500">*</span>{% endif %}
+    </label>
+    <input type="time" 
+           id="{{ name }}" 
+           name="{{ name }}"
+           value="{{ value }}"
+           {% if required %}required{% endif %}
+           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white">
+</div>
+{% endmacro %}
+
+{# Form Buttons #}
+{% macro form_buttons(submit_label="Save", cancel_onclick="") %}
+<div class="flex justify-end space-x-3 mt-6">
+    <button type="button" 
+            onclick="{{ cancel_onclick|default:'history.back()' }}"
+            class="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+        Cancel
+    </button>
+    <button type="submit" 
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+        {{ submit_label }}
+    </button>
+</div>
+{% endmacro %}
+
+{# Error Message Display #}
+{% macro error_message(errors) %}
+{% if errors %}
+<div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+    <div class="flex">
+        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+        </svg>
+        <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800 dark:text-red-200">
+                There were errors with your submission
+            </h3>
+            <ul class="mt-2 text-sm text-red-700 dark:text-red-300 list-disc list-inside">
+                {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endmacro %}
+
+{# Success Message Display #}
+{% macro success_message(message) %}
+{% if message %}
+<div class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+    <div class="flex">
+        <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <div class="ml-3">
+            <p class="text-sm font-medium text-green-800 dark:text-green-200">
+                {{ message }}
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endmacro %}

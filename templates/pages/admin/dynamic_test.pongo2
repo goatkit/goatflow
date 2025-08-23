@@ -1,0 +1,209 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Dynamic Module Testing - Side by Side Comparison{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Dynamic Module Testing</h1>
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Compare static and dynamic module implementations side by side
+        </p>
+    </div>
+
+    <!-- Test Instructions -->
+    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">Testing Instructions</h3>
+                <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>Open static and dynamic versions in separate tabs</li>
+                        <li>Test all CRUD operations (Create, Read, Update, Delete)</li>
+                        <li>Verify search, filters, and sorting work identically</li>
+                        <li>Check modal dialogs and form validation</li>
+                        <li>Ensure dark mode works in both versions</li>
+                        <li>Test CSV import/export if available</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Module Comparison Table -->
+    <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                Available Modules for Testing
+            </h3>
+        </div>
+        <div class="border-t border-gray-200 dark:border-gray-700">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Module
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Static Version
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Dynamic Version
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Status
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for module in Modules %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                {{ module.name|title }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if module.has_static %}
+                            <a href="{{ module.static_url }}" 
+                               target="_blank"
+                               class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">
+                                {{ module.static_url }}
+                            </a>
+                            {% else %}
+                            <span class="text-gray-400 dark:text-gray-500">Not implemented</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="{{ module.dynamic_url }}" 
+                               target="_blank"
+                               class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300">
+                                {{ module.dynamic_url }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if module.has_static %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                                Ready for comparison
+                            </span>
+                            {% else %}
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                Dynamic only
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if module.has_static %}
+                            <button onclick="runComparison('{{ module.name }}')"
+                                    class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-3">
+                                Run Tests
+                            </button>
+                            {% endif %}
+                            <button onclick="openSideBySide('{{ module.name }}', {% if module.has_static %}true{% else %}false{% endif %})"
+                                    class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">
+                                Open Side by Side
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Test Results Section -->
+    <div class="mt-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg hidden" id="test-results">
+        <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                Test Results
+            </h3>
+        </div>
+        <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-5 sm:px-6">
+            <div id="test-output" class="space-y-2"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openSideBySide(module, hasStatic) {
+    const width = window.screen.width;
+    const height = window.screen.height;
+    const halfWidth = Math.floor(width / 2);
+    
+    // Open dynamic version on the right
+    const dynamicWindow = window.open(
+        `/admin/dynamic/${module}`,
+        `dynamic_${module}`,
+        `width=${halfWidth},height=${height},left=${halfWidth},top=0`
+    );
+    
+    // Open static version on the left if it exists
+    if (hasStatic) {
+        const staticWindow = window.open(
+            `/admin/${module}`,
+            `static_${module}`,
+            `width=${halfWidth},height=${height},left=0,top=0`
+        );
+    }
+}
+
+function runComparison(module) {
+    const resultsDiv = document.getElementById('test-results');
+    const outputDiv = document.getElementById('test-output');
+    
+    resultsDiv.classList.remove('hidden');
+    outputDiv.innerHTML = '<div class="text-gray-500">Running automated tests...</div>';
+    
+    // This is where Playwright tests would be triggered
+    // For now, show manual test checklist
+    const tests = [
+        'List view renders correctly',
+        'Search functionality works',
+        'Sorting columns works',
+        'Create new item works',
+        'Edit existing item works',
+        'Delete/deactivate item works',
+        'Modal dialogs work',
+        'Dark mode works',
+        'Form validation works',
+        'Pagination works'
+    ];
+    
+    outputDiv.innerHTML = `
+        <div class="space-y-2">
+            <div class="font-medium text-gray-900 dark:text-white">Manual Test Checklist for ${module}:</div>
+            ${tests.map(test => `
+                <label class="flex items-center space-x-3">
+                    <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
+                    <span class="text-sm text-gray-700 dark:text-gray-300">${test}</span>
+                </label>
+            `).join('')}
+            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <button onclick="saveTestResults('${module}')" 
+                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Save Test Results
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function saveTestResults(module) {
+    const checkboxes = document.querySelectorAll('#test-output input[type="checkbox"]');
+    const results = Array.from(checkboxes).map(cb => cb.checked);
+    const passed = results.filter(r => r).length;
+    const total = results.length;
+    
+    alert(`Test results for ${module}: ${passed}/${total} tests passed`);
+}
+</script>
+{% endblock %}

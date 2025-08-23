@@ -1,0 +1,253 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Role Permissions - {{ Role.Name }} - GOTRS Admin{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header with Back Button -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg mb-6">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <a href="/admin/roles" class="mr-4 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                        </a>
+                        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
+                            <i class="fas fa-shield-alt mr-2"></i>Role Permissions: {{ Role.Name }}
+                        </h1>
+                    </div>
+                    <button onclick="savePermissions()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Save Permissions
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Role Info -->
+        {% if Role.Comments %}
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
+            <div class="px-6 py-4">
+                <p class="text-sm text-blue-700 dark:text-blue-300">{{ Role.Comments }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Quick Actions Bar -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg mb-6">
+            <div class="px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Quick Actions</h3>
+                    <div class="flex space-x-2">
+                        <button onclick="selectAll()" class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                            Select All
+                        </button>
+                        <button onclick="selectNone()" class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                            Select None
+                        </button>
+                        <button onclick="selectReadOnly()" class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                            Read Only
+                        </button>
+                        <button onclick="selectReadWrite()" class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                            Read/Write
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Permissions Matrix -->
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+            <form id="permissionsForm">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Group
+                            </th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Read Only">
+                                RO
+                            </th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Move Into">
+                                Move
+                            </th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Create">
+                                Create
+                            </th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Owner">
+                                Owner
+                            </th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Priority">
+                                Priority
+                            </th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Read/Write">
+                                RW
+                            </th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Note">
+                                Note
+                            </th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for group in Groups %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                {{ group.GroupName }}
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" name="perm_{{ group.GroupID }}_ro" value="1" 
+                                       {% if group.Permissions.ro %}checked{% endif %}
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" name="perm_{{ group.GroupID }}_move_into" value="1"
+                                       {% if group.Permissions.move_into %}checked{% endif %}
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" name="perm_{{ group.GroupID }}_create" value="1"
+                                       {% if group.Permissions.create %}checked{% endif %}
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" name="perm_{{ group.GroupID }}_owner" value="1"
+                                       {% if group.Permissions.owner %}checked{% endif %}
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" name="perm_{{ group.GroupID }}_priority" value="1"
+                                       {% if group.Permissions.priority %}checked{% endif %}
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" name="perm_{{ group.GroupID }}_rw" value="1"
+                                       {% if group.Permissions.rw %}checked{% endif %}
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <input type="checkbox" name="perm_{{ group.GroupID }}_note" value="1"
+                                       {% if group.Permissions.note %}checked{% endif %}
+                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <div class="flex justify-center space-x-1">
+                                    <button type="button" onclick="selectGroupAll({{ group.GroupID }})" 
+                                            class="text-xs px-2 py-1 text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                                            title="Select All">
+                                        All
+                                    </button>
+                                    <button type="button" onclick="selectGroupNone({{ group.GroupID }})"
+                                            class="text-xs px-2 py-1 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                            title="Select None">
+                                        None
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Select all permissions
+function selectAll() {
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
+    });
+}
+
+// Deselect all permissions
+function selectNone() {
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+    });
+}
+
+// Select read-only for all groups
+function selectReadOnly() {
+    selectNone();
+    document.querySelectorAll('input[name$="_ro"]').forEach(cb => {
+        cb.checked = true;
+    });
+}
+
+// Select read/write for all groups
+function selectReadWrite() {
+    selectNone();
+    document.querySelectorAll('input[name$="_ro"], input[name$="_rw"]').forEach(cb => {
+        cb.checked = true;
+    });
+}
+
+// Select all permissions for a specific group
+function selectGroupAll(groupId) {
+    document.querySelectorAll(`input[name^="perm_${groupId}_"]`).forEach(cb => {
+        cb.checked = true;
+    });
+}
+
+// Deselect all permissions for a specific group
+function selectGroupNone(groupId) {
+    document.querySelectorAll(`input[name^="perm_${groupId}_"]`).forEach(cb => {
+        cb.checked = false;
+    });
+}
+
+// Save permissions
+function savePermissions() {
+    const form = document.getElementById('permissionsForm');
+    const params = new URLSearchParams();
+    
+    // Add all checkboxes to params
+    document.querySelectorAll('input[type="checkbox"][name^="perm_"]').forEach(cb => {
+        params.append(cb.name, cb.checked ? '1' : '0');
+    });
+    
+    fetch(window.location.pathname, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString()
+    })
+    .then(response => {
+        if (response.redirected) {
+            window.location.href = response.url;
+        } else {
+            return response.text();
+        }
+    })
+    .then(text => {
+        if (text) {
+            console.log('Response:', text);
+            // Reload to show updated permissions
+            setTimeout(() => window.location.reload(), 1000);
+        }
+    })
+    .catch(error => {
+        alert('Error saving permissions');
+        console.error('Error:', error);
+    });
+}
+
+// Enter key to save
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        savePermissions();
+    }
+});
+</script>
+{% endblock %}

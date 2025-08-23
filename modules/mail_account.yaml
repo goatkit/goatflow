@@ -1,0 +1,201 @@
+module:
+    name: mail_account
+    singular: Mail_account
+    plural: Mail_accounts
+    table: mail_account
+    description: Manage Mail_accounts
+    route_prefix: /admin/dynamic/mail_account
+fields:
+    - name: id
+      type: integer
+      db_column: id
+      label: Id
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: login
+      type: string
+      db_column: login
+      label: Login
+      required: true
+      searchable: true
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: pw
+      type: password
+      db_column: pw
+      label: Pw
+      required: true
+      searchable: true
+      sortable: true
+      show_in_list: false
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: host
+      type: string
+      db_column: host
+      label: Host
+      required: true
+      searchable: true
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: account_type
+      type: string
+      db_column: account_type
+      label: Account Type
+      required: true
+      searchable: true
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: queue_id
+      type: integer
+      db_column: queue_id
+      label: Queue Id
+      required: true
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: trusted
+      type: integer
+      db_column: trusted
+      label: Trusted
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: imap_folder
+      type: string
+      db_column: imap_folder
+      label: Imap Folder
+      required: false
+      searchable: true
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: comments
+      type: string
+      db_column: comments
+      label: Comments
+      required: false
+      searchable: true
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: valid_id
+      type: integer
+      db_column: valid_id
+      label: Valid Id
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: create_time
+      type: datetime
+      db_column: create_time
+      label: Create Time
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: create_by
+      type: integer
+      db_column: create_by
+      label: Create By
+      required: true
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: change_time
+      type: datetime
+      db_column: change_time
+      label: Change Time
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: true
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+    - name: change_by
+      type: integer
+      db_column: change_by
+      label: Change By
+      required: true
+      searchable: false
+      sortable: true
+      show_in_list: false
+      show_in_form: false
+      default: null
+      options: []
+      validation: ""
+      help: ""
+features:
+    soft_delete: true
+    search: true
+    import_csv: false
+    export_csv: true
+    status_toggle: false
+    color_picker: false
+permissions: []
+validation:
+    unique_fields: []
+    required_fields: []

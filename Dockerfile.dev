@@ -17,9 +17,8 @@ RUN getent group 1000 || addgroup -g 1000 -S appgroup && \
     { adduser -u 1000 -S appuser -G appgroup 2>/dev/null || \
       adduser -u 1000 -S appuser -G "$(getent group 1000 | cut -d: -f1)"; }
 
-# Install air for hot reload (as root, then switch) - using versions compatible with Go 1.21
-RUN go install github.com/cosmtrek/air@v1.49.0 && \
-    go install github.com/swaggo/swag/cmd/swag@v1.16.3 && \
+# Install development tools (as root, then switch)
+RUN go install github.com/swaggo/swag/cmd/swag@v1.16.3 && \
     go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.17.1
 
 # Create app directory with correct permissions
@@ -45,5 +44,5 @@ RUN go mod tidy 2>/dev/null || echo "No dependencies to tidy"
 # Expose port (as non-root)
 EXPOSE 8080
 
-# Default command
-CMD ["air", "-c", ".air.toml"]
+# Default command - run the server directly
+CMD ["go", "run", "./cmd/server"]

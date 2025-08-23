@@ -1,0 +1,203 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ config.Spec.Dashboard.Title }}{% endblock %}
+
+{% block content %}
+<!-- Dynamic Dashboard Header -->
+<div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg mb-8">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold mb-2">{{ config.Spec.Dashboard.Title }}</h1>
+            <p class="text-blue-100">{{ config.Spec.Dashboard.Subtitle }}</p>
+        </div>
+        <div class="text-right">
+            <div class="text-sm text-blue-200">Version {{ config.Metadata.Version }}</div>
+            <div class="text-xs text-blue-300">{{ config.Metadata.Description }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Dashboard -->
+{% if stats %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    {% for stat in config.Spec.Dashboard.Stats %}
+        {% set color_scheme = config.Spec.Colors[stat.Color] %}
+        {% set icon_path = config.Spec.Icons[stat.Icon] %}
+        {% if stat.Color == "green" %}
+            {% set icon_class = "icon-success" %}
+        {% elif stat.Color == "yellow" or stat.Color == "orange" %}
+            {% set icon_class = "icon-warning" %}
+        {% elif stat.Color == "red" %}
+            {% set icon_class = "icon-error" %}
+        {% elif stat.Color == "teal" %}
+            {% set icon_class = "icon-info" %}
+        {% elif stat.Color == "gray" %}
+            {% set icon_class = "icon-secondary" %}
+        {% else %}
+            {% set icon_class = "icon-primary" %}
+        {% endif %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full {{ color_scheme.bg }}">
+                    <svg class="icon-lg {{ icon_class }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ stat.Name }}</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-white">N/A</p>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Quick Actions -->
+{% if actions %}
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
+    <div class="flex flex-wrap gap-3">
+        {% for action in actions %}
+            {% if action.action %}
+                <button 
+                    onclick="executeAction('{{ action.action }}', '{{ action.confirm|default:"" }}')"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white {{ action.color.button }} transition-colors duration-200">
+                    <svg class="icon-sm mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ action.icon }}"></path>
+                    </svg>
+                    {{ action.name }}
+                </button>
+            {% elif action.url %}
+                <a 
+                    href="{{ action.url }}"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white {{ action.color.button }} transition-colors duration-200">
+                    <svg class="icon-sm mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ action.icon }}"></path>
+                    </svg>
+                    {{ action.name }}
+                </a>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Dynamic Tools Grid -->
+{% if tiles %}
+    <div class="mb-8">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Development Tools</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {% for tile in tiles %}
+                <a href="{{ tile.url }}" class="block">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow">
+                        <div class="p-6">
+                            <div class="flex items-center mb-4">
+                                <div class="p-2 {{ tile.color.bg }} rounded-lg">
+                                    <svg class="icon-lg icon-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ tile.icon }}"></path>
+                                    </svg>
+                                </div>
+                                {% if tile.featured %}
+                                    <span class="ml-auto bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Featured</span>
+                                {% endif %}
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ tile.name }}</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-300">{{ tile.description }}</p>
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+<script>
+// Quick action execution
+function executeAction(action, confirmText) {
+    if (confirmText && !confirm(confirmText)) {
+        return;
+    }
+    
+    showToast('Executing ' + action + '...', 'info');
+    
+    fetch('/dev/action/' + action, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message || 'Action failed', 'error');
+        }
+    })
+    .catch(error => {
+        showToast('Network error: ' + error.message, 'error');
+    });
+}
+
+// Simple toast notification system
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 transition-opacity duration-300 ${
+        type === 'success' ? 'bg-green-100 text-green-800 border border-green-200' :
+        type === 'error' ? 'bg-red-100 text-red-800 border border-red-200' :
+        'bg-blue-100 text-blue-800 border border-blue-200'
+    }`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Auto-refresh stats every 30 seconds
+setInterval(() => {
+    if (document.hidden) return; // Don't refresh if tab is not active
+    
+    fetch(window.location.href, {
+        headers: {
+            'Cache-Control': 'no-cache'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        // Update only the stats section
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newStats = doc.querySelectorAll('[data-stat]');
+        const currentStats = document.querySelectorAll('[data-stat]');
+        
+        newStats.forEach((newStat, index) => {
+            if (currentStats[index]) {
+                const newValue = newStat.textContent.trim();
+                const currentValue = currentStats[index].textContent.trim();
+                if (newValue !== currentValue) {
+                    currentStats[index].textContent = newValue;
+                    // Add a subtle flash effect
+                    currentStats[index].style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                    setTimeout(() => {
+                        currentStats[index].style.backgroundColor = '';
+                    }, 1000);
+                }
+            }
+        });
+    })
+    .catch(() => {
+        // Silently fail - probably network issue
+    });
+}, 30000);
+</script>
+{% endblock %}

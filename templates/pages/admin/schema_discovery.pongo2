@@ -1,0 +1,484 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Schema Discovery - Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Schema Discovery</h1>
+        <p class="text-gray-600 dark:text-gray-400">Automatically generate dynamic modules from database tables</p>
+    </div>
+
+    <!-- SQL Query Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">SQL Query Explorer</h2>
+        <div class="space-y-4">
+            <div>
+                <label for="sqlQuery" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Enter SQL Query (SELECT only for safety)
+                </label>
+                <textarea id="sqlQuery" 
+                          rows="4" 
+                          placeholder="SELECT * FROM users LIMIT 10"
+                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white font-mono text-sm"></textarea>
+            </div>
+            <div class="flex space-x-2">
+                <button onclick="executeQuery()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    Execute Query
+                </button>
+                <button onclick="clearQuery()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors">
+                    Clear
+                </button>
+            </div>
+        </div>
+        
+        <!-- Query Results -->
+        <div id="queryResults" class="mt-6 hidden">
+            <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Query Results</h3>
+            <div class="overflow-x-auto">
+                <table id="resultsTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead id="resultsHeader" class="bg-gray-50 dark:bg-gray-700">
+                        <!-- Headers will be added dynamically -->
+                    </thead>
+                    <tbody id="resultsBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        <!-- Results will be added dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="resultStats" class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                <!-- Stats will be shown here -->
+            </div>
+        </div>
+        
+        <!-- Query Error -->
+        <div id="queryError" class="mt-6 hidden">
+            <div class="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800 dark:text-red-200">Query Error</h3>
+                        <div id="errorMessage" class="mt-2 text-sm text-red-700 dark:text-red-300">
+                            <!-- Error message will be shown here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table List Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Available Tables</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Table Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Description</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Module Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tablesList" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <!-- Tables will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Column Inspector Modal -->
+    <div id="columnModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Table Columns: <span id="modalTableName"></span>
+                </h3>
+                <button onclick="closeColumnModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="overflow-x-auto max-h-96">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Column</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Type</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nullable</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Default</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Key</th>
+                        </tr>
+                    </thead>
+                    <tbody id="columnsList" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        <!-- Columns will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button onclick="closeColumnModal()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                    Close
+                </button>
+                <button onclick="generateModule()" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    Generate Module
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                    Module Configuration Preview
+                </h3>
+                <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="bg-gray-100 dark:bg-gray-900 rounded p-4 max-h-96 overflow-y-auto">
+                <pre id="configPreview" class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono"></pre>
+            </div>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button onclick="closePreviewModal()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+                    Cancel
+                </button>
+                <button onclick="saveModule()" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+                    Save Module
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+let currentTable = '';
+let existingModules = [];
+
+// Load tables on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadTables();
+    loadExistingModules();
+});
+
+function loadExistingModules() {
+    fetch('/admin/dynamic/', {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.modules) {
+            existingModules = data.modules;
+        }
+    })
+    .catch(error => {
+        console.log('Could not load existing modules:', error);
+    });
+}
+
+function loadTables() {
+    fetch('/admin/dynamic/_schema?action=tables', {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.data) {
+            displayTables(data.data);
+        } else {
+            showToast('Failed to load tables', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading tables:', error);
+        showToast('Error loading tables', 'error');
+    });
+}
+
+function displayTables(tables) {
+    const tbody = document.getElementById('tablesList');
+    tbody.innerHTML = '';
+    
+    tables.forEach(table => {
+        const hasModule = existingModules.includes(table.Name);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                ${table.Name}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                ${table.Comment || '-'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                ${hasModule 
+                    ? '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">Configured</span>'
+                    : '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">Not Configured</span>'
+                }
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button onclick="viewColumns('${table.Name}')" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-2">
+                    View Columns
+                </button>
+                <button onclick="previewModule('${table.Name}')" class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
+                    Generate
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function viewColumns(tableName) {
+    currentTable = tableName;
+    document.getElementById('modalTableName').textContent = tableName;
+    
+    fetch(`/admin/dynamic/_schema?action=columns&table=${tableName}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.data) {
+            displayColumns(data.data);
+            document.getElementById('columnModal').classList.remove('hidden');
+        } else {
+            showToast('Failed to load columns', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading columns:', error);
+        showToast('Error loading columns', 'error');
+    });
+}
+
+function displayColumns(columns) {
+    const tbody = document.getElementById('columnsList');
+    tbody.innerHTML = '';
+    
+    columns.forEach(column => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">${column.Name}</td>
+            <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">${column.DataType}</td>
+            <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">${column.IsNullable ? 'Yes' : 'No'}</td>
+            <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">${column.DefaultValue || '-'}</td>
+            <td class="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                ${column.IsPrimaryKey ? 'PK' : ''}
+                ${column.IsForeignKey ? 'FK' : ''}
+                ${column.IsUnique ? 'UQ' : ''}
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function closeColumnModal() {
+    document.getElementById('columnModal').classList.add('hidden');
+}
+
+function generateModule() {
+    closeColumnModal();
+    previewModule(currentTable);
+}
+
+function previewModule(tableName) {
+    currentTable = tableName;
+    
+    fetch(`/admin/dynamic/_schema?action=generate&table=${tableName}&format=yaml`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'text/yaml'
+        }
+    })
+    .then(response => response.text())
+    .then(yamlData => {
+        document.getElementById('configPreview').textContent = yamlData;
+        document.getElementById('previewModal').classList.remove('hidden');
+    })
+    .catch(error => {
+        console.error('Error generating module:', error);
+        showToast('Error generating module configuration', 'error');
+    });
+}
+
+function closePreviewModal() {
+    document.getElementById('previewModal').classList.add('hidden');
+}
+
+function saveModule() {
+    fetch(`/admin/dynamic/_schema?action=save&table=${currentTable}`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`Module configuration saved for ${currentTable}`, 'success');
+            closePreviewModal();
+            // Reload tables to update status
+            setTimeout(() => {
+                loadExistingModules();
+                loadTables();
+            }, 1000);
+        } else {
+            showToast('Failed to save module configuration', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving module:', error);
+        showToast('Error saving module configuration', 'error');
+    });
+}
+
+function executeQuery() {
+    const query = document.getElementById('sqlQuery').value.trim();
+    
+    if (!query) {
+        showToast('Please enter a SQL query', 'error');
+        return;
+    }
+    
+    // Only allow SELECT queries for safety
+    if (!query.toUpperCase().startsWith('SELECT')) {
+        showToast('Only SELECT queries are allowed for safety', 'error');
+        return;
+    }
+    
+    // Hide previous results/errors
+    document.getElementById('queryResults').classList.add('hidden');
+    document.getElementById('queryError').classList.add('hidden');
+    
+    // Send query to backend
+    fetch('/admin/dynamic/_schema?action=query', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ query: query })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.data) {
+            displayQueryResults(data.data);
+        } else {
+            displayQueryError(data.error || 'Query failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error executing query:', error);
+        displayQueryError('Failed to execute query: ' + error.message);
+    });
+}
+
+function displayQueryResults(results) {
+    // Show results section
+    document.getElementById('queryResults').classList.remove('hidden');
+    
+    if (!results || results.length === 0) {
+        document.getElementById('resultsHeader').innerHTML = '';
+        document.getElementById('resultsBody').innerHTML = '<tr><td colspan="100%" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">No results found</td></tr>';
+        document.getElementById('resultStats').textContent = '0 rows returned';
+        return;
+    }
+    
+    // Get column names from first row
+    const columns = Object.keys(results[0]);
+    
+    // Build header
+    const headerRow = document.createElement('tr');
+    columns.forEach(col => {
+        const th = document.createElement('th');
+        th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider';
+        th.textContent = col;
+        headerRow.appendChild(th);
+    });
+    document.getElementById('resultsHeader').innerHTML = '';
+    document.getElementById('resultsHeader').appendChild(headerRow);
+    
+    // Build body
+    const tbody = document.getElementById('resultsBody');
+    tbody.innerHTML = '';
+    
+    results.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-700';
+        
+        columns.forEach(col => {
+            const td = document.createElement('td');
+            td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100';
+            
+            // Handle null values
+            const value = row[col];
+            if (value === null || value === undefined) {
+                td.innerHTML = '<span class="text-gray-400 italic">NULL</span>';
+            } else if (typeof value === 'boolean') {
+                td.innerHTML = value ? 
+                    '<span class="text-green-600 dark:text-green-400">✓</span>' : 
+                    '<span class="text-red-600 dark:text-red-400">✗</span>';
+            } else {
+                td.textContent = String(value);
+            }
+            
+            tr.appendChild(td);
+        });
+        
+        tbody.appendChild(tr);
+    });
+    
+    // Update stats
+    document.getElementById('resultStats').textContent = `${results.length} row${results.length !== 1 ? 's' : ''} returned`;
+}
+
+function displayQueryError(error) {
+    document.getElementById('queryError').classList.remove('hidden');
+    document.getElementById('errorMessage').textContent = error;
+}
+
+function clearQuery() {
+    document.getElementById('sqlQuery').value = '';
+    document.getElementById('queryResults').classList.add('hidden');
+    document.getElementById('queryError').classList.add('hidden');
+}
+
+function showToast(message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
+        type === 'success' ? 'bg-green-500' : 
+        type === 'error' ? 'bg-red-500' : 
+        'bg-blue-500'
+    }`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,401 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Schema Discovery Monitor - Admin - GOTRS{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">
+            Schema Discovery Monitor
+        </h1>
+        <p class="mt-2 text-gray-600 dark:text-gray-400">
+            Real-time monitoring of generated modules and system performance
+        </p>
+    </div>
+
+    <!-- Performance Overview -->
+    <div class="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg Generation Time</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100" id="avg-time">--ms</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Modules</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100" id="total-modules">--</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Healthy Modules</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100" id="healthy-modules">--</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Coverage</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100" id="coverage">--%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Module Status Table -->
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Module Health Status</h2>
+                <button onclick="refreshStatus()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                    <svg class="h-4 w-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Module</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Fields</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">CRUD</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Audit</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Response Time</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="module-list" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            <div class="flex justify-center">
+                                <svg class="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                            <p class="mt-2">Loading module status...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Performance Chart -->
+    <div class="mt-8 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Performance Trends</h2>
+        <div id="performance-chart" class="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+            <p>Performance chart will appear here</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Module health monitoring
+let moduleData = [];
+
+async function loadModuleStatus() {
+    try {
+        // Get list of tables
+        const tablesResponse = await fetch('/admin/dynamic/_schema?action=tables', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!tablesResponse.ok) throw new Error('Failed to fetch tables');
+        
+        const tablesData = await tablesResponse.json();
+        const tables = tablesData.data || [];
+        
+        moduleData = [];
+        let totalTime = 0;
+        let healthyCount = 0;
+        let moduleCount = 0;
+        
+        // Test each module
+        for (const table of tables.slice(0, 20)) { // Limit to first 20 for performance
+            const startTime = Date.now();
+            
+            // Check if module exists
+            const moduleResponse = await fetch(`/admin/dynamic/${table.name}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+            
+            const responseTime = Date.now() - startTime;
+            totalTime += responseTime;
+            
+            const moduleInfo = {
+                name: table.name,
+                status: moduleResponse.ok ? 'healthy' : 'error',
+                statusCode: moduleResponse.status,
+                responseTime: responseTime,
+                fields: 0,
+                hasAudit: false,
+                crudOps: []
+            };
+            
+            if (moduleResponse.ok) {
+                healthyCount++;
+                moduleCount++;
+                
+                // Get module config
+                const configResponse = await fetch(`/admin/dynamic/_schema?action=generate&table=${table.name}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (configResponse.ok) {
+                    const configData = await configResponse.json();
+                    if (configData.config && configData.config.Fields) {
+                        moduleInfo.fields = configData.config.Fields.length;
+                        moduleInfo.hasAudit = configData.config.Fields.some(f => 
+                            f.Name === 'create_by' || f.Name === 'change_by'
+                        );
+                    }
+                }
+                
+                // Test CRUD operations
+                const moduleData = await moduleResponse.json();
+                if (moduleData.success) {
+                    moduleInfo.crudOps.push('READ');
+                }
+            } else if (moduleResponse.status === 404) {
+                // Module not generated yet
+                moduleInfo.status = 'not_generated';
+            }
+            
+            moduleData.push(moduleInfo);
+        }
+        
+        // Update statistics
+        const avgTime = moduleCount > 0 ? Math.round(totalTime / moduleCount) : 0;
+        document.getElementById('avg-time').textContent = `${avgTime}ms`;
+        document.getElementById('total-modules').textContent = moduleCount;
+        document.getElementById('healthy-modules').textContent = healthyCount;
+        document.getElementById('coverage').textContent = `${Math.round((moduleCount / tables.length) * 100)}%`;
+        
+        // Update table
+        updateModuleTable();
+        
+    } catch (error) {
+        console.error('Error loading module status:', error);
+        showToast('Failed to load module status', 'error');
+    }
+}
+
+function updateModuleTable() {
+    const tbody = document.getElementById('module-list');
+    
+    if (moduleData.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                    No modules found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = moduleData.map(module => {
+        const statusBadge = getStatusBadge(module.status, module.statusCode);
+        const crudBadges = getCrudBadges(module.crudOps);
+        const auditBadge = module.hasAudit 
+            ? '<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">✓</span>'
+            : '<span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">-</span>';
+        
+        const responseClass = module.responseTime < 100 ? 'text-green-600' : 
+                            module.responseTime < 500 ? 'text-yellow-600' : 'text-red-600';
+        
+        return `
+            <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                    ${module.name}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    ${statusBadge}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    ${module.fields || '-'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    ${crudBadges}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    ${auditBadge}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm ${responseClass}">
+                    ${module.status === 'not_generated' ? '-' : module.responseTime + 'ms'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    ${getActionButtons(module)}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function getStatusBadge(status, statusCode) {
+    switch(status) {
+        case 'healthy':
+            return '<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Healthy</span>';
+        case 'error':
+            return `<span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">Error ${statusCode}</span>`;
+        case 'not_generated':
+            return '<span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Not Generated</span>';
+        default:
+            return '<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Unknown</span>';
+    }
+}
+
+function getCrudBadges(ops) {
+    const badges = [];
+    ['CREATE', 'READ', 'UPDATE', 'DELETE'].forEach(op => {
+        if (ops.includes(op)) {
+            badges.push(`<span class="inline-block px-1 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">${op[0]}</span>`);
+        } else {
+            badges.push(`<span class="inline-block px-1 py-0.5 text-xs bg-gray-100 text-gray-400 dark:bg-gray-900 dark:text-gray-600 rounded">${op[0]}</span>`);
+        }
+    });
+    return badges.join(' ');
+}
+
+function getActionButtons(module) {
+    if (module.status === 'not_generated') {
+        return `
+            <button onclick="generateModule('${module.name}')" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
+                Generate
+            </button>
+        `;
+    } else if (module.status === 'healthy') {
+        return `
+            <a href="/admin/dynamic/${module.name}" class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300">
+                View
+            </a>
+        `;
+    } else {
+        return `
+            <button onclick="regenerateModule('${module.name}')" class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300">
+                Regenerate
+            </button>
+        `;
+    }
+}
+
+async function generateModule(tableName) {
+    try {
+        const response = await fetch(`/admin/dynamic/_schema?action=save&table=${tableName}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            showToast(`Module ${tableName} generated successfully`, 'success');
+            setTimeout(() => loadModuleStatus(), 2000); // Reload after file watcher picks it up
+        } else {
+            showToast(`Failed to generate module ${tableName}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error generating module:', error);
+        showToast('Failed to generate module', 'error');
+    }
+}
+
+async function regenerateModule(tableName) {
+    if (confirm(`Regenerate module ${tableName}? This will overwrite existing configuration.`)) {
+        await generateModule(tableName);
+    }
+}
+
+function refreshStatus() {
+    const button = event.target.closest('button');
+    button.disabled = true;
+    button.innerHTML = `
+        <svg class="animate-spin h-4 w-4 inline mr-2" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Refreshing...
+    `;
+    
+    loadModuleStatus().finally(() => {
+        button.disabled = false;
+        button.innerHTML = `
+            <svg class="h-4 w-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Refresh
+        `;
+    });
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? 'bg-green-500' : 
+                    type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+    
+    toast.className = `fixed bottom-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Load on page ready
+document.addEventListener('DOMContentLoaded', () => {
+    loadModuleStatus();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(loadModuleStatus, 30000);
+});
+</script>
+{% endblock %}

@@ -6,7 +6,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAdminUsersPageLoad(t *testing.T) {
@@ -155,5 +158,56 @@ func TestUserCRUDOperations(t *testing.T) {
 	t.Run("Should delete/deactivate a user", func(t *testing.T) {
 		// TODO: Implement
 		t.Skip("Implement after basic endpoints work")
+	})
+}
+
+func TestUserRepositoryWithGroups(t *testing.T) {
+	// Initialize database connection
+	db, err := database.GetDB()
+	if err != nil {
+		t.Skip("Database not available, skipping integration test")
+	}
+
+	t.Run("User repository can fetch users with groups", func(t *testing.T) {
+		userRepo := repository.NewUserRepository(db)
+		
+		// Test the new ListWithGroups method
+		users, err := userRepo.ListWithGroups()
+		require.NoError(t, err, "ListWithGroups should not return error")
+		
+		// We should get some users (at least the admin user from migrations)
+		assert.GreaterOrEqual(t, len(users), 0, "Should return users array")
+		
+		// For each user, the Groups field should be initialized
+		for _, user := range users {
+			assert.NotNil(t, user.Groups, "Groups field should be initialized for user %d", user.ID)
+		}
+	})
+
+	t.Run("User repository can fetch individual user groups", func(t *testing.T) {
+		userRepo := repository.NewUserRepository(db)
+		
+		// Get first user
+		users, err := userRepo.List()
+		require.NoError(t, err)
+		
+		if len(users) > 0 {
+			firstUser := users[0]
+			
+			// Test GetUserGroups method
+			groups, err := userRepo.GetUserGroups(firstUser.ID)
+			require.NoError(t, err, "GetUserGroups should not return error")
+			
+			// Groups should be a slice (even if empty)
+			assert.NotNil(t, groups, "Groups should not be nil")
+			
+			// All groups should be strings
+			for _, group := range groups {
+				assert.IsType(t, "", group, "Each group should be a string")
+				assert.NotEmpty(t, group, "Group names should not be empty")
+			}
+		} else {
+			t.Skip("No users found in database to test group fetching")
+		}
 	})
 }

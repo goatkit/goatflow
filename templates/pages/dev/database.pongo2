@@ -1,0 +1,163 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Database Explorer - Developer Tools{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Database Explorer</h1>
+                <p class="text-gray-600 dark:text-gray-400">Browse and query the GOTRS database</p>
+            </div>
+            <div class="flex space-x-3">
+                <a href="/dev" class="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Tables List -->
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Database Tables</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ tables|length }} tables found</p>
+                </div>
+                <div class="p-6">
+                    {% if tables %}
+                        <div class="space-y-2 max-h-96 overflow-y-auto">
+                            {% for table in tables %}
+                                <div class="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <span class="text-sm font-mono text-gray-700 dark:text-gray-300">{{ table }}</span>
+                                    <button onclick="insertTableName('{{ table }}')" class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200">
+                                        SELECT
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-gray-500 dark:text-gray-400 text-sm">No tables found</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Query Interface -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Query Interface</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Execute SELECT queries only</p>
+                </div>
+                <div class="p-6">
+                    <form method="post" class="space-y-4">
+                        <div>
+                            <label for="query" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                SQL Query
+                            </label>
+                            <textarea
+                                id="query"
+                                name="query"
+                                rows="6"
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white font-mono text-sm"
+                                placeholder="SELECT * FROM ticket LIMIT 10;"
+                            >{{ query }}</textarea>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Only SELECT queries are allowed for security reasons
+                            </p>
+                        </div>
+                        <div class="flex justify-between">
+                            <div class="flex space-x-2">
+                                <button type="button" onclick="insertCommonQuery('tables')" class="text-xs px-3 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200">
+                                    Show Tables
+                                </button>
+                                <button type="button" onclick="insertCommonQuery('users')" class="text-xs px-3 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200">
+                                    Show Users
+                                </button>
+                                <button type="button" onclick="insertCommonQuery('tickets')" class="text-xs px-3 py-1 bg-gray-100 text-gray-800 rounded hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200">
+                                    Recent Tickets
+                                </button>
+                            </div>
+                            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m6-6V7a3 3 0 00-3-3H4a3 3 0 00-3 3v10a3 3 0 003 3h7"></path>
+                                </svg>
+                                Execute Query
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Query Results -->
+            {% if queryResult %}
+                <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Query Results</h3>
+                    </div>
+                    <div class="p-6">
+                        <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                            <pre class="text-sm text-gray-700 dark:text-gray-300 font-mono whitespace-pre-wrap">{{ queryResult }}</pre>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function insertTableName(tableName) {
+    const queryTextarea = document.getElementById('query');
+    const currentValue = queryTextarea.value;
+    
+    // Simple query template
+    const newQuery = `SELECT * FROM ${tableName} LIMIT 10;`;
+    queryTextarea.value = newQuery;
+    queryTextarea.focus();
+}
+
+function insertCommonQuery(type) {
+    const queryTextarea = document.getElementById('query');
+    let query = '';
+    
+    switch(type) {
+        case 'tables':
+            query = `SELECT tablename 
+FROM pg_tables 
+WHERE schemaname = 'public' 
+ORDER BY tablename;`;
+            break;
+        case 'users':
+            query = `SELECT id, login, first_name, last_name, email, valid_id 
+FROM users 
+ORDER BY id 
+LIMIT 20;`;
+            break;
+        case 'tickets':
+            query = `SELECT t.id, t.tn, t.title, t.create_time, ts.name as status
+FROM ticket t
+JOIN ticket_state ts ON t.ticket_state_id = ts.id
+ORDER BY t.create_time DESC
+LIMIT 20;`;
+            break;
+    }
+    
+    queryTextarea.value = query;
+    queryTextarea.focus();
+}
+
+// Auto-resize textarea
+document.getElementById('query').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+});
+</script>
+{% endblock %}
