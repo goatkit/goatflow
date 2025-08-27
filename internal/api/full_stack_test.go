@@ -18,6 +18,7 @@ import (
 	
 	// Import database package directly
 	"database/sql"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	_ "github.com/lib/pq"
 )
 

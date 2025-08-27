@@ -5178,7 +5178,7 @@ func handleClaudeFeedback(c *gin.Context) {
 	var ticketID int64
 	err = db.QueryRow(`
 		INSERT INTO ticket (
-			tn, title, queue_id, ticket_lock_id, ticket_type_id,
+			tn, title, queue_id, ticket_lock_id, type_id,
 			user_id, responsible_user_id, ticket_priority_id, ticket_state_id,
 			customer_id, customer_user_id, 
 			create_time, create_by, change_time, change_by

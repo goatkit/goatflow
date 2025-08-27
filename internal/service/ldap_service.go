@@ -654,14 +654,18 @@ func (s *LDAPService) createOrUpdateUser(ldapUser *LDAPUser) error {
 		LastName:  ldapUser.LastName,
 		Title:     ldapUser.Title,
 		Login:     ldapUser.Username,
-		IsActive:  ldapUser.IsActive,
+		ValidID:   1, // Active by default, will be set to 2 if ldapUser.IsActive is false
 	}
 
 	if existingUser == nil {
 		// Create new user
 		user.CreateTime = time.Now()
 		user.ChangeTime = time.Now()
-		user.ValidID = 1
+		if !ldapUser.IsActive {
+			user.ValidID = 2 // Set to invalid if LDAP user is not active
+		} else {
+			user.ValidID = 1 // Set to valid if LDAP user is active
+		}
 
 		// Set default role
 		if s.config.DefaultRole != "" {
@@ -677,7 +681,11 @@ func (s *LDAPService) createOrUpdateUser(ldapUser *LDAPUser) error {
 		existingUser.FirstName = user.FirstName
 		existingUser.LastName = user.LastName
 		existingUser.Title = user.Title
-		existingUser.IsActive = user.IsActive
+		if !ldapUser.IsActive {
+			existingUser.ValidID = 2 // Set to invalid if LDAP user is not active
+		} else {
+			existingUser.ValidID = 1 // Set to valid if LDAP user is active
+		}
 		existingUser.ChangeTime = time.Now()
 
 		// Update role based on group membership
@@ -748,9 +756,9 @@ func (s *LDAPService) syncGroups(conn *ldap.Conn, config *LDAPConfig) (*LDAPSync
 				Description: ldapGroup.Description,
 				Type:        models.GroupTypeLDAP,
 				DN:          ldapGroup.DN,
-				IsActive:    true,
-				CreatedAt:   time.Now(),
-				UpdatedAt:   time.Now(),
+				ValidID:     1, // Active
+				CreateTime:  time.Now(),
+				ChangeTime:  time.Now(),
 			}
 
 			if err := s.groupRepo.CreateGroup(context.Background(), group); err != nil {

@@ -67,8 +67,6 @@ help:
 	@echo "  make toolbox-run      - Interactive shell with all tools"
 	@echo "  make toolbox-test     - Run all tests quickly"
 	@echo "  make toolbox-test-run TEST=TestName - Run specific test"
-	@echo "  make toolbox-run-file FILE=path/to/file.go - Run specific Go file"
-	@echo "  make toolbox-antigaslight - Run anti-gaslighting detector in container"
 	@echo ""
 	@echo "E2E Testing (Playwright):"
 	@echo "  make test-e2e         - Run E2E tests headless"
@@ -110,10 +108,8 @@ help:
 	@echo "  make test-all          - Run all tests (backend, frontend, contracts)"
 	@echo ""
 	@echo "Service-specific commands:"
-	@echo "  make backend-logs  - View backend logs (static)"
-	@echo "  make backend-logs-follow - Follow backend logs (continuous)"
-	@echo "  make frontend-logs - View frontend logs (static)"
-	@echo "  make frontend-logs-follow - Follow frontend logs (continuous)"
+	@echo "  make backend-logs  - View backend logs"
+	@echo "  make frontend-logs - View frontend logs"
 	@echo "  make db-shell      - PostgreSQL shell"
 	@echo "  make valkey-cli    - Valkey CLI"
 	@echo "  make ldap-admin    - Open phpLDAPadmin (requires tools profile)"
@@ -301,17 +297,6 @@ toolbox-run:
 		gotrs-toolbox:latest \
 		/bin/bash
 
-# Check compilation of all packages
-toolbox-compile:
-	@$(MAKE) toolbox-build
-	@echo "🔨 Checking compilation..."
-	@$(CONTAINER_CMD) run --rm \
-		-v "$$(pwd):/workspace" \
-		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
-		gotrs-toolbox:latest \
-		go build ./...
-
 # Run tests directly in toolbox (faster than compose exec)
 toolbox-test:
 	@$(MAKE) toolbox-build
@@ -351,46 +336,6 @@ toolbox-test-run:
 		-e APP_ENV=test \
 		gotrs-toolbox:latest \
 		sh -c "source .env 2>/dev/null || true && go test -v -run '$(TEST)' ./..."
-
-# Run specific Go file with toolbox
-toolbox-run-file:
-	@$(MAKE) toolbox-build
-	@echo "🚀 Running Go file: $(FILE)"
-	@$(CONTAINER_CMD) run --rm \
-		-v "$$(pwd):/workspace" \
-		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
-		--network host \
-		-e DB_HOST=localhost \
-		-e DB_PORT=5432 \
-		-e DB_NAME=gotrs \
-		-e DB_USER=gotrs_user \
-		-e PGPASSWORD=$${DB_PASSWORD:-gotrs_password} \
-		-e VALKEY_HOST=localhost \
-		-e VALKEY_PORT=6380 \
-		-e APP_ENV=development \
-		gotrs-toolbox:latest \
-		sh -c "source .env 2>/dev/null || true && go run $(FILE)"
-
-# Run anti-gaslighting detector in toolbox container
-toolbox-antigaslight:
-	@$(MAKE) toolbox-build
-	@echo "🔍 Running anti-gaslighting detector in container..."
-	@$(CONTAINER_CMD) run --rm \
-		-v "$$(pwd):/workspace" \
-		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
-		--network host \
-		-e DB_HOST=localhost \
-		-e DB_PORT=5432 \
-		-e DB_NAME=gotrs \
-		-e DB_USER=gotrs_user \
-		-e PGPASSWORD=$${DB_PASSWORD:-gotrs_password} \
-		-e VALKEY_HOST=localhost \
-		-e VALKEY_PORT=6380 \
-		-e APP_ENV=development \
-		gotrs-toolbox:latest \
-		sh -c "source .env 2>/dev/null || true && ./scripts/anti-gaslighting-detector.sh detect"
 
 # Run linting with toolbox
 toolbox-lint:
@@ -478,15 +423,9 @@ logs:
 
 # Service-specific logs
 backend-logs:
-	$(COMPOSE_CMD) logs backend
-
-backend-logs-follow:
 	$(COMPOSE_CMD) logs -f backend
 
 frontend-logs:
-	$(COMPOSE_CMD) logs frontend
-
-frontend-logs-follow:
 	$(COMPOSE_CMD) logs -f frontend
 
 db-logs:
@@ -964,9 +903,6 @@ ldap-test:
 test-containerized:
 	@bash scripts/test-containerized.sh
 
-# Include task coordination system
-include task-coordination.mk
-
 # CSS Build Commands
 .PHONY: css-deps css-build css-watch
 
@@ -985,150 +921,4 @@ css-build: css-deps
 # Watch and rebuild CSS on changes (in container with user permissions)
 css-watch: css-deps
 	@echo "👁️  Watching for CSS changes..."
-	@$(CONTAINER_CMD) run --rm -it -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm run watch-css# Add these lines to the help section around line 40:
-	@echo "Advanced TDD Commands (Zero Tolerance for False Claims):"
-	@echo "  make tdd-comprehensive           - Run ALL quality gates with evidence"
-	@echo "  make anti-gaslighting            - Detect false success claims" 
-	@echo "  make tdd-test-first-init FEATURE=name - Initialize test-first TDD cycle"
-	@echo "  make tdd-full-cycle FEATURE=name - Complete guided TDD cycle"
-	@echo "  make tdd-quick                   - Quick verification for development"
-	@echo "  make tdd-dashboard              - Show TDD status and metrics"
-	@echo ""
-
-# Add these commands after the existing TDD section around line 178:
-
-#########################################
-# COMPREHENSIVE TDD AUTOMATION
-#########################################
-
-# Initialize comprehensive TDD environment  
-tdd-comprehensive-init:
-	@echo "🚀 Initializing comprehensive TDD environment..."
-	@./scripts/comprehensive-tdd-integration.sh init
-
-# Run comprehensive TDD verification with ALL quality gates
-tdd-comprehensive:
-	@echo "🧪 Running COMPREHENSIVE TDD verification..."
-	@echo "Zero tolerance for false positives and premature success claims"
-	@./scripts/tdd-comprehensive.sh comprehensive
-
-# Anti-gaslighting detection - prevents false success claims
-anti-gaslighting:
-	@echo "🚨 Running anti-gaslighting detection..."
-	@echo "Detecting premature success claims and hidden failures..."
-	@./scripts/anti-gaslighting-detector.sh detect
-
-# Initialize test-first TDD cycle with proper enforcement
-tdd-test-first-init:
-	@if [ -z "$(FEATURE)" ]; then \
-		echo "Error: FEATURE required. Usage: make tdd-test-first-init FEATURE='Feature Name'"; \
-		exit 1; \
-	fi
-	@echo "🔴 Initializing test-first TDD cycle for: $(FEATURE)"
-	@./scripts/tdd-test-first-enforcer.sh init "$(FEATURE)"
-
-# Generate failing test for TDD cycle
-tdd-generate-test:
-	@if [ ! -f .tdd-state ]; then \
-		echo "Error: TDD not initialized. Run 'make tdd-test-first-init FEATURE=name' first"; \
-		exit 1; \
-	fi
-	@echo "📝 Generating failing test..."
-	@echo "Test types: unit, integration, api, browser"
-	@read -p "Enter test type (default: unit): " test_type; \
-	test_type=$${test_type:-unit}; \
-	./scripts/tdd-test-first-enforcer.sh generate-test $$test_type
-
-# Verify test is actually failing (TDD enforcement)
-tdd-verify-failing:
-	@if [ -z "$(TEST_FILE)" ]; then \
-		echo "Error: TEST_FILE required. Usage: make tdd-verify-failing TEST_FILE=path/to/test.go"; \
-		exit 1; \
-	fi
-	@echo "🔍 Verifying test actually fails..."
-	@./scripts/tdd-test-first-enforcer.sh verify-failing "$(TEST_FILE)"
-
-# Verify tests now pass after implementation
-tdd-verify-passing:
-	@if [ -z "$(TEST_FILE)" ]; then \
-		echo "Error: TEST_FILE required. Usage: make tdd-verify-passing TEST_FILE=path/to/test.go"; \
-		exit 1; \
-	fi
-	@echo "✅ Verifying tests now pass..."
-	@./scripts/tdd-test-first-enforcer.sh verify-passing "$(TEST_FILE)"
-
-# Complete guided TDD cycle with comprehensive verification
-tdd-full-cycle:
-	@if [ -z "$(FEATURE)" ]; then \
-		echo "Error: FEATURE required. Usage: make tdd-full-cycle FEATURE='Feature Name'"; \
-		exit 1; \
-	fi
-	@echo "🔄 Starting full TDD cycle for: $(FEATURE)"
-	@./scripts/comprehensive-tdd-integration.sh full-cycle "$(FEATURE)"
-
-# Quick verification for development (fast feedback)
-tdd-quick:
-	@echo "⚡ Running quick TDD verification..."
-	@./scripts/comprehensive-tdd-integration.sh quick
-
-# Show TDD dashboard with current status and metrics
-tdd-dashboard:
-	@./scripts/comprehensive-tdd-integration.sh dashboard
-
-# Enhanced test command that integrates with comprehensive TDD
-test-comprehensive:
-	@echo "🧪 Running tests with comprehensive TDD integration..."
-	@if [ -f .tdd-state ]; then \
-		echo "TDD cycle active - running comprehensive verification..."; \
-		$(MAKE) tdd-comprehensive; \
-	else \
-		echo "No TDD cycle - running comprehensive test suite..."; \
-		./scripts/tdd-comprehensive.sh comprehensive; \
-	fi
-
-# Test-first enforcement (prevents implementation without failing test)
-test-enforce-first:
-	@echo "🚫 Enforcing test-first development..."
-	@if [ ! -f .tdd-state ]; then \
-		echo "Error: No TDD cycle active. Start with 'make tdd-test-first-init FEATURE=name'"; \
-		exit 1; \
-	fi
-	@./scripts/tdd-test-first-enforcer.sh check-implementation
-
-# Generate comprehensive TDD report
-tdd-report:
-	@echo "📊 Generating comprehensive TDD report..."
-	@./scripts/tdd-test-first-enforcer.sh report
-
-# Clean TDD state (reset cycle)
-tdd-clean:
-	@echo "🧹 Cleaning TDD state..."
-	@rm -f .tdd-state
-	@echo "TDD cycle reset. Start new cycle with 'make tdd-test-first-init FEATURE=name'"
-
-# Verify system integrity (prevents gaslighting)  
-verify-integrity:
-	@echo "🔍 Verifying system integrity..."
-	@echo "Checking for false success claims and hidden failures..."
-	@./scripts/anti-gaslighting-detector.sh detect
-	@echo "Running comprehensive verification..."
-	@./scripts/tdd-comprehensive.sh comprehensive
-
-# TDD pre-commit hook (runs before commits)
-tdd-pre-commit:
-	@echo "🔒 Running TDD pre-commit verification..."
-	@./scripts/anti-gaslighting-detector.sh quick
-	@if [ -f .tdd-state ]; then \
-		echo "TDD cycle active - verifying cycle state..."; \
-		./scripts/tdd-test-first-enforcer.sh status; \
-	fi
-
-#########################################
-# EVIDENCE-BASED VERIFICATION OVERRIDES  
-#########################################
-
-# Override existing test command to be more robust
-test: test-comprehensive
-
-# Override existing tdd-verify to use comprehensive verification
-tdd-verify: tdd-comprehensive
+	@$(CONTAINER_CMD) run --rm -it -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm run watch-css

@@ -33,7 +33,7 @@ func (r *TicketRepository) Create(ticket *models.Ticket) error {
 	
 	query := `
 		INSERT INTO ticket (
-			tn, title, queue_id, ticket_lock_id, ticket_type_id,
+			tn, title, queue_id, ticket_lock_id, type_id,
 			service_id, sla_id, user_id, responsible_user_id,
 			customer_id, customer_user_id, ticket_state_id,
 			ticket_priority_id, until_time, escalation_time,
@@ -79,7 +79,7 @@ func (r *TicketRepository) Create(ticket *models.Ticket) error {
 func (r *TicketRepository) GetByID(id uint) (*models.Ticket, error) {
 	query := `
 		SELECT 
-			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.ticket_type_id,
+			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
 			t.ticket_priority_id, t.until_time, t.escalation_time,
@@ -128,7 +128,7 @@ func (r *TicketRepository) GetByID(id uint) (*models.Ticket, error) {
 func (r *TicketRepository) GetByTN(tn string) (*models.Ticket, error) {
 	query := `
 		SELECT 
-			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.ticket_type_id,
+			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
 			t.ticket_priority_id, t.until_time, t.escalation_time,
@@ -182,7 +182,7 @@ func (r *TicketRepository) Update(ticket *models.Ticket) error {
 			title = $2,
 			queue_id = $3,
 			ticket_lock_id = $4,
-			ticket_type_id = $5,
+			type_id = $5,
 			service_id = $6,
 			sla_id = $7,
 			user_id = $8,
@@ -280,7 +280,7 @@ func (r *TicketRepository) List(req *models.TicketListRequest) (*models.TicketLi
 	countQuery := `SELECT COUNT(*) ` + baseQuery
 	selectQuery := `
 		SELECT 
-			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.ticket_type_id,
+			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
 			t.ticket_priority_id, t.until_time, t.escalation_time,
@@ -424,7 +424,7 @@ func (r *TicketRepository) List(req *models.TicketListRequest) (*models.TicketLi
 func (r *TicketRepository) GetTicketsByCustomer(customerID uint, includeArchived bool) ([]models.Ticket, error) {
 	query := `
 		SELECT 
-			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.ticket_type_id,
+			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
 			t.ticket_priority_id, t.until_time, t.escalation_time,
@@ -462,7 +462,7 @@ func (r *TicketRepository) GetTicketsByCustomer(customerID uint, includeArchived
 func (r *TicketRepository) GetTicketsByOwner(ownerID uint, includeArchived bool) ([]models.Ticket, error) {
 	query := `
 		SELECT 
-			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.ticket_type_id,
+			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
 			t.ticket_priority_id, t.until_time, t.escalation_time,
@@ -500,7 +500,7 @@ func (r *TicketRepository) GetTicketsByOwner(ownerID uint, includeArchived bool)
 func (r *TicketRepository) GetTicketWithRelations(id uint) (*models.Ticket, error) {
 	query := `
 		SELECT 
-			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.ticket_type_id,
+			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
 			t.ticket_priority_id, t.until_time, t.escalation_time,
@@ -780,7 +780,7 @@ func (r *TicketRepository) GetByTicketNumber(ticketNumber string) (*models.Ticke
 	var ticket models.Ticket
 	query := `
 		SELECT 
-			id, tn, title, queue_id, ticket_lock_id, ticket_type_id,
+			id, tn, title, queue_id, ticket_lock_id, type_id,
 			service_id, sla_id, user_id, responsible_user_id, customer_id,
 			customer_user_id, ticket_state_id, ticket_priority_id, until_time,
 			escalation_time, escalation_update_time, escalation_response_time,

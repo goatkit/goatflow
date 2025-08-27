@@ -56,8 +56,7 @@ func (r *UserRepository) GetByID(id uint) (*models.User, error) {
 		return nil, fmt.Errorf("user not found")
 	}
 
-	// Set derived fields
-	user.IsActive = user.ValidID == 1
+	// Note: IsActive is now a method based on ValidID
 	
 	// TODO: Load role from role_users table
 	// For now, set a default role based on some logic
@@ -118,8 +117,7 @@ func (r *UserRepository) GetByLogin(login string) (*models.User, error) {
 
 	fmt.Printf("UserRepository.GetByLogin: Found user ID=%d, login='%s', pw starts with='%.20s'\n", user.ID, user.Login, user.Password)
 
-	// Set derived fields
-	user.IsActive = user.ValidID == 1
+	// Note: IsActive is now a method based on ValidID
 	user.Email = user.Login // In OTRS, login can be email
 	
 	// Load role based on group membership
@@ -322,7 +320,7 @@ func (r *UserRepository) List() ([]*models.User, error) {
 		}
 		
 		// Set derived fields
-		user.IsActive = user.ValidID == 1
+		// IsActive is now a method based on ValidID
 		user.Role = "Agent" // Default to Agent
 		user.Email = user.Login // In OTRS, login can be email
 		

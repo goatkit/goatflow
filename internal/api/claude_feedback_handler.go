@@ -68,7 +68,7 @@ func HandleClaudeFeedback(c *gin.Context) {
 	// Create ticket in Claude Code queue (ID: 14)
 	query := `
 		INSERT INTO ticket (
-			tn, title, queue_id, ticket_type_id, ticket_state_id, 
+			tn, title, queue_id, type_id, ticket_state_id, 
 			ticket_priority_id, ticket_lock_id, customer_user_id,
 			create_time, change_time, create_by, change_by,
 			until_time, escalation_time, escalation_response_time,

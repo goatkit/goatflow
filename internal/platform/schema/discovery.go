@@ -3,7 +3,6 @@ package schema
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -408,9 +407,7 @@ func (d *Discovery) generateFields(info *TableInfo) []Field {
 				field.Type = "select"
 				field.LookupTable = fk.ReferencedTable
 				field.LookupKey = fk.ReferencedColumn
-				field.LookupDisplay = guessDi
-
-splayColumn(fk.ReferencedTable)
+				field.LookupDisplay = guessDisplayColumn(fk.ReferencedTable)
 			}
 		}
 		
@@ -673,7 +670,7 @@ func findForeignKey(foreignKeys []ForeignKeyInfo, columnName string) *ForeignKey
 
 func guessDisplayColumn(tableName string) string {
 	// Common display column names in order of preference
-	displayColumns := []string{"name", "title", "login", "email", "code", "id"}
+	_ = []string{"name", "title", "login", "email", "code", "id"} // displayColumns - for future use
 	
 	// For now, return "name" as default
 	// In a real implementation, we'd query the table to see which columns exist

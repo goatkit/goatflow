@@ -14,18 +14,22 @@ type User struct {
 	Title            string    `json:"title" db:"title"`
 	FirstName        string    `json:"first_name" db:"first_name"`
 	LastName         string    `json:"last_name" db:"last_name"`
-	ValidID          int       `json:"valid_id" db:"valid_id"`
+	ValidID          int       `json:"valid_id" db:"valid_id"` // OTRS valid field (1=valid, 2=invalid, 3=invalid-temporarily)
 	CreateTime       time.Time `json:"create_time" db:"create_time"`
 	CreateBy         int       `json:"create_by" db:"create_by"`
 	ChangeTime       time.Time `json:"change_time" db:"change_time"`
 	ChangeBy         int       `json:"change_by" db:"change_by"`
 	Role             string    `json:"role"` // Admin, Agent, Customer
 	TenantID         uint      `json:"tenant_id,omitempty"`
-	IsActive         bool      `json:"is_active"`
 	LastLogin        *time.Time `json:"last_login,omitempty"`
 	FailedLoginCount int       `json:"-"`
 	LockedUntil      *time.Time `json:"-"`
 	Groups           []string  `json:"groups,omitempty"` // Group names for the user
+}
+
+// IsActive returns true if the user is active (valid_id = 1 in OTRS)
+func (u *User) IsActive() bool {
+	return u.ValidID == 1
 }
 
 type UserRole string

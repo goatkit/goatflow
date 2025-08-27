@@ -444,7 +444,7 @@ func (m *Manager) processDelivery(delivery *WebhookDelivery) {
 	req.Header.Set("User-Agent", "GOTRS-Webhook/1.0")
 	req.Header.Set("X-Webhook-ID", fmt.Sprintf("%d", webhook.ID))
 	req.Header.Set("X-Webhook-Event", string(delivery.Event))
-	req.Header.Set("X-Webhook-Delivery", delivery.ID)
+	req.Header.Set("X-Webhook-Delivery", fmt.Sprintf("%d", delivery.ID))
 	
 	// Add custom headers
 	for key, value := range webhook.Headers {

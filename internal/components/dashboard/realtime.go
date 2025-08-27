@@ -172,7 +172,7 @@ type MetricUpdate struct {
 type CollectorFunc func(context.Context) (interface{}, error)
 
 var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *gin.Context) bool {
+	CheckOrigin: func(r *http.Request) bool {
 		return true // Configure appropriately for production
 	},
 }

@@ -1,12 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/bcrypt"
+	_ "github.com/lib/pq"
 )
 
 var (
@@ -52,6 +55,7 @@ func init() {
 	
 	rootCmd.AddCommand(synthesizeCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(resetUserCmd)
 }
 
 var versionCmd = &cobra.Command{
@@ -60,6 +64,30 @@ var versionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("GOTRS CLI %s\n", rootCmd.Version)
 	},
+}
+
+var resetUserCmd = &cobra.Command{
+	Use:   "reset-user",
+	Short: "Reset a user's password and optionally enable their account",
+	Long: `Reset a user's password in the database using bcrypt hashing.
+	
+Optionally enables the account by setting valid_id = 1 (OTRS compatible).
+Connects directly to the database using environment variables.`,
+	RunE: runResetUser,
+}
+
+var (
+	usernameFlag string
+	passwordFlag string
+	enableFlag   bool
+)
+
+func init() {
+	resetUserCmd.Flags().StringVar(&usernameFlag, "username", "", "Username to reset (required)")
+	resetUserCmd.Flags().StringVar(&passwordFlag, "password", "", "New password (required)")
+	resetUserCmd.Flags().BoolVar(&enableFlag, "enable", false, "Enable the user account (set valid_id = 1)")
+	resetUserCmd.MarkFlagRequired("username")
+	resetUserCmd.MarkFlagRequired("password")
 }
 
 func runSynthesize(cmd *cobra.Command, args []string) error {
@@ -181,6 +209,115 @@ exit 0
 		return fmt.Errorf("failed to write pre-commit hook: %w", err)
 	}
 	
+	return nil
+}
+
+func runResetUser(cmd *cobra.Command, args []string) error {
+	// Get database connection parameters from environment
+	dbHost := os.Getenv("DB_HOST")
+	if dbHost == "" {
+		dbHost = "localhost"
+	}
+	dbPort := os.Getenv("DB_PORT")
+	if dbPort == "" {
+		dbPort = "5432"
+	}
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		dbName = "gotrs"
+	}
+	dbUser := os.Getenv("DB_USER")
+	if dbUser == "" {
+		dbUser = "gotrs_user"
+	}
+	dbPassword := os.Getenv("PGPASSWORD")
+	if dbPassword == "" {
+		return fmt.Errorf("PGPASSWORD environment variable is required")
+	}
+
+	// Connect to database
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbHost, dbPort, dbUser, dbPassword, dbName)
+	
+	fmt.Printf("🔗 Connecting to database %s@%s:%s/%s...\n", dbUser, dbHost, dbPort, dbName)
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+	defer db.Close()
+
+	// Test connection
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	// Generate bcrypt hash for the password
+	fmt.Printf("🔒 Generating password hash...\n")
+	hash, err := bcrypt.GenerateFromPassword([]byte(passwordFlag), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to generate password hash: %w", err)
+	}
+
+	// Prepare SQL update
+	var sqlQuery string
+	var sqlArgs []any
+	
+	if enableFlag {
+		sqlQuery = `UPDATE users SET 
+			pw = $1,
+			valid_id = 1,
+			change_time = CURRENT_TIMESTAMP,
+			change_by = 1
+		WHERE login = $2`
+		sqlArgs = []any{string(hash), usernameFlag}
+	} else {
+		sqlQuery = `UPDATE users SET 
+			pw = $1,
+			change_time = CURRENT_TIMESTAMP,
+			change_by = 1
+		WHERE login = $2`
+		sqlArgs = []any{string(hash), usernameFlag}
+	}
+
+	// Execute update
+	fmt.Printf("🔄 Updating user password and status...\n")
+	result, err := db.Exec(sqlQuery, sqlArgs...)
+	if err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user '%s' not found", usernameFlag)
+	}
+
+	// Verify the update
+	var login string
+	var validID int
+	var passwordStatus string
+	
+	err = db.QueryRow(`SELECT login, 
+		CASE WHEN pw IS NOT NULL THEN 'SET' ELSE 'NULL' END as password_status, 
+		valid_id 
+		FROM users WHERE login = $1`, usernameFlag).Scan(&login, &passwordStatus, &validID)
+	
+	if err != nil {
+		return fmt.Errorf("failed to verify update: %w", err)
+	}
+
+	fmt.Printf("✅ Password reset successful!\n")
+	fmt.Printf("   Username: %s\n", login)
+	fmt.Printf("   Password: ******** (hidden for security)\n")
+	if enableFlag {
+		fmt.Printf("   Status: Enabled (valid_id=%d)\n", validID)
+	} else {
+		fmt.Printf("   Status: valid_id=%d\n", validID)
+	}
+
 	return nil
 }
 

@@ -55,6 +55,7 @@ COPY --chown=appuser:appgroup templates ./templates/
 COPY --chown=appuser:appgroup static ./static/
 COPY --chown=appuser:appgroup routes ./routes/
 COPY --chown=appuser:appgroup migrations ./migrations/
+COPY --chown=appuser:appgroup config ./config/
 
 # Expose port
 EXPOSE 8080

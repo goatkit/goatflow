@@ -530,7 +530,7 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 			SELECT t.id, t.tn, t.title, 
 				   t.customer_user_id, t.customer_id,
 				   t.queue_id, q.name as queue_name,
-				   t.ticket_type_id, tt.name as type_name,
+				   t.type_id, tt.name as type_name,
 				   t.service_id, s.name as service_name,
 				   t.sla_id, sla.name as sla_name,
 				   t.ticket_state_id, ts.name as state_name, tst.name as state_type,
@@ -539,7 +539,7 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 				   t.create_time, t.change_time
 			FROM ticket t
 			LEFT JOIN queue q ON t.queue_id = q.id
-			LEFT JOIN ticket_type tt ON t.ticket_type_id = tt.id
+			LEFT JOIN ticket_type tt ON t.type_id = tt.id
 			LEFT JOIN service s ON t.service_id = s.id
 			LEFT JOIN sla ON t.sla_id = sla.id
 			LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id

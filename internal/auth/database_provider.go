@@ -31,28 +31,18 @@ func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, passw
 	var user *models.User
 	var err error
 	
-	// Check if username looks like an email
-	if strings.Contains(username, "@") {
-		user, err = p.userRepo.GetByEmail(username)
-	} else {
-		user, err = p.userRepo.GetByLogin(username)
-	}
-	
+	// In OTRS, agents use login (which can contain @), not separate email field
+	// Always try GetByLogin first for agents
+	fmt.Printf("DatabaseAuthProvider: Looking up user '%s'\n", username)
+	user, err = p.userRepo.GetByLogin(username)
 	if err != nil {
-		// Try the other method if the first fails
-		if strings.Contains(username, "@") {
-			// Already tried email, don't retry
-			return nil, ErrUserNotFound
-		}
-		// Username might actually be an email, try that
-		user, err = p.userRepo.GetByEmail(username)
-		if err != nil {
-			return nil, ErrUserNotFound
-		}
+		fmt.Printf("DatabaseAuthProvider: GetByLogin failed: %v\n", err)
+		return nil, ErrUserNotFound
 	}
 	
-	// Check if user is active
-	if !user.IsActive {
+	// Check if user is active (valid_id = 1 in OTRS)
+	if !user.IsActive() {
+		fmt.Printf("DatabaseAuthProvider: User %s is not active (valid_id=%d)\n", user.Login, user.ValidID)
 		return nil, ErrUserDisabled
 	}
 	

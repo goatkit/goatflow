@@ -1,6 +1,6 @@
 # GOTRS Toolbox - All-in-one container for development tasks
 # Pre-cached dependencies for faster execution of one-off commands
-FROM golang:1.22-alpine AS toolbox
+FROM golang:1.23-alpine AS toolbox
 
 # Install common build and runtime dependencies
 RUN apk add --no-cache \
@@ -37,10 +37,11 @@ RUN go install -v golang.org/x/tools/cmd/goimports@latest || true
 # Copy source code
 COPY . .
 
-# Build all binaries
+# Build essential binaries for toolbox
 RUN go build -o /usr/local/bin/gotrs cmd/gotrs/main.go && \
     go build -o /usr/local/bin/gotrs-babelfish cmd/gotrs-babelfish/main.go && \
-    go build -o /usr/local/bin/gotrs-server cmd/server/main.go
+    go build -o /usr/local/bin/goats cmd/goats/main.go && \
+    go build -o /usr/local/bin/gotrs-migrate cmd/gotrs-migrate/main.go
 
 # Create non-root user
 RUN adduser -D -u 1000 gotrs

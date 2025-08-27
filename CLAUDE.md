@@ -654,6 +654,55 @@ curl -s http://localhost:8080/health && echo "✅ Backend responding"
 - ✅ No error logs in last 10 seconds
 - ✅ Can access at least one admin page
 
+### Config Files Must Be Copied to Container (Aug 27, 2025)
+**Problem**: `/dev` endpoint failed with "dev-dashboard.yaml: no such file or directory"
+**Root Cause**: Config directory existed on host but wasn't being copied into container
+**Initial Mistake**: Tried to mount config as volume, user corrected to copy instead
+
+**Solution**:
+1. Added config directory to Dockerfile COPY instructions:
+```dockerfile
+COPY --chown=appuser:appgroup config ./config/
+```
+2. Rebuilt container with `make up-d`
+3. Config files now baked into image, not mounted
+
+**Key Learning**: 
+- Dashboard manager loads configs from `./config/` directory
+- YAML routing configs in `./routes/` were already copied
+- Dashboard configs in `./config/` were missing
+- Always verify all necessary directories are in Dockerfile
+- User preference: copy files into image rather than mount as volumes
+
+### Fixing Compilation Errors Across Multiple Packages (Aug 27, 2025)
+**Task**: Fix test failures after disk corruption of .claude.json
+**Approach**: Created `make toolbox-compile` target to check compilation systematically
+
+**Fixed Issues**:
+1. **webhook/manager.go**: Type mismatch - `delivery.ID` (uint) needed `fmt.Sprintf`
+2. **dashboard/realtime.go**: Wrong function signature - `CheckOrigin` expects `*http.Request` not `*gin.Context`
+3. **handlers/base_crud.go**: Non-existent type `pongo2.Engine` → `*template.Pongo2Renderer`
+4. **oauth2/provider.go**: Unused imports and variables cleaned up
+5. **platform/schema/discovery.go**: Typo in function name and unused variables
+6. **tests/**: Disabled conflicting main functions in test utility files
+7. **cache/manager.go**: Removed unused redis import
+
+**Makefile Enhancement**:
+```makefile
+# Check compilation of all packages
+toolbox-compile:
+	@$(MAKE) toolbox-build
+	@echo "🔨 Checking compilation..."
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-u "$$(id -u):$$(id -g)" \
+		gotrs-toolbox:latest \
+		go build ./...
+```
+
+**Key Learning**: When fixing compilation errors, create a systematic approach to identify all issues at once rather than discovering them one by one during test runs.
+
 ### OTRS Architecture Alignment - Groups vs Roles (Dec 28, 2025)
 **Discovery**: OTRS documentation revealed we were misunderstanding the architecture
 **User Directive**: "There's no Option B Claude, always Use OTRS Schema... assume at this stage we are writing a clone, exact clone"
@@ -1082,3 +1131,54 @@ After ANY build system changes:
 - Don't use ad-hoc docker commands when Makefile targets exist
 - Don't assume React is needed - check actual frontend architecture first
 - Always update ALL references when moving/removing files (Makefile, compose, docs)
+
+### Comprehensive Database Schema Migration Fix (Aug 27, 2025)
+**Issue**: Database schema migrated `ticket_type_id` → `type_id` but code still referenced old column name
+**User Lesson**: "why not search the whole repo for ticket_type_id and fix every found instance and correct any documentation?"
+
+**The Right Approach - Comprehensive Systematic Fix**:
+1. **Repository-wide search**: `grep -r "ticket_type_id" . --exclude-dir=.git` to find ALL instances
+2. **Systematic fixes**: Update every single reference, not just the immediate problem
+3. **Multiple file types**: Code (.go), migrations (.sql), documentation (.md), config (.yaml)
+4. **Verification**: Create comprehensive test to ensure zero remaining references
+5. **Documentation update**: Reflect completion status in migration guides
+
+**Files Fixed (13 total references across 6 files)**:
+- `internal/api/admin_type_handlers.go` (2 SQL query fixes)
+- `internal/api/claude_feedback_handler.go` (1 INSERT statement)
+- `internal/api/htmx_routes.go` (1 INSERT statement)
+- `internal/repository/ticket_repository.go` (9 SQL queries - used replace_all)
+- `modules/generated/ticket.yaml` (field definition)
+- `migrations/000005_otrs_test_data.up.sql` (test data)
+- `docs/OTRS_MIGRATION_GUIDE.md` (status update)
+
+**Container-First Development Discipline (Aug 27, 2025)**:
+**Problem**: Still building/running Go programs on host instead of containers
+**User Action**: Uninstalled golang to prevent this
+**Lesson**: Must use containerized development consistently
+
+**Correct Approach**:
+- ✅ **For Go builds**: `make toolbox-build` + `make toolbox-run` (not `go build`)
+- ✅ **For Go tests**: `make test` or `make toolbox-test` (not `go run`)  
+- ✅ **For scripts**: Check Makefile targets first (not direct script execution)
+- ✅ **For host tools**: curl, grep, ls are fine on host
+
+**Makefile as Single Entry Point**:
+- Always check `make help` for available targets
+- Use proper workflow commands: `make tdd-verify`, `make quality-gates`
+- Follow container-first philosophy consistently
+- Only use host commands for basic utilities (curl, grep, ls)
+
+**The Comprehensive Fix Principle**:
+- **Don't fix just the symptom** - fix the entire problem domain
+- **Search systematically** - use grep/ripgrep to find ALL instances
+- **Update all file types** - code, migrations, docs, configs
+- **Verify comprehensively** - create tests to ensure zero remaining issues
+- **Document completion** - update guides to reflect current status
+
+**Trust Through Systematic Approach**:
+- User caught me fixing only immediate issue, not root cause
+- Comprehensive search revealed 13 references across 6 files
+- Systematic fix prevents future similar bugs
+- Verification ensures nothing missed
+- This builds user confidence in thoroughness

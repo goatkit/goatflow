@@ -1,0 +1,16 @@
+{
+  "task_id": "TASK_20250827_071208_07bb766a",
+  "description": "dev-dashboard.yaml: no such file or directory on dev/ endpoint",
+  "priority": "high",
+  "task_type": "bugfix",
+  "created": "2025-08-27T07:12:08+01:00",
+  "status": "created",
+  "completed": false,
+  "evidence_required": true,
+  "quality_gates_required": 7,
+  "evidence_files": [],
+  "quality_gates_passed": 0,
+  "assigned_agents": [],
+  "prerequisites": [],
+  "subtasks": []
+}

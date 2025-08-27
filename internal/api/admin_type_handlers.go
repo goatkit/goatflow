@@ -44,7 +44,7 @@ func handleAdminTypes(c *gin.Context) {
 			t.change_by,
 			COUNT(DISTINCT tk.id) as ticket_count
 		FROM ticket_type t
-		LEFT JOIN ticket tk ON tk.ticket_type_id = t.id
+		LEFT JOIN ticket tk ON tk.type_id = t.id
 	`
 
 	var args []interface{}
@@ -305,7 +305,7 @@ func handleAdminTypeDelete(c *gin.Context) {
 	var ticketCount int
 	err = db.QueryRow(`
 		SELECT COUNT(*) FROM ticket 
-		WHERE ticket_type_id = $1
+		WHERE type_id = $1
 	`, id).Scan(&ticketCount)
 
 	if err != nil {

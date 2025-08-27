@@ -121,7 +121,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Sample Tickets
 -- ============================================
 INSERT INTO ticket (
-    id, tn, title, queue_id, ticket_lock_id, ticket_type_id,
+    id, tn, title, queue_id, ticket_lock_id, type_id,
     user_id, responsible_user_id, ticket_priority_id, ticket_state_id,
     customer_id, customer_user_id, create_time_unix, create_by, change_by
 ) VALUES

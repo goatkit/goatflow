@@ -1,7 +1,6 @@
 package oauth2
 
 import (
-	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -250,8 +249,8 @@ func (p *Provider) handleAuthorize(c *gin.Context) {
 	responseType := c.Query("response_type")
 	scope := c.Query("scope")
 	state := c.Query("state")
-	codeChallenge := c.Query("code_challenge")
-	codeChallengeMethod := c.Query("code_challenge_method")
+	_ = c.Query("code_challenge") // codeChallenge - for future PKCE support
+	_ = c.Query("code_challenge_method") // codeChallengeMethod - for future PKCE support
 	
 	// Validate required parameters
 	if clientID == "" || redirectURI == "" || responseType == "" {
@@ -286,7 +285,7 @@ func (p *Provider) handleAuthorize(c *gin.Context) {
 	}
 	
 	// Check if user is authenticated
-	userID, _, _, authenticated := p.getCurrentUser(c)
+	_, _, _, authenticated := p.getCurrentUser(c) // userID will be used later
 	if !authenticated {
 		// Redirect to login with return URL
 		loginURL := fmt.Sprintf("/login?return_to=%s", url.QueryEscape(c.Request.URL.String()))
@@ -305,8 +304,8 @@ func (p *Provider) handleAuthorizePost(c *gin.Context) {
 	redirectURI := c.Query("redirect_uri")
 	scope := c.Query("scope")
 	state := c.Query("state")
-	codeChallenge := c.Query("code_challenge")
-	codeChallengeMethod := c.Query("code_challenge_method")
+	_ = c.Query("code_challenge") // codeChallenge - for future PKCE support
+	_ = c.Query("code_challenge_method") // codeChallengeMethod - for future PKCE support
 	
 	userID, _, _, authenticated := p.getCurrentUser(c)
 	if !authenticated {
