@@ -89,7 +89,14 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 			SELECT t.id, t.tn, t.title, 
 				   ts.name as state,
 				   tp.name as priority,
-				   tp.color as priority_color,
+				   CASE 
+				       WHEN tp.name LIKE '%very low%' THEN '#0066cc'
+				       WHEN tp.name LIKE '%low%' THEN '#0099ff'
+				       WHEN tp.name LIKE '%normal%' THEN '#00cc00'
+				       WHEN tp.name LIKE '%high%' THEN '#ff9900'
+				       WHEN tp.name LIKE '%very high%' THEN '#ff0000'
+				       ELSE '#666666'
+				   END as priority_color,
 				   t.create_time,
 				   t.change_time,
 				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id) as article_count,
@@ -180,7 +187,14 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 			SELECT t.id, t.tn, t.title,
 				   ts.name as state,
 				   tp.name as priority,
-				   tp.color as priority_color,
+				   CASE 
+				       WHEN tp.name LIKE '%very low%' THEN '#0066cc'
+				       WHEN tp.name LIKE '%low%' THEN '#0099ff'
+				       WHEN tp.name LIKE '%normal%' THEN '#00cc00'
+				       WHEN tp.name LIKE '%high%' THEN '#ff9900'
+				       WHEN tp.name LIKE '%very high%' THEN '#ff0000'
+				       ELSE '#666666'
+				   END as priority_color,
 				   s.name as service,
 				   t.create_time,
 				   t.change_time,
@@ -439,7 +453,15 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 		err := db.QueryRow(`
 			SELECT t.id, t.tn, t.title,
 			       ts.name as state, ts.id as state_id,
-			       tp.name as priority, tp.color as priority_color,
+			       tp.name as priority, 
+			       CASE 
+			           WHEN tp.name LIKE '%very low%' THEN '#0066cc'
+			           WHEN tp.name LIKE '%low%' THEN '#0099ff'
+			           WHEN tp.name LIKE '%normal%' THEN '#00cc00'
+			           WHEN tp.name LIKE '%high%' THEN '#ff9900'
+			           WHEN tp.name LIKE '%very high%' THEN '#ff0000'
+			           ELSE '#666666'
+			       END as priority_color,
 			       s.name as service,
 			       q.name as queue,
 			       ou.login as owner,

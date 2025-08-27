@@ -261,7 +261,14 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 				   q.name as queue,
 				   ts.name as state,
 				   tp.name as priority,
-				   tp.color as priority_color,
+				   CASE 
+				       WHEN tp.name LIKE '%very low%' THEN '#0066cc'
+				       WHEN tp.name LIKE '%low%' THEN '#0099ff'
+				       WHEN tp.name LIKE '%normal%' THEN '#00cc00'
+				       WHEN tp.name LIKE '%high%' THEN '#ff9900'
+				       WHEN tp.name LIKE '%very high%' THEN '#ff0000'
+				       ELSE '#666666'
+				   END as priority_color,
 				   u.login as assigned_to,
 				   t.create_time,
 				   t.change_time,
