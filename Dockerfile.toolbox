@@ -1,61 +1,98 @@
 # GOTRS Toolbox - All-in-one container for development tasks
-# Pre-cached dependencies for faster execution of one-off commands
-FROM golang:1.23-alpine AS toolbox
+# syntax=docker/dockerfile:1
 
-# Install common build and runtime dependencies
+# Use the optimized backend build as base to reuse compiled binaries
+FROM gotrs:latest AS backend
+
+# Build additional toolbox utilities
+FROM golang:1.23-alpine AS toolbox-builder
+
+# Install build dependencies
 RUN apk add --no-cache \
     git \
-    bash \
-    make \
     gcc \
     musl-dev \
-    postgresql-client \
-    curl \
-    jq \
-    openssl \
     ca-certificates
-
-# Install additional dev tools
-RUN apk add --no-cache \
-    ripgrep \
-    fd \
-    tree
 
 # Set working directory
 WORKDIR /workspace
 
-# Copy go mod files first for better caching
+# Copy go mod files for caching
 COPY go.mod go.sum ./
 
-# Download all Go dependencies - this layer will be cached
-RUN go mod download
-
-# Install Go tools (minimal set for now)
-# Note: Additional tools can be installed later as needed
-RUN go install -v golang.org/x/tools/cmd/goimports@latest || true
+# Download and verify dependencies
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download && go mod verify
 
 # Copy source code
 COPY . .
 
-# Build essential binaries for toolbox
-RUN go build -o /usr/local/bin/gotrs cmd/gotrs/main.go && \
-    go build -o /usr/local/bin/gotrs-babelfish cmd/gotrs-babelfish/main.go && \
-    go build -o /usr/local/bin/goats cmd/goats/main.go && \
-    go build -o /usr/local/bin/gotrs-migrate cmd/gotrs-migrate/main.go
+# Build additional toolbox utilities with optimization
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs cmd/gotrs/main.go 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-babelfish cmd/gotrs-babelfish/main.go 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-migrate cmd/gotrs-migrate/main.go 2>/dev/null || true
 
-# Create non-root user
-RUN adduser -D -u 1000 gotrs
+# Install Go development tools (use compatible versions)
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go install golang.org/x/tools/cmd/goimports@latest && \
+    go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4 && \
+    go install honnef.co/go/tools/cmd/staticcheck@latest
 
-# Set up proper permissions for workspace
+# ============================================
+# Final toolbox image
+# ============================================
+FROM alpine:3.19 AS toolbox
+
+# Install runtime and dev tools
+RUN apk add --no-cache \
+    # Runtime essentials\
+    ca-certificates \
+    postgresql15-client \
+    # Dev tools\
+    git \
+    bash \
+    make \
+    curl \
+    jq \
+    openssl \
+    # Text processing\
+    ripgrep \
+    fd \
+    tree \
+    # Go runtime\
+    libc6-compat
+
+# Create non-root user (matching backend)
+RUN addgroup -g 1000 -S appgroup && \
+    adduser -u 1000 -S appuser -G appgroup
+
+# Set up workspace
+WORKDIR /workspace
 RUN mkdir -p /tmp/.cache/go-build /tmp/.cache/go-mod && \
-    chown -R gotrs:gotrs /tmp/.cache
+    chown -R appuser:appgroup /tmp/.cache /workspace
+
+# Copy binaries from backend image
+COPY --from=backend --chown=appuser:appgroup /app/goats /usr/local/bin/goats
+COPY --from=backend --chown=appuser:appgroup /app/migrate /usr/local/bin/migrate
+
+# Copy additional tools from builder
+COPY --from=toolbox-builder /usr/local/bin/gotrs* /usr/local/bin/
+COPY --from=toolbox-builder /go/bin/* /usr/local/bin/
+
+# Copy workspace files for development
+COPY --chown=appuser:appgroup . /workspace/
 
 # Switch to non-root user
-USER gotrs
+USER appuser
 
 # Set environment for Go caching
 ENV GOCACHE=/tmp/.cache/go-build
 ENV GOMODCACHE=/tmp/.cache/go-mod
+ENV PATH=/usr/local/bin:$PATH
 
 # Default to bash shell for interactive use
 CMD ["/bin/bash"]

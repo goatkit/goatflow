@@ -349,4 +349,4 @@ GOTRS builds upon decades of open source ticketing system innovation. We acknowl
 
 **GOTRS** - Enterprise Ticketing, Community Driven
 
-Copyright © 2025 Gibbsoft Ltd and Contributors
+Copyright © 2025 Gibbsoft Ltd and Contributors# Test comment

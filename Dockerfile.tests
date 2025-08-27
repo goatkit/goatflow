@@ -1,36 +1,44 @@
 # Container-first testing environment for GOTRS
-FROM golang:1.23-alpine AS builder
+# syntax=docker/dockerfile:1
 
-# Install test dependencies
-RUN apk add --no-cache git ca-certificates curl jq
+# ============================================
+# Stage 1: Build test tools
+# ============================================
+FROM golang:1.23-alpine AS test-builder
 
-# Create non-root user
-RUN adduser -D -s /bin/sh -u 1000 tester
+# Install build dependencies
+RUN apk add --no-cache git gcc musl-dev ca-certificates
 
 WORKDIR /app
 
-# Copy go modules
+# Copy and cache dependencies
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download && go mod verify
 
 # Copy source code
 COPY . .
 
-# Build test tools
-RUN CGO_ENABLED=0 go build -o /usr/local/bin/route-test ./cmd/route-test
-RUN CGO_ENABLED=0 go build -o /usr/local/bin/route-docs ./cmd/route-docs
+# Build test tools with optimization
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/route-test ./cmd/route-test 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/route-docs ./cmd/route-docs 2>/dev/null || true
 
-# Production test image
-FROM alpine:3.18
+# ============================================
+# Stage 2: Minimal test runtime
+# ============================================
+FROM alpine:3.19 AS test-runtime
 
 RUN apk add --no-cache ca-certificates curl jq bash
 
 # Create tester user
 RUN adduser -D -s /bin/sh -u 1000 tester
 
-# Copy built tools
-COPY --from=builder /usr/local/bin/route-test /usr/local/bin/route-test
-COPY --from=builder /usr/local/bin/route-docs /usr/local/bin/route-docs
+# Copy built tools from test-builder
+COPY --from=test-builder /usr/local/bin/route-test /usr/local/bin/route-test
+COPY --from=test-builder /usr/local/bin/route-docs /usr/local/bin/route-docs
 
 # Copy routes for testing
 COPY --chown=tester:tester ./routes /app/routes

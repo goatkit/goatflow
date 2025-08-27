@@ -47,6 +47,12 @@ bin/
 *.dll
 *.so
 *.dylib
+goats
+gotrs
+gotrs-*
+server
+migrate
+generator
 
 # ============================================
 # Node.js / Frontend
@@ -95,6 +101,9 @@ Dockerfile*
 docker-compose*.yml
 docker-compose*.yaml
 .dockerignore
+docker/
+!docker/nginx/nginx.conf
+!docker/postgres/01-init-databases.sql
 
 # ============================================
 # Kubernetes
@@ -126,6 +135,15 @@ temp/
 *.pid
 *.seed
 *.pid.lock
+server.log
+cookies.txt
+debug_*.go
+test_*.py
+test_*.js
+test_*.html
+test-results*.html
+*_debug.go
+browser_test.py
 
 # ============================================
 # Database
@@ -209,6 +227,11 @@ PATENTS*
 *.diff
 .cache/
 .sass-cache/
-*.pid
-*.seed
-*.log
+security-reports/
+scripts/demo/
+scripts/debug/
+scripts/tools/
+scripts/test/
+*.prof
+*.test
+*.out

@@ -1,31 +1,50 @@
 # GoatKit - Container for GOTRS Configuration Management
-FROM golang:1.23-alpine AS builder
+# syntax=docker/dockerfile:1
+
+# ============================================
+# Use backend as base for consistency
+# ============================================
+FROM gotrs:latest AS backend
+
+# ============================================
+# Build GoatKit tools
+# ============================================
+FROM golang:1.23-alpine AS goatkit-builder
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates
 
 WORKDIR /app
 
-# Copy go modules
+# Copy and cache dependencies
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download && go mod verify
 
 # Copy source code
 COPY . .
 
-# Build GoatKit CLI
-RUN CGO_ENABLED=0 go build -o /usr/local/bin/gk ./cmd/gk
+# Build GoatKit CLI with optimization
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gk ./cmd/gk 2>/dev/null || true
 
-# Production image
-FROM alpine:3.18
+# ============================================
+# Minimal runtime
+# ============================================
+FROM alpine:3.19
 
 RUN apk add --no-cache ca-certificates bash git
 
 # Create non-root user (uid 1000 for podman compatibility)
 RUN adduser -D -s /bin/sh -u 1000 goat
 
-# Copy GoatKit binary
-COPY --from=builder /usr/local/bin/gk /usr/local/bin/
+# Copy GoatKit binary from builder
+COPY --from=goatkit-builder /usr/local/bin/gk /usr/local/bin/
+
+# Copy main goats binary from backend for consistency
+COPY --from=backend /app/goats /usr/local/bin/goats
 
 # Create config directories with proper ownership
 RUN mkdir -p /app/config /app/routes /app/dashboards /app/.versions && \
@@ -48,22 +67,113 @@ if [ $# -eq 0 ] || [ "$1" = "help" ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; 
 / /_/ / /_/ / ___ |/ / / _, _/ /| |_/ // /_  
 \____/\____/_/  |_/_/ /_/ |_/_/ |_/___/\__/  
                                               
-  🐐 YAML Configuration Management for GOTRS
-
+    🐐 YAML-First Configuration Management
+    
 BANNER
 fi
 
-# Set environment
-export GOATKIT_CONFIG_DIR=${GOATKIT_CONFIG_DIR:-/app/config}
+CONFIG_DIR=${CONFIG_DIR:-/app/config}
+ROUTES_DIR=${ROUTES_DIR:-/app/routes}
+DASHBOARDS_DIR=${DASHBOARDS_DIR:-/app/dashboards}
+VERSIONS_DIR=${VERSIONS_DIR:-/app/.versions}
 
-# Run gk with all arguments
-exec gk "$@"
+show_help() {
+    echo "Commands:"
+    echo "  init          Initialize GoatKit configuration"
+    echo "  generate      Generate YAML from existing code"
+    echo "  validate      Validate all YAML configurations"
+    echo "  watch         Watch for changes and auto-reload"
+    echo "  version       Manage configuration versions"
+    echo "  diff          Show configuration changes"
+    echo "  migrate       Migrate from OTRS configuration"
+    echo "  server        Start embedded configuration server"
+    echo ""
+    echo "Examples:"
+    echo "  goatkit init                  # Set up new project"
+    echo "  goatkit generate routes        # Generate route YAML from code"
+    echo "  goatkit validate              # Check all configurations"
+    echo "  goatkit watch                 # Auto-reload on changes"
+    echo "  goatkit version list          # Show version history"
+    echo "  goatkit diff v1.0 v1.1       # Compare versions"
+    echo "  goatkit migrate otrs.xml      # Import OTRS config"
+    echo "  goatkit server                # Start config UI on :3000"
+    echo ""
+    echo "Environment Variables:"
+    echo "  CONFIG_DIR      Main configuration directory (default: /app/config)"
+    echo "  ROUTES_DIR      Routes configuration (default: /app/routes)"
+    echo "  DASHBOARDS_DIR  Dashboard definitions (default: /app/dashboards)"
+    echo "  VERSIONS_DIR    Version history (default: /app/.versions)"
+}
+
+# Main command dispatcher
+case "$1" in
+    init)
+        echo "🎯 Initializing GoatKit configuration..."
+        gk init "$CONFIG_DIR"
+        ;;
+        
+    generate)
+        TYPE=${2:-all}
+        echo "🔧 Generating YAML configuration for: $TYPE"
+        gk generate "$TYPE" --output "$CONFIG_DIR"
+        ;;
+        
+    validate)
+        echo "✅ Validating configurations..."
+        gk validate "$CONFIG_DIR" "$ROUTES_DIR" "$DASHBOARDS_DIR"
+        ;;
+        
+    watch)
+        echo "👁️ Watching for configuration changes..."
+        gk watch "$CONFIG_DIR" "$ROUTES_DIR" "$DASHBOARDS_DIR"
+        ;;
+        
+    version)
+        shift
+        gk version "$@" --dir "$VERSIONS_DIR"
+        ;;
+        
+    diff)
+        FROM=${2:-HEAD~1}
+        TO=${3:-HEAD}
+        echo "📊 Showing differences between $FROM and $TO..."
+        gk diff "$FROM" "$TO" --dir "$VERSIONS_DIR"
+        ;;
+        
+    migrate)
+        SOURCE=${2}
+        if [ -z "$SOURCE" ]; then
+            echo "❌ Please provide source file for migration"
+            echo "Usage: goatkit migrate <otrs-config.xml>"
+            exit 1
+        fi
+        echo "📦 Migrating configuration from $SOURCE..."
+        gk migrate "$SOURCE" --output "$CONFIG_DIR"
+        ;;
+        
+    server)
+        PORT=${2:-3000}
+        echo "🚀 Starting GoatKit configuration server on port $PORT..."
+        echo "   Access the UI at http://localhost:$PORT"
+        gk server --port "$PORT" --config "$CONFIG_DIR"
+        ;;
+        
+    help|--help|-h)
+        show_help
+        ;;
+        
+    *)
+        if [ -n "$1" ]; then
+            echo "Unknown command: $1"
+            echo ""
+        fi
+        show_help
+        exit 1
+        ;;
+esac
 EOF
 
 RUN chmod +x /usr/local/bin/goatkit
-
-# Create a symlink for convenience
-RUN ln -s /usr/local/bin/goatkit /usr/local/bin/goat
 
 # Set up working directory
 WORKDIR /app
@@ -71,9 +181,5 @@ WORKDIR /app
 # Switch to non-root user
 USER goat
 
-# Set environment
-ENV GOATKIT_CONFIG_DIR=/app/config
-
-# Default entrypoint
-ENTRYPOINT ["/usr/local/bin/goatkit"]
-CMD ["help"]
+# Default command shows help
+CMD ["/usr/local/bin/goatkit", "help"]

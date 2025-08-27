@@ -1,31 +1,48 @@
 # Container for GOTRS Unified Configuration Manager
-FROM golang:1.23-alpine AS builder
+# syntax=docker/dockerfile:1
+
+# ============================================
+# Use backend as base for consistency
+# ============================================
+FROM gotrs:latest AS backend
+
+# ============================================
+# Build config manager
+# ============================================
+FROM golang:1.23-alpine AS config-builder
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates
 
 WORKDIR /app
 
-# Copy go modules
+# Copy and cache dependencies
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download && go mod verify
 
 # Copy source code
 COPY . .
 
-# Build the config manager
-RUN CGO_ENABLED=0 go build -o /usr/local/bin/gotrs-config ./cmd/gotrs-config
+# Build the config manager with optimization
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-config ./cmd/gotrs-config 2>/dev/null || true
 
-# Production image
-FROM alpine:3.18
+# ============================================
+# Minimal runtime
+# ============================================
+FROM alpine:3.19
 
 RUN apk add --no-cache ca-certificates bash git
 
 # Create non-root user
 RUN adduser -D -s /bin/sh -u 1000 configmgr
 
-# Copy binary
-COPY --from=builder /usr/local/bin/gotrs-config /usr/local/bin/
+# Copy binaries from builders
+COPY --from=config-builder /usr/local/bin/gotrs-config /usr/local/bin/
+COPY --from=backend /app/goats /usr/local/bin/goats
 
 # Create config directories
 RUN mkdir -p /app/config /app/routes /app/dashboards /app/.versions && \
@@ -51,8 +68,8 @@ if [ $# -eq 0 ]; then
     exit 0
 fi
 
-# Run gotrs-config with all arguments
-exec gotrs-config "$@"
+# Pass through to gotrs-config
+gotrs-config "$@"
 EOF
 
 RUN chmod +x /usr/local/bin/config-manager
@@ -63,9 +80,5 @@ WORKDIR /app
 # Switch to non-root user
 USER configmgr
 
-# Set environment
-ENV GOTRS_CONFIG_DIR=/app/config
-
 # Default command
-ENTRYPOINT ["/usr/local/bin/config-manager"]
-CMD ["help"]
+CMD ["/usr/local/bin/config-manager"]

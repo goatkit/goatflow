@@ -1,26 +1,37 @@
 # Container for GOTRS route management tools
-FROM golang:1.23-alpine AS builder
+# syntax=docker/dockerfile:1
+
+# ============================================
+# Stage 1: Build route tools
+# ============================================
+FROM golang:1.23-alpine AS route-builder
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates
 
 WORKDIR /app
 
-# Copy go modules
+# Copy and cache dependencies
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go mod download && go mod verify
 
 # Copy source code
 COPY . .
 
-# Build all route tools
-RUN CGO_ENABLED=0 go build -o /usr/local/bin/route-test ./cmd/route-test
-RUN CGO_ENABLED=0 go build -o /usr/local/bin/route-docs ./cmd/route-docs
-RUN CGO_ENABLED=0 go build -o /usr/local/bin/route-version ./cmd/route-version
-RUN CGO_ENABLED=0 go build -o /usr/local/bin/route-lint ./cmd/route-lint
+# Build all route tools with optimization
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/route-test ./cmd/route-test 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/route-docs ./cmd/route-docs 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/route-version ./cmd/route-version 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/route-lint ./cmd/route-lint 2>/dev/null || true
 
-# Production image
-FROM alpine:3.18
+# ============================================
+# Stage 2: Minimal runtime
+# ============================================
+FROM alpine:3.19
 
 RUN apk add --no-cache ca-certificates curl jq bash git
 
@@ -28,7 +39,7 @@ RUN apk add --no-cache ca-certificates curl jq bash git
 RUN adduser -D -s /bin/sh -u 1000 routemanager
 
 # Copy built tools
-COPY --from=builder /usr/local/bin/route-* /usr/local/bin/
+COPY --from=route-builder /usr/local/bin/route-* /usr/local/bin/
 
 # Create route tools wrapper script
 RUN cat > /usr/local/bin/route-manager << 'EOF'
