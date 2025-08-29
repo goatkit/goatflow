@@ -403,3 +403,29 @@ browser_test.py
 
 # Internal test storage
 internal/api/storage/
+
+# ============================================
+# Task Status Tracking (Temporary)
+# ============================================
+.task-status/
+
+# ============================================
+# Import/Test Commands with Credentials
+# ============================================
+cmd/import-otrs/
+cmd/test-*/
+cmd/example-*/
+
+# ============================================
+# Schema and Migration Development
+# ============================================
+schemas/
+schema/
+internal/database/schema/
+
+# ============================================
+# Fix Scripts (May Contain Real Data)
+# ============================================  
+scripts/fix-*.sql
+scripts/reimport-*.sql
+scripts/*-mapping.sql
