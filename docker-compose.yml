@@ -2,29 +2,29 @@
 # No version specified for better Podman compatibility
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: gotrs-postgres
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      # Pass APP_ENV to prevent test database creation in production
-      APP_ENV: ${APP_ENV:-development}
-    ports:
-      - "${DB_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      # Init script handles any username and creates test database safely
-      - ./docker/postgres/01-init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro,Z
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - gotrs-network
+  # PostgreSQL Database - DISABLED when using OTRS MySQL
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: gotrs-postgres
+  #   environment:
+  #     POSTGRES_DB: ${DB_NAME}
+  #     POSTGRES_USER: ${DB_USER}
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
+  #     # Pass APP_ENV to prevent test database creation in production
+  #     APP_ENV: ${APP_ENV:-development}
+  #   ports:
+  #     - "${DB_PORT:-5432}:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     # Init script handles any username and creates test database safely
+  #     - ./docker/postgres/01-init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro,Z
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - gotrs-network
 
   # Valkey Cache
   valkey:
@@ -44,27 +44,29 @@ services:
 
   # Go Backend with Hot Reload
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: gotrs:latest
     container_name: gotrs-backend
     environment:
       # Enable YAML-based routing by default  
       ENABLE_YAML_ROUTING: true
       ROUTES_DIR: /app/routes
-      APP_ENV: development
-      APP_PORT: 8080
-      DB_HOST: postgres
-      DB_PORT: 5432
+      APP_ENV: ${APP_ENV:-development}
+      APP_PORT: ${APP_PORT:-8080}
+      DB_DRIVER: ${DB_DRIVER:-postgres}
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
+      DATABASE_URL: ${DATABASE_URL}
       VALKEY_HOST: valkey
       VALKEY_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
-      DEMO_MODE: ${DEMO_MODE}
+      DEMO_MODE: ${DEMO_MODE:-false}
       DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL}
       DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD}
+      PASSWORD_HASH_TYPE: ${PASSWORD_HASH_TYPE:-sha256}
+      MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       STORAGE_LOCAL_PATH: ./storage
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-10MB}
       ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,doc,docx,txt,png,jpg,jpeg,gif,zip}
@@ -73,8 +75,8 @@ services:
     volumes:
       - ./storage:/app/storage:Z
     depends_on:
-      postgres:
-        condition: service_healthy
+      # postgres:
+      #   condition: service_healthy
       valkey:
         condition: service_healthy
     networks:
