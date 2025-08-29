@@ -79,10 +79,11 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 
 	// Create the ticket model
 	customerEmail := req.CustomerEmail
+	typeIDInt := int(typeID)
 	ticket := &models.Ticket{
 		Title:            ticketTitle,
 		QueueID:          int(queueID),
-		TypeID:           int(typeID),
+		TypeID:           &typeIDInt,
 		TicketPriorityID: getPriorityID(req.Priority),
 		TicketStateID:    1, // New
 		TicketLockID:     1, // Unlocked
@@ -183,11 +184,11 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 			
 			// Save attachment record to database
 			// OTRS stores attachments in article_data_mime_attachment table
-			_, err = db.Exec(`
+			_, err = db.Exec(database.ConvertPlaceholders(`
 				INSERT INTO article_data_mime_attachment 
 				(article_id, filename, content_type, content_size, content, 
 				 disposition, create_by, change_by)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`),
 				article.ID, 
 				fileHeader.Filename,
 				contentType,
@@ -222,8 +223,11 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 		"ticket_number": ticket.TicketNumber,
 		"message":       "Ticket created successfully",
 		"queue_id":      float64(ticket.QueueID),
-		"type_id":       float64(ticket.TypeID),
 		"priority":      req.Priority,
+	}
+	// Add type_id if it's not nil
+	if ticket.TypeID != nil {
+		response["type_id"] = float64(*ticket.TypeID)
 	}
 	
 	// Include attachment info if any were processed

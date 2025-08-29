@@ -201,22 +201,21 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 			return
 		}
 		
-		_, err = tx.Exec(`
+		_, err = tx.Exec(database.ConvertPlaceholders(`
 			UPDATE users 
 			SET login = $1, pw = $2, first_name = $3, last_name = $4, 
 			    valid_id = $5, change_time = NOW(), change_by = 1
-			WHERE id = $6`,
+			WHERE id = $6`),
 			req.Login, string(hash), req.FirstName, req.LastName, req.ValidID, id,
 		)
 	} else {
 		// Update without changing password
-		_, err = tx.Exec(`
+		_, err = tx.Exec(database.ConvertPlaceholders(`
 			UPDATE users 
 			SET login = $1, first_name = $2, last_name = $3, 
 			    valid_id = $4, change_time = NOW(), change_by = 1
-			WHERE id = $5`,
-			req.Login, req.FirstName, req.LastName, req.ValidID, id,
-		)
+			WHERE id = $5`),
+			req.Login, req.FirstName, req.LastName, req.ValidID, id)
 	}
 
 	if err != nil {
@@ -235,10 +234,10 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 	
 	// First, get current group memberships for logging
 	var currentGroups []string
-	rows, err := tx.Query(`
+	rows, err := tx.Query(database.ConvertPlaceholders(`
 		SELECT g.name FROM groups g 
 		JOIN group_user gu ON g.id = gu.group_id 
-		WHERE gu.user_id = $1 AND g.valid_id = 1`, id)
+		WHERE gu.user_id = $1 AND g.valid_id = 1`), id)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -282,11 +281,10 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 			continue
 		}
 		
-		_, err = tx.Exec(`
+		_, err = tx.Exec(database.ConvertPlaceholders(`
 			INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)`,
-			id, groupID,
-		)
+			VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)`),
+			id, groupID)
 		
 		if err != nil {
 			fmt.Printf("ERROR: Failed to add user %d to group '%s' (id=%d): %v\n", 
@@ -311,11 +309,11 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 
 	// Final verification - query the actual groups from database
 	var finalGroups []string
-	rows, err = db.Query(`
+	rows, err = db.Query(database.ConvertPlaceholders(`
 		SELECT g.name FROM groups g 
 		JOIN group_user gu ON g.id = gu.group_id 
 		WHERE gu.user_id = $1 AND g.valid_id = 1
-		ORDER BY g.name`, id)
+		ORDER BY g.name`), id)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {

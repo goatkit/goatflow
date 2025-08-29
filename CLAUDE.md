@@ -4,18 +4,37 @@
 GOTRS is a modern ticketing system replacing OTRS, built with Go backend and HTMX frontend. Hypermedia-driven architecture with server-side rendering for simplicity and performance. Security-first design with rootless containers.
 
 ## Tech Stack
-- Backend: Go 1.22+, Gin, PostgreSQL, Valkey, Temporal, Zinc
+- Backend: Go 1.22+, Gin, **MySQL/PostgreSQL** (dual compatibility), Valkey, Temporal, Zinc
 - Frontend: HTMX, Alpine.js, Tailwind CSS (server-rendered)
-- Real-time: Server-Sent Events (SSE)
+- Real-time: Server-Sent Events (SSE)  
 - Containers: Docker/Podman (first-class support for both)
 - Deploy: Kubernetes, OpenShift-ready
-- Current Phase: MVP Development (Started Aug 10, 2025)
+- Current Phase: MySQL Compatibility Achieved (Aug 29, 2025)
 
 ## Key Principles
 - **Docker/Podman from Day 1**: All development in containers
 - **Security First**: Non-root containers (UID 1000), Alpine base
 - **Podman Priority**: Full rootless and SELinux support
 - **OpenShift Ready**: SCC-compatible containers
+- **OTRS MySQL Compatibility**: Full compatibility with existing OTRS installations
+
+## CRITICAL: Database Access Patterns (MANDATORY)
+
+**⚠️ NEVER write direct SQL without ConvertPlaceholders wrapper**
+
+```go
+// ✅ CORRECT - Works on both PostgreSQL and MySQL
+db.Query(database.ConvertPlaceholders(`
+    SELECT id, title FROM ticket WHERE queue_id = $1
+`), queueID)
+
+// ❌ WRONG - Breaks MySQL with "$1" errors
+db.Query("SELECT id, title FROM ticket WHERE queue_id = $1", queueID)
+```
+
+**Achievement (Aug 29, 2025)**: Fixed 500+ placeholder conversion errors, full OTRS MySQL compatibility restored.
+
+See `DATABASE_ACCESS_PATTERNS.md` for complete documentation.
 
 ## Project Structure
 ```

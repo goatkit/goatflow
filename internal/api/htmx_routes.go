@@ -16,6 +16,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/ldap"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
@@ -339,10 +340,10 @@ func getUserMapForTemplate(c *gin.Context) gin.H {
 			}
 			
 			if userIDVal > 0 {
-				err := db.QueryRow(`
+				err := db.QueryRow(database.ConvertPlaceholders(`
 					SELECT login, first_name, last_name 
 					FROM users 
-					WHERE id = $1`,
+					WHERE id = $1`),
 					userIDVal).Scan(&dbLogin, &dbFirstName, &dbLastName)
 				
 				if err == nil {
@@ -359,11 +360,11 @@ func getUserMapForTemplate(c *gin.Context) gin.H {
 				
 				// Check if user is in admin group for Dev menu access
 				var count int
-				err = db.QueryRow(`
+				err = db.QueryRow(database.ConvertPlaceholders(`
 					SELECT COUNT(*) 
 					FROM group_user ug 
 					JOIN groups g ON ug.group_id = g.id 
-					WHERE ug.user_id = $1 AND g.name = 'admin'`,
+					WHERE ug.user_id = $1 AND g.name = 'admin'`),
 					userIDVal).Scan(&count)
 				if err == nil && count > 0 {
 					isInAdminGroup = true
@@ -453,11 +454,11 @@ func checkAdmin() gin.HandlerFunc {
 			db, err := database.GetDB()
 			if err == nil {
 				var count int
-				err = db.QueryRow(`
+				err = db.QueryRow(database.ConvertPlaceholders(`
 					SELECT COUNT(*) 
 					FROM group_user ug 
 					JOIN groups g ON ug.group_id = g.id 
-					WHERE ug.user_id = $1 AND g.name = 'admin'`,
+					WHERE ug.user_id = $1 AND g.name = 'admin'`),
 					userID).Scan(&count)
 				if err == nil && count > 0 {
 					c.Next()
@@ -645,8 +646,13 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 	protected.GET("/ticket/:id", handleTicketDetail)
 	protected.GET("/queues", handleQueues)
 	protected.GET("/queues/:id", handleQueueDetail)
-	protected.GET("/profile", handleProfile)
+	// Disabled - using YAML redirect route instead
+	// protected.GET("/profile", handleProfile)
 	protected.GET("/settings", handleSettings)
+	
+	// API routes for user preferences
+	protected.GET("/api/preferences/session-timeout", HandleGetSessionTimeout)
+	protected.POST("/api/preferences/session-timeout", HandleSetSessionTimeout)
 
 	// Developer routes - for Claude's development tools
 	devRoutes := protected.Group("/dev")
@@ -1147,66 +1153,71 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// Get database connection
 		db, err := database.GetDB()
 		if err != nil {
-			// Fall back to demo credentials if DB not available
-			if (username == "admin" && password == "admin123") ||
-				(username == "demo" && password == "demo123") ||
-				(username == "agent" && password == "agent123") {
+			// No fallback - database connection is required
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"success": false,
+				"error":   "Database connection unavailable",
+			})
+			return
+		}
+		
+		// Check credentials against database
+		var dbUserID int
+		var dbPassword string
+		var validID int
+		
+		// Query user and verify password
+		query := database.ConvertPlaceholders(`
+			SELECT id, pw, valid_id 
+			FROM users 
+			WHERE login = $1 
+			AND valid_id = 1`)
+		log.Printf("DEBUG: Querying for user '%s' with query: %s", username, query)
+		err = db.QueryRow(query, username).Scan(&dbUserID, &dbPassword, &validID)
+		if err != nil {
+			log.Printf("DEBUG: Query error: %v", err)
+		} else {
+			log.Printf("DEBUG: Found user ID %d with password hash starting with: %.20s", dbUserID, dbPassword)
+		}
+		
+		if err == nil && validID == 1 {
+			// Verify the password (handles both salted and unsalted)
+			log.Printf("DEBUG: Verifying password for user %d", dbUserID)
+			if verifyPassword(password, dbPassword) {
+				log.Printf("DEBUG: Password verification successful for user %d", dbUserID)
 				validLogin = true
-				if username == "demo" {
-					userID = 2
-				} else if username == "agent" {
-					userID = 3
-				}
+				userID = uint(dbUserID)
+			} else {
+				log.Printf("DEBUG: Password verification failed for user %d", dbUserID)
 			}
 		} else {
-			// Check credentials against database
-			var dbUserID int
-			var dbPassword string
-			var validID int
-			
-			// Query user and verify password
-			err := db.QueryRow(`
+			// If database check fails, try legacy plain text (for migration period)
+			// This should be removed once all passwords are migrated
+			query2 := database.ConvertPlaceholders(`
 				SELECT id, pw, valid_id 
 				FROM users 
 				WHERE login = $1 
-				AND valid_id = 1`,
-				username).Scan(&dbUserID, &dbPassword, &validID)
+				AND pw = $2
+				AND valid_id = 1`)
+			err = db.QueryRow(query2, username, password).Scan(&dbUserID, &dbPassword, &validID)
 			
 			if err == nil && validID == 1 {
-				// Verify the password (handles both salted and unsalted)
-				if verifyPassword(password, dbPassword) {
-					validLogin = true
-					userID = uint(dbUserID)
-				}
-			} else {
-				// If database check fails, try legacy plain text (for migration period)
-				// This should be removed once all passwords are migrated
-				err = db.QueryRow(`
-					SELECT id, pw, valid_id 
-					FROM users 
-					WHERE login = $1 
-					AND pw = $2
-					AND valid_id = 1`,
-					username, password).Scan(&dbUserID, &dbPassword, &validID)
+				validLogin = true
+				userID = uint(dbUserID)
 				
-				if err == nil && validID == 1 {
-					validLogin = true
-					userID = uint(dbUserID)
-					
-					// Update the password to use salted hashing
-					// Generate salt and hash the password
-					salt := generateSalt()
-					combined := password + salt
-					hash := sha256.Sum256([]byte(combined))
-					hashedPassword := fmt.Sprintf("sha256$%s$%s", salt, hex.EncodeToString(hash[:]))
-					
-					_, _ = db.Exec(`
-						UPDATE users 
-						SET pw = $1,
-						    change_time = CURRENT_TIMESTAMP
-						WHERE id = $2`,
-						hashedPassword, dbUserID)
-				}
+				// Update the password to use salted hashing
+				// Generate salt and hash the password
+				salt := generateSalt()
+				combined := password + salt
+				hash := sha256.Sum256([]byte(combined))
+				hashedPassword := fmt.Sprintf("sha256$%s$%s", salt, hex.EncodeToString(hash[:]))
+				
+				updateQuery := database.ConvertPlaceholders(`
+					UPDATE users 
+					SET pw = $1,
+					    change_time = CURRENT_TIMESTAMP
+					WHERE id = $2`)
+				_, _ = db.Exec(updateQuery, hashedPassword, dbUserID)
 			}
 		}
 		
@@ -1243,8 +1254,17 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			token = fmt.Sprintf("demo_session_%d_%d", userID, time.Now().Unix())
 		}
 		
+		// Get user's preferred session timeout
+		sessionTimeout := constants.DefaultSessionTimeout // Default 24 hours
+		if db != nil {
+			prefService := service.NewUserPreferencesService(db)
+			if userTimeout := prefService.GetSessionTimeout(int(userID)); userTimeout > 0 {
+				sessionTimeout = userTimeout
+			}
+		}
+		
 		// Set cookie
-		c.SetCookie("access_token", token, 86400, "/", "", false, true)
+		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
 		
 		// For HTMX requests, send redirect header
 		if c.GetHeader("HX-Request") == "true" {
@@ -1308,11 +1328,11 @@ func handleDashboard(c *gin.Context) {
 	}
 	
 	// Count tickets closed today (state_id = 3)
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM ticket 
 		WHERE ticket_state_id = 3 
 		AND change_time >= CURRENT_DATE
-	`).Scan(&closedToday)
+	`)).Scan(&closedToday)
 	if err != nil {
 		closedToday = 0
 	}
@@ -1827,11 +1847,11 @@ func handleDashboardStats(c *gin.Context) {
 	db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = 5").Scan(&pendingTickets)
 	
 	// Count tickets closed today
-	db.QueryRow(`
+	db.QueryRow(database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM ticket 
 		WHERE ticket_state_id = 3 
 		AND change_time >= CURRENT_DATE
-	`).Scan(&closedToday)
+	`)).Scan(&closedToday)
 	
 	stats := gin.H{
 		"openTickets":     openTickets,
@@ -2418,11 +2438,11 @@ func handleAssignTicket(c *gin.Context) {
 	}
 	
 	// Update the ticket's responsible_user_id
-	_, err = db.Exec(`
+	_, err = db.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket 
 		SET responsible_user_id = $1, change_time = NOW(), change_by = $2 
 		WHERE id = $3
-	`, assignment.AgentID, userID, ticketIDInt)
+	`), assignment.AgentID, userID, ticketIDInt)
 	
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign ticket"})
@@ -2431,11 +2451,11 @@ func handleAssignTicket(c *gin.Context) {
 	
 	// Get the agent's name for the response
 	var agentName string
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT first_name || ' ' || last_name 
 		FROM users 
 		WHERE id = $1
-	`, assignment.AgentID).Scan(&agentName)
+	`), assignment.AgentID).Scan(&agentName)
 	
 	if err != nil {
 		agentName = fmt.Sprintf("Agent %d", assignment.AgentID)
@@ -2507,11 +2527,11 @@ func handleCloseTicket(c *gin.Context) {
 	defer tx.Rollback()
 	
 	// Update ticket state
-	_, err = tx.Exec(`
+	_, err = tx.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket 
 		SET ticket_state_id = $1, change_time = NOW(), change_by = $2 
 		WHERE id = $3
-	`, closeData.StateID, userID, ticketIDInt)
+	`), closeData.StateID, userID, ticketIDInt)
 	
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close ticket"})
@@ -2582,11 +2602,11 @@ func handleReopenTicket(c *gin.Context) {
 	}
 	
 	// Update ticket state
-	_, err = db.Exec(`
+	_, err = db.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket 
 		SET ticket_state_id = $1, change_time = NOW(), change_by = $2 
 		WHERE id = $3
-	`, targetStateID, 1, ticketIDInt) // Using system user (1) for now
+	`), targetStateID, 1, ticketIDInt) // Using system user (1) for now
 	
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reopen ticket"})
@@ -2600,10 +2620,10 @@ func handleReopenTicket(c *gin.Context) {
 	}
 	
 	// Insert history/note entry
-	_, err = db.Exec(`
+	_, err = db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO article (ticket_id, article_type_id, subject, body, created_time, created_by, change_time, change_by)
 		VALUES ($1, 1, $2, $3, NOW(), $4, NOW(), $4)
-	`, ticketIDInt, "Ticket Reopened", reopenNote, 1) // Using system user (1) for now
+	`), ticketIDInt, "Ticket Reopened", reopenNote, 1) // Using system user (1) for now
 	
 	if err != nil {
 		// Log the error but don't fail the reopen operation
@@ -2647,12 +2667,12 @@ func handleSearchTickets(c *gin.Context) {
 	
 	// Search in ticket title and number
 	results := []gin.H{}
-	rows, err := db.Query(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, tn, title 
 		FROM ticket 
 		WHERE title ILIKE $1 OR tn ILIKE $1
 		LIMIT 20
-	`, "%"+query+"%")
+	`), "%"+query+"%")
 	
 	if err == nil {
 		defer rows.Close()
@@ -3870,12 +3890,12 @@ func handleAdminPriorities(c *gin.Context) {
 	}
 	
 	// Get priorities from database
-	rows, err := db.Query(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, name, color, valid_id 
 		FROM ticket_priority 
 		WHERE valid_id = 1 
 		ORDER BY id
-	`)
+	`))
 	if err != nil {
 		sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch priorities")
 		return
@@ -4777,7 +4797,7 @@ func handleCustomerSearch(c *gin.Context) {
 		searchTerm = "%" + searchTerm + "%"
 	}
 	
-	rows, err := db.Query(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, login, email, first_name, last_name, customer_id
 		FROM customer_user
 		WHERE valid_id = 1
@@ -4786,7 +4806,7 @@ func handleCustomerSearch(c *gin.Context) {
 		       OR first_name ILIKE $1 
 		       OR last_name ILIKE $1
 		       OR CONCAT(first_name, ' ', last_name) ILIKE $1)
-		LIMIT 10`,
+		LIMIT 10`),
 		searchTerm)
 	
 	if err != nil {
@@ -5176,7 +5196,7 @@ func handleClaudeFeedback(c *gin.Context) {
 
 	// Create ticket in database
 	var ticketID int64
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		INSERT INTO ticket (
 			tn, title, queue_id, ticket_lock_id, type_id,
 			user_id, responsible_user_id, ticket_priority_id, ticket_state_id,
@@ -5187,7 +5207,7 @@ func handleClaudeFeedback(c *gin.Context) {
 			$3, $3, 3, 1,
 			'Claude Code', $4,
 			CURRENT_TIMESTAMP, $3, CURRENT_TIMESTAMP, $3
-		) RETURNING id`,
+		) RETURNING id`),
 		ticketNumber, title, userID, feedback.Context.User).Scan(&ticketID)
 	
 	if err != nil {
@@ -5201,7 +5221,7 @@ func handleClaudeFeedback(c *gin.Context) {
 
 	// Create article first (without content - that goes in article_data_mime)
 	var articleID int64
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		INSERT INTO article (
 			ticket_id, article_type_id, article_sender_type_id,
 			communication_channel_id, is_visible_for_customer,
@@ -5210,14 +5230,14 @@ func handleClaudeFeedback(c *gin.Context) {
 			$1, 1, 3,
 			1, 1,
 			CURRENT_TIMESTAMP, $2, CURRENT_TIMESTAMP, $2
-		) RETURNING id`,
+		) RETURNING id`),
 		ticketID, userID).Scan(&articleID)
 	
 	if err != nil {
 		log.Printf("Failed to create article: %v", err)
 	} else {
 		// Now create the article_data_mime entry with the actual content and context
-		_, err = db.Exec(`
+		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO article_data_mime (
 				article_id, a_from, a_to, a_subject, a_body,
 				a_content_type, incoming_time,
@@ -5226,7 +5246,7 @@ func handleClaudeFeedback(c *gin.Context) {
 				$1, $2, 'Claude Code Queue', $3, $4,
 				'text/plain; charset=utf-8', 0,
 				CURRENT_TIMESTAMP, $5, CURRENT_TIMESTAMP, $5
-			)`,
+			)`),
 			articleID, 
 			feedback.Context.User, 
 			title, 

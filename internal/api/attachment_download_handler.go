@@ -32,12 +32,12 @@ func handleAttachmentDownload(c *gin.Context) {
 	var content []byte
 	var disposition sql.NullString
 
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT filename, COALESCE(content_type, 'application/octet-stream'), 
 		       COALESCE(content_size, '0'), content, disposition
 		FROM article_data_mime_attachment
 		WHERE id = $1
-	`, attachmentID).Scan(&filename, &contentType, &contentSize, &content, &disposition)
+	`), attachmentID).Scan(&filename, &contentType, &contentSize, &content, &disposition)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -109,7 +109,7 @@ func handleAttachmentDelete(c *gin.Context) {
 	}
 
 	// Delete from database (content is now stored in DB, not on disk)
-	result, err := db.Exec(`DELETE FROM article_data_mime_attachment WHERE id = $1`, attachmentID)
+	result, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM article_data_mime_attachment WHERE id = $1`), attachmentID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete attachment record"})
 		return
@@ -140,13 +140,13 @@ func GetAttachmentInfo(attachmentID int) (map[string]interface{}, error) {
 	var filename, contentType, contentSize string
 	var articleID int
 
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT article_id, filename, 
 		       COALESCE(content_type, 'application/octet-stream'),
 		       COALESCE(content_size, '0')
 		FROM article_data_mime_attachment
 		WHERE id = $1
-	`, attachmentID).Scan(&articleID, &filename, &contentType, &contentSize)
+	`), attachmentID).Scan(&articleID, &filename, &contentType, &contentSize)
 
 	if err != nil {
 		return nil, err

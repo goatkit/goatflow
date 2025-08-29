@@ -128,7 +128,7 @@ func handleClaudeTickets(c *gin.Context) {
 	db, _ := database.GetDB()
 
 	// Get all tickets from Claude Code queue
-	rows, err := db.Query(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT 
 			t.id,
 			t.tn,
@@ -144,7 +144,7 @@ func handleClaudeTickets(c *gin.Context) {
 		WHERE t.queue_id = 14
 		ORDER BY t.create_time DESC
 		LIMIT 50
-	`)
+	`))
 	if err != nil {
 		pongo2Renderer.HTML(c, http.StatusInternalServerError, "error.pongo2", pongo2.Context{
 			"error": "Failed to fetch tickets",
@@ -181,7 +181,7 @@ func handleClaudeTickets(c *gin.Context) {
 		}
 
 		// Get articles for this ticket
-		articleRows, err := db.Query(`
+		articleRows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT 
 				adm.a_from,
 				adm.a_subject,
@@ -192,7 +192,7 @@ func handleClaudeTickets(c *gin.Context) {
 			WHERE a.ticket_id = $1
 			ORDER BY a.create_time DESC
 			LIMIT 5
-		`, t.ID)
+		`), t.ID)
 		if err == nil {
 			defer articleRows.Close()
 			for articleRows.Next() {
@@ -312,12 +312,12 @@ func handleDevAction(c *gin.Context) {
 
 		// Insert article
 		var articleID int
-		err = db.QueryRow(`
+		err = db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id, 
 				is_visible_for_customer, create_by, change_by, create_time, change_time)
 			VALUES ($1, 1, 1, 1, 1, 1, NOW(), NOW())
 			RETURNING id
-		`, ticketID).Scan(&articleID)
+		`), ticketID).Scan(&articleID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -327,13 +327,13 @@ func handleDevAction(c *gin.Context) {
 		}
 
 		// Insert article content
-		_, err = db.Exec(`
+		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO article_data_mime (article_id, a_from, a_to, a_subject, a_body, 
 				a_content_type, incoming_time, create_by, change_by, create_time, change_time)
 			VALUES ($1, 'claude@gotrs.local', 'customer@gotrs.local', 
 				'Response added via Claude Ticket Monitor', $2, 'text/plain',
 				EXTRACT(EPOCH FROM NOW())::integer, 1, 1, NOW(), NOW())
-		`, articleID, req.Response)
+		`), articleID, req.Response)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -345,12 +345,12 @@ func handleDevAction(c *gin.Context) {
 		// Check if ticket is closed and reopen it
 		var currentStateID int
 		var currentStateName string
-		err = db.QueryRow(`
+		err = db.QueryRow(database.ConvertPlaceholders(`
 			SELECT ts.id, ts.name 
 			FROM ticket t 
 			JOIN ticket_state ts ON t.ticket_state_id = ts.id 
 			WHERE t.id = $1
-		`, ticketID).Scan(&currentStateID, &currentStateName)
+		`), ticketID).Scan(&currentStateID, &currentStateName)
 		if err == nil {
 			// If ticket is in a closed state, reopen it
 			if strings.Contains(strings.ToLower(currentStateName), "closed") || 
@@ -361,11 +361,11 @@ func handleDevAction(c *gin.Context) {
 				err = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'open' LIMIT 1").Scan(&openStateID)
 				if err == nil {
 					// Update ticket to open state
-					_, err = db.Exec(`
+					_, err = db.Exec(database.ConvertPlaceholders(`
 						UPDATE ticket 
 						SET ticket_state_id = $1, change_time = NOW(), change_by = 1 
 						WHERE id = $2
-					`, openStateID, ticketID)
+					`), openStateID, ticketID)
 					if err == nil {
 						c.JSON(http.StatusOK, gin.H{
 							"success": true,
@@ -417,10 +417,10 @@ func handleDevAction(c *gin.Context) {
 		}
 
 		// Update ticket status
-		result, err := db.Exec(`
+		result, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket SET ticket_state_id = $1, change_time = NOW(), change_by = 1
 			WHERE tn = $2
-		`, stateID, req.Ticket)
+		`), stateID, req.Ticket)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -519,12 +519,12 @@ func handleDevDatabase(c *gin.Context) {
 	db, _ := database.GetDB()
 
 	// Get list of tables
-	rows, err := db.Query(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT tablename 
 		FROM pg_tables 
 		WHERE schemaname = 'public' 
 		ORDER BY tablename
-	`)
+	`))
 	if err != nil {
 		pongo2Renderer.HTML(c, http.StatusInternalServerError, "error.pongo2", pongo2.Context{
 			"error": "Failed to get tables",

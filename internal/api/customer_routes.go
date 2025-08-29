@@ -8,6 +8,7 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // RegisterCustomerRoutes registers all customer portal routes
@@ -59,33 +60,33 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		}{}
 		
 		// Count open tickets for this customer
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket 
 			WHERE customer_user_id = $1 
 			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2))
-		`, username).Scan(&stats.OpenTickets)
+		`), username).Scan(&stats.OpenTickets)
 		
 		// Count closed tickets for this customer
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket 
 			WHERE customer_user_id = $1 
 			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)
-		`, username).Scan(&stats.ClosedTickets)
+		`), username).Scan(&stats.ClosedTickets)
 		
 		stats.TotalTickets = stats.OpenTickets + stats.ClosedTickets
 		
 		// Get last ticket date
 		var lastDate sql.NullTime
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT MAX(create_time) FROM ticket 
 			WHERE customer_user_id = $1
-		`, username).Scan(&lastDate)
+		`), username).Scan(&lastDate)
 		if lastDate.Valid {
 			stats.LastTicketDate = &lastDate.Time
 		}
 		
 		// Get recent tickets
-		rows, _ := db.Query(`
+		rows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT t.id, t.tn, t.title, 
 				   ts.name as state,
 				   tp.name as priority,
@@ -107,7 +108,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 			WHERE t.customer_user_id = $1
 			ORDER BY t.create_time DESC
 			LIMIT 10
-		`, username, userID)
+		`), username, userID)
 		defer rows.Close()
 		
 		recentTickets := []map[string]interface{}{}
@@ -149,12 +150,12 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 			Email     string
 			Company   sql.NullString
 		}
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT cu.first_name, cu.last_name, cu.email, cc.name as company
 			FROM customer_user cu
 			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
 			WHERE cu.login = $1
-		`, username).Scan(&customerInfo.FirstName, &customerInfo.LastName, 
+		`), username).Scan(&customerInfo.FirstName, &customerInfo.LastName, 
 			&customerInfo.Email, &customerInfo.Company)
 		
 		// Get announcements/news (if any)
@@ -296,11 +297,11 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get available services for customer
-		rows, _ := db.Query(`
+		rows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT id, name FROM service 
 			WHERE valid_id = 1
 			ORDER BY name
-		`)
+		`))
 		defer rows.Close()
 		
 		services := []map[string]interface{}{}
@@ -317,11 +318,11 @@ func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Get priorities customer can select
-		prRows, _ := db.Query(`
+		prRows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT id, name FROM ticket_priority 
 			WHERE valid_id = 1 AND name NOT IN ('1 very low', '5 very high')
 			ORDER BY id
-		`)
+		`))
 		defer prRows.Close()
 		
 		priorities := []map[string]interface{}{}
@@ -374,9 +375,9 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 		
 		// Get customer's company
 		var customerID sql.NullString
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT customer_id FROM customer_user WHERE login = $1
-		`, username).Scan(&customerID)
+		`), username).Scan(&customerID)
 		
 		// Set defaults
 		if priorityID == "" {
@@ -385,7 +386,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 		
 		// Create ticket
 		var ticketID int
-		err := db.QueryRow(`
+		err := db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO ticket (
 				tn, title, queue_id, type_id, service_id,
 				ticket_state_id, ticket_priority_id,
@@ -397,7 +398,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 				$5, $6,
 				NOW(), $7, NOW(), $7
 			) RETURNING id
-		`, tn, title, serviceID, priorityID, customerID, username, userID).Scan(&ticketID)
+		`), tn, title, serviceID, priorityID, customerID, username, userID).Scan(&ticketID)
 		
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create ticket"})
@@ -405,7 +406,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Create first article
-		_, err = db.Exec(`
+		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO article (
 				ticket_id, article_sender_type_id, communication_channel_id,
 				is_visible_for_customer, subject, body,
@@ -415,7 +416,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 				1, $2, $3,
 				NOW(), $4, NOW(), $4
 			)
-		`, ticketID, title, message, userID)
+		`), ticketID, title, message, userID)
 		
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create article"})
@@ -450,7 +451,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			ChangeTime    time.Time
 		}
 		
-		err := db.QueryRow(`
+		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT t.id, t.tn, t.title,
 			       ts.name as state, ts.id as state_id,
 			       tp.name as priority, 
@@ -475,7 +476,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			LEFT JOIN users ou ON t.user_id = ou.id
 			LEFT JOIN users ru ON t.responsible_user_id = ru.id
 			WHERE t.id = $1 AND t.customer_user_id = $2
-		`, ticketID, username).Scan(
+		`), ticketID, username).Scan(
 			&ticket.ID, &ticket.TN, &ticket.Title,
 			&ticket.State, &ticket.StateID,
 			&ticket.Priority, &ticket.PriorityColor,
@@ -493,7 +494,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Get articles for this ticket (only customer-visible ones)
-		rows, _ := db.Query(`
+		rows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT a.id, a.subject, a.body,
 			       ast.name as sender_type,
 			       u.login as author,
@@ -506,7 +507,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			WHERE a.ticket_id = $1 
 			  AND a.is_visible_for_customer = 1
 			ORDER BY a.create_time ASC
-		`, ticket.ID)
+		`), ticket.ID)
 		defer rows.Close()
 		
 		articles := []map[string]interface{}{}
@@ -581,12 +582,12 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		
 		// Verify customer owns this ticket
 		var exists bool
-		err := db.QueryRow(`
+		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT EXISTS(
 				SELECT 1 FROM ticket 
 				WHERE id = $1 AND customer_user_id = $2
 			)
-		`, ticketID, username).Scan(&exists)
+		`), ticketID, username).Scan(&exists)
 		
 		if err != nil || !exists {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
@@ -605,7 +606,7 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		db.QueryRow("SELECT title FROM ticket WHERE id = $1", ticketID).Scan(&ticketTitle)
 		
 		// Create article
-		_, err = db.Exec(`
+		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO article (
 				ticket_id, article_sender_type_id, communication_channel_id,
 				is_visible_for_customer, subject, body,
@@ -615,7 +616,7 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 				1, $2, $3,
 				NOW(), $4, NOW(), $4
 			)
-		`, ticketID, "Re: "+ticketTitle, message, userID)
+		`), ticketID, "Re: "+ticketTitle, message, userID)
 		
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add reply"})
@@ -623,11 +624,11 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Update ticket state to open if it was pending
-		db.Exec(`
+		db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
 			SET ticket_state_id = 4, change_time = NOW(), change_by = $2
 			WHERE id = $1 AND ticket_state_id IN (6, 7)
-		`, ticketID, userID)
+		`), ticketID, userID)
 		
 		// Redirect back to ticket view
 		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/customer/tickets/%s", ticketID))
@@ -642,10 +643,10 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 		
 		// Verify customer owns this ticket and it's not already closed
 		var stateID int
-		err := db.QueryRow(`
+		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT ticket_state_id FROM ticket 
 			WHERE id = $1 AND customer_user_id = $2
-		`, ticketID, username).Scan(&stateID)
+		`), ticketID, username).Scan(&stateID)
 		
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -662,11 +663,11 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Close the ticket
-		_, err = db.Exec(`
+		_, err = db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
 			SET ticket_state_id = 2, change_time = NOW(), change_by = $2
 			WHERE id = $1
-		`, ticketID, userID)
+		`), ticketID, userID)
 		
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to close ticket"})
@@ -674,7 +675,7 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Add a note about closure
-		db.Exec(`
+		db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO article (
 				ticket_id, article_sender_type_id, communication_channel_id,
 				is_visible_for_customer, subject, body,
@@ -684,7 +685,7 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 				1, 'Ticket closed by customer', 'Customer closed this ticket.',
 				NOW(), $2, NOW(), $2
 			)
-		`, ticketID, userID)
+		`), ticketID, userID)
 		
 		// Redirect to tickets list
 		c.Redirect(http.StatusSeeOther, "/customer/tickets")

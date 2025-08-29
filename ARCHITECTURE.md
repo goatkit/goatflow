@@ -147,6 +147,62 @@ type UserService interface {
 }
 ```
 
+### 4. Database Abstraction Layer (Critical: MySQL Compatibility)
+
+**Achievement: Full MySQL compatibility restored (August 29, 2025)**
+
+#### Database Access Pattern (MANDATORY)
+All database access MUST use the ConvertPlaceholders wrapper for MySQL compatibility:
+
+```go
+// ✅ CORRECT - Works on both PostgreSQL and MySQL
+rows, err := db.Query(database.ConvertPlaceholders(`
+    SELECT t.id, t.tn, t.title, ts.name as state
+    FROM ticket t
+    JOIN ticket_state ts ON t.ticket_state_id = ts.id
+    WHERE t.queue_id = $1 AND t.status IN ($2, $3)
+    ORDER BY t.create_time DESC
+    LIMIT $4
+`), queueID, status1, status2, limit)
+
+// ❌ WRONG - Direct SQL breaks MySQL with "$1" errors  
+rows, err := db.Query("SELECT * FROM ticket WHERE id = $1", ticketID)
+```
+
+#### Multi-Database Support
+```go
+type DatabaseDriver interface {
+    ConvertPlaceholders(query string) string
+    ExecuteQuery(query string, args ...interface{}) (*sql.Rows, error)
+    SupportsReturning() bool
+    GetDialect() string
+}
+
+// Automatic driver detection
+func IsMySQL() bool {
+    return os.Getenv("DB_DRIVER") == "mysql"
+}
+```
+
+#### Configuration Examples
+```bash
+# OTRS MySQL (Production)
+DB_DRIVER=mysql
+DB_HOST=mysql
+DB_USER=otrs  
+DB_NAME=otrs
+DB_PORT=3306
+
+# PostgreSQL (Development)
+DB_DRIVER=postgres  
+DB_HOST=postgres
+DB_USER=gotrs_user
+DB_NAME=gotrs
+DB_PORT=5432
+```
+
+**Critical Success**: System now connects to live OTRS MySQL databases with zero placeholder errors.
+
 ### 4. YAML-Based Routing System
 ```yaml
 # Example route configuration (routes/admin/admin-users.yaml)
