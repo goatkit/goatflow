@@ -11,51 +11,7 @@ import (
 // API v1 handler exports
 
 // Tickets API handlers
-var HandleAPIv1TicketsList = func(c *gin.Context) {
-	ticketRepo := GetTicketRepository()
-	if ticketRepo == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Ticket repository not initialized",
-		})
-		return
-	}
-	
-	// Parse query parameters
-	req := &models.TicketListRequest{
-		Page:    1,
-		PerPage: 20,
-	}
-	
-	if page := c.Query("page"); page != "" {
-		if p, err := strconv.Atoi(page); err == nil {
-			req.Page = p
-		}
-	}
-	
-	if perPage := c.Query("per_page"); perPage != "" {
-		if pp, err := strconv.Atoi(perPage); err == nil {
-			req.PerPage = pp
-		}
-	}
-	
-	resp, err := ticketRepo.List(req)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   err.Error(),
-		})
-		return
-	}
-	
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    resp.Tickets,
-		"total":   resp.Total,
-		"page":    resp.Page,
-		"per_page": resp.PerPage,
-	})
-}
+var HandleAPIv1TicketsList = HandleListTicketsAPI
 
 var HandleAPIv1TicketGet = func(c *gin.Context) {
 	id := c.Param("id")

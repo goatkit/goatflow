@@ -16,6 +16,12 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/service/ticket_number"
 )
 
+// HandleListTickets returns a paginated list of tickets (exported for tests)
+func (router *APIRouter) HandleListTickets(c *gin.Context) {
+	// Delegate to the standalone handler
+	HandleListTicketsAPI(c)
+}
+
 // handleListTickets returns a paginated list of tickets
 func (router *APIRouter) handleListTickets(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
