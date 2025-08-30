@@ -17,9 +17,6 @@ import (
 // Focus on business logic and API responses
 
 func TestHTMXLoginHandler_Logic(t *testing.T) {
-	// Set up environment variables for testing
-	t.Setenv("DEMO_ADMIN_EMAIL", "test@example.com")
-	t.Setenv("DEMO_ADMIN_PASSWORD", "testpass123")
 
 	gin.SetMode(gin.TestMode)
 
@@ -75,7 +72,7 @@ func TestHTMXLoginHandler_Logic(t *testing.T) {
 
 			if tt.wantToken {
 				assert.Contains(t, w.Header().Get("HX-Redirect"), "/dashboard")
-				
+
 				var response map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
@@ -87,9 +84,6 @@ func TestHTMXLoginHandler_Logic(t *testing.T) {
 }
 
 func TestHTMXLoginHandler_NoEnvVars(t *testing.T) {
-	// Clear environment variables
-	t.Setenv("DEMO_ADMIN_EMAIL", "")
-	t.Setenv("DEMO_ADMIN_PASSWORD", "")
 
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
@@ -196,11 +190,11 @@ func TestCreateTicketHandler_Logic(t *testing.T) {
 
 			if tt.wantStatus == http.StatusCreated {
 				assert.NotEmpty(t, w.Header().Get("HX-Redirect"))
-				
+
 				var response map[string]interface{}
 				err := json.Unmarshal(w.Body.Bytes(), &response)
 				require.NoError(t, err)
-				
+
 				if tt.checkResp != nil {
 					tt.checkResp(t, response)
 				}
@@ -220,7 +214,7 @@ func TestAssignTicketHandler_Logic(t *testing.T) {
 	handleAssignTicket(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	
+
 	// Check HTMX trigger header
 	triggerHeader := w.Header().Get("HX-Trigger")
 	assert.NotEmpty(t, triggerHeader)
@@ -278,12 +272,12 @@ func TestUpdateTicketStatusHandler_Logic(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 
 			c.Params = []gin.Param{{Key: "id", Value: tt.ticketID}}
-			
+
 			formData := url.Values{}
 			if tt.status != "" {
 				formData.Set("status", tt.status)
 			}
-			
+
 			c.Request = httptest.NewRequest("POST", "/api/tickets/"+tt.ticketID+"/status", strings.NewReader(formData.Encode()))
 			c.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -342,13 +336,13 @@ func TestTicketReplyHandler_Logic(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 
 			c.Params = []gin.Param{{Key: "id", Value: tt.ticketID}}
-			
+
 			formData := url.Values{}
 			if tt.reply != "" {
 				formData.Set("reply", tt.reply)
 			}
 			formData.Set("internal", tt.internal)
-			
+
 			c.Request = httptest.NewRequest("POST", "/api/tickets/"+tt.ticketID+"/reply", strings.NewReader(formData.Encode()))
 			c.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -359,7 +353,7 @@ func TestTicketReplyHandler_Logic(t *testing.T) {
 					// Expected for template loading in unit test
 				}
 			}()
-			
+
 			handleTicketReply(c)
 
 			// Can't fully test without templates, but we've validated the logic
@@ -408,12 +402,12 @@ func TestUpdateTicketPriorityHandler_Logic(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 
 			c.Params = []gin.Param{{Key: "id", Value: tt.ticketID}}
-			
+
 			formData := url.Values{}
 			if tt.priority != "" {
 				formData.Set("priority", tt.priority)
 			}
-			
+
 			c.Request = httptest.NewRequest("POST", "/api/tickets/"+tt.ticketID+"/priority", strings.NewReader(formData.Encode()))
 			c.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -461,12 +455,12 @@ func TestUpdateTicketQueueHandler_Logic(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 
 			c.Params = []gin.Param{{Key: "id", Value: tt.ticketID}}
-			
+
 			formData := url.Values{}
 			if tt.queueID != "" {
 				formData.Set("queue_id", tt.queueID)
 			}
-			
+
 			c.Request = httptest.NewRequest("POST", "/api/tickets/"+tt.ticketID+"/queue", strings.NewReader(formData.Encode()))
 			c.Request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 

@@ -89,7 +89,7 @@ func HandleAdminUsersDelete(c *gin.Context) {
 	}
 	
 	// Soft delete - set valid_id = 2
-	_, err = db.Exec("UPDATE users SET valid_id = 2 WHERE id = $1", id)
+	_, err = db.Exec(database.ConvertPlaceholders("UPDATE users SET valid_id = 2 WHERE id = $1"), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
@@ -200,13 +200,13 @@ func HandleAdminGroupsUsers(c *gin.Context) {
 		return
 	}
 	
-	rows, err := db.Query(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT u.id, u.login, u.first_name, u.last_name, u.email
 		FROM users u
 		JOIN group_user gu ON u.id = gu.user_id
 		WHERE gu.group_id = $1 AND u.valid_id = 1
 		ORDER BY u.login
-	`, id)
+	`), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
@@ -262,11 +262,11 @@ func HandleAdminGroupsAddUser(c *gin.Context) {
 	}
 	
 	// Add user to group with default 'rw' permission
-	_, err = db.Exec(`
+	_, err = db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
 		VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)
 		ON CONFLICT (user_id, group_id, permission_key) DO NOTHING
-	`, req.UserID, id)
+	`), req.UserID, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add user to group"})
 		return

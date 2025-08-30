@@ -144,11 +144,11 @@ func handleAdminTypeCreate(c *gin.Context) {
 
 	// Insert new type
 	var newID int
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		INSERT INTO ticket_type (name, valid_id, create_by, create_time, change_by, change_time)
 		VALUES ($1, $2, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)
 		RETURNING id
-	`, input.Name, input.ValidID).Scan(&newID)
+	`), input.Name, input.ValidID).Scan(&newID)
 
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
@@ -303,10 +303,10 @@ func handleAdminTypeDelete(c *gin.Context) {
 
 	// Check if type is in use
 	var ticketCount int
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM ticket 
 		WHERE type_id = $1
-	`, id).Scan(&ticketCount)
+	`), id).Scan(&ticketCount)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -325,11 +325,11 @@ func handleAdminTypeDelete(c *gin.Context) {
 	}
 
 	// Soft delete the type
-	result, err := db.Exec(`
+	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket_type 
 		SET valid_id = 2, change_by = 1, change_time = CURRENT_TIMESTAMP
 		WHERE id = $1
-	`, id)
+	`), id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

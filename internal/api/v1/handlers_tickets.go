@@ -1,15 +1,19 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	. "github.com/gotrs-io/gotrs-ce/internal/api"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/service/ticket_number"
 )
 
 // handleListTickets returns a paginated list of tickets
@@ -78,13 +82,14 @@ func (router *APIRouter) handleListTickets(c *gin.Context) {
 // handleCreateTicket creates a new ticket
 func (router *APIRouter) handleCreateTicket(c *gin.Context) {
 	var ticketRequest struct {
-		Title          string `json:"title" binding:"required"`
-		Description    string `json:"description" binding:"required"`
-		Priority       string `json:"priority"`
-		QueueID        int    `json:"queue_id" binding:"required"`
-		CustomerEmail  string `json:"customer_email" binding:"required,email"`
-		AssignedTo     *int   `json:"assigned_to"`
-		Tags           []string `json:"tags"`
+		Title             string                 `json:"title" binding:"required"`
+		QueueID           int                    `json:"queue_id" binding:"required"`
+		TypeID            int                    `json:"type_id"`
+		StateID           int                    `json:"state_id"`
+		PriorityID        int                    `json:"priority_id"`
+		CustomerUserID    string                 `json:"customer_user_id"`
+		CustomerID        string                 `json:"customer_id"`
+		Article           map[string]interface{} `json:"article"`
 	}
 
 	if err := c.ShouldBindJSON(&ticketRequest); err != nil {
@@ -98,21 +103,184 @@ func (router *APIRouter) handleCreateTicket(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual ticket creation
+	// Get database instance using abstraction layer
+	db := database.GetDatabase()
+	if db == nil {
+		sendError(c, http.StatusInternalServerError, "Database not initialized")
+		return
+	}
+
+	// Get legacy SQL DB for ticket number generator (temporary until generator is refactored)
+	sqlDB, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database connection failed")
+		return
+	}
+
+	// Create ticket number generator based on config
+	// For now, use environment variable or default to date generator
+	generatorConfig := map[string]interface{}{
+		"type": os.Getenv("TICKET_NUMBER_GENERATOR"),
+	}
+	if generatorConfig["type"] == "" {
+		generatorConfig["type"] = "date"
+	}
+	
+	generator, err := ticket_number.NewGeneratorFromConfig(sqlDB, generatorConfig)
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to initialize ticket number generator")
+		return
+	}
+
+	// Generate ticket number
+	ticketNumber, err := generator.Generate()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to generate ticket number")
+		return
+	}
+
+	// Set defaults for missing values
+	if ticketRequest.TypeID == 0 {
+		ticketRequest.TypeID = 1 // Default type
+	}
+	if ticketRequest.StateID == 0 {
+		ticketRequest.StateID = 1 // new
+	}
+	if ticketRequest.PriorityID == 0 {
+		ticketRequest.PriorityID = 3 // normal
+	}
+
+	// Begin transaction using abstraction layer
+	ctx := c.Request.Context()
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to start transaction")
+		return
+	}
+	defer tx.Rollback()
+
+	// Build ticket insert using database abstraction
+	// For now, use direct SQL with database-specific placeholders until abstraction layer
+	// fully supports raw SQL expressions for timestamps
+	var ticketID int64
+	
+	// Use traditional approach for now - will refactor when abstraction layer is enhanced
+	if db.GetType() == database.PostgreSQL {
+		err = tx.QueryRow(ctx, `
+			INSERT INTO ticket (
+				tn, title, queue_id, type_id, ticket_state_id, 
+				ticket_priority_id, customer_user_id, customer_id,
+				ticket_lock_id, user_id, responsible_user_id,
+				create_time, create_by, change_time, change_by
+			) VALUES (
+				$1, $2, $3, $4, $5, 
+				$6, $7, $8,
+				1, $9, $9,
+				NOW(), $9, NOW(), $9
+			) RETURNING id
+		`), ticketNumber, ticketRequest.Title, ticketRequest.QueueID, 
+		   ticketRequest.TypeID, ticketRequest.StateID,
+		   ticketRequest.PriorityID, ticketRequest.CustomerUserID, ticketRequest.CustomerID,
+		   userID).Scan(&ticketID)
+	} else if db.GetType() == database.MySQL {
+		result, err := tx.Exec(ctx, `
+			INSERT INTO ticket (
+				tn, title, queue_id, type_id, ticket_state_id, 
+				ticket_priority_id, customer_user_id, customer_id,
+				ticket_lock_id, user_id, responsible_user_id,
+				create_time, create_by, change_time, change_by
+			) VALUES (
+				?, ?, ?, ?, ?, 
+				?, ?, ?,
+				1, ?, ?,
+				NOW(), ?, NOW(), ?
+			)
+		`), ticketNumber, ticketRequest.Title, ticketRequest.QueueID, 
+		   ticketRequest.TypeID, ticketRequest.StateID,
+		   ticketRequest.PriorityID, ticketRequest.CustomerUserID, ticketRequest.CustomerID,
+		   userID, userID, userID, userID)
+		
+		if err == nil {
+			ticketID, err = result.LastInsertId()
+		}
+	} else {
+		// Add support for Oracle and SQL Server when needed
+		err = fmt.Errorf("unsupported database type: %v", db.GetType())
+	}
+
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to create ticket: " + err.Error())
+		return
+	}
+
+	// Create initial article if provided
+	if ticketRequest.Article != nil {
+		subject, _ := ticketRequest.Article["subject"].(string)
+		body, _ := ticketRequest.Article["body"].(string)
+		articleTypeID := 1 // email-external default
+		senderTypeID := 3  // customer default
+		
+		if atID, ok := ticketRequest.Article["article_type_id"].(float64); ok {
+			articleTypeID = int(atID)
+		}
+		if stID, ok := ticketRequest.Article["sender_type_id"].(float64); ok {
+			senderTypeID = int(stID)
+		}
+
+		// Insert article with database-specific SQL
+		if db.GetType() == database.PostgreSQL {
+			_, err = tx.Exec(ctx, `
+				INSERT INTO article (
+					ticket_id, article_sender_type_id, communication_channel_id,
+					is_visible_for_customer, create_time, create_by, 
+					change_time, change_by
+				) VALUES (
+					$1, $2, 1, 1, NOW(), $3, NOW(), $3
+				)
+			`), ticketID, senderTypeID, userID)
+		} else if db.GetType() == database.MySQL {
+			_, err = tx.Exec(ctx, `
+				INSERT INTO article (
+					ticket_id, article_sender_type_id, communication_channel_id,
+					is_visible_for_customer, create_time, create_by, 
+					change_time, change_by
+				) VALUES (
+					?, ?, 1, 1, NOW(), ?, NOW(), ?
+				)
+			`), ticketID, senderTypeID, userID, userID)
+		}
+		
+		if err != nil {
+			sendError(c, http.StatusInternalServerError, "Failed to create article: " + err.Error())
+			return
+		}
+		
+		// Note: Article content would go in article_data_mime table
+		// For simplicity, we're not implementing full article storage yet
+		_ = subject
+		_ = body
+		_ = articleTypeID
+	}
+
+	// Commit transaction
+	if err = tx.Commit(); err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
+
+	// Return created ticket
 	ticket := gin.H{
-		"id":             123,
-		"number":         "T-2025-123",
-		"title":          ticketRequest.Title,
-		"description":    ticketRequest.Description,
-		"status":         "open",
-		"priority":       ticketRequest.Priority,
-		"queue_id":       ticketRequest.QueueID,
-		"customer_email": ticketRequest.CustomerEmail,
-		"assigned_to":    ticketRequest.AssignedTo,
-		"created_by":     userID,
-		"created_at":     time.Now().UTC(),
-		"updated_at":     time.Now().UTC(),
-		"tags":           ticketRequest.Tags,
+		"id":                fmt.Sprintf("%d", ticketID),
+		"ticket_number":     ticketNumber,
+		"title":             ticketRequest.Title,
+		"queue_id":          ticketRequest.QueueID,
+		"type_id":           ticketRequest.TypeID,
+		"state_id":          ticketRequest.StateID,
+		"priority_id":       ticketRequest.PriorityID,
+		"customer_user_id":  ticketRequest.CustomerUserID,
+		"customer_id":       ticketRequest.CustomerID,
+		"created_by":        userID,
+		"create_time":       time.Now().UTC(),
 	}
 
 	c.JSON(http.StatusCreated, APIResponse{

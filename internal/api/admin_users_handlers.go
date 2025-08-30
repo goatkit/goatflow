@@ -160,10 +160,10 @@ func HandleAdminUserCreate(c *gin.Context) {
 
 	// Create user
 	var userID int
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
 		VALUES ($1, $2, $3, $4, $5, NOW(), 1, NOW(), 1)
-		RETURNING id`,
+		RETURNING id`),
 		req.Login, hashedPassword, req.FirstName, req.LastName, req.ValidID,
 	).Scan(&userID)
 
@@ -180,10 +180,10 @@ func HandleAdminUserCreate(c *gin.Context) {
 		var groupID int
 		err = db.QueryRow("SELECT id FROM groups WHERE name = $1 AND valid_id = 1", groupName).Scan(&groupID)
 		if err == nil {
-			db.Exec(`
+			db.Exec(database.ConvertPlaceholders(`
 				INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
 				VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)
-				ON CONFLICT (user_id, group_id, permission_key) DO NOTHING`,
+				ON CONFLICT (user_id, group_id, permission_key) DO NOTHING`),
 				userID, groupID,
 			)
 		}
@@ -247,22 +247,20 @@ func HandleAdminUserUpdate(c *gin.Context) {
 			return
 		}
 		
-		_, err = db.Exec(`
+		_, err = db.Exec(database.ConvertPlaceholders(`
 			UPDATE users 
 			SET login = $1, pw = $2, first_name = $3, last_name = $4, 
 			    valid_id = $5, change_time = NOW(), change_by = 1
-			WHERE id = $6`,
-			req.Login, string(hash), req.FirstName, req.LastName, req.ValidID, id,
-		)
+			WHERE id = $6`),
+			req.Login, string(hash), req.FirstName, req.LastName, req.ValidID, id)
 	} else {
 		// Update without changing password
-		_, err = db.Exec(`
+		_, err = db.Exec(database.ConvertPlaceholders(`
 			UPDATE users 
 			SET login = $1, first_name = $2, last_name = $3, 
 			    valid_id = $4, change_time = NOW(), change_by = 1
-			WHERE id = $5`,
-			req.Login, req.FirstName, req.LastName, req.ValidID, id,
-		)
+			WHERE id = $5`),
+			req.Login, req.FirstName, req.LastName, req.ValidID, id)
 	}
 
 	if err != nil {
@@ -294,11 +292,10 @@ func HandleAdminUserUpdate(c *gin.Context) {
 		var groupID int
 		err = db.QueryRow("SELECT id FROM groups WHERE name = $1 AND valid_id = 1", groupName).Scan(&groupID)
 		if err == nil {
-			_, err = db.Exec(`
+			_, err = db.Exec(database.ConvertPlaceholders(`
 				INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-				VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)`,
-				id, groupID,
-			)
+				VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)`),
+				id, groupID)
 		}
 	}
 

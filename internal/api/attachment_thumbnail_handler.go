@@ -83,11 +83,11 @@ func handleAttachmentThumbnail(c *gin.Context) {
 	var filename, contentType string
 	var content []byte
 	
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT filename, COALESCE(content_type, 'application/octet-stream'), content
 		FROM article_data_mime_attachment
 		WHERE id = $1
-	`, attachmentID).Scan(&filename, &contentType, &content)
+	`), attachmentID).Scan(&filename, &contentType, &content)
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -208,11 +208,11 @@ func handleBulkThumbnails(c *gin.Context) {
 		var contentType string
 		var content []byte
 		
-		err := db.QueryRow(`
+		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COALESCE(content_type, 'application/octet-stream'), content
 			FROM article_data_mime_attachment
 			WHERE id = $1
-		`, attachmentID).Scan(&contentType, &content)
+		`), attachmentID).Scan(&contentType, &content)
 		
 		if err != nil {
 			continue // Skip this attachment

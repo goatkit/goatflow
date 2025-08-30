@@ -25,40 +25,35 @@ var (
 // InitializeServices initializes singleton service instances
 func InitializeServices() {
 	once.Do(func() {
-		// Get database connection
+		// Get database connection - no fallback, service registry is single source of truth
 		db, err := database.GetDB()
 		if err != nil {
-			log.Printf("Warning: Could not connect to database, using in-memory repositories: %v", err)
-			// Fallback to memory repositories
-			ticketRepo = repository.NewMemoryTicketRepository()
-		} else {
-			log.Printf("Successfully connected to database")
-			// Initialize real database repositories
-			ticketRepo = repository.NewTicketRepository(db)
-			queueRepo = repository.NewQueueRepository(db)
-			priorityRepo = repository.NewPriorityRepository(db)
-			userRepo = repository.NewUserRepository(db)
+			log.Fatalf("FATAL: Cannot initialize services without database connection: %v", err)
 		}
+		
+		log.Printf("Successfully connected to database")
+		// Initialize real database repositories
+		ticketRepo = repository.NewTicketRepository(db)
+		queueRepo = repository.NewQueueRepository(db)
+		priorityRepo = repository.NewPriorityRepository(db)
+		userRepo = repository.NewUserRepository(db)
 		
 		// Initialize services
 		simpleTicketService = service.NewSimpleTicketService(ticketRepo)
 		
-		// Initialize lookup service (this will connect to database if available)
+		// Initialize lookup service
 		lookupService = service.NewLookupService()
 		
-		// Initialize storage service
+		// Initialize storage service - no fallback
 		storageService, err = service.NewLocalStorageService("./storage")
 		if err != nil {
-			// Fallback to temp directory if storage dir can't be created
-			storageService, _ = service.NewLocalStorageService("/tmp/gotrs-storage")
+			log.Fatalf("FATAL: Cannot initialize storage service: %v", err)
 		}
 		
-		// Initialize auth service if database is available
-		if db != nil {
-			// Use the shared JWT manager for auth service
-			jwtManager := shared.GetJWTManager()
-			authService = service.NewAuthService(db, jwtManager)
-		}
+		// Initialize auth service
+		// Use the shared JWT manager for auth service
+		jwtManager := shared.GetJWTManager()
+		authService = service.NewAuthService(db, jwtManager)
 	})
 }
 

@@ -3,12 +3,17 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
 // RegisterAgentRoutes registers all agent interface routes
@@ -61,51 +66,51 @@ func handleAgentDashboard(db *sql.DB) gin.HandlerFunc {
 		}{}
 		
 		// Count open tickets assigned to this agent
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket 
 			WHERE responsible_user_id = $1 
 			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 1)
-		`, userID).Scan(&stats.OpenTickets)
+		`), userID).Scan(&stats.OpenTickets)
 		
 		// Count pending tickets assigned to this agent
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket 
 			WHERE responsible_user_id = $1 
 			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 2)
-		`, userID).Scan(&stats.PendingTickets)
+		`), userID).Scan(&stats.PendingTickets)
 		
 		// Count tickets closed today by this agent
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket 
 			WHERE change_by = $1 
 			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)
 			AND DATE(change_time) = CURRENT_DATE
-		`, userID).Scan(&stats.ClosedToday)
+		`), userID).Scan(&stats.ClosedToday)
 		
 		// Count new tickets today in agent's queues
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket t
 			JOIN queue q ON t.queue_id = q.id
 			JOIN group_user gu ON q.group_id = gu.group_id
 			WHERE gu.user_id = $1
 			AND DATE(t.create_time) = CURRENT_DATE
-		`, userID).Scan(&stats.NewToday)
+		`), userID).Scan(&stats.NewToday)
 		
 		// Count all tickets assigned to this agent
 		stats.MyTickets = stats.OpenTickets + stats.PendingTickets
 		
 		// Count unassigned tickets in agent's queues
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket t
 			JOIN queue q ON t.queue_id = q.id
 			JOIN group_user gu ON q.group_id = gu.group_id
 			WHERE gu.user_id = $1
 			AND t.responsible_user_id IS NULL
 			AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2))
-		`, userID).Scan(&stats.UnassignedInMyQueues)
+		`), userID).Scan(&stats.UnassignedInMyQueues)
 		
 		// Get recent tickets
-		rows, _ := db.Query(`
+		rows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT t.id, t.tn, t.title, 
 				   c.login as customer,
 				   q.name as queue,
@@ -125,7 +130,7 @@ func handleAgentDashboard(db *sql.DB) gin.HandlerFunc {
 			))
 			ORDER BY t.create_time DESC
 			LIMIT 10
-		`, userID)
+		`), userID)
 		defer rows.Close()
 		
 		recentTickets := []map[string]interface{}{}
@@ -156,7 +161,7 @@ func handleAgentDashboard(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Get agent's queues
-		queueRows, _ := db.Query(`
+		queueRows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT q.id, q.name, 
 				   COUNT(t.id) as ticket_count,
 				   COUNT(CASE WHEN t.responsible_user_id IS NULL THEN 1 END) as unassigned_count
@@ -167,7 +172,7 @@ func handleAgentDashboard(db *sql.DB) gin.HandlerFunc {
 			WHERE gu.user_id = $1
 			GROUP BY q.id, q.name
 			ORDER BY q.name
-		`, userID)
+		`), userID)
 		defer queueRows.Close()
 		
 		queues := []map[string]interface{}{}
@@ -193,13 +198,13 @@ func handleAgentDashboard(db *sql.DB) gin.HandlerFunc {
 		
 		// Check if user is in admin group for Dev tab
 		var isInAdminGroup bool
-		adminErr := db.QueryRow(`
+		adminErr := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT EXISTS(
 				SELECT 1 FROM group_user gu
 				JOIN groups g ON gu.group_id = g.id
 				WHERE gu.user_id = $1 AND g.name = 'admin'
 			)
-		`, userID).Scan(&isInAdminGroup)
+		`), userID).Scan(&isInAdminGroup)
 		if adminErr == nil && isInAdminGroup && user != nil {
 			// Set a flag in context or add to user struct if it has the field
 			c.Set("isInAdminGroup", true)
@@ -306,13 +311,13 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		} else {
 			// Check if user is admin
 			var isAdmin bool
-			adminCheckErr := db.QueryRow(`
+			adminCheckErr := db.QueryRow(database.ConvertPlaceholders(`
 				SELECT EXISTS(
 					SELECT 1 FROM group_user gu
 					JOIN groups g ON gu.group_id = g.id
 					WHERE gu.user_id = $1 AND g.name = 'admin'
 				)
-			`, userID).Scan(&isAdmin)
+			`), userID).Scan(&isAdmin)
 			
 			if adminCheckErr == nil && isAdmin {
 				// Admin sees all queues - no filter needed
@@ -406,13 +411,13 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Get available queues for filter
-		queueRows, _ := db.Query(`
+		queueRows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT q.id, q.name
 			FROM queue q
 			JOIN group_user gu ON q.group_id = gu.group_id
 			WHERE gu.user_id = $1
 			ORDER BY q.name
-		`, userID)
+		`), userID)
 		defer queueRows.Close()
 		
 		availableQueues := []map[string]interface{}{}
@@ -433,13 +438,13 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		
 		// Check if user is in admin group for Dev tab
 		var isInAdminGroup bool
-		adminErr := db.QueryRow(`
+		adminErr := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT EXISTS(
 				SELECT 1 FROM group_user gu
 				JOIN groups g ON gu.group_id = g.id
 				WHERE gu.user_id = $1 AND g.name = 'admin'
 			)
-		`, userID).Scan(&isInAdminGroup)
+		`), userID).Scan(&isInAdminGroup)
 		if adminErr == nil && isInAdminGroup && user != nil {
 			// Set a flag in context or add to user struct if it has the field
 			c.Set("isInAdminGroup", true)
@@ -533,7 +538,7 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 			ChangeTime        time.Time
 		}
 		
-		err := db.QueryRow(`
+		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT t.id, t.tn, t.title, 
 				   t.customer_user_id, t.customer_id,
 				   t.queue_id, q.name as queue_name,
@@ -554,7 +559,7 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 			LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
 			LEFT JOIN users u ON t.responsible_user_id = u.id
 			WHERE t.id = $1
-		`, ticketID).Scan(
+		`), ticketID).Scan(
 			&ticket.ID, &ticket.TN, &ticket.Title,
 			&ticket.CustomerUserID, &ticket.CustomerID,
 			&ticket.QueueID, &ticket.QueueName,
@@ -580,14 +585,14 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 		// Get customer details including email
 		var customerName, customerCompany, customerEmail string
 		if ticket.CustomerUserID.Valid {
-			err := db.QueryRow(`
-				SELECT COALESCE(cu.first_name || ' ' || cu.last_name, cu.login) as name, 
+			err := db.QueryRow(database.ConvertPlaceholders(`
+				SELECT COALESCE(CONCAT(cu.first_name, ' ', cu.last_name), cu.login) as name, 
 					   COALESCE(cc.name, '') as company,
 					   COALESCE(cu.email, cu.login) as email
 				FROM customer_user cu
 				LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
 				WHERE cu.login = $1
-			`, ticket.CustomerUserID.String).Scan(&customerName, &customerCompany, &customerEmail)
+			`), ticket.CustomerUserID.String).Scan(&customerName, &customerCompany, &customerEmail)
 			if err != nil {
 				// If no customer_user record, use the ID as email
 				customerEmail = ticket.CustomerUserID.String
@@ -596,13 +601,14 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Get articles - fetch from article_data_mime table
-		rows, err := db.Query(`
+		log.Printf("Fetching articles for ticket ID: %s", ticketID)
+		rows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT a.id, a.article_sender_type_id, 
 				   COALESCE(ast.name, 'Unknown') as sender_type,
 				   COALESCE(adm.a_from, 'System') as from_addr,
 				   COALESCE(adm.a_to, '') as to_addr,
 				   COALESCE(adm.a_subject, 'Note') as subject,
-				   COALESCE(convert_from(adm.a_body, 'UTF8'), '') as body,
+				   COALESCE(adm.a_body, '') as body,
 				   a.create_time,
 				   a.is_visible_for_customer
 			FROM article a
@@ -610,14 +616,16 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 			LEFT JOIN article_data_mime adm ON a.id = adm.article_id
 			WHERE a.ticket_id = $1
 			ORDER BY a.create_time DESC
-		`, ticketID)
+		`), ticketID)
 		
 		articles := []map[string]interface{}{}
 		if err != nil {
-			log.Printf("Error fetching articles: %v", err)
+			log.Printf("Error fetching articles for ticket %s: %v", ticketID, err)
 		} else {
 			defer rows.Close()
+			articleCount := 0
 			for rows.Next() {
+				articleCount++
 				var article struct {
 					ID         int
 					SenderTypeID int
@@ -632,8 +640,43 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 				
 				if err := rows.Scan(&article.ID, &article.SenderTypeID, &article.SenderType,
 					&article.From, &article.To, &article.Subject, &article.Body, &article.CreateTime, &article.IsVisible); err != nil {
-					log.Printf("Error scanning article: %v", err)
+					log.Printf("Error scanning article %d: %v", articleCount, err)
 					continue
+				}
+				log.Printf("Scanned article %d: ID=%d, Subject=%s", articleCount, article.ID, article.Subject)
+				
+				// Get attachments for this article
+				var attachments []map[string]interface{}
+				attachmentRows, err := db.Query(database.ConvertPlaceholders(`
+					SELECT id, filename, content_size, content_type
+					FROM article_data_mime_attachment
+					WHERE article_id = $1
+				`), article.ID)
+				
+				if err == nil {
+					defer attachmentRows.Close()
+					for attachmentRows.Next() {
+						var att struct {
+							ID          int
+							Filename    string
+							Size        int64
+							ContentType string
+						}
+						if err := attachmentRows.Scan(&att.ID, &att.Filename, &att.Size, &att.ContentType); err == nil {
+							log.Printf("Found attachment for article %d: %s (%s)", article.ID, att.Filename, att.ContentType)
+							attachments = append(attachments, map[string]interface{}{
+								"id":       att.ID,
+								"filename": att.Filename,
+								"size":     formatFileSize(att.Size),
+								"content_type": att.ContentType,
+							})
+						}
+					}
+					if len(attachments) > 0 {
+						log.Printf("Article %d has %d attachments", article.ID, len(attachments))
+					}
+				} else {
+					log.Printf("Error querying attachments for article %d: %v", article.ID, err)
 				}
 				
 				articles = append(articles, map[string]interface{}{
@@ -646,8 +689,10 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 					"body":         article.Body,
 					"create_time":  article.CreateTime.Format("2006-01-02 15:04"),
 					"is_visible":   article.IsVisible,
+					"attachments":  attachments,
 				})
 			}
+			log.Printf("Processed %d articles, added %d to list", articleCount, len(articles))
 		}
 		
 		log.Printf("Found %d articles for ticket %s", len(articles), ticketID)
@@ -699,6 +744,13 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ticketID := c.Param("id")
+		
+		// Parse multipart form to handle file uploads
+		err := c.Request.ParseMultipartForm(32 << 20) // 32MB max
+		if err != nil && err != http.ErrNotMultipart {
+			log.Printf("Error parsing multipart form: %v", err)
+		}
+		
 		to := c.PostForm("to")
 		subject := c.PostForm("subject")
 		body := c.PostForm("body")
@@ -710,6 +762,14 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 			userName = "Agent"
 		}
 		
+		// Sanitize HTML content if detected
+		contentType := "text/plain"
+		if utils.IsHTML(body) {
+			sanitizer := utils.NewHTMLSanitizer()
+			body = sanitizer.Sanitize(body)
+			contentType = "text/html"
+		}
+		
 		// Start transaction
 		tx, err := db.Begin()
 		if err != nil {
@@ -718,14 +778,14 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 		}
 		defer tx.Rollback()
 		
-		// Insert article (sender_type_id = 1 for agent reply)
+		// Insert article (sender_type_id = 1 for agent reply, communication_channel_id = 1 for email)
 		var articleID int64
-		err = tx.QueryRow(`
-			INSERT INTO article (ticket_id, article_sender_type_id, is_visible_for_customer,
+		err = tx.QueryRow(database.ConvertPlaceholders(`
+			INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer,
 								create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, 1, CURRENT_TIMESTAMP, $2, CURRENT_TIMESTAMP, $2)
+			VALUES ($1, 1, 1, 1, CURRENT_TIMESTAMP, $2, CURRENT_TIMESTAMP, $2)
 			RETURNING id
-		`, ticketID, userID).Scan(&articleID)
+		`), ticketID, userID).Scan(&articleID)
 		
 		if err != nil {
 			log.Printf("Error creating article: %v", err)
@@ -734,16 +794,56 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Insert article data in mime table (incoming_time is unix timestamp)
-		// Note: a_body is BYTEA type, so we need to convert
-		_, err = tx.Exec(`
-			INSERT INTO article_data_mime (article_id, a_from, a_to, a_subject, a_body, incoming_time, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, $7, CURRENT_TIMESTAMP, $7)
-		`, articleID, userName, to, subject, []byte(body), time.Now().Unix(), userID)
+		// Insert article MIME data with content type
+		_, err = tx.Exec(database.ConvertPlaceholders(`
+			INSERT INTO article_data_mime (article_id, a_from, a_to, a_subject, a_body, a_content_type, incoming_time, create_time, create_by, change_time, change_by)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, $8, CURRENT_TIMESTAMP, $8)
+		`), articleID, userName, to, subject, body, contentType, time.Now().Unix(), userID)
 		
 		if err != nil {
 			log.Printf("Error adding article data: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add reply data"})
 			return
+		}
+		
+		// Handle file attachments if present
+		if c.Request.MultipartForm != nil && c.Request.MultipartForm.File != nil {
+			files := c.Request.MultipartForm.File["attachments"]
+			for _, fileHeader := range files {
+				file, err := fileHeader.Open()
+				if err != nil {
+					log.Printf("Error opening attachment %s: %v", fileHeader.Filename, err)
+					continue
+				}
+				defer file.Close()
+				
+				// Read file content
+				content, err := io.ReadAll(file)
+				if err != nil {
+					log.Printf("Error reading attachment %s: %v", fileHeader.Filename, err)
+					continue
+				}
+				
+				// Detect content type
+				contentType := fileHeader.Header.Get("Content-Type")
+				if contentType == "" {
+					contentType = http.DetectContentType(content)
+				}
+				
+				// Insert attachment
+				_, err = tx.Exec(database.ConvertPlaceholders(`
+					INSERT INTO article_data_mime_attachment (
+						article_id, filename, content_type, content, content_size,
+						create_time, create_by, change_time, change_by
+					) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6, CURRENT_TIMESTAMP, $6)
+				`), articleID, fileHeader.Filename, contentType, content, len(content), userID)
+				
+				if err != nil {
+					log.Printf("Error saving attachment %s: %v", fileHeader.Filename, err)
+				} else {
+					log.Printf("Saved attachment %s for article %d", fileHeader.Filename, articleID)
+				}
+			}
 		}
 		
 		// Update ticket change time
@@ -767,9 +867,31 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ticketID := c.Param("id")
 		body := c.PostForm("body")
+		subject := c.PostForm("subject")
+		
+		// Get communication channel from form (defaults to Internal if not specified)
+		communicationChannelID := c.DefaultPostForm("communication_channel_id", "3")
+		channelID, err := strconv.Atoi(communicationChannelID)
+		if err != nil || channelID < 1 || channelID > 4 {
+			channelID = 3 // Default to Internal
+		}
+		
+		// Get visibility flag (checkbox value will be "1" if checked, empty if not)
+		isVisibleForCustomer := 0
+		if c.PostForm("is_visible_for_customer") == "1" {
+			isVisibleForCustomer = 1
+		}
 		
 		// Get user info
 		userID := c.GetUint("user_id")
+		
+		// Sanitize HTML content if detected
+		contentType := "text/plain"
+		if utils.IsHTML(body) {
+			sanitizer := utils.NewHTMLSanitizer()
+			body = sanitizer.Sanitize(body)
+			contentType = "text/html"
+		}
 		
 		// Start transaction
 		tx, err := db.Begin()
@@ -779,14 +901,14 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 		}
 		defer tx.Rollback()
 		
-		// Insert article (sender_type_id = 3 for agent)
+		// Insert article (sender_type_id = 1 for agent)
 		var articleID int64
-		err = tx.QueryRow(`
-			INSERT INTO article (ticket_id, article_sender_type_id, is_visible_for_customer,
+		err = tx.QueryRow(database.ConvertPlaceholders(`
+			INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer,
 								create_time, create_by, change_time, change_by)
-			VALUES ($1, 3, 0, CURRENT_TIMESTAMP, $2, CURRENT_TIMESTAMP, $2)
+			VALUES ($1, 1, $2, $3, CURRENT_TIMESTAMP, $4, CURRENT_TIMESTAMP, $4)
 			RETURNING id
-		`, ticketID, userID).Scan(&articleID)
+		`), ticketID, channelID, isVisibleForCustomer, userID).Scan(&articleID)
 		
 		if err != nil {
 			log.Printf("Error creating article: %v", err)
@@ -794,12 +916,28 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 		
+		// Use subject from form or default based on communication channel
+		if subject == "" {
+			switch channelID {
+			case 1:
+				subject = "Email Note"
+			case 2:
+				subject = "Phone Note"
+			case 3:
+				subject = "Internal Note"
+			case 4:
+				subject = "Chat Note"
+			default:
+				subject = "Note"
+			}
+		}
+		
 		// Insert article data in mime table (incoming_time is unix timestamp)
-		// Note: a_body is BYTEA type, so we need to convert
-		_, err = tx.Exec(`
-			INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body, incoming_time, create_time, create_by, change_time, change_by)
-			VALUES ($1, 'Agent', 'Note', $2, $3, CURRENT_TIMESTAMP, $4, CURRENT_TIMESTAMP, $4)
-		`, articleID, []byte(body), time.Now().Unix(), userID)
+		// Insert article MIME data with content type
+		_, err = tx.Exec(database.ConvertPlaceholders(`
+			INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body, a_content_type, incoming_time, create_time, create_by, change_time, change_by)
+			VALUES ($1, 'Agent', $2, $3, $4, $5, CURRENT_TIMESTAMP, $6, CURRENT_TIMESTAMP, $6)
+		`), articleID, subject, body, contentType, time.Now().Unix(), userID)
 		
 		if err != nil {
 			log.Printf("Error adding article data: %v", err)
@@ -837,6 +975,14 @@ func handleAgentTicketPhone(db *sql.DB) gin.HandlerFunc {
 		// Get user info
 		userID := c.GetUint("user_id")
 		
+		// Sanitize HTML content if detected
+		contentType := "text/plain"
+		if utils.IsHTML(body) {
+			sanitizer := utils.NewHTMLSanitizer()
+			body = sanitizer.Sanitize(body)
+			contentType = "text/html"
+		}
+		
 		// Start transaction
 		tx, err := db.Begin()
 		if err != nil {
@@ -847,24 +993,24 @@ func handleAgentTicketPhone(db *sql.DB) gin.HandlerFunc {
 		
 		// Insert article (sender_type_id = 1 for agent, phone communication type)
 		var articleID int64
-		err = tx.QueryRow(`
+		err = tx.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer,
 								create_time, create_by, change_time, change_by)
 			VALUES ($1, 1, 2, 1, CURRENT_TIMESTAMP, $2, CURRENT_TIMESTAMP, $2)
 			RETURNING id
-		`, ticketID, userID).Scan(&articleID)
+		`), ticketID, userID).Scan(&articleID)
 		if err != nil {
 			log.Printf("Error inserting phone article: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save phone note"})
 			return
 		}
 
-		// Insert MIME data
-		_, err = tx.Exec(`
-			INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body,
+		// Insert MIME data with content type
+		_, err = tx.Exec(database.ConvertPlaceholders(`
+			INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body, a_content_type,
 											incoming_time, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $5, CURRENT_TIMESTAMP, $5)
-		`, articleID, "Agent Phone Call", subject, body, userID)
+			VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $6, CURRENT_TIMESTAMP, $6)
+		`), articleID, "Agent Phone Call", subject, body, contentType, userID)
 		if err != nil {
 			log.Printf("Error inserting phone article MIME data: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save phone note data"})
@@ -912,11 +1058,11 @@ func handleAgentTicketStatus(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Update ticket status with pending time
-		_, err := db.Exec(`
+		_, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
 			SET ticket_state_id = $1, until_time = $2, change_time = CURRENT_TIMESTAMP, change_by = $3
 			WHERE id = $4
-		`, statusID, untilTime, c.GetUint("user_id"), ticketID)
+		`), statusID, untilTime, c.GetUint("user_id"), ticketID)
 		
 		if err != nil {
 			log.Printf("Error updating ticket status: %v", err)
@@ -960,11 +1106,11 @@ func handleAgentTicketAssign(db *sql.DB) gin.HandlerFunc {
 		userID := c.PostForm("user_id")
 		
 		// Update responsible user
-		_, err := db.Exec(`
+		_, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
 			SET responsible_user_id = $1, change_time = CURRENT_TIMESTAMP, change_by = $2
 			WHERE id = $3
-		`, userID, c.GetUint("user_id"), ticketID)
+		`), userID, c.GetUint("user_id"), ticketID)
 		
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign agent"})
@@ -981,11 +1127,11 @@ func handleAgentTicketPriority(db *sql.DB) gin.HandlerFunc {
 		priorityID := c.PostForm("priority_id")
 		
 		// Update ticket priority
-		_, err := db.Exec(`
+		_, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
 			SET ticket_priority_id = $1, change_time = CURRENT_TIMESTAMP, change_by = $2
 			WHERE id = $3
-		`, priorityID, c.GetUint("user_id"), ticketID)
+		`), priorityID, c.GetUint("user_id"), ticketID)
 		
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update priority"})
@@ -1003,11 +1149,11 @@ func handleAgentTicketQueue(db *sql.DB) gin.HandlerFunc {
 		queueID := c.PostForm("queue_id")
 		
 		// Update ticket queue
-		_, err := db.Exec(`
+		_, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
 			SET queue_id = $1, change_time = CURRENT_TIMESTAMP, change_by = $2
 			WHERE id = $3
-		`, queueID, c.GetUint("user_id"), ticketID)
+		`), queueID, c.GetUint("user_id"), ticketID)
 		
 		if err != nil {
 			log.Printf("Error updating ticket queue: %v", err)
@@ -1046,11 +1192,11 @@ func handleAgentTicketMerge(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Move all articles from source to target ticket
-		_, err = tx.Exec(`
+		_, err = tx.Exec(database.ConvertPlaceholders(`
 			UPDATE article 
 			SET ticket_id = $1, change_time = CURRENT_TIMESTAMP, change_by = $2
 			WHERE ticket_id = $3
-		`, targetTicketID, c.GetUint("user_id"), sourceTicketID)
+		`), targetTicketID, c.GetUint("user_id"), sourceTicketID)
 		
 		if err != nil {
 			log.Printf("Error moving articles during merge: %v", err)
@@ -1059,12 +1205,12 @@ func handleAgentTicketMerge(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Close the source ticket
-		_, err = tx.Exec(`
+		_, err = tx.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
 			SET ticket_state_id = (SELECT id FROM ticket_state WHERE name = 'merged'),
 				change_time = CURRENT_TIMESTAMP, change_by = $1
 			WHERE id = $2
-		`, c.GetUint("user_id"), sourceTicketID)
+		`), c.GetUint("user_id"), sourceTicketID)
 		
 		if err != nil {
 			log.Printf("Error closing source ticket during merge: %v", err)
@@ -1083,6 +1229,148 @@ func handleAgentTicketMerge(db *sql.DB) gin.HandlerFunc {
 			"success": true, 
 			"message": fmt.Sprintf("Ticket merged into %s", targetTN),
 			"target_ticket": targetTN,
+		})
+	}
+}
+
+// handleArticleAttachmentDownload serves attachment files for a specific article
+func handleArticleAttachmentDownload(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ticketID := c.Param("id")
+		articleID := c.Param("article_id") 
+		attachmentID := c.Param("attachment_id")
+		
+		// Verify the attachment belongs to this article and ticket
+		var filename string
+		var contentType string
+		var content []byte
+		
+		err := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT adma.filename, adma.content_type, adma.content
+			FROM article_data_mime_attachment adma
+			JOIN article a ON adma.article_id = a.id
+			WHERE adma.id = $1 AND a.id = $2 AND a.ticket_id = $3
+		`), attachmentID, articleID, ticketID).Scan(&filename, &contentType, &content)
+		
+		if err != nil {
+			if err == sql.ErrNoRows {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Attachment not found"})
+			} else {
+				log.Printf("Error fetching attachment: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch attachment"})
+			}
+			return
+		}
+		
+		// Set appropriate headers
+		c.Header("Content-Type", contentType)
+		c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
+		c.Header("Content-Length", fmt.Sprintf("%d", len(content)))
+		
+		// For images, allow inline viewing
+		if strings.HasPrefix(contentType, "image/") {
+			c.Header("Cache-Control", "public, max-age=3600")
+		}
+		
+		// Send the file content
+		c.Data(http.StatusOK, contentType, content)
+	}
+}
+
+// handleTicketCustomerUsers returns customer users available for a ticket
+func handleTicketCustomerUsers(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ticketID := c.Param("id")
+		
+		// Get ticket's current customer info
+		var currentCustomerID, currentCustomerUserID string
+		err := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT COALESCE(customer_id, ''), COALESCE(customer_user_id, '')
+			FROM ticket WHERE id = $1
+		`), ticketID).Scan(&currentCustomerID, &currentCustomerUserID)
+		
+		if err != nil {
+			log.Printf("Error fetching ticket customer info: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch ticket info"})
+			return
+		}
+		
+		type CustomerUserOption struct {
+			Login       string `json:"login"`
+			Email       string `json:"email"`
+			FirstName   string `json:"first_name"`
+			LastName    string `json:"last_name"`
+			CustomerID  string `json:"customer_id"`
+			CompanyName string `json:"company_name"`
+			DisplayName string `json:"display_name"`
+			IsCurrent   bool   `json:"is_current"`
+		}
+		
+		var customerUsers []CustomerUserOption
+		
+		// Query customer users - prioritize same company
+		query := `
+			SELECT 
+				cu.login,
+				COALESCE(cu.email, cu.login) as email,
+				COALESCE(cu.first_name, '') as first_name,
+				COALESCE(cu.last_name, '') as last_name,
+				COALESCE(cu.customer_id, '') as customer_id,
+				COALESCE(cc.name, '') as company_name
+			FROM customer_user cu
+			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
+			WHERE cu.valid_id = 1
+				AND ($1 = '' OR cu.customer_id = $1)
+			ORDER BY 
+				CASE WHEN cu.customer_id = $1 THEN 0 ELSE 1 END,
+				cu.first_name, cu.last_name
+			LIMIT 50
+		`
+		
+		rows, err := db.Query(query, currentCustomerID)
+		if err != nil {
+			log.Printf("Error querying customer users: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch customer users"})
+			return
+		}
+		defer rows.Close()
+		
+		for rows.Next() {
+			var cu CustomerUserOption
+			err := rows.Scan(&cu.Login, &cu.Email, &cu.FirstName, &cu.LastName, 
+				&cu.CustomerID, &cu.CompanyName)
+			if err != nil {
+				log.Printf("Error scanning customer user: %v", err)
+				continue
+			}
+			
+			// Build display name
+			if cu.FirstName != "" || cu.LastName != "" {
+				cu.DisplayName = fmt.Sprintf("%s %s <%s>", cu.FirstName, cu.LastName, cu.Email)
+			} else {
+				cu.DisplayName = cu.Email
+			}
+			
+			// Mark current customer
+			cu.IsCurrent = (cu.Login == currentCustomerUserID || cu.Email == currentCustomerUserID)
+			
+			customerUsers = append(customerUsers, cu)
+		}
+		
+		// If no customer users found, at least return the current one
+		if len(customerUsers) == 0 && currentCustomerUserID != "" {
+			customerUsers = append(customerUsers, CustomerUserOption{
+				Login:       currentCustomerUserID,
+				Email:       currentCustomerUserID,
+				DisplayName: currentCustomerUserID,
+				IsCurrent:   true,
+			})
+		}
+		
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"customer_users": customerUsers,
+			"current": currentCustomerUserID,
 		})
 	}
 }

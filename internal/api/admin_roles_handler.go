@@ -203,11 +203,11 @@ func handleAdminRoleCreate(c *gin.Context) {
 		commentsPtr = &input.Comments
 	}
 
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		INSERT INTO roles (name, comments, valid_id, create_by, change_by)
 		VALUES ($1, $2, $3, 1, 1)
 		RETURNING id
-	`, input.Name, commentsPtr, input.ValidID).Scan(&id)
+	`), input.Name, commentsPtr, input.ValidID).Scan(&id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -252,11 +252,11 @@ func handleAdminRoleGet(c *gin.Context) {
 	var role Role
 	var comments sql.NullString
 	var permissionsJSON string
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, COALESCE(permissions, '[]')
 		FROM roles
 		WHERE id = $1
-	`, id).Scan(&role.ID, &role.Name, &comments, &role.ValidID, &permissionsJSON)
+	`), id).Scan(&role.ID, &role.Name, &comments, &role.ValidID, &permissionsJSON)
 
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -345,7 +345,7 @@ func handleAdminRoleUpdate(c *gin.Context) {
 	}
 	
 	// Update the role
-	result, err := db.Exec(`
+	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE roles 
 		SET name = COALESCE(NULLIF($1, ''), name),
 		    comments = CASE WHEN $2 = '' THEN NULL ELSE $2 END,
@@ -354,7 +354,7 @@ func handleAdminRoleUpdate(c *gin.Context) {
 		    change_time = CURRENT_TIMESTAMP,
 		    change_by = 1
 		WHERE id = $5
-	`, input.Name, input.Comments, input.ValidID, permissionsJSON, id)
+	`), input.Name, input.Comments, input.ValidID, permissionsJSON, id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -401,11 +401,11 @@ func handleAdminRoleDelete(c *gin.Context) {
 	}
 
 	// Soft delete by setting valid_id = 2
-	result, err := db.Exec(`
+	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE roles 
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
 		WHERE id = $1
-	`, id)
+	`), id)
 	
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -455,11 +455,11 @@ func handleAdminRoleUsers(c *gin.Context) {
 	var role Role
 	var comments sql.NullString
 	var permissionsJSON string
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, COALESCE(permissions, '[]') 
 		FROM roles 
 		WHERE id = $1
-	`, id).Scan(&role.ID, &role.Name, &comments, &role.ValidID, &permissionsJSON)
+	`), id).Scan(&role.ID, &role.Name, &comments, &role.ValidID, &permissionsJSON)
 	
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{
@@ -482,13 +482,13 @@ func handleAdminRoleUsers(c *gin.Context) {
 	}
 
 	// Get users assigned to this role
-	rows, err := db.Query(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT u.id, u.login, u.first_name, u.last_name
 		FROM users u
 		JOIN role_user ru ON u.id = ru.user_id
 		WHERE ru.role_id = $1
 		ORDER BY u.last_name, u.first_name
-	`, id)
+	`), id)
 	
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -511,7 +511,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 	}
 
 	// Get all available users not in this role
-	availableRows, err := db.Query(`
+	availableRows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, login, first_name, last_name
 		FROM users
 		WHERE id NOT IN (
@@ -519,7 +519,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 		)
 		AND valid_id = 1
 		ORDER BY last_name, first_name
-	`, id)
+	`), id)
 	
 	if err == nil {
 		defer availableRows.Close()
@@ -588,11 +588,11 @@ func handleAdminRoleUserAdd(c *gin.Context) {
 	}
 
 	// Add user to role
-	_, err = db.Exec(`
+	_, err = db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO role_user (role_id, user_id, create_by, change_by)
 		VALUES ($1, $2, 1, 1)
 		ON CONFLICT (role_id, user_id) DO NOTHING
-	`, roleID, input.UserID)
+	`), roleID, input.UserID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -640,10 +640,10 @@ func handleAdminRoleUserRemove(c *gin.Context) {
 	}
 
 	// Remove user from role
-	result, err := db.Exec(`
+	result, err := db.Exec(database.ConvertPlaceholders(`
 		DELETE FROM role_user 
 		WHERE role_id = $1 AND user_id = $2
-	`, roleID, userID)
+	`), roleID, userID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -691,11 +691,11 @@ func handleAdminRolePermissions(c *gin.Context) {
 		// Get role details
 		var role Role
 		var comments sql.NullString
-		err = db.QueryRow(`
+		err = db.QueryRow(database.ConvertPlaceholders(`
 			SELECT id, name, comments, valid_id 
 			FROM roles 
 			WHERE id = $1
-		`, id).Scan(&role.ID, &role.Name, &comments, &role.ValidID)
+		`), id).Scan(&role.ID, &role.Name, &comments, &role.ValidID)
 		
 		if err == sql.ErrNoRows {
 			c.String(http.StatusNotFound, "Role not found")
@@ -707,7 +707,7 @@ func handleAdminRolePermissions(c *gin.Context) {
 		}
 
 		// Get all groups and their permissions for this role
-		rows, err := db.Query(`
+		rows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT 
 				g.id, g.name,
 				MAX(CASE WHEN gr.permission_key = 'ro' THEN gr.permission_value ELSE 0 END) as ro,
@@ -722,7 +722,7 @@ func handleAdminRolePermissions(c *gin.Context) {
 			WHERE g.valid_id = 1
 			GROUP BY g.id, g.name
 			ORDER BY g.name
-		`, id)
+		`), id)
 		
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Failed to fetch permissions")
@@ -805,10 +805,10 @@ func handleAdminRolePermissions(c *gin.Context) {
 				fmt.Sscanf(key[5:], "%d_%s", &groupID, &permType)
 				
 				if groupID > 0 && permType != "" && len(values) > 0 && values[0] == "1" {
-					_, err = tx.Exec(`
+					_, err = tx.Exec(database.ConvertPlaceholders(`
 						INSERT INTO group_role (role_id, group_id, permission_key, permission_value, create_by, change_by)
 						VALUES ($1, $2, $3, 1, 1, 1)
-					`, id, groupID, permType)
+					`), id, groupID, permType)
 					
 					if err != nil {
 						c.JSON(http.StatusInternalServerError, gin.H{

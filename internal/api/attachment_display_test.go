@@ -118,12 +118,12 @@ func TestAttachmentDownloadHandler(t *testing.T) {
 
 		// Insert test attachment record
 		var attachmentID int
-		err = db.QueryRow(`
+		err = db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO article_data_mime_attachment 
 			(article_id, filename, content_type, content_size, content, disposition, create_by, change_by)
 			VALUES (1, 'test-download.txt', 'text/plain', '21', $1, 'attachment', 1, 1)
 			RETURNING id
-		`, []byte(testFile)).Scan(&attachmentID)
+		`), []byte(testFile)).Scan(&attachmentID)
 
 		if err != nil {
 			t.Skip("Could not create test attachment in database")
@@ -170,7 +170,7 @@ func TestGetMessagesWithAttachments(t *testing.T) {
 
 		// Create a test ticket
 		var ticketID int
-		err = db.QueryRow(`
+		err = db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO ticket (tn, title, queue_id, type_id, ticket_state_id, ticket_priority_id, 
 			                   ticket_lock_id, timeout, create_by, change_by)
 			VALUES ('TEST-ATT-001', 'Test Ticket for Attachments', 1, 1, 1, 1, 1, 0, 1, 1)
@@ -184,12 +184,12 @@ func TestGetMessagesWithAttachments(t *testing.T) {
 
 		// Create an article for the ticket
 		var articleID int
-		err = db.QueryRow(`
+		err = db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO article (ticket_id, subject, body, sender_type_id, communication_channel_id,
 			                    is_visible_for_customer, create_by, change_by)
 			VALUES ($1, 'Test Article', 'Test article body', 3, 1, 1, 1, 1)
 			RETURNING id
-		`, ticketID).Scan(&articleID)
+		`), ticketID).Scan(&articleID)
 		
 		require.NoError(t, err)
 		defer db.Exec("DELETE FROM article WHERE id = $1", articleID)
@@ -200,12 +200,12 @@ func TestGetMessagesWithAttachments(t *testing.T) {
 		defer os.Remove(testFile)
 
 		var attachmentID int
-		err = db.QueryRow(`
+		err = db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO article_data_mime_attachment 
 			(article_id, filename, content_type, content_size, content, disposition, create_by, change_by)
 			VALUES ($1, 'document.pdf', 'application/pdf', '11', $2, 'attachment', 1, 1)
 			RETURNING id
-		`, articleID, []byte(testFile)).Scan(&attachmentID)
+		`), articleID, []byte(testFile)).Scan(&attachmentID)
 		
 		require.NoError(t, err)
 		defer db.Exec("DELETE FROM article_data_mime_attachment WHERE id = $1", attachmentID)

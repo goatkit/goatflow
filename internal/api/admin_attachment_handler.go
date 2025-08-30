@@ -179,7 +179,7 @@ func handleAdminAttachmentCreate(c *gin.Context) {
 
 	// Check for duplicate name
 	var exists bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM standard_attachment WHERE name = $1)", name).Scan(&exists)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM standard_attachment WHERE name = $1)"), name).Scan(&exists)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -203,11 +203,11 @@ func handleAdminAttachmentCreate(c *gin.Context) {
 		commentsPtr = &comments
 	}
 
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		INSERT INTO standard_attachment (name, filename, content_type, content, comments, valid_id, create_by, change_by)
 		VALUES ($1, $2, $3, $4, $5, $6, 1, 1)
 		RETURNING id
-	`, name, header.Filename, header.Header.Get("Content-Type"), content, commentsPtr, validID).Scan(&id)
+	`), name, header.Filename, header.Header.Get("Content-Type"), content, commentsPtr, validID).Scan(&id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -356,11 +356,11 @@ func handleAdminAttachmentDelete(c *gin.Context) {
 	}
 
 	// Soft delete by setting valid_id = 2
-	result, err := db.Exec(`
+	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE standard_attachment 
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
 		WHERE id = $1
-	`, id)
+	`), id)
 	
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -403,11 +403,11 @@ func handleAdminAttachmentDownload(c *gin.Context) {
 	var filename, contentType string
 	var content []byte
 	
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT filename, content_type, content 
 		FROM standard_attachment 
 		WHERE id = $1
-	`, id).Scan(&filename, &contentType, &content)
+	`), id).Scan(&filename, &contentType, &content)
 	
 	if err == sql.ErrNoRows {
 		c.String(http.StatusNotFound, "Attachment not found")
@@ -460,11 +460,11 @@ func handleAdminAttachmentToggle(c *gin.Context) {
 		return
 	}
 
-	result, err := db.Exec(`
+	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE standard_attachment 
 		SET valid_id = $1, change_time = CURRENT_TIMESTAMP, change_by = 1 
 		WHERE id = $2
-	`, input.ValidID, id)
+	`), input.ValidID, id)
 	
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

@@ -190,7 +190,7 @@ func setupGroupAssignmentTestUser(t *testing.T, db *sql.DB) TestUser {
 	// Create test user
 	login := "test_group_user_" + randomString(8)
 	var userID int
-	err := db.QueryRow(`
+	err := db.QueryRow(database.ConvertPlaceholders(`
 		INSERT INTO users (login, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
 		VALUES ($1, $2, $3, 1, NOW(), 1, NOW(), 1)
 		RETURNING id`,
@@ -236,7 +236,7 @@ func verifyTestGroups(t *testing.T, db *sql.DB) []TestGroup {
 }
 
 func getUserGroupsFromDB(t *testing.T, db *sql.DB, userID int) []string {
-	rows, err := db.Query(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT g.name 
 		FROM groups g
 		JOIN group_user gu ON g.id = gu.group_id
@@ -262,7 +262,7 @@ func assignUserToGroups(t *testing.T, db *sql.DB, userID int, groupNames []strin
 		err := db.QueryRow("SELECT id FROM groups WHERE name = $1 AND valid_id = 1", groupName).Scan(&groupID)
 		require.NoError(t, err, "Group %s should exist", groupName)
 
-		_, err = db.Exec(`
+		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
 			VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)
 			ON CONFLICT (user_id, group_id, permission_key) DO NOTHING`,

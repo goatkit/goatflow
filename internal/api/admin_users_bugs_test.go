@@ -162,7 +162,7 @@ func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
 
 	t.Run("FAILING: Should support removing user from all groups but doesn't", func(t *testing.T) {
 		// ARRANGE: Ensure user has at least one group assignment
-		_, err := db.Exec(`
+		_, err := db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
 			SELECT 15, g.id, 'rw', 1, NOW(), 1, NOW(), 1
 			FROM groups g 

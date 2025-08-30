@@ -402,11 +402,11 @@ func handleAdminStateDelete(c *gin.Context) {
 	}
 
 	// Soft delete by setting valid_id = 2
-	result, err := db.Exec(`
+	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket_state 
 		SET valid_id = 2, change_by = 1, change_time = CURRENT_TIMESTAMP 
 		WHERE id = $1
-	`, id)
+	`), id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

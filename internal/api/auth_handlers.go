@@ -7,6 +7,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/flosch/pongo2/v6"
+	"github.com/gotrs-io/gotrs-ce/internal/constants"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
 
 // HandleAuthLogin handles the login form submission
@@ -56,11 +59,20 @@ var HandleAuthLogin = func(c *gin.Context) {
 		return
 	}
 	
+	// Get user's preferred session timeout
+	sessionTimeout := constants.DefaultSessionTimeout // Default 24 hours
+	if db, err := database.GetDB(); err == nil && db != nil {
+		prefService := service.NewUserPreferencesService(db)
+		if userTimeout := prefService.GetSessionTimeout(int(user.ID)); userTimeout > 0 {
+			sessionTimeout = userTimeout
+		}
+	}
+	
 	// Set cookies for tokens - use access_token name that SessionMiddleware expects
 	c.SetCookie(
 		"access_token",  // SessionMiddleware looks for this name
 		accessToken,
-		3600, // 1 hour
+		sessionTimeout,
 		"/",
 		"",
 		false, // Not HTTPS in dev
@@ -70,16 +82,16 @@ var HandleAuthLogin = func(c *gin.Context) {
 	c.SetCookie(
 		"refresh_token", 
 		refreshToken,
-		86400*7, // 7 days
+		constants.RefreshTokenTimeout, // 7 days
 		"/",
 		"",
 		false,
 		true,
 	)
 	
-	// Store user in session
+	// Store user in session (use "user_id" to match middleware)
 	c.Set("user", user)
-	c.Set("userID", user.ID)
+	c.Set("user_id", user.ID)
 	
 	// Check if this is an HTMX request or regular form submission
 	if c.GetHeader("HX-Request") == "true" {
@@ -104,7 +116,7 @@ var HandleAuthLogout = func(c *gin.Context) {
 
 // HandleAuthCheck checks if user is authenticated
 var HandleAuthCheck = func(c *gin.Context) {
-	userID, exists := c.Get("userID")
+	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"authenticated": false,

@@ -9,6 +9,7 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // RegisterAdminCustomerCompanyRoutes registers customer company management routes
@@ -179,7 +180,7 @@ func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Insert new company
-		_, err := db.Exec(`
+		_, err := db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO customer_company (
 				customer_id, name, street, zip, city, country, url, comments,
 				valid_id, create_time, create_by, change_time, change_by
@@ -188,7 +189,7 @@ func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 				NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''),
 				1, NOW(), 1, NOW(), 1
 			)
-		`, customerID, name, street, zip, city, country, url, comments)
+		`), customerID, name, street, zip, city, country, url, comments)
 		
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create customer company"})
@@ -217,11 +218,11 @@ func handleAdminEditCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			ValidID    int
 		}
 		
-		err := db.QueryRow(`
+		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT customer_id, name, street, zip, city, country, url, comments, valid_id
 			FROM customer_company
 			WHERE customer_id = $1
-		`, customerID).Scan(&company.CustomerID, &company.Name, &company.Street,
+		`), customerID).Scan(&company.CustomerID, &company.Name, &company.Street,
 			&company.Zip, &company.City, &company.Country, &company.URL,
 			&company.Comments, &company.ValidID)
 		
@@ -233,10 +234,10 @@ func handleAdminEditCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		// Get portal settings from sysconfig (stored as JSON in config_item table)
 		var portalConfig map[string]interface{}
 		var configJSON sql.NullString
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT content_json FROM sysconfig 
 			WHERE name = $1
-		`, "CustomerPortal::Company::"+customerID).Scan(&configJSON)
+		`), "CustomerPortal::Company::"+customerID).Scan(&configJSON)
 		
 		if configJSON.Valid {
 			// Parse stored portal configuration
@@ -297,14 +298,14 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		}
 		
 		// Update company
-		_, err := db.Exec(`
+		_, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE customer_company SET
 				name = $2, street = NULLIF($3, ''), zip = NULLIF($4, ''),
 				city = NULLIF($5, ''), country = NULLIF($6, ''),
 				url = NULLIF($7, ''), comments = NULLIF($8, ''),
 				valid_id = $9, change_time = NOW(), change_by = 1
 			WHERE customer_id = $1
-		`, customerID, name, street, zip, city, country, url, comments, validID)
+		`), customerID, name, street, zip, city, country, url, comments, validID)
 		
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update customer company"})
@@ -321,11 +322,11 @@ func handleAdminDeleteCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		customerID := c.Param("id")
 		
 		// Soft delete by setting valid_id to 2 (invalid)
-		_, err := db.Exec(`
+		_, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE customer_company 
 			SET valid_id = 2, change_time = NOW(), change_by = 1
 			WHERE customer_id = $1
-		`, customerID)
+		`), customerID)
 		
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete customer company"})
@@ -346,7 +347,7 @@ func handleAdminCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 		db.QueryRow("SELECT name FROM customer_company WHERE customer_id = $1", customerID).Scan(&companyName)
 		
 		// Get users
-		rows, _ := db.Query(`
+		rows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT cu.id, cu.login, cu.email, cu.first_name, cu.last_name,
 			       cu.phone, cu.mobile, cu.valid_id, v.name as valid_name,
 			       (SELECT COUNT(*) FROM ticket WHERE customer_user_id = cu.login) as ticket_count
@@ -354,7 +355,7 @@ func handleAdminCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 			LEFT JOIN valid v ON cu.valid_id = v.id
 			WHERE cu.customer_id = $1
 			ORDER BY cu.last_name, cu.first_name
-		`, customerID)
+		`), customerID)
 		defer rows.Close()
 		
 		users := []map[string]interface{}{}
@@ -402,7 +403,7 @@ func handleAdminCustomerCompanyTickets(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
 		
-		rows, _ := db.Query(`
+		rows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT t.id, t.tn, t.title, ts.name as state,
 			       tp.name as priority, t.create_time,
 			       cu.login as customer_user
@@ -413,7 +414,7 @@ func handleAdminCustomerCompanyTickets(db *sql.DB) gin.HandlerFunc {
 			WHERE t.customer_id = $1
 			ORDER BY t.create_time DESC
 			LIMIT 100
-		`, customerID)
+		`), customerID)
 		defer rows.Close()
 		
 		tickets := []map[string]interface{}{}
@@ -452,7 +453,7 @@ func handleAdminCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 		customerID := c.Param("id")
 		
 		// Get all services and their assignment status
-		rows, _ := db.Query(`
+		rows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT s.id, s.name, s.comments,
 			       EXISTS(
 			           SELECT 1 FROM customer_user_service 
@@ -464,7 +465,7 @@ func handleAdminCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 			FROM service s
 			WHERE s.valid_id = 1
 			ORDER BY s.name
-		`, customerID)
+		`), customerID)
 		defer rows.Close()
 		
 		services := []map[string]interface{}{}
@@ -531,10 +532,10 @@ func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 		// Add new assignments
 		for _, login := range userLogins {
 			for _, serviceID := range serviceIDs {
-				tx.Exec(`
+				tx.Exec(database.ConvertPlaceholders(`
 					INSERT INTO customer_user_service (customer_user_login, service_id, create_time, create_by)
 					VALUES ($1, $2, NOW(), 1)
-				`, login, serviceID)
+				`), login, serviceID)
 			}
 		}
 		
@@ -558,10 +559,10 @@ func handleAdminCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 		
 		// Get portal configuration
 		var configJSON sql.NullString
-		db.QueryRow(`
+		db.QueryRow(database.ConvertPlaceholders(`
 			SELECT content_json FROM sysconfig 
 			WHERE name = $1
-		`, "CustomerPortal::Company::"+customerID).Scan(&configJSON)
+		`), "CustomerPortal::Company::"+customerID).Scan(&configJSON)
 		
 		portalConfig := map[string]interface{}{
 			"logo_url":         "",
@@ -617,21 +618,21 @@ func handleAdminUpdateCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 		db.QueryRow("SELECT EXISTS(SELECT 1 FROM sysconfig WHERE name = $1)", configName).Scan(&exists)
 		
 		if exists {
-			_, err := db.Exec(`
+			_, err := db.Exec(database.ConvertPlaceholders(`
 				UPDATE sysconfig 
 				SET content_json = $2, change_time = NOW(), change_by = 1
 				WHERE name = $1
-			`, configName, config)
+			`), configName, config)
 			
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update portal settings"})
 				return
 			}
 		} else {
-			_, err := db.Exec(`
+			_, err := db.Exec(database.ConvertPlaceholders(`
 				INSERT INTO sysconfig (name, content_json, valid_id, create_time, create_by, change_time, change_by)
 				VALUES ($1, $2, 1, NOW(), 1, NOW(), 1)
-			`, configName, config)
+			`), configName, config)
 			
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create portal settings"})

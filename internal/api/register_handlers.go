@@ -6,6 +6,19 @@ import (
 
 // RegisterWithRouting registers all API handlers with the routing system
 func RegisterWithRouting(registry *routing.HandlerRegistry) error {
+	// Profile and preference handlers
+	registry.Register("profile", HandleProfile)
+	registry.Register("handleProfile", HandleProfile) // Both names for compatibility
+	registry.Register("get_session_timeout", HandleGetSessionTimeout)
+	registry.Register("set_session_timeout", HandleSetSessionTimeout)
+	
+	// Redirect handlers
+	registry.Register("redirect_profile", HandleRedirectProfile)
+	registry.Register("redirect_tickets", HandleRedirectTickets)
+	registry.Register("redirect_tickets_new", HandleRedirectTicketsNew)
+	registry.Register("redirect_queues", HandleRedirectQueues)
+	registry.Register("redirect_settings", HandleRedirectSettings)
+	
 	// Core handlers
 	registry.Register("redirect", HandleRedirect)
 	registry.Register("template", HandleTemplate)
@@ -90,6 +103,8 @@ func RegisterWithRouting(registry *routing.HandlerRegistry) error {
 	// NEWLY ADDED: Missing handlers that were causing 404 errors
 	registry.Register("agent_ticket_queue", HandleAgentTicketQueue)
 	registry.Register("agent_ticket_merge", HandleAgentTicketMerge)
+	registry.Register("ticket_customer_users", HandleTicketCustomerUsers)
+	registry.Register("article_attachment_download", HandleArticleAttachmentDownload)
 	registry.Register("agent_queues", HandleAgentQueues)
 	registry.Register("agent_queue_view", HandleAgentQueueView)
 	registry.Register("agent_queue_lock", HandleAgentQueueLock)

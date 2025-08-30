@@ -263,7 +263,7 @@ func handleAdminSLACreate(c *gin.Context) {
 
 	// Insert the new SLA
 	var id int
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		INSERT INTO sla (
 			name, calendar_name, 
 			first_response_time, first_response_notify,
@@ -275,7 +275,7 @@ func handleAdminSLACreate(c *gin.Context) {
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
 			CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1
 		) RETURNING id
-	`, input.Name, input.CalendarName,
+	`), input.Name, input.CalendarName,
 		input.FirstResponseTime, input.FirstResponseNotify,
 		input.UpdateTime, input.UpdateNotify,
 		input.SolutionTime, input.SolutionNotify,
@@ -480,11 +480,11 @@ func handleAdminSLADelete(c *gin.Context) {
 	}
 
 	// Soft delete (mark as invalid)
-	result, err := db.Exec(`
+	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE sla 
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
 		WHERE id = $1
-	`, id)
+	`), id)
 	
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

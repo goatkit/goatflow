@@ -186,12 +186,12 @@ func HandleClaudeTicketStatus(c *gin.Context) {
 	for _, ticketNum := range request.Tickets {
 		var status string
 		var stateID int
-		err := db.QueryRow(`
+		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT ts.name, t.ticket_state_id
 			FROM ticket t
 			JOIN ticket_state ts ON t.ticket_state_id = ts.id
 			WHERE t.tn = $1
-		`, ticketNum).Scan(&status, &stateID)
+		`), ticketNum).Scan(&status, &stateID)
 		
 		if err == nil {
 			// Map OTRS states to simple states for chat

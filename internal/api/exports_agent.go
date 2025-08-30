@@ -8,27 +8,47 @@ import (
 // Agent handler exports that get database from connection pool
 var (
 	HandleAgentDashboard = func(c *gin.Context) {
-		db, _ := database.GetDB()
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			c.JSON(500, gin.H{"error": "Database connection failed"})
+			return
+		}
 		handleAgentDashboard(db)(c)
 	}
 	
 	HandleAgentTickets = func(c *gin.Context) {
-		db, _ := database.GetDB()
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			c.JSON(500, gin.H{"error": "Database connection failed"})
+			return
+		}
 		handleAgentTickets(db)(c)
 	}
 	
 	HandleAgentTicketView = func(c *gin.Context) {
-		db, _ := database.GetDB()
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			c.JSON(500, gin.H{"error": "Database connection failed"})
+			return
+		}
 		handleAgentTicketView(db)(c)
 	}
 	
 	HandleAgentTicketReply = func(c *gin.Context) {
-		db, _ := database.GetDB()
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			c.JSON(500, gin.H{"error": "Database connection failed"})
+			return
+		}
 		handleAgentTicketReply(db)(c)
 	}
 	
 	HandleAgentTicketNote = func(c *gin.Context) {
-		db, _ := database.GetDB()
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			c.JSON(500, gin.H{"error": "Database connection failed"})
+			return
+		}
 		handleAgentTicketNote(db)(c)
 	}
 	
@@ -43,7 +63,11 @@ var (
 	}
 	
 	HandleAgentTicketAssign = func(c *gin.Context) {
-		db, _ := database.GetDB()
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			c.JSON(500, gin.H{"error": "Database connection failed"})
+			return
+		}
 		handleAgentTicketAssign(db)(c)
 	}
 	
@@ -63,8 +87,22 @@ var (
 		handleAgentTicketMerge(db)(c)
 	}
 	
-	HandleAgentQueues = func(c *gin.Context) {
+	HandleTicketCustomerUsers = func(c *gin.Context) {
 		db, _ := database.GetDB()
+		handleTicketCustomerUsers(db)(c)
+	}
+	
+	HandleArticleAttachmentDownload = func(c *gin.Context) {
+		db, _ := database.GetDB()
+		handleArticleAttachmentDownload(db)(c)
+	}
+	
+	HandleAgentQueues = func(c *gin.Context) {
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			c.JSON(500, gin.H{"error": "Database connection failed"})
+			return
+		}
 		handleAgentQueues(db)(c)
 	}
 	

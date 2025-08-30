@@ -31,7 +31,7 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 
 		// Query to verify user groups
 		var groups string
-		err = db.QueryRow(`
+		err = db.QueryRow(database.ConvertPlaceholders(`
 			SELECT string_agg(g.name, ', ') as groups 
 			FROM users u 
 			LEFT JOIN group_user gu ON u.id = gu.user_id 
@@ -142,7 +142,7 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 
 		// Now check if the database was actually updated
 		var newGroups string
-		err = db.QueryRow(`
+		err = db.QueryRow(database.ConvertPlaceholders(`
 			SELECT string_agg(g.name, ', ') as groups 
 			FROM users u 
 			LEFT JOIN group_user gu ON u.id = gu.user_id 

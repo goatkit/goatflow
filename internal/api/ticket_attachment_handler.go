@@ -284,7 +284,7 @@ func handleGetAttachments(c *gin.Context) {
 	}
 
 	// Query attachments from database - get all attachments for all articles of this ticket
-	rows, err := db.Query(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT att.id, att.filename, 
 		       COALESCE(att.content_type, 'application/octet-stream'), 
 		       COALESCE(att.content_size, '0'),
@@ -294,7 +294,7 @@ func handleGetAttachments(c *gin.Context) {
 		INNER JOIN article a ON att.article_id = a.id
 		WHERE a.ticket_id = $1
 		ORDER BY att.id
-	`, ticketID)
+	`), ticketID)
 	if err != nil {
 		sendGuruMeditation(c, err, "Failed to query attachments")
 		return

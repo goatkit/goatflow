@@ -199,11 +199,11 @@ func handleAdminServiceCreate(c *gin.Context) {
 
 	// Insert the new service
 	var id int
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		INSERT INTO service (name, comments, valid_id, create_time, create_by, change_time, change_by)
 		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 		RETURNING id
-	`, input.Name, input.Comments, input.ValidID).Scan(&id)
+	`), input.Name, input.Comments, input.ValidID).Scan(&id)
 
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
@@ -356,11 +356,11 @@ func handleAdminServiceDelete(c *gin.Context) {
 
 	// In OTRS, services are typically soft-deleted (marked invalid) rather than hard deleted
 	// This preserves referential integrity with existing tickets
-	result, err := db.Exec(`
+	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE service 
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
 		WHERE id = $1
-	`, id)
+	`), id)
 	
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

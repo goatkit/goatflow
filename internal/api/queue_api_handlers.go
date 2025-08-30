@@ -34,11 +34,11 @@ func HandleAPIQueueGet(c *gin.Context) {
 		ValidID          int    `json:"valid_id"`
 	}
 
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT id, name, group_id, system_address_id, comments, 
 		       unlock_timeout, follow_up_lock, valid_id
 		FROM queue WHERE id = $1
-	`, id).Scan(&queue.ID, &queue.Name, &queue.GroupID, &queue.SystemAddressID,
+	`), id).Scan(&queue.ID, &queue.Name, &queue.GroupID, &queue.SystemAddressID,
 		&queue.Comments, &queue.UnlockTimeout, &queue.FollowUpLock, &queue.ValidID)
 
 	if err != nil {
@@ -78,7 +78,7 @@ func HandleAPIQueueDetails(c *gin.Context) {
 		TicketCount      int    `json:"ticket_count"`
 	}
 
-	err = db.QueryRow(`
+	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT q.id, q.name, q.group_id, g.name as group_name,
 		       q.system_address_id, q.comments, 
 		       q.unlock_timeout, q.follow_up_lock, q.valid_id,
@@ -86,7 +86,7 @@ func HandleAPIQueueDetails(c *gin.Context) {
 		FROM queue q
 		LEFT JOIN groups g ON q.group_id = g.id
 		WHERE q.id = $1
-	`, id).Scan(&queue.ID, &queue.Name, &queue.GroupID, &queue.GroupName,
+	`), id).Scan(&queue.ID, &queue.Name, &queue.GroupID, &queue.GroupName,
 		&queue.SystemAddressID, &queue.Comments, &queue.UnlockTimeout,
 		&queue.FollowUpLock, &queue.ValidID, &queue.TicketCount)
 
@@ -122,7 +122,7 @@ func HandleAPIQueueStatus(c *gin.Context) {
 	}
 
 	// Update queue status
-	_, err = db.Exec(`UPDATE queue SET valid_id = $1 WHERE id = $2`, req.ValidID, id)
+	_, err = db.Exec(database.ConvertPlaceholders(`UPDATE queue SET valid_id = $1 WHERE id = $2`), req.ValidID, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update queue status"})
 		return

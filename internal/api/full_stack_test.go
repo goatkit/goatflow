@@ -290,7 +290,7 @@ func TestDatabaseIntegrity(t *testing.T) {
 	
 	t.Run("Verify foreign key constraints work", func(t *testing.T) {
 		// Try to create an article for non-existent ticket
-		_, err := db.Exec(`
+		_, err := db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO article (ticket_id, subject, body, create_by, change_by)
 			VALUES (999999, 'Test', 'Test', 1, 1)
 		`)
@@ -302,7 +302,7 @@ func TestDatabaseIntegrity(t *testing.T) {
 	t.Run("Verify cascade deletes work correctly", func(t *testing.T) {
 		// Create a test ticket
 		var ticketID int
-		err := db.QueryRow(`
+		err := db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO ticket (tn, title, queue_id, ticket_state_id, ticket_priority_id, 
 				ticket_lock_id, create_by, change_by, customer_user_id)
 			VALUES ('TEST' || EXTRACT(EPOCH FROM NOW())::int, 'Cascade Test', 1, 1, 1, 1, 1, 1, 'test@example.com')
@@ -311,10 +311,10 @@ func TestDatabaseIntegrity(t *testing.T) {
 		require.NoError(t, err)
 		
 		// Add an article
-		_, err = db.Exec(`
+		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO article (ticket_id, subject, body, create_by, change_by)
 			VALUES ($1, 'Test Article', 'Test Body', 1, 1)
-		`, ticketID)
+		`), ticketID)
 		require.NoError(t, err)
 		
 		// Delete the ticket
@@ -338,7 +338,7 @@ func TestCleanupOldTestData(t *testing.T) {
 	require.NoError(t, err)
 	
 	// Clean up test tickets older than 1 hour
-	result, err := db.Exec(`
+	result, err := db.Exec(database.ConvertPlaceholders(`
 		DELETE FROM ticket 
 		WHERE (title LIKE 'Test%' OR title LIKE 'Full Stack Test%' OR title LIKE 'Concurrent Test%')
 		AND create_time < NOW() - INTERVAL '1 hour'

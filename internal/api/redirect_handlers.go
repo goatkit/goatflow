@@ -73,8 +73,8 @@ func handleRedirectProfile(c *gin.Context) {
 	
 	switch role.(string) {
 	case "Admin", "Agent":
-		// Agents use admin profile for now
-		c.Redirect(http.StatusSeeOther, "/admin/users")
+		// Redirect to agent profile page
+		c.Redirect(http.StatusSeeOther, "/agent/profile")
 	case "Customer":
 		c.Redirect(http.StatusSeeOther, "/customer/profile")
 	default:
