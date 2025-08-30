@@ -69,30 +69,17 @@ func (g *AutoIncrementGenerator) getNextCounterWithStart() (int64, error) {
 	`), g.counterUID).Scan(&counter)
 	
 	if err == sql.ErrNoRows {
-		// Counter doesn't exist, initialize with StartFrom value
-		err = g.db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
-			VALUES ($1, $2, NOW())
-			RETURNING counter
-		`), g.config.StartFrom, g.counterUID).Scan(&counter)
-		
-		if err != nil {
-			return 0, err
-		}
-		return counter, nil
+		// Counter doesn't exist, use the shared getNextCounter function
+		// which handles MySQL/PostgreSQL differences
+		return getNextCounter(g.db, g.counterUID)
 	}
 	
 	if err != nil {
 		return 0, err
 	}
 	
-	// Counter exists, increment it
-	err = g.db.QueryRow(database.ConvertPlaceholders(`
-		UPDATE ticket_number_counter 
-		SET counter = counter + 1 
-		WHERE counter_uid = $1
-		RETURNING counter
-	`), g.counterUID).Scan(&counter)
+	// Counter exists, use the shared getNextCounter function
+	return getNextCounter(g.db, g.counterUID)
 	
 	if err != nil {
 		return 0, err

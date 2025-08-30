@@ -93,13 +93,7 @@ var HandleAPIv1TicketGet = func(c *gin.Context) {
 	})
 }
 
-var HandleAPIv1TicketCreate = func(c *gin.Context) {
-	c.JSON(http.StatusCreated, gin.H{
-		"success": true,
-		"message": "Endpoint /api/v1/tickets (POST) is under construction",
-		"data":    nil,
-	})
-}
+var HandleAPIv1TicketCreate = HandleCreateTicketAPI
 
 var HandleAPIv1TicketUpdate = func(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{

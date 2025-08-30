@@ -125,7 +125,7 @@ func (router *APIRouter) setupTicketRoutes(protected *gin.RouterGroup) {
 	{
 		// Basic CRUD
 		tickets.GET("", router.handleListTickets)
-		tickets.POST("", middleware.RequireAnyPermission(router.rbac, auth.PermissionTicketCreate, auth.PermissionOwnTicketCreate), router.handleCreateTicket)
+		tickets.POST("", middleware.RequireAnyPermission(router.rbac, auth.PermissionTicketCreate, auth.PermissionOwnTicketCreate), router.HandleCreateTicket)
 		tickets.GET("/:id", middleware.RequireTicketAccess(router.rbac), router.handleGetTicket)
 		tickets.PUT("/:id", middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate), router.handleUpdateTicket)
 		tickets.DELETE("/:id", middleware.RequirePermission(router.rbac, auth.PermissionTicketDelete), router.handleDeleteTicket)

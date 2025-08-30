@@ -655,8 +655,12 @@ db-shell:
 	@if [ "$(DB_DRIVER)" = "postgres" ]; then \
 		$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME); \
 	elif [ "$(DB_DRIVER)" = "mysql" ]; then \
-		$(COMPOSE_CMD) exec -T mariadb mysql -u $(MYSQL_ROOT_USER) -p$(MYSQL_ROOT_PASSWORD) -e 'CREATE DATABASE IF NOT EXISTS `$(DB_NAME)`;' < /dev/null; \
-		$(COMPOSE_CMD) exec -T mariadb mysql -u $(MYSQL_ROOT_USER) -p$(MYSQL_ROOT_PASSWORD) -D $(DB_NAME); \
+		$(CONTAINER_CMD) run --rm -i \
+			--network gotrs-ce_default \
+			-v "$$(pwd):/workspace" \
+			-w /workspace \
+			gotrs-toolbox:latest \
+			mysql -h 172.18.0.3 -u $(MYSQL_ROOT_USER) -p$(MYSQL_ROOT_PASSWORD) -D $(DB_NAME); \
     fi
 
 # Fix PostgreSQL sequences after data import

@@ -79,21 +79,27 @@ func (router *APIRouter) handleListTickets(c *gin.Context) {
 	sendPaginatedResponse(c, tickets, pagination)
 }
 
-// handleCreateTicket creates a new ticket
-func (router *APIRouter) handleCreateTicket(c *gin.Context) {
+// HandleCreateTicket creates a new ticket
+func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 	var ticketRequest struct {
-		Title             string                 `json:"title" binding:"required"`
-		QueueID           int                    `json:"queue_id" binding:"required"`
-		TypeID            int                    `json:"type_id"`
-		StateID           int                    `json:"state_id"`
-		PriorityID        int                    `json:"priority_id"`
-		CustomerUserID    string                 `json:"customer_user_id"`
-		CustomerID        string                 `json:"customer_id"`
-		Article           map[string]interface{} `json:"article"`
+		Title          string                 `json:"title" binding:"required"`
+		QueueID        int                    `json:"queue_id" binding:"required"`
+		TypeID         int                    `json:"type_id"`
+		StateID        int                    `json:"state_id"`
+		PriorityID     int                    `json:"priority_id"`
+		CustomerUserID string                 `json:"customer_user_id"`
+		CustomerID     string                 `json:"customer_id"`
+		Article        map[string]interface{} `json:"article"`
 	}
 
 	if err := c.ShouldBindJSON(&ticketRequest); err != nil {
 		sendError(c, http.StatusBadRequest, "Invalid ticket request: "+err.Error())
+		return
+	}
+
+	// Validate title length
+	if len(ticketRequest.Title) > 255 {
+		sendError(c, http.StatusBadRequest, "Title too long (max 255 characters)")
 		return
 	}
 
@@ -103,22 +109,22 @@ func (router *APIRouter) handleCreateTicket(c *gin.Context) {
 		return
 	}
 
-	// Get database instance using abstraction layer
-	db := database.GetDatabase()
-	if db == nil {
-		sendError(c, http.StatusInternalServerError, "Database not initialized")
-		return
-	}
-
-	// Get legacy SQL DB for ticket number generator (temporary until generator is refactored)
-	sqlDB, err := database.GetDB()
+	// Get database connection
+	db, err := database.GetDB()
 	if err != nil {
-		sendError(c, http.StatusInternalServerError, "Database connection failed")
+		sendError(c, http.StatusServiceUnavailable, "Database connection failed")
 		return
 	}
 
-	// Create ticket number generator based on config
-	// For now, use environment variable or default to date generator
+	// Validate queue exists
+	var queueExists bool
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM queue WHERE id = $1 AND valid_id = 1)"), ticketRequest.QueueID).Scan(&queueExists)
+	if err != nil || !queueExists {
+		sendError(c, http.StatusBadRequest, "Invalid queue_id")
+		return
+	}
+
+	// Create ticket number generator
 	generatorConfig := map[string]interface{}{
 		"type": os.Getenv("TICKET_NUMBER_GENERATOR"),
 	}
@@ -126,7 +132,7 @@ func (router *APIRouter) handleCreateTicket(c *gin.Context) {
 		generatorConfig["type"] = "date"
 	}
 	
-	generator, err := ticket_number.NewGeneratorFromConfig(sqlDB, generatorConfig)
+	generator, err := ticket_number.NewGeneratorFromConfig(db, generatorConfig)
 	if err != nil {
 		sendError(c, http.StatusInternalServerError, "Failed to initialize ticket number generator")
 		return
@@ -150,63 +156,40 @@ func (router *APIRouter) handleCreateTicket(c *gin.Context) {
 		ticketRequest.PriorityID = 3 // normal
 	}
 
-	// Begin transaction using abstraction layer
-	ctx := c.Request.Context()
-	tx, err := db.BeginTx(ctx, nil)
+	// Begin transaction
+	tx, err := db.Begin()
 	if err != nil {
 		sendError(c, http.StatusInternalServerError, "Failed to start transaction")
 		return
 	}
 	defer tx.Rollback()
 
-	// Build ticket insert using database abstraction
-	// For now, use direct SQL with database-specific placeholders until abstraction layer
-	// fully supports raw SQL expressions for timestamps
-	var ticketID int64
+	// Get database adapter
+	adapter := database.GetAdapter()
 	
-	// Use traditional approach for now - will refactor when abstraction layer is enhanced
-	if db.GetType() == database.PostgreSQL {
-		err = tx.QueryRow(ctx, `
-			INSERT INTO ticket (
-				tn, title, queue_id, type_id, ticket_state_id, 
-				ticket_priority_id, customer_user_id, customer_id,
-				ticket_lock_id, user_id, responsible_user_id,
-				create_time, create_by, change_time, change_by
-			) VALUES (
-				$1, $2, $3, $4, $5, 
-				$6, $7, $8,
-				1, $9, $9,
-				NOW(), $9, NOW(), $9
-			) RETURNING id
-		`), ticketNumber, ticketRequest.Title, ticketRequest.QueueID, 
-		   ticketRequest.TypeID, ticketRequest.StateID,
-		   ticketRequest.PriorityID, ticketRequest.CustomerUserID, ticketRequest.CustomerID,
-		   userID).Scan(&ticketID)
-	} else if db.GetType() == database.MySQL {
-		result, err := tx.Exec(ctx, `
-			INSERT INTO ticket (
-				tn, title, queue_id, type_id, ticket_state_id, 
-				ticket_priority_id, customer_user_id, customer_id,
-				ticket_lock_id, user_id, responsible_user_id,
-				create_time, create_by, change_time, change_by
-			) VALUES (
-				?, ?, ?, ?, ?, 
-				?, ?, ?,
-				1, ?, ?,
-				NOW(), ?, NOW(), ?
-			)
-		`), ticketNumber, ticketRequest.Title, ticketRequest.QueueID, 
-		   ticketRequest.TypeID, ticketRequest.StateID,
-		   ticketRequest.PriorityID, ticketRequest.CustomerUserID, ticketRequest.CustomerID,
-		   userID, userID, userID, userID)
-		
-		if err == nil {
-			ticketID, err = result.LastInsertId()
-		}
-	} else {
-		// Add support for Oracle and SQL Server when needed
-		err = fmt.Errorf("unsupported database type: %v", db.GetType())
-	}
+	// Insert ticket
+	ticketQuery := database.ConvertPlaceholders(`
+		INSERT INTO ticket (
+			tn, title, queue_id, type_id, ticket_state_id, 
+			ticket_priority_id, customer_user_id, customer_id,
+			ticket_lock_id, user_id, responsible_user_id,
+			create_time, create_by, change_time, change_by
+		) VALUES (
+			$1, $2, $3, $4, $5, 
+			$6, $7, $8,
+			1, $9, $10,
+			NOW(), $11, NOW(), $12
+		) RETURNING id
+	`)
+
+	ticketID, err := adapter.InsertWithReturningTx(
+		tx, 
+		ticketQuery,
+		ticketNumber, ticketRequest.Title, ticketRequest.QueueID, 
+		ticketRequest.TypeID, ticketRequest.StateID,
+		ticketRequest.PriorityID, ticketRequest.CustomerUserID, ticketRequest.CustomerID,
+		userID, userID, userID, userID,
+	)
 
 	if err != nil {
 		sendError(c, http.StatusInternalServerError, "Failed to create ticket: " + err.Error())
@@ -217,6 +200,11 @@ func (router *APIRouter) handleCreateTicket(c *gin.Context) {
 	if ticketRequest.Article != nil {
 		subject, _ := ticketRequest.Article["subject"].(string)
 		body, _ := ticketRequest.Article["body"].(string)
+		contentType, _ := ticketRequest.Article["content_type"].(string)
+		if contentType == "" {
+			contentType = "text/plain"
+		}
+		
 		articleTypeID := 1 // email-external default
 		senderTypeID := 3  // customer default
 		
@@ -227,38 +215,51 @@ func (router *APIRouter) handleCreateTicket(c *gin.Context) {
 			senderTypeID = int(stID)
 		}
 
-		// Insert article with database-specific SQL
-		if db.GetType() == database.PostgreSQL {
-			_, err = tx.Exec(ctx, `
-				INSERT INTO article (
-					ticket_id, article_sender_type_id, communication_channel_id,
-					is_visible_for_customer, create_time, create_by, 
-					change_time, change_by
-				) VALUES (
-					$1, $2, 1, 1, NOW(), $3, NOW(), $3
-				)
-			`), ticketID, senderTypeID, userID)
-		} else if db.GetType() == database.MySQL {
-			_, err = tx.Exec(ctx, `
-				INSERT INTO article (
-					ticket_id, article_sender_type_id, communication_channel_id,
-					is_visible_for_customer, create_time, create_by, 
-					change_time, change_by
-				) VALUES (
-					?, ?, 1, 1, NOW(), ?, NOW(), ?
-				)
-			`), ticketID, senderTypeID, userID, userID)
-		}
+		// Insert article
+		articleQuery := database.ConvertPlaceholders(`
+			INSERT INTO article (
+				ticket_id, article_sender_type_id, communication_channel_id,
+				is_visible_for_customer, create_time, create_by, 
+				change_time, change_by
+			) VALUES (
+				$1, $2, 1, 1, NOW(), $3, NOW(), $4
+			) RETURNING id
+		`)
+		
+		articleID, err := adapter.InsertWithReturningTx(
+			tx,
+			articleQuery,
+			ticketID, senderTypeID, userID, userID,
+		)
 		
 		if err != nil {
 			sendError(c, http.StatusInternalServerError, "Failed to create article: " + err.Error())
 			return
 		}
 		
-		// Note: Article content would go in article_data_mime table
-		// For simplicity, we're not implementing full article storage yet
-		_ = subject
-		_ = body
+		// Insert article content in article_data_mime table
+		if subject != "" || body != "" {
+			contentQuery := database.ConvertPlaceholders(`
+				INSERT INTO article_data_mime (
+					article_id, a_subject, a_body, a_content_type,
+					create_time, create_by, change_time, change_by
+				) VALUES (
+					$1, $2, $3, $4,
+					NOW(), $5, NOW(), $6
+				)
+			`)
+			
+			_, err = tx.Exec(contentQuery,
+				articleID, subject, body, contentType,
+				userID, userID,
+			)
+			
+			if err != nil {
+				// Log error but don't fail the whole ticket creation
+				// Article metadata is saved, just content failed
+				fmt.Printf("Warning: Failed to save article content: %v\n", err)
+			}
+		}
 		_ = articleTypeID
 	}
 
@@ -268,21 +269,52 @@ func (router *APIRouter) handleCreateTicket(c *gin.Context) {
 		return
 	}
 
-	// Return created ticket
-	ticket := gin.H{
-		"id":                fmt.Sprintf("%d", ticketID),
-		"ticket_number":     ticketNumber,
-		"title":             ticketRequest.Title,
-		"queue_id":          ticketRequest.QueueID,
-		"type_id":           ticketRequest.TypeID,
-		"state_id":          ticketRequest.StateID,
-		"priority_id":       ticketRequest.PriorityID,
-		"customer_user_id":  ticketRequest.CustomerUserID,
-		"customer_id":       ticketRequest.CustomerID,
-		"created_by":        userID,
-		"create_time":       time.Now().UTC(),
+	// Fetch the created ticket for response
+	var ticket struct {
+		ID               int64      `json:"id"`
+		TicketNumber     string     `json:"tn"`
+		Title            string     `json:"title"`
+		QueueID          int        `json:"queue_id"`
+		TypeID           int        `json:"type_id"`
+		StateID          int        `json:"ticket_state_id"`
+		PriorityID       int        `json:"ticket_priority_id"`
+		CustomerUserID   *string    `json:"customer_user_id"`
+		CustomerID       *string    `json:"customer_id"`
+		CreateTime       time.Time  `json:"create_time"`
 	}
 
+	// Query the created ticket
+	query := database.ConvertPlaceholders(`
+		SELECT id, tn, title, queue_id, type_id, ticket_state_id,
+		       ticket_priority_id, customer_user_id, customer_id, create_time
+		FROM ticket
+		WHERE id = $1
+	`)
+	
+	row := db.QueryRow(query, ticketID)
+	err = row.Scan(
+		&ticket.ID, &ticket.TicketNumber, &ticket.Title,
+		&ticket.QueueID, &ticket.TypeID, &ticket.StateID,
+		&ticket.PriorityID, &ticket.CustomerUserID, &ticket.CustomerID,
+		&ticket.CreateTime,
+	)
+	
+	if err != nil {
+		// Ticket was created but we can't fetch it - still return success with basic info
+		c.JSON(http.StatusCreated, APIResponse{
+			Success: true,
+			Data: gin.H{
+				"id":            ticketID,
+				"tn":            ticketNumber,
+				"title":         ticketRequest.Title,
+				"queue_id":      ticketRequest.QueueID,
+				"message":       "Ticket created successfully",
+			},
+		})
+		return
+	}
+
+	// Return full ticket data
 	c.JSON(http.StatusCreated, APIResponse{
 		Success: true,
 		Data:    ticket,
