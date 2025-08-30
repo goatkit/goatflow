@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	_ "github.com/lib/pq"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 func main() {
@@ -22,6 +23,7 @@ func main() {
 		dbURL    = flag.String("db", "", "PostgreSQL connection URL")
 		verbose  = flag.Bool("v", false, "Verbose output")
 		dryRun   = flag.Bool("dry-run", false, "Show what would be imported without executing")
+		force    = flag.Bool("force", false, "Force import by clearing existing data (DESTRUCTIVE!)")
 	)
 
 	flag.Usage = func() {
@@ -67,7 +69,8 @@ func main() {
 				log.Fatal("Database URL is required (use -db or DATABASE_URL env var)")
 			}
 		}
-		err := importSQLDump(*sqlFile, *dbURL, *verbose, *dryRun)
+		// Use the fixed import that handles ID mapping correctly
+		err := importSQLDumpFixed(*sqlFile, *dbURL, *verbose, *dryRun, *force)
 		if err != nil {
 			log.Fatalf("Import failed: %v", err)
 		}
@@ -157,13 +160,54 @@ func analyzeSQLDump(sqlFile string, verbose bool) error {
 			}
 
 			tables[tableName].HasData = true
-			tables[tableName].RowCount++
-
-			// Extract sample data from VALUES clause
-			if len(tables[tableName].SampleData) == 0 {
-				if valuesMatch := valuesPattern.FindStringSubmatch(line); valuesMatch != nil {
-					tables[tableName].SampleData["sample"] = valuesMatch[1]
+			
+			// Count the number of value sets (rows) in this INSERT
+			// Look for pattern: VALUES (row1),(row2),(row3)...
+			valuesIdx := strings.Index(line, "VALUES ")
+			if valuesIdx >= 0 {
+				valuesStr := line[valuesIdx+7:]
+				// Count opening parentheses at depth 1
+				depth := 0
+				rowCount := 0
+				inQuote := false
+				escaped := false
+				
+				for _, r := range valuesStr {
+					if escaped {
+						escaped = false
+						continue
+					}
+					if r == '\\' {
+						escaped = true
+						continue
+					}
+					if r == '\'' {
+						inQuote = !inQuote
+						continue
+					}
+					if !inQuote {
+						if r == '(' {
+							depth++
+							if depth == 1 {
+								rowCount++
+							}
+						} else if r == ')' {
+							depth--
+						}
+					}
 				}
+				
+				tables[tableName].RowCount += rowCount
+				
+				// Extract sample data from first value set
+				if len(tables[tableName].SampleData) == 0 {
+					if valuesMatch := valuesPattern.FindStringSubmatch(line); valuesMatch != nil {
+						tables[tableName].SampleData["sample"] = valuesMatch[1]
+					}
+				}
+			} else {
+				// Fallback for single row INSERT
+				tables[tableName].RowCount++
 			}
 		}
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/bcrypt"
 	_ "github.com/lib/pq"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 var (
@@ -300,7 +301,7 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 	var validID int
 	var passwordStatus string
 	
-	err = db.QueryRow(`SELECT login, 
+	err = db.QueryRow(database.ConvertPlaceholders(`SELECT login, 
 		CASE WHEN pw IS NOT NULL THEN 'SET' ELSE 'NULL' END as password_status, 
 		valid_id 
 		FROM users WHERE login = $1`, usernameFlag).Scan(&login, &passwordStatus, &validID)

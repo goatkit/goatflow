@@ -11,6 +11,7 @@ import (
 
 	"github.com/gotrs-io/gotrs-ce/internal/storage"
 	_ "github.com/lib/pq"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 func main() {
@@ -325,7 +326,7 @@ func showStatus(ctx context.Context, db *sql.DB, fsPath string, verbose bool) er
 	
 	if fsReferences > 0 && verbose {
 		// Show sample files
-		rows, _ := db.Query(`
+		rows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT article_id, file_name, file_size, created_time 
 			FROM article_storage_references 
 			WHERE backend = 'FS' 
@@ -353,7 +354,7 @@ func showStatus(ctx context.Context, db *sql.DB, fsPath string, verbose bool) er
 	if activeMigrations > 0 {
 		fmt.Printf("\nActive Migrations: %d\n", activeMigrations)
 		
-		rows, _ := db.Query(`
+		rows, _ := db.Query(database.ConvertPlaceholders(`
 			SELECT id, source_backend, target_backend, status, 
 			       processed_articles, total_articles, start_time
 			FROM article_storage_migration 
