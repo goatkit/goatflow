@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"database/sql"
 	"fmt"
 
@@ -19,11 +20,11 @@ func NewTicketStateRepository(db *sql.DB) *TicketStateRepository {
 
 // GetByID retrieves a ticket state by ID
 func (r *TicketStateRepository) GetByID(id uint) (*models.TicketState, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
-		WHERE id = $1`
+		WHERE id = $1`)
 
 	var state models.TicketState
 	err := r.db.QueryRow(query, id).Scan(
@@ -47,11 +48,11 @@ func (r *TicketStateRepository) GetByID(id uint) (*models.TicketState, error) {
 
 // GetByName retrieves a ticket state by name
 func (r *TicketStateRepository) GetByName(name string) (*models.TicketState, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
-		WHERE name = $1 AND valid_id = 1`
+		WHERE name = $1 AND valid_id = 1`)
 
 	var state models.TicketState
 	err := r.db.QueryRow(query, name).Scan(
@@ -75,12 +76,12 @@ func (r *TicketStateRepository) GetByName(name string) (*models.TicketState, err
 
 // GetByTypeID retrieves all ticket states for a specific type
 func (r *TicketStateRepository) GetByTypeID(typeID uint) ([]*models.TicketState, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
 		WHERE type_id = $1 AND valid_id = 1
-		ORDER BY name`
+		ORDER BY name`)
 
 	rows, err := r.db.Query(query, typeID)
 	if err != nil {
@@ -113,12 +114,12 @@ func (r *TicketStateRepository) GetByTypeID(typeID uint) ([]*models.TicketState,
 
 // List retrieves all active ticket states
 func (r *TicketStateRepository) List() ([]*models.TicketState, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
 		WHERE valid_id = 1
-		ORDER BY name`
+		ORDER BY name`)
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -151,13 +152,13 @@ func (r *TicketStateRepository) List() ([]*models.TicketState, error) {
 
 // Create creates a new ticket state
 func (r *TicketStateRepository) Create(state *models.TicketState) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		INSERT INTO ticket_state (
 			name, type_id, comments, valid_id,
 			create_time, create_by, change_time, change_by
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8
-		) RETURNING id`
+		) RETURNING id`)
 
 	err := r.db.QueryRow(
 		query,
@@ -176,7 +177,7 @@ func (r *TicketStateRepository) Create(state *models.TicketState) error {
 
 // Update updates a ticket state
 func (r *TicketStateRepository) Update(state *models.TicketState) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE ticket_state SET
 			name = $2,
 			type_id = $3,
@@ -184,7 +185,7 @@ func (r *TicketStateRepository) Update(state *models.TicketState) error {
 			valid_id = $5,
 			change_time = $6,
 			change_by = $7
-		WHERE id = $1`
+		WHERE id = $1`)
 
 	result, err := r.db.Exec(
 		query,
@@ -218,12 +219,12 @@ func (r *TicketStateRepository) GetOpenStates() ([]*models.TicketState, error) {
 	// Type IDs: 1=new, 2=open, 3=pending reminder, 4=pending auto
 	openTypeIDs := []int{1, 2, 3, 4}
 	
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
 		WHERE type_id = ANY($1) AND valid_id = 1
-		ORDER BY name`
+		ORDER BY name`)
 
 	rows, err := r.db.Query(query, openTypeIDs)
 	if err != nil {
@@ -259,12 +260,12 @@ func (r *TicketStateRepository) GetClosedStates() ([]*models.TicketState, error)
 	// Type IDs: 5=closed successful, 6=closed unsuccessful, 9=merged
 	closedTypeIDs := []int{5, 6, 9}
 	
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
 		WHERE type_id = ANY($1) AND valid_id = 1
-		ORDER BY name`
+		ORDER BY name`)
 
 	rows, err := r.db.Query(query, closedTypeIDs)
 	if err != nil {

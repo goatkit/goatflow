@@ -57,12 +57,18 @@ func (st *SimpleTicket) ToORTSTicket() *Ticket {
 		customerID = &st.CustomerEmail
 	}
 
+	var typeID *int
+	if st.TypeID > 0 {
+		tid := int(st.TypeID)
+		typeID = &tid
+	}
+
 	return &Ticket{
 		ID:               int(st.ID),
 		TicketNumber:     st.TicketNumber,
 		Title:            st.Subject,
 		QueueID:          int(st.QueueID),
-		TypeID:           int(st.TypeID),
+		TypeID:           typeID,
 		TicketPriorityID: priorityID,
 		TicketStateID:    stateID,
 		TicketLockID:     1, // Unlocked by default
@@ -111,12 +117,17 @@ func FromORTSTicket(t *Ticket) *SimpleTicket {
 		customerEmail = *t.CustomerUserID
 	}
 
+	var typeID uint
+	if t.TypeID != nil {
+		typeID = uint(*t.TypeID)
+	}
+
 	return &SimpleTicket{
 		ID:            uint(t.ID),
 		TicketNumber:  t.TicketNumber,
 		Subject:       t.Title,
 		QueueID:       uint(t.QueueID),
-		TypeID:        uint(t.TypeID),
+		TypeID:        typeID,
 		Priority:      priority,
 		Status:        status,
 		CustomerEmail: customerEmail,

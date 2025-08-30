@@ -1032,9 +1032,9 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 			groupIDs := strings.Split(groupsStr, ",")
 			for _, groupID := range groupIDs {
 				if groupID != "" {
-					_, err = h.db.Exec(`
+					_, err = h.db.Exec(database.ConvertPlaceholders(`
 						INSERT INTO user_groups (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-						VALUES ($1, $2, 'rw', 1, CURRENT_TIMESTAMP, $3, CURRENT_TIMESTAMP, $3)`,
+						VALUES ($1, $2, 'rw', 1, CURRENT_TIMESTAMP, $3, CURRENT_TIMESTAMP, $3)`),
 						newID, groupID, currentUserID)
 					if err != nil {
 						// Log but don't fail the whole operation
@@ -1142,9 +1142,9 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 				groupIDs := strings.Split(groupsStr, ",")
 				for _, groupID := range groupIDs {
 					if groupID != "" {
-						_, err = h.db.Exec(`
+						_, err = h.db.Exec(database.ConvertPlaceholders(`
 							INSERT INTO user_groups (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-							VALUES ($1, $2, 'rw', 1, CURRENT_TIMESTAMP, $3, CURRENT_TIMESTAMP, $3)`,
+							VALUES ($1, $2, 'rw', 1, CURRENT_TIMESTAMP, $3, CURRENT_TIMESTAMP, $3)`),
 							id, groupID, currentUserID)
 						if err != nil {
 							// Log but don't fail the whole operation

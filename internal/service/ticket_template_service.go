@@ -103,10 +103,11 @@ func (s *TicketTemplateService) ApplyTemplate(ctx context.Context, application *
 	// TODO: Create ticket from template - needs proper ticket model integration
 	// For now, just create a basic ticket structure that can be used
 	// when the ticket creation is properly integrated with OTRS schema
+	typeID := template.TypeID
 	ticket := &models.Ticket{
 		Title:            subject,
 		QueueID:          template.QueueID,
-		TypeID:           template.TypeID,
+		TypeID:           &typeID,
 		TicketPriorityID: 3, // Default to normal priority  
 	}
 	

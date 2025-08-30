@@ -178,7 +178,7 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 	}
 
 	// Query articles from database - join with article_data_mime for content
-	rows, err := db.Query(`
+	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT a.id, 
 		       COALESCE(adm.a_subject, ''),
 		       COALESCE(CONVERT_FROM(adm.a_body, 'UTF8'), ''),
@@ -189,7 +189,7 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
 		WHERE a.ticket_id = $1
 		ORDER BY a.create_time ASC
-	`, ticketID)
+	`), ticketID)
 	if err != nil {
 		// If query fails, return in-memory messages
 		if inMemoryMessages == nil {
@@ -256,7 +256,7 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 
 	// Now query attachments for all articles
 	if len(articleIDs) > 0 {
-		attachRows, err := db.Query(`
+		attachRows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT att.id, att.article_id, att.filename, 
 			       COALESCE(att.content_type, 'application/octet-stream'), 
 			       COALESCE(att.content_size, '0'),
@@ -264,7 +264,7 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 			FROM article_data_mime_attachment att
 			WHERE att.article_id = ANY($1)
 			ORDER BY att.id
-		`, pq.Array(articleIDs))
+		`), pq.Array(articleIDs))
 		
 		if err == nil {
 			defer attachRows.Close()

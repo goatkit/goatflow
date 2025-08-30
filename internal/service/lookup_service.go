@@ -155,42 +155,17 @@ func (s *LookupService) buildFormDataWithLang(lang string) *models.TicketFormDat
 			log.Printf("LookupService: Got %d queues from database", len(queueItems))
 		}
 		
-		// If we got any data from database, return it
-		if len(result.Statuses) > 0 || len(result.Priorities) > 0 || len(result.Queues) > 0 {
-			return result
-		}
+		// Return data from database
+		return result
 	}
 	
-	// Fallback to default values with translations
+	// No fallback - database is the single source of truth
+	log.Printf("ERROR: No lookup data available from database")
 	return &models.TicketFormData{
-		Queues: []models.QueueInfo{
-			{ID: 1, Name: "General Support", Description: "General customer inquiries", Active: true},
-			{ID: 2, Name: "Technical Issues", Description: "Technical problems and bugs", Active: true},
-			{ID: 3, Name: "Billing", Description: "Billing and payment issues", Active: true},
-			{ID: 4, Name: "Feature Requests", Description: "New feature suggestions", Active: true},
-			{ID: 5, Name: "Sales", Description: "Sales inquiries", Active: true},
-			{ID: 6, Name: "Documentation", Description: "Documentation requests", Active: true},
-		},
-		Priorities: []models.LookupItem{
-			{ID: 1, Value: "low", Label: "Low", Order: 1, Active: true},
-			{ID: 2, Value: "normal", Label: "Normal", Order: 2, Active: true},
-			{ID: 3, Value: "high", Label: "High", Order: 3, Active: true},
-			{ID: 4, Value: "urgent", Label: "Urgent", Order: 4, Active: true},
-		},
-		Types: []models.LookupItem{
-			{ID: 1, Value: "incident", Label: "Incident", Order: 1, Active: true},
-			{ID: 2, Value: "service_request", Label: "Service Request", Order: 2, Active: true},
-			{ID: 3, Value: "change_request", Label: "Change Request", Order: 3, Active: true},
-			{ID: 4, Value: "problem", Label: "Problem", Order: 4, Active: true},
-			{ID: 5, Value: "question", Label: "Question", Order: 5, Active: true},
-		},
-		Statuses: []models.LookupItem{
-			{ID: 1, Value: "new", Label: "New", Order: 1, Active: true},
-			{ID: 2, Value: "open", Label: "Open", Order: 2, Active: true},
-			{ID: 3, Value: "pending", Label: "Pending", Order: 3, Active: true},
-			{ID: 4, Value: "resolved", Label: "Resolved", Order: 4, Active: true},
-			{ID: 5, Value: "closed", Label: "Closed", Order: 5, Active: true},
-		},
+		Queues:     []models.QueueInfo{},
+		Priorities: []models.LookupItem{},
+		Types:      []models.LookupItem{},
+		Statuses:   []models.LookupItem{},
 	}
 }
 

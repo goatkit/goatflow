@@ -31,6 +31,9 @@ func InitializeServiceRegistry() (*registry.ServiceRegistry, error) {
 		// Register PostgreSQL provider
 		dbFactory.RegisterProvider(registry.ProviderPostgres, database.NewPostgresService)
 		
+		// Register MySQL provider
+		dbFactory.RegisterProvider(registry.ProviderMySQL, database.NewMySQLService)
+		
 		// Register the factory with the registry
 		initErr = globalRegistry.RegisterFactory(registry.ServiceTypeDatabase, dbFactory)
 		if initErr != nil {
@@ -95,18 +98,25 @@ func AutoConfigureDatabase() error {
 
 // buildDatabaseConfig builds database configuration from environment
 func buildDatabaseConfig() *registry.ServiceConfig {
+	// Determine database provider from DB_DRIVER
+	driver := os.Getenv("DB_DRIVER")
+	provider := registry.ProviderPostgres // default
+	if driver == "mysql" || driver == "mariadb" {
+		provider = registry.ProviderMySQL
+	}
+	
 	config := &registry.ServiceConfig{
 		ID:       "primary-db",
 		Name:     "Primary Database",
 		Type:     registry.ServiceTypeDatabase,
-		Provider: registry.ProviderPostgres,
+		Provider: provider,
 		Options:  make(map[string]interface{}),
 	}
 	
 	// Check for DATABASE_URL first
 	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
 		// Parse DATABASE_URL
-		// Format: postgres://user:password@host:port/database?sslmode=disable
+		// Format: mysql://user:password@host:port/database or postgres://...
 		// This is simplified - use a proper URL parser in production
 		config.Options["connection_url"] = dbURL
 	} else {

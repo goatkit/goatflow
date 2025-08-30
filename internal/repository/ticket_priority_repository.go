@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"database/sql"
 	"fmt"
 
@@ -19,10 +20,10 @@ func NewTicketPriorityRepository(db *sql.DB) *TicketPriorityRepository {
 
 // GetByID retrieves a ticket priority by ID
 func (r *TicketPriorityRepository) GetByID(id uint) (*models.TicketPriority, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
 		FROM ticket_priority
-		WHERE id = $1`
+		WHERE id = $1`)
 
 	var priority models.TicketPriority
 	err := r.db.QueryRow(query, id).Scan(
@@ -44,10 +45,10 @@ func (r *TicketPriorityRepository) GetByID(id uint) (*models.TicketPriority, err
 
 // GetByName retrieves a ticket priority by name
 func (r *TicketPriorityRepository) GetByName(name string) (*models.TicketPriority, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
 		FROM ticket_priority
-		WHERE name = $1 AND valid_id = 1`
+		WHERE name = $1 AND valid_id = 1`)
 
 	var priority models.TicketPriority
 	err := r.db.QueryRow(query, name).Scan(
@@ -69,11 +70,11 @@ func (r *TicketPriorityRepository) GetByName(name string) (*models.TicketPriorit
 
 // List retrieves all active ticket priorities
 func (r *TicketPriorityRepository) List() ([]*models.TicketPriority, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
 		FROM ticket_priority
 		WHERE valid_id = 1
-		ORDER BY id`  // Order by ID to maintain priority order (1=very low, 5=very high)
+		ORDER BY id`)  // Order by ID to maintain priority order (1=very low, 5=very high)
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -104,12 +105,12 @@ func (r *TicketPriorityRepository) List() ([]*models.TicketPriority, error) {
 
 // Create creates a new ticket priority
 func (r *TicketPriorityRepository) Create(priority *models.TicketPriority) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		INSERT INTO ticket_priority (
 			name, valid_id, create_time, create_by, change_time, change_by
 		) VALUES (
 			$1, $2, $3, $4, $5, $6
-		) RETURNING id`
+		) RETURNING id`)
 
 	err := r.db.QueryRow(
 		query,
@@ -126,13 +127,13 @@ func (r *TicketPriorityRepository) Create(priority *models.TicketPriority) error
 
 // Update updates a ticket priority
 func (r *TicketPriorityRepository) Update(priority *models.TicketPriority) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE ticket_priority SET
 			name = $2,
 			valid_id = $3,
 			change_time = $4,
 			change_by = $5
-		WHERE id = $1`
+		WHERE id = $1`)
 
 	result, err := r.db.Exec(
 		query,
@@ -166,11 +167,11 @@ func (r *TicketPriorityRepository) GetDefault() (*models.TicketPriority, error) 
 
 // GetHighPriorities returns all priorities considered "high" (4=high, 5=very high)
 func (r *TicketPriorityRepository) GetHighPriorities() ([]*models.TicketPriority, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
 		FROM ticket_priority
 		WHERE id >= 4 AND valid_id = 1
-		ORDER BY id`
+		ORDER BY id`)
 
 	rows, err := r.db.Query(query)
 	if err != nil {

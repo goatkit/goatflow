@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"database/sql"
 	"fmt"
 
@@ -19,10 +20,10 @@ func NewGroupRepository(db *sql.DB) *GroupSQLRepository {
 
 // List retrieves all groups (both active and inactive)
 func (r *GroupSQLRepository) List() ([]*models.Group, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
 		FROM groups
-		ORDER BY name`
+		ORDER BY name`)
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -58,12 +59,12 @@ func (r *GroupSQLRepository) List() ([]*models.Group, error) {
 
 // GetUserGroups retrieves group names for a user
 func (r *GroupSQLRepository) GetUserGroups(userID uint) ([]string, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT g.name 
 		FROM groups g
 		JOIN group_user ug ON g.id = ug.group_id
 		WHERE ug.user_id = $1 AND g.valid_id = 1
-		ORDER BY g.name`
+		ORDER BY g.name`)
 
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
@@ -85,10 +86,10 @@ func (r *GroupSQLRepository) GetUserGroups(userID uint) ([]string, error) {
 
 // GetByID retrieves a group by ID
 func (r *GroupSQLRepository) GetByID(id uint) (*models.Group, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
 		FROM groups
-		WHERE id = $1`
+		WHERE id = $1`)
 
 	var group models.Group
 	var comments sql.NullString
@@ -129,9 +130,9 @@ func (r *GroupSQLRepository) AddUserToGroup(userID uint, groupID uint) error {
 	}
 	
 	// Insert the relationship with required OTRS fields
-	insertQuery := `
+	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by) 
-		VALUES ($1, $2, 'rw', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)`
+		VALUES ($1, $2, 'rw', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)`)
 	_, err = r.db.Exec(insertQuery, userID, groupID)
 	if err != nil {
 		return fmt.Errorf("failed to add user to group: %w", err)
@@ -162,10 +163,10 @@ func (r *GroupSQLRepository) RemoveUserFromGroup(userID uint, groupID uint) erro
 
 // Create creates a new group
 func (r *GroupSQLRepository) Create(group *models.Group) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		INSERT INTO groups (name, comments, valid_id, create_time, create_by, change_time, change_by)
 		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, CURRENT_TIMESTAMP, $5)
-		RETURNING id, create_time, change_time`
+		RETURNING id, create_time, change_time`)
 
 	err := r.db.QueryRow(
 		query,
@@ -185,10 +186,10 @@ func (r *GroupSQLRepository) Create(group *models.Group) error {
 
 // Update updates an existing group
 func (r *GroupSQLRepository) Update(group *models.Group) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE groups 
 		SET name = $1, comments = $2, valid_id = $3, change_time = CURRENT_TIMESTAMP, change_by = $4
-		WHERE id = $5`
+		WHERE id = $5`)
 
 	result, err := r.db.Exec(
 		query,
@@ -218,13 +219,13 @@ func (r *GroupSQLRepository) Update(group *models.Group) error {
 // Delete permanently deletes a group and removes all member associations
 func (r *GroupSQLRepository) Delete(id uint) error {
 	// First, remove all group members
-	_, err := r.db.Exec(`DELETE FROM group_user WHERE group_id = $1`, id)
+	_, err := r.db.Exec(database.ConvertPlaceholders(`DELETE FROM group_user WHERE group_id = $1`), id)
 	if err != nil {
 		return fmt.Errorf("failed to remove group members: %w", err)
 	}
 	
 	// Then delete the group itself
-	query := `DELETE FROM groups WHERE id = $1`
+	query := database.ConvertPlaceholders(`DELETE FROM groups WHERE id = $1`)
 	
 	result, err := r.db.Exec(query, id)
 	if err != nil {
@@ -245,10 +246,10 @@ func (r *GroupSQLRepository) Delete(id uint) error {
 
 // GetByName retrieves a group by name
 func (r *GroupSQLRepository) GetByName(name string) (*models.Group, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
 		FROM groups
-		WHERE name = $1 AND valid_id = 1`
+		WHERE name = $1 AND valid_id = 1`)
 
 	var group models.Group
 	var comments sql.NullString
@@ -276,12 +277,12 @@ func (r *GroupSQLRepository) GetByName(name string) (*models.Group, error) {
 
 // GetGroupMembers retrieves all users in a group
 func (r *GroupSQLRepository) GetGroupMembers(groupID uint) ([]*models.User, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT u.id, u.login, u.first_name, u.last_name, u.valid_id
 		FROM users u
 		JOIN group_user ug ON u.id = ug.user_id
 		WHERE ug.group_id = $1 AND u.valid_id = 1
-		ORDER BY u.login`
+		ORDER BY u.login`)
 
 	rows, err := r.db.Query(query, groupID)
 	if err != nil {

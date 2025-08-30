@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"database/sql"
 	"fmt"
 
@@ -19,10 +20,10 @@ func NewPriorityRepository(db *sql.DB) *PriorityRepository {
 
 // GetByID retrieves a priority by ID
 func (r *PriorityRepository) GetByID(id uint) (*models.TicketPriority, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
 		FROM ticket_priority
-		WHERE id = $1`
+		WHERE id = $1`)
 
 	var priority models.TicketPriority
 	err := r.db.QueryRow(query, id).Scan(
@@ -44,11 +45,11 @@ func (r *PriorityRepository) GetByID(id uint) (*models.TicketPriority, error) {
 
 // List retrieves all active priorities
 func (r *PriorityRepository) List() ([]*models.TicketPriority, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
 		FROM ticket_priority
 		WHERE valid_id = 1
-		ORDER BY id`
+		ORDER BY id`)
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -79,10 +80,10 @@ func (r *PriorityRepository) List() ([]*models.TicketPriority, error) {
 
 // GetByName retrieves a priority by name
 func (r *PriorityRepository) GetByName(name string) (*models.TicketPriority, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
 		FROM ticket_priority
-		WHERE name = $1 AND valid_id = 1`
+		WHERE name = $1 AND valid_id = 1`)
 
 	var priority models.TicketPriority
 	err := r.db.QueryRow(query, name).Scan(

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
@@ -25,6 +26,9 @@ func (r *QueueRepository) GetByID(id uint) (*models.Queue, error) {
 		       comments, valid_id, create_time, create_by, change_time, change_by
 		FROM queue
 		WHERE id = $1`
+	
+	// Convert placeholders for MySQL compatibility
+	query = database.ConvertPlaceholders(query)
 
 	var queue models.Queue
 	var systemAddressID, salutationID, signatureID sql.NullInt32
@@ -76,6 +80,9 @@ func (r *QueueRepository) GetByName(name string) (*models.Queue, error) {
 		       comments, valid_id, create_time, create_by, change_time, change_by
 		FROM queue
 		WHERE name = $1 AND valid_id = 1`
+	
+	// Convert placeholders for MySQL compatibility
+	query = database.ConvertPlaceholders(query)
 
 	var queue models.Queue
 	var systemAddressID, salutationID, signatureID sql.NullInt32

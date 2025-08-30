@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
@@ -19,11 +20,11 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 // GetByID retrieves a user by ID
 func (r *UserRepository) GetByID(id uint) (*models.User, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, login, pw, title, first_name, last_name,
 		       valid_id, create_time, create_by, change_time, change_by
 		FROM users
-		WHERE id = $1`
+		WHERE id = $1`)
 
 	var user models.User
 	var title sql.NullString
@@ -75,11 +76,11 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 // GetByLogin retrieves a user by login username
 func (r *UserRepository) GetByLogin(login string) (*models.User, error) {
 	fmt.Printf("UserRepository.GetByLogin: Looking for user '%s'\n", login)
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, login, pw, title, first_name, last_name,
 		       valid_id, create_time, create_by, change_time, change_by
 		FROM users
-		WHERE login = $1 AND valid_id = 1`
+		WHERE login = $1 AND valid_id = 1`)
 
 	var user models.User
 	var title sql.NullString
@@ -185,7 +186,7 @@ func (r *UserRepository) Create(user *models.User) error {
 
 // Update updates a user
 func (r *UserRepository) Update(user *models.User) error {
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE users SET
 			login = $2,
 			pw = $3,
@@ -195,7 +196,7 @@ func (r *UserRepository) Update(user *models.User) error {
 			valid_id = $7,
 			change_time = $8,
 			change_by = $9
-		WHERE id = $1`
+		WHERE id = $1`)
 
 	result, err := r.db.Exec(
 		query,
@@ -249,12 +250,12 @@ func (r *UserRepository) ListWithGroups() ([]*models.User, error) {
 
 // GetUserGroups retrieves the group names for a specific user
 func (r *UserRepository) GetUserGroups(userID uint) ([]string, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT g.name 
 		FROM groups g
 		INNER JOIN group_user gu ON g.id = gu.group_id
 		WHERE gu.user_id = $1 AND g.valid_id = 1
-		ORDER BY g.name`
+		ORDER BY g.name`)
 
 	rows, err := r.db.Query(query, userID)
 	if err != nil {
@@ -277,11 +278,11 @@ func (r *UserRepository) GetUserGroups(userID uint) ([]string, error) {
 
 // List retrieves all users (both active and inactive)
 func (r *UserRepository) List() ([]*models.User, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, login, pw, title, first_name, last_name,
 		       valid_id, create_time, create_by, change_time, change_by
 		FROM users
-		ORDER BY last_name, first_name`
+		ORDER BY last_name, first_name`)
 
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -332,7 +333,7 @@ func (r *UserRepository) List() ([]*models.User, error) {
 
 // Delete deletes a user by ID
 func (r *UserRepository) Delete(id uint) error {
-	query := `DELETE FROM users WHERE id = $1`
+	query := database.ConvertPlaceholders(`DELETE FROM users WHERE id = $1`)
 	result, err := r.db.Exec(query, id)
 	if err != nil {
 		return err

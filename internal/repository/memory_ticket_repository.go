@@ -61,7 +61,8 @@ func (r *MemoryTicketRepository) Create(ticket *models.Ticket) error {
 	}
 	if simpleTicket.TypeID == 0 {
 		simpleTicket.TypeID = 1
-		ticket.TypeID = 1
+		typeID := 1
+		ticket.TypeID = &typeID
 	}
 
 	// Store the ticket

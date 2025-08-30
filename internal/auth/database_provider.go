@@ -8,13 +8,13 @@ import (
 
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // DatabaseAuthProvider provides authentication against the database
 type DatabaseAuthProvider struct {
 	userRepo *repository.UserRepository
 	db       *sql.DB
+	hasher   *PasswordHasher
 }
 
 // NewDatabaseAuthProvider creates a new database authentication provider
@@ -22,6 +22,7 @@ func NewDatabaseAuthProvider(db *sql.DB) *DatabaseAuthProvider {
 	return &DatabaseAuthProvider{
 		userRepo: repository.NewUserRepository(db),
 		db:       db,
+		hasher:   NewPasswordHasher(),
 	}
 }
 
@@ -46,13 +47,14 @@ func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, passw
 		return nil, ErrUserDisabled
 	}
 	
-	// Verify password
+	// Verify password using our configurable hasher
 	fmt.Printf("DatabaseAuthProvider: Verifying password for user %s\n", user.Login)
 	fmt.Printf("DatabaseAuthProvider: Password hash from DB: %s\n", user.Password)
 	fmt.Printf("DatabaseAuthProvider: Password length from user: %d\n", len(password))
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
-		fmt.Printf("DatabaseAuthProvider: Password verification failed: %v\n", err)
+	
+	// Use our hasher which auto-detects hash type (SHA256 for OTRS, bcrypt for GOTRS)
+	if !p.hasher.VerifyPassword(password, user.Password) {
+		fmt.Printf("DatabaseAuthProvider: Password verification failed\n")
 		return nil, ErrInvalidCredentials
 	}
 	fmt.Printf("DatabaseAuthProvider: Password verification successful\n")

@@ -88,6 +88,9 @@ func registerExistingHandlers(registry *HandlerRegistry, db *sql.DB, jwtManager 
 		// etc...
 	}
 	
+	// Register core handlers (including redirects)
+	registerCoreHandlers(handlers, db)
+	
 	// Register admin handlers
 	registerAdminHandlers(handlers, db)
 	
@@ -99,6 +102,16 @@ func registerExistingHandlers(registry *HandlerRegistry, db *sql.DB, jwtManager 
 	
 	// Register all handlers with the registry
 	return registry.RegisterBatch(handlers)
+}
+
+// registerCoreHandlers registers core handlers including redirects
+func registerCoreHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
+	// Redirect handlers
+	handlers["redirect_tickets"] = wrapHandler(db, "handleRedirectTickets")
+	handlers["redirect_tickets_new"] = wrapHandler(db, "handleRedirectTicketsNew")
+	handlers["redirect_queues"] = wrapHandler(db, "handleRedirectQueues")
+	handlers["redirect_profile"] = wrapHandler(db, "handleRedirectProfile")
+	handlers["redirect_settings"] = wrapHandler(db, "handleRedirectSettings")
 }
 
 // registerAdminHandlers registers admin-specific handlers
@@ -134,6 +147,11 @@ func registerAgentHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	handlers["handleAgentCustomers"] = wrapHandler(db, "handleAgentCustomers")
 	handlers["handleAgentCustomerView"] = wrapHandler(db, "handleAgentCustomerView")
 	handlers["handleAgentCustomerTickets"] = wrapHandler(db, "handleAgentCustomerTickets")
+	
+	// Profile handlers
+	handlers["profile"] = wrapHandler(db, "handleProfile")
+	handlers["get_session_timeout"] = wrapHandler(db, "HandleGetSessionTimeout")
+	handlers["set_session_timeout"] = wrapHandler(db, "HandleSetSessionTimeout")
 	
 	// Add other agent handlers...
 }
@@ -236,16 +254,28 @@ func registerExistingMiddleware(registry *HandlerRegistry, jwtManager interface{
 	return registry.RegisterMiddlewareBatch(middlewares)
 }
 
+// Global handler map that will be populated by the API package
+var GlobalHandlerMap = make(map[string]gin.HandlerFunc)
+
+// RegisterHandler allows the API package to register handlers
+func RegisterHandler(name string, handler gin.HandlerFunc) {
+	GlobalHandlerMap[name] = handler
+}
+
 // wrapHandler is a helper to wrap handler functions that need database access
-// In a real implementation, this would properly call the actual handler functions
+// It looks up the actual handler function from the global registry
 func wrapHandler(db *sql.DB, handlerName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// This is a placeholder - in reality, you would call the actual handler
-		// For example: api.HandleAgentDashboard(db)(c)
-		c.JSON(http.StatusOK, gin.H{
-			"handler": handlerName,
-			"message": "Handler would be executed here",
-		})
+		// Look up the handler in the global map
+		if handler, exists := GlobalHandlerMap[handlerName]; exists {
+			handler(c)
+		} else {
+			// Placeholder for unimplemented handlers
+			c.JSON(http.StatusOK, gin.H{
+				"handler": handlerName,
+				"message": "Handler not registered",
+			})
+		}
 	}
 }
 

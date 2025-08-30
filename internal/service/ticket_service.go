@@ -62,11 +62,12 @@ func (s *TicketService) CreateTicket(req *CreateTicketRequest, createBy int) (*C
 	}
 
 	// Create ticket
+	typeID := req.TypeID
 	ticket := &models.Ticket{
 		Title:               req.Subject,
 		QueueID:             req.QueueID,
 		TicketLockID:        models.TicketUnlocked,
-		TypeID:              req.TypeID,
+		TypeID:              &typeID,
 		TicketStateID:       models.TicketStateNew,
 		TicketPriorityID:    priorityID,
 		UntilTime:           0,

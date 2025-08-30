@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // Discovery handles database schema discovery

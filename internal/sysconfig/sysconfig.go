@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // Manager handles system configuration loading and deployment
