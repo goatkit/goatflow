@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -222,6 +223,12 @@ func (s *MySQLService) Restore(ctx context.Context, path string) error {
 func (s *MySQLService) buildConnectionString() string {
 	// Check for complete connection URL first
 	if url, ok := s.config.Options["connection_url"].(string); ok && url != "" {
+		// Check if already in DSN format (contains @tcp)
+		if strings.Contains(url, "@tcp(") {
+			// Already in DSN format, return as-is
+			return url
+		}
+		
 		// Parse MySQL URL format: mysql://user:password@host:port/database
 		// Convert to DSN format: user:password@tcp(host:port)/database
 		if len(url) > 8 && url[:8] == "mysql://" {
@@ -243,6 +250,12 @@ func (s *MySQLService) buildConnectionString() string {
 			userPass := url[:atIndex]
 			hostPort := url[atIndex+1 : slashIndex]
 			database := url[slashIndex+1:]
+			// Check if database already has query parameters
+			if strings.Contains(database, "?") {
+				// Already has parameters, return as-is
+				return fmt.Sprintf("%s@tcp(%s)/%s", userPass, hostPort, database)
+			}
+			// No parameters, add parseTime=true
 			return fmt.Sprintf("%s@tcp(%s)/%s?parseTime=true", userPass, hostPort, database)
 		}
 	}

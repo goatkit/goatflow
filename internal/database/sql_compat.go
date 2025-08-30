@@ -46,6 +46,10 @@ func ConvertPlaceholders(query string) string {
 		result = strings.Replace(result, placeholder, "?", 1)
 	}
 	
+	// Convert ILIKE to LIKE for MySQL (MySQL is case-insensitive by default)
+	result = strings.ReplaceAll(result, " ILIKE ", " LIKE ")
+	result = strings.ReplaceAll(result, " ilike ", " LIKE ")
+	
 	return result
 }
 

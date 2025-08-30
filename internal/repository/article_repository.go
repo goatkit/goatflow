@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
@@ -42,17 +43,19 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	defer tx.Rollback()
 	
 	// Insert into article table
-	articleQuery := `
+	articleQuery := database.ConvertPlaceholders(`
 		INSERT INTO article (
 			ticket_id, article_sender_type_id,
 			communication_channel_id, is_visible_for_customer,
 			create_time, create_by, change_time, change_by
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8
-		) RETURNING id`
+		) RETURNING id`)
 	
-	var articleID int
-	err = tx.QueryRow(
+	// Use adapter for database-specific handling
+	adapter := database.GetAdapter()
+	articleID64, err := adapter.InsertWithReturningTx(
+		tx,
 		articleQuery,
 		article.TicketID,
 		article.SenderTypeID,
@@ -62,22 +65,22 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 		article.CreateBy,
 		now,
 		article.ChangeBy,
-	).Scan(&articleID)
+	)
 	
 	if err != nil {
 		return err
 	}
 	
-	article.ID = articleID
+	article.ID = int(articleID64)
 	
 	// Insert into article_data_mime table
-	mimeQuery := `
+	mimeQuery := database.ConvertPlaceholders(`
 		INSERT INTO article_data_mime (
 			article_id, a_subject, a_body, a_content_type,
 			incoming_time, create_time, create_by, change_time, change_by
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9
-		)`
+		)`)
 	
 	// Convert body to bytea
 	var bodyBytes []byte
@@ -99,7 +102,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	
 	_, err = tx.Exec(
 		mimeQuery,
-		articleID,
+		articleID64,
 		article.Subject,
 		bodyBytes,
 		contentType,
@@ -115,10 +118,10 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	}
 	
 	// Update ticket's change_time when an article is added
-	updateTicketQuery := `
+	updateTicketQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
 		SET change_time = $2, change_by = $3
-		WHERE id = $1`
+		WHERE id = $1`)
 	
 	_, err = tx.Exec(updateTicketQuery, article.TicketID, now, article.CreateBy)
 	if err != nil {
@@ -131,7 +134,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 
 // GetByID retrieves an article by its ID
 func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT 
 			id, ticket_id, article_type_id, sender_type_id,
 			communication_channel_id, is_visible_for_customer,
@@ -139,7 +142,7 @@ func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
 			content_path, valid_id,
 			create_time, create_by, change_time, change_by
 		FROM article
-		WHERE id = $1`
+		WHERE id = $1`)
 	
 	var article models.Article
 	err := r.db.QueryRow(query, id).Scan(
@@ -171,7 +174,7 @@ func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
 
 // GetByTicketID retrieves all articles for a specific ticket
 func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) ([]models.Article, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT 
 			id, ticket_id, article_type_id, sender_type_id,
 			communication_channel_id, is_visible_for_customer,
@@ -179,7 +182,7 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 			content_path, valid_id,
 			create_time, create_by, change_time, change_by
 		FROM article
-		WHERE ticket_id = $1 AND valid_id = 1`
+		WHERE ticket_id = $1 AND valid_id = 1`)
 	
 	if !includeInternal {
 		query += " AND is_visible_for_customer = 1"
@@ -228,7 +231,7 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 func (r *ArticleRepository) Update(article *models.Article) error {
 	article.ChangeTime = time.Now()
 	
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE article SET
 			article_type_id = $2,
 			sender_type_id = $3,
@@ -243,7 +246,7 @@ func (r *ArticleRepository) Update(article *models.Article) error {
 			valid_id = $12,
 			change_time = $13,
 			change_by = $14
-		WHERE id = $1`
+		WHERE id = $1`)
 	
 	result, err := r.db.Exec(
 		query,
@@ -277,10 +280,10 @@ func (r *ArticleRepository) Update(article *models.Article) error {
 	}
 	
 	// Update ticket's change_time when an article is updated
-	updateTicketQuery := `
+	updateTicketQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
 		SET change_time = $2, change_by = $3
-		WHERE id = $1`
+		WHERE id = $1`)
 	
 	_, err = r.db.Exec(updateTicketQuery, article.TicketID, time.Now(), article.ChangeBy)
 	
@@ -291,7 +294,7 @@ func (r *ArticleRepository) Update(article *models.Article) error {
 func (r *ArticleRepository) Delete(id uint, userID uint) error {
 	// First get the ticket ID for updating change_time
 	var ticketID uint
-	getTicketQuery := `SELECT ticket_id FROM article WHERE id = $1`
+	getTicketQuery := database.ConvertPlaceholders(`SELECT ticket_id FROM article WHERE id = $1`)
 	err := r.db.QueryRow(getTicketQuery, id).Scan(&ticketID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -301,10 +304,10 @@ func (r *ArticleRepository) Delete(id uint, userID uint) error {
 	}
 	
 	// Soft delete the article
-	query := `
+	query := database.ConvertPlaceholders(`
 		UPDATE article 
 		SET valid_id = 0, change_time = $2, change_by = $3
-		WHERE id = $1`
+		WHERE id = $1`)
 	
 	result, err := r.db.Exec(query, id, time.Now(), userID)
 	if err != nil {
@@ -321,10 +324,10 @@ func (r *ArticleRepository) Delete(id uint, userID uint) error {
 	}
 	
 	// Update ticket's change_time
-	updateTicketQuery := `
+	updateTicketQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
 		SET change_time = $2, change_by = $3
-		WHERE id = $1`
+		WHERE id = $1`)
 	
 	_, err = r.db.Exec(updateTicketQuery, ticketID, time.Now(), userID)
 	
@@ -338,7 +341,7 @@ func (r *ArticleRepository) GetVisibleArticlesForCustomer(ticketID uint) ([]mode
 
 // GetLatestArticleForTicket retrieves the most recent article for a ticket
 func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Article, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT 
 			id, ticket_id, article_type_id, sender_type_id,
 			communication_channel_id, is_visible_for_customer,
@@ -348,7 +351,7 @@ func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Ar
 		FROM article
 		WHERE ticket_id = $1 AND valid_id = 1
 		ORDER BY create_time DESC
-		LIMIT 1`
+		LIMIT 1`)
 	
 	var article models.Article
 	err := r.db.QueryRow(query, ticketID).Scan(
@@ -380,10 +383,10 @@ func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Ar
 
 // CountArticlesForTicket counts the number of articles for a ticket
 func (r *ArticleRepository) CountArticlesForTicket(ticketID uint, includeInternal bool) (int, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT COUNT(*) 
 		FROM article 
-		WHERE ticket_id = $1 AND valid_id = 1`
+		WHERE ticket_id = $1 AND valid_id = 1`)
 	
 	if !includeInternal {
 		query += " AND is_visible_for_customer = 1"
@@ -403,14 +406,14 @@ func (r *ArticleRepository) CreateAttachment(attachment *models.Attachment) erro
 		attachment.Disposition = "attachment"
 	}
 	
-	query := `
+	query := database.ConvertPlaceholders(`
 		INSERT INTO article_attachments (
 			article_id, filename, content_type, content_size,
 			content_id, content_alternative, disposition, content,
 			create_time, create_by, change_time, change_by
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
-		) RETURNING id`
+		) RETURNING id`)
 	
 	err := r.db.QueryRow(
 		query,
@@ -433,14 +436,14 @@ func (r *ArticleRepository) CreateAttachment(attachment *models.Attachment) erro
 
 // GetAttachmentsByArticleID retrieves all attachments for an article
 func (r *ArticleRepository) GetAttachmentsByArticleID(articleID uint) ([]models.Attachment, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT 
 			id, article_id, filename, content_type, content_size,
 			content_id, content_alternative, disposition, content,
 			create_time, create_by, change_time, change_by
 		FROM article_attachments
 		WHERE article_id = $1
-		ORDER BY create_time ASC`
+		ORDER BY create_time ASC`)
 	
 	rows, err := r.db.Query(query, articleID)
 	if err != nil {
@@ -477,13 +480,13 @@ func (r *ArticleRepository) GetAttachmentsByArticleID(articleID uint) ([]models.
 
 // GetAttachmentByID retrieves a specific attachment
 func (r *ArticleRepository) GetAttachmentByID(id uint) (*models.Attachment, error) {
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT 
 			id, article_id, filename, content_type, content_size,
 			content_id, content_alternative, disposition, content,
 			create_time, create_by, change_time, change_by
 		FROM article_attachments
-		WHERE id = $1`
+		WHERE id = $1`)
 	
 	var attachment models.Attachment
 	err := r.db.QueryRow(query, id).Scan(
@@ -511,7 +514,7 @@ func (r *ArticleRepository) GetAttachmentByID(id uint) (*models.Attachment, erro
 
 // DeleteAttachment removes an attachment
 func (r *ArticleRepository) DeleteAttachment(id uint) error {
-	query := `DELETE FROM article_attachments WHERE id = $1`
+	query := database.ConvertPlaceholders(`DELETE FROM article_attachments WHERE id = $1`)
 	result, err := r.db.Exec(query, id)
 	if err != nil {
 		return err
