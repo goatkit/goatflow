@@ -310,7 +310,7 @@ relationships:
 ### Module Not Loading
 - Check YAML syntax: `yamllint modules/my_module.yaml`
 - Verify table exists in database
-- Check logs: `./scripts/container-wrapper.sh logs gotrs-backend`
+- Check logs: `make logs`
 
 ### Fields Not Showing
 - Ensure `show_in_list: true` for table columns

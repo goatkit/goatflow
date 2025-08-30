@@ -178,7 +178,7 @@ fields:
 
 1. Check file permissions on `modules/` directory
 2. Wait 2-3 seconds for file watcher to detect changes
-3. Check backend logs for errors: `./scripts/container-wrapper.sh logs gotrs-backend`
+3. Check backend logs for errors: `make logs`
 
 ### CRUD Operations Failing
 

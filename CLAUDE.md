@@ -640,7 +640,7 @@ go build ./cmd/gotrs && echo "✅ Build successful!"
 
 2. **Service restart**:
 ```bash
-./scripts/container-wrapper.sh restart gotrs-backend
+make restart
 ```
 
 3. **Health check**:
@@ -650,7 +650,7 @@ curl -s http://localhost:8080/health && echo "✅ Backend responding"
 
 4. **Log verification**:
 ```bash
-./scripts/container-wrapper.sh logs gotrs-backend | grep -E "(panic|error)" | tail -5
+make logs | grep -E "(panic|error)" | tail -5
 ```
 
 **Common Issues to Watch For**:
@@ -660,11 +660,10 @@ curl -s http://localhost:8080/health && echo "✅ Backend responding"
 - **Nil pointer dereferences**: Check logs for runtime panics
 
 **Recovery Steps When Service Fails**:
-1. Check logs immediately: `./scripts/container-wrapper.sh logs gotrs-backend | tail -50`
+1. Check logs immediately: `make logs | tail -50`
 2. Identify the panic or error message
 3. Fix the issue (usually duplicate routes or missing imports)
-4. Rebuild: `go build ./cmd/gotrs`
-5. Restart service: `./scripts/container-wrapper.sh restart gotrs-backend`
+5. Restart service: `make restart`
 6. Verify health: `curl http://localhost:8080/health`
 
 **Never commit or claim completion without**:
@@ -812,7 +811,7 @@ go run test_template.go
 go build ./cmd/server
 
 # 3. Restart service
-./scripts/container-wrapper.sh restart gotrs-backend
+make restart
 
 # 4. Check health
 curl http://localhost:8080/health
@@ -821,10 +820,10 @@ curl http://localhost:8080/health
 curl -v http://localhost:8080/admin/states
 
 # 6. CHECK THE LOGS FOR TEMPLATE ERRORS
-./scripts/container-wrapper.sh logs gotrs-backend | grep "Template error"
+make logs | grep "Template error"
 
 # 7. Look for HTTP status in logs
-./scripts/container-wrapper.sh logs gotrs-backend | grep "/admin/states"
+make logs | grep "/admin/states"
 ```
 
 **Never Claim "It Works" Without**:
@@ -950,9 +949,9 @@ curl -v http://localhost:8080/admin/states
 **How to Break This Pattern**:
 ```bash
 # ACTUALLY DO THESE STEPS:
-1. ./scripts/container-wrapper.sh restart gotrs-backend
+1. make restart
 2. curl http://localhost:8080/health
-3. ./scripts/container-wrapper.sh logs gotrs-backend | grep "Template error"
+3. make logs | grep "Template error"
 4. curl -v http://localhost:8080/admin/[module]
 5. Open in browser, check console
 6. Try to create/edit/delete an item

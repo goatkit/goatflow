@@ -51,7 +51,7 @@
 ### 6. Manual Testing Protocol
 ```bash
 # 1. Build and restart
-go build ./cmd/server && ./scripts/container-wrapper.sh restart gotrs-backend
+go build ./cmd/server && make restart
 
 # 2. Check health
 curl -s http://localhost:8080/health
@@ -60,7 +60,7 @@ curl -s http://localhost:8080/health
 curl -s "http://localhost:8080/admin/MODULE" -H "Cookie: access_token=demo_session_1755839704" -o /dev/null -w "%{http_code}"
 
 # 4. Check logs for template errors
-./scripts/container-wrapper.sh logs gotrs-backend | grep -i "error\|template"
+make logs | grep -i "error\|template"
 
 # 5. Test CREATE with all validity states
 curl -X POST "http://localhost:8080/admin/MODULE/create" \
