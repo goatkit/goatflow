@@ -33,6 +33,10 @@
     <!-- HTMX extensions -->
     <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
     
+    <!-- Tiptap Rich Text Editor (bundled for airgapped environments) -->
+    <script src="/static/js/tiptap.min.js"></script>
+    <script src="/static/js/tiptap-editor.js"></script>
+    
     <!-- Custom styles -->
     <style>
         /* Smooth transitions for dark mode */

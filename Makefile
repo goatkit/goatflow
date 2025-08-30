@@ -152,11 +152,11 @@ help:
 	@echo "  $(shell echo '\033[1;33m')🐠 i18n (Babel fish) Commands$(shell echo '\033[0m')"
 	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
 	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make babelfish$(shell echo '\033[0m')                    🏗️  Build gotrs-babelfish binary"
+	@echo "  $(shell echo '\033[0;32m')make babelfish$(shell echo '\033[0m')                    🏗️ Build gotrs-babelfish binary"
 	@echo "  $(shell echo '\033[0;32m')make babelfish-coverage$(shell echo '\033[0m')           📊 Show translation coverage"
-	@echo "  $(shell echo '\033[0;32m')make babelfish-validate$(shell echo '\033[0m') LANG=de   ✅ Validate a language"
-	@echo "  $(shell echo '\033[0;32m')make babelfish-missing$(shell echo '\033[0m') LANG=es    🔍 Show missing translations"
-	@echo "  $(shell echo '\033[0;32m')make babelfish-run$(shell echo '\033[0m') ARGS='-help'   🎯 Run with custom args"
+	@echo "  $(shell echo '\033[0;32m')make babelfish-validate$(shell echo '\033[0m\n\t') LANG=de   ✅ Validate a language"
+	@echo "  $(shell echo '\033[0;32m')make babelfish-missing$(shell echo '\033[0m\n\t') LANG=es    🔍 Show missing translations"
+	@echo "  $(shell echo '\033[0;32m')make babelfish-run$(shell echo '\033[0m\n\t') ARGS='-help'   🎯 Run with custom args"
 	@echo "  $(shell echo '\033[0;32m')make test-ldap$(shell echo '\033[0m')                    🔐 Run LDAP integration tests"
 	@echo "  $(shell echo '\033[0;32m')make test-ldap-perf$(shell echo '\033[0m')               ⚡ Run LDAP performance benchmarks"
 	@echo ""
@@ -164,39 +164,49 @@ help:
 	@echo "  $(shell echo '\033[1;33m')🔒 Security Commands$(shell echo '\033[0m')"
 	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
 	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make scan-secrets$(shell echo '\033[0m')                 🕵️ Scan current code for secrets"
-	@echo "  $(shell echo '\033[0;32m')make scan-secrets-history$(shell echo '\033[0m')         📜 Scan git history for secrets"
-	@echo "  $(shell echo '\033[0;32m')make scan-secrets-precommit$(shell echo '\033[0m')       🪝 Install pre-commit hooks"
-	@echo "  $(shell echo '\033[0;32m')make scan-vulnerabilities$(shell echo '\033[0m')         🐛 Scan for vulnerabilities"
-	@echo "  $(shell echo '\033[0;32m')make security-scan$(shell echo '\033[0m')                🛡️  Run all security scans"
-	@echo "  $(shell echo '\033[0;32m')make test-contracts$(shell echo '\033[0m')               📝 Run Pact contract tests"
-	@echo "  $(shell echo '\033[0;32m')make test-all$(shell echo '\033[0m')                     🎯 Run all tests (backend, frontend, contracts)"
+	@echo "  $(shell echo '\033[0;32m')make scan-secrets$(shell echo '\033[0m')\t\t\t🕵️ Scan current code for secrets"
+	@echo "  $(shell echo '\033[0;32m')make scan-secrets-history$(shell echo '\033[0m')\t\t📜 Scan git history for secrets"
+	@echo "  $(shell echo '\033[0;32m')make scan-secrets-precommit$(shell echo '\033[0m')\t\t🪝 Install pre-commit hooks"
+	@echo "  $(shell echo '\033[0;32m')make scan-vulnerabilities$(shell echo '\033[0m')\t\t🐛 Scan for vulnerabilities"
+	@echo "  $(shell echo '\033[0;32m')make security-scan$(shell echo '\033[0m')\t\t\t🛡️ Run all security scans"
+	@echo "  $(shell echo '\033[0;32m')make test-contracts$(shell echo '\033[0m')\t\t\t📝 Run Pact contract tests"
+	@echo "  $(shell echo '\033[0;32m')make test-all$(shell echo '\033[0m')\t\t\t\t🎯 Run all tests (backend, frontend, contracts)"
 	@echo ""
 	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
 	@echo "  $(shell echo '\033[1;33m')📡 Service Management$(shell echo '\033[0m')"
 	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
 	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make backend-logs$(shell echo '\033[0m')                 📋 View backend logs"
-	@echo "  $(shell echo '\033[0;32m')make backend-logs-follow$(shell echo '\033[0m')          📺 Follow backend logs"
-	@echo "  $(shell echo '\033[0;32m')make valkey-cli$(shell echo '\033[0m')                   🔑 Valkey CLI"
+	@echo "  $(shell echo '\033[0;32m')make backend-logs$(shell echo '\033[0m')\t\t\t📋 View backend logs"
+	@echo "  $(shell echo '\033[0;32m')make backend-logs-follow$(shell echo '\033[0m')\t\t📺 Follow backend logs"
+	@echo "  $(shell echo '\033[0;32m')make valkey-cli$(shell echo '\033[0m')\t\t\t🔑 Valkey CLI"
 	@echo ""
 	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
 	@echo "  $(shell echo '\033[1;33m')🗄️  Database Operations$(shell echo '\033[0m')"
 	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
 	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make db-shell$(shell echo '\033[0m')                     🐘 PostgreSQL shell"
-	@echo "  $(shell echo '\033[0;32m')make db-migrate$(shell echo '\033[0m')                   📤 Run pending migrations"
-	@echo "  $(shell echo '\033[0;32m')make db-rollback$(shell echo '\033[0m')                  ↩️  Rollback last migration"
-	@echo "  $(shell echo '\033[0;32m')make db-reset$(shell echo '\033[0m')                     💥 Reset DB (cleans storage)"
-	@echo "  $(shell echo '\033[0;32m')make db-init$(shell echo '\033[0m')                      🚀 Fast baseline init"
-	@echo "  $(shell echo '\033[0;32m')make db-apply-test-data$(shell echo '\033[0m')           🧪 Apply test data"
-	@echo "  $(shell echo '\033[0;32m')make clean-storage$(shell echo '\033[0m')                🗑️ Remove orphaned files"
+	@echo "  $(shell echo '\033[0;32m')make db-shell$(shell echo '\033[0m')\t\t\t\t🐘 PostgreSQL shell"
+	@echo "  $(shell echo '\033[0;32m')make db-migrate$(shell echo '\033[0m')\t\t\t📤 Run pending migrations"
+	@echo "  $(shell echo '\033[0;32m')make db-rollback$(shell echo '\033[0m')\t\t\t↩️  Rollback last migration"
+	@echo "  $(shell echo '\033[0;32m')make db-reset$(shell echo '\033[0m')\t\t\t\t💥 Reset DB (cleans storage)"
+	@echo "  $(shell echo '\033[0;32m')make db-init$(shell echo '\033[0m')\t\t\t\t🚀 Fast baseline init"
+	@echo "  $(shell echo '\033[0;32m')make db-apply-test-data$(shell echo '\033[0m')\t\t🧪 Apply test data"
+	@echo "  $(shell echo '\033[0;32m')make clean-storage$(shell echo '\033[0m')\t\t\t🗑️ Remove orphaned files"
+	@echo ""
+	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
+	@echo "  $(shell echo '\033[1;33m')📦 OTRS Migration$(shell echo '\033[0m')"
+	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
+	@echo ""
+	@echo "  $(shell echo '\033[0;32m')make migrate-analyze$(shell echo '\033[0m\n\t') SQL=dump.sql\t\t\t🔍 Analyze OTRS SQL dump"
+	@echo "  $(shell echo '\033[0;32m')make migrate-import$(shell echo '\033[0m\n\t') SQL=dump.sql\t\t\t📥 Import OTRS data (dry-run)"
+	@echo "  $(shell echo '\033[0;32m')make migrate-import$(shell echo '\033[0m\n\t') SQL=dump.sql DRY_RUN=false\t💾 Import for real"
+	@echo "  $(shell echo '\033[0;32m')make migrate-validate$(shell echo '\033[0m')\t\t\t🔍 Validate imported data"
+	@echo "  $(shell echo '\033[0;32m')make import-test-data$(shell echo '\033[0m')\t\t\t🎯 Import test tickets with proper mapping"
 	@echo ""
 	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
 	@echo "  $(shell echo '\033[1;33m')👥 User Management$(shell echo '\033[0m')"
 	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
 	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make reset-password$(shell echo '\033[0m')               🔓 Reset user password"
+	@echo "  $(shell echo '\033[0;32m')make reset-password$(shell echo '\033[0m')\t\t\t🔓 Reset user password"
 	@echo ""
 	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
 	@echo ""
@@ -402,7 +412,18 @@ toolbox-run:
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		gotrs-toolbox:latest \
-		/bin/bash
+		$(if $(ARGS),$(ARGS),/bin/bash)
+
+# Execute command in toolbox container (non-interactive, no TTY)
+toolbox-exec:
+	@$(MAKE) toolbox-build
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-u "$$(id -u):$$(id -g)" \
+		--network host \
+		gotrs-toolbox:latest \
+		$(ARGS)
 
 # Check compilation of all packages
 toolbox-compile:
@@ -414,6 +435,21 @@ toolbox-compile:
 		-u "$$(id -u):$$(id -g)" \
 		gotrs-toolbox:latest \
 		go build ./...
+
+# Compile the main goats binary in container
+.PHONY: compile
+compile: toolbox-build
+	@echo "🔨 Compiling goats binary..."
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-u "$$(id -u):$$(id -g)" \
+		-e CGO_ENABLED=1 \
+		-e GOOS=linux \
+		-e GOARCH=amd64 \
+		gotrs-toolbox:latest \
+		go build -ldflags="-w -s" -o bin/goats ./cmd/goats
+	@echo "✅ Binary compiled to bin/goats"
 
 # Run tests directly in toolbox (faster than compose exec)
 toolbox-test:
@@ -572,8 +608,8 @@ down:
 	$(COMPOSE_CMD) down
 
 # Restart services
-restart:
-	$(COMPOSE_CMD) restart
+restart: down up-d
+	@echo "🔄 Restarted all services"
 
 # View logs
 logs:
@@ -612,8 +648,22 @@ reset-db:
 export
 
 # Database operations
+# Set this from the environment or override on the command line
+#    e.g.   echo "select * from users;"| make db-shell
+#           echo "select * from users;"| make DB_DRIVER=mysql   db-shell
 db-shell:
-	$(COMPOSE_CMD) exec postgres psql -U $(DB_USER) -d $(DB_NAME)
+	@if [ "$(DB_DRIVER)" = "postgres" ]; then \
+		$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME); \
+	elif [ "$(DB_DRIVER)" = "mysql" ]; then \
+		$(COMPOSE_CMD) exec -T mariadb mysql -u $(MYSQL_ROOT_USER) -p$(MYSQL_ROOT_PASSWORD) -e 'CREATE DATABASE IF NOT EXISTS `$(DB_NAME)`;' < /dev/null; \
+		$(COMPOSE_CMD) exec -T mariadb mysql -u $(MYSQL_ROOT_USER) -p$(MYSQL_ROOT_PASSWORD) -D $(DB_NAME); \
+    fi
+
+# Fix PostgreSQL sequences after data import
+db-fix-sequences:
+	@echo "🔧 Fixing database sequences..."
+	@./scripts/fix-sequences.sh
+	@echo "✅ Sequences fixed - duplicate key errors should be resolved"
 
 # Run a database query (use QUERY="SELECT ..." make db-query)
 db-query:
@@ -627,15 +677,23 @@ db-migrate:
 	@echo "Running database migrations..."
 	$(COMPOSE_CMD) exec backend ./migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" up
 	@echo "Migrations completed successfully!"
+	@echo "🔧 Fixing database sequences to prevent duplicate key errors..."
+	@./scripts/fix-sequences.sh > /dev/null 2>&1 || true
+	@echo "✅ Database ready with sequences properly synchronized!"
 
 db-migrate-schema-only:
 	@echo "Running schema migration only..."
 	$(COMPOSE_CMD) exec backend ./migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" up 3
 	@echo "Schema and initial data applied (no test data)"
+	@echo "🔧 Fixing database sequences..."
+	@./scripts/fix-sequences.sh > /dev/null 2>&1 || true
+	@echo "✅ Sequences synchronized!"
 
 db-seed-dev:
 	@echo "Seeding development database with comprehensive test data..."
 	@$(COMPOSE_CMD) exec backend ./migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" up
+	@echo "🔧 Fixing sequences after seeding..."
+	@./scripts/fix-sequences.sh > /dev/null 2>&1 || true
 	@echo "✅ Development database seeded with:"
 	@echo "   - 10 organizations"
 	@echo "   - 50 customer users"
@@ -682,6 +740,8 @@ db-init:
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -f - < schema/baseline/otrs_complete.sql
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -f - < schema/baseline/required_lookups.sql
 	@$(MAKE) clean-storage
+	@echo "🔧 Fixing sequences after baseline initialization..."
+	@./scripts/fix-sequences.sh > /dev/null 2>&1 || true
 	@echo "✅ Database initialized from baseline"
 
 # Initialize for OTRS import (structure only, no data)
@@ -696,6 +756,8 @@ db-init-dev:
 	@echo "🚀 Initializing development database..."
 	@$(MAKE) db-init
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -f - < schema/seed/minimal.sql
+	@echo "🔧 Fixing sequences after initialization..."
+	@./scripts/fix-sequences.sh > /dev/null 2>&1 || true
 	@echo "✅ Development database ready (admin/admin)"
 
 # Legacy reset using old migrations (kept for compatibility)
@@ -722,6 +784,97 @@ db-migrate-sql:
 		$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -f - < "$$f" 2>&1 | grep -E "(CREATE|ALTER|INSERT|ERROR)" | head -3 || true; \
 	done
 	@echo "✅ SQL migrations applied"
+
+# OTRS Migration Tools
+# Analyze OTRS SQL dump file
+migrate-analyze:
+	@$(MAKE) toolbox-build
+	@if [ -z "$(SQL)" ]; then \
+		echo "❌ SQL file required. Usage: make migrate-analyze SQL=/path/to/dump.sql"; \
+		exit 1; \
+	fi
+	@echo "🔍 Analyzing OTRS SQL dump: $(SQL)"
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(dirname $(SQL)):/data:ro" \
+		-u "$$(id -u):$$(id -g)" \
+		gotrs-toolbox:latest \
+		gotrs-migrate -cmd=analyze -sql="/data/$$(basename $(SQL))"
+
+# Import OTRS data (dry run by default)
+migrate-import:
+	@$(MAKE) toolbox-build
+	@if [ -z "$(SQL)" ]; then \
+		echo "❌ SQL file required. Usage: make migrate-import SQL=/path/to/dump.sql [DRY_RUN=false]"; \
+		exit 1; \
+	fi
+	@echo "📥 Importing OTRS data from: $(SQL)"
+	@DRY_RUN_FLAG=""; \
+	if [ "$${DRY_RUN:-true}" = "true" ]; then \
+		DRY_RUN_FLAG="-dry-run"; \
+		echo "🧪 Running in DRY RUN mode (no data will be imported)"; \
+	fi; \
+	$(CONTAINER_CMD) run --rm \
+		-v "$$(dirname $(SQL)):/data:ro" \
+		-u "$$(id -u):$$(id -g)" \
+		--network gotrs-ce_gotrs-network \
+		gotrs-toolbox:latest \
+		gotrs-migrate -cmd=import -sql="/data/$$(basename $(SQL))" \
+			-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" \
+			$$DRY_RUN_FLAG -v
+
+# Force import - clears existing data before importing (DESTRUCTIVE!)
+migrate-import-force:
+	@$(MAKE) toolbox-build
+	@if [ -z "$(SQL)" ]; then \
+		echo "❌ SQL file required. Usage: make migrate-import-force SQL=/path/to/dump.sql"; \
+		exit 1; \
+	fi
+	@echo "⚠️  WARNING: Force import will CLEAR ALL EXISTING DATA!"
+	@echo "📥 Importing OTRS data from: $(SQL)"
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(dirname $(SQL)):/data:ro" \
+		-u "$$(id -u):$$(id -g)" \
+		--network gotrs-ce_gotrs-network \
+		gotrs-toolbox:latest \
+		gotrs-migrate -cmd=import -sql="/data/$$(basename $(SQL))" \
+			-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" \
+			-force -v || true
+	@echo "✅ Force import completed successfully!"
+
+# Validate imported OTRS data
+migrate-validate:
+	@$(MAKE) toolbox-build
+	@echo "🔍 Validating imported OTRS data"
+	@$(CONTAINER_CMD) run --rm \
+		-u "$$(id -u):$$(id -g)" \
+		--network gotrs-ce_gotrs-network \
+		gotrs-toolbox:latest \
+		gotrs-migrate -cmd=validate \
+			-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" -v
+
+# Import test data with proper ID mapping
+import-test-data:
+	@echo "📥 Building and importing test tickets with proper ID mapping..."
+	@echo "🔨 Building import tool..."
+	@mkdir -p bin
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-e GOCACHE=/tmp/.cache/go-build \
+		-e GOMODCACHE=/tmp/.cache/go-mod \
+		-u "$$(id -u):$$(id -g)" \
+		golang:1.23-alpine \
+		go build -o /workspace/bin/import-otrs ./cmd/import-otrs/main.go
+	@echo "🗑️ Clearing existing data..."
+	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -c "TRUNCATE ticket CASCADE;" > /dev/null 2>&1
+	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -c "TRUNCATE article CASCADE;" > /dev/null 2>&1
+	@echo "📦 Running import..."
+	@$(CONTAINER_CMD) run --rm \
+		-v "$$(pwd)/bin:/bin:ro" \
+		--network gotrs-ce_gotrs-network \
+		alpine:3.19 \
+		/bin/import-otrs -db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable"
+	@echo "✅ Test data imported successfully with correct article mappings!"
 
 # Reset user password and enable account (using toolbox)
 reset-password:
@@ -940,13 +1093,14 @@ scan-vulnerabilities:
 security-scan: scan-secrets scan-vulnerabilities
 	@echo "Security scanning completed!"
 
-# Build for production (and clean host binaries)
-build:
+# Build for production (includes CSS and container build)
+build: css-build
+	@echo "🔨 Building backend container..."
 	$(CONTAINER_CMD) build -f Dockerfile -t gotrs:latest .
 	@echo "🧹 Cleaning host binaries..."
 	@rm -f goats gotrs gotrs-* generator migrate server  # Clean root directory
 	@rm -f bin/* 2>/dev/null || true  # Clean bin directory
-	@echo "✅ Host binaries cleaned - containers have the only copies"
+	@echo "✅ Build complete - CSS compiled and containers ready"
 
 # ============================================
 # Enhanced Build Targets with BuildKit
@@ -1217,10 +1371,29 @@ css-deps:
 	@echo "✅ CSS dependencies installed"
 
 # Build production CSS (in container with user permissions)
-css-build: css-deps
+css-build:
 	@echo "🎨 Building production CSS..."
+	@if [ ! -d "node_modules" ]; then \
+		echo "📦 Installing CSS dependencies first..."; \
+		$(MAKE) css-deps; \
+	fi
 	@$(CONTAINER_CMD) run --rm -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm run build-css
 	@echo "✅ CSS built to static/css/output.css"
+
+# Build JavaScript assets (Tiptap editor bundle)
+js-deps:
+	@echo "📦 Installing JavaScript dependencies..."
+	@$(CONTAINER_CMD) run --rm -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm install
+	@echo "✅ JavaScript dependencies installed"
+
+js-build: js-deps
+	@echo "🔨 Building JavaScript bundles..."
+	@$(CONTAINER_CMD) run --rm -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm run build-js
+	@echo "✅ JavaScript built to static/js/tiptap.min.js"
+
+# Build all frontend assets
+frontend-build: css-build js-build
+	@echo "✅ All frontend assets built"
 
 # Watch and rebuild CSS on changes (in container with user permissions)
 css-watch: css-deps

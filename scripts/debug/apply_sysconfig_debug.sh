@@ -23,7 +23,7 @@ show_help() {
 case "$1" in
     "prepare")
         echo "=== PREPARING SYSCONFIG DEBUG ==="
-        
+
         # Create backup
         if [ ! -f "$BACKUP_FILE" ]; then
             cp "$HANDLER_FILE" "$BACKUP_FILE"
@@ -31,23 +31,23 @@ case "$1" in
         else
             echo "! Backup already exists: $BACKUP_FILE"
         fi
-        
+
         # Run basic check
         echo ""
         echo "=== BASIC MODULE CHECK ==="
         go run debug_sysconfig.go
-        
+
         echo ""
         echo "=== READY FOR DEBUG MODIFICATIONS ==="
         echo "Next steps:"
         echo "1. Edit $HANDLER_FILE"
         echo "2. Replace 3 functions with debug versions from debug_comprehensive.go:"
         echo "   - loadAllConfigs (around line 194)"
-        echo "   - loadConfig (around line 214)" 
+        echo "   - loadConfig (around line 214)"
         echo "   - GetAvailableModules (around line 920)"
         echo "3. Run: $0 test"
         ;;
-        
+
     "apply")
         echo "=== APPLYING SYSCONFIG DEBUG ==="
         echo "This requires manual editing of $HANDLER_FILE"
@@ -60,10 +60,10 @@ case "$1" in
         echo ""
         echo "After editing, run: $0 test"
         ;;
-        
+
     "test")
         echo "=== TESTING SYSCONFIG DEBUG ==="
-        
+
         # Build to check for syntax errors
         echo "Building server..."
         if go build ./cmd/server; then
@@ -72,24 +72,24 @@ case "$1" in
             echo "✗ Build failed - check debug modifications"
             exit 1
         fi
-        
+
         echo ""
         echo "Starting debug session..."
         echo "Watch for debug output about sysconfig loading..."
         echo ""
         echo "Starting server with debug output:"
-        ./scripts/container-wrapper.sh restart gotrs-backend
+        make restart
         sleep 3
-        
+
         echo ""
         echo "Checking server health:"
         curl -s http://localhost:8080/health
-        
+
         echo ""
         echo ""
         echo "Check the logs for DEBUG output:"
-        echo "./scripts/container-wrapper.sh logs gotrs-backend | grep -E '(DEBUG:|sysconfig)'"
-        
+        echo "make logs | grep -E '(DEBUG:|sysconfig)'"
+
         echo ""
         echo "Look for these patterns in the logs:"
         echo "1. 'DEBUG: Processing file: sysconfig.yaml'"
@@ -98,30 +98,30 @@ case "$1" in
         echo "4. 'DEBUG: configs map contents:' (should include sysconfig)"
         echo "5. 'DEBUG: Adding module to list: sysconfig'"
         ;;
-        
+
     "revert")
         echo "=== REVERTING SYSCONFIG DEBUG ==="
-        
+
         if [ -f "$BACKUP_FILE" ]; then
             mv "$BACKUP_FILE" "$HANDLER_FILE"
             echo "✓ Reverted $HANDLER_FILE from backup"
             echo "✓ Restart the server to remove debug output:"
-            echo "  ./scripts/container-wrapper.sh restart gotrs-backend"
+            echo "  make restart"
         else
             echo "✗ No backup file found: $BACKUP_FILE"
             exit 1
         fi
         ;;
-        
+
     "status")
         echo "=== SYSCONFIG DEBUG STATUS ==="
-        
+
         if [ -f "$BACKUP_FILE" ]; then
             echo "✓ Backup exists: $BACKUP_FILE"
         else
             echo "✗ No backup found - debug not prepared"
         fi
-        
+
         echo ""
         echo "Module file status:"
         if [ -f "modules/sysconfig.yaml" ]; then
@@ -130,7 +130,7 @@ case "$1" in
         else
             echo "✗ sysconfig.yaml missing"
         fi
-        
+
         echo ""
         echo "Current server status:"
         if curl -s http://localhost:8080/health > /dev/null; then
@@ -138,12 +138,12 @@ case "$1" in
         else
             echo "✗ Server not responding"
         fi
-        
+
         echo ""
         echo "Available debug files:"
         ls -la debug*.go 2>/dev/null || echo "No debug files found"
         ;;
-        
+
     *)
         show_help
         exit 1

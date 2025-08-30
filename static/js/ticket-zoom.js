@@ -40,6 +40,12 @@ function addNote(ticketId) {
         // Show the modal by removing 'hidden' class
         noteModal.classList.remove('hidden');
         
+        // Reset the note type dropdown to Internal
+        const noteTypeSelect = document.getElementById('noteTypeSelect');
+        if (noteTypeSelect) {
+            noteTypeSelect.value = '3'; // Internal
+        }
+        
         // Clear any existing content
         const subjectField = noteModal.querySelector('[name="subject"]');
         const bodyField = noteModal.querySelector('[name="body"]');
@@ -72,7 +78,70 @@ function replyToTicket() {
         }
         isComposing = true;
         console.log('Reply modal opened');
+        
+        // Load customer users for dropdown
+        loadCustomerUsers();
     }
+}
+
+/**
+ * Load customer users for the reply dropdown
+ */
+function loadCustomerUsers() {
+    const ticketId = currentTicketId;
+    const selectElement = document.getElementById('customerUserSelect');
+    const helpText = selectElement ? selectElement.nextElementSibling : null;
+    
+    if (!selectElement || !ticketId) return;
+    
+    // Update help text
+    if (helpText) {
+        helpText.textContent = 'Loading customer users...';
+    }
+    
+    fetch(`/agent/tickets/${ticketId}/customer-users`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.customer_users) {
+                // Clear existing options
+                selectElement.innerHTML = '';
+                
+                // Add customer users as options
+                data.customer_users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.email || user.login;
+                    option.textContent = user.display_name || user.email || user.login;
+                    
+                    // Select current customer by default
+                    if (user.is_current) {
+                        option.selected = true;
+                    }
+                    
+                    selectElement.appendChild(option);
+                });
+                
+                // Add option to enter custom email
+                const customOption = document.createElement('option');
+                customOption.value = '__custom__';
+                customOption.textContent = '-- Enter custom email address --';
+                selectElement.appendChild(customOption);
+                
+                // Update help text
+                if (helpText) {
+                    if (data.customer_users.length > 0) {
+                        helpText.textContent = `${data.customer_users.length} customer user(s) available`;
+                    } else {
+                        helpText.textContent = 'No customer users found for this company';
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error loading customer users:', error);
+            if (helpText) {
+                helpText.textContent = 'Error loading customer users';
+            }
+        });
 }
 
 /**
@@ -433,6 +502,42 @@ function showToast(message, type) {
 }
 
 /**
+ * Load attachment images with authentication
+ */
+function loadAttachmentImages() {
+    document.querySelectorAll('img[data-attachment-url]').forEach(img => {
+        const url = img.getAttribute('data-attachment-url');
+        fetch(url, {
+            credentials: 'include',
+            headers: {
+                'Accept': 'image/*'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            } else {
+                throw new Error('Failed to load image');
+            }
+        })
+        .then(blob => {
+            const objectUrl = URL.createObjectURL(blob);
+            img.src = objectUrl;
+            img.onload = () => URL.revokeObjectURL(objectUrl);
+        })
+        .catch(error => {
+            console.error('Failed to load attachment image:', error);
+            // Hide the broken image and show a placeholder
+            img.style.display = 'none';
+            const placeholder = document.createElement('div');
+            placeholder.className = 'flex items-center justify-center h-full bg-gray-200 dark:bg-gray-700 text-gray-400';
+            placeholder.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+            img.parentElement.appendChild(placeholder);
+        });
+    });
+}
+
+/**
  * Initialize keyboard shortcuts
  */
 function initializeKeyboardShortcuts() {
@@ -495,5 +600,45 @@ document.addEventListener('keydown', function(event) {
             modal.classList.add('hidden');
         });
         isComposing = false;
+    }
+});
+
+// Handle custom email option in customer user dropdown
+document.addEventListener('change', function(event) {
+    if (event.target && event.target.id === 'customerUserSelect') {
+        if (event.target.value === '__custom__') {
+            // Replace select with input field
+            const select = event.target;
+            const parent = select.parentElement;
+            
+            const input = document.createElement('input');
+            input.type = 'email';
+            input.name = 'to';
+            input.required = true;
+            input.className = select.className;
+            input.placeholder = 'Enter email address';
+            input.id = 'customerUserInput';
+            
+            // Add back button to return to dropdown
+            const backBtn = document.createElement('button');
+            backBtn.type = 'button';
+            backBtn.textContent = '← Back to list';
+            backBtn.className = 'text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 mt-1 block';
+            backBtn.onclick = function() {
+                input.replaceWith(select);
+                backBtn.remove();
+                loadCustomerUsers();
+            };
+            
+            select.replaceWith(input);
+            const helpText = parent.querySelector('.text-xs');
+            if (helpText) {
+                helpText.after(backBtn);
+                helpText.textContent = 'Enter a custom email address';
+            } else {
+                input.after(backBtn);
+            }
+            input.focus();
+        }
     }
 });

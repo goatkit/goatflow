@@ -1,0 +1,148 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
+                User Profile
+            </h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Manage your account settings and preferences
+            </p>
+        </div>
+
+        <!-- Profile Information -->
+        <div class="px-4 py-5 sm:p-6">
+            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">Account Information</h4>
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Username</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ User.username|default:"—" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ User.email|default:"—" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">First Name</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ User.first_name|default:"—" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last Name</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ User.last_name|default:"—" }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <!-- Session Preferences -->
+        <div class="px-4 py-5 sm:p-6 border-t border-gray-200 dark:border-gray-700">
+            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">Session Settings</h4>
+            
+            <form id="session-preferences-form" class="space-y-4">
+                <div>
+                    <label for="session-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Session Timeout
+                    </label>
+                    <select id="session-timeout" name="session_timeout" 
+                            class="mt-1 block w-full sm:w-64 pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="0">System Default (24 hours)</option>
+                        <option value="3600">1 hour</option>
+                        <option value="14400">4 hours</option>
+                        <option value="28800">8 hours</option>
+                        <option value="86400">24 hours</option>
+                        <option value="259200">3 days</option>
+                        <option value="604800">7 days</option>
+                    </select>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        How long should your session stay active before requiring you to log in again?
+                    </p>
+                </div>
+
+                <div>
+                    <button type="submit" 
+                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Save Preferences
+                    </button>
+                </div>
+            </form>
+            
+            <div id="save-feedback" class="mt-4 hidden">
+                <div class="rounded-md bg-green-50 dark:bg-green-900/20 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-green-800 dark:text-green-200">
+                                Preferences saved successfully
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Other Preferences (future expansion) -->
+        <div class="px-4 py-5 sm:p-6 border-t border-gray-200 dark:border-gray-700">
+            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">Display Settings</h4>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Additional preferences will be available here in future updates.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load current session timeout preference
+    fetch('/agent/api/preferences/session-timeout')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.value) {
+                document.getElementById('session-timeout').value = data.value;
+            }
+        })
+        .catch(error => console.error('Error loading preferences:', error));
+
+    // Handle form submission
+    document.getElementById('session-preferences-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const timeout = formData.get('session_timeout');
+        
+        fetch('/agent/api/preferences/session-timeout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ value: parseInt(timeout) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success feedback
+                const feedback = document.getElementById('save-feedback');
+                feedback.classList.remove('hidden');
+                
+                // Hide feedback after 3 seconds
+                setTimeout(() => {
+                    feedback.classList.add('hidden');
+                }, 3000);
+            } else {
+                alert('Error saving preferences: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error saving preferences:', error);
+            alert('Error saving preferences');
+        });
+    });
+});
+</script>
+{% endblock %}

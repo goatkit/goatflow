@@ -36,7 +36,7 @@ echo ""
 echo "📝 Test automator context query:"
 echo '{
   "requesting_agent": "test-automator",
-  "request_type": "get_automation_context", 
+  "request_type": "get_automation_context",
   "payload": {
     "query": "Automation context needed: application type, tech stack, current coverage, manual tests, CI/CD setup, and team skills.",
     "task": "'"$TASK"'",
@@ -44,7 +44,7 @@ echo '{
     "tech_stack": {
       "backend": "Go 1.22+, Gin, PostgreSQL",
       "frontend": "HTMX, Alpine.js, Tailwind CSS",
-      "containers": "Docker/Podman", 
+      "containers": "Docker/Podman",
       "database": "PostgreSQL with OTRS schema"
     },
     "test_requirements": [
@@ -57,7 +57,7 @@ echo '{
     "execution_commands": {
       "unit_tests": "./scripts/container-wrapper.sh exec gotrs-backend go test ./...",
       "health_check": "curl http://localhost:8080/health",
-      "service_restart": "./scripts/container-wrapper.sh restart gotrs-backend"
+      "service_restart": "make restart"
     }
   }
 }'

@@ -79,3 +79,15 @@ spec:
       handler: agent_ticket_merge
       name: Merge Ticket
       description: Merge ticket into another ticket
+      
+    - path: /tickets/:id/customer-users
+      method: GET
+      handler: ticket_customer_users
+      name: Get Customer Users
+      description: Get available customer users for a ticket
+      
+    - path: /tickets/:id/articles/:article_id/attachments/:attachment_id
+      method: GET
+      handler: article_attachment_download
+      name: Download Article Attachment
+      description: Download attachment from a specific article

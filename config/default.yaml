@@ -128,15 +128,54 @@ storage:
       - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 
 ticket:
-  id_prefix: "TKT"
-  id_format: "{prefix}{year}{month}{day}{sequence:06d}"
-  default_priority: normal
-  default_status: open
+  # Ticket number generator configuration (OTRS-compatible)
+  number_generator:
+    # Generator type: date, date_checksum, auto_increment, random
+    type: date  # Default matches OTRS DateChecksum format
+    
+    # Date-based generator (OTRS Date format)
+    # Produces: 2025082814000001 (YYYYMMDDHHnnnnnn)
+    date:
+      include_hour: true     # Include hour in format
+      counter_digits: 6      # Counter padding (000001)
+      reset_daily: true      # Reset counter each day
+      
+    # Auto-increment generator (Simple sequential)
+    # Produces: T-0000001, T-0000002
+    auto_increment:
+      prefix: "T-"           # Ticket prefix
+      min_digits: 7          # Minimum digit padding
+      start_from: 1000       # Starting counter value
+      
+    # Random generator (Non-sequential)
+    # Produces: TKT-A3X9K2M8
+    random:
+      length: 8              # Random string length
+      charset: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+      prefix: "TKT-"         # Optional prefix
+      
+    # Date with checksum (OTRS DateChecksum)
+    # Produces: 20250828-000001-42 (date-counter-checksum)
+    date_checksum:
+      separator: "-"         # Separator character
+      counter_digits: 6      # Counter padding
+      checksum_length: 2     # Checksum digits
+      reset_daily: true      # Reset counter each day
+  
+  # Default ticket settings
+  default_priority: 3        # 3 = normal (OTRS priority IDs)
+  default_state: 1           # 1 = new (OTRS state IDs) 
+  default_queue: 1           # 1 = Raw (OTRS queue IDs)
+  default_lock: 1            # 1 = unlock (OTRS lock IDs)
   auto_assign: false
+  
+  # SLA configuration
   sla:
     enabled: false
     first_response: 4h
     resolution: 24h
+    
+  # Notification settings
   notifications:
     customer_create: true
     customer_update: true

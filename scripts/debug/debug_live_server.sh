@@ -10,18 +10,18 @@ if curl -s http://localhost:8080/health > /dev/null; then
     echo "✓ Server is responding"
 else
     echo "✗ Server not responding - start it first"
-    echo "Run: ./scripts/container-wrapper.sh restart gotrs-backend"
+    echo "Run: make restart"
     exit 1
 fi
 
 echo ""
 echo "2. Checking server logs for module loading..."
 echo "Looking for 'Loaded module: sysconfig':"
-./scripts/container-wrapper.sh logs gotrs-backend | grep -i "sysconfig" | head -10
+make logs | grep -i "sysconfig" | head -10
 
 echo ""
 echo "3. Checking server logs for 'Dynamic Module System loaded':"
-./scripts/container-wrapper.sh logs gotrs-backend | grep "Dynamic Module System loaded" | tail -1
+make logs | grep "Dynamic Module System loaded" | tail -1
 
 echo ""
 echo "4. Testing sysconfig endpoint directly..."

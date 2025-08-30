@@ -2,6 +2,59 @@
 
 {% block title %}Ticket #{{ ticket.tn }} - {{ ticket.title }} - GOTRS{% endblock %}
 
+{% block styles %}
+<style>
+/* Table styles for article content - with !important to override prose styles */
+.article-content table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    border: 1px solid #d1d5db !important;
+}
+
+.article-content table th,
+.article-content table td {
+    border: 1px solid #d1d5db !important;
+    padding: 0.5rem 0.75rem !important;
+    text-align: left !important;
+}
+
+/* Dark mode table borders */
+.dark .article-content table {
+    border: 1px solid #4b5563 !important;
+}
+
+.dark .article-content table th,
+.dark .article-content table td {
+    border: 1px solid #4b5563 !important;
+}
+
+.article-content table th {
+    background-color: #f9fafb !important;
+    font-weight: 600 !important;
+}
+
+.dark .article-content table th {
+    background-color: #1f2937 !important;
+}
+
+.article-content table tbody tr:nth-child(even) {
+    background-color: #f9fafb !important;
+}
+
+.dark .article-content table tbody tr:nth-child(even) {
+    background-color: rgba(31, 41, 55, 0.3) !important;
+}
+
+.article-content table tbody tr:hover {
+    background-color: #f3f4f6 !important;
+}
+
+.dark .article-content table tbody tr:hover {
+    background-color: rgba(55, 65, 81, 0.5) !important;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Header -->
@@ -81,22 +134,53 @@
                                 <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
                                     <p>{{ article.subject }}</p>
                                 </div>
-                                <div class="mt-2 prose prose-sm dark:prose-invert max-w-none">
+                                <div class="mt-2 prose prose-sm dark:prose-invert max-w-none article-content">
                                     {{ article.body|safe }}
                                 </div>
                                 {% if article.attachments %}
                                 <div class="mt-4">
-                                    <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Attachments</h4>
-                                    <ul class="mt-2 space-y-1">
+                                    <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Attachments</h4>
+                                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                                         {% for attachment in article.attachments %}
-                                        <li>
-                                            <a href="/agent/tickets/{{ ticket.id }}/articles/{{ article.id }}/attachments/{{ attachment.id }}"
-                                               class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                                                {{ attachment.filename }} ({{ attachment.size }})
+                                        <div class="relative group bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                            {% if attachment.content_type and attachment.content_type|slice:":5" == "image" %}
+                                            <!-- Image preview -->
+                                            <div class="aspect-square mb-1 overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
+                                                <img data-attachment-url="/agent/tickets/{{ ticket.id }}/articles/{{ article.id }}/attachments/{{ attachment.id }}" 
+                                                     alt="{{ attachment.filename }}"
+                                                     class="w-full h-full object-cover cursor-pointer attachment-image"
+                                                     onclick="showImagePreview(this.src, '{{ attachment.filename }}')"
+                                                     loading="lazy">
+                                            </div>
+                                            {% else %}
+                                            <!-- File icon -->
+                                            <div class="flex justify-center items-center h-16 mb-1">
+                                                {% if attachment.content_type == "application/pdf" %}
+                                                <svg class="h-12 w-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                                </svg>
+                                                {% else %}
+                                                <svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+                                                </svg>
+                                                {% endif %}
+                                            </div>
+                                            {% endif %}
+                                            <div class="text-xs">
+                                                <p class="truncate font-medium text-gray-900 dark:text-white" title="{{ attachment.filename }}">
+                                                    {{ attachment.filename }}
+                                                </p>
+                                                <p class="text-gray-500 dark:text-gray-400">{{ attachment.size }}</p>
+                                            </div>
+                                            <a href="/agent/tickets/{{ ticket.id }}/articles/{{ article.id }}/attachments/{{ attachment.id }}" 
+                                               download="{{ attachment.filename }}"
+                                               class="absolute inset-0 rounded-lg ring-2 ring-transparent hover:ring-blue-500 transition-all"
+                                               title="Download {{ attachment.filename }}">
+                                                <span class="sr-only">Download</span>
                                             </a>
-                                        </li>
+                                        </div>
                                         {% endfor %}
-                                    </ul>
+                                    </div>
                                 </div>
                                 {% endif %}
                             </div>
@@ -188,35 +272,141 @@
     </div>
 </div>
 
-<!-- Reply Modal -->
+<!-- Reply Modal - Enhanced with OTRS feature parity -->
 <div id="replyModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto z-50">
     <div class="flex min-h-full items-center justify-center p-4">
-        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl">
+        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Reply to Ticket</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Compose Reply</h3>
             </div>
             <form id="replyForm" onsubmit="submitReply(event)">
                 <div class="p-6 space-y-4">
+                    <!-- Communication Type and Visibility -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
+                            <select name="communication_channel_id" id="replyCommunicationType" onchange="updateReplyVisibility()"
+                                    class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                <option value="1" selected>Email-External</option>
+                                <option value="3">Email-Internal</option>
+                                <option value="2">Phone</option>
+                                <option value="4">Chat</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Next State</label>
+                            <select name="next_state_id" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                <option value="">Keep current state</option>
+                                <option value="2">open</option>
+                                <option value="4">pending reminder</option>
+                                <option value="7">closed successful</option>
+                                <option value="8">closed unsuccessful</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Recipients -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">To</label>
+                        <select id="customerUserSelect" name="to" required
+                                class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="{{ ticket.customer_user_id }}">{{ ticket.customer_user_id }}</option>
+                        </select>
+                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Loading customer users...
+                        </div>
+                    </div>
+                    
+                    <!-- Expandable Cc/Bcc -->
+                    <div>
+                        <button type="button" onclick="toggleCcBcc()" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                            + Add Cc/Bcc
+                        </button>
+                        <div id="ccBccFields" class="hidden mt-2 space-y-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Cc</label>
+                                <input type="email" name="cc" multiple placeholder="Separate multiple emails with commas"
+                                       class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bcc</label>
+                                <input type="email" name="bcc" multiple placeholder="Separate multiple emails with commas"
+                                       class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Subject -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>
                         <input type="text" name="subject" value="Re: {{ ticket.title }}" required
                                class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
                     </div>
+                    
+                    <!-- Template Selection -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
-                        <textarea name="body" rows="6" required
-                                  class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"></textarea>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Template (optional)</label>
+                        <select name="template_id" onchange="loadTemplate(this.value)"
+                                class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="">-- Select template --</option>
+                            <option value="1">Standard Response</option>
+                            <option value="2">Request More Information</option>
+                            <option value="3">Issue Resolved</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Message with Quote Option -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
+                            <label class="flex items-center text-sm">
+                                <input type="checkbox" name="quote_original" class="mr-2 rounded border-gray-300 dark:border-gray-600">
+                                <span class="text-gray-700 dark:text-gray-300">Quote original message</span>
+                            </label>
+                        </div>
+                        <div id="replyEditor" class="mt-1"></div>
+                        <input type="hidden" name="body" id="replyBody" required>
+                    </div>
+                    
+                    <!-- Attachments -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Attachments</label>
+                        <input type="file" name="attachments" multiple
+                               class="mt-1 w-full text-sm text-gray-900 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300">
+                    </div>
+                    
+                    <!-- Time Accounting -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Time Units (minutes)</label>
+                            <input type="number" name="time_units" min="0" step="1" placeholder="0"
+                                   class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="flex items-center text-sm mt-7">
+                                <input type="checkbox" name="is_visible_for_customer" id="replyVisibility" value="1" checked
+                                       class="mr-2 rounded border-gray-300 dark:border-gray-600">
+                                <span class="text-gray-700 dark:text-gray-300">Visible to Customer</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal('replyModal')"
+                
+                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
+                    <button type="button" onclick="saveDraft()" 
                             class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                        Cancel
+                        Save as Draft
                     </button>
-                    <button type="submit"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                        Send Reply
-                    </button>
+                    <div class="space-x-3">
+                        <button type="button" onclick="closeModal('replyModal')"
+                                class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            Send Reply
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -233,14 +423,31 @@
             <form id="noteForm" onsubmit="submitNote(event)">
                 <div class="p-6 space-y-4">
                     <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Note Type</label>
+                        <select id="noteTypeSelect" name="communication_channel_id" required onchange="updateNoteSubject()"
+                                class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="1">Email</option>
+                            <option value="2">Phone</option>
+                            <option value="3" selected>Internal</option>
+                            <option value="4">Chat</option>
+                        </select>
+                    </div>
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>
-                        <input type="text" name="subject" placeholder="Note subject" required
+                        <input type="text" id="noteSubject" name="subject" placeholder="Note subject" value="Internal Note" required
                                class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Note</label>
-                        <textarea name="body" rows="6" required
-                                  class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"></textarea>
+                        <div id="noteEditor" class="mt-1"></div>
+                        <input type="hidden" name="body" id="noteBody" required>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="is_visible_for_customer" id="noteVisibility" value="1"
+                               class="mr-2 rounded border-gray-300 dark:border-gray-600">
+                        <label for="noteVisibility" class="text-sm text-gray-700 dark:text-gray-300">
+                            Visible to Customer
+                        </label>
                     </div>
                 </div>
                 <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
@@ -458,6 +665,80 @@ const ticketId = {{ ticket.id }};
 // Initialize ticket zoom functionality
 initTicketZoom(ticketId);
 
+// Initialize rich text editors
+let replyEditorInstance = null;
+let noteEditorInstance = null;
+
+function initializeEditors() {
+    // Initialize reply editor when modal opens
+    const replyModal = document.getElementById('replyModal');
+    if (replyModal) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (!replyModal.classList.contains('hidden') && !replyEditorInstance) {
+                    replyEditorInstance = TiptapEditor.init('replyEditor', {
+                        placeholder: 'Write your reply here...',
+                        onUpdate: (content) => {
+                            document.getElementById('replyBody').value = content;
+                        }
+                    });
+                } else if (replyModal.classList.contains('hidden') && replyEditorInstance) {
+                    TiptapEditor.destroy('replyEditor');
+                    replyEditorInstance = null;
+                }
+            });
+        });
+        observer.observe(replyModal, { attributes: true, attributeFilter: ['class'] });
+    }
+    
+    // Initialize note editor when modal opens
+    const noteModal = document.getElementById('noteModal');
+    if (noteModal) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (!noteModal.classList.contains('hidden') && !noteEditorInstance) {
+                    noteEditorInstance = TiptapEditor.init('noteEditor', {
+                        placeholder: 'Write your note here...',
+                        onUpdate: (content) => {
+                            document.getElementById('noteBody').value = content;
+                        }
+                    });
+                } else if (noteModal.classList.contains('hidden') && noteEditorInstance) {
+                    TiptapEditor.destroy('noteEditor');
+                    noteEditorInstance = null;
+                }
+            });
+        });
+        observer.observe(noteModal, { attributes: true, attributeFilter: ['class'] });
+    }
+}
+
+// Initialize editors when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeEditors);
+} else {
+    initializeEditors();
+}
+
+// Update form submission to ensure editor content is included
+const replyForm = document.getElementById('replyForm');
+if (replyForm) {
+    replyForm.addEventListener('submit', (e) => {
+        if (replyEditorInstance) {
+            document.getElementById('replyBody').value = TiptapEditor.getContent('replyEditor');
+        }
+    });
+}
+
+const noteForm = document.getElementById('noteForm');
+if (noteForm) {
+    noteForm.addEventListener('submit', (e) => {
+        if (noteEditorInstance) {
+            document.getElementById('noteBody').value = TiptapEditor.getContent('noteEditor');
+        }
+    });
+}
+
 /**
  * Toggle pending time fields based on status selection - ENHANCED VERSION
  */
@@ -524,6 +805,404 @@ function togglePendingFields() {
 // Initialize pending fields on page load  
 document.addEventListener('DOMContentLoaded', function() {
     togglePendingFields();
+    // Load attachment images with authentication
+    if (typeof loadAttachmentImages === 'function') {
+        loadAttachmentImages();
+    }
+    
+    // Function to style tables based on current theme
+    function styleArticleTables() {
+        document.querySelectorAll('.article-content table').forEach(table => {
+            // Check if in dark mode
+            const isDark = document.documentElement.classList.contains('dark');
+            const borderColor = isDark ? '#4b5563' : '#d1d5db';
+            const headerBg = isDark ? '#374151' : '#f3f4f6';  // Lighter gray in light mode, more contrast in dark
+            const evenRowBg = isDark ? 'rgba(31, 41, 55, 0.3)' : '#fafafa';  // Very light gray in light mode
+            
+            // Style the table
+            table.style.borderCollapse = 'collapse';
+            table.style.width = '100%';
+            table.style.border = `1px solid ${borderColor}`;
+            
+            // Style all cells
+            table.querySelectorAll('th, td').forEach(cell => {
+                cell.style.border = `1px solid ${borderColor}`;
+                cell.style.padding = '0.5rem 0.75rem';
+                cell.style.textAlign = 'left';
+            });
+            
+            // Style header cells
+            table.querySelectorAll('th').forEach(th => {
+                th.style.backgroundColor = headerBg;
+                th.style.fontWeight = '600';
+            });
+            
+            // Store row index for hover handling
+            table.querySelectorAll('tbody tr').forEach((row, index) => {
+                row.dataset.rowIndex = index;
+                
+                if (index % 2 === 1) {
+                    row.style.backgroundColor = evenRowBg;
+                } else {
+                    row.style.backgroundColor = 'transparent';
+                }
+                
+                // Remove old listeners by cloning the node
+                const newRow = row.cloneNode(true);
+                row.parentNode.replaceChild(newRow, row);
+                
+                // Add hover effect with fresh listeners
+                newRow.addEventListener('mouseenter', function() {
+                    const currentDark = document.documentElement.classList.contains('dark');
+                    this.style.backgroundColor = currentDark ? 'rgba(75, 85, 99, 0.4)' : '#e5e7eb';
+                });
+                
+                newRow.addEventListener('mouseleave', function() {
+                    const currentDark = document.documentElement.classList.contains('dark');
+                    const currentEvenBg = currentDark ? 'rgba(31, 41, 55, 0.3)' : '#fafafa';
+                    const idx = parseInt(this.dataset.rowIndex);
+                    
+                    if (idx % 2 === 1) {
+                        this.style.backgroundColor = currentEvenBg;
+                    } else {
+                        this.style.backgroundColor = 'transparent';
+                    }
+                });
+            });
+        });
+    }
+    
+    // Apply table styles initially
+    styleArticleTables();
+    
+    // Watch for theme changes and reapply styles
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                // Theme changed, restyle tables
+                styleArticleTables();
+            }
+        });
+    });
+    
+    // Observe changes to the document element's class (where dark mode class is toggled)
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class']
+    });
 });
+
+// Form submission functions
+function submitReply(event) {
+    event.preventDefault();
+    
+    // Get form data
+    const formData = new FormData(event.target);
+    
+    // Ensure we have the editor content
+    if (replyEditorInstance) {
+        const content = TiptapEditor.getContent('replyEditor');
+        formData.set('body', content);
+    }
+    
+    // Add the 'to' field (customer email)
+    formData.set('to', '{{ ticket.customer_user_id }}');
+    
+    // Submit the form
+    fetch(`/agent/tickets/${ticketId}/reply`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            closeModal('replyModal');
+            showToast('Reply sent successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('Failed to send reply', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error sending reply', 'error');
+    });
+}
+
+function submitNote(event) {
+    event.preventDefault();
+    
+    // Get form data
+    const formData = new FormData(event.target);
+    
+    // Ensure we have the editor content
+    if (noteEditorInstance) {
+        const content = TiptapEditor.getContent('noteEditor');
+        formData.set('body', content);
+    }
+    
+    // Submit the form
+    fetch(`/agent/tickets/${ticketId}/note`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            closeModal('noteModal');
+            showToast('Note added successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('Failed to add note', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error adding note', 'error');
+    });
+}
+
+function submitPhone(event) {
+    event.preventDefault();
+    
+    // Get form data
+    const formData = new FormData(event.target);
+    
+    // Submit the form
+    fetch(`/agent/tickets/${ticketId}/phone`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            closeModal('phoneModal');
+            showToast('Phone note added successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('Failed to add phone note', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error adding phone note', 'error');
+    });
+}
+
+function submitAssign(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    
+    fetch(`/agent/tickets/${ticketId}/assign`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            closeModal('assignModal');
+            showToast('Ticket assigned successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('Failed to assign ticket', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error assigning ticket', 'error');
+    });
+}
+
+function submitPriority(event) {
+    event.preventDefault();
+    
+    const formData = new FormData(event.target);
+    
+    fetch(`/agent/tickets/${ticketId}/priority`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            closeModal('priorityModal');
+            showToast('Priority updated successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast('Failed to update priority', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Error updating priority', 'error');
+    });
+}
+
+// Modal control functions
+function openModal(modalId) {
+    document.getElementById(modalId).classList.remove('hidden');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+}
+
+function updateNoteSubject() {
+    const noteTypeSelect = document.getElementById('noteTypeSelect');
+    const noteSubject = document.getElementById('noteSubject');
+    
+    // Only update if the subject hasn't been manually edited by the user
+    const currentSubject = noteSubject.value;
+    const defaultSubjects = ['Email Note', 'Phone Note', 'Internal Note', 'Chat Note', ''];
+    
+    // If the current subject is one of the defaults or empty, update it
+    if (defaultSubjects.includes(currentSubject) || currentSubject === '') {
+        const selectedType = noteTypeSelect.value;
+        let newSubject = '';
+        
+        switch(selectedType) {
+            case '1':
+                newSubject = 'Email Note';
+                break;
+            case '2':
+                newSubject = 'Phone Note';
+                break;
+            case '3':
+                newSubject = 'Internal Note';
+                break;
+            case '4':
+                newSubject = 'Chat Note';
+                break;
+            default:
+                newSubject = 'Note';
+        }
+        
+        noteSubject.value = newSubject;
+    }
+}
+
+// Toggle Cc/Bcc fields visibility
+function toggleCcBcc() {
+    const ccBccFields = document.getElementById('ccBccFields');
+    if (ccBccFields.classList.contains('hidden')) {
+        ccBccFields.classList.remove('hidden');
+    } else {
+        ccBccFields.classList.add('hidden');
+    }
+}
+
+// Update reply visibility based on communication type
+function updateReplyVisibility() {
+    const typeSelect = document.getElementById('replyCommunicationType');
+    const visibilityCheckbox = document.getElementById('replyVisibility');
+    
+    // If internal email, uncheck visibility
+    if (typeSelect.value === '3') { // Email-Internal
+        visibilityCheckbox.checked = false;
+    } else {
+        visibilityCheckbox.checked = true;
+    }
+}
+
+// Load template content
+function loadTemplate(templateId) {
+    if (!templateId) return;
+    
+    // This would normally fetch from API
+    const templates = {
+        '1': 'Thank you for contacting us. We have received your request and will respond shortly.\n\nBest regards,\nSupport Team',
+        '2': 'Thank you for your inquiry. To assist you better, could you please provide the following information:\n\n1. \n2. \n3. \n\nBest regards,\nSupport Team',
+        '3': 'Your issue has been resolved. If you have any further questions, please don\'t hesitate to contact us.\n\nBest regards,\nSupport Team'
+    };
+    
+    if (templates[templateId] && replyEditorInstance) {
+        // Set the template content in the editor
+        TiptapEditor.setContent('replyEditor', templates[templateId]);
+    }
+}
+
+// Save as draft
+function saveDraft() {
+    const formData = new FormData(document.getElementById('replyForm'));
+    formData.append('is_draft', '1');
+    
+    if (replyEditorInstance) {
+        const content = TiptapEditor.getContent('replyEditor');
+        formData.set('body', content);
+    }
+    
+    // Save draft via API
+    fetch(`/agent/tickets/${ticketId}/draft`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            showToast('Draft saved successfully', 'success');
+        } else {
+            showToast('Failed to save draft', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving draft:', error);
+        showToast('Error saving draft', 'error');
+    });
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    // Use existing toast container from base layout
+    const event = new CustomEvent('show-toast', { 
+        detail: { message, type } 
+    });
+    document.dispatchEvent(event);
+}
+
+// Show image preview in modal
+function showImagePreview(src, filename) {
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4';
+    modal.onclick = function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    };
+    
+    // Create image container
+    const container = document.createElement('div');
+    container.className = 'relative max-w-full max-h-full';
+    
+    // Create image
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = filename;
+    img.className = 'max-w-full max-h-[90vh] object-contain';
+    
+    // Create close button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75';
+    closeBtn.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+    closeBtn.onclick = function() {
+        modal.remove();
+    };
+    
+    // Create filename label
+    const label = document.createElement('div');
+    label.className = 'absolute bottom-2 left-2 right-2 text-white bg-black bg-opacity-50 rounded px-3 py-1 text-sm truncate';
+    label.textContent = filename;
+    
+    // Assemble modal
+    container.appendChild(img);
+    container.appendChild(closeBtn);
+    container.appendChild(label);
+    modal.appendChild(container);
+    document.body.appendChild(modal);
+    
+    // Close on escape key
+    const escHandler = function(e) {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+}
 </script>
 {% endblock %}

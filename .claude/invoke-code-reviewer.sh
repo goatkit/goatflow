@@ -32,7 +32,7 @@ fi
 echo ""
 echo "2. 🚀 Service Health:"
 echo "   Restarting backend service..."
-./scripts/container-wrapper.sh restart gotrs-backend >/dev/null 2>&1
+make restart >/dev/null 2>&1
 sleep 3
 
 if curl -s http://localhost:8080/health | grep -q "healthy"; then
@@ -45,7 +45,7 @@ fi
 
 echo ""
 echo "3. 📋 Template Verification:"
-TEMPLATE_ERRORS=$(./scripts/container-wrapper.sh logs gotrs-backend | grep "Template error" | tail -5)
+TEMPLATE_ERRORS=$(make logs | grep "Template error" | tail -5)
 if [ -z "$TEMPLATE_ERRORS" ]; then
     echo "   ✅ No template errors in recent logs"
 else
@@ -57,7 +57,7 @@ fi
 echo ""
 echo "4. 🌐 HTTP Status Verification:"
 echo "   Recent HTTP requests from logs:"
-./scripts/container-wrapper.sh logs gotrs-backend | grep -E "GET|POST|PUT|DELETE" | grep -E "[0-9]{3}" | tail -3
+make logs | grep -E "GET|POST|PUT|DELETE" | grep -E "[0-9]{3}" | tail -3
 
 echo ""
 echo "📝 Code reviewer context query:"
@@ -70,7 +70,7 @@ echo '{
     "project": "GOTRS - OTRS replacement system",
     "quality_standards": {
       "compilation": "Must build without errors or warnings",
-      "service_health": "Must start and respond to health checks", 
+      "service_health": "Must start and respond to health checks",
       "template_rendering": "Zero template errors in logs",
       "http_responses": "No 500 or 404 responses for claimed functionality",
       "browser_testing": "Zero JavaScript console errors",
@@ -79,12 +79,12 @@ echo '{
     "verification_commands": {
       "build": "go build ./cmd/server",
       "health": "curl http://localhost:8080/health",
-      "logs": "./scripts/container-wrapper.sh logs gotrs-backend",
-      "restart": "./scripts/container-wrapper.sh restart gotrs-backend"
+      "logs": "make logs",
+      "restart": "make restart"
     },
     "review_scope": [
       "Code quality and maintainability",
-      "Security vulnerabilities", 
+      "Security vulnerabilities",
       "Performance bottlenecks",
       "OTRS schema compliance",
       "Internationalization completeness",

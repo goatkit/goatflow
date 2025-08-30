@@ -1,0 +1,33 @@
+apiVersion: routes/v1
+kind: RouteGroup
+metadata:
+  name: agent-profile
+  description: Agent profile and preferences management
+  namespace: agent
+  enabled: true
+
+spec:
+  prefix: /agent
+  middleware:
+    - auth
+  
+  routes:
+    - path: /profile
+      method: GET
+      handler: profile
+      name: Agent Profile
+      description: View and edit agent profile and preferences
+      template: pages/profile.pongo2
+      
+    # API routes for preferences
+    - path: /api/preferences/session-timeout
+      method: GET
+      handler: get_session_timeout
+      name: Get Session Timeout
+      description: Get user's session timeout preference
+      
+    - path: /api/preferences/session-timeout
+      method: POST
+      handler: set_session_timeout
+      name: Set Session Timeout
+      description: Set user's session timeout preference
