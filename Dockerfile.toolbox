@@ -33,7 +33,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs cmd/gotrs/main.go 2>/dev/null || true && \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-babelfish cmd/gotrs-babelfish/main.go 2>/dev/null || true && \
-    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-migrate cmd/gotrs-migrate/main.go 2>/dev/null || true
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-migrate ./cmd/gotrs-migrate/*.go 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-db cmd/gotrs-db/main.go 2>/dev/null || true && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/schema-discovery cmd/schema-discovery/main.go 2>/dev/null || true
 
 # Install Go development tools (use compatible versions)
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -52,6 +54,8 @@ RUN apk add --no-cache \
     # Runtime essentials\
     ca-certificates \
     postgresql15-client \
+    mysql-client \
+    sqlite \
     # Dev tools\
     git \
     bash \
@@ -63,6 +67,10 @@ RUN apk add --no-cache \
     ripgrep \
     fd \
     tree \
+    # Go development\
+    go \
+    gcc \
+    musl-dev \
     # Go runtime\
     libc6-compat
 
@@ -83,6 +91,9 @@ COPY --from=backend --chown=appuser:appgroup /app/migrate /usr/local/bin/migrate
 COPY --from=toolbox-builder /usr/local/bin/gotrs* /usr/local/bin/
 COPY --from=toolbox-builder /go/bin/* /usr/local/bin/
 
+# Copy Go 1.23 from builder
+COPY --from=toolbox-builder /usr/local/go /usr/local/go
+
 # Copy workspace files for development
 COPY --chown=appuser:appgroup . /workspace/
 
@@ -92,7 +103,7 @@ USER appuser
 # Set environment for Go caching
 ENV GOCACHE=/tmp/.cache/go-build
 ENV GOMODCACHE=/tmp/.cache/go-mod
-ENV PATH=/usr/local/bin:$PATH
+ENV PATH=/usr/local/go/bin:/usr/local/bin:$PATH
 
 # Default to bash shell for interactive use
 CMD ["/bin/bash"]

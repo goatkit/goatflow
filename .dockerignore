@@ -155,6 +155,7 @@ browser_test.py
 postgres-data/
 mysql-data/
 data/
+volumes/
 
 # ============================================
 # Backups
@@ -234,4 +235,4 @@ scripts/tools/
 scripts/test/
 *.prof
 *.test
-*.out
+*.outvolumes/

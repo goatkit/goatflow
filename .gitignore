@@ -48,6 +48,9 @@ migrate        # Database migration tool
 server         # Legacy server name
 *.test
 
+# Local volumes directory (container data)
+volumes/
+
 # Go build cache
 .cache/
 
