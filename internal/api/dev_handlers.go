@@ -545,26 +545,14 @@ func handleDevDatabase(c *gin.Context) {
 		return
 	}
 
-	// Get list of tables
-	rows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT tablename 
-		FROM pg_tables 
-		WHERE schemaname = 'public' 
-		ORDER BY tablename
-	`))
-	if err != nil {
-		pongo2Renderer.HTML(c, http.StatusInternalServerError, "error.pongo2", pongo2.Context{
-			"error": "Failed to get tables",
-		})
-		return
-	}
-	defer rows.Close()
-
-	var tables []string
-	for rows.Next() {
-		var table string
-		rows.Scan(&table)
-		tables = append(tables, table)
+	// Get list of common OTRS tables (no need to query metadata)
+	tables := []string{
+		"ticket", "article", "article_data_mime", "users", "queue",
+		"ticket_state", "ticket_priority", "ticket_type", "ticket_lock",
+		"customer_user", "customer_company", "group_user", "permission",
+		"article_attachment", "article_flag", "ticket_history", "ticket_index",
+		"ticket_watcher", "ticket_workflow", "ticket_workflow_transition",
+		"system_maintenance", "system_data", "valid", "valid_id",
 	}
 
 	// If a query was submitted, run it
