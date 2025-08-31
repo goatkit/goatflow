@@ -120,6 +120,13 @@ func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		c.Set("user_role", claims.Role)
 		c.Set("user_name", claims.Email) // Use email as name for now
 		
+		// Set is_customer based on role
+		if claims.Role == "Customer" {
+			c.Set("is_customer", true)
+		} else {
+			c.Set("is_customer", false)
+		}
+		
 		// Add user info to request context for services
 		ctx := context.WithValue(c.Request.Context(), "user_id", claims.UserID)
 		ctx = context.WithValue(ctx, "user_email", claims.Email)
