@@ -41,7 +41,7 @@
     </div>
 
     <!-- Ticket Form -->
-    <form method="post" action="/customer/tickets/new" enctype="multipart/form-data" class="space-y-6">
+    <form method="post" action="/customer/ticket/create" enctype="multipart/form-data" class="space-y-6">
         <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Ticket Information</h2>
@@ -135,10 +135,10 @@
                                     <span class="font-semibold">Click to upload</span> or drag and drop
                                 </p>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    PNG, JPG, PDF up to 10MB (Coming soon)
+                                    PNG, JPG, PDF up to 10MB
                                 </p>
                             </div>
-                            <input id="attachments" type="file" class="hidden" disabled multiple />
+                            <input id="attachments" name="attachments" type="file" class="hidden" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.doc,.docx,.xls,.xlsx" />
                         </label>
                     </div>
                 </div>
@@ -198,4 +198,61 @@
         </ul>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('attachments');
+    const dropZone = fileInput.parentElement;
+    
+    // Handle file selection
+    fileInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        displaySelectedFiles(files);
+    });
+    
+    // Handle drag and drop
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropZone.classList.add('border-blue-500', 'bg-blue-50');
+    });
+    
+    dropZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+    });
+    
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-500', 'bg-blue-50');
+        const files = Array.from(e.dataTransfer.files);
+        fileInput.files = e.dataTransfer.files;
+        displaySelectedFiles(files);
+    });
+    
+    function displaySelectedFiles(files) {
+        // Remove existing file list
+        const existingList = dropZone.querySelector('.file-list');
+        if (existingList) {
+            existingList.remove();
+        }
+        
+        if (files.length > 0) {
+            const fileList = document.createElement('div');
+            fileList.className = 'file-list mt-4 space-y-2';
+            
+            files.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded';
+                fileItem.innerHTML = `
+                    <span class="text-sm text-gray-700 dark:text-gray-300">${file.name}</span>
+                    <span class="text-xs text-gray-500">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                `;
+                fileList.appendChild(fileItem);
+            });
+            
+            dropZone.appendChild(fileList);
+        }
+    }
+});
+</script>
 {% endblock %}

@@ -27,9 +27,8 @@
 
     <!-- Ticket Creation Form -->
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
-        <form hx-post="/api/tickets" 
-              hx-target="#form-messages"
-              hx-swap="innerHTML"
+        <form method="post" 
+              action="/customer/ticket/create"
               enctype="multipart/form-data"
               class="space-y-6 p-6">
             
