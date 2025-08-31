@@ -31,13 +31,13 @@ type StateType struct {
 
 // StateWithType includes type information
 type StateWithType struct {
-	ID           int     `json:"id"`
-	Name         string  `json:"name"`
-	TypeID       int     `json:"type_id"`
-	TypeName     string  `json:"type_name"`
-	Comments     *string `json:"comments,omitempty"`
-	ValidID      int     `json:"valid_id"`
-	TicketCount  int     `json:"ticket_count"`
+	ID          int     `json:"id"`
+	Name        string  `json:"name"`
+	TypeID      int     `json:"type_id"`
+	TypeName    string  `json:"type_name"`
+	Comments    *string `json:"comments,omitempty"`
+	ValidID     int     `json:"valid_id"`
+	TicketCount int     `json:"ticket_count"`
 }
 
 // handleAdminStates renders the admin states management page
@@ -65,7 +65,7 @@ func handleAdminStates(c *gin.Context) {
 		LEFT JOIN ticket t ON t.ticket_state_id = s.id
 		WHERE 1=1
 	`
-	
+
 	var args []interface{}
 	argCount := 1
 
@@ -107,17 +107,17 @@ func handleAdminStates(c *gin.Context) {
 	for rows.Next() {
 		var s StateWithType
 		var comments sql.NullString
-		
-		err := rows.Scan(&s.ID, &s.Name, &s.TypeID, &s.TypeName, 
+
+		err := rows.Scan(&s.ID, &s.Name, &s.TypeID, &s.TypeName,
 			&comments, &s.ValidID, &s.TicketCount)
 		if err != nil {
 			continue
 		}
-		
+
 		if comments.Valid {
 			s.Comments = &comments.String
 		}
-		
+
 		states = append(states, s)
 	}
 
@@ -133,16 +133,16 @@ func handleAdminStates(c *gin.Context) {
 	for typeRows.Next() {
 		var st StateType
 		var comments sql.NullString
-		
+
 		err := typeRows.Scan(&st.ID, &st.Name, &comments)
 		if err != nil {
 			continue
 		}
-		
+
 		if comments.Valid {
 			st.Comments = &comments.String
 		}
-		
+
 		stateTypes = append(stateTypes, st)
 	}
 
@@ -195,7 +195,7 @@ func handleAdminStateCreate(c *gin.Context) {
 
 	// Validate type_id exists
 	var typeExists bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = $1)", input.TypeID).Scan(&typeExists)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = $1)"), input.TypeID).Scan(&typeExists)
 	if err != nil || !typeExists {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -288,7 +288,7 @@ func handleAdminStateUpdate(c *gin.Context) {
 	// Validate type_id if provided
 	if input.TypeID != nil {
 		var typeExists bool
-		err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = $1)", *input.TypeID).Scan(&typeExists)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = $1)"), *input.TypeID).Scan(&typeExists)
 		if err != nil || !typeExists {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -384,7 +384,7 @@ func handleAdminStateDelete(c *gin.Context) {
 
 	// Check if state is in use
 	var ticketCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = $1", id).Scan(&ticketCount)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = $1"), id).Scan(&ticketCount)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,

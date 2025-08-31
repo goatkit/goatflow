@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/api"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
@@ -151,140 +152,29 @@ func main() {
 		"handleLogout":    api.HandleLogout,
 
 		// Admin handlers
-		"handleAdminUsers": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Admin Users Management",
-				"users":   []gin.H{},
-				"status":  "Admin users working!",
-			})
-		},
-		"handleAdminGroups": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Admin Groups Management",
-				"groups":  []gin.H{},
-				"status":  "Admin groups working!",
-			})
-		},
-		"handleCreateGroup": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Create Group",
-				"status":  "Create group working!",
-			})
-		},
-		"handleGetGroup": func(c *gin.Context) {
-			groupID := c.Param("id")
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Get Group",
-				"groupID": groupID,
-				"status":  "Get group working!",
-			})
-		},
-		"handleUpdateGroup": func(c *gin.Context) {
-			groupID := c.Param("id")
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Update Group",
-				"groupID": groupID,
-				"status":  "Update group working!",
-			})
-		},
-		"handleDeleteGroup": func(c *gin.Context) {
-			groupID := c.Param("id")
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Delete Group",
-				"groupID": groupID,
-				"status":  "Delete group working!",
-			})
-		},
-		"handleGroupMembers": func(c *gin.Context) {
-			groupID := c.Param("id")
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Group Members",
-				"groupID": groupID,
-				"members": []gin.H{},
-				"status":  "Group members working!",
-			})
-		},
-		"handleAddUserToGroup": func(c *gin.Context) {
-			groupID := c.Param("id")
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Add User to Group",
-				"groupID": groupID,
-				"status":  "Add user to group working!",
-			})
-		},
-		"handleRemoveUserFromGroup": func(c *gin.Context) {
-			groupID := c.Param("id")
-			userID := c.Param("userId")
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Remove User from Group",
-				"groupID": groupID,
-				"userID":  userID,
-				"status":  "Remove user from group working!",
-			})
-		},
-		"handleAdminQueues": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Admin Queues Management",
-				"queues":  []gin.H{},
-				"status":  "Admin queues working!",
-			})
-		},
-		"handleAdminPriorities": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message":    "Admin Priorities Management",
-				"priorities": []gin.H{},
-				"status":     "Admin priorities working!",
-			})
-		},
-		"handleAdminPermissions": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message":     "Admin Permissions Management",
-				"permissions": []gin.H{},
-				"status":      "Admin permissions working!",
-			})
-		},
-		"handleAdminStates": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Admin States Management",
-				"states":  []gin.H{},
-				"status":  "Admin states working!",
-			})
-		},
-		"handleAdminTypes": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Admin Types Management",
-				"types":   []gin.H{},
-				"status":  "Admin types working!",
-			})
-		},
-		"handleAdminServices": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message":  "Admin Services Management",
-				"services": []gin.H{},
-				"status":   "Admin services working!",
-			})
-		},
-		"handleAdminSLA": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Admin SLA Management",
-				"sla":     []gin.H{},
-				"status":  "Admin SLA working!",
-			})
-		},
-		"handleAdminLookups": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Admin Lookups Management",
-				"lookups": []gin.H{},
-				"status":  "Admin lookups working!",
-			})
-		},
-		"handleAdminCustomerCompanies": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "Admin Customer Companies",
-				"companies": []gin.H{},
-				"status":    "Admin customer companies working!",
-			})
-		},
+		"handleAdminUsers":             api.HandleAdminUsers,
+		"handleAdminUserGet":            api.HandleAdminUserGet,
+		"handleAdminUserEdit":           api.HandleAdminUserEdit,
+		"handleAdminUserUpdate":         api.HandleAdminUserUpdate,
+		"handleAdminUserDelete":         api.HandleAdminUserDelete,
+		"handleAdminPasswordPolicy":     api.HandleAdminPasswordPolicy,
+		"handleAdminGroups":            api.HandleAdminGroups,
+		"handleCreateGroup":            api.HandleCreateGroup,
+		"handleGetGroup":               api.HandleGetGroup,
+		"handleUpdateGroup":            api.HandleUpdateGroup,
+		"handleDeleteGroup":            api.HandleDeleteGroup,
+		"handleGroupMembers":           api.HandleGroupMembers,
+		"handleAddUserToGroup":         api.HandleAddUserToGroup,
+		"handleRemoveUserFromGroup":    api.HandleRemoveUserFromGroup,
+		"handleAdminQueues":            api.HandleAdminQueues,
+		"handleAdminPriorities":        api.HandleAdminPriorities,
+		"handleAdminPermissions":       api.HandleAdminPermissions,
+		"handleAdminStates":            api.HandleAdminStates,
+		"handleAdminTypes":             api.HandleAdminTypes,
+		"handleAdminServices":          api.HandleAdminServices,
+		"handleAdminSLA":               api.HandleAdminSLA,
+		"handleAdminLookups":           api.HandleAdminLookups,
+		"handleAdminCustomerCompanies": api.HandleAdminCustomerCompanies,
 		"handleAdminNewCustomerCompany": func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"message": "New Customer Company",
@@ -321,33 +211,9 @@ func main() {
 				"status":    "Delete customer company working!",
 			})
 		},
-		"handleAdminCustomerCompanyUsers": func(c *gin.Context) {
-			companyID := c.Param("id")
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "Customer Company Users",
-				"companyID": companyID,
-				"users":     []gin.H{},
-				"status":    "Customer company users working!",
-			})
-		},
-		"handleAdminCustomerCompanyTickets": func(c *gin.Context) {
-			companyID := c.Param("id")
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "Customer Company Tickets",
-				"companyID": companyID,
-				"tickets":   []gin.H{},
-				"status":    "Customer company tickets working!",
-			})
-		},
-		"handleAdminCustomerCompanyServices": func(c *gin.Context) {
-			companyID := c.Param("id")
-			c.JSON(http.StatusOK, gin.H{
-				"message":   "Customer Company Services",
-				"companyID": companyID,
-				"services":  []gin.H{},
-				"status":    "Customer company services working!",
-			})
-		},
+		"handleAdminCustomerCompanyUsers":    api.HandleAdminCustomerCompanyUsers,
+		"handleAdminCustomerCompanyTickets":  api.HandleAdminCustomerCompanyTickets,
+		"handleAdminCustomerCompanyServices": api.HandleAdminCustomerCompanyServices,
 		"handleAdminUpdateCustomerCompanyServices": func(c *gin.Context) {
 			companyID := c.Param("id")
 			c.JSON(http.StatusOK, gin.H{
@@ -356,13 +222,7 @@ func main() {
 				"status":    "Update customer company services working!",
 			})
 		},
-		"handleAdminCustomerPortalSettings": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"message":  "Customer Portal Settings",
-				"settings": gin.H{},
-				"status":   "Customer portal settings working!",
-			})
-		},
+		"handleAdminCustomerPortalSettings": api.HandleAdminCustomerPortalSettings,
 		"handleAdminUpdateCustomerPortalSettings": func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Update Customer Portal Settings",
@@ -433,12 +293,58 @@ func main() {
 			c.Redirect(http.StatusMovedPermanently, "/tickets/"+ticketID)
 		},
 		"handleAdminDashboard": func(c *gin.Context) {
-			// Simple admin dashboard
-			c.JSON(http.StatusOK, gin.H{
-				"message": "Admin Dashboard",
-				"user":    "Admin User",
-				"status":  "Admin access working!",
-			})
+			// Render admin dashboard template with data
+			userID, _ := c.Get("user_id")
+			userRole, _ := c.Get("user_role")
+
+			// Get database connection
+			db, err := adapter.GetDatabase()
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+				return
+			}
+
+			// Get counts for dashboard
+			var userCount, groupCount, activeTickets, queueCount int
+
+			// Count users
+			err = db.QueryRow(c.Request.Context(), "SELECT COUNT(*) FROM users").Scan(&userCount)
+			if err != nil {
+				log.Printf("Error counting users: %v", err)
+			}
+
+			// Count groups
+			err = db.QueryRow(c.Request.Context(), "SELECT COUNT(*) FROM groups").Scan(&groupCount)
+			if err != nil {
+				log.Printf("Error counting groups: %v", err)
+			}
+
+			// Count active tickets
+			err = db.QueryRow(c.Request.Context(), "SELECT COUNT(*) FROM ticket WHERE ticket_state_id IN (1, 2, 3, 4)").Scan(&activeTickets)
+			if err != nil {
+				log.Printf("Error counting active tickets: %v", err)
+			}
+
+			// Count queues
+			err = db.QueryRow(c.Request.Context(), "SELECT COUNT(*) FROM queue").Scan(&queueCount)
+			if err != nil {
+				log.Printf("Error counting queues: %v", err)
+			}
+
+			// Render template with data using Pongo2 renderer
+			renderer := api.GetPongo2Renderer()
+			if renderer != nil {
+				renderer.HTML(c, http.StatusOK, "pages/admin/dashboard.pongo2", pongo2.Context{
+					"UserCount":     userCount,
+					"GroupCount":    groupCount,
+					"ActiveTickets": activeTickets,
+					"QueueCount":    queueCount,
+					"UserID":        userID,
+					"UserRole":      userRole,
+				})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Template renderer not available"})
+			}
 		},
 		"handleQueuesRedirect": func(c *gin.Context) {
 			// Get user role from context

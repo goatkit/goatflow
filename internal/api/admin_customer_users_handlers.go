@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/flosch/pongo2/v6"
 )
 
 // HandleAdminCustomerUsersList handles GET /admin/customer-users
@@ -39,7 +39,7 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 	argIndex := 1
 
 	if search != "" {
-		whereClause += fmt.Sprintf(" AND (cu.login ILIKE $%d OR cu.email ILIKE $%d OR cu.first_name ILIKE $%d OR cu.last_name ILIKE $%d OR cc.name ILIKE $%d)", 
+		whereClause += fmt.Sprintf(" AND (cu.login ILIKE $%d OR cu.email ILIKE $%d OR cu.first_name ILIKE $%d OR cu.last_name ILIKE $%d OR cc.name ILIKE $%d)",
 			argIndex, argIndex+1, argIndex+2, argIndex+3, argIndex+4)
 		searchPattern := "%" + search + "%"
 		args = append(args, searchPattern, searchPattern, searchPattern, searchPattern, searchPattern)
@@ -71,7 +71,7 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 		%s
 		ORDER BY cu.last_name, cu.first_name
 		LIMIT $%d OFFSET $%d`, whereClause, argIndex, argIndex+1)
-	
+
 	args = append(args, limit, offset)
 
 	// Count query for pagination
@@ -114,7 +114,7 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 		var login, email, customerID string
 		var validID int
 		var createTime time.Time
-		
+
 		err := rows.Scan(
 			&id,
 			&login,
@@ -130,11 +130,11 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 			&createTime,
 			&ticketCount,
 		)
-		
+
 		if err != nil {
 			continue
 		}
-		
+
 		customer["id"] = id
 		customer["login"] = login
 		customer["email"] = email
@@ -149,7 +149,7 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 		customer["company_name"] = companyName.String
 		customer["ticket_count"] = ticketCount
 		customer["full_name"] = strings.TrimSpace(firstName.String + " " + lastName.String)
-		
+
 		customers = append(customers, customer)
 	}
 
@@ -173,8 +173,8 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 	if c.GetHeader("HX-Request") == "true" {
 		// Return JSON for HTMX/AJAX requests
 		c.JSON(http.StatusOK, gin.H{
-			"success":     true,
-			"data":        customers,
+			"success": true,
+			"data":    customers,
 			"pagination": gin.H{
 				"current_page": page,
 				"total_count":  totalCount,
@@ -187,18 +187,18 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 
 	// Render template for regular HTTP requests
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/customer_users.pongo2", pongo2.Context{
-		"User":         getUserFromContext(c),
-		"ActivePage":   "admin",
-		"Title":        "Customer User Management",
-		"customers":    customers,
-		"companies":    companies,
-		"search":       search,
-		"validFilter":  validFilter,
+		"User":           getUserFromContext(c),
+		"ActivePage":     "admin",
+		"Title":          "Customer User Management",
+		"customers":      customers,
+		"companies":      companies,
+		"search":         search,
+		"validFilter":    validFilter,
 		"customerFilter": customerFilter,
-		"totalCount":   totalCount,
-		"currentPage":  page,
-		"totalPages":   (totalCount + limit - 1) / limit,
-		"perPage":      limit,
+		"totalCount":     totalCount,
+		"currentPage":    page,
+		"totalPages":     (totalCount + limit - 1) / limit,
+		"perPage":        limit,
 	})
 }
 
@@ -232,7 +232,7 @@ func HandleAdminCustomerUsersGet(c *gin.Context) {
 		FROM customer_user cu
 		LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
 		WHERE cu.id = $1`
-	
+
 	var customer map[string]interface{} = make(map[string]interface{})
 	var companyName sql.NullString
 	var pw, title, firstName, lastName, phone, fax, mobile sql.NullString
@@ -240,7 +240,7 @@ func HandleAdminCustomerUsersGet(c *gin.Context) {
 	var custID int
 	var login, email, customerIDFromDB string
 	var validID int
-	
+
 	err = db.QueryRow(query, id).Scan(
 		&custID,
 		&login,
@@ -261,7 +261,7 @@ func HandleAdminCustomerUsersGet(c *gin.Context) {
 		&validID,
 		&companyName,
 	)
-	
+
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -376,8 +376,8 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 	}
 
 	// Check if this is a form submission (redirect) or API call (JSON)
-	if c.GetHeader("Content-Type") == "application/x-www-form-urlencoded" || 
-	   c.GetHeader("HX-Request") == "true" {
+	if c.GetHeader("Content-Type") == "application/x-www-form-urlencoded" ||
+		c.GetHeader("HX-Request") == "true" {
 		c.Header("HX-Redirect", "/admin/customer-users")
 		c.JSON(http.StatusCreated, gin.H{
 			"success": true,
@@ -498,7 +498,7 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 
 	// Check if this is a form submission (redirect) or API call (JSON)
 	if c.GetHeader("Content-Type") == "application/x-www-form-urlencoded" ||
-	   c.GetHeader("HX-Request") == "true" {
+		c.GetHeader("HX-Request") == "true" {
 		c.Header("HX-Redirect", "/admin/customer-users")
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
@@ -586,7 +586,7 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 
 	// Get customer login first
 	var customerLogin string
-	err = db.QueryRow("SELECT login FROM customer_user WHERE id = $1", id).Scan(&customerLogin)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT login FROM customer_user WHERE id = $1"), id).Scan(&customerLogin)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -624,7 +624,7 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 		var ticketID int
 		var title, ticketNumber string
 		var createTime time.Time
-		
+
 		err := rows.Scan(
 			&ticketID,
 			&title,
@@ -634,11 +634,11 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 			&priority,
 			&queue,
 		)
-		
+
 		if err != nil {
 			continue
 		}
-		
+
 		ticket["id"] = ticketID
 		ticket["title"] = title
 		ticket["ticket_number"] = ticketNumber
@@ -646,7 +646,7 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 		ticket["state"] = state.String
 		ticket["priority"] = priority.String
 		ticket["queue"] = queue.String
-		
+
 		tickets = append(tickets, ticket)
 	}
 
@@ -717,7 +717,7 @@ func HandleAdminCustomerUsersImport(c *gin.Context) {
 	// Process data rows
 	for i := 1; i < len(records); i++ {
 		record := records[i]
-		
+
 		// Helper function to get column value safely
 		getColumn := func(name string) string {
 			if idx, exists := columnMap[name]; exists && idx < len(record) {
@@ -729,7 +729,7 @@ func HandleAdminCustomerUsersImport(c *gin.Context) {
 		login := getColumn("login")
 		email := getColumn("email")
 		customerID := getColumn("customer_id")
-		
+
 		if login == "" || email == "" || customerID == "" {
 			errors = append(errors, fmt.Sprintf("Row %d: Missing required fields (login, email, customer_id)", i+1))
 			failed++
@@ -837,27 +837,27 @@ func HandleAdminCustomerUsersExport(c *gin.Context) {
 	for rows.Next() {
 		var record []string = make([]string, 16)
 		var nullableFields []*sql.NullString = make([]*sql.NullString, 16)
-		
+
 		for i := range nullableFields {
 			nullableFields[i] = &sql.NullString{}
 		}
 
 		err := rows.Scan(
-			&record[0], // login
-			&record[1], // email
-			&record[2], // customer_id
-			nullableFields[3], // title
-			nullableFields[4], // first_name
-			nullableFields[5], // last_name
-			nullableFields[6], // phone
-			nullableFields[7], // fax
-			nullableFields[8], // mobile
-			nullableFields[9], // street
+			&record[0],         // login
+			&record[1],         // email
+			&record[2],         // customer_id
+			nullableFields[3],  // title
+			nullableFields[4],  // first_name
+			nullableFields[5],  // last_name
+			nullableFields[6],  // phone
+			nullableFields[7],  // fax
+			nullableFields[8],  // mobile
+			nullableFields[9],  // street
 			nullableFields[10], // zip
 			nullableFields[11], // city
 			nullableFields[12], // country
 			nullableFields[13], // comments
-			&record[14], // valid_id
+			&record[14],        // valid_id
 			nullableFields[15], // company_name
 		)
 

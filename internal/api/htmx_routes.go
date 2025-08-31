@@ -1748,7 +1748,7 @@ func handleTicketDetail(c *gin.Context) {
 		var stateRow struct {
 			Name string
 		}
-		err := db.QueryRow("SELECT name FROM ticket_state WHERE id = $1", ticket.TicketStateID).Scan(&stateRow.Name)
+		err := db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), ticket.TicketStateID).Scan(&stateRow.Name)
 		if err == nil {
 			stateName = stateRow.Name
 		}

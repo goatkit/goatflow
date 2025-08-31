@@ -41,8 +41,8 @@ type RoleUser struct {
 
 // RoleGroup represents group permissions for a role
 type RoleGroupPermission struct {
-	GroupID     int    `json:"group_id"`
-	GroupName   string `json:"group_name"`
+	GroupID     int             `json:"group_id"`
+	GroupName   string          `json:"group_name"`
 	Permissions map[string]bool `json:"permissions"`
 }
 
@@ -71,7 +71,7 @@ func handleAdminRoles(c *gin.Context) {
 		LEFT JOIN group_role gr ON r.id = gr.role_id
 		WHERE 1=1
 	`
-	
+
 	var args []interface{}
 	argCount := 1
 
@@ -108,7 +108,7 @@ func handleAdminRoles(c *gin.Context) {
 		var r Role
 		var comments sql.NullString
 		var permissionsJSON string
-		
+
 		err := rows.Scan(
 			&r.ID, &r.Name, &comments, &r.ValidID,
 			&r.CreateTime, &r.CreateBy, &r.ChangeTime, &r.ChangeBy,
@@ -117,11 +117,11 @@ func handleAdminRoles(c *gin.Context) {
 		if err != nil {
 			continue
 		}
-		
+
 		if comments.Valid {
 			r.Comments = &comments.String
 		}
-		
+
 		// Parse permissions JSON
 		if permissionsJSON != "" && permissionsJSON != "[]" {
 			json.Unmarshal([]byte(permissionsJSON), &r.Permissions)
@@ -129,11 +129,11 @@ func handleAdminRoles(c *gin.Context) {
 		if r.Permissions == nil {
 			r.Permissions = []string{}
 		}
-		
+
 		// Set computed fields
 		r.IsActive = r.ValidID == 1
 		r.IsSystem = r.ID <= 3 // First 3 roles are system roles
-		
+
 		roles = append(roles, r)
 	}
 
@@ -179,7 +179,7 @@ func handleAdminRoleCreate(c *gin.Context) {
 
 	// Check for duplicate name
 	var exists bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM roles WHERE name = $1)", input.Name).Scan(&exists)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM roles WHERE name = $1)"), input.Name).Scan(&exists)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -265,7 +265,7 @@ func handleAdminRoleGet(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -277,7 +277,7 @@ func handleAdminRoleGet(c *gin.Context) {
 	if comments.Valid {
 		role.Comments = &comments.String
 	}
-	
+
 	// Parse permissions
 	if permissionsJSON != "" && permissionsJSON != "[]" {
 		json.Unmarshal([]byte(permissionsJSON), &role.Permissions)
@@ -343,7 +343,7 @@ func handleAdminRoleUpdate(c *gin.Context) {
 	} else {
 		permissionsJSON = "[]"
 	}
-	
+
 	// Update the role
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE roles 
@@ -406,7 +406,7 @@ func handleAdminRoleDelete(c *gin.Context) {
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
 		WHERE id = $1
 	`), id)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -460,7 +460,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 		FROM roles 
 		WHERE id = $1
 	`), id).Scan(&role.ID, &role.Name, &comments, &role.ValidID, &permissionsJSON)
-	
+
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -468,11 +468,11 @@ func handleAdminRoleUsers(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	if comments.Valid {
 		role.Comments = &comments.String
 	}
-	
+
 	// Parse permissions
 	if permissionsJSON != "" && permissionsJSON != "[]" {
 		json.Unmarshal([]byte(permissionsJSON), &role.Permissions)
@@ -489,7 +489,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 		WHERE ru.role_id = $1
 		ORDER BY u.last_name, u.first_name
 	`), id)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -520,7 +520,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 		AND valid_id = 1
 		ORDER BY last_name, first_name
 	`), id)
-	
+
 	if err == nil {
 		defer availableRows.Close()
 		var availableUsers []RoleUser
@@ -533,13 +533,13 @@ func handleAdminRoleUsers(c *gin.Context) {
 			u.Email = u.Login // Use login as email for display
 			availableUsers = append(availableUsers, u)
 		}
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"role": gin.H{
 				"name": role.Name,
 			},
-			"members": users,
+			"members":   users,
 			"available": availableUsers,
 		})
 	} else {
@@ -548,7 +548,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 			"role": gin.H{
 				"name": role.Name,
 			},
-			"members": users,
+			"members":   users,
 			"available": []RoleUser{},
 		})
 	}
@@ -696,12 +696,12 @@ func handleAdminRolePermissions(c *gin.Context) {
 			FROM roles 
 			WHERE id = $1
 		`), id).Scan(&role.ID, &role.Name, &comments, &role.ValidID)
-		
+
 		if err == sql.ErrNoRows {
 			c.String(http.StatusNotFound, "Role not found")
 			return
 		}
-		
+
 		if comments.Valid {
 			role.Comments = &comments.String
 		}
@@ -723,7 +723,7 @@ func handleAdminRolePermissions(c *gin.Context) {
 			GROUP BY g.id, g.name
 			ORDER BY g.name
 		`), id)
-		
+
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Failed to fetch permissions")
 			return
@@ -734,12 +734,12 @@ func handleAdminRolePermissions(c *gin.Context) {
 		for rows.Next() {
 			var g RoleGroupPermission
 			var ro, moveInto, create, owner, priority, rw, note int
-			
+
 			err := rows.Scan(&g.GroupID, &g.GroupName, &ro, &moveInto, &create, &owner, &priority, &rw, &note)
 			if err != nil {
 				continue
 			}
-			
+
 			g.Permissions = map[string]bool{
 				"ro":        ro == 1,
 				"move_into": moveInto == 1,
@@ -749,7 +749,7 @@ func handleAdminRolePermissions(c *gin.Context) {
 				"rw":        rw == 1,
 				"note":      note == 1,
 			}
-			
+
 			groups = append(groups, g)
 		}
 
@@ -774,7 +774,7 @@ func handleAdminRolePermissions(c *gin.Context) {
 
 		// Parse form data
 		c.Request.ParseForm()
-		
+
 		// Begin transaction
 		tx, err := db.Begin()
 		if err != nil {
@@ -803,13 +803,13 @@ func handleAdminRolePermissions(c *gin.Context) {
 				var groupID int
 				var permType string
 				fmt.Sscanf(key[5:], "%d_%s", &groupID, &permType)
-				
+
 				if groupID > 0 && permType != "" && len(values) > 0 && values[0] == "1" {
 					_, err = tx.Exec(database.ConvertPlaceholders(`
 						INSERT INTO group_role (role_id, group_id, permission_key, permission_value, create_by, change_by)
 						VALUES ($1, $2, $3, 1, 1, 1)
 					`), id, groupID, permType)
-					
+
 					if err != nil {
 						c.JSON(http.StatusInternalServerError, gin.H{
 							"success": false,

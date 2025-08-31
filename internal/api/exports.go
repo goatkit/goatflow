@@ -1,5 +1,12 @@
 package api
 
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
+)
+
 // Exported handlers for use by the routing system
 
 // Core handlers
@@ -18,7 +25,8 @@ var (
 var (
 	HandleAdminDashboard = handleAdminDashboard
 	HandleAdminUsers     = handleAdminUsers
-	// HandleAdminUserGet is already exported in admin_users_handlers.go
+	HandleAdminUserEdit  = HandleAdminUserGet // Same handler for edit form
+	HandleAdminPasswordPolicy = HandlePasswordPolicy
 	HandleAdminGroups         = handleAdminGroups
 	HandleGetGroup            = handleGetGroup
 	HandleCreateGroup         = handleCreateGroup
@@ -35,6 +43,47 @@ var (
 	HandleAdminServices       = handleAdminServices
 	HandleAdminSLA            = handleAdminSLA
 	HandleAdminLookups        = handleAdminLookups
+	// Customer company handlers - wrapped to get database from adapter
+	HandleAdminCustomerCompanies = func(c *gin.Context) {
+		dbService, err := adapter.GetDatabase()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+			return
+		}
+		handleAdminCustomerCompanies(dbService.GetDB())(c)
+	}
+	HandleAdminCustomerCompanyUsers = func(c *gin.Context) {
+		dbService, err := adapter.GetDatabase()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+			return
+		}
+		handleAdminCustomerCompanyUsers(dbService.GetDB())(c)
+	}
+	HandleAdminCustomerCompanyTickets = func(c *gin.Context) {
+		dbService, err := adapter.GetDatabase()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+			return
+		}
+		handleAdminCustomerCompanyTickets(dbService.GetDB())(c)
+	}
+	HandleAdminCustomerCompanyServices = func(c *gin.Context) {
+		dbService, err := adapter.GetDatabase()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+			return
+		}
+		handleAdminCustomerCompanyServices(dbService.GetDB())(c)
+	}
+	HandleAdminCustomerPortalSettings = func(c *gin.Context) {
+		dbService, err := adapter.GetDatabase()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+			return
+		}
+		handleAdminCustomerPortalSettings(dbService.GetDB())(c)
+	}
 )
 
 // Ticket handlers

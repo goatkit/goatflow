@@ -26,6 +26,31 @@ spec:
       template: pages/admin/users.pongo2
       description: "Display user management page"
 
+    - path: /users/:id
+      method: GET
+      handler: handleAdminUserGet
+      description: "Display user details"
+
+    - path: /users/:id/edit
+      method: GET
+      handler: handleAdminUserEdit
+      description: "Display user edit form"
+
+    - path: /users/:id
+      method: PUT
+      handler: handleAdminUserUpdate
+      description: "Update user"
+
+    - path: /users/:id
+      method: DELETE
+      handler: handleAdminUserDelete
+      description: "Delete user"
+
+    - path: /password-policy
+      method: GET
+      handler: handleAdminPasswordPolicy
+      description: "Get password policy configuration"
+
     # Group management
     - path: /groups
       method: GET

@@ -16,21 +16,21 @@ import (
 
 // SLADefinition represents a Service Level Agreement configuration
 type SLADefinition struct {
-	ID                   int       `json:"id"`
-	Name                 string    `json:"name"`
-	CalendarName         *string   `json:"calendar_name,omitempty"`
-	FirstResponseTime    *int      `json:"first_response_time,omitempty"`
-	FirstResponseNotify  *int      `json:"first_response_notify,omitempty"`
-	UpdateTime           *int      `json:"update_time,omitempty"`
-	UpdateNotify         *int      `json:"update_notify,omitempty"`
-	SolutionTime         *int      `json:"solution_time,omitempty"`
-	SolutionNotify       *int      `json:"solution_notify,omitempty"`
-	Comments             *string   `json:"comments,omitempty"`
-	ValidID              int       `json:"valid_id"`
-	CreateTime           time.Time `json:"create_time"`
-	CreateBy             int       `json:"create_by"`
-	ChangeTime           time.Time `json:"change_time"`
-	ChangeBy             int       `json:"change_by"`
+	ID                  int       `json:"id"`
+	Name                string    `json:"name"`
+	CalendarName        *string   `json:"calendar_name,omitempty"`
+	FirstResponseTime   *int      `json:"first_response_time,omitempty"`
+	FirstResponseNotify *int      `json:"first_response_notify,omitempty"`
+	UpdateTime          *int      `json:"update_time,omitempty"`
+	UpdateNotify        *int      `json:"update_notify,omitempty"`
+	SolutionTime        *int      `json:"solution_time,omitempty"`
+	SolutionNotify      *int      `json:"solution_notify,omitempty"`
+	Comments            *string   `json:"comments,omitempty"`
+	ValidID             int       `json:"valid_id"`
+	CreateTime          time.Time `json:"create_time"`
+	CreateBy            int       `json:"create_by"`
+	ChangeTime          time.Time `json:"change_time"`
+	ChangeBy            int       `json:"change_by"`
 }
 
 // SLAWithStats includes additional statistics
@@ -67,7 +67,7 @@ func handleAdminSLA(c *gin.Context) {
 		LEFT JOIN ticket t ON t.sla_id = s.id
 		WHERE 1=1
 	`
-	
+
 	var args []interface{}
 	argCount := 1
 
@@ -123,7 +123,7 @@ func handleAdminSLA(c *gin.Context) {
 		var firstResponseTime, firstResponseNotify sql.NullInt32
 		var updateTime, updateNotify sql.NullInt32
 		var solutionTime, solutionNotify sql.NullInt32
-		
+
 		err := rows.Scan(
 			&s.ID, &s.Name, &calendarName,
 			&firstResponseTime, &firstResponseNotify,
@@ -136,7 +136,7 @@ func handleAdminSLA(c *gin.Context) {
 		if err != nil {
 			continue
 		}
-		
+
 		if calendarName.Valid {
 			s.CalendarName = &calendarName.String
 		}
@@ -167,7 +167,7 @@ func handleAdminSLA(c *gin.Context) {
 			val := int(solutionNotify.Int32)
 			s.SolutionNotify = &val
 		}
-		
+
 		slas = append(slas, s)
 	}
 
@@ -244,7 +244,7 @@ func handleAdminSLACreate(c *gin.Context) {
 
 	// Check for duplicate name
 	var exists bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM sla WHERE name = $1)", input.Name).Scan(&exists)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM sla WHERE name = $1)"), input.Name).Scan(&exists)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -470,7 +470,7 @@ func handleAdminSLADelete(c *gin.Context) {
 
 	// Check if SLA has associated tickets
 	var ticketCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE sla_id = $1", id).Scan(&ticketCount)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE sla_id = $1"), id).Scan(&ticketCount)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -485,7 +485,7 @@ func handleAdminSLADelete(c *gin.Context) {
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
 		WHERE id = $1
 	`), id)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,

@@ -603,7 +603,9 @@ function showAddUserModal() {
 
 function editUser(userId) {
     // Fetch user data and populate form
-    fetch(`/admin/users/${userId}`)
+    fetch(`/admin/users/${userId}`, {
+        credentials: 'include'
+    })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -838,7 +840,9 @@ let passwordPolicy = {
 };
 
 // Fetch password policy on page load
-fetch('/admin/password-policy')
+fetch('/admin/password-policy', {
+    credentials: 'include'
+})
     .then(response => response.json())
     .then(data => {
         if (data.success) {
@@ -903,6 +907,7 @@ function toggleUserStatus(userId, currentStatus) {
             fetch(`/admin/users/${userId}/status`, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
                 body: JSON.stringify({ valid_id: newStatus })
             })
             .then(response => response.json())
@@ -1073,6 +1078,7 @@ function confirmPasswordReset() {
     fetch(`/admin/users/${currentUserId}/reset-password`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
+        credentials: 'include',
         body: JSON.stringify({ password: newPassword })
     })
     .then(response => response.json())

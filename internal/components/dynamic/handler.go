@@ -24,9 +24,9 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/gotrs-io/gotrs-ce/internal/components/lambda"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // hashPassword hashes a password using SHA256 with salt
@@ -34,12 +34,12 @@ import (
 func hashPassword(password string) string {
 	// Generate a random salt (16 bytes = 32 hex chars)
 	salt := generateSalt()
-	
+
 	// Combine password and salt, then hash
 	combined := password + salt
 	hash := sha256.Sum256([]byte(combined))
 	hashStr := hex.EncodeToString(hash[:])
-	
+
 	// Return in format: sha256$salt$hash
 	return fmt.Sprintf("sha256$%s$%s", salt, hashStr)
 }
@@ -68,11 +68,11 @@ type ModuleConfig struct {
 		Description string `yaml:"description"`
 		RoutePrefix string `yaml:"route_prefix"`
 	} `yaml:"module"`
-	
+
 	Fields []Field `yaml:"fields"`
-	
+
 	ComputedFields []ComputedField `yaml:"computed_fields"`
-	
+
 	Features struct {
 		SoftDelete   bool `yaml:"soft_delete"`
 		Search       bool `yaml:"search"`
@@ -81,18 +81,18 @@ type ModuleConfig struct {
 		StatusToggle bool `yaml:"status_toggle"`
 		ColorPicker  bool `yaml:"color_picker"`
 	} `yaml:"features"`
-	
+
 	Permissions []string `yaml:"permissions"`
-	
+
 	Validation struct {
 		UniqueFields []string `yaml:"unique_fields"`
 		Required     []string `yaml:"required_fields"`
 	} `yaml:"validation"`
-	
+
 	UI struct {
 		ListColumns []string `yaml:"list_columns" json:"list_columns"`
 	} `yaml:"ui" json:"ui"`
-	
+
 	Filters []Filter `yaml:"filters" json:"filters"`
 
 	LambdaConfig lambda.LambdaConfig `yaml:"lambda_config" json:"lambda_config"`
@@ -128,7 +128,7 @@ type ComputedField struct {
 	Label        string `yaml:"label"`
 	ShowInList   bool   `yaml:"show_in_list"`
 	ShowInForm   bool   `yaml:"show_in_form"`
-	Lambda       string `yaml:"lambda"`       // JavaScript lambda function
+	Lambda       string `yaml:"lambda"`        // JavaScript lambda function
 	ListPosition int    `yaml:"list_position"` // Optional position in list view
 }
 
@@ -159,15 +159,15 @@ type FilterOption struct {
 
 // DynamicModuleHandler handles all dynamic modules
 type DynamicModuleHandler struct {
-	configs       map[string]*ModuleConfig
-	mu            sync.RWMutex
-	db            *sql.DB
-	renderer      *pongo2.TemplateSet
-	watcher       *fsnotify.Watcher
-	modulesPath   string
-	lambdaEngine  *lambda.Engine
-	ctx           context.Context
-	i18n          *i18n.I18n
+	configs      map[string]*ModuleConfig
+	mu           sync.RWMutex
+	db           *sql.DB
+	renderer     *pongo2.TemplateSet
+	watcher      *fsnotify.Watcher
+	modulesPath  string
+	lambdaEngine *lambda.Engine
+	ctx          context.Context
+	i18n         *i18n.I18n
 }
 
 // NewDynamicModuleHandler creates a new dynamic module handler
@@ -187,17 +187,17 @@ func NewDynamicModuleHandler(db *sql.DB, renderer *pongo2.TemplateSet, modulesPa
 		ctx:          ctx,
 		i18n:         i18n.GetInstance(),
 	}
-	
+
 	// Load all module configs
 	if err := h.loadAllConfigs(); err != nil {
 		return nil, fmt.Errorf("failed to load configs: %w", err)
 	}
-	
+
 	// Setup file watcher
 	if err := h.setupWatcher(); err != nil {
 		return nil, fmt.Errorf("failed to setup watcher: %w", err)
 	}
-	
+
 	return h, nil
 }
 
@@ -207,7 +207,7 @@ func (h *DynamicModuleHandler) loadAllConfigs() error {
 	if err != nil {
 		return err
 	}
-	
+
 	for _, file := range files {
 		if !file.IsDir() && strings.HasSuffix(file.Name(), ".yaml") {
 			configPath := filepath.Join(h.modulesPath, file.Name())
@@ -216,7 +216,7 @@ func (h *DynamicModuleHandler) loadAllConfigs() error {
 			}
 		}
 	}
-	
+
 	fmt.Printf("Loaded %d module configurations\n", len(h.configs))
 	return nil
 }
@@ -227,16 +227,16 @@ func (h *DynamicModuleHandler) loadConfig(path string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	var config ModuleConfig
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return err
 	}
-	
+
 	h.mu.Lock()
 	h.configs[config.Module.Name] = &config
 	h.mu.Unlock()
-	
+
 	fmt.Printf("Loaded module: %s\n", config.Module.Name)
 	return nil
 }
@@ -247,17 +247,17 @@ func (h *DynamicModuleHandler) setupWatcher() error {
 	if err != nil {
 		return err
 	}
-	
+
 	h.watcher = watcher
-	
+
 	// Watch the modules directory
 	if err := watcher.Add(h.modulesPath); err != nil {
 		return err
 	}
-	
+
 	// Start watching in background
 	go h.watchFiles()
-	
+
 	return nil
 }
 
@@ -269,7 +269,7 @@ func (h *DynamicModuleHandler) watchFiles() {
 			if !ok {
 				return
 			}
-			
+
 			if strings.HasSuffix(event.Name, ".yaml") {
 				if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
 					fmt.Printf("Module config changed: %s\n", event.Name)
@@ -283,7 +283,7 @@ func (h *DynamicModuleHandler) watchFiles() {
 					fmt.Printf("Module removed: %s\n", moduleName)
 				}
 			}
-			
+
 		case err, ok := <-h.watcher.Errors:
 			if !ok {
 				return
@@ -326,19 +326,19 @@ func (h *DynamicModuleHandler) resolveTranslation(value string, lang string) str
 func (h *DynamicModuleHandler) resolveConfigTranslations(config *ModuleConfig, lang string) *ModuleConfig {
 	// Create a deep copy to avoid modifying the original
 	resolved := *config
-	
+
 	// Resolve module-level translations
 	resolved.Module.Singular = h.resolveTranslation(config.Module.Singular, lang)
 	resolved.Module.Plural = h.resolveTranslation(config.Module.Plural, lang)
 	resolved.Module.Description = h.resolveTranslation(config.Module.Description, lang)
-	
+
 	// Resolve field translations
 	resolved.Fields = make([]Field, len(config.Fields))
 	for i, field := range config.Fields {
 		resolved.Fields[i] = field
 		resolved.Fields[i].Label = h.resolveTranslation(field.Label, lang)
 		resolved.Fields[i].Help = h.resolveTranslation(field.Help, lang)
-		
+
 		// Resolve options
 		if len(field.Options) > 0 {
 			resolved.Fields[i].Options = make([]Option, len(field.Options))
@@ -350,20 +350,20 @@ func (h *DynamicModuleHandler) resolveConfigTranslations(config *ModuleConfig, l
 			}
 		}
 	}
-	
+
 	// Resolve computed field translations
 	resolved.ComputedFields = make([]ComputedField, len(config.ComputedFields))
 	for i, field := range config.ComputedFields {
 		resolved.ComputedFields[i] = field
 		resolved.ComputedFields[i].Label = h.resolveTranslation(field.Label, lang)
 	}
-	
+
 	// Resolve filter translations
 	resolved.Filters = make([]Filter, len(config.Filters))
 	for i, filter := range config.Filters {
 		resolved.Filters[i] = filter
 		resolved.Filters[i].Label = h.resolveTranslation(filter.Label, lang)
-		
+
 		// Resolve filter options
 		if len(filter.Options) > 0 {
 			resolved.Filters[i].Options = make([]FilterOption, len(filter.Options))
@@ -375,41 +375,41 @@ func (h *DynamicModuleHandler) resolveConfigTranslations(config *ModuleConfig, l
 			}
 		}
 	}
-	
+
 	return &resolved
 }
 
 // ServeModule handles requests for any dynamic module
 func (h *DynamicModuleHandler) ServeModule(c *gin.Context) {
 	moduleName := c.Param("module")
-	
+
 	// Special case for schema discovery
 	if moduleName == "_schema" {
 		h.handleSchemaDiscovery(c)
 		return
 	}
-	
+
 	h.mu.RLock()
 	config, exists := h.configs[moduleName]
 	h.mu.RUnlock()
-	
+
 	if !exists {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": fmt.Sprintf("Module '%s' not found", moduleName),
 		})
 		return
 	}
-	
+
 	// Route to appropriate handler based on method and path
 	id := c.Param("id")
 	action := c.Param("action")
-	
+
 	// Check for export which comes as id="export"
 	if id == "export" {
 		h.handleExport(c, config)
 		return
 	}
-	
+
 	switch c.Request.Method {
 	case "GET":
 		if action != "" && id != "" {
@@ -440,10 +440,10 @@ func (h *DynamicModuleHandler) ServeModule(c *gin.Context) {
 func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) {
 	// Get current language
 	lang := middleware.GetLanguage(c)
-	
+
 	// Resolve translations in config
 	config = h.resolveConfigTranslations(config, lang)
-	
+
 	// Get pagination parameters
 	page := 1
 	if p := c.Query("page"); p != "" {
@@ -451,18 +451,18 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 			page = parsed
 		}
 	}
-	
+
 	pageSize := 25 // Default page size
 	if ps := c.Query("page_size"); ps != "" {
 		if parsed, err := strconv.Atoi(ps); err == nil && parsed > 0 && parsed <= 100 {
 			pageSize = parsed
 		}
 	}
-	
+
 	// Build SELECT query
 	columns := h.getSelectColumns(config)
 	baseQuery := fmt.Sprintf("SELECT %s FROM %s", columns, config.Module.Table)
-	
+
 	// Apply filters based on request parameters
 	args := []interface{}{}
 	whereClause, filterArgs := h.buildFilterWhereClause(c, config)
@@ -470,7 +470,7 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 		baseQuery += " WHERE " + whereClause
 		args = append(args, filterArgs...)
 	}
-	
+
 	// Don't filter by valid_id - show all records so users can enable/disable them
 	// if config.Features.SoftDelete {
 	//     if whereClause != "" {
@@ -479,20 +479,20 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 	//         baseQuery += " WHERE valid_id = 1"
 	//     }
 	// }
-	
+
 	// Count total records for pagination
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s", config.Module.Table)
 	if whereClause != "" {
 		countQuery += " WHERE " + whereClause
 	}
-	
+
 	var totalCount int
 	err := h.db.QueryRow(countQuery, args...).Scan(&totalCount)
 	if err != nil {
 		fmt.Printf("Error counting records: %v\n", err)
 		totalCount = 0
 	}
-	
+
 	// Calculate pagination values
 	totalPages := (totalCount + pageSize - 1) / pageSize
 	if totalPages == 0 {
@@ -502,26 +502,26 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 		page = totalPages
 	}
 	offset := (page - 1) * pageSize
-	
+
 	// Add ordering and pagination to query
 	query := baseQuery + " ORDER BY id DESC LIMIT $" + strconv.Itoa(len(args)+1) + " OFFSET $" + strconv.Itoa(len(args)+2)
 	args = append(args, pageSize, offset)
-	
+
 	rows, err := h.db.Query(query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	defer rows.Close()
-	
+
 	items := h.scanRows(rows, config)
-	
+
 	// Process lookups for foreign key fields
 	h.processLookups(items, config)
-	
+
 	// Process computed fields for all items
 	h.processComputedFields(items, config)
-	
+
 	// Check if this is an API request
 	if h.isAPIRequest(c) {
 		c.JSON(http.StatusOK, gin.H{
@@ -531,7 +531,7 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 		})
 		return
 	}
-	
+
 	// Populate database-sourced filter options
 	for i, filter := range config.Filters {
 		if filter.Source == "database" && filter.Query != "" {
@@ -541,14 +541,14 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 				continue
 			}
 			defer filterRows.Close()
-			
+
 			var options []FilterOption
 			// Add "All" option first
 			options = append(options, FilterOption{
 				Value: "",
 				Label: fmt.Sprintf("All %s", filter.Label),
 			})
-			
+
 			for filterRows.Next() {
 				var value, label string
 				if err := filterRows.Scan(&value, &label); err != nil {
@@ -560,72 +560,71 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 					Label: label,
 				})
 			}
-			
+
 			// Update the filter with the loaded options
 			config.Filters[i].Options = options
 		}
 	}
-	
+
 	// Render the universal template
 	tmpl, err := h.renderer.FromFile("pages/admin/dynamic_module.pongo2")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Template not found: " + err.Error()})
 		return
 	}
-	
+
 	// Convert config to JSON string for JavaScript (exclude lambda functions)
 	safeConfig := map[string]interface{}{
-		"module": config.Module,
+		"module":   config.Module,
 		"features": config.Features,
-		"fields": []map[string]interface{}{},
-		"filters": []map[string]interface{}{},
+		"fields":   []map[string]interface{}{},
+		"filters":  []map[string]interface{}{},
 	}
-	
+
 	// Copy fields without lambda functions
 	for _, field := range config.Fields {
 		safeField := map[string]interface{}{
-			"Name": field.Name,
-			"Type": field.Type,
-			"Label": field.Label,
-			"Required": field.Required,
+			"Name":       field.Name,
+			"Type":       field.Type,
+			"Label":      field.Label,
+			"Required":   field.Required,
 			"ShowInForm": field.ShowInForm,
 			"ShowInList": field.ShowInList,
 		}
 		safeConfig["fields"] = append(safeConfig["fields"].([]map[string]interface{}), safeField)
 	}
-	
+
 	// Copy filters for JavaScript access
 	for _, filter := range config.Filters {
 		safeFilter := map[string]interface{}{
 			"field": filter.Field,
-			"type": filter.Type,
+			"type":  filter.Type,
 			"label": filter.Label,
 		}
 		safeConfig["filters"] = append(safeConfig["filters"].([]map[string]interface{}), safeFilter)
 	}
-	
+
 	configJSON, _ := json.Marshal(safeConfig)
-	
-	
+
 	// Populate lookup options for form fields
 	h.populateLookupOptions(config)
-	
+
 	// Template rendering with data
 	// Get user from context for navigation - match the format used in getUserMapForTemplate
 	userMap := make(map[string]interface{})
 	if userID, exists := c.Get("user_id"); exists {
 		userMap["ID"] = userID
-		userMap["id"] = userID  // Also provide lowercase for compatibility
+		userMap["id"] = userID // Also provide lowercase for compatibility
 	}
 	if userEmail, exists := c.Get("user_email"); exists {
 		userMap["Email"] = userEmail
-		userMap["Login"] = userEmail  // Use email as login
-		userMap["email"] = userEmail  // Also provide lowercase
+		userMap["Login"] = userEmail // Use email as login
+		userMap["email"] = userEmail // Also provide lowercase
 	}
 	if userRole, exists := c.Get("user_role"); exists {
 		userMap["Role"] = userRole
 		userMap["IsAdmin"] = (userRole == "Admin")
-		userMap["role"] = userRole  // Also provide lowercase
+		userMap["role"] = userRole // Also provide lowercase
 	}
 	if userName, exists := c.Get("user_name"); exists {
 		// Parse name into first and last
@@ -640,7 +639,7 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 		}
 		userMap["FirstName"] = firstName
 		userMap["LastName"] = lastName
-		userMap["name"] = userName  // Also provide lowercase
+		userMap["name"] = userName // Also provide lowercase
 	}
 	if isDemo, exists := c.Get("is_demo"); exists {
 		userMap["is_demo"] = isDemo
@@ -648,10 +647,10 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 	}
 	// Set defaults for active status
 	userMap["IsActive"] = true
-	
+
 	// Prepare all fields for display (combine regular and computed fields)
 	allFields := make([]interface{}, 0)
-	
+
 	// If UI.ListColumns is specified, use that order
 	if len(config.UI.ListColumns) > 0 {
 		for _, colName := range config.UI.ListColumns {
@@ -683,12 +682,12 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 			}
 		}
 	}
-	
+
 	// Populate options for filters with database source
 	for i, filter := range config.Filters {
 		if filter.Source == "database" && filter.LookupTable != "" {
 			// Load options from database
-			query := fmt.Sprintf("SELECT %s, %s FROM %s ORDER BY %s", 
+			query := fmt.Sprintf("SELECT %s, %s FROM %s ORDER BY %s",
 				filter.LookupKey, filter.LookupDisplay, filter.LookupTable, filter.LookupDisplay)
 			rows, err := h.db.Query(query)
 			if err == nil {
@@ -704,7 +703,7 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 			}
 		}
 	}
-	
+
 	// Collect current filter values from URL parameters
 	currentFilters := make(map[string]string)
 	for _, filter := range config.Filters {
@@ -730,7 +729,7 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 	if searchValue != "" {
 		currentFilters["search"] = searchValue
 	}
-	
+
 	// Generate page range for pagination display
 	pageRange := []int{}
 	startPage := page - 2
@@ -748,41 +747,41 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 	for i := startPage; i <= endPage; i++ {
 		pageRange = append(pageRange, i)
 	}
-	
+
 	html, err := tmpl.Execute(pongo2.Context{
-		"config": config,
-		"config_json": string(configJSON),
-		"items":  items,
-		"module": config.Module,
-		"fields": config.Fields,
-		"allFields": allFields,  // Combined fields for display
-		"features": config.Features,
-		"filters": config.Filters,  // Pass filters configuration
-		"currentFilters": currentFilters,  // Pass current filter values
+		"config":         config,
+		"config_json":    string(configJSON),
+		"items":          items,
+		"module":         config.Module,
+		"fields":         config.Fields,
+		"allFields":      allFields, // Combined fields for display
+		"features":       config.Features,
+		"filters":        config.Filters, // Pass filters configuration
+		"currentFilters": currentFilters, // Pass current filter values
 		"pagination": map[string]interface{}{
-			"enabled":     true,
-			"page":        page,
-			"pageSize":    pageSize,
-			"totalCount":  totalCount,
-			"totalPages":  totalPages,
-			"pageRange":   pageRange,
-			"hasNext":     page < totalPages,
-			"hasPrev":     page > 1,
+			"enabled":    true,
+			"page":       page,
+			"pageSize":   pageSize,
+			"totalCount": totalCount,
+			"totalPages": totalPages,
+			"pageRange":  pageRange,
+			"hasNext":    page < totalPages,
+			"hasPrev":    page > 1,
 		},
-		"User": userMap,  // Required for base template
-		"ActivePage": "admin",  // For navigation highlighting
-		"Title": fmt.Sprintf("%s Management", config.Module.Plural),
+		"User":       userMap, // Required for base template
+		"ActivePage": "admin", // For navigation highlighting
+		"Title":      fmt.Sprintf("%s Management", config.Module.Plural),
 		// Add translation function
 		"t": func(key string, args ...interface{}) string {
 			return h.i18n.T(lang, key, args...)
 		},
 	})
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }
 
@@ -792,11 +791,11 @@ func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig
 		c.JSON(http.StatusForbidden, gin.H{"error": "Export not enabled for this module"})
 		return
 	}
-	
+
 	// Build query with filters
 	columns := h.getSelectColumns(config)
 	query := fmt.Sprintf("SELECT %s FROM %s", columns, config.Module.Table)
-	
+
 	// Check if specific IDs were requested
 	idsParam := c.Query("ids")
 	if idsParam != "" {
@@ -810,21 +809,21 @@ func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig
 		}
 		query += " WHERE id IN (" + strings.Join(placeholders, ", ") + ")"
 		query += " ORDER BY id DESC"
-		
+
 		rows, err := h.db.Query(query, args...)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		defer rows.Close()
-		
+
 		items := h.scanRows(rows, config)
 		h.processLookups(items, config)
 		h.processComputedFields(items, config)
 		h.generateCSVResponse(c, config, items)
 		return
 	}
-	
+
 	// Apply filters based on request parameters (same as handleList)
 	args := []interface{}{}
 	whereClause, filterArgs := h.buildFilterWhereClause(c, config)
@@ -832,28 +831,28 @@ func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig
 		query += " WHERE " + whereClause
 		args = append(args, filterArgs...)
 	}
-	
+
 	query += " ORDER BY id DESC"
-	
+
 	rows, err := h.db.Query(query, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	defer rows.Close()
-	
+
 	items := h.scanRows(rows, config)
-	
+
 	// Process lookups for foreign key fields
 	h.processLookups(items, config)
-	
+
 	// Process computed fields for all items
 	h.processComputedFields(items, config)
-	
+
 	// Generate CSV
 	var csvData bytes.Buffer
 	csvWriter := csv.NewWriter(&csvData)
-	
+
 	// Write header row
 	var headers []string
 	for _, field := range config.Fields {
@@ -862,7 +861,7 @@ func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig
 		}
 	}
 	csvWriter.Write(headers)
-	
+
 	// Write data rows
 	for _, item := range items {
 		var row []string
@@ -881,9 +880,9 @@ func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig
 		}
 		csvWriter.Write(row)
 	}
-	
+
 	csvWriter.Flush()
-	
+
 	// Set headers for download
 	filename := fmt.Sprintf("%s_export_%s.csv", config.Module.Name, time.Now().Format("20060102_150405"))
 	c.Header("Content-Type", "text/csv")
@@ -896,20 +895,20 @@ func (h *DynamicModuleHandler) handleGet(c *gin.Context, config *ModuleConfig, i
 	// Get current language and resolve translations
 	lang := middleware.GetLanguage(c)
 	config = h.resolveConfigTranslations(config, lang)
-	
+
 	columns := h.getSelectColumns(config)
 	query := fmt.Sprintf("SELECT %s FROM %s WHERE id = $1", columns, config.Module.Table)
-	
+
 	row := h.db.QueryRow(query, id)
 	item := h.scanRow(row, config)
-	
+
 	if item == nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": fmt.Sprintf("%s not found", config.Module.Singular),
 		})
 		return
 	}
-	
+
 	// For users module, fetch the user's groups
 	if config.Module.Name == "users" {
 		groupQuery := `
@@ -918,7 +917,7 @@ func (h *DynamicModuleHandler) handleGet(c *gin.Context, config *ModuleConfig, i
 			INNER JOIN user_groups ug ON g.id = ug.group_id 
 			WHERE ug.user_id = $1
 			ORDER BY g.name`
-		
+
 		rows, err := h.db.Query(groupQuery, id)
 		if err == nil {
 			defer rows.Close()
@@ -932,7 +931,7 @@ func (h *DynamicModuleHandler) handleGet(c *gin.Context, config *ModuleConfig, i
 			item["Groups"] = groups
 		}
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    item,
@@ -944,9 +943,9 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 	// Get current language and resolve translations
 	lang := middleware.GetLanguage(c)
 	config = h.resolveConfigTranslations(config, lang)
-	
+
 	data := h.parseFormData(c, config)
-	
+
 	// Get current user ID for audit fields
 	userIDValue, exists := c.Get("user_id")
 	var currentUserID int
@@ -960,17 +959,17 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 	if currentUserID == 0 {
 		currentUserID = 1 // Default to admin user if not found
 	}
-	
+
 	// Build INSERT query
 	columns := []string{}
 	placeholders := []string{}
 	values := []interface{}{}
-	
+
 	for _, field := range config.Fields {
 		if field.DBColumn == "id" {
 			continue
 		}
-		
+
 		// Check for audit fields
 		if field.DBColumn == "create_by" {
 			columns = append(columns, field.DBColumn)
@@ -983,7 +982,7 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 		} else if field.ShowInForm {
 			if value, exists := data[field.Name]; exists {
 				columns = append(columns, field.DBColumn)
-				
+
 				// Special handling for password fields - hash in Go instead of PostgreSQL
 				if field.Type == "password" && field.DBColumn == "pw" && config.Module.Name == "users" {
 					// Hash the password in Go using SHA256
@@ -1006,25 +1005,25 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 			}
 		}
 	}
-	
+
 	// Add valid_id if soft delete is enabled
 	if config.Features.SoftDelete {
 		columns = append(columns, "valid_id")
 		placeholders = append(placeholders, "1")
 	}
-	
+
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) RETURNING id",
 		config.Module.Table,
 		strings.Join(columns, ", "),
 		strings.Join(placeholders, ", "))
-	
+
 	var newID int64
 	err := h.db.QueryRow(query, values...).Scan(&newID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Handle group assignments for users module
 	if config.Module.Name == "users" {
 		if groupsStr := c.PostForm("groups"); groupsStr != "" {
@@ -1044,7 +1043,7 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 			}
 		}
 	}
-	
+
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
 		"message": fmt.Sprintf("%s created successfully", config.Module.Singular),
@@ -1056,9 +1055,9 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 	// Get current language and resolve translations
 	lang := middleware.GetLanguage(c)
 	config = h.resolveConfigTranslations(config, lang)
-	
+
 	data := h.parseFormData(c, config)
-	
+
 	// Get current user ID for audit fields
 	userIDValue, exists := c.Get("user_id")
 	var currentUserID int
@@ -1072,16 +1071,16 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 	if currentUserID == 0 {
 		currentUserID = 1 // Default to admin user if not found
 	}
-	
+
 	// Build UPDATE query
 	sets := []string{}
 	values := []interface{}{}
-	
+
 	for _, field := range config.Fields {
 		if field.DBColumn == "id" {
 			continue
 		}
-		
+
 		// Always update change_by if it exists
 		if field.DBColumn == "change_by" {
 			sets = append(sets, fmt.Sprintf("%s = $%d", field.DBColumn, len(values)+1))
@@ -1108,34 +1107,34 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 			}
 		}
 	}
-	
+
 	values = append(values, id)
-	
+
 	query := fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d",
 		config.Module.Table,
 		strings.Join(sets, ", "),
 		len(values))
-	
+
 	_, err := h.db.Exec(query, values...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Handle group assignments for users module
 	if config.Module.Name == "users" {
 		// Check if groups were actually submitted in the form
 		groupsStr, groupsSubmitted := c.GetPostForm("groups")
-		
+
 		// Only update groups if they were explicitly submitted
 		if groupsSubmitted {
 			// First, remove all existing group assignments
-			_, err = h.db.Exec("DELETE FROM user_groups WHERE user_id = $1", id)
+			_, err = h.db.Exec(database.ConvertPlaceholders("DELETE FROM user_groups WHERE user_id = $1"), id)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update groups: " + err.Error()})
 				return
 			}
-			
+
 			// Add new group assignments
 			if groupsStr != "" {
 				// Parse the selected group IDs
@@ -1156,7 +1155,7 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 		}
 		// If groups field wasn't submitted, preserve existing group memberships
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": fmt.Sprintf("%s updated successfully", config.Module.Singular),
@@ -1168,26 +1167,26 @@ func (h *DynamicModuleHandler) handleDelete(c *gin.Context, config *ModuleConfig
 	// Get current language and resolve translations
 	lang := middleware.GetLanguage(c)
 	config = h.resolveConfigTranslations(config, lang)
-	
+
 	var query string
-	
+
 	if config.Features.SoftDelete {
 		query = fmt.Sprintf("UPDATE %s SET valid_id = 2 WHERE id = $1", config.Module.Table)
 	} else {
 		query = fmt.Sprintf("DELETE FROM %s WHERE id = $1", config.Module.Table)
 	}
-	
+
 	_, err := h.db.Exec(query, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	action := "deleted"
 	if config.Features.SoftDelete {
 		action = "deactivated"
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": fmt.Sprintf("%s %s successfully", config.Module.Singular, action),
@@ -1206,7 +1205,7 @@ func (h *DynamicModuleHandler) getSelectColumns(config *ModuleConfig) string {
 
 func (h *DynamicModuleHandler) scanRows(rows *sql.Rows, config *ModuleConfig) []map[string]interface{} {
 	items := []map[string]interface{}{}
-	
+
 	for rows.Next() {
 		// Create scanners for each field
 		scanners := make([]interface{}, len(config.Fields))
@@ -1214,11 +1213,11 @@ func (h *DynamicModuleHandler) scanRows(rows *sql.Rows, config *ModuleConfig) []
 			var val interface{}
 			scanners[i] = &val
 		}
-		
+
 		if err := rows.Scan(scanners...); err != nil {
 			continue
 		}
-		
+
 		// Build item map
 		item := make(map[string]interface{})
 		for i, field := range config.Fields {
@@ -1226,10 +1225,10 @@ func (h *DynamicModuleHandler) scanRows(rows *sql.Rows, config *ModuleConfig) []
 				item[field.Name] = *ptr
 			}
 		}
-		
+
 		items = append(items, item)
 	}
-	
+
 	return items
 }
 
@@ -1239,24 +1238,24 @@ func (h *DynamicModuleHandler) scanRow(row *sql.Row, config *ModuleConfig) map[s
 		var val interface{}
 		scanners[i] = &val
 	}
-	
+
 	if err := row.Scan(scanners...); err != nil {
 		return nil
 	}
-	
+
 	item := make(map[string]interface{})
 	for i, field := range config.Fields {
 		if ptr, ok := scanners[i].(*interface{}); ok && *ptr != nil {
 			item[field.Name] = *ptr
 		}
 	}
-	
+
 	return item
 }
 
 func (h *DynamicModuleHandler) parseFormData(c *gin.Context, config *ModuleConfig) map[string]interface{} {
 	data := make(map[string]interface{})
-	
+
 	if c.ContentType() == "application/json" {
 		c.ShouldBindJSON(&data)
 	} else {
@@ -1267,7 +1266,7 @@ func (h *DynamicModuleHandler) parseFormData(c *gin.Context, config *ModuleConfi
 			}
 		}
 	}
-	
+
 	return data
 }
 
@@ -1298,7 +1297,7 @@ func (h *DynamicModuleHandler) isAPIRequest(c *gin.Context) bool {
 func (h *DynamicModuleHandler) GetAvailableModules() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	modules := []string{}
 	for name := range h.configs {
 		modules = append(modules, name)
@@ -1310,9 +1309,9 @@ func (h *DynamicModuleHandler) GetAvailableModules() []string {
 func (h *DynamicModuleHandler) handleSchemaDiscovery(c *gin.Context) {
 	action := c.Query("action")
 	tableName := c.Query("table")
-	
+
 	discovery := NewSchemaDiscovery(h.db)
-	
+
 	switch action {
 	case "tables":
 		// List all tables
@@ -1323,9 +1322,9 @@ func (h *DynamicModuleHandler) handleSchemaDiscovery(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
-			"data": tables,
+			"data":    tables,
 		})
-		
+
 	case "columns":
 		// Get columns for a specific table
 		if tableName == "" {
@@ -1339,10 +1338,10 @@ func (h *DynamicModuleHandler) handleSchemaDiscovery(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
-			"table": tableName,
-			"data": columns,
+			"table":   tableName,
+			"data":    columns,
 		})
-		
+
 	case "generate":
 		// Generate module config for a table
 		if tableName == "" {
@@ -1354,7 +1353,7 @@ func (h *DynamicModuleHandler) handleSchemaDiscovery(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		
+
 		// Convert to YAML if requested
 		if c.Query("format") == "yaml" {
 			yamlData, err := yaml.Marshal(config)
@@ -1365,25 +1364,25 @@ func (h *DynamicModuleHandler) handleSchemaDiscovery(c *gin.Context) {
 			c.Data(http.StatusOK, "text/yaml", yamlData)
 			return
 		}
-		
+
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
-			"config": config,
+			"config":  config,
 		})
-		
+
 	case "save":
 		// Save generated config to file
 		if tableName == "" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "table parameter required"})
 			return
 		}
-		
+
 		config, err := discovery.GenerateModuleConfig(tableName)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		
+
 		// Save to modules directory
 		filename := filepath.Join(h.modulesPath, fmt.Sprintf("%s.yaml", tableName))
 		yamlData, err := yaml.Marshal(config)
@@ -1391,18 +1390,18 @@ func (h *DynamicModuleHandler) handleSchemaDiscovery(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		
+
 		if err := ioutil.WriteFile(filename, yamlData, 0644); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		
+
 		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"message": fmt.Sprintf("Module config saved to %s", filename),
+			"success":  true,
+			"message":  fmt.Sprintf("Module config saved to %s", filename),
 			"filename": filename,
 		})
-		
+
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid action. Use: tables, columns, generate, or save",
@@ -1417,23 +1416,23 @@ func (h *DynamicModuleHandler) populateLookupOptions(config *ModuleConfig) {
 			// Query lookup table for options
 			query := fmt.Sprintf("SELECT %s, %s FROM %s WHERE valid_id = 1 ORDER BY %s",
 				field.LookupKey, field.LookupDisplay, field.LookupTable, field.LookupDisplay)
-			
+
 			if field.LookupKey == "" {
 				query = fmt.Sprintf("SELECT id, %s FROM %s WHERE valid_id = 1 ORDER BY %s",
 					field.LookupDisplay, field.LookupTable, field.LookupDisplay)
 			}
-			
+
 			if field.LookupDisplay == "" {
 				query = fmt.Sprintf("SELECT id, name FROM %s WHERE valid_id = 1 ORDER BY name", field.LookupTable)
 			}
-			
+
 			rows, err := h.db.Query(query)
 			if err != nil {
 				fmt.Printf("Error loading lookup options for %s: %v\n", field.Name, err)
 				continue
 			}
 			defer rows.Close()
-			
+
 			options := []Option{}
 			for rows.Next() {
 				var value, label string
@@ -1444,7 +1443,7 @@ func (h *DynamicModuleHandler) populateLookupOptions(config *ModuleConfig) {
 					})
 				}
 			}
-			
+
 			// Update the field with options
 			config.Fields[i].Options = options
 			config.Fields[i].Type = "select" // Change type to select for lookup fields
@@ -1459,9 +1458,9 @@ func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, co
 		if field.LookupTable == "" {
 			continue
 		}
-		
+
 		fmt.Printf("DEBUG: Processing lookup for field %s with table %s, display_as=%s\n", field.Name, field.LookupTable, field.DisplayAs)
-		
+
 		// Collect unique IDs to lookup
 		idMap := make(map[interface{}]bool)
 		for _, item := range items {
@@ -1469,11 +1468,11 @@ func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, co
 				idMap[val] = true
 			}
 		}
-		
+
 		if len(idMap) == 0 {
 			continue
 		}
-		
+
 		// Build lookup query
 		lookupKey := field.LookupKey
 		if lookupKey == "" {
@@ -1483,23 +1482,23 @@ func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, co
 		if lookupDisplay == "" {
 			lookupDisplay = "name"
 		}
-		
+
 		// Create ID list for IN clause
 		var ids []string
 		for id := range idMap {
 			ids = append(ids, fmt.Sprintf("%v", id))
 		}
-		
+
 		query := fmt.Sprintf("SELECT %s, %s FROM %s WHERE %s IN (%s)",
 			lookupKey, lookupDisplay, field.LookupTable, lookupKey, strings.Join(ids, ","))
-		
+
 		rows, err := h.db.Query(query)
 		if err != nil {
 			fmt.Printf("Lookup query error for field %s: %v\n", field.Name, err)
 			continue
 		}
 		defer rows.Close()
-		
+
 		// Build lookup map
 		lookupMap := make(map[interface{}]string)
 		for rows.Next() {
@@ -1509,7 +1508,7 @@ func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, co
 				lookupMap[id] = displayValue
 			}
 		}
-		
+
 		// Update items with lookup values
 		lookupFieldName := field.Name + "_display"
 		for _, item := range items {
@@ -1526,12 +1525,12 @@ func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, co
 						} else if strings.Contains(strings.ToLower(field.Name), "valid") || field.LookupTable == "valid" {
 							chipType = "status"
 						}
-						
+
 						item[chipKey] = map[string]interface{}{
-							"value": val,
-							"label": displayVal,
+							"value":      val,
+							"label":      displayVal,
 							"display_as": "chip",
-							"type": chipType,
+							"type":       chipType,
 						}
 						fmt.Printf("DEBUG: Added chip for field %s: %s = %v\n", field.Name, chipKey, item[chipKey])
 					}
@@ -1599,7 +1598,6 @@ func (h *DynamicModuleHandler) executeLambda(lambdaCode string, item map[string]
 	return result, nil
 }
 
-
 // createDatabaseInterface creates a safe database interface for lambda execution
 func (h *DynamicModuleHandler) createDatabaseInterface() *lambda.SafeDBInterface {
 	return lambda.NewSafeDBInterface(&simpleDatabaseWrapper{db: h.db})
@@ -1623,30 +1621,58 @@ func (w *simpleDatabaseWrapper) Exec(ctx context.Context, query string, args ...
 }
 
 // Implement the required interface methods (minimal implementation for lambda use)
-func (w *simpleDatabaseWrapper) Connect() error { return nil }
-func (w *simpleDatabaseWrapper) Close() error { return nil }
-func (w *simpleDatabaseWrapper) Ping() error { return w.db.Ping() }
-func (w *simpleDatabaseWrapper) GetType() database.DatabaseType { return database.PostgreSQL }
+func (w *simpleDatabaseWrapper) Connect() error                     { return nil }
+func (w *simpleDatabaseWrapper) Close() error                       { return nil }
+func (w *simpleDatabaseWrapper) Ping() error                        { return w.db.Ping() }
+func (w *simpleDatabaseWrapper) GetType() database.DatabaseType     { return database.PostgreSQL }
 func (w *simpleDatabaseWrapper) GetConfig() database.DatabaseConfig { return database.DatabaseConfig{} }
-func (w *simpleDatabaseWrapper) Begin(ctx context.Context) (database.ITransaction, error) { return nil, fmt.Errorf("transactions not supported in lambda") }
-func (w *simpleDatabaseWrapper) BeginTx(ctx context.Context, opts *sql.TxOptions) (database.ITransaction, error) { return nil, fmt.Errorf("transactions not supported in lambda") }
-func (w *simpleDatabaseWrapper) TableExists(ctx context.Context, tableName string) (bool, error) { return false, fmt.Errorf("not implemented") }
-func (w *simpleDatabaseWrapper) GetTableColumns(ctx context.Context, tableName string) ([]database.ColumnInfo, error) { return nil, fmt.Errorf("not implemented") }
-func (w *simpleDatabaseWrapper) CreateTable(ctx context.Context, definition *database.TableDefinition) error { return fmt.Errorf("not supported") }
-func (w *simpleDatabaseWrapper) DropTable(ctx context.Context, tableName string) error { return fmt.Errorf("not supported") }
-func (w *simpleDatabaseWrapper) CreateIndex(ctx context.Context, tableName, indexName string, columns []string, unique bool) error { return fmt.Errorf("not supported") }
-func (w *simpleDatabaseWrapper) DropIndex(ctx context.Context, tableName, indexName string) error { return fmt.Errorf("not supported") }
+func (w *simpleDatabaseWrapper) Begin(ctx context.Context) (database.ITransaction, error) {
+	return nil, fmt.Errorf("transactions not supported in lambda")
+}
+func (w *simpleDatabaseWrapper) BeginTx(ctx context.Context, opts *sql.TxOptions) (database.ITransaction, error) {
+	return nil, fmt.Errorf("transactions not supported in lambda")
+}
+func (w *simpleDatabaseWrapper) TableExists(ctx context.Context, tableName string) (bool, error) {
+	return false, fmt.Errorf("not implemented")
+}
+func (w *simpleDatabaseWrapper) GetTableColumns(ctx context.Context, tableName string) ([]database.ColumnInfo, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+func (w *simpleDatabaseWrapper) CreateTable(ctx context.Context, definition *database.TableDefinition) error {
+	return fmt.Errorf("not supported")
+}
+func (w *simpleDatabaseWrapper) DropTable(ctx context.Context, tableName string) error {
+	return fmt.Errorf("not supported")
+}
+func (w *simpleDatabaseWrapper) CreateIndex(ctx context.Context, tableName, indexName string, columns []string, unique bool) error {
+	return fmt.Errorf("not supported")
+}
+func (w *simpleDatabaseWrapper) DropIndex(ctx context.Context, tableName, indexName string) error {
+	return fmt.Errorf("not supported")
+}
 func (w *simpleDatabaseWrapper) Quote(identifier string) string { return `"` + identifier + `"` }
-func (w *simpleDatabaseWrapper) QuoteValue(value interface{}) string { return fmt.Sprintf("'%v'", value) }
-func (w *simpleDatabaseWrapper) BuildInsert(tableName string, data map[string]interface{}) (string, []interface{}) { return "", nil }
-func (w *simpleDatabaseWrapper) BuildUpdate(tableName string, data map[string]interface{}, where string, whereArgs []interface{}) (string, []interface{}) { return "", nil }
-func (w *simpleDatabaseWrapper) BuildSelect(tableName string, columns []string, where string, orderBy string, limit int) string { return "" }
-func (w *simpleDatabaseWrapper) GetLimitClause(limit, offset int) string { return fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset) }
+func (w *simpleDatabaseWrapper) QuoteValue(value interface{}) string {
+	return fmt.Sprintf("'%v'", value)
+}
+func (w *simpleDatabaseWrapper) BuildInsert(tableName string, data map[string]interface{}) (string, []interface{}) {
+	return "", nil
+}
+func (w *simpleDatabaseWrapper) BuildUpdate(tableName string, data map[string]interface{}, where string, whereArgs []interface{}) (string, []interface{}) {
+	return "", nil
+}
+func (w *simpleDatabaseWrapper) BuildSelect(tableName string, columns []string, where string, orderBy string, limit int) string {
+	return ""
+}
+func (w *simpleDatabaseWrapper) GetLimitClause(limit, offset int) string {
+	return fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset)
+}
 func (w *simpleDatabaseWrapper) GetDateFunction() string { return "NOW()" }
-func (w *simpleDatabaseWrapper) GetConcatFunction(fields []string) string { return strings.Join(fields, " || ") }
+func (w *simpleDatabaseWrapper) GetConcatFunction(fields []string) string {
+	return strings.Join(fields, " || ")
+}
 func (w *simpleDatabaseWrapper) SupportsReturning() bool { return true }
-func (w *simpleDatabaseWrapper) Stats() sql.DBStats { return w.db.Stats() }
-func (w *simpleDatabaseWrapper) IsHealthy() bool { return w.db.Ping() == nil }
+func (w *simpleDatabaseWrapper) Stats() sql.DBStats      { return w.db.Stats() }
+func (w *simpleDatabaseWrapper) IsHealthy() bool         { return w.db.Ping() == nil }
 
 // handleAction handles special actions on records
 func (h *DynamicModuleHandler) handleAction(c *gin.Context, config *ModuleConfig, id, action string) {
@@ -1667,20 +1693,20 @@ func (h *DynamicModuleHandler) handleDetails(c *gin.Context, config *ModuleConfi
 		h.handleSysconfigDetails(c, config, id)
 		return
 	}
-	
+
 	// For other modules, use regular record lookup
 	query := fmt.Sprintf("SELECT * FROM %s WHERE id = $1", config.Module.Table)
 	row := h.db.QueryRow(query, id)
-	
+
 	item := h.scanRow(row, config)
 	if item == nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Item not found"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"data": item,
+		"data":    item,
 	})
 }
 
@@ -1692,7 +1718,7 @@ func (h *DynamicModuleHandler) handleSysconfigDetails(c *gin.Context, config *Mo
 		FROM sysconfig_default 
 		WHERE name = $1 AND is_valid = 1
 	`
-	
+
 	var details struct {
 		Name                     string `json:"name"`
 		Description              string `json:"description"`
@@ -1703,13 +1729,13 @@ func (h *DynamicModuleHandler) handleSysconfigDetails(c *gin.Context, config *Mo
 		IsReadonly               bool   `json:"is_readonly"`
 		IsRequired               bool   `json:"is_required"`
 	}
-	
+
 	err := h.db.QueryRow(query, configName).Scan(
 		&details.Name, &details.Description, &details.Navigation,
 		&details.EffectiveValue, &details.XMLContentParsed,
 		&details.UserModificationPossible, &details.IsReadonly, &details.IsRequired,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Configuration not found"})
@@ -1718,24 +1744,24 @@ func (h *DynamicModuleHandler) handleSysconfigDetails(c *gin.Context, config *Mo
 		}
 		return
 	}
-	
+
 	// Parse XML content to get additional metadata
 	var configData map[string]interface{}
 	if details.XMLContentParsed != "" {
 		json.Unmarshal([]byte(details.XMLContentParsed), &configData)
 	}
-	
+
 	// Prepare response data
 	response := map[string]interface{}{
 		"name":                       details.Name,
-		"description":               details.Description,
-		"navigation":                details.Navigation,
-		"effective_value":           details.EffectiveValue,
+		"description":                details.Description,
+		"navigation":                 details.Navigation,
+		"effective_value":            details.EffectiveValue,
 		"user_modification_possible": details.UserModificationPossible,
-		"is_readonly":               details.IsReadonly,
-		"is_required":               details.IsRequired,
+		"is_readonly":                details.IsReadonly,
+		"is_required":                details.IsRequired,
 	}
-	
+
 	// Add parsed config data
 	if configData != nil {
 		if t, ok := configData["type"].(string); ok {
@@ -1748,21 +1774,21 @@ func (h *DynamicModuleHandler) handleSysconfigDetails(c *gin.Context, config *Mo
 			response["validation"] = val
 		}
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"data": response,
+		"data":    response,
 	})
 }
 
-// handleReset handles reset-to-default requests  
+// handleReset handles reset-to-default requests
 func (h *DynamicModuleHandler) handleReset(c *gin.Context, config *ModuleConfig, id string) {
 	// For sysconfig module, 'id' is actually the config name
 	if config.Module.Name == "sysconfig" {
 		h.handleSysconfigReset(c, config, id)
 		return
 	}
-	
+
 	// For other modules, this action doesn't make sense
 	c.JSON(http.StatusBadRequest, gin.H{"error": "Reset action not supported for this module"})
 }
@@ -1771,13 +1797,13 @@ func (h *DynamicModuleHandler) handleReset(c *gin.Context, config *ModuleConfig,
 func (h *DynamicModuleHandler) handleSysconfigReset(c *gin.Context, config *ModuleConfig, configName string) {
 	// Remove any custom value from sysconfig_modified table
 	query := `DELETE FROM sysconfig_modified WHERE name = $1`
-	
+
 	_, err := h.db.Exec(query, configName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Configuration reset to default successfully",
@@ -1788,7 +1814,7 @@ func (h *DynamicModuleHandler) handleSysconfigReset(c *gin.Context, config *Modu
 func (h *DynamicModuleHandler) generateCSVResponse(c *gin.Context, config *ModuleConfig, items []map[string]interface{}) {
 	var csvData bytes.Buffer
 	csvWriter := csv.NewWriter(&csvData)
-	
+
 	// Write header row
 	var headers []string
 	for _, field := range config.Fields {
@@ -1803,7 +1829,7 @@ func (h *DynamicModuleHandler) generateCSVResponse(c *gin.Context, config *Modul
 		}
 	}
 	csvWriter.Write(headers)
-	
+
 	// Write data rows
 	for _, item := range items {
 		var row []string
@@ -1889,9 +1915,9 @@ func (h *DynamicModuleHandler) generateCSVResponse(c *gin.Context, config *Modul
 		}
 		csvWriter.Write(row)
 	}
-	
+
 	csvWriter.Flush()
-	
+
 	// Set headers for download
 	filename := fmt.Sprintf("%s_export_%s.csv", config.Module.Name, time.Now().Format("20060102_150405"))
 	c.Header("Content-Type", "text/csv")
@@ -1903,7 +1929,7 @@ func (h *DynamicModuleHandler) generateCSVResponse(c *gin.Context, config *Modul
 func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *ModuleConfig) (string, []interface{}) {
 	var conditions []string
 	var args []interface{}
-	
+
 	// Process search parameter - search across searchable fields and their lookup display values
 	searchValue := c.Query("search")
 	if searchValue != "" {
@@ -1914,26 +1940,25 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 				// Add condition for the direct field value
 				searchConditions = append(searchConditions, config.Module.Table+"."+field.DBColumn+" ILIKE $"+fmt.Sprintf("%d", len(args)+1))
 				args = append(args, "%"+searchValue+"%")
-				
+
 				// If this field has a lookup configuration, also search in the display value
 				if field.LookupTable != "" && field.LookupDisplay != "" {
 					// Add a subquery condition to search in the lookup table's display column
 					subquery := fmt.Sprintf("%s.%s IN (SELECT %s FROM %s WHERE %s ILIKE $%d)",
-						config.Module.Table, field.DBColumn, field.LookupKey, 
+						config.Module.Table, field.DBColumn, field.LookupKey,
 						field.LookupTable, field.LookupDisplay, len(args)+1)
 					searchConditions = append(searchConditions, subquery)
 					args = append(args, "%"+searchValue+"%")
 				}
 			}
 		}
-		
-		
+
 		// If we have searchable fields, combine them with OR
 		if len(searchConditions) > 0 {
 			conditions = append(conditions, "("+strings.Join(searchConditions, " OR ")+")")
 		}
 	}
-	
+
 	// Process each configured filter
 	for _, filter := range config.Filters {
 		// Get the filter value from query parameters
@@ -1941,7 +1966,7 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 		if filterValue == "" {
 			continue // Skip empty filters
 		}
-		
+
 		// Add condition based on filter field
 		switch filter.Type {
 		case "select":
@@ -1956,7 +1981,7 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 			// Handle date range filters - expect from and to parameters
 			fromDate := c.Query("filter_" + filter.Field + "_from")
 			toDate := c.Query("filter_" + filter.Field + "_to")
-			
+
 			if fromDate != "" {
 				conditions = append(conditions, filter.Field+" >= $"+fmt.Sprintf("%d", len(args)+1))
 				args = append(args, fromDate)
@@ -1968,7 +1993,7 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 		case "multi_select":
 			// Handle multi-select filters - expect comma-separated values
 			values := strings.Split(filterValue, ",")
-			
+
 			// Special handling for users module with group filter
 			if config.Module.Name == "users" && filter.Field == "group_id" {
 				// For users, we need to join with user_groups table
@@ -1994,12 +2019,12 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 			args = append(args, filterValue)
 		}
 	}
-	
+
 	// Join conditions with AND
 	if len(conditions) > 0 {
 		return strings.Join(conditions, " AND "), args
 	}
-	
+
 	return "", nil
 }
 

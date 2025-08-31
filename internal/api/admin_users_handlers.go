@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -24,7 +25,8 @@ func HandleAdminUserGet(c *gin.Context) {
 		return
 	}
 
-	db, err := database.GetDB()
+	dbService, err := adapter.GetDatabase()
+	db := dbService.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -35,11 +37,11 @@ func HandleAdminUserGet(c *gin.Context) {
 
 	// Get user details
 	var user models.User
-	query := `
+	query := database.ConvertPlaceholders(`
 		SELECT id, login, title, first_name, last_name, valid_id
 		FROM users
-		WHERE id = $1`
-	
+		WHERE id = $1`)
+
 	err = db.QueryRow(query, id).Scan(
 		&user.ID,
 		&user.Login,
@@ -48,7 +50,7 @@ func HandleAdminUserGet(c *gin.Context) {
 		&user.LastName,
 		&user.ValidID,
 	)
-	
+
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -58,12 +60,12 @@ func HandleAdminUserGet(c *gin.Context) {
 	}
 
 	// Get user's groups
-	groupQuery := `
+	groupQuery := database.ConvertPlaceholders(`
 		SELECT g.id, g.name
 		FROM groups g
 		JOIN group_user gu ON g.id = gu.group_id
-		WHERE gu.user_id = $1 AND g.valid_id = 1`
-	
+		WHERE gu.user_id = $1 AND g.valid_id = 1`)
+
 	rows, err := db.Query(groupQuery, id)
 	if err == nil {
 		defer rows.Close()
@@ -106,7 +108,7 @@ func HandleAdminUserCreate(c *gin.Context) {
 		ValidID   int      `json:"valid_id" form:"valid_id"`
 		Groups    []string `json:"groups" form:"groups"`
 	}
-	
+
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -124,7 +126,8 @@ func HandleAdminUserCreate(c *gin.Context) {
 		return
 	}
 
-	db, err := database.GetDB()
+	dbService, err := adapter.GetDatabase()
+	db := dbService.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -135,7 +138,7 @@ func HandleAdminUserCreate(c *gin.Context) {
 
 	// Check if user already exists
 	var exists bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)", req.Login).Scan(&exists)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)"), req.Login).Scan(&exists)
 	if err == nil && exists {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -178,7 +181,7 @@ func HandleAdminUserCreate(c *gin.Context) {
 	// Add user to groups
 	for _, groupName := range req.Groups {
 		var groupID int
-		err = db.QueryRow("SELECT id FROM groups WHERE name = $1 AND valid_id = 1", groupName).Scan(&groupID)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1 AND valid_id = 1"), groupName).Scan(&groupID)
 		if err == nil {
 			db.Exec(database.ConvertPlaceholders(`
 				INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
@@ -217,7 +220,7 @@ func HandleAdminUserUpdate(c *gin.Context) {
 		ValidID   int      `json:"valid_id" form:"valid_id"`
 		Groups    []string `json:"groups" form:"groups"`
 	}
-	
+
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -226,7 +229,8 @@ func HandleAdminUserUpdate(c *gin.Context) {
 		return
 	}
 
-	db, err := database.GetDB()
+	dbService, err := adapter.GetDatabase()
+	db := dbService.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -246,7 +250,7 @@ func HandleAdminUserUpdate(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		_, err = db.Exec(database.ConvertPlaceholders(`
 			UPDATE users 
 			SET login = $1, pw = $2, first_name = $3, last_name = $4, 
@@ -273,7 +277,7 @@ func HandleAdminUserUpdate(c *gin.Context) {
 
 	// Update group memberships
 	// First, remove all existing group memberships
-	_, err = db.Exec("DELETE FROM group_user WHERE user_id = $1", id)
+	_, err = db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -288,9 +292,9 @@ func HandleAdminUserUpdate(c *gin.Context) {
 		if groupName == "" {
 			continue
 		}
-		
+
 		var groupID int
-		err = db.QueryRow("SELECT id FROM groups WHERE name = $1 AND valid_id = 1", groupName).Scan(&groupID)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1 AND valid_id = 1"), groupName).Scan(&groupID)
 		if err == nil {
 			_, err = db.Exec(database.ConvertPlaceholders(`
 				INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
@@ -317,7 +321,8 @@ func HandleAdminUserDelete(c *gin.Context) {
 		return
 	}
 
-	db, err := database.GetDB()
+	dbService, err := adapter.GetDatabase()
+	db := dbService.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -327,7 +332,7 @@ func HandleAdminUserDelete(c *gin.Context) {
 	}
 
 	// Soft delete - set valid_id = 2
-	_, err = db.Exec("UPDATE users SET valid_id = 2, change_time = NOW() WHERE id = $1", id)
+	_, err = db.Exec(database.ConvertPlaceholders("UPDATE users SET valid_id = 2, change_time = NOW() WHERE id = $1"), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -354,7 +359,8 @@ func HandleAdminUserGroups(c *gin.Context) {
 		return
 	}
 
-	db, err := database.GetDB()
+	dbService, err := adapter.GetDatabase()
+	db := dbService.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -370,7 +376,7 @@ func HandleAdminUserGroups(c *gin.Context) {
 		JOIN group_user gu ON g.id = gu.group_id
 		WHERE gu.user_id = $1 AND g.valid_id = 1
 		ORDER BY g.name`
-	
+
 	rows, err := db.Query(query, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -414,7 +420,7 @@ func HandleAdminUsersStatus(c *gin.Context) {
 	var req struct {
 		ValidID int `json:"valid_id" form:"valid_id"`
 	}
-	
+
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -423,7 +429,8 @@ func HandleAdminUsersStatus(c *gin.Context) {
 		return
 	}
 
-	db, err := database.GetDB()
+	dbService, err := adapter.GetDatabase()
+	db := dbService.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -436,7 +443,7 @@ func HandleAdminUsersStatus(c *gin.Context) {
 	if req.ValidID == 0 {
 		// Get current status to toggle
 		var currentValid int
-		err = db.QueryRow("SELECT valid_id FROM users WHERE id = $1", id).Scan(&currentValid)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT valid_id FROM users WHERE id = $1"), id).Scan(&currentValid)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
 				"success": false,
@@ -444,7 +451,7 @@ func HandleAdminUsersStatus(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		if currentValid == 1 {
 			req.ValidID = 2
 		} else {
@@ -453,7 +460,7 @@ func HandleAdminUsersStatus(c *gin.Context) {
 	}
 
 	// Update user status
-	_, err = db.Exec("UPDATE users SET valid_id = $1, change_time = NOW() WHERE id = $2", req.ValidID, id)
+	_, err = db.Exec(database.ConvertPlaceholders("UPDATE users SET valid_id = $1, change_time = NOW() WHERE id = $2"), req.ValidID, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -463,8 +470,8 @@ func HandleAdminUsersStatus(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "User status updated successfully",
+		"success":  true,
+		"message":  "User status updated successfully",
 		"valid_id": req.ValidID,
 	})
 }
@@ -480,7 +487,7 @@ func HandlePasswordPolicy(c *gin.Context) {
 		"requireDigit":     true,  // PasswordRequireDigit default
 		"requireSpecial":   false, // PasswordRequireSpecial default
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"policy":  policy,

@@ -61,7 +61,7 @@ func handleAdminServices(c *gin.Context) {
 		)
 		WHERE 1=1
 	`
-	
+
 	var args []interface{}
 	argCount := 1
 
@@ -111,7 +111,7 @@ func handleAdminServices(c *gin.Context) {
 	for rows.Next() {
 		var s ServiceWithStats
 		var comments sql.NullString
-		
+
 		err := rows.Scan(
 			&s.ID, &s.Name, &comments, &s.ValidID,
 			&s.CreateTime, &s.CreateBy, &s.ChangeTime, &s.ChangeBy,
@@ -120,11 +120,11 @@ func handleAdminServices(c *gin.Context) {
 		if err != nil {
 			continue
 		}
-		
+
 		if comments.Valid {
 			s.Comments = &comments.String
 		}
-		
+
 		services = append(services, s)
 	}
 
@@ -180,7 +180,7 @@ func handleAdminServiceCreate(c *gin.Context) {
 
 	// Check for duplicate name
 	var exists bool
-	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM service WHERE name = $1)", input.Name).Scan(&exists)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM service WHERE name = $1)"), input.Name).Scan(&exists)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -345,7 +345,7 @@ func handleAdminServiceDelete(c *gin.Context) {
 
 	// Check if service has associated tickets
 	var ticketCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE service_id = $1", id).Scan(&ticketCount)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE service_id = $1"), id).Scan(&ticketCount)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -361,7 +361,7 @@ func handleAdminServiceDelete(c *gin.Context) {
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
 		WHERE id = $1
 	`), id)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,

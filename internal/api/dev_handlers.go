@@ -21,7 +21,7 @@ func handleDevDashboard(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Load dashboard configuration from YAML
 	dashboardConfig, err := config.DefaultDashboardManager.LoadDashboard("dev-dashboard")
 	if err != nil {
@@ -37,7 +37,7 @@ func handleDevDashboard(c *gin.Context) {
 	stats := make(map[string]interface{})
 	for _, stat := range dashboardConfig.Spec.Dashboard.Stats {
 		var value interface{} = "N/A"
-		
+
 		// Execute SQL query if defined
 		if stat.Query != "" && db != nil {
 			var result int
@@ -49,7 +49,7 @@ func handleDevDashboard(c *gin.Context) {
 				}
 			}
 		}
-		
+
 		// Execute command if defined
 		if stat.Command != "" {
 			cmd := exec.Command("sh", "-c", stat.Command)
@@ -75,7 +75,7 @@ func handleDevDashboard(c *gin.Context) {
 				}
 			}
 		}
-		
+
 		stats[strings.ToLower(strings.ReplaceAll(stat.Name, " ", "_"))] = value
 	}
 
@@ -84,7 +84,7 @@ func handleDevDashboard(c *gin.Context) {
 	for i, tile := range dashboardConfig.Spec.Dashboard.Tiles {
 		colorScheme := config.DefaultDashboardManager.GetColorScheme(dashboardConfig, tile.Color)
 		iconPath := config.DefaultDashboardManager.GetIconPath(dashboardConfig, tile.Icon)
-		
+
 		tilesData[i] = map[string]interface{}{
 			"name":        tile.Name,
 			"description": tile.Description,
@@ -101,7 +101,7 @@ func handleDevDashboard(c *gin.Context) {
 	for i, action := range dashboardConfig.Spec.Dashboard.QuickActions {
 		colorScheme := config.DefaultDashboardManager.GetColorScheme(dashboardConfig, action.Color)
 		iconPath := config.DefaultDashboardManager.GetIconPath(dashboardConfig, action.Icon)
-		
+
 		actionsData[i] = map[string]interface{}{
 			"name":     action.Name,
 			"action":   action.Action,
@@ -170,7 +170,6 @@ func handleClaudeTickets(c *gin.Context) {
 		AssignedTo string
 		Articles   []Article
 	}
-
 
 	var tickets []Ticket
 	for rows.Next() {
@@ -301,7 +300,7 @@ func handleDevAction(c *gin.Context) {
 
 		// Get ticket ID from ticket number
 		var ticketID int
-		err = db.QueryRow("SELECT id FROM ticket WHERE tn = $1", req.Ticket).Scan(&ticketID)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket WHERE tn = $1"), req.Ticket).Scan(&ticketID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
 				"success": false,
@@ -353,9 +352,9 @@ func handleDevAction(c *gin.Context) {
 		`), ticketID).Scan(&currentStateID, &currentStateName)
 		if err == nil {
 			// If ticket is in a closed state, reopen it
-			if strings.Contains(strings.ToLower(currentStateName), "closed") || 
-			   strings.Contains(strings.ToLower(currentStateName), "removed") ||
-			   strings.Contains(strings.ToLower(currentStateName), "merged") {
+			if strings.Contains(strings.ToLower(currentStateName), "closed") ||
+				strings.Contains(strings.ToLower(currentStateName), "removed") ||
+				strings.Contains(strings.ToLower(currentStateName), "merged") {
 				// Get the ID for 'open' state
 				var openStateID int
 				err = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'open' LIMIT 1").Scan(&openStateID)
@@ -407,7 +406,7 @@ func handleDevAction(c *gin.Context) {
 
 		// Get state ID from state name
 		var stateID int
-		err = db.QueryRow("SELECT id FROM ticket_state WHERE name = $1", req.Status).Scan(&stateID)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = $1"), req.Status).Scan(&stateID)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -551,7 +550,7 @@ func handleDevDatabase(c *gin.Context) {
 				queryResult = fmt.Sprintf("Error: %v", err)
 			} else {
 				defer rows.Close()
-				
+
 				// Get column names
 				columns, err := rows.Columns()
 				if err != nil {
@@ -559,14 +558,14 @@ func handleDevDatabase(c *gin.Context) {
 				} else {
 					// Prepare result structure
 					var results []map[string]interface{}
-					
+
 					// Create a slice of interface{} to hold each column value
 					values := make([]interface{}, len(columns))
 					valuePtrs := make([]interface{}, len(columns))
 					for i := range values {
 						valuePtrs[i] = &values[i]
 					}
-					
+
 					// Fetch all rows
 					for rows.Next() {
 						err := rows.Scan(valuePtrs...)
@@ -574,7 +573,7 @@ func handleDevDatabase(c *gin.Context) {
 							queryResult = fmt.Sprintf("Error scanning row: %v", err)
 							break
 						}
-						
+
 						// Create a map for this row
 						row := make(map[string]interface{})
 						for i, col := range columns {
@@ -591,14 +590,14 @@ func handleDevDatabase(c *gin.Context) {
 						}
 						results = append(results, row)
 					}
-					
+
 					// Format results as a table-like string
 					if len(results) == 0 {
 						queryResult = "No rows returned"
 					} else {
 						// Build formatted output
 						var output strings.Builder
-						
+
 						// Header
 						for i, col := range columns {
 							if i > 0 {
@@ -609,7 +608,7 @@ func handleDevDatabase(c *gin.Context) {
 						output.WriteString("\n")
 						output.WriteString(strings.Repeat("-", len(output.String())))
 						output.WriteString("\n")
-						
+
 						// Rows
 						for _, row := range results {
 							for i, col := range columns {
@@ -620,7 +619,7 @@ func handleDevDatabase(c *gin.Context) {
 							}
 							output.WriteString("\n")
 						}
-						
+
 						queryResult = output.String()
 					}
 				}
@@ -643,24 +642,24 @@ func handleDevDatabase(c *gin.Context) {
 func RegisterDevRoutes(r *gin.RouterGroup) {
 	// Note: Routes are now handled via YAML configuration files
 	// See routes/dev/*.yaml for route definitions
-	
+
 	// Commented out - now handled by YAML routes
 	// // Main dashboard
 	// r.GET("", handleDevDashboard)
 	// r.GET("/", handleDevDashboard)
-	// 
+	//
 	// // Tools
 	// r.GET("/claude-tickets", handleClaudeTickets)
 	// r.GET("/database", handleDevDatabase)
 	// r.POST("/database", handleDevDatabase)
 	// r.GET("/logs", handleDevLogs)
-	// 
+	//
 	// // Server-Sent Events for real-time updates
 	// r.GET("/tickets/events", handleTicketEvents)
-	// 
+	//
 	// // Actions
 	// r.POST("/action/:action", handleDevAction)
-	// 
+	//
 	// // TODO: Add more dev tools as needed
 	// // dev.GET("/api-tester", handleAPITester)
 	// // dev.GET("/templates", handleTemplatePlayground)
