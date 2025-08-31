@@ -93,6 +93,15 @@ var (
 	HandleTicketDetail = handleTicketDetail
 )
 
+// Dev handlers
+var (
+	HandleDevDashboard = handleDevDashboard
+	HandleClaudeTickets = handleClaudeTickets
+	HandleDevAction = handleDevAction
+	HandleDevLogs = handleDevLogs
+	HandleDevDatabase = handleDevDatabase
+)
+
 // GetPongo2Renderer returns the pongo2 renderer for template rendering
 func GetPongo2Renderer() *Pongo2Renderer {
 	return pongo2Renderer

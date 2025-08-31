@@ -1,0 +1,109 @@
+apiVersion: gotrs.io/v1alpha1
+kind: RouteGroup
+metadata:
+  name: dev-dashboard
+  description: "Developer dashboard and tools - admin only"
+  version: "1.0.0"
+  created: "2025-08-31"
+
+spec:
+  prefix: /dev
+  middleware:
+    - auth # Require authentication
+    - admin # Require admin role
+  routes:
+    # Main dashboard
+    - path: ""
+      method: GET
+      handler: handleDevDashboard
+      description: "Developer dashboard main page"
+      template: "pages/dev/dashboard.pongo2"
+
+    - path: "/"
+      method: GET
+      handler: handleDevDashboard
+      description: "Developer dashboard main page (root)"
+      template: "pages/dev/dashboard.pongo2"
+
+    # Claude tickets monitoring
+    - path: "/claude-tickets"
+      method: GET
+      handler: handleClaudeTickets
+      description: "Monitor Claude Code queue tickets"
+      template: "pages/dev/claude_tickets.pongo2"
+
+    # Database explorer
+    - path: "/database"
+      method: GET
+      handler: handleDevDatabase
+      description: "Database explorer and query tool"
+      template: "pages/dev/database.pongo2"
+
+    - path: "/database"
+      method: POST
+      handler: handleDevDatabase
+      description: "Execute database queries"
+      template: "pages/dev/database.pongo2"
+
+    # Log viewer
+    - path: "/logs"
+      method: GET
+      handler: handleDevLogs
+      description: "View and search application logs"
+      template: "pages/dev/logs.pongo2"
+
+    # Dynamic dashboard
+    - path: "/dashboard-dynamic"
+      method: GET
+      handler: handleDevDashboard
+      description: "Dynamic developer dashboard"
+      template: "pages/dev/dashboard_dynamic.pongo2"
+
+    # Server-Sent Events for real-time updates
+    - path: "/tickets/events"
+      method: GET
+      handler: handleDevAction
+      description: "Real-time ticket events stream"
+
+    # Actions
+    - path: "/action/:action"
+      method: POST
+      handler: handleDevAction
+      description: "Execute developer actions"
+
+    # TODO: Add more dev tools as needed
+    # - path: "/api-tester"
+    #   method: GET
+    #   handler: handleAPITester
+    #   description: "API testing tool"
+    #   template: "pages/dev/api_tester.pongo2"
+
+    # - path: "/templates"
+    #   method: GET
+    #   handler: handleTemplatePlayground
+    #   description: "Pongo2 template playground"
+    #   template: "pages/dev/templates.pongo2"
+
+    # - path: "/services"
+    #   method: GET
+    #   handler: handleServiceMonitor
+    #   description: "Service monitoring"
+    #   template: "pages/dev/services.pongo2"
+
+    # - path: "/migrations"
+    #   method: GET
+    #   handler: handleMigrationManager
+    #   description: "Database migration manager"
+    #   template: "pages/dev/migrations.pongo2"
+
+    # - path: "/websocket"
+    #   method: GET
+    #   handler: handleWebSocketTest
+    #   description: "WebSocket testing tool"
+    #   template: "pages/dev/websocket.pongo2"
+
+    # - path: "/tests"
+    #   method: GET
+    #   handler: handleTestRunner
+    #   description: "Test runner and monitor"
+    #   template: "pages/dev/tests.pongo2"

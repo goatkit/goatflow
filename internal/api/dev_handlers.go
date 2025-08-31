@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 )
 
 // handleDevDashboard shows the main developer dashboard
@@ -31,7 +32,13 @@ func handleDevDashboard(c *gin.Context) {
 		return
 	}
 
-	db, _ := database.GetDB()
+	db, err := adapter.GetDB()
+	if err != nil {
+		pongo2Renderer.HTML(c, http.StatusInternalServerError, "error.pongo2", pongo2.Context{
+			"error": "Database connection failed",
+		})
+		return
+	}
 
 	// Calculate stats from YAML configuration
 	stats := make(map[string]interface{})
@@ -125,7 +132,13 @@ func handleDevDashboard(c *gin.Context) {
 
 // handleClaudeTickets shows the Claude ticket monitoring interface
 func handleClaudeTickets(c *gin.Context) {
-	db, _ := database.GetDB()
+	db, err := adapter.GetDB()
+	if err != nil {
+		pongo2Renderer.HTML(c, http.StatusInternalServerError, "error.pongo2", pongo2.Context{
+			"error": "Database connection failed",
+		})
+		return
+	}
 
 	// Get all tickets from Claude Code queue
 	rows, err := db.Query(database.ConvertPlaceholders(`
@@ -235,8 +248,15 @@ func handleDevAction(c *gin.Context) {
 	case "clear-cache":
 		// Clear various caches
 		// For now, just clear session storage
-		db, _ := database.GetDB()
-		_, err := db.Exec("DELETE FROM sessions WHERE create_time < NOW() - INTERVAL '1 hour'")
+		db, err := adapter.GetDB()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"message": "Database connection failed",
+			})
+			return
+		}
+		_, err = db.Exec(database.ConvertPlaceholders("DELETE FROM sessions WHERE create_time < NOW() - INTERVAL '1 hour'"))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -289,7 +309,7 @@ func handleDevAction(c *gin.Context) {
 			return
 		}
 
-		db, err := database.GetDB()
+		db, err := adapter.GetDB()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -444,7 +464,7 @@ func handleDevAction(c *gin.Context) {
 
 	case "get-ticket-states":
 		// Get available ticket states for dropdown
-		db, err := database.GetDB()
+		db, err := adapter.GetDB()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -453,7 +473,7 @@ func handleDevAction(c *gin.Context) {
 			return
 		}
 
-		rows, err := db.Query("SELECT id, name FROM ticket_state ORDER BY name")
+		rows, err := db.Query(database.ConvertPlaceholders("SELECT id, name FROM ticket_state ORDER BY name"))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
@@ -515,7 +535,13 @@ func handleDevLogs(c *gin.Context) {
 
 // handleDevDatabase shows database explorer
 func handleDevDatabase(c *gin.Context) {
-	db, _ := database.GetDB()
+	db, err := adapter.GetDB()
+	if err != nil {
+		pongo2Renderer.HTML(c, http.StatusInternalServerError, "error.pongo2", pongo2.Context{
+			"error": "Database connection failed",
+		})
+		return
+	}
 
 	// Get list of tables
 	rows, err := db.Query(database.ConvertPlaceholders(`
