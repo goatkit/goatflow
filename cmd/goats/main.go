@@ -168,6 +168,10 @@ func main() {
 		"handleRemoveUserFromGroup":    api.HandleRemoveUserFromGroup,
 		"handleAdminQueues":            api.HandleAdminQueues,
 		"handleAdminPriorities":        api.HandleAdminPriorities,
+		// Queue API handlers
+		"HandleAPIQueueGet":            api.HandleAPIQueueGet,
+		"HandleAPIQueueDetails":        api.HandleAPIQueueDetails,
+		"HandleAPIQueueStatus":         api.HandleAPIQueueStatus,
 		"handleAdminPermissions":       api.HandleAdminPermissions,
 		"handleAdminStates":            api.HandleAdminStates,
 		"handleAdminTypes":             api.HandleAdminTypes,

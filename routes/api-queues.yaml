@@ -1,0 +1,28 @@
+# Queue API Routes Configuration
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: api-queues
+  description: "Queue API endpoints for frontend"
+  namespace: default
+  enabled: true
+spec:
+  prefix: /api
+  middleware:
+    - auth # Require authentication
+  routes:
+  # Queue endpoints
+  - path: /queues/:id
+    method: GET
+    handler: HandleAPIQueueGet
+    description: "Get queue by ID"
+    
+  - path: /queues/:id/details
+    method: GET
+    handler: HandleAPIQueueDetails
+    description: "Get queue details"
+    
+  - path: /queues/:id/status
+    method: PUT
+    handler: HandleAPIQueueStatus
+    description: "Update queue status"
