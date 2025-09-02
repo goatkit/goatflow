@@ -21,6 +21,10 @@ func TestAdminGroupManagement(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	t.Run("ListGroups_ShowsAllGroups", func(t *testing.T) {
+        if err := database.InitTestDB(); err != nil {
+            t.Skip("Database not available")
+        }
+        defer database.CloseTestDB()
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
@@ -34,6 +38,10 @@ func TestAdminGroupManagement(t *testing.T) {
 	})
 
 	t.Run("SearchGroups_FiltersResults", func(t *testing.T) {
+        if err := database.InitTestDB(); err != nil {
+            t.Skip("Database not available")
+        }
+        defer database.CloseTestDB()
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
@@ -47,6 +55,10 @@ func TestAdminGroupManagement(t *testing.T) {
 	})
 
 	t.Run("CreateGroup_ValidData", func(t *testing.T) {
+        if err := database.InitTestDB(); err != nil {
+            t.Skip("Database not available")
+        }
+        defer database.CloseTestDB()
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
@@ -71,6 +83,10 @@ func TestAdminGroupManagement(t *testing.T) {
 	})
 
 	t.Run("CreateGroup_DuplicateName", func(t *testing.T) {
+        if err := database.InitTestDB(); err != nil {
+            t.Skip("Database not available")
+        }
+        defer database.CloseTestDB()
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
@@ -94,7 +110,12 @@ func TestAdminGroupManagement(t *testing.T) {
 	})
 
 	t.Run("UpdateGroup_ValidData", func(t *testing.T) {
-		db, err := database.GetDB()
+        if err := database.InitTestDB(); err != nil {
+            t.Skip("Database not available")
+        }
+        defer database.CloseTestDB()
+
+        db, err := database.GetDB()
 		if err != nil {
 			t.Skip("Database not available")
 		}
@@ -142,7 +163,12 @@ func TestAdminGroupManagement(t *testing.T) {
 	})
 
 	t.Run("DeleteGroup_SoftDelete", func(t *testing.T) {
-		db, err := database.GetDB()
+        if err := database.InitTestDB(); err != nil {
+            t.Skip("Database not available")
+        }
+        defer database.CloseTestDB()
+
+        db, err := database.GetDB()
 		if err != nil {
 			t.Skip("Database not available")
 		}
@@ -190,6 +216,10 @@ func TestAdminGroupManagement(t *testing.T) {
 	})
 
 	t.Run("GetGroupPermissions", func(t *testing.T) {
+        if err := database.InitTestDB(); err != nil {
+            t.Skip("Database not available")
+        }
+        defer database.CloseTestDB()
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
@@ -205,6 +235,10 @@ func TestAdminGroupManagement(t *testing.T) {
 	})
 
 	t.Run("UpdateGroupPermissions", func(t *testing.T) {
+        if err := database.InitTestDB(); err != nil {
+            t.Skip("Database not available")
+        }
+        defer database.CloseTestDB()
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
