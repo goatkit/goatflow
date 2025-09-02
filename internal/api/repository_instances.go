@@ -3,6 +3,7 @@ package api
 import (
 	"log"
 	"sync"
+	"os"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
@@ -44,8 +45,12 @@ func InitializeServices() {
 		// Initialize lookup service
 		lookupService = service.NewLookupService()
 		
-		// Initialize storage service - no fallback
-		storageService, err = service.NewLocalStorageService("./storage")
+        // Initialize storage service - respect STORAGE_PATH env, fallback to ./storage
+        storagePath := os.Getenv("STORAGE_PATH")
+        if storagePath == "" {
+            storagePath = "./storage"
+        }
+        storageService, err = service.NewLocalStorageService(storagePath)
 		if err != nil {
 			log.Fatalf("FATAL: Cannot initialize storage service: %v", err)
 		}
