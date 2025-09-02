@@ -285,6 +285,10 @@ func TestGroupValidation(t *testing.T) {
 
 func TestGroupFiltering(t *testing.T) {
 	t.Run("FilterByStatus", func(t *testing.T) {
+        if err := database.InitTestDB(); err != nil {
+            t.Skip("Database not available")
+        }
+        defer database.CloseTestDB()
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
@@ -306,6 +310,10 @@ func TestGroupFiltering(t *testing.T) {
 	})
 
 	t.Run("SortGroups", func(t *testing.T) {
+        if err := database.InitTestDB(); err != nil {
+            t.Skip("Database not available")
+        }
+        defer database.CloseTestDB()
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
