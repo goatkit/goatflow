@@ -456,3 +456,5 @@ debug_*.go
 docs/temp/
 *.temp.md
 *.draft.md
+bin/
+import-otrs
