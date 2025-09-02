@@ -29,9 +29,10 @@ else
 VZ :=
 endif
 
-# Ensure Go caches exist for toolbox runs
+# Ensure Go caches exist for toolbox runs (writable by container user)
 define ensure_caches
 @mkdir -p .cache/go-build .cache/go-mod
+@chmod -R 0777 .cache || true
 endef
 
 # Common run flags
@@ -402,7 +403,7 @@ toolbox-run:
 	@$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm -it \
         --security-opt label=disable \
-        -v "$$PWD:/workspace" \
+        -v "$$PWD:/workspace$(VZ)" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/workspace/.cache/go-build \
@@ -416,7 +417,7 @@ toolbox-exec:
 	@$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
-        -v "$$PWD:/workspace" \
+        -v "$$PWD:/workspace$(VZ)" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/workspace/.cache/go-build \
@@ -432,7 +433,7 @@ toolbox-compile:
 	@$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
-        -v "$$PWD:/workspace" \
+        -v "$$PWD:/workspace$(VZ)" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/workspace/.cache/go-build \
@@ -447,7 +448,7 @@ toolbox-compile-api:
 	@$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
-        -v "$$PWD:/workspace" \
+        -v "$$PWD:/workspace$(VZ)" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/workspace/.cache/go-build \
@@ -489,15 +490,15 @@ toolbox-test-api: toolbox-build
 	@$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
-        -v "$$PWD:/workspace" \
+        -v "$$PWD:/workspace$(VZ)" \
 		-w /workspace \
-		-e GOCACHE=/tmp/gocache \
-		-e GOMODCACHE=/tmp/gomodcache \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e APP_ENV=test \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
 		gotrs-toolbox:latest \
-		bash -lc 'mkdir -p $$GOCACHE $$GOMODCACHE; export PATH=/usr/local/go/bin:$$PATH; go test -v ./internal/api -run "Queue|Article|Search|Priority|User"'
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -v ./internal/api -run "Queue|Article|Search|Priority|User"'
 
 # Run core tests (cmd/goats + internal/api + generated/tdd-comprehensive)
 toolbox-test:
@@ -506,16 +507,16 @@ toolbox-test:
 	@$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
-        -v "$$PWD:/workspace" \
+        -v "$$PWD:/workspace$(VZ)" \
 		-w /workspace \
-		-e GOCACHE=/tmp/gocache \
-		-e GOMODCACHE=/tmp/gomodcache \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e APP_ENV=test \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		gotrs-toolbox:latest \
-		bash -lc 'mkdir -p $$GOCACHE $$GOMODCACHE; export PATH=/usr/local/go/bin:$$PATH; pkgs="./cmd/goats ./internal/api ./generated/tdd-comprehensive"; echo Running: $$pkgs; go test -v $$pkgs'
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; pkgs="./cmd/goats ./internal/api ./generated/tdd-comprehensive"; echo Running: $$pkgs; go test -v $$pkgs'
 
 # Run a specific test pattern across all packages
 toolbox-test-run:
@@ -524,17 +525,17 @@ toolbox-test-run:
 	@$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
-        -v "$$PWD:/workspace" \
+        -v "$$PWD:/workspace$(VZ)" \
 		-w /workspace \
 		--network host \
-		-e GOCACHE=/tmp/gocache \
-		-e GOMODCACHE=/tmp/gomodcache \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e APP_ENV=test \
 		gotrs-toolbox:latest \
-		bash -lc 'mkdir -p $$GOCACHE $$GOMODCACHE; export PATH=/usr/local/go/bin:$$PATH; go test -v -run "$(TEST)" ./...'
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -v -run "$(TEST)" ./...'
 
 # Run a specific Go file
 toolbox-run-file:
