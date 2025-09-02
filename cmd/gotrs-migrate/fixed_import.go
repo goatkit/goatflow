@@ -337,13 +337,13 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 							incoming_time, content_path, create_time, create_by,
 							change_time, change_by
 						) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-					`, newArticleID, values[2], parseNull(values[3]), parseNull(values[4]), 
+					`), newArticleID, values[2], parseNull(values[3]), parseNull(values[4]),
 					   parseNull(values[5]), parseNull(values[6]), values[7], parseNull(values[8]),
 					   parseNull(values[9]), parseNull(values[10]), parseNull(values[11]),
 					   parseNull(values[12]), values[13], parseIntOrNull(values[14]),
 					   parseNull(values[15]), values[16], parseIntOrNull(values[17]),
 					   values[18], parseIntOrNull(values[19]))
-					
+
 					if err != nil {
 						if verbose {
 							log.Printf("Warning: Failed to insert article_data_mime for article %d: %v", newArticleID, err)
@@ -379,13 +379,13 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 								valid_id, create_time, create_by, change_time, change_by
 							) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 							ON CONFLICT (login) DO NOTHING
-						`, values[1], values[2], values[3], parseNull(values[4]), parseNull(values[5]),
-						   parseNull(values[6]), parseNull(values[7]), parseNull(values[8]), 
+						`), values[1], values[2], values[3], parseNull(values[4]), parseNull(values[5]),
+						   parseNull(values[6]), parseNull(values[7]), parseNull(values[8]),
 						   parseNull(values[9]), parseNull(values[10]), parseNull(values[11]),
 						   parseNull(values[12]), parseNull(values[13]), parseNull(values[14]),
 						   parseNull(values[15]), parseIntOrNull(values[16]), values[17],
 						   parseIntOrNull(values[18]), values[19], parseIntOrNull(values[20]))
-						
+
 						if err != nil {
 							if verbose {
 								log.Printf("Warning: Failed to insert customer_user %s: %v", values[1], err)
@@ -439,13 +439,13 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 								name = EXCLUDED.name,
 								group_id = EXCLUDED.group_id,
 								valid_id = EXCLUDED.valid_id
-						`, parseIntOrNull(values[0]), values[1], parseIntOrNull(values[2]),
+						`), parseIntOrNull(values[0]), values[1], parseIntOrNull(values[2]),
 						   parseIntOrNull(values[3]), salutationID, parseIntOrNull(values[5]),
 						   parseIntOrNull(values[6]), parseIntOrNull(values[7]), parseIntOrNull(values[8]),
 						   parseNull(values[9]), parseNull(values[10]), parseNull(values[11]),
 						   validID, parseTimestamp(values[13]),
 						   parseIntOrNull(values[14]), parseTimestamp(values[15]), parseIntOrNull(values[16]))
-						
+
 						if err != nil {
 							if verbose {
 								log.Printf("Warning: Failed to insert queue: %v", err)
@@ -484,10 +484,10 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 								name = EXCLUDED.name,
 								comments = EXCLUDED.comments,
 								valid_id = EXCLUDED.valid_id
-						`, parseIntOrNull(values[0]), values[1], parseNull(values[2]),
+						`), parseIntOrNull(values[0]), values[1], parseNull(values[2]),
 						   parseIntOrNull(values[3]), parseTimestamp(values[4]),
 						   parseIntOrNull(values[5]), parseTimestamp(values[6]), parseIntOrNull(values[7]))
-						
+
 						if err != nil {
 							if verbose {
 								log.Printf("Warning: Failed to insert group: %v", err)
@@ -529,11 +529,11 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 								first_name = EXCLUDED.first_name,
 								last_name = EXCLUDED.last_name,
 								valid_id = EXCLUDED.valid_id
-						`, parseIntOrNull(values[0]), values[1], values[2],
+						`), parseIntOrNull(values[0]), values[1], values[2],
 						   parseNull(values[3]), parseNull(values[4]), parseNull(values[5]),
 						   parseIntOrNull(values[6]), parseTimestamp(values[7]),
 						   parseIntOrNull(values[8]), parseTimestamp(values[9]), parseIntOrNull(values[10]))
-						
+
 						if err != nil {
 							if verbose {
 								log.Printf("Warning: Failed to insert user: %v", err)
@@ -571,7 +571,7 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 							ON CONFLICT (id) DO UPDATE SET
 								name = EXCLUDED.name,
 								valid_id = EXCLUDED.valid_id
-						`, parseIntOrNull(values[0]), values[1], parseIntOrNull(values[2]),
+						`), parseIntOrNull(values[0]), values[1], parseIntOrNull(values[2]),
 						   parseTimestamp(values[3]), parseIntOrNull(values[4]),
 						   parseTimestamp(values[5]), parseIntOrNull(values[6]))
 						
@@ -614,7 +614,7 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 								comments = EXCLUDED.comments,
 								type_id = EXCLUDED.type_id,
 								valid_id = EXCLUDED.valid_id
-						`, parseIntOrNull(values[0]), values[1], parseNull(values[2]),
+						`), parseIntOrNull(values[0]), values[1], parseNull(values[2]),
 						   parseIntOrNull(values[3]), parseIntOrNull(values[4]),
 						   parseTimestamp(values[5]), parseIntOrNull(values[6]),
 						   parseTimestamp(values[7]), parseIntOrNull(values[8]))
@@ -688,7 +688,7 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 								type_id, queue_id, owner_id, priority_id,
 								state_id, create_time, create_by, change_time, change_by
 							) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-						`, values[1], historyTypeID, newTicketID, 
+						`), values[1], historyTypeID, newTicketID,
 						   articleIDVal, parseIntOrNull(values[5]),
 						   parseIntOrNull(values[6]), parseIntOrNull(values[7]),
 						   parseIntOrNull(values[8]), parseIntOrNull(values[9]),

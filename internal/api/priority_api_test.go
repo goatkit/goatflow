@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+    "time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -16,14 +17,16 @@ import (
 
 func TestPriorityAPI(t *testing.T) {
 	// Initialize test database
-	database.InitTestDB()
-	defer database.CloseTestDB()
+    if err := database.InitTestDB(); err != nil {
+        t.Skip("Database not available; skipping priority API test")
+    }
+    defer database.CloseTestDB()
 
 	// Create test JWT manager
-	jwtManager := auth.NewJWTManager("test-secret")
+    jwtManager := auth.NewJWTManager("test-secret", time.Hour)
 
 	// Create test token
-	token, _ := jwtManager.GenerateToken(1, "testuser", 1)
+    token, _ := jwtManager.GenerateToken(1, "testuser@example.com", "Agent", 0)
 
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)

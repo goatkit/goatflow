@@ -1,0 +1,1 @@
+To resume this session: cursor-agent --resume=47c3aeda-9a63-4301-a78b-fdb062c2ea0d

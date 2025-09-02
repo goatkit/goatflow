@@ -1,19 +1,19 @@
 package api
 
 import (
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
-	"os"
-	"strconv"
-	"strings"
-	"testing"
+    "encoding/json"
+    "net/http"
+    "net/http/httptest"
+    "net/url"
+    "os"
+    "strconv"
+    "strings"
+    "testing"
 
-	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+    "github.com/gin-gonic/gin"
+    "github.com/gotrs-io/gotrs-ce/internal/database"
+    "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/require"
 )
 
 // This test focuses on the EXACT scenario the user reported:
@@ -60,7 +60,7 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 
 		// Get test user's ID
 		var testUserID int
-		testUsername := os.Getenv("TEST_USERNAME")
+    testUsername := os.Getenv("TEST_USERNAME")
 		if testUsername == "" {
 			testUsername = "testuser"
 		}
@@ -104,10 +104,14 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 			t.Skip("Database not available")
 		}
 
-		// Get test user's ID and current data
-		var testUserID int
-		var firstName, lastName, login string
-		err = db.QueryRow("SELECT id, login, first_name, last_name FROM users WHERE login = $1", testUsername).Scan(&testUserID, &login, &firstName, &lastName)
+        // Get test user's ID and current data
+        var testUserID int
+        var firstName, lastName, login string
+        testUsernameLocal := os.Getenv("TEST_USERNAME")
+        if testUsernameLocal == "" {
+            testUsernameLocal = "testuser"
+        }
+        err = db.QueryRow("SELECT id, login, first_name, last_name FROM users WHERE login = $1", testUsernameLocal).Scan(&testUserID, &login, &firstName, &lastName)
 		if err != nil {
 			t.Skip("Test user not found")
 		}

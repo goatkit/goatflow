@@ -529,10 +529,10 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 			if _, parseErr := fmt.Sscanf(ticketID, "%d", &id); parseErr == nil {
 				log.Printf("Debug: Parsed as numeric ID: %d, calling GetByID", id)
 				ticket, err = ticketRepo.GetByID(uint(id))
-			} else {
-				log.Printf("Debug: Failed to parse as numeric ID, calling GetByTicketNumber", ticketID)
-				ticket, err = ticketRepo.GetByTicketNumber(ticketID)
-			}
+            } else {
+                log.Printf("Debug: Failed to parse as numeric ID, calling GetByTicketNumber: %s", ticketID)
+                ticket, err = ticketRepo.GetByTicketNumber(ticketID)
+            }
 		} else {
 			// Longer IDs are likely ticket numbers
 			log.Printf("Debug: Long ID '%s', calling GetByTicketNumber", ticketID)

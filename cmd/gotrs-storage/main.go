@@ -326,13 +326,13 @@ func showStatus(ctx context.Context, db *sql.DB, fsPath string, verbose bool) er
 	
 	if fsReferences > 0 && verbose {
 		// Show sample files
-		rows, _ := db.Query(database.ConvertPlaceholders(`
-			SELECT article_id, file_name, file_size, created_time 
-			FROM article_storage_references 
-			WHERE backend = 'FS' 
-			ORDER BY created_time DESC 
-			LIMIT 5`)
-		defer rows.Close()
+        rows, _ := db.Query(database.ConvertPlaceholders(`
+            SELECT article_id, file_name, file_size, created_time 
+            FROM article_storage_references 
+            WHERE backend = 'FS' 
+            ORDER BY created_time DESC 
+            LIMIT 5`))
+        defer rows.Close()
 		
 		fmt.Println("\n  Recent Files:")
 		for rows.Next() {
@@ -354,13 +354,13 @@ func showStatus(ctx context.Context, db *sql.DB, fsPath string, verbose bool) er
 	if activeMigrations > 0 {
 		fmt.Printf("\nActive Migrations: %d\n", activeMigrations)
 		
-		rows, _ := db.Query(database.ConvertPlaceholders(`
-			SELECT id, source_backend, target_backend, status, 
-			       processed_articles, total_articles, start_time
-			FROM article_storage_migration 
-			WHERE status IN ('pending', 'in_progress')
-			ORDER BY id DESC`)
-		defer rows.Close()
+        rows, _ := db.Query(database.ConvertPlaceholders(`
+            SELECT id, source_backend, target_backend, status, 
+                   processed_articles, total_articles, start_time
+            FROM article_storage_migration 
+            WHERE status IN ('pending', 'in_progress')
+            ORDER BY id DESC`))
+        defer rows.Close()
 		
 		for rows.Next() {
 			var id int

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -73,8 +72,9 @@ func TestGetPriorities(t *testing.T) {
 			
 			tt.setupMock(mock)
 			
-			router := gin.New()
-			router.GET("/api/priorities", handleGetPriorities)
+            router := gin.New()
+            router.Use(func(c *gin.Context) { c.Set("user_id", 1); c.Next() })
+            router.GET("/api/priorities", HandleListPrioritiesAPI)
 			
 			req, _ := http.NewRequest("GET", "/api/priorities", nil)
 			w := httptest.NewRecorder()
@@ -174,8 +174,10 @@ func TestCreatePriority(t *testing.T) {
 			
 			tt.setupMock(mock)
 			
-			router := gin.New()
-			router.POST("/api/priorities", handleCreatePriority)
+            router := gin.New()
+            // Auth shim for handlers requiring user_id
+            router.Use(func(c *gin.Context) { c.Set("user_id", 1); c.Next() })
+            router.POST("/api/priorities", HandleCreatePriorityAPI)
 			
 			body, _ := json.Marshal(tt.body)
 			req, _ := http.NewRequest("POST", "/api/priorities", bytes.NewBuffer(body))
@@ -280,8 +282,9 @@ func TestUpdatePriority(t *testing.T) {
 			
 			tt.setupMock(mock)
 			
-			router := gin.New()
-			router.PUT("/api/priorities/:id", handleUpdatePriority)
+            router := gin.New()
+            router.Use(func(c *gin.Context) { c.Set("user_id", 1); c.Next() })
+            router.PUT("/api/priorities/:id", HandleUpdatePriorityAPI)
 			
 			body, _ := json.Marshal(tt.body)
 			req, _ := http.NewRequest("PUT", "/api/priorities/"+tt.priorityID, bytes.NewBuffer(body))
@@ -373,8 +376,9 @@ func TestDeletePriority(t *testing.T) {
 			
 			tt.setupMock(mock)
 			
-			router := gin.New()
-			router.DELETE("/api/priorities/:id", handleDeletePriority)
+            router := gin.New()
+            router.Use(func(c *gin.Context) { c.Set("user_id", 1); c.Next() })
+            router.DELETE("/api/priorities/:id", HandleDeletePriorityAPI)
 			
 			req, _ := http.NewRequest("DELETE", "/api/priorities/"+tt.priorityID, nil)
 			w := httptest.NewRecorder()

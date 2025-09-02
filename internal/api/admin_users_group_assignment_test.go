@@ -190,11 +190,11 @@ func setupGroupAssignmentTestUser(t *testing.T, db *sql.DB) TestUser {
 	// Create test user
 	login := "test_group_user_" + randomString(8)
 	var userID int
-	err := db.QueryRow(database.ConvertPlaceholders(`
-		INSERT INTO users (login, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, 1, NOW(), 1, NOW(), 1)
-		RETURNING id`,
-		login, "Test", "User").Scan(&userID)
+    query := database.ConvertPlaceholders(`
+        INSERT INTO users (login, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+        VALUES ($1, $2, $3, 1, NOW(), 1, NOW(), 1)
+        RETURNING id`)
+    err := db.QueryRow(query, login, "Test", "User").Scan(&userID)
 	require.NoError(t, err, "Failed to create test user")
 
 	return TestUser{
@@ -236,12 +236,13 @@ func verifyTestGroups(t *testing.T, db *sql.DB) []TestGroup {
 }
 
 func getUserGroupsFromDB(t *testing.T, db *sql.DB, userID int) []string {
-	rows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT g.name 
-		FROM groups g
-		JOIN group_user gu ON g.id = gu.group_id
-		WHERE gu.user_id = $1 AND g.valid_id = 1
-		ORDER BY g.name`, userID)
+    sqlQuery := database.ConvertPlaceholders(`
+        SELECT g.name 
+        FROM groups g
+        JOIN group_user gu ON g.id = gu.group_id
+        WHERE gu.user_id = $1 AND g.valid_id = 1
+        ORDER BY g.name`)
+    rows, err := db.Query(sqlQuery, userID)
 	require.NoError(t, err, "Failed to query user groups")
 	defer rows.Close()
 
@@ -262,11 +263,11 @@ func assignUserToGroups(t *testing.T, db *sql.DB, userID int, groupNames []strin
 		err := db.QueryRow("SELECT id FROM groups WHERE name = $1 AND valid_id = 1", groupName).Scan(&groupID)
 		require.NoError(t, err, "Group %s should exist", groupName)
 
-		_, err = db.Exec(database.ConvertPlaceholders(`
+        _, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
 			VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)
-			ON CONFLICT (user_id, group_id, permission_key) DO NOTHING`,
-			userID, groupID)
+            ON CONFLICT (user_id, group_id, permission_key) DO NOTHING`),
+            userID, groupID)
 		require.NoError(t, err, "Failed to assign user to group %s", groupName)
 	}
 }

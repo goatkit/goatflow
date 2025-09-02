@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,10 @@ import (
 
 func TestHandleGetQueues(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+    // Lookup service pulls from DB; skip when DB unavailable
+    if err := database.InitTestDB(); err != nil {
+        t.Skip("Database not available; skipping lookups test")
+    }
 	
 	tests := []struct {
 		name           string

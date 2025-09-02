@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	_ "github.com/lib/pq"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 func main() {

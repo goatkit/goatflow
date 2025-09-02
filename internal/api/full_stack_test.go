@@ -282,7 +282,7 @@ func createTestTicket(t *testing.T, router *gin.Engine) int {
 
 // TestDatabaseIntegrity verifies our database operations maintain referential integrity
 func TestDatabaseIntegrity(t *testing.T) {
-	err := database.InitDB()
+    err := database.InitTestDB()
 	require.NoError(t, err)
 	
 	db, err := database.GetDB()
@@ -290,10 +290,10 @@ func TestDatabaseIntegrity(t *testing.T) {
 	
 	t.Run("Verify foreign key constraints work", func(t *testing.T) {
 		// Try to create an article for non-existent ticket
-		_, err := db.Exec(database.ConvertPlaceholders(`
+        _, err := db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO article (ticket_id, subject, body, create_by, change_by)
-			VALUES (999999, 'Test', 'Test', 1, 1)
-		`)
+            VALUES (999999, 'Test', 'Test', 1, 1)
+        `))
 		
 		assert.Error(t, err, "Should fail due to foreign key constraint")
 		assert.Contains(t, err.Error(), "foreign key", "Error should mention foreign key")
@@ -302,12 +302,12 @@ func TestDatabaseIntegrity(t *testing.T) {
 	t.Run("Verify cascade deletes work correctly", func(t *testing.T) {
 		// Create a test ticket
 		var ticketID int
-		err := db.QueryRow(database.ConvertPlaceholders(`
+        err := db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO ticket (tn, title, queue_id, ticket_state_id, ticket_priority_id, 
 				ticket_lock_id, create_by, change_by, customer_user_id)
 			VALUES ('TEST' || EXTRACT(EPOCH FROM NOW())::int, 'Cascade Test', 1, 1, 1, 1, 1, 1, 'test@example.com')
-			RETURNING id
-		`).Scan(&ticketID)
+            RETURNING id
+        `)).Scan(&ticketID)
 		require.NoError(t, err)
 		
 		// Add an article
@@ -331,18 +331,18 @@ func TestDatabaseIntegrity(t *testing.T) {
 
 // TestCleanupOldTestData ensures we don't accumulate test data over time
 func TestCleanupOldTestData(t *testing.T) {
-	err := database.InitDB()
+    err := database.InitTestDB()
 	require.NoError(t, err)
 	
 	db, err := database.GetDB()
 	require.NoError(t, err)
 	
 	// Clean up test tickets older than 1 hour
-	result, err := db.Exec(database.ConvertPlaceholders(`
+    result, err := db.Exec(database.ConvertPlaceholders(`
 		DELETE FROM ticket 
 		WHERE (title LIKE 'Test%' OR title LIKE 'Full Stack Test%' OR title LIKE 'Concurrent Test%')
-		AND create_time < NOW() - INTERVAL '1 hour'
-	`)
+        AND create_time < NOW() - INTERVAL '1 hour'
+    `))
 	
 	if err == nil {
 		affected, _ := result.RowsAffected()

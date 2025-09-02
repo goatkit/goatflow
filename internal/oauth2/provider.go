@@ -249,8 +249,9 @@ func (p *Provider) handleAuthorize(c *gin.Context) {
 	responseType := c.Query("response_type")
 	scope := c.Query("scope")
 	state := c.Query("state")
-	_ = c.Query("code_challenge") // codeChallenge - for future PKCE support
-	_ = c.Query("code_challenge_method") // codeChallengeMethod - for future PKCE support
+    // Read PKCE params if provided
+    _ = c.Query("code_challenge")
+    _ = c.Query("code_challenge_method")
 	
 	// Validate required parameters
 	if clientID == "" || redirectURI == "" || responseType == "" {
@@ -304,8 +305,8 @@ func (p *Provider) handleAuthorizePost(c *gin.Context) {
 	redirectURI := c.Query("redirect_uri")
 	scope := c.Query("scope")
 	state := c.Query("state")
-	_ = c.Query("code_challenge") // codeChallenge - for future PKCE support
-	_ = c.Query("code_challenge_method") // codeChallengeMethod - for future PKCE support
+    codeChallenge := c.Query("code_challenge")
+    codeChallengeMethod := c.Query("code_challenge_method")
 	
 	userID, _, _, authenticated := p.getCurrentUser(c)
 	if !authenticated {

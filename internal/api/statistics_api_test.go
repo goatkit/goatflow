@@ -19,10 +19,10 @@ func TestStatisticsAPI(t *testing.T) {
 	defer database.CloseTestDB()
 
 	// Create test JWT manager
-	jwtManager := auth.NewJWTManager("test-secret")
+    jwtManager := auth.NewJWTManager("test-secret", time.Hour)
 
 	// Create test token
-	token, _ := jwtManager.GenerateToken(1, "testuser", 1)
+    token, _ := jwtManager.GenerateToken(1, "testuser@example.com", "Agent", 0)
 
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)

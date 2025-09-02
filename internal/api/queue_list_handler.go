@@ -156,15 +156,15 @@ func HandleListQueuesAPI(c *gin.Context) {
 		// Include statistics if requested
 		if includeStats {
 			// Get ticket counts for this queue
-			statsQuery := database.ConvertPlaceholders(`
-				SELECT 
-					COUNT(*) as total,
-					COUNT(CASE WHEN state_id IN (1, 4) THEN 1 END) as open_count,
-					COUNT(CASE WHEN state_id IN (2, 3) THEN 1 END) as closed_count,
-					COUNT(CASE WHEN state_id = 5 THEN 1 END) as pending_count
-				FROM ticket
-				WHERE queue_id = $1
-			`)
+            statsQuery := database.ConvertPlaceholders(`
+                SELECT 
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN ticket_state_id IN (1, 4) THEN 1 END) as open_count,
+                    COUNT(CASE WHEN ticket_state_id IN (2, 3) THEN 1 END) as closed_count,
+                    COUNT(CASE WHEN ticket_state_id IN (5) THEN 1 END) as pending_count
+                FROM ticket
+                WHERE queue_id = $1
+            `)
 			
 			var total, openCount, closedCount, pendingCount int
 			err = db.QueryRow(statsQuery, queue.ID).Scan(&total, &openCount, &closedCount, &pendingCount)

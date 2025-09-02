@@ -18,14 +18,22 @@ func HandleGetArticleAPI(c *gin.Context) {
 	}
 	_ = userID // Will use for permission checks later
 
-	// Parse IDs
-	ticketID, err := strconv.Atoi(c.Param("ticket_id"))
+    // Parse IDs (accept both :ticket_id and :id, article :article_id or :id)
+    ticketParam := c.Param("ticket_id")
+    if ticketParam == "" {
+        ticketParam = c.Param("id")
+    }
+    ticketID, err := strconv.Atoi(ticketParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
 		return
 	}
 
-	articleID, err := strconv.Atoi(c.Param("id"))
+    articleParam := c.Param("article_id")
+    if articleParam == "" {
+        articleParam = c.Param("id")
+    }
+    articleID, err := strconv.Atoi(articleParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid article ID"})
 		return

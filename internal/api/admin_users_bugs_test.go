@@ -24,10 +24,10 @@ func TestGroupAssignmentNotPersisting(t *testing.T) {
 	router.PUT("/admin/users/:id", HandleAdminUserUpdate)
 	
 	// Get database connection
-	db, err := database.GetDB()
-	if err != nil {
-		t.Skip("Database not available, skipping integration test")
-	}
+    if err := database.InitTestDB(); err != nil {
+        t.Skip("Database not available, skipping integration test")
+    }
+    db, _ := database.GetDB()
 
 	t.Run("FAILING: Group assignment should persist to database but doesn't", func(t *testing.T) {
 		// ARRANGE: Get Robbie's current groups to ensure test state
@@ -154,21 +154,23 @@ func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
 	
 	router.PUT("/admin/users/:id", HandleAdminUserUpdate)
 	
-	// Get database connection
-	db, err := database.GetDB()
-	if err != nil {
-		t.Skip("Database not available, skipping integration test")
-	}
+    // Get database connection
+    if err := database.InitTestDB(); err != nil {
+        t.Skip("Database not available, skipping integration test")
+    }
+    db, _ := database.GetDB()
+    if db == nil {
+        t.Skip("Database not available, skipping integration test")
+    }
 
 	t.Run("FAILING: Should support removing user from all groups but doesn't", func(t *testing.T) {
 		// ARRANGE: Ensure user has at least one group assignment
-		_, err := db.Exec(database.ConvertPlaceholders(`
+        _, err := db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
 			SELECT 15, g.id, 'rw', 1, NOW(), 1, NOW(), 1
 			FROM groups g 
 			WHERE g.name = 'Support' AND g.valid_id = 1
-			ON CONFLICT (user_id, group_id, permission_key) DO NOTHING`,
-		)
+            ON CONFLICT (user_id, group_id, permission_key) DO NOTHING`))
 		require.NoError(t, err)
 		
 		// Verify user has groups
@@ -221,11 +223,14 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 	router.GET("/admin/users/:id", HandleAdminUserGet)
 	router.PUT("/admin/users/:id", HandleAdminUserUpdate)
 	
-	// Get database connection
-	db, err := database.GetDB()
-	if err != nil {
-		t.Skip("Database not available, skipping integration test")
-	}
+    // Get database connection
+    if err := database.InitTestDB(); err != nil {
+        t.Skip("Database not available, skipping integration test")
+    }
+    db, _ := database.GetDB()
+    if db == nil {
+        t.Skip("Database not available, skipping integration test")
+    }
 
 	t.Run("FAILING: Complete edit workflow should persist group changes", func(t *testing.T) {
 		// ARRANGE: Get initial user state (simulates loading edit dialog)

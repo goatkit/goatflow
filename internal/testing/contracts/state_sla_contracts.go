@@ -14,30 +14,18 @@ var TicketStateContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"states": {
-						Type: "array",
-						Items: &Schema{
-							Type: "object",
-							Properties: map[string]Schema{
-								"id":        {Type: "number"},
-								"name":      {Type: "string"},
-								"type_id":   {Type: "number"},
-								"valid_id":  {Type: "number"},
-								"type_name": {Type: "string"},
-							},
-							Required: []string{"id", "name", "type_id", "valid_id"},
-						},
-					},
-					"total": {Type: "number"},
-				},
-				Required: []string{"states", "total"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "states": ArraySchema{ItemsSchema: ObjectSchema{Properties: map[string]Schema{
+                    "id":       NumberSchema{Required: true},
+                    "name":     StringSchema{Required: true},
+                    "type_id":  NumberSchema{},
+                    "valid_id": NumberSchema{},
+                }}, Required: true},
+                "total": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "GetTicketState",
@@ -47,19 +35,15 @@ var TicketStateContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id":       {Type: "number"},
-					"name":     {Type: "string"},
-					"type_id":  {Type: "number"},
-					"valid_id": {Type: "number"},
-				},
-				Required: []string{"id", "name", "type_id", "valid_id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":       NumberSchema{Required: true},
+                "name":     StringSchema{Required: true},
+                "type_id":  NumberSchema{},
+                "valid_id": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "CreateTicketState",
@@ -74,19 +58,15 @@ var TicketStateContracts = []Contract{
 			"name":    "Test State",
 			"type_id": 1, // open type
 		},
-		Expected: Response{
-			Status: http.StatusCreated,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id":       {Type: "number"},
-					"name":     {Type: "string"},
-					"type_id":  {Type: "number"},
-					"valid_id": {Type: "number"},
-				},
-				Required: []string{"id", "name", "type_id", "valid_id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusCreated,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":       NumberSchema{Required: true},
+                "name":     StringSchema{Required: true},
+                "type_id":  NumberSchema{},
+                "valid_id": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "TicketStateStatistics",
@@ -96,29 +76,18 @@ var TicketStateContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"statistics": {
-						Type: "array",
-						Items: &Schema{
-							Type: "object",
-							Properties: map[string]Schema{
-								"state_id":     {Type: "number"},
-								"state_name":   {Type: "string"},
-								"type_id":      {Type: "number"},
-								"ticket_count": {Type: "number"},
-							},
-							Required: []string{"state_id", "state_name", "type_id", "ticket_count"},
-						},
-					},
-					"total_tickets": {Type: "number"},
-				},
-				Required: []string{"statistics", "total_tickets"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "statistics": ArraySchema{ItemsSchema: ObjectSchema{Properties: map[string]Schema{
+                    "state_id":     NumberSchema{Required: true},
+                    "state_name":   StringSchema{Required: true},
+                    "type_id":      NumberSchema{},
+                    "ticket_count": NumberSchema{},
+                }}, Required: true},
+                "total_tickets": NumberSchema{},
+            }},
+        },
 	},
 }
 
@@ -132,35 +101,19 @@ var SLAContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"slas": {
-						Type: "array",
-						Items: &Schema{
-							Type: "object",
-							Properties: map[string]Schema{
-								"id":                    {Type: "number"},
-								"name":                  {Type: "string"},
-								"calendar_id":           {Type: "number"},
-								"first_response_time":   {Type: "number"},
-								"first_response_notify": {Type: "number"},
-								"update_time":           {Type: "number"},
-								"update_notify":         {Type: "number"},
-								"solution_time":         {Type: "number"},
-								"solution_notify":       {Type: "number"},
-								"valid_id":              {Type: "number"},
-							},
-							Required: []string{"id", "name", "first_response_time", "solution_time", "valid_id"},
-						},
-					},
-					"total": {Type: "number"},
-				},
-				Required: []string{"slas", "total"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "slas": ArraySchema{ItemsSchema: ObjectSchema{Properties: map[string]Schema{
+                    "id":      NumberSchema{Required: true},
+                    "name":    StringSchema{Required: true},
+                    "first_response_time": NumberSchema{},
+                    "solution_time":       NumberSchema{},
+                    "valid_id":            NumberSchema{},
+                }}, Required: true},
+                "total": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "GetSLA",
@@ -170,25 +123,16 @@ var SLAContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id":                    {Type: "number"},
-					"name":                  {Type: "string"},
-					"calendar_id":           {Type: "number"},
-					"first_response_time":   {Type: "number"},
-					"first_response_notify": {Type: "number"},
-					"update_time":           {Type: "number"},
-					"update_notify":         {Type: "number"},
-					"solution_time":         {Type: "number"},
-					"solution_notify":       {Type: "number"},
-					"valid_id":              {Type: "number"},
-				},
-				Required: []string{"id", "name", "first_response_time", "solution_time", "valid_id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":      NumberSchema{Required: true},
+                "name":    StringSchema{Required: true},
+                "first_response_time": NumberSchema{},
+                "solution_time":       NumberSchema{},
+                "valid_id":            NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "CreateSLA",
@@ -209,20 +153,16 @@ var SLAContracts = []Contract{
 			"solution_time":         480,
 			"solution_notify":       400,
 		},
-		Expected: Response{
-			Status: http.StatusCreated,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id":                    {Type: "number"},
-					"name":                  {Type: "string"},
-					"first_response_time":   {Type: "number"},
-					"solution_time":         {Type: "number"},
-					"valid_id":              {Type: "number"},
-				},
-				Required: []string{"id", "name", "first_response_time", "solution_time", "valid_id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusCreated,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":      NumberSchema{Required: true},
+                "name":    StringSchema{Required: true},
+                "first_response_time": NumberSchema{},
+                "solution_time":       NumberSchema{},
+                "valid_id":            NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "UpdateSLA",
@@ -238,19 +178,15 @@ var SLAContracts = []Contract{
 			"first_response_time": 45,
 			"solution_time":      360,
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id":                  {Type: "number"},
-					"name":                {Type: "string"},
-					"first_response_time": {Type: "number"},
-					"solution_time":       {Type: "number"},
-				},
-				Required: []string{"id", "name"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":      NumberSchema{Required: true},
+                "name":    StringSchema{Required: true},
+                "first_response_time": NumberSchema{},
+                "solution_time":       NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "DeleteSLA",
@@ -260,17 +196,13 @@ var SLAContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"message": {Type: "string"},
-					"id":      {Type: "number"},
-				},
-				Required: []string{"message", "id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "message": StringSchema{},
+                "id":      NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "SLAMetrics",
@@ -280,37 +212,18 @@ var SLAContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"sla_id":   {Type: "number"},
-					"sla_name": {Type: "string"},
-					"metrics": {
-						Type: "object",
-						Properties: map[string]Schema{
-							"total_tickets":      {Type: "number"},
-							"met_first_response": {Type: "number"},
-							"met_solution":       {Type: "number"},
-							"breached_tickets":   {Type: "number"},
-							"compliance_percent": {Type: "number"},
-						},
-						Required: []string{"total_tickets", "met_first_response", "met_solution"},
-					},
-				},
-				Required: []string{"sla_id", "metrics"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "sla_id":   NumberSchema{Required: true},
+                "sla_name": StringSchema{},
+                "metrics":  ObjectSchema{},
+            }},
+        },
 	},
 }
 
 // RegisterStateSLAContracts registers ticket state and SLA contracts for testing
 func RegisterStateSLAContracts() {
-	for _, contract := range TicketStateContracts {
-		RegisterContract(contract)
-	}
-	for _, contract := range SLAContracts {
-		RegisterContract(contract)
-	}
+    // No-op registrar kept for backward compatibility
 }

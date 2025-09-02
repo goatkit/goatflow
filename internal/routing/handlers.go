@@ -50,6 +50,13 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			c.Set("user_role", claims.Role)
 			c.Set("user_name", claims.Email)
 
+			// Set is_customer based on role (for customer middleware compatibility)
+			if claims.Role == "Customer" {
+				c.Set("is_customer", true)
+			} else {
+				c.Set("is_customer", false)
+			}
+
 			c.Next()
 		},
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestAdminGroupManagement(t *testing.T) {
@@ -116,7 +116,23 @@ func TestAdminGroupManagement(t *testing.T) {
 		form.Add("comments", "Updated description")
 		form.Add("valid_id", "1")
 
-		req, _ := http.NewRequest("PUT", "/admin/groups/"+string(testGroup.ID), strings.NewReader(form.Encode()))
+        // testGroup.ID is interface{}; assert to an int or string where possible
+        var idStr string
+        switch v := testGroup.ID.(type) {
+        case int:
+            idStr = strconv.Itoa(v)
+        case int64:
+            idStr = strconv.Itoa(int(v))
+        case uint:
+            idStr = strconv.Itoa(int(v))
+        case uint64:
+            idStr = strconv.Itoa(int(v))
+        case string:
+            idStr = v
+        default:
+            t.Skip("Unknown group ID type; skipping")
+        }
+        req, _ := http.NewRequest("PUT", "/admin/groups/"+idStr, strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		
 		w := httptest.NewRecorder()
@@ -150,7 +166,22 @@ func TestAdminGroupManagement(t *testing.T) {
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
-		req, _ := http.NewRequest("DELETE", "/admin/groups/"+string(testGroup.ID), nil)
+        var idStr2 string
+        switch v := testGroup.ID.(type) {
+        case int:
+            idStr2 = strconv.Itoa(v)
+        case int64:
+            idStr2 = strconv.Itoa(int(v))
+        case uint:
+            idStr2 = strconv.Itoa(int(v))
+        case uint64:
+            idStr2 = strconv.Itoa(int(v))
+        case string:
+            idStr2 = v
+        default:
+            t.Skip("Unknown group ID type; skipping")
+        }
+        req, _ := http.NewRequest("DELETE", "/admin/groups/"+idStr2, nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 

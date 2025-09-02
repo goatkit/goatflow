@@ -35,7 +35,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 		return
 	}
 
-	db, err := database.GetDB()
+    db, err := database.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 		return
@@ -43,10 +43,10 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 
 	// Check if queue exists
 	var count int
-	checkQuery := database.ConvertPlaceholders(`
-		SELECT 1 FROM queues
-		WHERE id = $1 AND valid_id = 1
-	`)
+    checkQuery := database.ConvertPlaceholders(`
+        SELECT 1 FROM queue
+        WHERE id = $1 AND valid_id = 1
+    `)
 	db.QueryRow(checkQuery, queueID).Scan(&count)
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Queue not found"})
@@ -63,10 +63,10 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 
 	// Update queue if name or description provided
 	if req.Name != "" || req.Description != "" {
-		updateQuery := database.ConvertPlaceholders(`
-			UPDATE queues 
-			SET change_time = NOW(), change_by = $1
-		`)
+        updateQuery := database.ConvertPlaceholders(`
+            UPDATE queue 
+            SET change_time = NOW(), change_by = $1
+        `)
 		args := []interface{}{userID}
 		paramCount := 1
 
@@ -77,7 +77,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 		}
 		if req.Description != "" {
 			paramCount++
-			updateQuery += database.ConvertPlaceholders(`, description = $` + strconv.Itoa(paramCount))
+            updateQuery += database.ConvertPlaceholders(`, comments = $` + strconv.Itoa(paramCount))
 			args = append(args, req.Description)
 		}
 
@@ -94,9 +94,9 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 	// Update group access if provided
 	if req.GroupAccess != nil {
 		// Remove existing group access
-		deleteQuery := database.ConvertPlaceholders(`
-			DELETE FROM queue_groups WHERE queue_id = $1
-		`)
+        deleteQuery := database.ConvertPlaceholders(`
+            DELETE FROM queue_group WHERE queue_id = $1
+        `)
 		if _, err := tx.Exec(deleteQuery, queueID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update group access"})
 			return
@@ -104,10 +104,10 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 
 		// Add new group access
 		for _, groupID := range req.GroupAccess {
-			insertQuery := database.ConvertPlaceholders(`
-				INSERT INTO queue_groups (queue_id, group_id, permission)
-				VALUES ($1, $2, 'rw')
-			`)
+            insertQuery := database.ConvertPlaceholders(`
+                INSERT INTO queue_group (queue_id, group_id)
+                VALUES ($1, $2)
+            `)
 			if _, err := tx.Exec(insertQuery, queueID, groupID); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update group access"})
 				return
@@ -130,11 +130,11 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 		GroupAccess []int  `json:"group_access"`
 	}
 
-	query := database.ConvertPlaceholders(`
-		SELECT id, name, description, valid_id
-		FROM queues
-		WHERE id = $1
-	`)
+    query := database.ConvertPlaceholders(`
+        SELECT id, name, comments, valid_id
+        FROM queue
+        WHERE id = $1
+    `)
 	err = db.QueryRow(query, queueID).Scan(&queue.ID, &queue.Name, &queue.Description, &queue.ValidID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve updated queue"})
@@ -159,5 +159,5 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, queue)
+    c.JSON(http.StatusOK, gin.H{"success": true, "data": queue})
 }

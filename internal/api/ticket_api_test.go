@@ -290,14 +290,14 @@ func TestTicketAPI(t *testing.T) {
 }
 
 // Test helper functions
-func setupTestRouter() *gin.Engine {
+func setupAPITestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	return router
 }
 
 func authenticatedRouter() *gin.Engine {
-	router := setupTestRouter()
+    router := setupAPITestRouter()
 	router.Use(func(c *gin.Context) {
 		c.Set("user_id", uint(1))
 		c.Set("is_authenticated", true)

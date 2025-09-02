@@ -354,7 +354,7 @@ func TestTicketReplyHandler_Logic(t *testing.T) {
 				}
 			}()
 
-			handleTicketReply(c)
+            handleTicketReply(c)
 
 			// Can't fully test without templates, but we've validated the logic
 		})

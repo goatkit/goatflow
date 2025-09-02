@@ -17,28 +17,33 @@ import (
 
 func TestArticleAPI(t *testing.T) {
 	// Initialize test database
-	database.InitTestDB()
-	defer database.CloseTestDB()
+    if err := database.InitTestDB(); err != nil {
+        t.Skip("Database not available, skipping integration-style API test")
+    }
+    defer database.CloseTestDB()
 
 	// Create test JWT manager
-	jwtManager := auth.NewJWTManager("test-secret")
+    jwtManager := auth.NewJWTManager("test-secret", time.Hour)
 
 	// Create test token
-	token, _ := jwtManager.GenerateToken(1, "testuser", 1)
+    token, _ := jwtManager.GenerateToken(1, "testuser@example.com", "Agent", 0)
 
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
 	// Setup test data - create a ticket first
-	db, _ := database.GetDB()
+    db, _ := database.GetDB()
+    if db == nil {
+        t.Skip("Database not available, skipping")
+    }
 	var ticketID int
-	ticketQuery := database.ConvertPlaceholders(`
-		INSERT INTO tickets (tn, title, queue_id, type_id, ticket_state_id, 
-			ticket_priority_id, customer_user_id, user_id, responsible_user_id,
-			create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, 1, 1, 1, 3, 'test@example.com', 1, 1, NOW(), 1, NOW(), 1)
-		RETURNING id
-	`)
+    ticketQuery := database.ConvertPlaceholders(`
+        INSERT INTO ticket (tn, title, queue_id, type_id, ticket_state_id, 
+            ticket_priority_id, customer_user_id, user_id, responsible_user_id,
+            create_time, create_by, change_time, change_by)
+        VALUES ($1, $2, 1, 1, 1, 3, 'test@example.com', 1, 1, NOW(), 1, NOW(), 1)
+        RETURNING id
+    `)
 	db.QueryRow(ticketQuery, "2024123100001", "Test Ticket").Scan(&ticketID)
 
 	t.Run("List Articles", func(t *testing.T) {

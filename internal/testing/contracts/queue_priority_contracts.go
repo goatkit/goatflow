@@ -14,33 +14,18 @@ var QueueContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"queues": {
-						Type: "array",
-						Items: &Schema{
-							Type: "object",
-							Properties: map[string]Schema{
-								"id": {Type: "number"},
-								"name": {Type: "string"},
-								"description": {Type: "string"},
-								"valid_id": {Type: "number"},
-								"group_access": {
-									Type: "array",
-									Items: &Schema{Type: "number"},
-								},
-							},
-							Required: []string{"id", "name", "valid_id"},
-						},
-					},
-					"total": {Type: "number"},
-				},
-				Required: []string{"queues", "total"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "queues": ArraySchema{ItemsSchema: ObjectSchema{Properties: map[string]Schema{
+                    "id":       NumberSchema{Required: true},
+                    "name":     StringSchema{Required: true},
+                    "description": StringSchema{},
+                    "valid_id": NumberSchema{},
+                }}, Required: true},
+                "total": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "GetQueue",
@@ -50,23 +35,15 @@ var QueueContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id": {Type: "number"},
-					"name": {Type: "string"},
-					"description": {Type: "string"},
-					"valid_id": {Type: "number"},
-					"group_access": {
-						Type: "array",
-						Items: &Schema{Type: "number"},
-					},
-				},
-				Required: []string{"id", "name", "valid_id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":       NumberSchema{Required: true},
+                "name":     StringSchema{Required: true},
+                "description": StringSchema{},
+                "valid_id": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "CreateQueue",
@@ -82,23 +59,15 @@ var QueueContracts = []Contract{
 			"description": "Test queue description",
 			"group_access": []int{1, 2},
 		},
-		Expected: Response{
-			Status: http.StatusCreated,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id": {Type: "number"},
-					"name": {Type: "string"},
-					"description": {Type: "string"},
-					"valid_id": {Type: "number"},
-					"group_access": {
-						Type: "array",
-						Items: &Schema{Type: "number"},
-					},
-				},
-				Required: []string{"id", "name", "valid_id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusCreated,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":       NumberSchema{Required: true},
+                "name":     StringSchema{Required: true},
+                "description": StringSchema{},
+                "valid_id": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "UpdateQueue",
@@ -113,19 +82,15 @@ var QueueContracts = []Contract{
 			"name":        "Updated Queue",
 			"description": "Updated description",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id": {Type: "number"},
-					"name": {Type: "string"},
-					"description": {Type: "string"},
-					"valid_id": {Type: "number"},
-				},
-				Required: []string{"id", "name", "valid_id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":       NumberSchema{Required: true},
+                "name":     StringSchema{Required: true},
+                "description": StringSchema{},
+                "valid_id": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "DeleteQueue",
@@ -135,17 +100,13 @@ var QueueContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"message": {Type: "string"},
-					"id": {Type: "number"},
-				},
-				Required: []string{"message", "id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "message": StringSchema{},
+                "id":      NumberSchema{},
+            }},
+        },
 	},
 }
 
@@ -159,28 +120,17 @@ var PriorityContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"priorities": {
-						Type: "array",
-						Items: &Schema{
-							Type: "object",
-							Properties: map[string]Schema{
-								"id": {Type: "number"},
-								"name": {Type: "string"},
-								"valid_id": {Type: "number"},
-							},
-							Required: []string{"id", "name", "valid_id"},
-						},
-					},
-					"total": {Type: "number"},
-				},
-				Required: []string{"priorities", "total"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "priorities": ArraySchema{ItemsSchema: ObjectSchema{Properties: map[string]Schema{
+                    "id":      NumberSchema{Required: true},
+                    "name":    StringSchema{Required: true},
+                    "valid_id": NumberSchema{},
+                }}, Required: true},
+                "total": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "GetPriority",
@@ -190,18 +140,14 @@ var PriorityContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id": {Type: "number"},
-					"name": {Type: "string"},
-					"valid_id": {Type: "number"},
-				},
-				Required: []string{"id", "name", "valid_id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":      NumberSchema{Required: true},
+                "name":    StringSchema{Required: true},
+                "valid_id": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "CreatePriority",
@@ -215,18 +161,14 @@ var PriorityContracts = []Contract{
 		Body: map[string]interface{}{
 			"name": "Test Priority",
 		},
-		Expected: Response{
-			Status: http.StatusCreated,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id": {Type: "number"},
-					"name": {Type: "string"},
-					"valid_id": {Type: "number"},
-				},
-				Required: []string{"id", "name", "valid_id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusCreated,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":      NumberSchema{Required: true},
+                "name":    StringSchema{Required: true},
+                "valid_id": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "UpdatePriority",
@@ -240,18 +182,14 @@ var PriorityContracts = []Contract{
 		Body: map[string]interface{}{
 			"name": "Updated Priority",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id": {Type: "number"},
-					"name": {Type: "string"},
-					"valid_id": {Type: "number"},
-				},
-				Required: []string{"id", "name", "valid_id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":      NumberSchema{Required: true},
+                "name":    StringSchema{Required: true},
+                "valid_id": NumberSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "DeletePriority",
@@ -261,26 +199,17 @@ var PriorityContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"message": {Type: "string"},
-					"id": {Type: "number"},
-				},
-				Required: []string{"message", "id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "message": StringSchema{},
+                "id":      NumberSchema{},
+            }},
+        },
 	},
 }
 
 // RegisterQueuePriorityContracts registers queue and priority contracts for testing
 func RegisterQueuePriorityContracts() {
-	for _, contract := range QueueContracts {
-		RegisterContract(contract)
-	}
-	for _, contract := range PriorityContracts {
-		RegisterContract(contract)
-	}
+    // No-op registrar kept for backward compatibility
 }

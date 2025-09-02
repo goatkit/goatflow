@@ -17,14 +17,22 @@ func HandleDeleteArticleAPI(c *gin.Context) {
 		return
 	}
 
-	// Parse IDs
-	ticketID, err := strconv.Atoi(c.Param("ticket_id"))
+    // Parse IDs (accept both :ticket_id and :id, article :article_id or :id)
+    ticketParam := c.Param("ticket_id")
+    if ticketParam == "" {
+        ticketParam = c.Param("id")
+    }
+    ticketID, err := strconv.Atoi(ticketParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
 		return
 	}
 
-	articleID, err := strconv.Atoi(c.Param("id"))
+    articleParam := c.Param("article_id")
+    if articleParam == "" {
+        articleParam = c.Param("id")
+    }
+    articleID, err := strconv.Atoi(articleParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid article ID"})
 		return
@@ -90,11 +98,11 @@ func HandleDeleteArticleAPI(c *gin.Context) {
 	}
 
 	// Update ticket change time
-	updateTicketQuery := database.ConvertPlaceholders(`
-		UPDATE tickets 
-		SET change_time = NOW(), change_by = $1
-		WHERE id = $2
-	`)
+    updateTicketQuery := database.ConvertPlaceholders(`
+        UPDATE ticket 
+        SET change_time = NOW(), change_by = $1
+        WHERE id = $2
+    `)
 	db.Exec(updateTicketQuery, userID, ticketID)
 
 	c.JSON(http.StatusOK, gin.H{

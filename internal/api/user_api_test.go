@@ -67,7 +67,7 @@ func TestUserAPI(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			// Should process the filter
-			assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+            assert.NotEqual(t, http.StatusInternalServerError, w.Code)
 		})
 
 		t.Run("should search by login or name", func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestUserAPI(t *testing.T) {
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
-			assert.NotEqual(t, http.StatusInternalServerError, w.Code)
+            assert.NotEqual(t, http.StatusInternalServerError, w.Code)
 		})
 	})
 

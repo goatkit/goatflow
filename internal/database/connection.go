@@ -11,5 +11,8 @@ import (
 // GetDB returns the database connection singleton from the service registry
 // Service registry is the single source of truth for database connections
 func GetDB() (*sql.DB, error) {
-	return adapter.GetDB()
+    if testDB != nil {
+        return testDB, nil
+    }
+    return adapter.GetDB()
 }

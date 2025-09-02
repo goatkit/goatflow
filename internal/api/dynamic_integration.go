@@ -14,10 +14,14 @@ var dynamicHandler *dynamic.DynamicModuleHandler
 // SetupDynamicModules initializes and registers the dynamic module system
 // alongside existing static modules for side-by-side testing
 func SetupDynamicModules(router *gin.RouterGroup, db *sql.DB) error {
-	// Template directory is handled by the existing pongo2 renderer
-	
-	// Initialize dynamic handler with database and templates
-	handler, err := dynamic.NewDynamicModuleHandler(db, pongo2Renderer.templateSet, "modules")
+    // If templates are not available in this test environment, skip setup
+    if pongo2Renderer == nil || pongo2Renderer.templateSet == nil {
+        log.Printf("Dynamic modules disabled: template renderer not initialized")
+        return nil
+    }
+
+    // Initialize dynamic handler with database and templates
+    handler, err := dynamic.NewDynamicModuleHandler(db, pongo2Renderer.templateSet, "modules")
 	if err != nil {
 		return err
 	}

@@ -28,7 +28,7 @@ func HandleCreateQueueAPI(c *gin.Context) {
 		return
 	}
 
-	db, err := database.GetDB()
+    db, err := database.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 		return
@@ -36,10 +36,10 @@ func HandleCreateQueueAPI(c *gin.Context) {
 
 	// Check if queue with this name already exists
 	var count int
-	checkQuery := database.ConvertPlaceholders(`
-		SELECT 1 FROM queues
-		WHERE name = $1 AND valid_id = 1
-	`)
+    checkQuery := database.ConvertPlaceholders(`
+        SELECT 1 FROM queue
+        WHERE name = $1 AND valid_id = 1
+    `)
 	db.QueryRow(checkQuery, req.Name).Scan(&count)
 	if count == 1 {
 		c.JSON(http.StatusConflict, gin.H{"error": "Queue with this name already exists"})
@@ -56,11 +56,11 @@ func HandleCreateQueueAPI(c *gin.Context) {
 
 	// Create queue
 	var queueID int
-	insertQuery := database.ConvertPlaceholders(`
-		INSERT INTO queues (name, description, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, 1, NOW(), $3, NOW(), $3)
-		RETURNING id
-	`)
+    insertQuery := database.ConvertPlaceholders(`
+        INSERT INTO queue (name, comments, valid_id, create_time, create_by, change_time, change_by)
+        VALUES ($1, $2, 1, NOW(), $3, NOW(), $3)
+        RETURNING id
+    `)
 	
 	err = tx.QueryRow(insertQuery, req.Name, req.Description, userID).Scan(&queueID)
 	if err != nil {
@@ -69,12 +69,12 @@ func HandleCreateQueueAPI(c *gin.Context) {
 	}
 
 	// Add group access if specified
-	if len(req.GroupAccess) > 0 {
+    if len(req.GroupAccess) > 0 {
 		for _, groupID := range req.GroupAccess {
-			groupInsert := database.ConvertPlaceholders(`
-				INSERT INTO queue_groups (queue_id, group_id, permission)
-				VALUES ($1, $2, 'rw')
-			`)
+            groupInsert := database.ConvertPlaceholders(`
+                INSERT INTO queue_group (queue_id, group_id)
+                VALUES ($1, $2)
+            `)
 			if _, err := tx.Exec(groupInsert, queueID, groupID); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set group access"})
 				return
@@ -88,8 +88,8 @@ func HandleCreateQueueAPI(c *gin.Context) {
 		return
 	}
 
-	// Return created queue
-	response := gin.H{
+    // Return created queue
+    response := gin.H{
 		"id":           queueID,
 		"name":         req.Name,
 		"description":  req.Description,
@@ -97,5 +97,5 @@ func HandleCreateQueueAPI(c *gin.Context) {
 		"group_access": req.GroupAccess,
 	}
 
-	c.JSON(http.StatusCreated, response)
+    c.JSON(http.StatusCreated, gin.H{"success": true, "data": response})
 }

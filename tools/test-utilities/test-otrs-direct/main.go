@@ -1,3 +1,6 @@
+//go:build tools
+// +build tools
+
 package main
 
 import (
@@ -6,8 +9,7 @@ import (
 	"fmt"
 	"log"
 	
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+    _ "github.com/go-sql-driver/mysql"
 )
 
 func main() {

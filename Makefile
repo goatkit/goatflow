@@ -22,205 +22,216 @@ COMPOSE_CMD := $(shell \
 		echo "docker compose"; \
 	fi)
 
+# Volume mount SELinux label for Podman
+ifeq ($(findstring podman,$(CONTAINER_CMD)),podman)
+VZ := :Z
+else
+VZ :=
+endif
+
+# Common run flags
+VOLUME_PWD := -v "$$(pwd):/workspace$(VZ)"
+WORKDIR_FLAGS := -w /workspace
+USER_FLAGS := -u "$$(id -u):$$(id -g)"
+
 .PHONY: help up down logs restart clean setup test build debug-env toolbox-build toolbox-run toolbox-test
 
 # Default target
 help:
-	@echo ""
-	@echo "    $(shell echo '\033[1;36m')🐐 GOTRS - Go Open Ticketing Resource System$(shell echo '\033[0m')"
-	@echo ""
-	@echo "    $(shell echo '\033[0;90m')                           ///////                ";
-	@echo "    $(shell echo '\033[0;90m')                     ///////     ////////         ";
-	@echo "    $(shell echo '\033[0;90m')                 ////                   /////     ";
-	@echo "    $(shell echo '\033[0;90m')               ///             ////////////////   ";
-	@echo "    $(shell echo '\033[0;90m')             ///          /////              //// ";
-	@echo "    $(shell echo '\033[0;90m')           ///         ///                      //";
-	@echo "    $(shell echo '\033[0;90m')        ////        //////        /               ";
-	@echo "    $(shell echo '\033[0;90m')       //// ///     /    //////////               ";
-	@echo "    $(shell echo '\033[0;90m')       //  / / //        //    // ///             ";
-	@echo "    $(shell echo '\033[0;90m')       /// ////                /    ////          ";
-	@echo "    $(shell echo '\033[0;90m')      //                               ///        ";
-	@echo "    $(shell echo '\033[0;90m')     /                                    ////    ";
-	@echo "    $(shell echo '\033[0;90m')   ///                /                      //// ";
-	@echo "    $(shell echo '\033[0;90m')  //                  /      /                 /  ";
-	@echo "    $(shell echo '\033[0;90m')/////     /           /     //               //   ";
-	@echo "    $(shell echo '\033[0;90m')//      ///          //     /               //    ";
-	@echo "    $(shell echo '\033[0;90m') //   ///         ////     //              //     ";
-	@echo "    $(shell echo '\033[0;90m')  /////       //////      //             ///      ";
-	@echo "    $(shell echo '\033[0;90m')   //// ///////    //   ///            ///        ";
-	@echo "    $(shell echo '\033[0;90m')      ///           /////            ///          ";
-	@echo "    $(shell echo '\033[0;90m')                   ///             ///            ";
-	@echo "    $(shell echo '\033[0;90m')                  //           ////               ";
-	@echo "    $(shell echo '\033[0;90m')                  /         ////                  ";
-	@echo "    $(shell echo '\033[0;90m')                    ////////$(shell echo '\033[0m')";
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🚀 Core Commands$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make up$(shell echo '\033[0m')                           ▶️ Start all services"
-	@echo "  $(shell echo '\033[0;32m')make down$(shell echo '\033[0m')                         🛑 Stop all services"
-	@echo "  $(shell echo '\033[0;32m')make logs$(shell echo '\033[0m')                         📋 View logs"
-	@echo "  $(shell echo '\033[0;32m')make restart$(shell echo '\033[0m')                      🔄 Restart all services"
-	@echo "  $(shell echo '\033[0;32m')make clean$(shell echo '\033[0m')                        🧹 Clean everything (including volumes)"
-	@echo "  $(shell echo '\033[0;32m')make setup$(shell echo '\033[0m')                        🎯 Initial project setup with secure secrets"
-	@echo "  $(shell echo '\033[0;32m')make build$(shell echo '\033[0m')                        🔨 Build production images"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🧪 TDD Workflow (Quality Gates Enforced)$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make tdd-init$(shell echo '\033[0m')                     🏁 Initialize TDD workflow"
-	@echo "  $(shell echo '\033[0;32m')make tdd-test-first$(shell echo '\033[0m') FEATURE=name  ❌ Start with failing test"
-	@echo "  $(shell echo '\033[0;32m')make tdd-implement$(shell echo '\033[0m')                ✅ Implement to pass tests"
-	@echo "  $(shell echo '\033[0;32m')make tdd-verify$(shell echo '\033[0m')                   🔍 Run ALL quality gates"
-	@echo "  $(shell echo '\033[0;32m')make tdd-refactor$(shell echo '\033[0m')                 ♻️  Safe refactoring"
-	@echo "  $(shell echo '\033[0;32m')make tdd-status$(shell echo '\033[0m')                   📊 Show workflow status"
-	@echo "  $(shell echo '\033[0;32m')make quality-gates$(shell echo '\033[0m')                🚦 Run quality checks"
-	@echo "  $(shell echo '\033[0;32m')make evidence-report$(shell echo '\033[0m')              📄 Generate evidence"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🎨 CSS/Frontend Build$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make css-build$(shell echo '\033[0m')                    📦 Build production CSS from Tailwind"
-	@echo "  $(shell echo '\033[0;32m')make css-watch$(shell echo '\033[0m')                    👁️ Watch and rebuild CSS on changes"
-	@echo "  $(shell echo '\033[0;32m')make css-deps$(shell echo '\033[0m')                     📥 Install CSS build dependencies"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🔐 Secrets Management$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make synthesize$(shell echo '\033[0m')                   🔑 Generate new .env with secure secrets"
-	@echo "  $(shell echo '\033[0;32m')make rotate-secrets$(shell echo '\033[0m')               🔄 Rotate secrets in existing .env"
-	@echo "  $(shell echo '\033[0;32m')make synthesize-force$(shell echo '\033[0m')             ⚡ Force regenerate .env"
-	@echo "  $(shell echo '\033[0;32m')make k8s-secrets$(shell echo '\033[0m')                  🙊 Generate k8s/secrets.yaml"
-	@echo "  $(shell echo '\033[0;32m')make show-dev-creds$(shell echo '\033[0m')               👤 Show test user credentials"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🐳 Docker/Container Build$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make build-cached$(shell echo '\033[0m')                 🚀 Fast build with caching (70% faster)"
-	@echo "  $(shell echo '\033[0;32m')make build-clean$(shell echo '\033[0m')                  🧹 Clean build without cache"
-	@echo "  $(shell echo '\033[0;32m')make build-secure$(shell echo '\033[0m')                 🔒 Build with security scanning"
-	@echo "  $(shell echo '\033[0;32m')make build-multi$(shell echo '\033[0m')                  🌍 Multi-platform build (AMD64/ARM64)"
-	@echo "  $(shell echo '\033[0;32m')make build-all-tools$(shell echo '\033[0m')              🛠️ Build all specialized containers"
-	@echo "  $(shell echo '\033[0;32m')make toolbox-build$(shell echo '\033[0m')                🔧 Build development toolbox"
-	@echo "  $(shell echo '\033[0;32m')make analyze-size$(shell echo '\033[0m')                 📏 Analyze image size with dive"
-	@echo "  $(shell echo '\033[0;32m')make show-sizes$(shell echo '\033[0m')                   📊 Show all image sizes"
-	@echo "  $(shell echo '\033[0;32m')make show-cache$(shell echo '\033[0m')                   💾 Display build cache usage"
-	@echo "  $(shell echo '\033[0;32m')make clear-cache$(shell echo '\033[0m')                  🗑️ Clear Docker build cache"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🔮 Schema Discovery$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make schema-discovery$(shell echo '\033[0m')             🔍 Generate YAML from DB schema"
-	@echo "  $(shell echo '\033[0;32m')make schema-table$(shell echo '\033[0m')                 📊 Generate YAML for table"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🧰 Toolbox (Fast Container Dev)$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make toolbox-build$(shell echo '\033[0m')                🔨 Build toolbox container"
-	@echo "  $(shell echo '\033[0;32m')make toolbox-run$(shell echo '\033[0m')                  🐚 Interactive shell"
-	@echo "  $(shell echo '\033[0;32m')make toolbox-test$(shell echo '\033[0m')                 🧪 Run all tests quickly"
-	@echo "  $(shell echo '\033[0;32m')make toolbox-test-run$(shell echo '\033[0m')             🎯 Run specific test"
-	@echo "  $(shell echo '\033[0;32m')make toolbox-run-file$(shell echo '\033[0m')             📄 Run Go file"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🎭 E2E Testing (Playwright)$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make test-e2e$(shell echo '\033[0m')                     🤖 Run E2E tests headless"
-	@echo "  $(shell echo '\033[0;32m')make test-e2e-debug$(shell echo '\033[0m')               👀 Tests with visible browser"
-	@echo "  $(shell echo '\033[0;32m')make test-e2e-watch$(shell echo '\033[0m')               🔁 Tests in watch mode"
-	@echo "  $(shell echo '\033[0;32m')make test-e2e-report$(shell echo '\033[0m')              📊 View test results"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🧪 Testing Commands$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make test$(shell echo '\033[0m')                         ✅ Run Go backend tests"
-	@echo "  $(shell echo '\033[0;32m')make test-short$(shell echo '\033[0m')                   ⚡ Skip long tests"
-	@echo "  $(shell echo '\033[0;32m')make test-coverage$(shell echo '\033[0m')                📈 Tests with coverage"
-	@echo "  $(shell echo '\033[0;32m')make test-safe$(shell echo '\033[0m')                    🏃 Race/deadlock detection"
-	@echo "  $(shell echo '\033[0;32m')make test-html$(shell echo '\033[0m')                    🌐 HTML test report"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🐠 i18n (Babel fish) Commands$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make babelfish$(shell echo '\033[0m')                    🏗️ Build gotrs-babelfish binary"
-	@echo "  $(shell echo '\033[0;32m')make babelfish-coverage$(shell echo '\033[0m')           📊 Show translation coverage"
-	@echo "  $(shell echo '\033[0;32m')make babelfish-validate$(shell echo '\033[0m\n\t') LANG=de   ✅ Validate a language"
-	@echo "  $(shell echo '\033[0;32m')make babelfish-missing$(shell echo '\033[0m\n\t') LANG=es    🔍 Show missing translations"
-	@echo "  $(shell echo '\033[0;32m')make babelfish-run$(shell echo '\033[0m\n\t') ARGS='-help'   🎯 Run with custom args"
-	@echo "  $(shell echo '\033[0;32m')make test-ldap$(shell echo '\033[0m')                    🔐 Run LDAP integration tests"
-	@echo "  $(shell echo '\033[0;32m')make test-ldap-perf$(shell echo '\033[0m')               ⚡ Run LDAP performance benchmarks"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🔒 Security Commands$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make scan-secrets$(shell echo '\033[0m')\t\t\t🕵️ Scan current code for secrets"
-	@echo "  $(shell echo '\033[0;32m')make scan-secrets-history$(shell echo '\033[0m')\t\t📜 Scan git history for secrets"
-	@echo "  $(shell echo '\033[0;32m')make scan-secrets-precommit$(shell echo '\033[0m')\t\t🪝 Install pre-commit hooks"
-	@echo "  $(shell echo '\033[0;32m')make scan-vulnerabilities$(shell echo '\033[0m')\t\t🐛 Scan for vulnerabilities"
-	@echo "  $(shell echo '\033[0;32m')make security-scan$(shell echo '\033[0m')\t\t\t🛡️ Run all security scans"
-	@echo "  $(shell echo '\033[0;32m')make test-contracts$(shell echo '\033[0m')\t\t\t📝 Run Pact contract tests"
-	@echo "  $(shell echo '\033[0;32m')make test-all$(shell echo '\033[0m')\t\t\t\t🎯 Run all tests (backend, frontend, contracts)"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')📡 Service Management$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make backend-logs$(shell echo '\033[0m')\t\t\t📋 View backend logs"
-	@echo "  $(shell echo '\033[0;32m')make backend-logs-follow$(shell echo '\033[0m')\t\t📺 Follow backend logs"
-	@echo "  $(shell echo '\033[0;32m')make valkey-cli$(shell echo '\033[0m')\t\t\t🔑 Valkey CLI"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')🗄️  Database Operations$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make db-shell$(shell echo '\033[0m')\t\t\t\t🐘 PostgreSQL shell"
-	@echo "  $(shell echo '\033[0;32m')make db-migrate$(shell echo '\033[0m')\t\t\t📤 Run pending migrations"
-	@echo "  $(shell echo '\033[0;32m')make db-rollback$(shell echo '\033[0m')\t\t\t↩️  Rollback last migration"
-	@echo "  $(shell echo '\033[0;32m')make db-reset$(shell echo '\033[0m')\t\t\t\t💥 Reset DB (cleans storage)"
-	@echo "  $(shell echo '\033[0;32m')make db-init$(shell echo '\033[0m')\t\t\t\t🚀 Fast baseline init"
-	@echo "  $(shell echo '\033[0;32m')make db-apply-test-data$(shell echo '\033[0m')\t\t🧪 Apply test data"
-	@echo "  $(shell echo '\033[0;32m')make clean-storage$(shell echo '\033[0m')\t\t\t🗑️ Remove orphaned files"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')📦 OTRS Migration$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make migrate-analyze$(shell echo '\033[0m\n\t') SQL=dump.sql\t\t\t🔍 Analyze OTRS SQL dump"
-	@echo "  $(shell echo '\033[0;32m')make migrate-import$(shell echo '\033[0m\n\t') SQL=dump.sql\t\t\t📥 Import OTRS data (dry-run)"
-	@echo "  $(shell echo '\033[0;32m')make migrate-import$(shell echo '\033[0m\n\t') SQL=dump.sql DRY_RUN=false\t💾 Import for real"
-	@echo "  $(shell echo '\033[0;32m')make migrate-validate$(shell echo '\033[0m')\t\t\t🔍 Validate imported data"
-	@echo "  $(shell echo '\033[0;32m')make import-test-data$(shell echo '\033[0m')\t\t\t🎯 Import test tickets with proper mapping"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;33m')👥 User Management$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;32m')make reset-password$(shell echo '\033[0m')\t\t\t🔓 Reset user password"
-	@echo ""
-	@echo "  $(shell echo '\033[1;35m')━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$(shell echo '\033[0m')"
-	@echo ""
-	@echo "  $(shell echo '\033[0;90m')🐐 Happy coding with GOTRS!$(shell echo '\033[0m')"
-	@echo "  $(shell echo '\033[0;90m')Container: $(CONTAINER_CMD) | Compose: $(COMPOSE_CMD)$(shell echo '\033[0m')"
-	@echo ""
-
+	@printf "\n\n"
+	@printf "    \033[1;36m🐐 GOTRS - Go Open Ticketing Resource System\033[0m\n\n"
+	@printf "\n\n"
+	@printf "    \033[0;90m                           ///////                \n"
+	@printf "    \033[0;90m                     ///////     ////////         \n"
+	@printf "    \033[0;90m                 ////                   /////     \n"
+	@printf "    \033[0;90m               ///             ////////////////   \n"
+	@printf "    \033[0;90m             ///          /////              //// \n"
+	@printf "    \033[0;90m           ///         ///                      //\n"
+	@printf "    \033[0;90m        ////        //////        /               \n"
+	@printf "    \033[0;90m       //// ///     /    //////////               \n"
+	@printf "    \033[0;90m       //  / / //        //    // ///             \n"
+	@printf "    \033[0;90m       /// ////                /    ////          \n"
+	@printf "    \033[0;90m      //                               ///        \n"
+	@printf "    \033[0;90m     /                                    ////    \n"
+	@printf "    \033[0;90m   ///                /                      //// \n"
+	@printf "    \033[0;90m  //                  /      /                 /  \n"
+	@printf "    \033[0;90m/////     /           /     //               //   \n"
+	@printf "    \033[0;90m//      ///          //     /               //    \n"
+	@printf "    \033[0;90m //   ///         ////     //              //     \n"
+	@printf "    \033[0;90m  /////       //////      //             ///      \n"
+	@printf "    \033[0;90m   //// ///////    //   ///            ///        \n"
+	@printf "    \033[0;90m      ///           /////            ///          \n"
+	@printf "    \033[0;90m                   ///             ///            \n"
+	@printf "    \033[0;90m                  //           ////               \n"
+	@printf "    \033[0;90m                  /         ////                  \n"
+	@printf "    \033[0;90m                    ////////\033[0m\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🚀 Core Commands\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake up\033[0m                           ▶️ Start all services\n\n"
+	@printf "  \033[0;32mmake down\033[0m                         🛑 Stop all services\n\n"
+	@printf "  \033[0;32mmake logs\033[0m                         📋 View logs\n\n"
+	@printf "  \033[0;32mmake restart\033[0m                      🔄 Restart all services\n\n"
+	@printf "  \033[0;32mmake clean\033[0m                        🧹 Clean everything (including volumes)\n\n"
+	@printf "  \033[0;32mmake setup\033[0m                        🎯 Initial project setup with secure secrets\n\n"
+	@printf "  \033[0;32mmake build\033[0m                        🔨 Build production images\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🧪 TDD Workflow (Quality Gates Enforced)\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake tdd-init\033[0m                     🏁 Initialize TDD workflow\n\n"
+	@printf "  \033[0;32mmake tdd-test-first\033[0m FEATURE=name  ❌ Start with failing test\n\n"
+	@printf "  \033[0;32mmake tdd-implement\033[0m                ✅ Implement to pass tests\n\n"
+	@printf "  \033[0;32mmake tdd-verify\033[0m                   🔍 Run ALL quality gates\n\n"
+	@printf "  \033[0;32mmake tdd-refactor\033[0m                 ♻️  Safe refactoring\n\n"
+	@printf "  \033[0;32mmake tdd-status\033[0m                   📊 Show workflow status\n\n"
+	@printf "  \033[0;32mmake quality-gates\033[0m                🚦 Run quality checks\n\n"
+	@printf "  \033[0;32mmake evidence-report\033[0m              📄 Generate evidence\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🎨 CSS/Frontend Build\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake css-build\033[0m                    📦 Build production CSS from Tailwind\n\n"
+	@printf "  \033[0;32mmake css-watch\033[0m                    👁️ Watch and rebuild CSS on changes\n\n"
+	@printf "  \033[0;32mmake css-deps\033[0m                     📥 Install CSS build dependencies\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🔐 Secrets Management\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake synthesize\033[0m                   🔑 Generate new .env with secure secrets\n\n"
+	@printf "  \033[0;32mmake rotate-secrets\033[0m               🔄 Rotate secrets in existing .env\n\n"
+	@printf "  \033[0;32mmake synthesize-force\033[0m             ⚡ Force regenerate .env\n\n"
+	@printf "  \033[0;32mmake k8s-secrets\033[0m                  🙊 Generate k8s/secrets.yaml\n\n"
+	@printf "  \033[0;32mmake show-dev-creds\033[0m               👤 Show test user credentials\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🐳 Docker/Container Build\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake build-cached\033[0m                 🚀 Fast build with caching (70% faster)\n\n"
+	@printf "  \033[0;32mmake build-clean\033[0m                  🧹 Clean build without cache\n\n"
+	@printf "  \033[0;32mmake build-secure\033[0m                 🔒 Build with security scanning\n\n"
+	@printf "  \033[0;32mmake build-multi\033[0m                  🌍 Multi-platform build (AMD64/ARM64)\n\n"
+	@printf "  \033[0;32mmake build-all-tools\033[0m              🛠️ Build all specialized containers\n\n"
+	@printf "  \033[0;32mmake toolbox-build\033[0m                🔧 Build development toolbox\n\n"
+	@printf "  \033[0;32mmake analyze-size\033[0m                 📏 Analyze image size with dive\n\n"
+	@printf "  \033[0;32mmake show-sizes\033[0m                   📊 Show all image sizes\n\n"
+	@printf "  \033[0;32mmake show-cache\033[0m                   💾 Display build cache usage\n\n"
+	@printf "  \033[0;32mmake clear-cache\033[0m                  🗑️ Clear Docker build cache\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🔮 Schema Discovery\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake schema-discovery\033[0m             🔍 Generate YAML from DB schema\n\n"
+	@printf "  \033[0;32mmake schema-table\033[0m                 📊 Generate YAML for table\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🧰 Toolbox (Fast Container Dev)\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake toolbox-build\033[0m                🔨 Build toolbox container\n\n"
+	@printf "  \033[0;32mmake toolbox-run\033[0m                  🐚 Interactive shell\n\n"
+	@printf "  \033[0;32mmake toolbox-test\033[0m                 🧪 Run all tests quickly\n\n"
+	@printf "  \033[0;32mmake toolbox-test-run\033[0m             🎯 Run specific test\n\n"
+	@printf "  \033[0;32mmake toolbox-run-file\033[0m             📄 Run Go file\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🎭 E2E Testing (Playwright)\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake test-e2e\033[0m                     🤖 Run E2E tests headless\n\n"
+	@printf "  \033[0;32mmake test-e2e-debug\033[0m               👀 Tests with visible browser\n\n"
+	@printf "  \033[0;32mmake test-e2e-watch\033[0m               🔁 Tests in watch mode\n\n"
+	@printf "  \033[0;32mmake test-e2e-report\033[0m              📊 View test results\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🧪 Testing Commands\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake test\033[0m                         ✅ Run Go backend tests\n\n"
+	@printf "  \033[0;32mmake test-short\033[0m                   ⚡ Skip long tests\n\n"
+	@printf "  \033[0;32mmake test-coverage\033[0m                📈 Tests with coverage\n\n"
+	@printf "  \033[0;32mmake test-safe\033[0m                    🏃 Race/deadlock detection\n\n"
+	@printf "  \033[0;32mmake test-html\033[0m                    🌐 HTML test report\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🐠 i18n (Babel fish) Commands\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake babelfish\033[0m                    🏗️ Build gotrs-babelfish binary\n\n"
+	@printf "  \033[0;32mmake babelfish-coverage\033[0m           📊 Show translation coverage\n\n"
+	@printf "  \033[0;32mmake babelfish-validate\033[0m\n\t LANG=de   ✅ Validate a language\n\n"
+	@printf "  \033[0;32mmake babelfish-missing\033[0m\n\t LANG=es    🔍 Show missing translations\n\n"
+	@printf "  \033[0;32mmake babelfish-run\033[0m\n\t ARGS='-help'   🎯 Run with custom args\n\n"
+	@printf "  \033[0;32mmake test-ldap\033[0m                    🔐 Run LDAP integration tests\n\n"
+	@printf "  \033[0;32mmake test-ldap-perf\033[0m               ⚡ Run LDAP performance benchmarks\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🔒 Security Commands\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake scan-secrets\033[0m\t\t\t🕵️ Scan current code for secrets\n\n"
+	@printf "  \033[0;32mmake scan-secrets-history\033[0m\t\t📜 Scan git history for secrets\n\n"
+	@printf "  \033[0;32mmake scan-secrets-precommit\033[0m\t\t🪝 Install pre-commit hooks\n\n"
+	@printf "  \033[0;32mmake scan-vulnerabilities\033[0m\t\t🐛 Scan for vulnerabilities\n\n"
+	@printf "  \033[0;32mmake security-scan\033[0m\t\t\t🛡️ Run all security scans\n\n"
+	@printf "  \033[0;32mmake test-contracts\033[0m\t\t\t📝 Run Pact contract tests\n\n"
+	@printf "  \033[0;32mmake test-all\033[0m\t\t\t\t🎯 Run all tests (backend, frontend, contracts)\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m📡 Service Management\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake backend-logs\033[0m\t\t\t📋 View backend logs\n\n"
+	@printf "  \033[0;32mmake backend-logs-follow\033[0m\t\t📺 Follow backend logs\n\n"
+	@printf "  \033[0;32mmake valkey-cli\033[0m\t\t\t🔑 Valkey CLI\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m🗄️  Database Operations\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake db-shell\033[0m\t\t\t\t🐘 PostgreSQL shell\n\n"
+	@printf "  \033[0;32mmake db-migrate\033[0m\t\t\t📤 Run pending migrations\n\n"
+	@printf "  \033[0;32mmake db-rollback\033[0m\t\t\t↩️  Rollback last migration\n\n"
+	@printf "  \033[0;32mmake db-reset\033[0m\t\t\t\t💥 Reset DB (cleans storage)\n\n"
+	@printf "  \033[0;32mmake db-init\033[0m\t\t\t\t🚀 Fast baseline init\n\n"
+	@printf "  \033[0;32mmake db-apply-test-data\033[0m\t\t🧪 Apply test data\n\n"
+	@printf "  \033[0;32mmake clean-storage\033[0m\t\t\t🗑️ Remove orphaned files\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m📦 OTRS Migration\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake migrate-analyze\033[0m\n\t SQL=dump.sql\t\t\t🔍 Analyze OTRS SQL dump\n\n"
+	@printf "  \033[0;32mmake migrate-import\033[0m\n\t SQL=dump.sql\t\t\t📥 Import OTRS data (dry-run)\n\n"
+	@printf "  \033[0;32mmake migrate-import\033[0m\n\t SQL=dump.sql DRY_RUN=false\t💾 Import for real\n\n"
+	@printf "  \033[0;32mmake migrate-validate\033[0m\t\t\t🔍 Validate imported data\n\n"
+	@printf "  \033[0;32mmake import-test-data\033[0m\t\t\t🎯 Import test tickets with proper mapping\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "  \033[1;33m👥 User Management\033[0m\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;32mmake reset-password\033[0m\t\t\t🔓 Reset user password\n\n"
+	@printf "\n\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
+	@printf "\n\n"
+	@printf "  \033[0;90m🐐 Happy coding with GOTRS!\033[0m\n\n"
+	@printf "  \033[0;90mContainer: $(CONTAINER_CMD) | Compose: $(COMPOSE_CMD)\033[0m\n\n"
+	@printf "\n\n"
 #########################################
 # TDD WORKFLOW COMMANDS
 #########################################
 
 # Initialize TDD workflow
 tdd-init:
-	@echo "🧪 Initializing TDD workflow with mandatory quality gates..."
+	@printf "🧪 Initializing TDD workflow with mandatory quality gates...\n"
 	@./scripts/tdd-enforcer.sh init
 
 # Start TDD cycle with failing test
@@ -229,22 +240,22 @@ tdd-test-first:
 		echo "Error: FEATURE required. Usage: make tdd-test-first FEATURE='Feature Name'"; \
 		exit 1; \
 	fi
-	@echo "🔴 Starting test-first phase for: $(FEATURE)"
+	@printf "🔴 Starting test-first phase for: $(FEATURE)\n"
 	@./scripts/tdd-enforcer.sh test-first "$(FEATURE)"
 
 # Implement code to pass tests
 tdd-implement:
-	@echo "🔧 Starting implementation phase..."
+	@printf "🔧 Starting implementation phase...\n"
 	@./scripts/tdd-enforcer.sh implement
 
 # Comprehensive verification with all quality gates
 tdd-verify:
-	@echo "✅ Running comprehensive verification (ALL quality gates must pass)..."
+	@printf "✅ Running comprehensive verification (ALL quality gates must pass)...\n"
 	@./scripts/tdd-enforcer.sh verify
 
 # Safe refactoring with regression checks
 tdd-refactor:
-	@echo "♻️ Starting refactor phase with regression protection..."
+	@printf "♻️ Starting refactor phase with regression protection...\n"
 	@./scripts/tdd-enforcer.sh refactor
 
 # Show current TDD workflow status
@@ -253,12 +264,12 @@ tdd-status:
 
 # Run quality gates independently for debugging
 quality-gates:
-	@echo "🚪 Running all quality gates independently..."
+	@printf "🚪 Running all quality gates independently...\n"
 	@./scripts/tdd-enforcer.sh verify debug
 
 # Generate evidence report from latest verification
 evidence-report:
-	@echo "📊 Latest evidence reports:"
+	@printf "📊 Latest evidence reports:\n"
 	@find generated/evidence -name "*_report_*.html" -type f -exec ls -la {} \; | head -5 || echo "No evidence reports found"
 
 #########################################
@@ -280,34 +291,29 @@ test:
 
 # Debug environment detection
 debug-env:
-	@echo "Container Environment Detection:"
-	@echo "================================"
-	@echo "Container runtime: $(CONTAINER_CMD)"
-	@echo "Compose command: $(COMPOSE_CMD)"
-	@echo ""
-	@echo "Checking available commands:"
-	@echo "----------------------------"
+	@printf "Container Environment Detection:\n"
+	@printf "================================\n"
+	@printf "Container runtime: $(CONTAINER_CMD)\n"
+	@printf "Compose command: $(COMPOSE_CMD)\n"
+	@printf "\n"
+	@printf "Checking available commands:\n"
+	@printf "----------------------------\n"
 	@command -v docker > /dev/null 2>&1 && echo "✓ docker found: $$(which docker)" || echo "✗ docker not found"
 	@command -v docker-compose > /dev/null 2>&1 && echo "✓ docker-compose found: $$(which docker-compose)" || echo "✗ docker-compose not found"
 	@command -v docker > /dev/null 2>&1 && docker compose version > /dev/null 2>&1 && echo "✓ docker compose plugin found" || echo "✗ docker compose plugin not found"
 	@command -v podman > /dev/null 2>&1 && echo "✓ podman found: $$(which podman)" || echo "✗ podman not found"
 	@command -v podman-compose > /dev/null 2>&1 && echo "✓ podman-compose found: $$(which podman-compose)" || echo "✗ podman-compose not found"
 	@command -v podman > /dev/null 2>&1 && podman compose version > /dev/null 2>&1 && echo "✓ podman compose plugin found" || echo "✗ podman compose plugin not found"
-	@echo ""
-	@echo "Selected commands will be used for all make targets."
-
+	@printf "\n"
+	@printf "Selected commands will be used for all make targets.\n"
 # Build the toolbox container (cached after first build)
 toolbox-build: build-cached
-	@echo "🔧 Building GOTRS toolbox container (using backend as base)..."
-	@$(CONTAINER_CMD) build \
-		--cache-from gotrs-toolbox:latest \
-		--build-arg BUILDKIT_INLINE_CACHE=1 \
-		-f Dockerfile.toolbox -t gotrs-toolbox:latest .
-	@echo "✅ Toolbox container ready"
-
+	@printf "🔧 Building GOTRS toolbox container (using backend as base)...\n"
+	@$(CONTAINER_CMD) build -f Dockerfile.toolbox -t gotrs-toolbox:latest .
+	@printf "✅ Toolbox container ready\n"
 # Initial setup with secure secret generation
 setup:
-	@echo "🔬 Synthesizing secure configuration..."
+	@printf "🔬 Synthesizing secure configuration...\n"
 	@if [ ! -f .env ]; then \
 		$(MAKE) synthesize || echo "⚠️  Failed to synthesize. Using example file as fallback."; \
 		if [ ! -f .env ]; then cp -n .env.example .env || true; fi; \
@@ -315,8 +321,7 @@ setup:
 		echo "✅ .env already exists. Run 'make synthesize' to regenerate."; \
 	fi
 	@cp -n docker-compose.override.yml.example docker-compose.override.yml || true
-	@echo "Setup complete. Run 'make up' to start development environment."
-
+	@printf "Setup complete. Run 'make up' to start development environment.\n"
 # Generate secure credentials and output CSV to stdout
 synthesize-credentials:
 	@$(MAKE) toolbox-build >&2
@@ -333,21 +338,19 @@ show-dev-creds:
 
 # Apply generated test data to database
 db-apply-test-data:
-	@echo "📝 Applying generated test data..."
+	@printf "📝 Applying generated test data...\n"
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -f - < migrations/000004_generated_test_data.up.sql
-	@echo "✅ Test data applied. Run 'make show-dev-creds' to see credentials."
-
+	@printf "✅ Test data applied. Run 'make show-dev-creds' to see credentials.\n"
 # Clean up storage directory (orphaned files after DB reset)
 clean-storage:
-	@echo "🧹 Cleaning orphaned storage files..."
+	@printf "🧹 Cleaning orphaned storage files...\n"
 	@rm -rf internal/api/storage/* 2>/dev/null || true
 	@rm -rf storage/* 2>/dev/null || true
-	@echo "✅ Storage directories cleaned"
-
+	@printf "✅ Storage directories cleaned\n"
 # Generate secure .env file with random secrets (runs in container)
 synthesize:
 	@$(MAKE) toolbox-build
-	@echo "🔬 Synthesizing secure configuration and test data..." >&2
+	@printf "🔬 Synthesizing secure configuration and test data..." >&2
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -357,7 +360,7 @@ synthesize:
 	@if [ -z "$(SYNTH_ARGS)" ]; then \
 		echo "📝 Test credentials saved to test_credentials.csv" >&2; \
 	fi
-	@echo "🔐 Generating Kubernetes secrets from template..."
+	@printf "🔐 Generating Kubernetes secrets from template...\n"
 	@./scripts/generate-k8s-secrets.sh
 	@if [ -d .git ]; then \
 		echo ""; \
@@ -368,7 +371,7 @@ synthesize:
 # Rotate secrets in existing .env file (runs in container)
 rotate-secrets:
 	@$(MAKE) toolbox-build
-	@echo "🔄 Rotating secrets..."
+	@printf "🔄 Rotating secrets...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -379,7 +382,7 @@ rotate-secrets:
 # Force regenerate .env file (runs in container)
 synthesize-force:
 	@$(MAKE) toolbox-build
-	@echo "⚠️  Force regenerating .env file..."
+	@printf "⚠️  Force regenerating .env file...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -390,7 +393,7 @@ synthesize-force:
 # Generate only test data (SQL and CSV)
 gen-test-data:
 	@$(MAKE) toolbox-build
-	@echo "🔄 Regenerating test data only..."
+	@printf "🔄 Regenerating test data only...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -400,13 +403,13 @@ gen-test-data:
 
 # Generate Kubernetes secrets from template with secure random values
 k8s-secrets:
-	@echo "🔐 Generating Kubernetes secrets from template..."
+	@printf "🔐 Generating Kubernetes secrets from template...\n"
 	@./scripts/generate-k8s-secrets.sh
 
 # Run interactive shell in toolbox container
 toolbox-run:
 	@$(MAKE) toolbox-build
-	@echo "🔧 Starting toolbox shell..."
+	@printf "🔧 Starting toolbox shell...\n"
 	@$(CONTAINER_CMD) run --rm -it \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -428,33 +431,70 @@ toolbox-exec:
 # Check compilation of all packages
 toolbox-compile:
 	@$(MAKE) toolbox-build
-	@echo "🔨 Checking compilation..."
+	@printf "🔨 Checking compilation...\n"
 	@$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		gotrs-toolbox:latest \
-		go build ./...
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./...'
+
+# Compile only API and goats (faster, avoids unrelated packages)
+.PHONY: toolbox-compile-api
+toolbox-compile-api:
+	@$(MAKE) toolbox-build
+	@printf "🔨 Compiling API and goats packages only...\n"
+	@$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		-v "$$(pwd):/workspace" \
+		-w /workspace \
+		-u "$$(id -u):$$(id -g)" \
+		gotrs-toolbox:latest \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./internal/api ./cmd/goats'
 
 # Compile the main goats binary in container
 .PHONY: compile
 compile: toolbox-build
-	@echo "🔨 Compiling goats binary..."
+	@printf "🔨 Compiling goats binary...\n"
+	@mkdir -p bin
 	@$(CONTAINER_CMD) run --rm \
-		-v "$$(pwd):/workspace" \
+		--security-opt label=disable \
+		-v "$$(pwd):/workspace$(VZ)" \
+		-v "$$(pwd)/bin:/workspace/bin$(VZ)" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		-e CGO_ENABLED=1 \
-		-e GOOS=linux \
-		-e GOARCH=amd64 \
 		gotrs-toolbox:latest \
-		go build -ldflags="-w -s" -o bin/goats ./cmd/goats
-	@echo "✅ Binary compiled to bin/goats"
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && mkdir -p bin && go build -buildvcs=false -ldflags="-w -s" -o bin/goats ./cmd/goats'
+	@printf "✅ Binary compiled to bin/goats\n"
+# Safe compile without bind-mounts (avoids SELinux relabel issues)
+.PHONY: compile-safe
+compile-safe: toolbox-build
+	@printf "🔒 Compiling goats binary in isolated toolbox container...\n"
+	-@$(CONTAINER_CMD) rm -f gotrs-compile >/dev/null 2>&1 || true
+	@$(CONTAINER_CMD) create --name gotrs-compile gotrs-toolbox:latest sleep infinity >/dev/null
+	@$(CONTAINER_CMD) cp . gotrs-compile:/workspace
+	@$(CONTAINER_CMD) start gotrs-compile >/dev/null
+	@$(CONTAINER_CMD) exec gotrs-compile bash -lc 'export PATH=/usr/local/go/bin:$$PATH && mkdir -p /workspace/bin && go build -buildvcs=false -ldflags="-w -s" -o /workspace/bin/goats ./cmd/goats'
+	@mkdir -p bin
+	@$(CONTAINER_CMD) cp gotrs-compile:/workspace/bin/goats ./bin/goats
+	@$(CONTAINER_CMD) rm -f gotrs-compile >/dev/null
+	@printf "✅ Binary compiled to bin/goats (compile-safe)\n"
+# Run only internal/api tests (containerized)
+.PHONY: toolbox-test-api
+toolbox-test-api: toolbox-build
+	@printf "🧪 Running internal/api tests in toolbox...\n"	# Use isolated container copy to avoid SELinux relabel on node_modules
+	-@$(CONTAINER_CMD) rm -f gotrs-test >/dev/null 2>&1 || true
+	@$(CONTAINER_CMD) create --name gotrs-test gotrs-toolbox:latest sleep infinity >/dev/null
+	@$(CONTAINER_CMD) cp . gotrs-test:/workspace
+	@$(CONTAINER_CMD) start gotrs-test >/dev/null
+	@$(CONTAINER_CMD) exec gotrs-test bash -lc "export PATH=/usr/local/go/bin:$$PATH && cd /workspace && APP_ENV=test DB_HOST=localhost DB_PORT=5432 DB_NAME=gotrs_test DB_USER=gotrs_test DB_PASSWORD=gotrs_test_password go test -v ./internal/api -run 'Queue|Article|Search|Priority|User'"
+	@$(CONTAINER_CMD) rm -f gotrs-test >/dev/null
 
 # Run tests directly in toolbox (faster than compose exec)
 toolbox-test:
 	@$(MAKE) toolbox-build
-	@echo "🧪 Running tests in toolbox..."
+	@printf "🧪 Running tests in toolbox...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -474,7 +514,7 @@ toolbox-test:
 # Run specific test with toolbox
 toolbox-test-run:
 	@$(MAKE) toolbox-build
-	@echo "🧪 Running specific test: $(TEST)"
+	@printf "🧪 Running specific test: $(TEST)\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -494,7 +534,7 @@ toolbox-test-run:
 # Run specific Go file with toolbox
 toolbox-run-file:
 	@$(MAKE) toolbox-build
-	@echo "🚀 Running Go file: $(FILE)"
+	@printf "🚀 Running Go file: $(FILE)\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -514,7 +554,7 @@ toolbox-run-file:
 # Run anti-gaslighting detector in toolbox container
 toolbox-antigaslight:
 	@$(MAKE) toolbox-build
-	@echo "🔍 Running anti-gaslighting detector in container..."
+	@printf "🔍 Running anti-gaslighting detector in container...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -534,7 +574,7 @@ toolbox-antigaslight:
 # Run linting with toolbox
 toolbox-lint:
 	@$(MAKE) toolbox-build
-	@echo "🔍 Running linters..."
+	@printf "🔍 Running linters...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -545,7 +585,7 @@ toolbox-lint:
 # Run security scan with toolbox
 toolbox-security:
 	@$(MAKE) toolbox-build
-	@echo "🔒 Running security scan..."
+	@printf "🔒 Running security scan...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -555,7 +595,7 @@ toolbox-security:
 
 # Run Trivy vulnerability scan locally
 trivy-scan:
-	@echo "🔍 Running Trivy vulnerability scan..."
+	@printf "🔍 Running Trivy vulnerability scan...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
@@ -564,12 +604,12 @@ trivy-scan:
 
 # Run Trivy on built images
 trivy-images:
-	@echo "🔍 Scanning backend image..."
+	@printf "🔍 Scanning backend image...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		aquasec/trivy:latest \
 		image gotrs-backend:latest
-	@echo "🔍 Scanning frontend image..."
+	@printf "🔍 Scanning frontend image...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		aquasec/trivy:latest \
@@ -577,7 +617,7 @@ trivy-images:
 
 # Schema discovery - generate YAML modules from database
 schema-discovery:
-	@echo "🔍 Discovering database schema and generating YAML modules..."
+	@printf "🔍 Discovering database schema and generating YAML modules...\n"
 	@./scripts/schema-discovery.sh --verbose
 
 # Schema discovery for specific table
@@ -586,31 +626,28 @@ schema-table:
 		echo "Error: TABLE not specified. Usage: make schema-table TABLE=tablename"; \
 		exit 1; \
 	fi
-	@echo "🔍 Generating YAML module for table: $(TABLE)..."
+	@printf "🔍 Generating YAML module for table: $(TABLE)...\n"
 	@./scripts/schema-discovery.sh --table $(TABLE) --verbose
 
 # Start all services (and clean host binaries after build)
 up:
 	$(COMPOSE_CMD) up --build
-	@echo "🧹 Cleaning host binaries after container build..."
+	@printf "🧹 Cleaning host binaries after container build...\n"
 	@rm -f bin/goats bin/gotrs bin/server bin/migrate bin/generator bin/gotrs-migrate bin/schema-discovery 2>/dev/null || true
-	@echo "✅ Host binaries cleaned - containers have the only copies"
-
+	@printf "✅ Host binaries cleaned - containers have the only copies\n"
 # Start in background (and clean host binaries after build)
 up-d:
 	$(COMPOSE_CMD) up -d --build
-	@echo "🧹 Cleaning host binaries after container build..."
+	@printf "🧹 Cleaning host binaries after container build...\n"
 	@rm -f bin/goats bin/gotrs bin/server bin/migrate bin/generator bin/gotrs-migrate bin/schema-discovery 2>/dev/null || true
-	@echo "✅ Host binaries cleaned - containers have the only copies"
-
+	@printf "✅ Host binaries cleaned - containers have the only copies\n"
 # Stop all services
 down:
 	$(COMPOSE_CMD) down
 
 # Restart services
 restart: down up-d
-	@echo "🔄 Restarted all services"
-
+	@printf "🔄 Restarted all services\n"
 # View logs
 logs:
 	$(COMPOSE_CMD) logs -f
@@ -640,7 +677,7 @@ clean:
 reset-db:
 	$(COMPOSE_CMD) down -v postgres
 	$(COMPOSE_CMD) up -d postgres
-	@echo "Database reset. Waiting for initialization..."
+	@printf "Database reset. Waiting for initialization...\n"
 	@sleep 5
 
 # Load environment variables from .env file (only if it exists)
@@ -665,10 +702,9 @@ db-shell:
 
 # Fix PostgreSQL sequences after data import
 db-fix-sequences:
-	@echo "🔧 Fixing database sequences..."
+	@printf "🔧 Fixing database sequences...\n"
 	@./scripts/fix-sequences.sh
-	@echo "✅ Sequences fixed - duplicate key errors should be resolved"
-
+	@printf "✅ Sequences fixed - duplicate key errors should be resolved\n"
 # Run a database query (use QUERY="SELECT ..." make db-query)
 db-query:
 	@if [ -z "$(QUERY)" ]; then \
@@ -678,40 +714,36 @@ db-query:
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -t -c "$(QUERY)"
 
 db-migrate:
-	@echo "Running database migrations..."
+	@printf "Running database migrations...\n"
 	$(COMPOSE_CMD) exec backend ./migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" up
-	@echo "Migrations completed successfully!"
-	@echo "🔧 Fixing database sequences to prevent duplicate key errors..."
+	@printf "Migrations completed successfully!\n"
+	@printf "🔧 Fixing database sequences to prevent duplicate key errors...\n"
 	@./scripts/fix-sequences.sh > /dev/null 2>&1 || true
-	@echo "✅ Database ready with sequences properly synchronized!"
-
+	@printf "✅ Database ready with sequences properly synchronized!\n"
 db-migrate-schema-only:
-	@echo "Running schema migration only..."
+	@printf "Running schema migration only...\n"
 	$(COMPOSE_CMD) exec backend ./migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" up 3
-	@echo "Schema and initial data applied (no test data)"
-	@echo "🔧 Fixing database sequences..."
+	@printf "Schema and initial data applied (no test data)\n"
+	@printf "🔧 Fixing database sequences...\n"
 	@./scripts/fix-sequences.sh > /dev/null 2>&1 || true
-	@echo "✅ Sequences synchronized!"
-
+	@printf "✅ Sequences synchronized!\n"
 db-seed-dev:
-	@echo "Seeding development database with comprehensive test data..."
+	@printf "Seeding development database with comprehensive test data...\n"
 	@$(COMPOSE_CMD) exec backend ./migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" up
-	@echo "🔧 Fixing sequences after seeding..."
+	@printf "🔧 Fixing sequences after seeding...\n"
 	@./scripts/fix-sequences.sh > /dev/null 2>&1 || true
-	@echo "✅ Development database seeded with:"
-	@echo "   - 10 organizations"
-	@echo "   - 50 customer users"
-	@echo "   - 15 support agents"
-	@echo "   - 100 ITSM tickets"
-	@echo "   - Knowledge base articles"
-
+	@printf "✅ Development database seeded with:\n"
+	@printf "   - 10 organizations\n"
+	@printf "   - 50 customer users\n"
+	@printf "   - 15 support agents\n"
+	@printf "   - 100 ITSM tickets\n"
+	@printf "   - Knowledge base articles\n"
 db-seed-test:
-	@echo "Seeding test database with comprehensive test data..."
+	@printf "Seeding test database with comprehensive test data...\n"
 	@$(COMPOSE_CMD) exec backend ./migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$${DB_NAME}_test?sslmode=disable" up
-	@echo "✅ Test database ready for testing"
-
+	@printf "✅ Test database ready for testing\n"
 db-reset-dev:
-	@echo "⚠️  This will DELETE all data and recreate the development database!"
+	@printf "⚠️  This will DELETE all data and recreate the development database!\n"
 	@echo -n "Are you sure? [y/N]: "; \
 	read confirm; \
 	if [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ]; then \
@@ -725,45 +757,40 @@ db-reset-dev:
 	fi
 
 db-reset-test:
-	@echo "Resetting test database..."
+	@printf "Resetting test database...\n"
 	@$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$${DB_NAME}_test?sslmode=disable" down -all
 	@$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$${DB_NAME}_test?sslmode=disable" up
 	@$(MAKE) clean-storage
-	@echo "✅ Test database reset with fresh test data"
-
+	@printf "✅ Test database reset with fresh test data\n"
 db-refresh: db-reset-dev
-	@echo "✅ Database refreshed for new development cycle"
-
+	@printf "✅ Database refreshed for new development cycle\n"
 db-rollback:
 	$(COMPOSE_CMD) exec backend migrate -path /app/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" down 1
 
 # Fast database initialization from baseline (new approach)
 db-init:
-	@echo "🚀 Initializing database from baseline (fast path)..."
+	@printf "🚀 Initializing database from baseline (fast path)...\n"
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -f - < schema/baseline/otrs_complete.sql
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -f - < schema/baseline/required_lookups.sql
 	@$(MAKE) clean-storage
-	@echo "🔧 Fixing sequences after baseline initialization..."
+	@printf "🔧 Fixing sequences after baseline initialization...\n"
 	@./scripts/fix-sequences.sh > /dev/null 2>&1 || true
-	@echo "✅ Database initialized from baseline"
-
+	@printf "✅ Database initialized from baseline\n"
 # Initialize for OTRS import (structure only, no data)
 db-init-import:
-	@echo "🚀 Initializing database structure for OTRS import..."
+	@printf "🚀 Initializing database structure for OTRS import...\n"
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -f - < schema/baseline/otrs_complete.sql
-	@echo "✅ Database structure ready for OTRS import"
-
+	@printf "✅ Database structure ready for OTRS import\n"
 # Development environment with minimal seed data
 db-init-dev:
-	@echo "🚀 Initializing development database..."
+	@printf "🚀 Initializing development database...\n"
 	@$(MAKE) db-init
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -f - < schema/seed/minimal.sql
-	@echo "🔧 Fixing sequences after initialization..."
+	@printf "🔧 Fixing sequences after initialization...\n"
 	@./scripts/fix-sequences.sh > /dev/null 2>&1 || true
-	@echo "✅ Development database ready (admin/admin)"
-
+	@printf "✅ Development database ready (admin/admin)\n"
 # Legacy reset using old migrations (kept for compatibility)
 db-reset-legacy:
 	$(COMPOSE_CMD) exec backend migrate -path /app/migrations/legacy -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" down -all
@@ -782,13 +809,12 @@ db-force:
 
 # Apply SQL migrations directly via psql
 db-migrate-sql:
-	@echo "📄 Applying SQL migrations directly..."
+	@printf "📄 Applying SQL migrations directly...\n"
 	@for f in migrations/*.up.sql; do \
 		echo "  Running $$(basename $$f)..."; \
 		$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -f - < "$$f" 2>&1 | grep -E "(CREATE|ALTER|INSERT|ERROR)" | head -3 || true; \
 	done
-	@echo "✅ SQL migrations applied"
-
+	@printf "✅ SQL migrations applied\n"
 # OTRS Migration Tools
 # Analyze OTRS SQL dump file
 migrate-analyze:
@@ -797,7 +823,7 @@ migrate-analyze:
 		echo "❌ SQL file required. Usage: make migrate-analyze SQL=/path/to/dump.sql"; \
 		exit 1; \
 	fi
-	@echo "🔍 Analyzing OTRS SQL dump: $(SQL)"
+	@printf "🔍 Analyzing OTRS SQL dump: $(SQL)\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(dirname $(SQL)):/data:ro" \
 		-u "$$(id -u):$$(id -g)" \
@@ -811,7 +837,7 @@ migrate-import:
 		echo "❌ SQL file required. Usage: make migrate-import SQL=/path/to/dump.sql [DRY_RUN=false]"; \
 		exit 1; \
 	fi
-	@echo "📥 Importing OTRS data from: $(SQL)"
+	@printf "📥 Importing OTRS data from: $(SQL)\n"
 	@DRY_RUN_FLAG=""; \
 	if [ "$${DRY_RUN:-true}" = "true" ]; then \
 		DRY_RUN_FLAG="-dry-run"; \
@@ -833,8 +859,8 @@ migrate-import-force:
 		echo "❌ SQL file required. Usage: make migrate-import-force SQL=/path/to/dump.sql"; \
 		exit 1; \
 	fi
-	@echo "⚠️  WARNING: Force import will CLEAR ALL EXISTING DATA!"
-	@echo "📥 Importing OTRS data from: $(SQL)"
+	@printf "⚠️  WARNING: Force import will CLEAR ALL EXISTING DATA!\n"
+	@printf "📥 Importing OTRS data from: $(SQL)\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(dirname $(SQL)):/data:ro" \
 		-u "$$(id -u):$$(id -g)" \
@@ -843,12 +869,11 @@ migrate-import-force:
 		gotrs-migrate -cmd=import -sql="/data/$$(basename $(SQL))" \
 			-db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable" \
 			-force -v || true
-	@echo "✅ Force import completed successfully!"
-
+	@printf "✅ Force import completed successfully!\n"
 # Validate imported OTRS data
 migrate-validate:
 	@$(MAKE) toolbox-build
-	@echo "🔍 Validating imported OTRS data"
+	@printf "🔍 Validating imported OTRS data\n"
 	@$(CONTAINER_CMD) run --rm \
 		-u "$$(id -u):$$(id -g)" \
 		--network gotrs-ce_gotrs-network \
@@ -858,8 +883,8 @@ migrate-validate:
 
 # Import test data with proper ID mapping
 import-test-data:
-	@echo "📥 Building and importing test tickets with proper ID mapping..."
-	@echo "🔨 Building import tool..."
+	@printf "📥 Building and importing test tickets with proper ID mapping...\n"
+	@printf "🔨 Building import tool...\n"
 	@mkdir -p bin
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
@@ -869,17 +894,16 @@ import-test-data:
 		-u "$$(id -u):$$(id -g)" \
 		golang:1.23-alpine \
 		go build -o /workspace/bin/import-otrs ./cmd/import-otrs/main.go
-	@echo "🗑️ Clearing existing data..."
+	@printf "🗑️ Clearing existing data...\n"
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -c "TRUNCATE ticket CASCADE;" > /dev/null 2>&1
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -c "TRUNCATE article CASCADE;" > /dev/null 2>&1
-	@echo "📦 Running import..."
+	@printf "📦 Running import...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd)/bin:/bin:ro" \
 		--network gotrs-ce_gotrs-network \
 		alpine:3.19 \
 		/bin/import-otrs -db="postgres://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)?sslmode=disable"
-	@echo "✅ Test data imported successfully with correct article mappings!"
-
+	@printf "✅ Test data imported successfully with correct article mappings!\n"
 # Reset user password and enable account (using toolbox)
 reset-password:
 	@$(MAKE) toolbox-build
@@ -909,11 +933,9 @@ valkey-cli:
 
 # i18n Tools
 babelfish:
-	@echo "Building gotrs-babelfish..."
-	$(COMPOSE_CMD) exec backend go build -o /tmp/bin/gotrs-babelfish cmd/gotrs-babelfish/main.go
-	@echo "✨ gotrs-babelfish built successfully!"
-	@echo "Run it with: docker exec gotrs-backend /tmp/gotrs-babelfish"
-
+	@printf "Building gotrs-babelfish...\n"	$(COMPOSE_CMD) exec backend go build -o /tmp/bin/gotrs-babelfish cmd/gotrs-babelfish/main.go
+	@printf "✨ gotrs-babelfish built successfully!\n"
+	@printf "Run it with: docker exec gotrs-backend /tmp/gotrs-babelfish\n"
 babelfish-run:
 	@$(COMPOSE_CMD) exec backend go run cmd/gotrs-babelfish/main.go $(ARGS)
 
@@ -930,8 +952,8 @@ test-short:
 	$(COMPOSE_CMD) exec -e DB_NAME=$${DB_NAME:-gotrs}_test -e APP_ENV=test backend go test -short ./...
 
 test-coverage:
-	@echo "Running test coverage analysis..."
-	@echo "Using test database: $${DB_NAME:-gotrs}_test"
+	@printf "Running test coverage analysis...\n"
+	@printf "Using test database: $${DB_NAME:-gotrs}_test\n"
 	@mkdir -p generated
 	$(COMPOSE_CMD) exec -e DB_NAME=$${DB_NAME:-gotrs}_test -e APP_ENV=test backend sh -c "mkdir -p generated && go test -v -race -coverprofile=generated/coverage.out -covermode=atomic ./..."
 	$(COMPOSE_CMD) exec backend go tool cover -func=generated/coverage.out
@@ -986,15 +1008,13 @@ test-coverage-html:
 	$(COMPOSE_CMD) exec -e DB_NAME=$${DB_NAME:-gotrs}_test -e APP_ENV=test backend sh -c "mkdir -p generated && go test -v -race -coverprofile=generated/coverage.out -covermode=atomic ./..."
 	$(COMPOSE_CMD) exec backend sh -c "go tool cover -html=generated/coverage.out -o generated/coverage.html"
 	$(COMPOSE_CMD) cp backend:/app/generated/coverage.html ./generated/coverage.html
-	@echo "Coverage report generated: generated/coverage.html"
-
+	@printf "Coverage report generated: generated/coverage.html\n"
 # Frontend test commands
 test-frontend:
-	@echo "Running frontend tests..."
-	$(COMPOSE_CMD) exec frontend npm test
+	@printf "Running frontend tests...\n"	$(COMPOSE_CMD) exec frontend npm test
 
 test-contracts: toolbox-build
-	@echo "🔍 Running API contract tests..."
+	@printf "🔍 Running API contract tests...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -1004,19 +1024,18 @@ test-contracts: toolbox-build
 		go test -v ./internal/testing/contracts/...
 
 test-all: test test-frontend test-contracts test-e2e
-	@echo "All tests completed!"
-
+	@printf "All tests completed!\n"
 # E2E Testing Commands
 .PHONY: test-e2e test-e2e-watch test-e2e-debug test-e2e-report playwright-build
 
 # Build Playwright test container
 playwright-build:
-	@echo "Building Playwright test container..."
+	@printf "Building Playwright test container...\n"
 	@$(COMPOSE_CMD) build playwright
 
 # Run E2E tests
 test-e2e: playwright-build
-	@echo "Running E2E tests with Playwright..."
+	@printf "Running E2E tests with Playwright...\n"
 	@mkdir -p test-results/screenshots test-results/videos
 	@$(COMPOSE_CMD) run --rm \
 		-e HEADLESS=true \
@@ -1024,7 +1043,7 @@ test-e2e: playwright-build
 
 # Run E2E tests in watch mode (for development)
 test-e2e-watch: playwright-build
-	@echo "Running E2E tests in watch mode..."
+	@printf "Running E2E tests in watch mode...\n"
 	@mkdir -p test-results/screenshots test-results/videos
 	@$(COMPOSE_CMD) run --rm \
 		-e HEADLESS=false \
@@ -1033,12 +1052,12 @@ test-e2e-watch: playwright-build
 
 # Check for untranslated keys in UI
 check-translations:
-	@echo "Checking for untranslated keys in UI..."
+	@printf "Checking for untranslated keys in UI...\n"
 	@./scripts/check-translations.sh
 
 # Run E2E tests with headed browser for debugging
 test-e2e-debug: playwright-build
-	@echo "Running E2E tests in debug mode (headed browser)..."
+	@printf "Running E2E tests in debug mode (headed browser)...\n"
 	@mkdir -p test-results/screenshots test-results/videos
 	@$(COMPOSE_CMD) run --rm \
 		-e HEADLESS=false \
@@ -1049,7 +1068,7 @@ test-e2e-debug: playwright-build
 
 # Generate HTML test report
 test-e2e-report:
-	@echo "Generating E2E test report..."
+	@printf "Generating E2E test report...\n"
 	@if [ -d "test-results" ]; then \
 		echo "Test results:"; \
 		echo "Screenshots: $$(find test-results/screenshots -name "*.png" 2>/dev/null | wc -l) files"; \
@@ -1061,7 +1080,7 @@ test-e2e-report:
 
 # Clean test results
 clean-test-results:
-	@echo "Cleaning test results..."
+	@printf "Cleaning test results...\n"
 	@rm -rf test-results/
 
 # Security scanning commands
@@ -1069,7 +1088,7 @@ clean-test-results:
 
 # Scan for secrets in current code
 scan-secrets:
-	@echo "Scanning for secrets and credentials..."
+	@printf "Scanning for secrets and credentials...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -1078,7 +1097,7 @@ scan-secrets:
 
 # Scan entire git history for secrets
 scan-secrets-history:
-	@echo "Scanning git history for secrets..."
+	@printf "Scanning git history for secrets...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -1091,7 +1110,7 @@ scan-secrets-precommit:
 
 # Scan for vulnerabilities with Trivy
 scan-vulnerabilities:
-	@echo "Scanning for vulnerabilities..."
+	@printf "Scanning for vulnerabilities...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
@@ -1101,54 +1120,45 @@ scan-vulnerabilities:
 
 # Run all security scans
 security-scan: scan-secrets scan-vulnerabilities
-	@echo "Security scanning completed!"
-
+	@printf "Security scanning completed!\n"
 # Build for production (includes CSS and container build)
 build: css-build
-	@echo "🔨 Building backend container..."
-	$(CONTAINER_CMD) build -f Dockerfile -t gotrs:latest .
-	@echo "🧹 Cleaning host binaries..."
+	@printf "🔨 Building backend container...\n"	$(CONTAINER_CMD) build -f Dockerfile -t gotrs:latest .
+	@printf "🧹 Cleaning host binaries...\n"
 	@rm -f goats gotrs gotrs-* generator migrate server  # Clean root directory
 	@rm -f bin/* 2>/dev/null || true  # Clean bin directory
-	@echo "✅ Build complete - CSS compiled and containers ready"
-
+	@printf "✅ Build complete - CSS compiled and containers ready\n"
 # ============================================
 # Enhanced Build Targets with BuildKit
 # ============================================
 
 # Enable BuildKit for better caching
+# Enable BuildKit for Docker only
+ifeq ($(findstring docker,$(CONTAINER_CMD)),docker)
 export DOCKER_BUILDKIT=1
 export COMPOSE_DOCKER_CLI_BUILD=1
+endif
 
 # Build with caching (70% faster rebuilds)
 build-cached:
-	@echo "🚀 Building with BuildKit cache mounts..."
-	$(CONTAINER_CMD) build \
-		--cache-from gotrs:latest \
-		--build-arg BUILDKIT_INLINE_CACHE=1 \
-		-t gotrs:latest .
-	@echo "✅ Build complete with caching"
-
+	@printf "🚀 Building backend image (cache flags disabled for podman compatibility)...\n"	$(CONTAINER_CMD) build -t gotrs:latest .
+	@printf "✅ Build complete\n"
 # Security scan build (CI/CD)
 build-secure:
-	@echo "🔒 Building with security scanning..."
-	$(CONTAINER_CMD) build \
+	@printf "🔒 Building with security scanning...\n"	$(CONTAINER_CMD) build \
 		--target security \
 		--output type=local,dest=./security-reports \
 		.
-	@echo "📊 Security reports saved to ./security-reports/"
-
+	@printf "📊 Security reports saved to ./security-reports/\n"
 # Multi-platform build (AMD64 and ARM64)
 build-multi:
-	@echo "🌍 Building for multiple platforms..."
-	$(CONTAINER_CMD) buildx build \
+	@printf "🌍 Building for multiple platforms...\n"	$(CONTAINER_CMD) buildx build \
 		--platform linux/amd64,linux/arm64 \
 		-t gotrs:latest .
-	@echo "✅ Multi-platform build complete"
-
+	@printf "✅ Multi-platform build complete\n"
 # Analyze image size with dive
 analyze-size:
-	@echo "📏 Analyzing Docker image size..."
+	@printf "📏 Analyzing Docker image size...\n"
 	@if command -v dive > /dev/null 2>&1; then \
 		dive gotrs:latest; \
 	else \
@@ -1159,26 +1169,23 @@ analyze-size:
 
 # Build without cache (clean build)
 build-clean:
-	@echo "🧹 Clean build without cache..."
-	$(CONTAINER_CMD) build --no-cache -t gotrs:latest .
-	@echo "✅ Clean build complete"
-
+	@printf "🧹 Clean build without cache...\n"	$(CONTAINER_CMD) build --no-cache -t gotrs:latest .
+	@printf "✅ Clean build complete\n"
 # Show build cache usage
 show-cache:
-	@echo "💾 Docker build cache usage:"
+	@printf "💾 Docker build cache usage:\n"
 	@$(CONTAINER_CMD) system df --verbose | grep -A 10 "Build Cache" || \
 		$(CONTAINER_CMD) buildx du --verbose 2>/dev/null || \
 		echo "Build cache info not available"
 
 # Clear build cache
 clear-cache:
-	@echo "🗑️ Clearing Docker build cache..."
+	@printf "🗑️ Clearing Docker build cache...\n"
 	@$(CONTAINER_CMD) builder prune -f
-	@echo "✅ Build cache cleared"
-
+	@printf "✅ Build cache cleared\n"
 # Build specialized containers
 build-all-tools: build-cached toolbox-build
-	@echo "🛠️ Building all specialized tool containers..."
+	@printf "🛠️ Building all specialized tool containers...\n"
 	@$(CONTAINER_CMD) build \
 		--cache-from gotrs-tests:latest \
 		--build-arg BUILDKIT_INLINE_CACHE=1 \
@@ -1195,22 +1202,21 @@ build-all-tools: build-cached toolbox-build
 		--cache-from gotrs-config-manager:latest \
 		--build-arg BUILDKIT_INLINE_CACHE=1 \
 		-f Dockerfile.config-manager -t gotrs-config-manager:latest .
-	@echo "✅ All tool containers built successfully"
-
+	@printf "✅ All tool containers built successfully\n"
 # Show image sizes
 show-sizes:
-	@echo "📏 Docker image sizes:"
+	@printf "📏 Docker image sizes:\n"
 	@$(CONTAINER_CMD) images --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" | grep -E "(REPOSITORY|gotrs)" | column -t
 
 # Check service health (runs in container)
 health:
-	@echo "Checking service health..."
+	@printf "Checking service health...\n"
 	@$(CONTAINER_CMD) run --rm --network=host alpine/curl:latest -f http://localhost/health || echo "Backend not healthy"
 	@$(CONTAINER_CMD) run --rm --network=host alpine/curl:latest -f http://localhost/ || echo "Frontend not healthy"
 
 # Open services in browser
 open:
-	@echo "Opening services..."
+	@printf "Opening services...\n"
 	@open http://localhost || xdg-open http://localhost || echo "Open http://localhost"
 
 open-mail:
@@ -1225,8 +1231,7 @@ dev: up
 stop: down
 
 reset: clean setup up-d
-	@echo "Environment reset and restarted"
-
+	@printf "Environment reset and restarted\n"
 # Show running services
 ps:
 	$(COMPOSE_CMD) ps
@@ -1240,7 +1245,7 @@ exec-frontend:
 
 # Podman-specific: Generate systemd units
 podman-systemd:
-	@echo "Generating systemd units for podman..."
+	@printf "Generating systemd units for podman...\n"
 	@if command -v podman > /dev/null 2>&1; then \
 		podman generate systemd --new --files --name gotrs-postgres; \
 		podman generate systemd --new --files --name gotrs-valkey; \
@@ -1272,30 +1277,26 @@ gen-migration:
 
 # Run LDAP integration tests
 test-ldap:
-	@echo "Running LDAP integration tests..."
-	@echo "Starting LDAP server if not running..."
-	$(COMPOSE_CMD) up -d openldap
-	@echo "Waiting for LDAP server to be ready..."
+	@printf "Running LDAP integration tests...\n"
+	@printf "Starting LDAP server if not running...\n"	$(COMPOSE_CMD) up -d openldap
+	@printf "Waiting for LDAP server to be ready...\n"
 	@sleep 30
-	@echo "Running integration tests..."
-	$(COMPOSE_CMD) exec -e LDAP_INTEGRATION_TESTS=true -e LDAP_HOST=openldap backend go test -v ./internal/service -run TestLDAPIntegration
+	@printf "Running integration tests...\n"	$(COMPOSE_CMD) exec -e LDAP_INTEGRATION_TESTS=true -e LDAP_HOST=openldap backend go test -v ./internal/service -run TestLDAPIntegration
 
 # Run LDAP performance benchmarks
 test-ldap-perf:
-	@echo "Running LDAP performance benchmarks..."
-	$(COMPOSE_CMD) up -d openldap
-	@echo "Waiting for LDAP server..."
+	@printf "Running LDAP performance benchmarks...\n"	$(COMPOSE_CMD) up -d openldap
+	@printf "Waiting for LDAP server...\n"
 	@sleep 30
 	$(COMPOSE_CMD) exec -e LDAP_INTEGRATION_TESTS=true -e LDAP_HOST=openldap backend go test -v ./internal/service -bench=BenchmarkLDAP -run=^$$
 
 # Open phpLDAPadmin in browser
 ldap-admin:
-	@echo "Starting phpLDAPadmin..."
-	$(COMPOSE_CMD) --profile tools up -d phpldapadmin
-	@echo "Opening phpLDAPadmin at http://localhost:8091"
-	@echo "Login with:"
-	@echo "  Login DN: cn=admin,dc=gotrs,dc=local"
-	@echo "  Password: admin123"
+	@printf "Starting phpLDAPadmin...\n"	$(COMPOSE_CMD) --profile tools up -d phpldapadmin
+	@printf "Opening phpLDAPadmin at http://localhost:8091\n"
+	@printf "Login with:\n"
+	@printf "  Login DN: cn=admin,dc=gotrs,dc=local\n"
+	@printf "  Password: admin123\n"
 	@open http://localhost:8091 || xdg-open http://localhost:8091 || echo "Open http://localhost:8091"
 
 # View OpenLDAP logs
@@ -1304,9 +1305,8 @@ ldap-logs:
 
 # Setup LDAP for development (start services and wait)
 ldap-setup:
-	@echo "Setting up LDAP development environment..."
-	$(COMPOSE_CMD) up -d openldap
-	@echo "Waiting for LDAP server to initialize (this may take up to 60 seconds)..."
+	@printf "Setting up LDAP development environment...\n"	$(COMPOSE_CMD) up -d openldap
+	@printf "Waiting for LDAP server to initialize (this may take up to 60 seconds)...\n"
 	@timeout=60; \
 	while [ $$timeout -gt 0 ]; do \
 		if $(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost -b "dc=gotrs,dc=local" -D "cn=admin,dc=gotrs,dc=local" -w "admin123" "(objectclass=*)" dn > /dev/null 2>&1; then \
@@ -1322,28 +1322,27 @@ ldap-setup:
 		echo "⚠ LDAP server startup timeout. Check logs with 'make ldap-logs'"; \
 		exit 1; \
 	fi
-	@echo ""
-	@echo "LDAP Server Configuration:"
-	@echo "========================="
-	@echo "Host: localhost:389"
-	@echo "Base DN: dc=gotrs,dc=local"
-	@echo "Admin DN: cn=admin,dc=gotrs,dc=local"
-	@echo "Admin Password: admin123"
-	@echo "Readonly DN: cn=readonly,dc=gotrs,dc=local"
-	@echo "Readonly Password: readonly123"
-	@echo ""
-	@echo "Test Users (password: password123):"
-	@echo "==================================="
-	@echo "jadmin     - john.admin@gotrs.local (System Administrator)"
-	@echo "smitchell  - sarah.mitchell@gotrs.local (IT Manager)"
-	@echo "mwilson    - mike.wilson@gotrs.local (Senior Support Agent)"
-	@echo "lchen      - lisa.chen@gotrs.local (Support Agent)"
-	@echo "djohnson   - david.johnson@gotrs.local (Junior Support Agent)"
-	@echo ""
-	@echo "Web Interface:"
-	@echo "=============="
-	@echo "phpLDAPadmin: http://localhost:8091 (run 'make ldap-admin')"
-
+	@printf "\n"
+	@printf "LDAP Server Configuration:\n"
+	@printf "=========================\n"
+	@printf "Host: localhost:389\n"
+	@printf "Base DN: dc=gotrs,dc=local\n"
+	@printf "Admin DN: cn=admin,dc=gotrs,dc=local\n"
+	@printf "Admin Password: admin123\n"
+	@printf "Readonly DN: cn=readonly,dc=gotrs,dc=local\n"
+	@printf "Readonly Password: readonly123\n"
+	@printf "\n"
+	@printf "Test Users (password: password123):\n"
+	@printf "===================================\n"
+	@printf "jadmin     - john.admin@gotrs.local (System Administrator)\n"
+	@printf "smitchell  - sarah.mitchell@gotrs.local (IT Manager)\n"
+	@printf "mwilson    - mike.wilson@gotrs.local (Senior Support Agent)\n"
+	@printf "lchen      - lisa.chen@gotrs.local (Support Agent)\n"
+	@printf "djohnson   - david.johnson@gotrs.local (Junior Support Agent)\n"
+	@printf "\n"
+	@printf "Web Interface:\n"
+	@printf "==============\n"
+	@printf "phpLDAPadmin: http://localhost:8091 (run 'make ldap-admin')\n"
 # Test LDAP authentication with a specific user
 ldap-test-user:
 	@echo -n "Username to test: "; \
@@ -1357,8 +1356,7 @@ ldap-test-user:
 
 # Quick LDAP connectivity test
 ldap-test:
-	@echo "Testing LDAP connectivity..."
-	$(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost \
+	@printf "Testing LDAP connectivity...\n"	$(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost \
 		-D "cn=admin,dc=gotrs,dc=local" -w "admin123" \
 		-b "dc=gotrs,dc=local" \
 		"(objectclass=*)" dn | head -20
@@ -1376,38 +1374,33 @@ include task-coordination.mk
 
 # Install CSS build dependencies (in container with user permissions)
 css-deps:
-	@echo "📦 Installing CSS build dependencies..."
+	@printf "📦 Installing CSS build dependencies...\n"
 	@$(CONTAINER_CMD) run --rm --security-opt label=disable -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm install
-	@echo "✅ CSS dependencies installed"
-
+	@printf "✅ CSS dependencies installed\n"
 # Build production CSS (in container with user permissions)
 css-build:
-	@echo "🎨 Building production CSS..."
+	@printf "🎨 Building production CSS...\n"
 	@if [ ! -d "node_modules" ]; then \
 		echo "📦 Installing CSS dependencies first..."; \
 		$(MAKE) css-deps; \
 	fi
 	@$(CONTAINER_CMD) run --rm --security-opt label=disable -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm run build-css
-	@echo "✅ CSS built to static/css/output.css"
-
+	@printf "✅ CSS built to static/css/output.css\n"
 # Build JavaScript assets (Tiptap editor bundle)
 js-deps:
-	@echo "📦 Installing JavaScript dependencies..."
+	@printf "📦 Installing JavaScript dependencies...\n"
 	@$(CONTAINER_CMD) run --rm --security-opt label=disable -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm install
-	@echo "✅ JavaScript dependencies installed"
-
+	@printf "✅ JavaScript dependencies installed\n"
 js-build: js-deps
-	@echo "🔨 Building JavaScript bundles..."
+	@printf "🔨 Building JavaScript bundles...\n"
 	@$(CONTAINER_CMD) run --rm --security-opt label=disable -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm run build-js
-	@echo "✅ JavaScript built to static/js/tiptap.min.js"
-
+	@printf "✅ JavaScript built to static/js/tiptap.min.js\n"
 # Build all frontend assets
 frontend-build: css-build js-build
-	@echo "✅ All frontend assets built"
-
+	@printf "✅ All frontend assets built\n"
 # Watch and rebuild CSS on changes (in container with user permissions)
 css-watch: css-deps
-	@echo "👁️  Watching for CSS changes..."
+	@printf "👁️  Watching for CSS changes...\n"
 	@$(CONTAINER_CMD) run --rm -it --security-opt label=disable -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm run watch-css
 
 # Add these commands after the existing TDD section around line 178:
@@ -1418,19 +1411,19 @@ css-watch: css-deps
 
 # Initialize comprehensive TDD environment
 tdd-comprehensive-init:
-	@echo "🚀 Initializing comprehensive TDD environment..."
+	@printf "🚀 Initializing comprehensive TDD environment...\n"
 	@./scripts/comprehensive-tdd-integration.sh init
 
 # Run comprehensive TDD verification with ALL quality gates
 tdd-comprehensive:
-	@echo "🧪 Running COMPREHENSIVE TDD verification..."
-	@echo "Zero tolerance for false positives and premature success claims"
+	@printf "🧪 Running COMPREHENSIVE TDD verification...\n"
+	@printf "Zero tolerance for false positives and premature success claims\n"
 	@./scripts/tdd-comprehensive.sh comprehensive
 
 # Anti-gaslighting detection - prevents false success claims
 anti-gaslighting:
-	@echo "🚨 Running anti-gaslighting detection..."
-	@echo "Detecting premature success claims and hidden failures..."
+	@printf "🚨 Running anti-gaslighting detection...\n"
+	@printf "Detecting premature success claims and hidden failures...\n"
 	@./scripts/anti-gaslighting-detector.sh detect
 
 # Initialize test-first TDD cycle with proper enforcement
@@ -1439,7 +1432,7 @@ tdd-test-first-init:
 		echo "Error: FEATURE required. Usage: make tdd-test-first-init FEATURE='Feature Name'"; \
 		exit 1; \
 	fi
-	@echo "🔴 Initializing test-first TDD cycle for: $(FEATURE)"
+	@printf "🔴 Initializing test-first TDD cycle for: $(FEATURE)\n"
 	@./scripts/tdd-test-first-enforcer.sh init "$(FEATURE)"
 
 # Generate failing test for TDD cycle
@@ -1448,8 +1441,8 @@ tdd-generate-test:
 		echo "Error: TDD not initialized. Run 'make tdd-test-first-init FEATURE=name' first"; \
 		exit 1; \
 	fi
-	@echo "📝 Generating failing test..."
-	@echo "Test types: unit, integration, api, browser"
+	@printf "📝 Generating failing test...\n"
+	@printf "Test types: unit, integration, api, browser\n"
 	@read -p "Enter test type (default: unit): " test_type; \
 	test_type=$${test_type:-unit}; \
 	./scripts/tdd-test-first-enforcer.sh generate-test $$test_type
@@ -1460,7 +1453,7 @@ tdd-verify-failing:
 		echo "Error: TEST_FILE required. Usage: make tdd-verify-failing TEST_FILE=path/to/test.go"; \
 		exit 1; \
 	fi
-	@echo "🔍 Verifying test actually fails..."
+	@printf "🔍 Verifying test actually fails...\n"
 	@./scripts/tdd-test-first-enforcer.sh verify-failing "$(TEST_FILE)"
 
 # Verify tests now pass after implementation
@@ -1469,7 +1462,7 @@ tdd-verify-passing:
 		echo "Error: TEST_FILE required. Usage: make tdd-verify-passing TEST_FILE=path/to/test.go"; \
 		exit 1; \
 	fi
-	@echo "✅ Verifying tests now pass..."
+	@printf "✅ Verifying tests now pass...\n"
 	@./scripts/tdd-test-first-enforcer.sh verify-passing "$(TEST_FILE)"
 
 # Complete guided TDD cycle with comprehensive verification
@@ -1478,12 +1471,12 @@ tdd-full-cycle:
 		echo "Error: FEATURE required. Usage: make tdd-full-cycle FEATURE='Feature Name'"; \
 		exit 1; \
 	fi
-	@echo "🔄 Starting full TDD cycle for: $(FEATURE)"
+	@printf "🔄 Starting full TDD cycle for: $(FEATURE)\n"
 	@./scripts/comprehensive-tdd-integration.sh full-cycle "$(FEATURE)"
 
 # Quick verification for development (fast feedback)
 tdd-quick:
-	@echo "⚡ Running quick TDD verification..."
+	@printf "⚡ Running quick TDD verification...\n"
 	@./scripts/comprehensive-tdd-integration.sh quick
 
 # Run specific test in toolbox container
@@ -1492,7 +1485,7 @@ test-specific:
 		echo "Error: TEST required. Usage: make test-specific TEST=TestRequiredQueueExists"; \
 		exit 1; \
 	fi
-	@echo "🧪 Running specific test: $(TEST)"
+	@printf "🧪 Running specific test: $(TEST)\n"
 	@$(CONTAINER_CMD) run --rm \
 		--network gotrs-ce_gotrs-network \
 		-e DB_HOST=postgres \
@@ -1510,7 +1503,7 @@ tdd-dashboard:
 
 # Enhanced test command that integrates with comprehensive TDD
 test-comprehensive:
-	@echo "🧪 Running tests with comprehensive TDD integration..."
+	@printf "🧪 Running tests with comprehensive TDD integration...\n"
 	@if [ -f .tdd-state ]; then \
 		echo "TDD cycle active - running comprehensive verification..."; \
 		$(MAKE) tdd-comprehensive; \
@@ -1521,7 +1514,7 @@ test-comprehensive:
 
 # Test-first enforcement (prevents implementation without failing test)
 test-enforce-first:
-	@echo "🚫 Enforcing test-first development..."
+	@printf "🚫 Enforcing test-first development...\n"
 	@if [ ! -f .tdd-state ]; then \
 		echo "Error: No TDD cycle active. Start with 'make tdd-test-first-init FEATURE=name'"; \
 		exit 1; \
@@ -1530,26 +1523,25 @@ test-enforce-first:
 
 # Generate comprehensive TDD report
 tdd-report:
-	@echo "📊 Generating comprehensive TDD report..."
+	@printf "📊 Generating comprehensive TDD report...\n"
 	@./scripts/tdd-test-first-enforcer.sh report
 
 # Clean TDD state (reset cycle)
 tdd-clean:
-	@echo "🧹 Cleaning TDD state..."
+	@printf "🧹 Cleaning TDD state...\n"
 	@rm -f .tdd-state
-	@echo "TDD cycle reset. Start new cycle with 'make tdd-test-first-init FEATURE=name'"
-
+	@printf "TDD cycle reset. Start new cycle with 'make tdd-test-first-init FEATURE=name'\n"
 # Verify system integrity (prevents gaslighting)
 verify-integrity:
-	@echo "🔍 Verifying system integrity..."
-	@echo "Checking for false success claims and hidden failures..."
+	@printf "🔍 Verifying system integrity...\n"
+	@printf "Checking for false success claims and hidden failures...\n"
 	@./scripts/anti-gaslighting-detector.sh detect
-	@echo "Running comprehensive verification..."
+	@printf "Running comprehensive verification...\n"
 	@./scripts/tdd-comprehensive.sh comprehensive
 
 # TDD pre-commit hook (runs before commits)
 tdd-pre-commit:
-	@echo "🔒 Running TDD pre-commit verification..."
+	@printf "🔒 Running TDD pre-commit verification...\n"
 	@./scripts/anti-gaslighting-detector.sh quick
 	@if [ -f .tdd-state ]; then \
 		echo "TDD cycle active - verifying cycle state..."; \

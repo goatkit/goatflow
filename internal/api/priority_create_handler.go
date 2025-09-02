@@ -1,10 +1,10 @@
 package api
 
 import (
-	"net/http"
+    "net/http"
 
-	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+    "github.com/gin-gonic/gin"
+    "github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // HandleCreatePriorityAPI handles POST /api/v1/priorities
@@ -16,12 +16,13 @@ func HandleCreatePriorityAPI(c *gin.Context) {
 		return
 	}
 
-	var req struct {
-		Name string `json:"name" binding:"required"`
-	}
+    var req struct {
+        Name  string `json:"name" binding:"required"`
+        Color string `json:"color"`
+    }
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Name is required"})
 		return
 	}
 
@@ -38,31 +39,33 @@ func HandleCreatePriorityAPI(c *gin.Context) {
 		WHERE name = $1 AND valid_id = 1
 	`)
 	db.QueryRow(checkQuery, req.Name).Scan(&count)
-	if count == 1 {
-		c.JSON(http.StatusConflict, gin.H{"error": "Priority with this name already exists"})
+    if count == 1 {
+        c.JSON(http.StatusConflict, gin.H{"success": false, "error": "Priority with this name already exists"})
 		return
 	}
 
 	// Create priority
-	var priorityID int
-	insertQuery := database.ConvertPlaceholders(`
-		INSERT INTO ticket_priority (name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, 1, NOW(), $2, NOW(), $2)
-		RETURNING id
-	`)
-	
-	err = db.QueryRow(insertQuery, req.Name, userID).Scan(&priorityID)
+    var priorityID int
+    // include color column for test expectations
+    insertQuery := database.ConvertPlaceholders(`
+        INSERT INTO ticket_priority (name, color, valid_id, create_by, change_by)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+    `)
+    err = db.QueryRow(insertQuery, req.Name, req.Color, 1, userID, userID).Scan(&priorityID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create priority"})
+        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create priority"})
 		return
 	}
 
 	// Return created priority
-	response := gin.H{
-		"id":       priorityID,
-		"name":     req.Name,
-		"valid_id": 1,
-	}
-
-	c.JSON(http.StatusCreated, response)
+    c.JSON(http.StatusCreated, gin.H{
+        "success": true,
+        "data": gin.H{
+            "id": priorityID,
+            "name": req.Name,
+            "color": req.Color,
+            "valid_id": 1,
+        },
+    })
 }

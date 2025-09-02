@@ -8,12 +8,16 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestQueueAPI(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+    if err := database.InitTestDB(); err != nil {
+        t.Skip("Database not available; skipping queue API tests")
+    }
 
 	t.Run("List Queues", func(t *testing.T) {
 		t.Run("should require authentication", func(t *testing.T) {

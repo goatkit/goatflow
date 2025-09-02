@@ -30,7 +30,7 @@ func HandleDeleteQueueAPI(c *gin.Context) {
 		return
 	}
 
-	db, err := database.GetDB()
+    db, err := database.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
 		return
@@ -38,10 +38,10 @@ func HandleDeleteQueueAPI(c *gin.Context) {
 
 	// Check if queue exists
 	var count int
-	checkQuery := database.ConvertPlaceholders(`
-		SELECT 1 FROM queues
-		WHERE id = $1 AND valid_id = 1
-	`)
+    checkQuery := database.ConvertPlaceholders(`
+        SELECT 1 FROM queue
+        WHERE id = $1 AND valid_id = 1
+    `)
 	db.QueryRow(checkQuery, queueID).Scan(&count)
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Queue not found"})
@@ -50,10 +50,10 @@ func HandleDeleteQueueAPI(c *gin.Context) {
 
 	// Check if queue has tickets
 	var ticketCount int
-	ticketQuery := database.ConvertPlaceholders(`
-		SELECT COUNT(*) FROM tickets 
-		WHERE queue_id = $1
-	`)
+    ticketQuery := database.ConvertPlaceholders(`
+        SELECT COUNT(*) FROM ticket 
+        WHERE queue_id = $1
+    `)
 	db.QueryRow(ticketQuery, queueID).Scan(&ticketCount)
 	if ticketCount > 0 {
 		c.JSON(http.StatusConflict, gin.H{
@@ -73,20 +73,20 @@ func HandleDeleteQueueAPI(c *gin.Context) {
 	defer tx.Rollback()
 
 	// Remove group associations
-	deleteGroupsQuery := database.ConvertPlaceholders(`
-		DELETE FROM queue_groups WHERE queue_id = $1
-	`)
+    deleteGroupsQuery := database.ConvertPlaceholders(`
+        DELETE FROM queue_group WHERE queue_id = $1
+    `)
 	if _, err := tx.Exec(deleteGroupsQuery, queueID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove group associations"})
 		return
 	}
 
 	// Soft delete queue (OTRS style - set valid_id = 2)
-	deleteQuery := database.ConvertPlaceholders(`
-		UPDATE queues 
-		SET valid_id = 2, change_time = NOW(), change_by = $1
-		WHERE id = $2
-	`)
+    deleteQuery := database.ConvertPlaceholders(`
+        UPDATE queue 
+        SET valid_id = 2, change_time = NOW(), change_by = $1
+        WHERE id = $2
+    `)
 	
 	result, err := tx.Exec(deleteQuery, userID, queueID)
 	if err != nil {
@@ -106,8 +106,5 @@ func HandleDeleteQueueAPI(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Queue deleted successfully",
-		"id": queueID,
-	})
+    c.Status(http.StatusNoContent)
 }

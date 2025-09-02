@@ -62,8 +62,8 @@ func TestQueueDetailAPI(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			router := gin.New()
-			router.GET("/api/queues/:id", handleQueueDetail)
+            router := gin.New()
+            router.GET("/api/queues/:id", handleQueueDetailJSON)
 
 			req, _ := http.NewRequest("GET", "/api/queues/"+tt.queueID, nil)
 			w := httptest.NewRecorder()
@@ -123,8 +123,8 @@ func TestQueueDetailJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			router := gin.New()
-			router.GET("/api/queues/:id", handleQueueDetail)
+            router := gin.New()
+            router.GET("/api/queues/:id", handleQueueDetailJSON)
 
 			req, _ := http.NewRequest("GET", "/api/queues/"+tt.queueID, nil)
 			if tt.acceptHeader != "" {
@@ -257,8 +257,8 @@ func TestQueueDetailHTMX(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			router := gin.New()
-			router.GET("/api/queues/:id", handleQueueDetail)
+            router := gin.New()
+            router.GET("/api/queues/:id", handleQueueDetailJSON)
 
 			req, _ := http.NewRequest("GET", "/api/queues/"+tt.queueID, nil)
 			if tt.htmxRequest {

@@ -18,8 +18,12 @@ func HandleListArticlesAPI(c *gin.Context) {
 	}
 	_ = userID // Will use for permission checks later
 
-	// Parse ticket ID
-	ticketID, err := strconv.Atoi(c.Param("ticket_id"))
+    // Parse ticket ID (accept both :ticket_id and :id)
+    ticketParam := c.Param("ticket_id")
+    if ticketParam == "" {
+        ticketParam = c.Param("id")
+    }
+    ticketID, err := strconv.Atoi(ticketParam)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
 		return
@@ -42,13 +46,13 @@ func HandleListArticlesAPI(c *gin.Context) {
 		return
 	}
 
-	// Get articles for the ticket
+    // Get articles for the ticket (OTRS tables are singular: article)
 	query := database.ConvertPlaceholders(`
 		SELECT a.id, a.ticket_id, a.article_type_id, a.article_sender_type_id,
 			a.from_email, a.to_email, a.cc, a.subject, a.body,
 			a.create_time, a.create_by, 
 			at.name as article_type, ast.name as sender_type
-		FROM article a
+        FROM article a
 		LEFT JOIN article_type at ON a.article_type_id = at.id
 		LEFT JOIN article_sender_type ast ON a.article_sender_type_id = ast.id
 		WHERE a.ticket_id = $1
@@ -115,10 +119,10 @@ func HandleListArticlesAPI(c *gin.Context) {
 		}
 
 		// Check for attachments if requested
-		if c.Query("include_attachments") == "true" {
+        if c.Query("include_attachments") == "true" {
 			attachQuery := database.ConvertPlaceholders(`
-				SELECT id, filename, content_type, content_size
-				FROM article_attachment
+                SELECT id, filename, content_type, content_size
+                FROM article_attachment
 				WHERE article_id = $1
 			`)
 			attachRows, err := db.Query(attachQuery, article.ID)

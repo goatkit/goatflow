@@ -22,10 +22,10 @@ func TestCreateUserWithGroups(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	
 	// Initialize database connection
-	db, err := database.GetDB()
-	if err != nil {
-		t.Skip("Database not available, skipping integration test")
-	}
+    db, err := database.GetDB()
+    if err != nil || db == nil {
+        t.Skip("Database not available, skipping integration test")
+    }
 
 	// Create a test router
 	router := gin.New()
@@ -161,10 +161,10 @@ func TestUpdateUserGroups(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
 	
-	db, err := database.GetDB()
-	if err != nil {
-		t.Skip("Database not available, skipping integration test")
-	}
+    db, err := database.GetDB()
+    if err != nil || db == nil {
+        t.Skip("Database not available, skipping integration test")
+    }
 
 	// Create a test user first
 	userRepo := repository.NewUserRepository(db)

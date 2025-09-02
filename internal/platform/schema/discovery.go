@@ -1,10 +1,11 @@
 package schema
 
 import (
-	"database/sql"
-	"fmt"
-	"strings"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+    "database/sql"
+    "fmt"
+    "strings"
+    
+    "github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // Discovery handles database schema discovery
@@ -125,15 +126,15 @@ func NewDiscovery(db *sql.DB, verbose bool) *Discovery {
 
 // GetTables returns all user tables in the database
 func (d *Discovery) GetTables() ([]string, error) {
-	query := `
-		SELECT table_name 
-		FROM information_schema.tables 
-		WHERE table_schema = 'public' 
-		AND table_type = 'BASE TABLE'
-		ORDER BY table_name
-	`
+    query := `
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = $1 
+        AND table_type = 'BASE TABLE'
+        ORDER BY table_name
+    `
 	
-	rows, err := d.db.Query(query)
+    rows, err := d.db.Query(database.ConvertPlaceholders(query), "public")
 	if err != nil {
 		return nil, fmt.Errorf("failed to query tables: %v", err)
 	}
@@ -237,7 +238,7 @@ func (d *Discovery) getColumns(tableName string) ([]ColumnInfo, error) {
 		ORDER BY c.ordinal_position
 	`
 	
-	rows, err := d.db.Query(query, tableName)
+    rows, err := d.db.Query(database.ConvertPlaceholders(query), tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +287,7 @@ func (d *Discovery) getForeignKeys(tableName string) ([]ForeignKeyInfo, error) {
 		AND tc.constraint_type = 'FOREIGN KEY'
 	`
 	
-	rows, err := d.db.Query(query, tableName)
+    rows, err := d.db.Query(database.ConvertPlaceholders(query), tableName)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +317,7 @@ func (d *Discovery) getIndexes(tableName string) ([]IndexInfo, error) {
 		AND indexname NOT LIKE '%_pkey'
 	`
 	
-	rows, err := d.db.Query(query, tableName)
+    rows, err := d.db.Query(database.ConvertPlaceholders(query), tableName)
 	if err != nil {
 		return nil, err
 	}

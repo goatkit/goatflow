@@ -89,8 +89,81 @@ spec:
     handler: HandleGetPriorityAPI
     description: "Get priority by ID"
     
-  # Search endpoint
+  # Search endpoints
   - path: /search
-    method: GET
+    method: POST
     handler: HandleSearchAPI
     description: "Search tickets"
+
+  - path: /search/suggestions
+    method: GET
+    handler: HandleSearchSuggestionsAPI
+    description: "Search suggestions"
+
+  - path: /search/reindex
+    method: POST
+    handler: HandleReindexAPI
+    description: "Trigger search reindex"
+
+  - path: /search/health
+    method: GET
+    handler: HandleSearchHealthAPI
+    description: "Search health"
+
+  # User mutations
+  - path: /users
+    method: POST
+    handler: HandleCreateUserAPI
+    description: "Create user"
+
+  - path: /users/:id
+    method: PUT
+    handler: HandleUpdateUserAPI
+    description: "Update user"
+
+  - path: /users/:id
+    method: DELETE
+    handler: HandleDeleteUserAPI
+    description: "Delete user"
+
+  # Article mutations
+  - path: /tickets/:id/articles/:article_id
+    method: PUT
+    handler: HandleUpdateArticleAPI
+    description: "Update article"
+
+  - path: /tickets/:id/articles/:article_id
+    method: DELETE
+    handler: HandleDeleteArticleAPI
+    description: "Delete article"
+
+  # Queue mutations and extras
+  - path: /queues
+    method: POST
+    handler: HandleCreateQueueAPI
+    description: "Create queue"
+
+  - path: /queues/:id
+    method: PUT
+    handler: HandleUpdateQueueAPI
+    description: "Update queue"
+
+  - path: /queues/:id
+    method: DELETE
+    handler: HandleDeleteQueueAPI
+    description: "Delete queue"
+
+  - path: /queues/:id/stats
+    method: GET
+    handler: HandleGetQueueStatsAPI
+    description: "Queue ticket statistics"
+
+  - path: /queues/:id/groups
+    method: POST
+    handler: HandleAssignQueueGroupAPI
+    description: "Assign group to queue"
+
+  - path: /queues/:id/groups/:group_id
+    method: DELETE
+    handler: HandleRemoveQueueGroupAPI
+    description: "Remove group from queue"

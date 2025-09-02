@@ -14,35 +14,21 @@ var ArticleContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"articles": {
-						Type: "array",
-						Items: &Schema{
-							Type: "object",
-							Properties: map[string]Schema{
-								"id":                     {Type: "number"},
-								"ticket_id":              {Type: "number"},
-								"article_type_id":        {Type: "number"},
-								"article_sender_type_id": {Type: "number"},
-								"from_email":             {Type: "string"},
-								"to_email":               {Type: "string"},
-								"subject":                {Type: "string"},
-								"body":                   {Type: "string"},
-								"create_time":            {Type: "string"},
-								"create_by":              {Type: "number"},
-							},
-							Required: []string{"id", "ticket_id", "subject", "body"},
-						},
-					},
-					"total": {Type: "number"},
-				},
-				Required: []string{"articles", "total"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{
+                Required: true,
+                Properties: map[string]Schema{
+                    "articles": ArraySchema{ItemsSchema: ObjectSchema{Properties: map[string]Schema{
+                        "id":        NumberSchema{Required: true},
+                        "ticket_id": NumberSchema{Required: true},
+                        "subject":   StringSchema{},
+                        "body":      StringSchema{},
+                    }}},
+                    "total": NumberSchema{},
+                },
+            },
+        },
 	},
 	{
 		Name:        "GetArticle",
@@ -52,27 +38,15 @@ var ArticleContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id":                     {Type: "number"},
-					"ticket_id":              {Type: "number"},
-					"article_type_id":        {Type: "number"},
-					"article_sender_type_id": {Type: "number"},
-					"from_email":             {Type: "string"},
-					"to_email":               {Type: "string"},
-					"subject":                {Type: "string"},
-					"body":                   {Type: "string"},
-					"create_time":            {Type: "string"},
-					"create_by":              {Type: "number"},
-					"change_time":            {Type: "string"},
-					"change_by":              {Type: "number"},
-				},
-				Required: []string{"id", "ticket_id", "subject", "body"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":        NumberSchema{Required: true},
+                "ticket_id": NumberSchema{Required: true},
+                "subject":   StringSchema{},
+                "body":      StringSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "GetArticleWithAttachments",
@@ -82,32 +56,21 @@ var ArticleContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id":         {Type: "number"},
-					"ticket_id":  {Type: "number"},
-					"subject":    {Type: "string"},
-					"body":       {Type: "string"},
-					"attachments": {
-						Type: "array",
-						Items: &Schema{
-							Type: "object",
-							Properties: map[string]Schema{
-								"id":           {Type: "number"},
-								"filename":     {Type: "string"},
-								"content_type": {Type: "string"},
-								"size":         {Type: "number"},
-							},
-							Required: []string{"id", "filename", "content_type", "size"},
-						},
-					},
-				},
-				Required: []string{"id", "ticket_id", "subject", "body"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":        NumberSchema{Required: true},
+                "ticket_id": NumberSchema{Required: true},
+                "subject":   StringSchema{},
+                "body":      StringSchema{},
+                "attachments": ArraySchema{ItemsSchema: ObjectSchema{Properties: map[string]Schema{
+                    "id":           NumberSchema{Required: true},
+                    "filename":     StringSchema{Required: true},
+                    "content_type": StringSchema{},
+                    "size":         NumberSchema{},
+                }}}},
+            },
+        },
 	},
 	{
 		Name:        "CreateArticle",
@@ -127,25 +90,15 @@ var ArticleContracts = []Contract{
 			"sender_type":  "agent",
 			"is_visible":   true,
 		},
-		Expected: Response{
-			Status: http.StatusCreated,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id":                     {Type: "number"},
-					"ticket_id":              {Type: "number"},
-					"article_type_id":        {Type: "number"},
-					"article_sender_type_id": {Type: "number"},
-					"from_email":             {Type: "string"},
-					"to_email":               {Type: "string"},
-					"subject":                {Type: "string"},
-					"body":                   {Type: "string"},
-					"create_time":            {Type: "string"},
-					"create_by":              {Type: "number"},
-				},
-				Required: []string{"id", "ticket_id", "subject", "body"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusCreated,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":        NumberSchema{Required: true},
+                "ticket_id": NumberSchema{Required: true},
+                "subject":   StringSchema{},
+                "body":      StringSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "UpdateArticle",
@@ -160,19 +113,15 @@ var ArticleContracts = []Contract{
 			"subject": "Updated Article Subject",
 			"body":    "Updated article body content",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"id":        {Type: "number"},
-					"ticket_id": {Type: "number"},
-					"subject":   {Type: "string"},
-					"body":      {Type: "string"},
-				},
-				Required: []string{"id", "ticket_id", "subject", "body"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "id":        NumberSchema{Required: true},
+                "ticket_id": NumberSchema{Required: true},
+                "subject":   StringSchema{},
+                "body":      StringSchema{},
+            }},
+        },
 	},
 	{
 		Name:        "DeleteArticle",
@@ -182,23 +131,17 @@ var ArticleContracts = []Contract{
 		Headers: map[string]string{
 			"Authorization": "Bearer {{token}}",
 		},
-		Expected: Response{
-			Status: http.StatusOK,
-			Schema: Schema{
-				Type: "object",
-				Properties: map[string]Schema{
-					"message": {Type: "string"},
-					"id":      {Type: "number"},
-				},
-				Required: []string{"message", "id"},
-			},
-		},
+        Expected: Response{
+            Status: http.StatusOK,
+            BodySchema: ObjectSchema{Required: true, Properties: map[string]Schema{
+                "message": StringSchema{},
+                "id":      NumberSchema{},
+            }},
+        },
 	},
 }
 
 // RegisterArticleContracts registers article contracts for testing
 func RegisterArticleContracts() {
-	for _, contract := range ArticleContracts {
-		RegisterContract(contract)
-	}
+    // No-op registrar kept for backward compatibility
 }

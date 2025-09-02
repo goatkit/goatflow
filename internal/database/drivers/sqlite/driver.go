@@ -1,12 +1,13 @@
 package sqlite
 
 import (
-	"context"
-	"database/sql"
-	"fmt"
-	"strings"
-	
-	_ "github.com/mattn/go-sqlite3"
+    "context"
+    "database/sql"
+    "fmt"
+    "strings"
+
+    "github.com/gotrs-io/gotrs-ce/internal/database"
+    _ "github.com/mattn/go-sqlite3"
 )
 
 // SQLiteDriver implements the DatabaseDriver interface for SQLite
