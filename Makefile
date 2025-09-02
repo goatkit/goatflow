@@ -29,42 +29,29 @@ else
 VZ :=
 endif
 
+# Ensure Go caches exist for toolbox runs
+define ensure_caches
+@mkdir -p .cache/go-build .cache/go-mod
+endef
+
 # Common run flags
 VOLUME_PWD := -v "$$(pwd):/workspace$(VZ)"
 WORKDIR_FLAGS := -w /workspace
 USER_FLAGS := -u "$$(id -u):$$(id -g)"
+DB_HOST ?= localhost
+DB_PORT ?= 5432
+DB_NAME ?= gotrs
+DB_USER ?= gotrs_user
+DB_PASSWORD ?= gotrs_password
+VALKEY_HOST ?= localhost
+VALKEY_PORT ?= 6388
 
-.PHONY: help up down logs restart clean setup test build debug-env toolbox-build toolbox-run toolbox-test
+.PHONY: help up down logs restart clean setup test build debug-env build-cached toolbox-build toolbox-run toolbox-exec toolbox-compile toolbox-compile-api \
+	toolbox-test-api toolbox-test toolbox-test-run toolbox-run-file
 
 # Default target
 help:
-	@printf "\n\n"
-	@printf "    \033[1;36m🐐 GOTRS - Go Open Ticketing Resource System\033[0m\n\n"
-	@printf "\n\n"
-	@printf "    \033[0;90m                           ///////                \n"
-	@printf "    \033[0;90m                     ///////     ////////         \n"
-	@printf "    \033[0;90m                 ////                   /////     \n"
-	@printf "    \033[0;90m               ///             ////////////////   \n"
-	@printf "    \033[0;90m             ///          /////              //// \n"
-	@printf "    \033[0;90m           ///         ///                      //\n"
-	@printf "    \033[0;90m        ////        //////        /               \n"
-	@printf "    \033[0;90m       //// ///     /    //////////               \n"
-	@printf "    \033[0;90m       //  / / //        //    // ///             \n"
-	@printf "    \033[0;90m       /// ////                /    ////          \n"
-	@printf "    \033[0;90m      //                               ///        \n"
-	@printf "    \033[0;90m     /                                    ////    \n"
-	@printf "    \033[0;90m   ///                /                      //// \n"
-	@printf "    \033[0;90m  //                  /      /                 /  \n"
-	@printf "    \033[0;90m/////     /           /     //               //   \n"
-	@printf "    \033[0;90m//      ///          //     /               //    \n"
-	@printf "    \033[0;90m //   ///         ////     //              //     \n"
-	@printf "    \033[0;90m  /////       //////      //             ///      \n"
-	@printf "    \033[0;90m   //// ///////    //   ///            ///        \n"
-	@printf "    \033[0;90m      ///           /////            ///          \n"
-	@printf "    \033[0;90m                   ///             ///            \n"
-	@printf "    \033[0;90m                  //           ////               \n"
-	@printf "    \033[0;90m                  /         ////                  \n"
-	@printf "    \033[0;90m                    ////////\033[0m\n"
+	@cat logo.txt
 	@printf "\n\n"
 	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
 	@printf "  \033[1;33m🚀 Core Commands\033[0m\n\n"
@@ -306,11 +293,7 @@ debug-env:
 	@command -v podman > /dev/null 2>&1 && podman compose version > /dev/null 2>&1 && echo "✓ podman compose plugin found" || echo "✗ podman compose plugin not found"
 	@printf "\n"
 	@printf "Selected commands will be used for all make targets.\n"
-# Build the toolbox container (cached after first build)
-toolbox-build: build-cached
-	@printf "🔧 Building GOTRS toolbox container (using backend as base)...\n"
-	@$(CONTAINER_CMD) build -f Dockerfile.toolbox -t gotrs-toolbox:latest .
-	@printf "✅ Toolbox container ready\n"
+
 # Initial setup with secure secret generation
 setup:
 	@printf "🔬 Synthesizing secure configuration...\n"
@@ -406,50 +389,69 @@ k8s-secrets:
 	@printf "🔐 Generating Kubernetes secrets from template...\n"
 	@./scripts/generate-k8s-secrets.sh
 
-# Run interactive shell in toolbox container
+# Build toolbox image
+toolbox-build: build-cached
+	@printf "\n🔧 Building GOTRS toolbox container...\n"
+	@$(CONTAINER_CMD) build -f Dockerfile.toolbox -t gotrs-toolbox:latest .
+	@printf "✅ Toolbox container ready\n"
+
+# Interactive toolbox shell (non-root, with SELinux-friendly mounts)
 toolbox-run:
 	@$(MAKE) toolbox-build
-	@printf "🔧 Starting toolbox shell...\n"
+	@printf "\n🔧 Starting toolbox shell...\n"
+	$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm -it \
-		-v "$$(pwd):/workspace" \
+		--security-opt label=disable \
+		-v "$$PWD:/workspace$(VZ)" \
+		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
+		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
+		-u "$$UID:$$GID" \
 		gotrs-toolbox:latest \
 		$(if $(ARGS),$(ARGS),/bin/bash)
 
-# Execute command in toolbox container (non-interactive, no TTY)
+# Non-interactive toolbox exec
 toolbox-exec:
 	@$(MAKE) toolbox-build
+	$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
-		-v "$$(pwd):/workspace" \
+		--security-opt label=disable \
+		-v "$$PWD:/workspace$(VZ)" \
+		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
+		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
+		-u "$$UID:$$GID" \
 		--network host \
 		gotrs-toolbox:latest \
 		$(ARGS)
 
-# Check compilation of all packages
+# Compile everything (bind mounts + caches)
 toolbox-compile:
 	@$(MAKE) toolbox-build
-	@printf "🔨 Checking compilation...\n"
+	@printf "\n🔨 Checking compilation...\n"
+	$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
-		-v "$$(pwd):/workspace" \
+		-v "$$PWD:/workspace$(VZ)" \
+		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
+		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
+		-u "$$UID:$$GID" \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./...'
 
-# Compile only API and goats (faster, avoids unrelated packages)
-.PHONY: toolbox-compile-api
+# Compile only API and goats (faster)
 toolbox-compile-api:
 	@$(MAKE) toolbox-build
-	@printf "🔨 Compiling API and goats packages only...\n"
+	@printf "\n🔨 Compiling API and goats packages only...\n"
+	$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
-		-v "$$(pwd):/workspace" \
+		-v "$$PWD:/workspace$(VZ)" \
+		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
+		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
+		-u "$$UID:$$GID" \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./internal/api ./cmd/goats'
 
@@ -480,67 +482,83 @@ compile-safe: toolbox-build
 	@$(CONTAINER_CMD) cp gotrs-compile:/workspace/bin/goats ./bin/goats
 	@$(CONTAINER_CMD) rm -f gotrs-compile >/dev/null
 	@printf "✅ Binary compiled to bin/goats (compile-safe)\n"
-# Run only internal/api tests (containerized)
-.PHONY: toolbox-test-api
-toolbox-test-api: toolbox-build
-	@printf "🧪 Running internal/api tests in toolbox...\n"	# Use isolated container copy to avoid SELinux relabel on node_modules
-	-@$(CONTAINER_CMD) rm -f gotrs-test >/dev/null 2>&1 || true
-	@$(CONTAINER_CMD) create --name gotrs-test gotrs-toolbox:latest sleep infinity >/dev/null
-	@$(CONTAINER_CMD) cp . gotrs-test:/workspace
-	@$(CONTAINER_CMD) start gotrs-test >/dev/null
-	@$(CONTAINER_CMD) exec gotrs-test bash -lc "export PATH=/usr/local/go/bin:$$PATH && cd /workspace && APP_ENV=test DB_HOST=localhost DB_PORT=5432 DB_NAME=gotrs_test DB_USER=gotrs_test DB_PASSWORD=gotrs_test_password go test -v ./internal/api -run 'Queue|Article|Search|Priority|User'"
-	@$(CONTAINER_CMD) rm -f gotrs-test >/dev/null
 
-# Run tests directly in toolbox (faster than compose exec)
+# Run internal/api tests (bind mounts + caches; DB-less-safe)
+toolbox-test-api: toolbox-build
+	@printf "\n🧪 Running internal/api tests in toolbox...\n"
+	$(call ensure_caches)
+	@$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		-v "$$PWD:/workspace$(VZ)" \
+		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
+		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
+		-w /workspace \
+		-u "$$UID:$$GID" \
+		-e APP_ENV=test \
+		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
+		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
+		gotrs-toolbox:latest \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go test -v ./internal/api -run "Queue|Article|Search|Priority|User"'
+
+# Run core tests (cmd/goats + internal/api + generated/tdd-comprehensive)
 toolbox-test:
 	@$(MAKE) toolbox-build
-	@printf "🧪 Running core test suite in isolated toolbox container...\n"
-	-@$(CONTAINER_CMD) rm -f gotrs-test-all >/dev/null 2>&1 || true
-	@$(CONTAINER_CMD) create --name gotrs-test-all gotrs-toolbox:latest sleep infinity >/dev/null
-	@$(CONTAINER_CMD) cp . gotrs-test-all:/workspace
-	@$(CONTAINER_CMD) start gotrs-test-all >/dev/null
-	@$(CONTAINER_CMD) exec gotrs-test-all bash -lc "export PATH=/usr/local/go/bin:$$PATH && cd /workspace && APP_ENV=test DB_HOST=localhost DB_PORT=5432 DB_NAME=gotrs_test DB_USER=gotrs_test DB_PASSWORD=gotrs_test_password VALKEY_HOST=localhost VALKEY_PORT=6388 go test -v ./cmd/goats ./internal/api ./generated/tdd-comprehensive"
-	@$(CONTAINER_CMD) rm -f gotrs-test-all >/dev/null
+	@printf "\n🧪 Running core test suite in toolbox...\n"
+	$(call ensure_caches)
+	@$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		-v "$$PWD:/workspace$(VZ)" \
+		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
+		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
+		-w /workspace \
+		-u "$$UID:$$GID" \
+		-e APP_ENV=test \
+		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
+		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
+		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
+		gotrs-toolbox:latest \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && pkgs="./cmd/goats ./internal/api ./generated/tdd-comprehensive"; echo Running: $$pkgs; go test -v $$pkgs'
 
-# Run specific test with toolbox
+# Run a specific test pattern across all packages
 toolbox-test-run:
 	@$(MAKE) toolbox-build
-	@printf "🧪 Running specific test: $(TEST)\n"
+	@printf "\n🧪 Running specific test: $(TEST)\n"
+	$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
-		-v "$$(pwd):/workspace" \
+		--security-opt label=disable \
+		-v "$$PWD:/workspace$(VZ)" \
+		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
+		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
+		-u "$$UID:$$GID" \
 		--network host \
-		-e DB_HOST=localhost \
-		-e DB_PORT=5432 \
-		-e DB_NAME=gotrs_test \
-		-e DB_USER=gotrs_test \
-		-e DB_PASSWORD=gotrs_test_password \
-		-e VALKEY_HOST=localhost \
-		-e VALKEY_PORT=6388 \
+		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
+		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
+		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e APP_ENV=test \
 		gotrs-toolbox:latest \
-		sh -c "source .env 2>/dev/null || true && go test -v -run '$(TEST)' ./..."
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go test -v -run "$(TEST)" ./...'
 
-# Run specific Go file with toolbox
+# Run a specific Go file
 toolbox-run-file:
 	@$(MAKE) toolbox-build
-	@printf "🚀 Running Go file: $(FILE)\n"
+	@printf "\n🚀 Running Go file: $(FILE)\n"
+	$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
-		-v "$$(pwd):/workspace" \
+		--security-opt label=disable \
+		-v "$$PWD:/workspace$(VZ)" \
+		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
+		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
+		-u "$$UID:$$GID" \
 		--network host \
-		-e DB_HOST=localhost \
-		-e DB_PORT=5432 \
-		-e DB_NAME=gotrs \
-		-e DB_USER=gotrs_user \
-		-e PGPASSWORD=$${DB_PASSWORD:-gotrs_password} \
-		-e VALKEY_HOST=localhost \
-		-e VALKEY_PORT=6388 \
+		-e DB_HOST=postgres -e DB_PORT=$(DB_PORT) \
+		-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) \
+		-e PGPASSWORD=$(DB_PASSWORD) \
+		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e APP_ENV=development \
 		gotrs-toolbox:latest \
-		sh -c "source .env 2>/dev/null || true && go run $(FILE)"
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run $(FILE)'
 
 # Run anti-gaslighting detector in toolbox container
 toolbox-antigaslight:
@@ -1133,6 +1151,7 @@ endif
 # Build with caching (70% faster rebuilds)
 build-cached:
 	@printf "🚀 Building backend image (cache flags disabled for podman compatibility)...\n"	$(CONTAINER_CMD) build -t gotrs:latest .
+	@$(CONTAINER_CMD) build -t gotrs:latest .
 	@printf "✅ Build complete\n"
 # Security scan build (CI/CD)
 build-secure:
