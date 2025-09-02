@@ -52,166 +52,166 @@ VALKEY_PORT ?= 6388
 # Default target
 help:
 	@cat logo.txt
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🚀 Core Commands\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake up\033[0m                           ▶️ Start all services\n\n"
-	@printf "  \033[0;32mmake down\033[0m                         🛑 Stop all services\n\n"
-	@printf "  \033[0;32mmake logs\033[0m                         📋 View logs\n\n"
-	@printf "  \033[0;32mmake restart\033[0m                      🔄 Restart all services\n\n"
-	@printf "  \033[0;32mmake clean\033[0m                        🧹 Clean everything (including volumes)\n\n"
-	@printf "  \033[0;32mmake setup\033[0m                        🎯 Initial project setup with secure secrets\n\n"
-	@printf "  \033[0;32mmake build\033[0m                        🔨 Build production images\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🧪 TDD Workflow (Quality Gates Enforced)\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake tdd-init\033[0m                     🏁 Initialize TDD workflow\n\n"
-	@printf "  \033[0;32mmake tdd-test-first\033[0m FEATURE=name  ❌ Start with failing test\n\n"
-	@printf "  \033[0;32mmake tdd-implement\033[0m                ✅ Implement to pass tests\n\n"
-	@printf "  \033[0;32mmake tdd-verify\033[0m                   🔍 Run ALL quality gates\n\n"
-	@printf "  \033[0;32mmake tdd-refactor\033[0m                 ♻️  Safe refactoring\n\n"
-	@printf "  \033[0;32mmake tdd-status\033[0m                   📊 Show workflow status\n\n"
-	@printf "  \033[0;32mmake quality-gates\033[0m                🚦 Run quality checks\n\n"
-	@printf "  \033[0;32mmake evidence-report\033[0m              📄 Generate evidence\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🎨 CSS/Frontend Build\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake css-build\033[0m                    📦 Build production CSS from Tailwind\n\n"
-	@printf "  \033[0;32mmake css-watch\033[0m                    👁️ Watch and rebuild CSS on changes\n\n"
-	@printf "  \033[0;32mmake css-deps\033[0m                     📥 Install CSS build dependencies\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🔐 Secrets Management\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake synthesize\033[0m                   🔑 Generate new .env with secure secrets\n\n"
-	@printf "  \033[0;32mmake rotate-secrets\033[0m               🔄 Rotate secrets in existing .env\n\n"
-	@printf "  \033[0;32mmake synthesize-force\033[0m             ⚡ Force regenerate .env\n\n"
-	@printf "  \033[0;32mmake k8s-secrets\033[0m                  🙊 Generate k8s/secrets.yaml\n\n"
-	@printf "  \033[0;32mmake show-dev-creds\033[0m               👤 Show test user credentials\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🐳 Docker/Container Build\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake build-cached\033[0m                 🚀 Fast build with caching (70% faster)\n\n"
-	@printf "  \033[0;32mmake build-clean\033[0m                  🧹 Clean build without cache\n\n"
-	@printf "  \033[0;32mmake build-secure\033[0m                 🔒 Build with security scanning\n\n"
-	@printf "  \033[0;32mmake build-multi\033[0m                  🌍 Multi-platform build (AMD64/ARM64)\n\n"
-	@printf "  \033[0;32mmake build-all-tools\033[0m              🛠️ Build all specialized containers\n\n"
-	@printf "  \033[0;32mmake toolbox-build\033[0m                🔧 Build development toolbox\n\n"
-	@printf "  \033[0;32mmake analyze-size\033[0m                 📏 Analyze image size with dive\n\n"
-	@printf "  \033[0;32mmake show-sizes\033[0m                   📊 Show all image sizes\n\n"
-	@printf "  \033[0;32mmake show-cache\033[0m                   💾 Display build cache usage\n\n"
-	@printf "  \033[0;32mmake clear-cache\033[0m                  🗑️ Clear Docker build cache\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🔮 Schema Discovery\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake schema-discovery\033[0m             🔍 Generate YAML from DB schema\n\n"
-	@printf "  \033[0;32mmake schema-table\033[0m                 📊 Generate YAML for table\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🧰 Toolbox (Fast Container Dev)\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake toolbox-build\033[0m                🔨 Build toolbox container\n\n"
-	@printf "  \033[0;32mmake toolbox-run\033[0m                  🐚 Interactive shell\n\n"
-	@printf "  \033[0;32mmake toolbox-test\033[0m                 🧪 Run all tests quickly\n\n"
-	@printf "  \033[0;32mmake toolbox-test-run\033[0m             🎯 Run specific test\n\n"
-	@printf "  \033[0;32mmake toolbox-run-file\033[0m             📄 Run Go file\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🎭 E2E Testing (Playwright)\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake test-e2e\033[0m                     🤖 Run E2E tests headless\n\n"
-	@printf "  \033[0;32mmake test-e2e-debug\033[0m               👀 Tests with visible browser\n\n"
-	@printf "  \033[0;32mmake test-e2e-watch\033[0m               🔁 Tests in watch mode\n\n"
-	@printf "  \033[0;32mmake test-e2e-report\033[0m              📊 View test results\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🧪 Testing Commands\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake test\033[0m                         ✅ Run Go backend tests\n\n"
-	@printf "  \033[0;32mmake test-short\033[0m                   ⚡ Skip long tests\n\n"
-	@printf "  \033[0;32mmake test-coverage\033[0m                📈 Tests with coverage\n\n"
-	@printf "  \033[0;32mmake test-safe\033[0m                    🏃 Race/deadlock detection\n\n"
-	@printf "  \033[0;32mmake test-html\033[0m                    🌐 HTML test report\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🐠 i18n (Babel fish) Commands\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake babelfish\033[0m                    🏗️ Build gotrs-babelfish binary\n\n"
-	@printf "  \033[0;32mmake babelfish-coverage\033[0m           📊 Show translation coverage\n\n"
-	@printf "  \033[0;32mmake babelfish-validate\033[0m\n\t LANG=de   ✅ Validate a language\n\n"
-	@printf "  \033[0;32mmake babelfish-missing\033[0m\n\t LANG=es    🔍 Show missing translations\n\n"
-	@printf "  \033[0;32mmake babelfish-run\033[0m\n\t ARGS='-help'   🎯 Run with custom args\n\n"
-	@printf "  \033[0;32mmake test-ldap\033[0m                    🔐 Run LDAP integration tests\n\n"
-	@printf "  \033[0;32mmake test-ldap-perf\033[0m               ⚡ Run LDAP performance benchmarks\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🔒 Security Commands\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake scan-secrets\033[0m\t\t\t🕵️ Scan current code for secrets\n\n"
-	@printf "  \033[0;32mmake scan-secrets-history\033[0m\t\t📜 Scan git history for secrets\n\n"
-	@printf "  \033[0;32mmake scan-secrets-precommit\033[0m\t\t🪝 Install pre-commit hooks\n\n"
-	@printf "  \033[0;32mmake scan-vulnerabilities\033[0m\t\t🐛 Scan for vulnerabilities\n\n"
-	@printf "  \033[0;32mmake security-scan\033[0m\t\t\t🛡️ Run all security scans\n\n"
-	@printf "  \033[0;32mmake test-contracts\033[0m\t\t\t📝 Run Pact contract tests\n\n"
-	@printf "  \033[0;32mmake test-all\033[0m\t\t\t\t🎯 Run all tests (backend, frontend, contracts)\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m📡 Service Management\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake backend-logs\033[0m\t\t\t📋 View backend logs\n\n"
-	@printf "  \033[0;32mmake backend-logs-follow\033[0m\t\t📺 Follow backend logs\n\n"
-	@printf "  \033[0;32mmake valkey-cli\033[0m\t\t\t🔑 Valkey CLI\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m🗄️  Database Operations\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake db-shell\033[0m\t\t\t\t🐘 PostgreSQL shell\n\n"
-	@printf "  \033[0;32mmake db-migrate\033[0m\t\t\t📤 Run pending migrations\n\n"
-	@printf "  \033[0;32mmake db-rollback\033[0m\t\t\t↩️  Rollback last migration\n\n"
-	@printf "  \033[0;32mmake db-reset\033[0m\t\t\t\t💥 Reset DB (cleans storage)\n\n"
-	@printf "  \033[0;32mmake db-init\033[0m\t\t\t\t🚀 Fast baseline init\n\n"
-	@printf "  \033[0;32mmake db-apply-test-data\033[0m\t\t🧪 Apply test data\n\n"
-	@printf "  \033[0;32mmake clean-storage\033[0m\t\t\t🗑️ Remove orphaned files\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m📦 OTRS Migration\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake migrate-analyze\033[0m\n\t SQL=dump.sql\t\t\t🔍 Analyze OTRS SQL dump\n\n"
-	@printf "  \033[0;32mmake migrate-import\033[0m\n\t SQL=dump.sql\t\t\t📥 Import OTRS data (dry-run)\n\n"
-	@printf "  \033[0;32mmake migrate-import\033[0m\n\t SQL=dump.sql DRY_RUN=false\t💾 Import for real\n\n"
-	@printf "  \033[0;32mmake migrate-validate\033[0m\t\t\t🔍 Validate imported data\n\n"
-	@printf "  \033[0;32mmake import-test-data\033[0m\t\t\t🎯 Import test tickets with proper mapping\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "  \033[1;33m👥 User Management\033[0m\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;32mmake reset-password\033[0m\t\t\t🔓 Reset user password\n\n"
-	@printf "\n\n"
-	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n\n"
-	@printf "\n\n"
-	@printf "  \033[0;90m🐐 Happy coding with GOTRS!\033[0m\n\n"
-	@printf "  \033[0;90mContainer: $(CONTAINER_CMD) | Compose: $(COMPOSE_CMD)\033[0m\n\n"
-	@printf "\n\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🚀 Core Commands\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake up\033[0m                           ▶️ Start all services\n"
+	@printf "  \033[0;32mmake down\033[0m                         🛑 Stop all services\n"
+	@printf "  \033[0;32mmake logs\033[0m                         📋 View logs\n"
+	@printf "  \033[0;32mmake restart\033[0m                      🔄 Restart all services\n"
+	@printf "  \033[0;32mmake clean\033[0m                        🧹 Clean everything (including volumes)\n"
+	@printf "  \033[0;32mmake setup\033[0m                        🎯 Initial project setup with secure secrets\n"
+	@printf "  \033[0;32mmake build\033[0m                        🔨 Build production images\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🧪 TDD Workflow (Quality Gates Enforced)\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake tdd-init\033[0m                     🏁 Initialize TDD workflow\n"
+	@printf "  \033[0;32mmake tdd-test-first\033[0m FEATURE=name  ❌ Start with failing test\n"
+	@printf "  \033[0;32mmake tdd-implement\033[0m                ✅ Implement to pass tests\n"
+	@printf "  \033[0;32mmake tdd-verify\033[0m                   🔍 Run ALL quality gates\n"
+	@printf "  \033[0;32mmake tdd-refactor\033[0m                 ♻️  Safe refactoring\n"
+	@printf "  \033[0;32mmake tdd-status\033[0m                   📊 Show workflow status\n"
+	@printf "  \033[0;32mmake quality-gates\033[0m                🚦 Run quality checks\n"
+	@printf "  \033[0;32mmake evidence-report\033[0m              📄 Generate evidence\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🎨 CSS/Frontend Build\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake css-build\033[0m                    📦 Build production CSS from Tailwind\n"
+	@printf "  \033[0;32mmake css-watch\033[0m                    👁️ Watch and rebuild CSS on changes\n"
+	@printf "  \033[0;32mmake css-deps\033[0m                     📥 Install CSS build dependencies\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🔐 Secrets Management\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake synthesize\033[0m                   🔑 Generate new .env with secure secrets\n"
+	@printf "  \033[0;32mmake rotate-secrets\033[0m               🔄 Rotate secrets in existing .env\n"
+	@printf "  \033[0;32mmake synthesize-force\033[0m             ⚡ Force regenerate .env\n"
+	@printf "  \033[0;32mmake k8s-secrets\033[0m                  🙊 Generate k8s/secrets.yaml\n"
+	@printf "  \033[0;32mmake show-dev-creds\033[0m               👤 Show test user credentials\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🐳 Docker/Container Build\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake build-cached\033[0m                 🚀 Fast build with caching (70% faster)\n"
+	@printf "  \033[0;32mmake build-clean\033[0m                  🧹 Clean build without cache\n"
+	@printf "  \033[0;32mmake build-secure\033[0m                 🔒 Build with security scanning\n"
+	@printf "  \033[0;32mmake build-multi\033[0m                  🌍 Multi-platform build (AMD64/ARM64)\n"
+	@printf "  \033[0;32mmake build-all-tools\033[0m              🛠️ Build all specialized containers\n"
+	@printf "  \033[0;32mmake toolbox-build\033[0m                🔧 Build development toolbox\n"
+	@printf "  \033[0;32mmake analyze-size\033[0m                 📏 Analyze image size with dive\n"
+	@printf "  \033[0;32mmake show-sizes\033[0m                   📊 Show all image sizes\n"
+	@printf "  \033[0;32mmake show-cache\033[0m                   💾 Display build cache usage\n"
+	@printf "  \033[0;32mmake clear-cache\033[0m                  🗑️ Clear Docker build cache\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🔮 Schema Discovery\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake schema-discovery\033[0m             🔍 Generate YAML from DB schema\n"
+	@printf "  \033[0;32mmake schema-table\033[0m                 📊 Generate YAML for table\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🧰 Toolbox (Fast Container Dev)\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake toolbox-build\033[0m                🔨 Build toolbox container\n"
+	@printf "  \033[0;32mmake toolbox-run\033[0m                  🐚 Interactive shell\n"
+	@printf "  \033[0;32mmake toolbox-test\033[0m                 🧪 Run all tests quickly\n"
+	@printf "  \033[0;32mmake toolbox-test-run\033[0m             🎯 Run specific test\n"
+	@printf "  \033[0;32mmake toolbox-run-file\033[0m             📄 Run Go file\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🎭 E2E Testing (Playwright)\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake test-e2e\033[0m                     🤖 Run E2E tests headless\n"
+	@printf "  \033[0;32mmake test-e2e-debug\033[0m               👀 Tests with visible browser\n"
+	@printf "  \033[0;32mmake test-e2e-watch\033[0m               🔁 Tests in watch mode\n"
+	@printf "  \033[0;32mmake test-e2e-report\033[0m              📊 View test results\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🧪 Testing Commands\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake test\033[0m                         ✅ Run Go backend tests\n"
+	@printf "  \033[0;32mmake test-short\033[0m                   ⚡ Skip long tests\n"
+	@printf "  \033[0;32mmake test-coverage\033[0m                📈 Tests with coverage\n"
+	@printf "  \033[0;32mmake test-safe\033[0m                    🏃 Race/deadlock detection\n"
+	@printf "  \033[0;32mmake test-html\033[0m                    🌐 HTML test report\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🐠 i18n (Babel fish) Commands\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake babelfish\033[0m                    🏗️ Build gotrs-babelfish binary\n"
+	@printf "  \033[0;32mmake babelfish-coverage\033[0m           📊 Show translation coverage\n"
+	@printf "  \033[0;32mmake babelfish-validate\033[0m\n\t LANG=de   ✅ Validate a language\n"
+	@printf "  \033[0;32mmake babelfish-missing\033[0m\n\t LANG=es    🔍 Show missing translations\n"
+	@printf "  \033[0;32mmake babelfish-run\033[0m\n\t ARGS='-help'   🎯 Run with custom args\n"
+	@printf "  \033[0;32mmake test-ldap\033[0m                    🔐 Run LDAP integration tests\n"
+	@printf "  \033[0;32mmake test-ldap-perf\033[0m               ⚡ Run LDAP performance benchmarks\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🔒 Security Commands\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake scan-secrets\033[0m\t\t\t🕵️ Scan current code for secrets\n"
+	@printf "  \033[0;32mmake scan-secrets-history\033[0m\t\t📜 Scan git history for secrets\n"
+	@printf "  \033[0;32mmake scan-secrets-precommit\033[0m\t\t🪝 Install pre-commit hooks\n"
+	@printf "  \033[0;32mmake scan-vulnerabilities\033[0m\t\t🐛 Scan for vulnerabilities\n"
+	@printf "  \033[0;32mmake security-scan\033[0m\t\t\t🛡️ Run all security scans\n"
+	@printf "  \033[0;32mmake test-contracts\033[0m\t\t\t📝 Run Pact contract tests\n"
+	@printf "  \033[0;32mmake test-all\033[0m\t\t\t\t🎯 Run all tests (backend, frontend, contracts)\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m📡 Service Management\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake backend-logs\033[0m\t\t\t📋 View backend logs\n"
+	@printf "  \033[0;32mmake backend-logs-follow\033[0m\t\t📺 Follow backend logs\n"
+	@printf "  \033[0;32mmake valkey-cli\033[0m\t\t\t🔑 Valkey CLI\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🗄️  Database Operations\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake db-shell\033[0m\t\t\t\t🐘 PostgreSQL shell\n"
+	@printf "  \033[0;32mmake db-migrate\033[0m\t\t\t📤 Run pending migrations\n"
+	@printf "  \033[0;32mmake db-rollback\033[0m\t\t\t↩️  Rollback last migration\n"
+	@printf "  \033[0;32mmake db-reset\033[0m\t\t\t\t💥 Reset DB (cleans storage)\n"
+	@printf "  \033[0;32mmake db-init\033[0m\t\t\t\t🚀 Fast baseline init\n"
+	@printf "  \033[0;32mmake db-apply-test-data\033[0m\t\t🧪 Apply test data\n"
+	@printf "  \033[0;32mmake clean-storage\033[0m\t\t\t🗑️ Remove orphaned files\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m📦 OTRS Migration\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake migrate-analyze\033[0m\n\t SQL=dump.sql\t\t\t🔍 Analyze OTRS SQL dump\n"
+	@printf "  \033[0;32mmake migrate-import\033[0m\n\t SQL=dump.sql\t\t\t📥 Import OTRS data (dry-run)\n"
+	@printf "  \033[0;32mmake migrate-import\033[0m\n\t SQL=dump.sql DRY_RUN=false\t💾 Import for real\n"
+	@printf "  \033[0;32mmake migrate-validate\033[0m\t\t\t🔍 Validate imported data\n"
+	@printf "  \033[0;32mmake import-test-data\033[0m\t\t\t🎯 Import test tickets with proper mapping\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m👥 User Management\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;32mmake reset-password\033[0m\t\t\t🔓 Reset user password\n"
+	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "\n"
+	@printf "  \033[0;90m🐐 Happy coding with GOTRS!\033[0m\n"
+	@printf "  \033[0;90mContainer: $(CONTAINER_CMD) | Compose: $(COMPOSE_CMD)\033[0m\n"
+	@printf "\n"
 #########################################
 # TDD WORKFLOW COMMANDS
 #########################################
@@ -399,28 +399,28 @@ toolbox-build: build-cached
 toolbox-run:
 	@$(MAKE) toolbox-build
 	@printf "\n🔧 Starting toolbox shell...\n"
-	$(call ensure_caches)
-    @$(CONTAINER_CMD) run --rm -it \
+	@$(call ensure_caches)
+	@$(CONTAINER_CMD) run --rm -it \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
-		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
-		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		gotrs-toolbox:latest \
 		$(if $(ARGS),$(ARGS),/bin/bash)
 
 # Non-interactive toolbox exec
 toolbox-exec:
 	@$(MAKE) toolbox-build
-	$(call ensure_caches)
-    @$(CONTAINER_CMD) run --rm \
+	@$(call ensure_caches)
+	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
-		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
-		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		--network host \
 		gotrs-toolbox:latest \
 		$(ARGS)
@@ -429,14 +429,14 @@ toolbox-exec:
 toolbox-compile:
 	@$(MAKE) toolbox-build
 	@printf "\n🔨 Checking compilation...\n"
-	$(call ensure_caches)
-    @$(CONTAINER_CMD) run --rm \
+	@$(call ensure_caches)
+	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
-		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
-		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./...'
 
@@ -444,14 +444,14 @@ toolbox-compile:
 toolbox-compile-api:
 	@$(MAKE) toolbox-build
 	@printf "\n🔨 Compiling API and goats packages only...\n"
-	$(call ensure_caches)
-    @$(CONTAINER_CMD) run --rm \
+	@$(call ensure_caches)
+	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
-		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
-		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./internal/api ./cmd/goats'
 
@@ -486,52 +486,50 @@ compile-safe: toolbox-build
 # Run internal/api tests (bind mounts + caches; DB-less-safe)
 toolbox-test-api: toolbox-build
 	@printf "\n🧪 Running internal/api tests in toolbox...\n"
-	$(call ensure_caches)
-    @$(CONTAINER_CMD) run --rm \
+	@$(call ensure_caches)
+	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
-		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
-		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
-		-u "$$UID:$$GID" \
+		-e GOCACHE=/tmp/gocache \
+		-e GOMODCACHE=/tmp/gomodcache \
 		-e APP_ENV=test \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
 		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go test -v ./internal/api -run "Queue|Article|Search|Priority|User"'
+		bash -lc 'mkdir -p $$GOCACHE $$GOMODCACHE; export PATH=/usr/local/go/bin:$$PATH; go test -v ./internal/api -run "Queue|Article|Search|Priority|User"'
 
 # Run core tests (cmd/goats + internal/api + generated/tdd-comprehensive)
 toolbox-test:
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running core test suite in toolbox...\n"
-	$(call ensure_caches)
-    @$(CONTAINER_CMD) run --rm \
+	@$(call ensure_caches)
+	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
-		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
-		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
-		-u "$$UID:$$GID" \
+		-e GOCACHE=/tmp/gocache \
+		-e GOMODCACHE=/tmp/gomodcache \
 		-e APP_ENV=test \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && pkgs="./cmd/goats ./internal/api ./generated/tdd-comprehensive"; echo Running: $$pkgs; go test -v $$pkgs'
+		bash -lc 'mkdir -p $$GOCACHE $$GOMODCACHE; export PATH=/usr/local/go/bin:$$PATH; pkgs="./cmd/goats ./internal/api ./generated/tdd-comprehensive"; echo Running: $$pkgs; go test -v $$pkgs'
 
 # Run a specific test pattern across all packages
 toolbox-test-run:
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running specific test: $(TEST)\n"
-	$(call ensure_caches)
-    @$(CONTAINER_CMD) run --rm \
+	@$(call ensure_caches)
+	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
-		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
-		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		--network host \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
@@ -543,15 +541,15 @@ toolbox-test-run:
 toolbox-run-file:
 	@$(MAKE) toolbox-build
 	@printf "\n🚀 Running Go file: $(FILE)\n"
-	$(call ensure_caches)
-    @$(CONTAINER_CMD) run --rm \
+	@$(call ensure_caches)
+	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
-		-v "$$PWD/.cache/go-build:/tmp/.cache/go-build$(VZ)" \
-		-v "$$PWD/.cache/go-mod:/tmp/.cache/go-mod$(VZ)" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		--network host \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e DB_HOST=postgres -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) \
 		-e PGPASSWORD=$(DB_PASSWORD) \
