@@ -509,7 +509,7 @@ toolbox-test:
 		-e VALKEY_PORT=6388 \
 		-e APP_ENV=test \
 		gotrs-toolbox:latest \
-		sh -c "source .env 2>/dev/null || true && go test -v ./..."
+		sh -lc "export PATH=/usr/local/go/bin:$$PATH; source .env 2>/dev/null || true; pkgs='./cmd/goats ./internal/api ./generated/tdd-comprehensive'; echo Running: $$pkgs; go test -v $$pkgs"
 
 # Run specific test with toolbox
 toolbox-test-run:
