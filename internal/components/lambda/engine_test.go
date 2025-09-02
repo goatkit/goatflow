@@ -2,6 +2,7 @@ package lambda
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 
@@ -22,8 +23,10 @@ func TestEngine_ExecuteLambda_BasicFunctionality(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	mockDB := database.NewDatabase(db)
-	safeDB := NewSafeDBInterface(mockDB)
+    // Wrap the raw *sql.DB with a trivial adapter for tests
+    // We only need the SafeDB interface methods used by the engine
+    type rawDB struct{ *sql.DB }
+    safeDB := NewSafeDBInterface(rawDB{db})
 
 	execCtx := ExecutionContext{
 		Item: map[string]interface{}{
@@ -91,8 +94,8 @@ func TestEngine_ExecuteLambda_DatabaseQueries(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	mockDB := database.NewDatabase(db)
-	safeDB := NewSafeDBInterface(mockDB)
+    type rawDB struct{ *sql.DB }
+    safeDB := NewSafeDBInterface(rawDB{db})
 
 	execCtx := ExecutionContext{
 		Item: map[string]interface{}{
@@ -132,8 +135,8 @@ func TestEngine_ExecuteLambda_SecurityValidation(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	mockDB := database.NewDatabase(db)
-	safeDB := NewSafeDBInterface(mockDB)
+    type rawDB struct{ *sql.DB }
+    safeDB := NewSafeDBInterface(rawDB{db})
 
 	execCtx := ExecutionContext{
 		Item: map[string]interface{}{"id": 1},
@@ -165,8 +168,8 @@ func TestEngine_ExecuteLambda_Timeout(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
-	mockDB := database.NewDatabase(db)
-	safeDB := NewSafeDBInterface(mockDB)
+    type rawDB struct{ *sql.DB }
+    safeDB := NewSafeDBInterface(rawDB{db})
 
 	execCtx := ExecutionContext{
 		Item: map[string]interface{}{"id": 1},

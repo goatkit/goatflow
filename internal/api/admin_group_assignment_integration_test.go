@@ -23,11 +23,11 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 	config := GetTestConfig()
 	
 	// Manual database check first - this should pass based on our earlier query
-	t.Run("Database verification: Test user should have groups", func(t *testing.T) {
-		db, err := database.GetDB()
-		if err != nil {
-			t.Skip("Database not available")
-		}
+    t.Run("Database verification: Test user should have groups", func(t *testing.T) {
+        db, err := database.GetDB()
+        if err != nil || db == nil {
+            t.Skip("Database not available")
+        }
 
 		// Query to verify user groups
 		var groups string
@@ -52,11 +52,11 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 		t.Logf("SUCCESS: Database shows test user has groups: %s", groups)
 	})
 
-	t.Run("API GET verification: Does HandleAdminUserGet return the groups?", func(t *testing.T) {
-		db, err := database.GetDB()
-		if err != nil {
-			t.Skip("Database not available")
-		}
+    t.Run("API GET verification: Does HandleAdminUserGet return the groups?", func(t *testing.T) {
+        db, err := database.GetDB()
+        if err != nil || db == nil {
+            t.Skip("Database not available")
+        }
 
 		// Get test user's ID
 		var testUserID int
@@ -64,7 +64,7 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 		if testUsername == "" {
 			testUsername = "testuser"
 		}
-		err = db.QueryRow("SELECT id FROM users WHERE login = $1", testUsername).Scan(&testUserID)
+        err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM users WHERE login = $1"), testUsername).Scan(&testUserID)
 		if err != nil {
 			t.Skip("Test user not found")
 		}
@@ -99,10 +99,10 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 	})
 
 	t.Run("Form submission test: Can we update Test user's groups via HandleAdminUserUpdate?", func(t *testing.T) {
-		db, err := database.GetDB()
-		if err != nil {
-			t.Skip("Database not available")
-		}
+        db, err := database.GetDB()
+        if err != nil || db == nil {
+            t.Skip("Database not available")
+        }
 
         // Get test user's ID and current data
         var testUserID int
@@ -111,7 +111,7 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
         if testUsernameLocal == "" {
             testUsernameLocal = "testuser"
         }
-        err = db.QueryRow("SELECT id, login, first_name, last_name FROM users WHERE login = $1", testUsernameLocal).Scan(&testUserID, &login, &firstName, &lastName)
+        err = db.QueryRow(database.ConvertPlaceholders("SELECT id, login, first_name, last_name FROM users WHERE login = $1"), testUsernameLocal).Scan(&testUserID, &login, &firstName, &lastName)
 		if err != nil {
 			t.Skip("Test user not found")
 		}

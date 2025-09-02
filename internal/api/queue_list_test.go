@@ -19,7 +19,7 @@ func TestQueueListAPI(t *testing.T) {
 		expectedStatus int
 		checkResponse  func(t *testing.T, body string)
 	}{
-		{
+        {
 			name:           "should return all active queues",
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, body string) {
@@ -40,9 +40,8 @@ func TestQueueListAPI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			router.GET("/api/queues", handleQueuesAPI)
-
-			req, _ := http.NewRequest("GET", "/api/queues", nil)
+            router.GET("/api/queues", handleQueuesAPI)
+            req, _ := http.NewRequest("GET", "/api/queues", nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -57,12 +56,13 @@ func TestQueueListAPI(t *testing.T) {
 func TestQueueListJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	tests := []struct {
-		name           string
-		acceptHeader   string
-		expectedStatus int
-		checkResponse  func(t *testing.T, body string)
-	}{
+    tests := []struct {
+        name           string
+        acceptHeader   string
+        expectedStatus int
+        checkResponse  func(t *testing.T, body string)
+        setupError     bool
+    }{
 		{
 			name:           "should return JSON when requested",
 			acceptHeader:   "application/json",
@@ -101,9 +101,13 @@ func TestQueueListJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			router.GET("/api/queues", handleQueuesAPI)
+            router.GET("/api/queues", handleQueuesAPI)
 
-			req, _ := http.NewRequest("GET", "/api/queues", nil)
+            path := "/api/queues"
+            if tt.setupError {
+                path += "?force_error=true"
+            }
+            req, _ := http.NewRequest("GET", path, nil)
 			if tt.acceptHeader != "" {
 				req.Header.Set("Accept", tt.acceptHeader)
 			}
@@ -140,9 +144,13 @@ func TestQueueListErrorHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			router.GET("/api/queues", handleQueuesAPI)
+            router.GET("/api/queues", handleQueuesAPI)
 
-			req, _ := http.NewRequest("GET", "/api/queues", nil)
+            path := "/api/queues"
+            if tt.setupError {
+                path += "?force_error=true"
+            }
+            req, _ := http.NewRequest("GET", path, nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 

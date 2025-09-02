@@ -149,7 +149,7 @@ func TestValidationFunctions(t *testing.T) {
 func TestTicketStructure(t *testing.T) {
 	t.Run("Ticket fields are properly structured", func(t *testing.T) {
 		now := time.Now()
-		userID := 1
+        userID := 1
 		customerID := "CUST002"
 		customerUserID := "customer@example.com"
 		
@@ -171,7 +171,7 @@ func TestTicketStructure(t *testing.T) {
 			ChangeBy:         1,
 		}
 		
-		assert.Equal(t, 1, ticket.ID)
+        assert.Equal(t, 1, ticket.ID)
 		assert.Equal(t, "20240101-000001", ticket.TicketNumber)
 		assert.Equal(t, "Test Ticket", ticket.Title)
 		assert.Equal(t, 1, ticket.QueueID)
@@ -201,8 +201,8 @@ func TestTicketStructure(t *testing.T) {
 			ChangeBy:             1,
 		}
 		
-		assert.Equal(t, 1, article.ID)
-		assert.Equal(t, 1, article.TicketID)
+        assert.Equal(t, 1, article.ID)
+        assert.Equal(t, 1, article.TicketID)
 		assert.Equal(t, ArticleTypeEmailExternal, article.ArticleTypeID)
 		assert.Equal(t, SenderTypeCustomer, article.SenderTypeID)
 		assert.Equal(t, 1, article.IsVisibleForCustomer)
