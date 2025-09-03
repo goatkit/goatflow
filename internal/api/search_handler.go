@@ -16,11 +16,12 @@ func init() {
 	// Initialize search manager
 	searchManager = search.NewSearchManager()
 
-	// Register PostgreSQL backend as primary by default
-	pgBackend, err := search.NewPostgresBackend()
-	if err == nil {
-		searchManager.RegisterBackend("postgresql", pgBackend, true)
-	}
+    // Register PostgreSQL backend as primary by default, but only if DB is reachable
+    if os.Getenv("APP_ENV") != "test" { // tests can run without DB
+        if pgBackend, err := search.NewPostgresBackend(); err == nil {
+            searchManager.RegisterBackend("postgresql", pgBackend, true)
+        }
+    }
 
 	// Register Elasticsearch/Zinc backend if configured
 	if esEndpoint := os.Getenv("ELASTICSEARCH_ENDPOINT"); esEndpoint != "" {

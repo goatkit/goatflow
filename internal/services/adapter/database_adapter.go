@@ -192,6 +192,12 @@ func GetDB() (*sql.DB, error) {
     }
 
     db := dbService.GetDB()
+    if db == nil {
+        if os.Getenv("APP_ENV") == "test" {
+            return nil, fmt.Errorf("database unreachable in test: no db instance")
+        }
+        return nil, fmt.Errorf("database not initialized: no db instance")
+    }
     // In tests, proactively verify connectivity with a short timeout to avoid blocking queries
     if os.Getenv("APP_ENV") == "test" {
         ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
