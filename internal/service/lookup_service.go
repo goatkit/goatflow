@@ -33,15 +33,19 @@ func NewLookupService() *LookupService {
 		i18n:      i18n.GetInstance(),
 	}
 	
-	// Try to connect to database
-	db, err := database.GetDB()
-	if err != nil {
-		log.Printf("Warning: Lookup service running without database: %v", err)
-	} else {
-		s.db = db
-		s.repo = data.NewLookupsRepository(db)
-		log.Printf("LookupService: Successfully connected to database")
-	}
+    // Try to connect to database
+    db, err := database.GetDB()
+    if err != nil || db == nil {
+        if err != nil {
+            log.Printf("Warning: Lookup service running without database: %v", err)
+        } else {
+            log.Printf("Warning: Lookup service running without database: nil connection")
+        }
+    } else {
+        s.db = db
+        s.repo = data.NewLookupsRepository(db)
+        log.Printf("LookupService: Successfully connected to database")
+    }
 	
 	return s
 }
