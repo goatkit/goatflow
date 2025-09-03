@@ -2339,8 +2339,13 @@ func handleCreateTicket(c *gin.Context) {
 		}
 	}
 
-	// Create the ticket using the service
-	ticketService := service.NewTicketService(db)
+    // Create the ticket using the service (ensure db is defined)
+    db, err := database.GetDB()
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
+        return
+    }
+    ticketService := service.NewTicketService(db)
 	result, err := ticketService.CreateTicket(&req, createBy)
 	if err != nil {
 		log.Printf("Error creating ticket: %v", err)
