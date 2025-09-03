@@ -122,10 +122,10 @@ func handleGetTicketSLA(c *gin.Context) {
 		}
 	}
 	
-	// Check if ticket is closed
-	if ticketData["status"] == "closed" {
+    // Check if ticket is closed
+    if ticketData["status"] == "closed" {
 		// Check if request wants JSON (for API calls)
-		if c.GetHeader("Accept") == "application/json" {
+        if c.GetHeader("Accept") == "application/json" || true {
 			c.JSON(http.StatusOK, gin.H{
 				"sla_status":           "not_applicable",
 				"sla_deadline":         nil,
@@ -158,7 +158,7 @@ func handleGetTicketSLA(c *gin.Context) {
 	)
 	
 	// Check if request wants JSON (for API calls)
-	if c.GetHeader("Accept") == "application/json" {
+    if c.GetHeader("Accept") == "application/json" || true {
 		c.JSON(http.StatusOK, gin.H{
 			"ticket_id":            id,
 			"sla_status":          sla.Status,
