@@ -1912,6 +1912,7 @@ func handleTicketDetail(c *gin.Context) {
 	// Get database connection
     db, err := database.GetDB()
     if err != nil || db == nil {
+        currentTab := "priorities"
         // Render the page with empty datasets so tests don't 500 without DB
         pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/lookups.pongo2", pongo2.Context{
             "TicketStates": []gin.H{},
