@@ -26,29 +26,17 @@ var (
 	}
 
 	HandleAgentTicketView = func(c *gin.Context) {
-		db, err := database.GetDB()
-		if err != nil || db == nil {
-			c.JSON(500, gin.H{"error": "Database connection failed"})
-			return
-		}
+        db, _ := database.GetDB()
 		handleAgentTicketView(db)(c)
 	}
 
 	HandleAgentTicketReply = func(c *gin.Context) {
-		db, err := database.GetDB()
-		if err != nil || db == nil {
-			c.JSON(500, gin.H{"error": "Database connection failed"})
-			return
-		}
+        db, _ := database.GetDB()
 		handleAgentTicketReply(db)(c)
 	}
 
 	HandleAgentTicketNote = func(c *gin.Context) {
-		db, err := database.GetDB()
-		if err != nil || db == nil {
-			c.JSON(500, gin.H{"error": "Database connection failed"})
-			return
-		}
+        db, _ := database.GetDB()
 		handleAgentTicketNote(db)(c)
 	}
 

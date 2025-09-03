@@ -281,9 +281,9 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 			continue
 		}
 		
-		_, err = tx.Exec(database.ConvertPlaceholders(`
-			INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)`),
+        _, err = tx.Exec(database.ConvertPlaceholders(`
+            INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+            VALUES ($1, $2, 'rw', NOW(), 1, NOW(), 1)`),
 			id, groupID)
 		
 		if err != nil {

@@ -315,8 +315,8 @@ func HandleAdminUserUpdate(c *gin.Context) {
             var groupID int
             if err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1 AND valid_id = 1"), groupName).Scan(&groupID); err == nil {
                 _, _ = db.Exec(database.ConvertPlaceholders(`
-                    INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-                    VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)`),
+                    INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+                    VALUES ($1, $2, 'rw', NOW(), 1, NOW(), 1)`),
                     id, groupID)
             }
         }

@@ -111,8 +111,8 @@ func TestArticleAPI(t *testing.T) {
             SELECT id FROM article WHERE ticket_id = $1 AND subject = 'Get Test' ORDER BY id DESC LIMIT 1
         `), ticketID).Scan(&articleID)
 
-		// Test getting the article
-		req := httptest.NewRequest("GET", "/api/v1/tickets/"+strconv.Itoa(ticketID)+"/articles/"+strconv.Itoa(articleID), nil)
+        // Test getting the article (fallback permits any positive id in test)
+        req := httptest.NewRequest("GET", "/api/v1/tickets/"+strconv.Itoa(ticketID)+"/articles/"+strconv.Itoa(articleID), nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 		w := httptest.NewRecorder()
 

@@ -42,13 +42,9 @@ func TestTicketZoomHandler(t *testing.T) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	r := gin.New()
-	
-	// Add the ticket zoom handler - skip for now, test integration separately
-	r.GET("/agent/tickets/:id", func(c *gin.Context) {
-		// This test verifies handler exists and basic routing works
-		c.JSON(http.StatusOK, gin.H{"message": "ticket zoom handler exists"})
-	})
+    r := gin.New()
+    // Use the real handler so we exercise view logic
+    r.GET("/agent/tickets/:id", HandleAgentTicketView)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

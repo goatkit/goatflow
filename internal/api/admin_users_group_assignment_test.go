@@ -191,8 +191,8 @@ func setupGroupAssignmentTestUser(t *testing.T, db *sql.DB) TestUser {
 	login := "test_group_user_" + randomString(8)
 	var userID int
     query := database.ConvertPlaceholders(`
-        INSERT INTO users (login, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-        VALUES ($1, $2, $3, 1, NOW(), 1, NOW(), 1)
+        INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+        VALUES ($1, '', $2, $3, 1, NOW(), 1, NOW(), 1)
         RETURNING id`)
     err := db.QueryRow(query, login, "Test", "User").Scan(&userID)
 	require.NoError(t, err, "Failed to create test user")
@@ -207,13 +207,13 @@ func setupGroupAssignmentTestUser(t *testing.T, db *sql.DB) TestUser {
 
 func cleanupGroupAssignmentTestUser(t *testing.T, db *sql.DB, userID int) {
 	// Clean up group memberships
-	_, err := db.Exec("DELETE FROM group_user WHERE user_id = $1", userID)
+    _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), userID)
 	if err != nil {
 		t.Logf("Warning: Failed to cleanup group memberships: %v", err)
 	}
 	
 	// Clean up user
-	_, err = db.Exec("DELETE FROM users WHERE id = $1", userID)
+    _, err = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = $1"), userID)
 	if err != nil {
 		t.Logf("Warning: Failed to cleanup test user: %v", err)
 	}
@@ -264,9 +264,8 @@ func assignUserToGroups(t *testing.T, db *sql.DB, userID int, groupNames []strin
 		require.NoError(t, err, "Group %s should exist", groupName)
 
         _, err = db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)
-            ON CONFLICT (user_id, group_id, permission_key) DO NOTHING`),
+			INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+			VALUES ($1, $2, 'rw', NOW(), 1, NOW(), 1)`),
             userID, groupID)
 		require.NoError(t, err, "Failed to assign user to group %s", groupName)
 	}

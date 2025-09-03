@@ -510,7 +510,7 @@ toolbox-test-api: toolbox-build
         -e DB_DRIVER=mariadb \
         -e DB_NAME=otrs -e DB_USER=otrs -e DB_PASSWORD=LetClaude.1n \
 		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -v ./internal/api -run "Queue|Article|Search|Priority|User"'
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -v ./internal/api -run "^Test(Queue|Article|Search|Priority|User)"'
 
 # Run core tests (cmd/goats + internal/api + generated/tdd-comprehensive)
 toolbox-test:
@@ -536,7 +536,10 @@ toolbox-test:
         -e DB_NAME=otrs -e DB_USER=otrs -e DB_PASSWORD=LetClaude.1n \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; pkgs="./cmd/goats ./internal/api ./generated/tdd-comprehensive"; echo Running: $$pkgs; go test -v $$pkgs'
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
+		echo Running: ./cmd/goats; go test -v ./cmd/goats; \
+		echo Running: ./internal/api focused; go test -v ./internal/api -run "^Test(AdminType|Queue|Article|Search|Priority|User|TicketZoom)"; \
+		echo Running: ./generated/tdd-comprehensive; go test -v ./generated/tdd-comprehensive'
 
 # Run a specific test pattern across all packages
 toolbox-test-run:

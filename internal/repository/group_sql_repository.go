@@ -130,9 +130,9 @@ func (r *GroupSQLRepository) AddUserToGroup(userID uint, groupID uint) error {
 	}
 	
 	// Insert the relationship with required OTRS fields
-	insertQuery := database.ConvertPlaceholders(`
-		INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by) 
-		VALUES ($1, $2, 'rw', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)`)
+    insertQuery := database.ConvertPlaceholders(`
+        INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) 
+        VALUES ($1, $2, 'rw', CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)`)
 	_, err = r.db.Exec(insertQuery, userID, groupID)
 	if err != nil {
 		return fmt.Errorf("failed to add user to group: %w", err)

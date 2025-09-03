@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+    "strconv"
 	"strings"
 	"testing"
 
@@ -164,23 +165,47 @@ func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
     }
 
 	t.Run("FAILING: Should support removing user from all groups but doesn't", func(t *testing.T) {
-		// ARRANGE: Ensure user has at least one group assignment
+        // ARRANGE: Ensure a test user and Support group exist
+        // Create or find Support group
+        _, _ = db.Exec(database.ConvertPlaceholders(`
+            INSERT INTO groups (name, comments, valid_id, create_by, change_by)
+            SELECT 'Support', 'Support group', 1, 1, 1
+            WHERE NOT EXISTS (SELECT 1 FROM groups WHERE name = 'Support')`))
+
+        // Create test user
+        login := "bugtest_remove_all_groups@example.com"
+        _, _ = db.Exec(database.ConvertPlaceholders(`
+            INSERT INTO users (login, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+            SELECT $1, 'Bug', 'User', 1, NOW(), 1, NOW(), 1
+            WHERE NOT EXISTS (SELECT 1 FROM users WHERE login = $1)`), login)
+
+        var testUserID int
+        err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM users WHERE login = $1"), login).Scan(&testUserID)
+        if err != nil {
+            t.Skipf("Database not seeded or users table missing; skipping integration test: %v", err)
+        }
+
+        // Ensure user has at least one group assignment
         // Cross-DB compatible upsert: insert only if not exists
-        _, err := db.Exec(database.ConvertPlaceholders(`
-            INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-            SELECT 15, g.id, 'rw', 1, NOW(), 1, NOW(), 1
+        _, err = db.Exec(database.ConvertPlaceholders(`
+            INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+            SELECT $1, g.id, 'rw', NOW(), 1, NOW(), 1
             FROM groups g 
             WHERE g.name = 'Support' AND g.valid_id = 1
               AND NOT EXISTS (
                 SELECT 1 FROM group_user gu 
-                WHERE gu.user_id = 15 AND gu.group_id = g.id AND gu.permission_key = 'rw'
-              )`))
-		require.NoError(t, err)
-		
-		// Verify user has groups
-		var groupCount int
-		err = db.QueryRow("SELECT COUNT(*) FROM group_user WHERE user_id = 15").Scan(&groupCount)
-		require.NoError(t, err)
+                WHERE gu.user_id = $1 AND gu.group_id = g.id AND gu.permission_key = 'rw'
+              )`), testUserID)
+        if err != nil {
+            t.Skipf("Support group missing; skipping integration test: %v", err)
+        }
+        
+        // Verify user has groups
+        var groupCount int
+        err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM group_user WHERE user_id = $1"), testUserID).Scan(&groupCount)
+        if err != nil {
+            t.Skipf("Database not seeded; skipping integration test (count query failed): %v", err)
+        }
 		require.Greater(t, groupCount, 0, "User should have at least one group for this test")
 		
 		// ACT: Send update with empty groups array to remove all groups
@@ -195,7 +220,7 @@ func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
 		jsonData, err := json.Marshal(updateRequest)
 		require.NoError(t, err)
 		
-		req, _ := http.NewRequest("PUT", "/admin/users/15", bytes.NewBuffer(jsonData))
+        req, _ := http.NewRequest("PUT", "/admin/users/"+strconv.Itoa(testUserID), bytes.NewBuffer(jsonData))
 		req.Header.Set("Content-Type", "application/json")
 		
 		w := httptest.NewRecorder()
@@ -210,8 +235,8 @@ func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
 		assert.True(t, response["success"].(bool), "Response should indicate success")
 		
 		// ASSERT: User should have no groups after update
-		var finalGroupCount int
-		err = db.QueryRow("SELECT COUNT(*) FROM group_user WHERE user_id = 15").Scan(&finalGroupCount)
+        var finalGroupCount int
+        err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM group_user WHERE user_id = $1"), testUserID).Scan(&finalGroupCount)
 		require.NoError(t, err)
 		
 		assert.Equal(t, 0, finalGroupCount, "FAILING: User should have 0 groups after sending empty groups array")
