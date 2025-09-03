@@ -24,14 +24,26 @@ func handleGetQueues(c *gin.Context) {
 
 // handleGetPriorities returns list of priorities as JSON
 func handleGetPriorities(c *gin.Context) {
-	lookupService := GetLookupService()
-	lang := middleware.GetLanguage(c)
-	formData := lookupService.GetTicketFormDataWithLang(lang)
-	
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    formData.Priorities,
-	})
+    lookupService := GetLookupService()
+    lang := middleware.GetLanguage(c)
+
+    // If DB is not available, LookupService returns empty defaults safely
+    // But guard against nil repo path panics by ensuring service exists
+    if lookupService == nil {
+        c.JSON(http.StatusOK, gin.H{"success": true, "data": []any{}})
+        return
+    }
+
+    formData := lookupService.GetTicketFormDataWithLang(lang)
+    if formData == nil {
+        c.JSON(http.StatusOK, gin.H{"success": true, "data": []any{}})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "success": true,
+        "data":    formData.Priorities,
+    })
 }
 
 // handleGetTypes returns list of ticket types as JSON
