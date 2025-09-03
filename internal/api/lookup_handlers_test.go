@@ -15,10 +15,8 @@ import (
 
 func TestHandleGetQueues(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-    // Lookup service pulls from DB; skip when DB unavailable
-    if err := database.InitTestDB(); err != nil {
-        t.Skip("Database not available; skipping lookups test")
-    }
+    // Lookup service pulls from DB; if DB unavailable, handler returns defaults
+    _ = database.InitTestDB()
 	
 	tests := []struct {
 		name           string
