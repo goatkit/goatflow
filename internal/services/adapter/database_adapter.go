@@ -185,13 +185,23 @@ func GetDB() (*sql.DB, error) {
 		return db, nil
 	}
 
-	// Fallback to service registry
-	dbService, err := GetDatabase()
-	if err != nil {
-		return nil, err
-	}
+    // Fallback to service registry
+    dbService, err := GetDatabase()
+    if err != nil {
+        return nil, err
+    }
 
-	return dbService.GetDB(), nil
+    db := dbService.GetDB()
+    // In tests, proactively verify connectivity with a short timeout to avoid blocking queries
+    if os.Getenv("APP_ENV") == "test" {
+        ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+        defer cancel()
+        if pingErr := db.PingContext(ctx); pingErr != nil {
+            return nil, fmt.Errorf("database unreachable in test: %w", pingErr)
+        }
+    }
+
+    return db, nil
 }
 
 // GetDirectDB creates a direct database connection using environment variables
