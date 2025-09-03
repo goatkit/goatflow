@@ -208,6 +208,10 @@ func handleAddTicketMessage(c *gin.Context) {
     // Create new article/message using the service (real path)
     ticketService := GetTicketService()
     if err := ticketService.AddMessage(uint(ticketID), message); err != nil {
+        if strings.Contains(err.Error(), "not found") {
+            c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})
+            return
+        }
         c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create message"})
         return
     }
