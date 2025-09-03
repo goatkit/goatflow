@@ -2762,18 +2762,6 @@ func handleTicketReply(c *gin.Context) {
         return
     }
 
-    // Get database connection for real creation
-    db, err := database.GetDB()
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{
-            "success": false,
-            "error":   "Database connection failed",
-        })
-        return
-    }
-
-    // (tests register their own minimal queue endpoints directly in router)
-
     // For unit tests, we don't require DB writes here. Generate a simple HTML fragment.
     badge := ""
     if isInternal {
