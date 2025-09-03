@@ -2726,6 +2726,11 @@ func handleTicketReply(c *gin.Context) {
 
     // In unit tests (APP_ENV=test), allow DB-less stubbed creation
     if os.Getenv("APP_ENV") == "test" {
+        var req struct{
+            QueueID  int
+            TypeID   int
+            Priority string
+        }
         // Generate a fake ticket number string without DB
         // Keep format simple and deterministic enough for tests
         ticketNum := fmt.Sprintf("T-%d", time.Now().UnixNano())
