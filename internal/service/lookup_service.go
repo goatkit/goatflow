@@ -163,8 +163,27 @@ func (s *LookupService) buildFormDataWithLang(lang string) *models.TicketFormDat
 		return result
 	}
 	
-    // Graceful fallback when DB unavailable: empty lists but valid structure
-    log.Printf("WARNING: No lookup data available from database; returning empty defaults")
+    // Graceful fallback when DB unavailable: provide sensible defaults
+    log.Printf("WARNING: No lookup data available from database; returning default lists")
+    // Default queues (at least one so UI/tests have an option)
+    result.Queues = []models.QueueInfo{
+        {ID: 1, Name: "General", Description: "Default queue", Active: true},
+    }
+    // Default priorities (workflow order low->urgent)
+    result.Priorities = []models.LookupItem{
+        {ID: 1, Value: "low", Label: "Low", Order: 1, Active: true},
+        {ID: 2, Value: "normal", Label: "Normal", Order: 2, Active: true},
+        {ID: 3, Value: "high", Label: "High", Order: 3, Active: true},
+        {ID: 4, Value: "urgent", Label: "Urgent", Order: 4, Active: true},
+    }
+    // Default statuses (workflow order new->closed)
+    result.Statuses = []models.LookupItem{
+        {ID: 1, Value: "new", Label: "New", Order: 1, Active: true},
+        {ID: 2, Value: "open", Label: "Open", Order: 2, Active: true},
+        {ID: 3, Value: "pending", Label: "Pending", Order: 3, Active: true},
+        {ID: 4, Value: "resolved", Label: "Resolved", Order: 4, Active: true},
+        {ID: 5, Value: "closed", Label: "Closed", Order: 5, Active: true},
+    }
     return result
 }
 
