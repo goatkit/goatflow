@@ -1468,10 +1468,9 @@ func handleDashboard(c *gin.Context) {
         return
     }
 
-    // Get database connection through repository pattern
+    // Get database connection through repository pattern (graceful fallback if unavailable)
     db, err := database.GetDB()
-    if err != nil {
-        // Render template with empty stats
+    if err != nil || db == nil {
         pongo2Renderer.HTML(c, http.StatusOK, "pages/dashboard.pongo2", pongo2.Context{
             "Title": "Dashboard - GOTRS",
             "Stats": gin.H{"openTickets": 0, "pendingTickets": 0, "closedToday": 0},
@@ -1565,12 +1564,25 @@ func handleDashboard(c *gin.Context) {
 
 // handleTickets shows the tickets list page
 func handleTickets(c *gin.Context) {
-	// Get database connection
-	db, err := database.GetDB()
-	if err != nil {
-		sendErrorResponse(c, http.StatusInternalServerError, "Database connection failed")
-		return
-	}
+    // Get database connection (graceful fallback to empty list)
+    db, err := database.GetDB()
+    if err != nil || db == nil {
+        if pongo2Renderer != nil && pongo2Renderer.templateSet != nil {
+            pongo2Renderer.HTML(c, http.StatusOK, "pages/tickets.pongo2", pongo2.Context{
+                "Tickets":       []gin.H{},
+                "States":        []gin.H{},
+                "Priorities":    []gin.H{},
+                "Queues":        []gin.H{},
+                "ActiveFilters": gin.H{"status": "all", "priority": "all", "queue": "all"},
+                "Pagination":    gin.H{"page": 1, "totalPages": 1, "totalItems": 0},
+                "User":          getUserMapForTemplate(c),
+                "ActivePage":    "tickets",
+            })
+            return
+        }
+        c.String(http.StatusOK, "Tickets page (no DB)")
+        return
+    }
 
 	// Get filter and search parameters
 	status := c.Query("status")
