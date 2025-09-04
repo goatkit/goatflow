@@ -52,7 +52,7 @@ VALKEY_HOST ?= localhost
 VALKEY_PORT ?= 6388
 
 .PHONY: help up down logs restart clean setup test build debug-env build-cached toolbox-build toolbox-run toolbox-exec toolbox-compile toolbox-compile-api \
-	toolbox-test-api toolbox-test toolbox-test-all toolbox-test-run toolbox-run-file
+	toolbox-test-api toolbox-test toolbox-test-all toolbox-test-run toolbox-run-file toolbox-staticcheck
 
 # Default target
 help:
@@ -615,6 +615,21 @@ toolbox-test-run:
 		-e APP_ENV=test \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -v -run "$(TEST)" ./...'
+
+# Run static analysis using staticcheck inside toolbox
+toolbox-staticcheck:
+	@$(MAKE) toolbox-build
+	@printf "\n🔎 Running staticcheck in toolbox...\n"
+	@$(call ensure_caches)
+	$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		-v "$$PWD:/workspace" \
+		-w /workspace \
+		-u "$$UID:$$GID" \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
+		gotrs-toolbox:latest \
+		bash -lc 'set -e; export PATH=/usr/local/go/bin:/usr/local/bin:$$PATH; go version; staticcheck -version; GOTOOLCHAIN=local staticcheck ./...'
 
 # Run a specific Go file
 toolbox-run-file:
