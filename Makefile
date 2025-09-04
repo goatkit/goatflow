@@ -572,6 +572,25 @@ toolbox-test-all:
 		go test -buildvcs=false -v ./internal/service; \
 		go test -buildvcs=false -v ./generated/tdd-comprehensive'
 
+# Run integration tests (requires running Postgres and proper creds)
+toolbox-test-integration:
+	@$(MAKE) toolbox-build
+	@printf "\n🧪 Running integration tests (requires DB) in toolbox...\n"
+	@$(call ensure_caches)
+	@printf "📡 Starting dependencies (postgres, valkey)...\n"
+	@$(COMPOSE_CMD) up -d postgres valkey >/dev/null 2>&1 || true
+	$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		-v "$$PWD:/workspace" \
+		--network host \
+		-w /workspace \
+		-u "$$UID:$$GID" \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e APP_ENV=test \
+		gotrs-toolbox:latest \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; go test -tags=integration -buildvcs=false -count=1 ./...'
+
 # Run a specific test pattern across all packages
 toolbox-test-run:
 	@$(MAKE) toolbox-build
