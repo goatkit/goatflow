@@ -405,7 +405,7 @@ toolbox-run:
 	@$(MAKE) toolbox-build
 	@printf "\n🔧 Starting toolbox shell...\n"
 	@$(call ensure_caches)
-    	@$(CONTAINER_CMD) run --rm -it \
+	$(CONTAINER_CMD) run --rm -it \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
 		-w /workspace \
@@ -435,7 +435,7 @@ toolbox-compile:
 	@$(MAKE) toolbox-build
 	@printf "\n🔨 Checking compilation...\n"
 	@$(call ensure_caches)
-	@$(CONTAINER_CMD) run --rm \
+	$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
 		-w /workspace \
