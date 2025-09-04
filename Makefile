@@ -35,7 +35,7 @@ define ensure_caches
 endef
 
 # Common run flags
-VOLUME_PWD := -v "$$(pwd):/workspace$(VZ)"
+VOLUME_PWD := -v "$$(pwd):/workspace"
 WORKDIR_FLAGS := -w /workspace
 USER_FLAGS := -u "$$(id -u):$$(id -g)"
 # Default DB host: prefer host.containers.internal on Podman
@@ -405,9 +405,9 @@ toolbox-run:
 	@$(MAKE) toolbox-build
 	@printf "\n🔧 Starting toolbox shell...\n"
 	@$(call ensure_caches)
-	@$(CONTAINER_CMD) run --rm -it \
+    	@$(CONTAINER_CMD) run --rm -it \
         --security-opt label=disable \
-        -v "$$PWD:/workspace$(VZ)" \
+        -v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/workspace/.cache/go-build \
@@ -419,9 +419,9 @@ toolbox-run:
 toolbox-exec:
 	@$(MAKE) toolbox-build
 	@$(call ensure_caches)
-	@$(CONTAINER_CMD) run --rm \
+    	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
-        -v "$$PWD:/workspace$(VZ)" \
+        -v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		-e GOCACHE=/workspace/.cache/go-build \
