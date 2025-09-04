@@ -153,13 +153,14 @@ func TestTicketStructure(t *testing.T) {
 		customerID := "CUST002"
 		customerUserID := "customer@example.com"
 		
-		ticket := Ticket{
+        typeID := 1
+        ticket := Ticket{
 			ID:               1,
 			TicketNumber:     "20240101-000001",
 			Title:            "Test Ticket",
 			QueueID:          1,
 			TicketLockID:     TicketUnlocked,
-			TypeID:           1,
+            TypeID:           &typeID,
 			UserID:           &userID,
 			CustomerID:       &customerID,
 			CustomerUserID:   &customerUserID,
