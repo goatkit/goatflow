@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	_ "github.com/lib/pq"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // getTestDB returns a database connection for testing

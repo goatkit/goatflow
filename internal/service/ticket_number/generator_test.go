@@ -6,7 +6,6 @@ package ticket_number
 import (
 	"database/sql"
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -15,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	_ "github.com/lib/pq"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // Test database connection for integration tests
