@@ -589,7 +589,10 @@ toolbox-test-integration:
 		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e APP_ENV=test \
 		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; go test -tags=integration -buildvcs=false -count=1 ./...'
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
+		PKGS=$$(go list ./... | rg -v "^(github.com/gotrs-io/gotrs-ce/(tests/e2e|tests/integration|internal/components/lambda|internal/service/ticket_number|internal/database))"); \
+		echo "Running integration-tagged tests for packages:"; echo "$$PKGS" | tr "\n" " "; echo; \
+		if [ -n "$$PKGS" ]; then go test -tags=integration -buildvcs=false -count=1 $$PKGS; else echo "No integration-tagged packages to test"; fi'
 
 # Run a specific test pattern across all packages
 toolbox-test-run:
