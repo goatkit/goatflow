@@ -1,16 +1,17 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
-	"os"
-	"path/filepath"
+    "database/sql"
+    "fmt"
+    "os"
+    "path/filepath"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/spf13/cobra"
-	"golang.org/x/crypto/bcrypt"
-	_ "github.com/lib/pq"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+    "github.com/gotrs-io/gotrs-ce/internal/config"
+    "github.com/spf13/cobra"
+    "golang.org/x/crypto/bcrypt"
+    _ "github.com/lib/pq"
+    _ "github.com/go-sql-driver/mysql"
+    "github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 var (
@@ -215,13 +216,30 @@ exit 0
 
 func runResetUser(cmd *cobra.Command, args []string) error {
 	// Get database connection parameters from environment
+    dbDriver := os.Getenv("DB_DRIVER")
+    if dbDriver == "" {
+        // Default to postgres if not specified, but most of our docker-compose uses mariadb
+        dbDriver = os.Getenv("DB_ENGINE")
+        if dbDriver == "" {
+            dbDriver = "mariadb"
+        }
+    }
 	dbHost := os.Getenv("DB_HOST")
 	if dbHost == "" {
-		dbHost = "localhost"
+        // Prefer service names inside compose network
+        if dbDriver == "postgres" || dbDriver == "postgresql" {
+            dbHost = "postgres"
+        } else {
+            dbHost = "mariadb"
+        }
 	}
 	dbPort := os.Getenv("DB_PORT")
 	if dbPort == "" {
-		dbPort = "5432"
+        if dbDriver == "postgres" || dbDriver == "postgresql" {
+            dbPort = "5432"
+        } else {
+            dbPort = "3306"
+        }
 	}
 	dbName := os.Getenv("DB_NAME")
 	if dbName == "" {
@@ -229,19 +247,44 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 	}
 	dbUser := os.Getenv("DB_USER")
 	if dbUser == "" {
-		dbUser = "gotrs_user"
+        if dbDriver == "postgres" || dbDriver == "postgresql" {
+            dbUser = "gotrs_user"
+        } else {
+            dbUser = "otrs"
+        }
 	}
-	dbPassword := os.Getenv("PGPASSWORD")
+    dbPassword := os.Getenv("DB_PASSWORD")
+    if dbPassword == "" {
+        dbPassword = os.Getenv("PGPASSWORD")
+    }
 	if dbPassword == "" {
-		return fmt.Errorf("PGPASSWORD environment variable is required")
+        return fmt.Errorf("database password environment variable is required (DB_PASSWORD or PGPASSWORD)")
 	}
 
 	// Connect to database
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		dbHost, dbPort, dbUser, dbPassword, dbName)
-	
-	fmt.Printf("🔗 Connecting to database %s@%s:%s/%s...\n", dbUser, dbHost, dbPort, dbName)
-	db, err := sql.Open("postgres", dsn)
+    var (
+        driverName string
+        dsn        string
+    )
+    switch dbDriver {
+    case "postgres", "postgresql":
+        driverName = "postgres"
+        dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+            dbHost, dbPort, dbUser, dbPassword, dbName)
+    case "mysql", "mariadb":
+        driverName = "mysql"
+        // Use MySQL DSN format
+        dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4,utf8&loc=Local",
+            dbUser, dbPassword, dbHost, dbPort, dbName)
+    default:
+        // Fallback: try postgres style first
+        driverName = "postgres"
+        dsn = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+            dbHost, dbPort, dbUser, dbPassword, dbName)
+    }
+
+    fmt.Printf("🔗 Connecting to database (%s) %s@%s:%s/%s...\n", driverName, dbUser, dbHost, dbPort, dbName)
+    db, err := sql.Open(driverName, dsn)
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}

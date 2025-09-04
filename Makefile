@@ -1023,11 +1023,12 @@ reset-password:
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
 		--network gotrs-ce_gotrs-network \
-		-e DB_HOST=postgres \
-		-e DB_PORT=5432 \
-		-e DB_NAME=${DB_NAME} \
-		-e DB_USER=${DB_USER} \
-		-e PGPASSWORD=${DB_PASSWORD} \
+		-e DB_DRIVER=$${DB_DRIVER:-mariadb} \
+		-e DB_HOST=$${DB_HOST:-mariadb} \
+		-e DB_PORT=$${DB_PORT:-3306} \
+		-e DB_NAME=$${DB_NAME:-otrs} \
+		-e DB_USER=$${DB_USER:-otrs} \
+		-e DB_PASSWORD=$${DB_PASSWORD:-LetClaude.1n} \
 		gotrs-toolbox:latest \
 		gotrs reset-user --username="$$username" --password="$$password" --enable
 
