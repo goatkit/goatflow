@@ -18,8 +18,8 @@ import (
 )
 
 // ARCHIVED - replaced by dynamic module
-// handleCreateUser creates a new user
-func handleCreateUser_ARCHIVED(c *gin.Context) {
+// handleCreateUser creates a new user (archived, unused)
+// func handleCreateUser_ARCHIVED(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -73,11 +73,11 @@ func handleCreateUser_ARCHIVED(c *gin.Context) {
 		"success": true,
 		"data":    user,
 	})
-}
+// }
 
 // ARCHIVED - replaced by dynamic module
-// handleGetUser returns user details
-func handleGetUser_ARCHIVED(c *gin.Context) {
+// handleGetUser returns user details (archived, unused)
+// func handleGetUser_ARCHIVED(c *gin.Context) {
 	userID := c.Param("id")
 
 	// Get database connection
@@ -150,11 +150,11 @@ func handleGetUser_ARCHIVED(c *gin.Context) {
 		"success": true,
 		"data":    user,
 	})
-}
+// }
 
 // ARCHIVED - replaced by dynamic module
-// handleUpdateUser updates a user
-func handleUpdateUser_ARCHIVED(c *gin.Context) {
+// handleUpdateUser updates a user (archived, unused)
+// func handleUpdateUser_ARCHIVED(c *gin.Context) {
 	userID := c.Param("id")
 	
 	var updates map[string]interface{}
@@ -221,11 +221,11 @@ func handleUpdateUser_ARCHIVED(c *gin.Context) {
 		"success": true,
 		"message": "User updated successfully",
 	})
-}
+// }
 
 // ARCHIVED - replaced by dynamic module
-// handleDeleteUser deletes a user
-func handleDeleteUser_ARCHIVED(c *gin.Context) {
+// handleDeleteUser deletes a user (archived, unused)
+// func handleDeleteUser_ARCHIVED(c *gin.Context) {
 	userID := c.Param("id")
 
 	// Don't allow deletion of system users
@@ -259,11 +259,11 @@ func handleDeleteUser_ARCHIVED(c *gin.Context) {
 		"success": true,
 		"message": "User deleted successfully",
 	})
-}
+// }
 
 // ARCHIVED - replaced by dynamic module
-// handleUpdateUserStatus updates a user's active/inactive status
-func handleUpdateUserStatus_ARCHIVED(c *gin.Context) {
+// handleUpdateUserStatus updates a user's active/inactive status (archived, unused)
+// func handleUpdateUserStatus_ARCHIVED(c *gin.Context) {
 	userID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -308,4 +308,4 @@ func handleUpdateUserStatus_ARCHIVED(c *gin.Context) {
 		"success": true,
 		"message": fmt.Sprintf("User %s successfully", map[bool]string{true: "activated", false: "deactivated"}[req.Active]),
 	})
-}
+// }

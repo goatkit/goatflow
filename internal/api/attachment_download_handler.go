@@ -10,8 +10,8 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// handleAttachmentDownload serves attachment files for download
-func handleAttachmentDownload(c *gin.Context) {
+// handleAttachmentDownload serves attachment files for download (unused in MVP)
+// func handleAttachmentDownload(c *gin.Context) {
 	// Get attachment ID from URL
 	attachmentIDStr := c.Param("id")
 	attachmentID, err := strconv.Atoi(attachmentIDStr)
@@ -78,18 +78,18 @@ func handleAttachmentDownload(c *gin.Context) {
 
 	// Serve the content directly from database
 	c.Data(http.StatusOK, contentType, content)
-}
+// }
 
-// handleAttachmentPreview generates a preview or thumbnail for an attachment
-func handleAttachmentPreview(c *gin.Context) {
+// handleAttachmentPreview generates a preview or thumbnail for an attachment (unused in MVP)
+// func handleAttachmentPreview(c *gin.Context) {
 	// For now, just redirect to download
 	// In the future, this could generate thumbnails for images
 	attachmentID := c.Param("id")
 	c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/api/attachments/%s/download", attachmentID))
-}
+// }
 
-// handleAttachmentDelete removes an attachment (admin only)
-func handleAttachmentDelete(c *gin.Context) {
+// handleAttachmentDelete removes an attachment (admin only) (unused in MVP)
+// func handleAttachmentDelete(c *gin.Context) {
 	// Get attachment ID
 	attachmentIDStr := c.Param("id")
 	attachmentID, err := strconv.Atoi(attachmentIDStr)
@@ -128,7 +128,7 @@ func handleAttachmentDelete(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Attachment deleted successfully"})
-}
+// }
 
 // GetAttachmentInfo retrieves basic info about an attachment
 func GetAttachmentInfo(attachmentID int) (map[string]interface{}, error) {

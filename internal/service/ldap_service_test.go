@@ -3,6 +3,7 @@ package service
 import (
 	"testing"
 	"time"
+	"context"
 
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository/memory"
@@ -292,7 +293,7 @@ func TestLDAPService_RoleMapping(t *testing.T) {
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	roleRepo.CreateRole(nil, adminRole)
+	roleRepo.CreateRole(context.TODO(), adminRole)
 
 	userRole := &models.Role{
 		ID:          "user", 
@@ -302,7 +303,7 @@ func TestLDAPService_RoleMapping(t *testing.T) {
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	roleRepo.CreateRole(nil, userRole)
+	roleRepo.CreateRole(context.TODO(), userRole)
 
 	// Configure LDAP with role mappings
 	config := &LDAPConfig{

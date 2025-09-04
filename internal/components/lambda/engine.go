@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dop251/goja"
@@ -333,7 +334,7 @@ func isReadOnlyQuery(query string) bool {
 		" EXEC ", " EXECUTE ", " WITH ",
 	}
 
-    queryUpper := " " + q + " "
+    queryUpper := " " + strings.ToUpper(q) + " "
 	for _, danger := range dangerous {
 		if contains(queryUpper, danger) {
 			return false

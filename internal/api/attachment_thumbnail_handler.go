@@ -14,10 +14,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var thumbnailService *service.ThumbnailService
+// Deprecated in MVP: thumbnails disabled unless explicitly enabled
+// var thumbnailService *service.ThumbnailService
 
 // InitThumbnailService initializes the thumbnail service with Redis
-func InitThumbnailService() error {
+/* func InitThumbnailService() error {
 	// Initialize Redis client
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     "valkey:6379", // Using valkey service name from docker-compose
@@ -109,7 +110,7 @@ func handleAttachmentThumbnail(c *gin.Context) {
 	}
 	
 	// Initialize thumbnail service if not already done
-	if thumbnailService == nil {
+    /* if thumbnailService == nil {
 		if err := InitThumbnailService(); err != nil {
 			// Fallback to placeholder if Redis is not available
 			placeholder, placeholderType := service.GetPlaceholderThumbnail(contentType)
@@ -117,7 +118,7 @@ func handleAttachmentThumbnail(c *gin.Context) {
 			c.Data(http.StatusOK, placeholderType, placeholder)
 			return
 		}
-	}
+    } */
 	
 	// Check if this is an image that can be thumbnailed
 	if !service.IsSupportedImageType(contentType) {
@@ -129,17 +130,11 @@ func handleAttachmentThumbnail(c *gin.Context) {
 	}
 	
 	// Generate or get cached thumbnail
-	ctx := context.Background()
-	thumbnailData, thumbnailType, err := thumbnailService.GetOrCreateThumbnail(ctx, attachmentID, content, contentType, opts)
-	
-	if err != nil {
-		// Log error and return placeholder
-		fmt.Printf("Failed to generate thumbnail for attachment %d: %v\n", attachmentID, err)
-		placeholder, placeholderType := service.GetPlaceholderThumbnail(contentType)
-		c.Header("Cache-Control", "public, max-age=3600")
-		c.Data(http.StatusOK, placeholderType, placeholder)
-		return
-	}
+    // Thumbnails disabled: return placeholder for now
+    placeholder, placeholderType := service.GetPlaceholderThumbnail(contentType)
+    c.Header("Cache-Control", "public, max-age=86400")
+    c.Data(http.StatusOK, placeholderType, placeholder)
+    return
 	
 	// Set caching headers
 	c.Header("Cache-Control", "public, max-age=604800") // Cache for 7 days
@@ -155,7 +150,7 @@ func handleAttachmentThumbnail(c *gin.Context) {
 	}
 	
 	// Serve the thumbnail
-	c.Data(http.StatusOK, thumbnailType, thumbnailData)
+    // c.Data(http.StatusOK, thumbnailType, thumbnailData)
 }
 
 // handleBulkThumbnails generates thumbnails for multiple attachments (for preloading)
@@ -181,12 +176,7 @@ func handleBulkThumbnails(c *gin.Context) {
 	}
 	
 	// Initialize service if needed
-	if thumbnailService == nil {
-		if err := InitThumbnailService(); err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Thumbnail service unavailable"})
-			return
-		}
-	}
+    // Thumbnails disabled in MVP; return computed URLs only
 	
 	// Get database connection
 	db, err := database.GetDB()
@@ -208,7 +198,7 @@ func handleBulkThumbnails(c *gin.Context) {
 		var contentType string
 		var content []byte
 		
-		err := db.QueryRow(database.ConvertPlaceholders(`
+        err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COALESCE(content_type, 'application/octet-stream'), content
 			FROM article_data_mime_attachment
 			WHERE id = $1
@@ -218,17 +208,12 @@ func handleBulkThumbnails(c *gin.Context) {
 			continue // Skip this attachment
 		}
 		
-		// Check if it's an image
-		if !service.IsSupportedImageType(contentType) {
+        // Check if it's an image
+        if !service.IsSupportedImageType(contentType) {
 			results[attachmentID] = fmt.Sprintf("/api/attachments/%d/thumbnail", attachmentID)
 			continue
 		}
-		
-		// Try to generate thumbnail (it will be cached)
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		_, _, err = thumbnailService.GetOrCreateThumbnail(ctx, attachmentID, content, contentType, opts)
-		cancel()
-		
+        // Return URL; generation disabled
 		// Add to results regardless of success (URL will work either way)
 		results[attachmentID] = fmt.Sprintf("/api/attachments/%d/thumbnail?w=%d&h=%d", 
 			attachmentID, req.Width, req.Height)
