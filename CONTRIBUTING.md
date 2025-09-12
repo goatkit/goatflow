@@ -1,5 +1,7 @@
 # Contributing to GOTRS
 
+Engineering assistants: See [AGENT.md](AGENT.md) for the canonical operating manual and workflow.
+
 ## Coming Soon
 
 Thank you for your interest in contributing to GOTRS! 
@@ -38,3 +40,13 @@ While we prepare comprehensive contribution guidelines, here are the basics:
 ---
 
 *This document is under development. Check back soon for complete contribution guidelines.*
+
+## Temporary Critical Standards
+
+- Database access: use `database.ConvertPlaceholders` for every SQL string (no exceptions).
+- No ORM: use `database/sql` with small repositories.
+- Keep SQL in repositories, not handlers.
+- Templating: Pongo2 only. Do not use Go's `html/template`. Render user-facing views via Pongo2 with `layouts/base.pongo2` and proper context (`User`, `ActivePage`).
+- Routing: All routes defined in YAML under `routes/*.yaml` using the YAML router. Do not register routes directly in Go code.
+- Tests: add/update tests for any DB-affecting change; run `make test`.
+

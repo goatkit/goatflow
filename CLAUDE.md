@@ -1,3 +1,5 @@
+> Note: This document is historical. See [AGENT.md](AGENT.md) for the canonical operating manual.
+
 # CLAUDE.md - AI Assistant Project Context
 
 ## Project Overview

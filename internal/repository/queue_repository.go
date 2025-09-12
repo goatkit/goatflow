@@ -215,8 +215,8 @@ func (r *QueueRepository) Create(queue *models.Queue) error {
 		comments = sql.NullString{String: queue.Comment, Valid: true}
 	}
 
-	err := r.db.QueryRow(
-		query,
+    err := r.db.QueryRow(
+        database.ConvertPlaceholders(query),
 		queue.Name,
 		systemAddressID,
 		salutationID,
@@ -270,8 +270,8 @@ func (r *QueueRepository) Update(queue *models.Queue) error {
 		comments = sql.NullString{String: queue.Comment, Valid: true}
 	}
 
-	result, err := r.db.Exec(
-		query,
+    result, err := r.db.Exec(
+        database.ConvertPlaceholders(query),
 		queue.ID,
 		queue.Name,
 		systemAddressID,

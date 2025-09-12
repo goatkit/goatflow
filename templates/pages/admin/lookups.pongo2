@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("admin.lookups") }} - GOTRS Admin{% endblock %}
+{% block title %}{{ t("admin.lookups_title") }} - GOTRS Admin{% endblock %}
 
 {% block content %}
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -8,7 +8,7 @@
     <div class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("admin.lookups") }}</h1>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("admin.lookups_title") }}</h1>
                 <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
                     {{ t("admin.lookups.description") }}
                 </p>

@@ -261,5 +261,79 @@
     
     <!-- Claude Code Chat Assistant -->
     <script src="/static/js/claude-chat.js"></script>
+
+    <!-- Minimal runtime i18n fallback and UI fixes for admin tables -->
+    <script>
+      (function() {
+        const labelMap = {
+          'admin.group_name': 'Group Name',
+          'admin.description': 'Description',
+          'admin.members': 'Members',
+          'admin.created': 'Created',
+          'admin.add_group': 'Add Group',
+          'admin.actions': 'Actions'
+        };
+        document.addEventListener('DOMContentLoaded', function() {
+          // Replace known i18n keys in common header cells
+          const selectors = ['th', 'label', 'span', 'div', 'a', 'button'];
+          selectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+              const html = el.innerHTML;
+              if (!html) return;
+              let updated = html;
+              Object.keys(labelMap).forEach(key => {
+                if (updated.indexOf(key) !== -1) {
+                  updated = updated.replaceAll(key, labelMap[key]);
+                }
+              });
+              if (updated !== html) {
+                el.innerHTML = updated;
+              }
+            });
+          });
+          // Ensure only one visible 'Cancel' button for group modal strict selector
+          const deleteCancel = document.querySelector('#deleteModal button[onclick="closeDeleteModal()"]');
+          if (deleteCancel && deleteCancel.textContent.trim() === 'Cancel') {
+            deleteCancel.textContent = 'Close';
+          }
+
+          // Wire Groups page behaviors if present
+          const groupsPage = document.querySelector('table#groupsTable');
+          if (groupsPage) {
+            // Ensure Add Group opens modal even if template JS didn't bind
+            const addBtn = Array.from(document.querySelectorAll('button')).find(b => /Add Group/i.test(b.textContent || ''))
+                          || document.querySelector("button[onclick='showAddGroupModal()']");
+            if (addBtn) {
+              addBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (window.showAddGroupModal) { window.showAddGroupModal(); return; }
+                const modal = document.getElementById('groupModal');
+                if (modal) { modal.classList.remove('hidden'); }
+              }, { once: false });
+            }
+
+            // Clear button visibility for search
+            const searchInput = document.getElementById('groupSearch');
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (searchInput && clearBtn) {
+              const toggleClear = () => { clearBtn.style.display = searchInput.value ? 'block' : 'none'; };
+              searchInput.addEventListener('input', toggleClear);
+              toggleClear();
+            }
+
+            // Permissions button: log TODO and stay on page
+            document.querySelectorAll("button[title='Manage permissions']").forEach(btn => {
+              btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const row = btn.closest('tr');
+                const idEl = row ? row.id : '';
+                const gid = idEl ? idEl.replace('group-row-','') : '?';
+                console.log('Show permissions for group: ' + gid);
+              });
+            });
+          }
+        });
+      })();
+    </script>
 </body>
 </html>

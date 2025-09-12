@@ -1,0 +1,414 @@
+openapi: 3.0.3
+info:
+  title: GOTRS API
+  description: Modern Open Source Ticketing System API
+  version: 0.1.0
+  contact:
+    name: GOTRS Team
+    url: https://github.com/gotrs-io/gotrs-ce
+  license:
+    name: AGPL-3.0
+    url: https://opensource.org/licenses/AGPL-3.0
+servers:
+  - url: http://localhost:8081
+    description: Development server
+  - url: http://localhost:8000
+    description: Development server via nginx
+  - url: https://api.gotrs.io
+    description: Production server
+tags:
+  - name: System
+    description: System health and status endpoints
+  - name: Tickets
+    description: Ticket management operations
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the API server
+      operationId: getHealth
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: healthy
+                service: gotrs-backend
+        '500':
+          description: Server is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/status:
+    get:
+      summary: API status endpoint
+      description: Returns the status and version information of the API
+      operationId: getApiStatus
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: API status information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiStatusResponse'
+              example:
+                success: true
+                data:
+                  message: GOTRS API is running
+                  version: 0.1.0
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/tickets:
+    get:
+      summary: List tickets
+      description: Retrieve a list of tickets with optional filtering
+      operationId: listTickets
+      tags:
+        - Tickets
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Number of tickets per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: status
+          in: query
+          description: Filter by ticket status
+          required: false
+          schema:
+            type: string
+            enum:
+              - new
+              - open
+              - pending
+              - resolved
+              - closed
+        - name: priority
+          in: query
+          description: Filter by ticket priority
+          required: false
+          schema:
+            type: string
+            enum:
+              - low
+              - normal
+              - high
+              - critical
+        - name: queue
+          in: query
+          description: Filter by queue ID
+          required: false
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of tickets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create a new ticket
+      description: Create a new ticket in the system
+      operationId: createTicket
+      tags:
+        - Tickets
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTicketRequest'
+      responses:
+        '201':
+          description: Ticket created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/v1/tickets/{ticketId}:
+    get:
+      summary: Get ticket by ID
+      description: Retrieve a specific ticket by its ID
+      operationId: getTicket
+      tags:
+        - Tickets
+      parameters:
+        - name: ticketId
+          in: path
+          required: true
+          description: The ID of the ticket
+          schema:
+            type: integer
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ticket details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: Authentication required
+    BadRequestError:
+      description: Invalid request data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: Invalid request data
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: Resource not found
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error: Internal server error
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - service
+      properties:
+        status:
+          type: string
+          enum:
+            - healthy
+            - unhealthy
+        service:
+          type: string
+          example: gotrs-backend
+    ApiStatusResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+            version:
+              type: string
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+    Ticket:
+      type: object
+      required:
+        - id
+        - title
+        - status
+        - priority
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          description: Unique ticket identifier
+          example: 12345
+        title:
+          type: string
+          description: Ticket title
+          example: Unable to login to system
+          maxLength: 255
+        description:
+          type: string
+          description: Detailed ticket description
+          example: User reports they cannot login with correct credentials
+        status:
+          type: string
+          enum:
+            - new
+            - open
+            - pending
+            - resolved
+            - closed
+          description: Current ticket status
+        priority:
+          type: string
+          enum:
+            - low
+            - normal
+            - high
+            - critical
+          description: Ticket priority level
+        queue_id:
+          type: integer
+          description: ID of the queue this ticket belongs to
+        customer_id:
+          type: integer
+          description: ID of the customer who created the ticket
+        assignee_id:
+          type: integer
+          nullable: true
+          description: ID of the agent assigned to this ticket
+        created_at:
+          type: string
+          format: date-time
+          description: Ticket creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Ticket resolution timestamp
+    CreateTicketRequest:
+      type: object
+      required:
+        - title
+        - description
+        - priority
+      properties:
+        title:
+          type: string
+          maxLength: 255
+          example: Unable to login to system
+        description:
+          type: string
+          example: User reports they cannot login with correct credentials
+        priority:
+          type: string
+          enum:
+            - low
+            - normal
+            - high
+            - critical
+          default: normal
+        queue_id:
+          type: integer
+          description: Queue to create ticket in (defaults to user's default queue)
+    TicketResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Ticket'
+    TicketListResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            tickets:
+              type: array
+              items:
+                $ref: '#/components/schemas/Ticket'
+            pagination:
+              $ref: '#/components/schemas/Pagination'
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 25
+        total:
+          type: integer
+          example: 150
+        total_pages:
+          type: integer
+          example: 6

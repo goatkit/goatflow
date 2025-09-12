@@ -2,8 +2,7 @@
 package api
 
 import (
-	"net/http"
-    "log"
+    "net/http"
     "os"
 	
 	"github.com/gin-gonic/gin"
@@ -77,45 +76,79 @@ func handleGetPriorities(c *gin.Context) {
 }
 
 // handleGetTypes returns list of ticket types as JSON
+// Behavior:
+// - If a DB connection is available (including sqlmock in tests), return SQL-backed shape:
+//   [{id, name, comments, valid_id}]
+// - If no DB is available, return in-memory lookup shape from service (value/label/order/active)
+// - If a DB query fails, return 500 with an error (matches unit test expectations)
 func handleGetTypes(c *gin.Context) {
-    if os.Getenv("APP_ENV") == "test" {
-        lookupService := GetLookupService()
-        lang := middleware.GetLanguage(c)
-        formData := lookupService.GetTicketFormDataWithLang(lang)
-        c.JSON(http.StatusOK, gin.H{"success": true, "data": formData.Types})
-        return
-    }
-    // If a database is configured (e.g., unit tests with sqlmock), serve SQL-backed shape
     if db, err := database.GetDB(); err == nil && db != nil {
-        rows, qerr := db.Query("SELECT id, name, valid_id FROM ticket_type")
-        if qerr == nil {
-            defer rows.Close()
-            data := make([]map[string]interface{}, 0)
-            for rows.Next() {
-                var id int
-                var name string
-                var validID int
-                if scanErr := rows.Scan(&id, &name, &validID); scanErr != nil {
-                    continue
-                }
-                data = append(data, map[string]interface{}{
-                    "id":       id,
-                    "name":     name,
-                    "valid_id": validID,
-                })
-            }
-            c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
+        rows, qerr := db.Query(database.ConvertPlaceholders(`SELECT id, name, comments, valid_id FROM ticket_type`))
+        if qerr != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch types"})
             return
         }
-        // On query error, fall back to in-memory defaults rather than 500 for tests
-        log.Printf("handleGetTypes: query error: %v", qerr)
+        defer rows.Close()
+
+        data := make([]map[string]interface{}, 0)
+        for rows.Next() {
+            var (
+                id, validID int
+                name string
+                comments sqlNullString
+            )
+            // Local alias to avoid importing database/sql here; use a tiny wrapper
+            if err := scanTypeRow(rows, &id, &name, &comments, &validID); err != nil {
+                // Skip malformed rows
+                continue
+            }
+            data = append(data, map[string]interface{}{
+                "id":       id,
+                "name":     name,
+                "comments": comments.String(),
+                "valid_id": validID,
+            })
+        }
+        c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
+        return
     }
 
-    // Fallback to in-memory lookup service shape (value/label/order/active)
+    // No DB available: Fallback to in-memory lookup service shape (value/label/order/active)
     lookupService := GetLookupService()
     lang := middleware.GetLanguage(c)
     formData := lookupService.GetTicketFormDataWithLang(lang)
     c.JSON(http.StatusOK, gin.H{"success": true, "data": formData.Types})
+}
+
+// Minimal helpers to avoid adding a new import in this file
+type sqlRowScanner interface{ Scan(dest ...interface{}) error }
+type sqlNullString struct{ v *string }
+
+func (s *sqlNullString) Scan(src interface{}) error {
+    switch v := src.(type) {
+    case nil:
+        s.v = nil
+    case string:
+        s.v = &v
+    case []byte:
+        str := string(v)
+        s.v = &str
+    default:
+        // treat as nil
+        s.v = nil
+    }
+    return nil
+}
+
+func (s sqlNullString) String() string {
+    if s.v == nil {
+        return ""
+    }
+    return *s.v
+}
+
+func scanTypeRow(scanner sqlRowScanner, id *int, name *string, comments *sqlNullString, validID *int) error {
+    return scanner.Scan(id, name, comments, validID)
 }
 
 // handleGetStatuses returns list of ticket statuses as JSON

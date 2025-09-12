@@ -30,7 +30,10 @@ func TestWebhookAPI(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	// Setup test data
-	db, _ := database.GetDB()
+    db, _ := database.GetDB()
+    if db == nil {
+        t.Skip("Database not available for webhook tests")
+    }
 	
 	// Create webhook table if not exists (simplified for testing)
 	db.Exec(`

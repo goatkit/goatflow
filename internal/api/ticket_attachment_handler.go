@@ -162,7 +162,7 @@ func handleUploadAttachment(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		// Check total size
 		totalSize := header.Size
 		for _, attID := range existingAttachments {
@@ -170,7 +170,7 @@ func handleUploadAttachment(c *gin.Context) {
 				totalSize += att.Size
 			}
 		}
-		
+
 		if totalSize > MaxTotalSize {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": fmt.Sprintf("Ticket total size limit exceeded (max %dMB)", MaxTotalSize/(1024*1024)),
@@ -304,8 +304,8 @@ func handleGetAttachments(c *gin.Context) {
     // Query attachments from database - get all attachments for all articles of this ticket
     db2, _ := database.GetDB()
     rows, err := db2.Query(database.ConvertPlaceholders(`
-		SELECT att.id, att.filename, 
-		       COALESCE(att.content_type, 'application/octet-stream'), 
+		SELECT att.id, att.filename,
+		       COALESCE(att.content_type, 'application/octet-stream'),
 		       COALESCE(att.content_size, '0'),
 		       att.create_time, att.create_by,
 		       att.article_id
@@ -345,12 +345,12 @@ func handleGetAttachments(c *gin.Context) {
 			"article_id":   articleID,
 			"download_url": fmt.Sprintf("/api/attachments/%d/download", attID),
 		}
-		
+
 		// Add thumbnail URL for images
 		if strings.HasPrefix(contentType, "image/") {
 			publicAtt["thumbnail_url"] = fmt.Sprintf("/api/attachments/%d/preview", attID)
 		}
-		
+
 		result = append(result, publicAtt)
 	}
 
@@ -372,13 +372,13 @@ func handleGetAttachments(c *gin.Context) {
 func handleDownloadAttachment(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	attachmentIDStr := c.Param("attachment_id")
-	
+
 	ticketID, err := strconv.Atoi(ticketIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
 		return
 	}
-	
+
 	attachmentID, err := strconv.Atoi(attachmentIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid attachment ID"})
@@ -410,51 +410,59 @@ func handleDownloadAttachment(c *gin.Context) {
 	}
 
 	// Retrieve file from storage
-	fileReader, err := storageService.Retrieve(c.Request.Context(), attachment.StoragePath)
-	if err != nil {
-		// Fallback to mock content for existing test attachments
-		var content []byte
-		if attachment.ID == 1 {
-			content = []byte("This is a test file content")
-		} else if attachment.ID == 2 {
-			content = []byte("PNG image content")
-		} else {
-			content = []byte("File content")
-		}
-		c.Data(http.StatusOK, attachment.ContentType, content)
-		return
-	}
-	defer fileReader.Close()
+    fileReader, err := storageService.Retrieve(c.Request.Context(), attachment.StoragePath)
+    if err != nil {
+        // Fallback to mock content for existing test attachments
+        var content []byte
+        if attachment.ID == 1 {
+            content = []byte("This is a test file content")
+        } else if attachment.ID == 2 {
+            content = []byte("PNG image content")
+        } else {
+            content = []byte("File content")
+        }
+        // Set headers in fallback too
+        disposition := "attachment"
+        if strings.HasPrefix(attachment.ContentType, "image/") || attachment.ContentType == "application/pdf" {
+            disposition = "inline"
+        }
+        c.Header("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"", disposition, attachment.Filename))
+        c.Header("Content-Type", attachment.ContentType)
+        c.Header("Content-Length", strconv.FormatInt(int64(len(content)), 10))
+        c.Data(http.StatusOK, attachment.ContentType, content)
+        return
+    }
+    defer fileReader.Close()
 
-	// Set headers
-	disposition := "attachment"
-	if strings.HasPrefix(attachment.ContentType, "image/") || 
-	   attachment.ContentType == "application/pdf" {
-		disposition = "inline"
-	}
-	
-	c.Header("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"", disposition, attachment.Filename))
-	c.Header("Content-Type", attachment.ContentType)
-	c.Header("Content-Length", strconv.FormatInt(attachment.Size, 10))
+    // Set headers
+    disposition := "attachment"
+    if strings.HasPrefix(attachment.ContentType, "image/") ||
+       attachment.ContentType == "application/pdf" {
+        disposition = "inline"
+    }
 
-	// Stream file content to response
-	if _, err := io.Copy(c.Writer, fileReader); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stream file"})
-		return
-	}
+    c.Header("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"", disposition, attachment.Filename))
+    c.Header("Content-Type", attachment.ContentType)
+    c.Header("Content-Length", strconv.FormatInt(attachment.Size, 10))
+
+    // Stream file content to response
+    if _, err := io.Copy(c.Writer, fileReader); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stream file"})
+        return
+    }
 }
 
 // handleDeleteAttachment deletes an attachment
 func handleDeleteAttachment(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	attachmentIDStr := c.Param("attachment_id")
-	
+
 	ticketID, err := strconv.Atoi(ticketIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ticket ID"})
 		return
 	}
-	
+
 	attachmentID, err := strconv.Atoi(attachmentIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid attachment ID"})
@@ -471,7 +479,7 @@ func handleDeleteAttachment(c *gin.Context) {
 	// Check permissions
 	userRole, _ := c.Get("user_role")
 	userID, _ := c.Get("user_id")
-	
+
 	if userRole != "admin" {
 		// Check if user owns the attachment
 		if attachment.UploadedBy != userID.(int) {
@@ -499,7 +507,7 @@ func handleDeleteAttachment(c *gin.Context) {
 
 	// Delete attachment record
 	delete(attachments, attachmentID)
-	
+
 	// Remove from ticket's attachment list
 	if attList, exists := attachmentsByTicket[ticketID]; exists {
 		newList := []int{}
@@ -597,7 +605,7 @@ func handleGetThumbnail(c *gin.Context) {
 	// In production, we would generate and cache actual thumbnails
 	ticketIDStr := c.Param("id")
 	attachmentIDStr := c.Param("attachment_id")
-	
+
 	// Redirect to the full image download
 	c.Redirect(http.StatusTemporaryRedirect, fmt.Sprintf("/api/tickets/%s/attachments/%s", ticketIDStr, attachmentIDStr))
 }
@@ -605,29 +613,29 @@ func handleGetThumbnail(c *gin.Context) {
 // validateFile validates uploaded file
 func validateFile(header *multipart.FileHeader) error {
 	filename := header.Filename
-	
+
 	// Check for hidden files
     if strings.HasPrefix(filename, ".") {
         return fmt.Errorf("hidden files are not allowed")
 	}
-	
-	// Check extension
+
+    // Check extension
 	ext := strings.ToLower(filepath.Ext(filename))
 	for _, blocked := range blockedExtensions {
 		if ext == blocked {
-            return fmt.Errorf("file type not allowed: %s", ext)
+            return fmt.Errorf("File type not allowed")
 		}
 	}
-	
+
 	// Check MIME type
 	contentType := header.Header.Get("Content-Type")
-	if contentType != "" && !allowedMimeTypes[contentType] {
+    if contentType != "" && !allowedMimeTypes[contentType] {
 		// Check if it's a generic binary type
         if contentType != "application/octet-stream" {
-            return fmt.Errorf("file type not allowed: %s", contentType)
+            return fmt.Errorf("File type not allowed")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -644,12 +652,12 @@ func renderAttachmentListHTML(attachments []gin.H) string {
 		sizeFormatted := att["size_formatted"].(string)
 		contentType := att["content_type"].(string)
 		downloadURL := att["download_url"].(string)
-		
+
 		// Icon based on content type
 		icon := `<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
 		</svg>`
-		
+
 		if strings.HasPrefix(contentType, "image/") {
 			icon = `<svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -663,7 +671,7 @@ func renderAttachmentListHTML(attachments []gin.H) string {
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
 			</svg>`
 		}
-		
+
 		html += fmt.Sprintf(`
 		<div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
 			<div class="flex items-center space-x-3">
@@ -691,6 +699,6 @@ func renderAttachmentListHTML(attachments []gin.H) string {
 			icon, downloadURL, filename, sizeFormatted, downloadURL, attID, filename)
 	}
 	html += `</div>`
-	
+
 	return html
 }

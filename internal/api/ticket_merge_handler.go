@@ -262,26 +262,26 @@ func validateMerge(primaryTicket map[string]interface{}, mergeTickets []map[stri
 	primaryStatus := primaryTicket["status"].(string)
 
 	// Check if primary ticket is closed
-	if primaryStatus == "closed" {
-        return false, fmt.Errorf("cannot merge into closed ticket")
-	}
+    if primaryStatus == "closed" {
+        return false, fmt.Errorf("Cannot merge into closed ticket")
+    }
 
 	for _, ticket := range mergeTickets {
 		// Check customer match
-		if ticket["customer"].(string) != primaryCustomer {
-            return false, fmt.Errorf("cannot merge tickets from different customers")
-		}
+        if ticket["customer"].(string) != primaryCustomer {
+            return false, fmt.Errorf("Cannot merge tickets from different customers")
+        }
 
 		// Check if ticket is closed
-		if ticket["status"].(string) == "closed" {
-            return false, fmt.Errorf("cannot merge closed tickets")
-		}
+        if ticket["status"].(string) == "closed" {
+            return false, fmt.Errorf("Cannot merge closed tickets")
+        }
 
 		// Check if ticket is already merged
-		if mergedInto, ok := ticket["merged_into"]; ok && mergedInto != nil {
-			ticketID := ticket["id"].(int)
-            return false, fmt.Errorf("ticket %d is already merged", ticketID)
-		}
+        if mergedInto, ok := ticket["merged_into"]; ok && mergedInto != nil {
+            ticketID := ticket["id"].(int)
+            return false, fmt.Errorf("Ticket %d is already merged", ticketID)
+        }
 	}
 
 	return true, nil

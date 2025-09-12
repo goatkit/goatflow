@@ -569,7 +569,7 @@ async function saveQueue(event) {
         valid_id: parseInt(formData.get('valid_id')) || 1
     };
     
-    const url = currentEditId ? `/api/queues/${currentEditId}` : '/api/queues';
+    const url = currentEditId ? `/api/v1/queues/${currentEditId}` : '/api/v1/queues';
     const method = currentEditId ? 'PUT' : 'POST';
     
     try {
@@ -580,7 +580,40 @@ async function saveQueue(event) {
         });
         
         if (response.ok) {
+            // If backend returns created object, optimistically inject row for faster UI
+            try {
+                const result = await response.json();
+                if (result && result.data) {
+                    const q = result.data;
+                    const tbody = document.getElementById('queuesTableBody');
+                    if (tbody) {
+                        const tr = document.createElement('tr');
+                        tr.className = 'queue-row hover:bg-gray-50 dark:hover:bg-gray-700';
+                        tr.dataset.id = q.id;
+                        tr.dataset.name = (q.name||'').toLowerCase();
+                        tr.dataset.group = q.group_id || '';
+                        tr.dataset.status = q.valid_id || 1;
+                        tr.innerHTML = `
+                          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${q.id}</td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900 dark:text-white">${q.name}</div>
+                            ${q.comments ? `<div class="text-sm text-gray-500 dark:text-gray-400">${q.comments}</div>` : ''}
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gotrs-100 text-gotrs-800 dark:bg-gotrs-900 dark:text-gotrs-200">${q.group_name || 'No Group'}</span>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"></td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"></td>
+                        `;
+                        tbody.prepend(tr);
+                    }
+                }
+            } catch (_) {}
             closeQueueModal();
+            // Also trigger a full reload so counts and groups are accurate
             location.reload();
         } else {
             const error = await response.json();

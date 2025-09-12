@@ -56,9 +56,9 @@ func InitializeServiceRegistry() (*registry.ServiceRegistry, error) {
 
 // AutoConfigureDatabase configures database from environment variables
 func AutoConfigureDatabase() error {
-    // Fast-fail in test when DB is clearly not configured; avoids background openers
+    // In tests with no DB configured, treat as no-op (allow DB-less tests)
     if os.Getenv("APP_ENV") == "test" && os.Getenv("DB_HOST") == "" && os.Getenv("DATABASE_URL") == "" {
-        return fmt.Errorf("test env: no DB configured")
+        return nil
     }
 	// Initialize registry if not already done
 	reg, err := InitializeServiceRegistry()
@@ -187,7 +187,7 @@ func GetDB() (*sql.DB, error) {
         db := globalDB.GetDB()
         if db == nil {
             if os.Getenv("APP_ENV") == "test" {
-                return nil, fmt.Errorf("database unreachable in test: no db instance")
+                return nil, fmt.Errorf("database not initialized in test: no db instance")
             }
             return nil, fmt.Errorf("database not initialized: no db instance")
         }
@@ -196,21 +196,31 @@ func GetDB() (*sql.DB, error) {
             ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
             defer cancel()
             if pingErr := db.PingContext(ctx); pingErr != nil {
-                return nil, fmt.Errorf("database unreachable in test: %w", pingErr)
+                return nil, fmt.Errorf("database not initialized in test: %w", pingErr)
             }
         }
         return db, nil
     }
 
-	// Try direct connection first (bypass service registry)
-	if db := GetDirectDB(); db != nil {
-		return db, nil
-	}
+    // Try direct connection first (bypass service registry)
+    if db := GetDirectDB(); db != nil {
+        return db, nil
+    }
 
     // Fallback to service registry
     dbService, err := GetDatabase()
     if err != nil {
+        if os.Getenv("APP_ENV") == "test" {
+            return nil, fmt.Errorf("database not initialized in test: %w", err)
+        }
         return nil, err
+    }
+
+    if dbService == nil {
+        if os.Getenv("APP_ENV") == "test" {
+            return nil, fmt.Errorf("database not initialized in test: no service")
+        }
+        return nil, fmt.Errorf("database not initialized: no service")
     }
 
     db := dbService.GetDB()

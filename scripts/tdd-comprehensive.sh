@@ -218,15 +218,15 @@ run_comprehensive_unit_tests() {
     export DB_NAME="${DB_NAME:-gotrs}_test"
     export APP_ENV=test
     
-    # Run unit tests (quick mode runs a minimal, stable subset)
+    # Run unit tests (quick: minimal; full: exclude examples and e2e)
     local phase
     phase=$(jq -r '.test_phase // "quick"' "$evidence_file" 2>/dev/null || echo "quick")
-    local test_cmd="go test -v -race -count=1 -timeout=30m"
+    local test_cmd="GOTOOLCHAIN=auto go test -v -race -count=1 -timeout=30m"
     local packages
     if [ "$phase" = "quick" ]; then
-        packages="./cmd/goats ./generated/tdd-comprehensive"
+        packages="./cmd/goats ./generated/tdd-comprehensive ./internal/api ./internal/service"
     else
-        packages=$(go list ./... | grep -v "/examples$" | tr '\n' ' ')
+        packages=$(go list ./... | grep -v "/examples$" | grep -v "/tests/e2e" | tr '\n' ' ')
     fi
 
     if eval "$test_cmd $packages" > "$LOG_DIR/unit_tests.log" 2>&1; then

@@ -143,7 +143,7 @@ func handleQueuesAPI(c *gin.Context) { handleGetQueuesAPI(c) }
 
 // handleCreateQueue creates a new queue (API)
 func handleCreateQueue(c *gin.Context) {
-	var input struct {
+    var input struct {
 		Name            string  `json:"name"`
 		GroupID         int     `json:"group_id"`
         SystemAddress   string  `json:"system_address"`
@@ -157,9 +157,19 @@ func handleCreateQueue(c *gin.Context) {
         Comments        *string `json:"comments"`
         Comment         *string `json:"comment"`
 	}
-    if err := c.ShouldBindJSON(&input); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid JSON"})
-        return
+    // Allow pre-parsed payload injection (from x-www-form-urlencoded wrapper)
+    if v, exists := c.Get("__json_body__"); exists {
+        if m, ok := v.(gin.H); ok {
+            // Manually map known fields
+            if n, ok := m["name"].(string); ok { input.Name = n }
+            if gid, ok := m["group_id"].(int); ok { input.GroupID = gid }
+            if cm, ok := m["comments"].(string); ok { input.Comments = &cm }
+        }
+    } else {
+        if err := c.ShouldBindJSON(&input); err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid JSON"})
+            return
+        }
     }
     db, err := database.GetDB()
     if err != nil || db == nil {

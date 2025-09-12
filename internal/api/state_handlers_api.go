@@ -66,11 +66,14 @@ func handleCreateState(c *gin.Context) {
         }})
         return
     }
+    // Normalize comments to plain string for SQL args (sqlmock expects string, not *string)
+    commentVal := ""
+    if input.Comments != nil { commentVal = *input.Comments }
     var id int
     err = db.QueryRow(database.ConvertPlaceholders(`
         INSERT INTO ticket_state (name, type_id, comments, valid_id, create_by, change_by)
-        VALUES ($1,$2,$3,1,1,1) RETURNING id
-    `), input.Name, input.TypeID, input.Comments).Scan(&id)
+        VALUES ($1,$2,$3,$4,$5,$6) RETURNING id
+    `), input.Name, input.TypeID, commentVal, 1, 1, 1).Scan(&id)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create state"})
         return

@@ -171,6 +171,8 @@ help:
 	@printf "  \033[0;32mmake tdd-comprehensive\033[0m           📋 Run comprehensive TDD gates\n"
 	@printf "  \033[0;32mmake toolbox-test-run\033[0m             🎯 Run specific test\n"
 	@printf "  \033[0;32mmake toolbox-run-file\033[0m             📄 Run Go file\n"
+	@printf "  \033[0;32mmake test-unit\033[0m                    🧪 Run unit tests only (stable set)\n"
+	@printf "  \033[0;32mmake test-e2e TEST=...\033[0m         🎯 Run targeted E2E tests (pattern)\n"
 	@printf "\n"
 	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
 	@printf "  \033[1;33m🎭 E2E Testing (Playwright)\033[0m\n"
@@ -655,6 +657,21 @@ toolbox-test-all:
 		go test -buildvcs=false -v ./internal/api -run "^Test(AdminType|Queue|Article|Search|Priority|User|TicketZoom|AdminService|AdminStates|AdminGroupManagement|HandleGetQueues|HandleGetPriorities|DatabaseIntegrity)"; \
 		go test -buildvcs=false -v ./internal/service; \
 		go test -buildvcs=false -v ./generated/tdd-comprehensive'
+
+.PHONY: test-unit
+test-unit:
+	@echo "🧪 Running stable unit test set (excluding examples and e2e)..."
+	@go test -count=1 -buildvcs=false -v ./cmd/goats ./internal/... ./generated/... | tee generated/test-results/unit_stable.log
+
+.PHONY: test-e2e
+test-e2e:
+	@echo "🎯 Running targeted E2E tests (set TEST=pattern, e.g., TEST=Login|Groups)"
+	@[ -n "$(TEST)" ] || (echo "Usage: make test-e2e TEST=Login|Groups|Queues" && exit 2)
+	@HEADLESS=${HEADLESS:-true} \
+	 BASE_URL=${BASE_URL:-http://localhost:$(BACKEND_PORT)} \
+	 DEMO_ADMIN_EMAIL=${DEMO_ADMIN_EMAIL:-} \
+	 DEMO_ADMIN_PASSWORD=${DEMO_ADMIN_PASSWORD:-} \
+	 go test -count=1 -buildvcs=false -v ./tests/e2e -run "$(TEST)" | tee generated/test-results/e2e_$(shell echo $(TEST) | tr ' ' '_').log
 
 # Run integration tests (requires running Postgres and proper creds)
 toolbox-test-integration:

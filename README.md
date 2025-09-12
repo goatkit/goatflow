@@ -128,6 +128,12 @@ GOTRS uses a modern, hypermedia-driven architecture that scales from single-serv
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation.
 
+### Development Policies
+
+- Database access: This project uses `database/sql` with a thin `database.ConvertPlaceholders` wrapper to support PostgreSQL and MySQL. All SQL must be wrapped. See `DATABASE_ACCESS_PATTERNS.md`.
+- Templating: Use Pongo2 templates exclusively. Do not use Go's `html/template`. Render user-facing views via Pongo2 with `layouts/base.pongo2` and proper context.
+- Routing: Define all HTTP routes in YAML under `routes/*.yaml` using the YAML router. Do not register routes directly in Go code.
+
 ## CI/CD & Quality
 
 GOTRS maintains high code quality and security standards through comprehensive automated testing:
@@ -296,6 +302,9 @@ See [i18n Contributing Guide](docs/i18n/CONTRIBUTING.md) for detailed instructio
 See [ROADMAP.md](ROADMAP.md) for detailed development timeline.
 
 ## Contributing
+
+Engineering assistants: See [AGENT.md](AGENT.md) for the canonical operating manual.
+Developers: See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution process and standards.
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
 - Code of Conduct

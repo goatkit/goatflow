@@ -26,23 +26,34 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 				}
 			}
 
-			// If no token found, return unauthorized
-			if token == "" {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing authorization token"})
-				c.Abort()
-				return
-			}
+            // If no token found, redirect for HTML requests, JSON for APIs
+            if token == "" {
+                accept := strings.ToLower(c.GetHeader("Accept"))
+                if strings.Contains(accept, "text/html") || accept == "" {
+                    // Browser navigation -> redirect to login
+                    c.Redirect(http.StatusSeeOther, "/login")
+                } else {
+                    c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing authorization token"})
+                }
+                c.Abort()
+                return
+            }
 
 			// Validate token
 			jwtManager := shared.GetJWTManager()
 			claims, err := jwtManager.ValidateToken(token)
-			if err != nil {
-				// Clear invalid cookie
-				c.SetCookie("auth_token", "", -1, "/", "", false, true)
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-				c.Abort()
-				return
-			}
+            if err != nil {
+                // Clear invalid cookie
+                c.SetCookie("auth_token", "", -1, "/", "", false, true)
+                accept := strings.ToLower(c.GetHeader("Accept"))
+                if strings.Contains(accept, "text/html") || accept == "" {
+                    c.Redirect(http.StatusSeeOther, "/login")
+                } else {
+                    c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+                }
+                c.Abort()
+                return
+            }
 
 			// Store user info in context
 			c.Set("user_id", claims.UserID)

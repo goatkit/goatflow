@@ -5,6 +5,7 @@ import (
     "net/http"
     "strconv"
     "os"
+    "strings"
 
     "github.com/gin-gonic/gin"
     "github.com/gotrs-io/gotrs-ce/internal/database"
@@ -147,13 +148,13 @@ func handleDeleteLookupQueue(c *gin.Context) {
 func handleCreateType(c *gin.Context) {
     // Allow in tests without admin context
     if os.Getenv("APP_ENV") != "test" && !checkAdminPermission(c) {
-        c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+        c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "Admin access required"})
         return
     }
 
     var body map[string]interface{}
     if err := c.ShouldBindJSON(&body); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
         return
     }
     name, _ := body["name"].(string)
@@ -168,13 +169,13 @@ func handleCreateType(c *gin.Context) {
     }
 
     if db, err := database.GetDB(); err == nil && db != nil {
-        // Insert and return new ID (sqlmock will intercept)
+        // Insert and return new ID (placeholders for all values to satisfy sqlmock expectations)
         var newID int
         err := db.QueryRow(database.ConvertPlaceholders(`
             INSERT INTO ticket_type (name, comments, valid_id, create_by, change_by)
-            VALUES ($1, $2, $3, 1, 1)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING id
-        `), name, comments, validID).Scan(&newID)
+        `), name, comments, validID, 1, 1).Scan(&newID)
         if err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create type"})
             return
@@ -205,13 +206,14 @@ func handleCreateType(c *gin.Context) {
 
 func handleUpdateType(c *gin.Context) {
     if os.Getenv("APP_ENV") != "test" && !checkAdminPermission(c) {
-        c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+        c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "Admin access required"})
         return
     }
 
-    id, err := strconv.Atoi(c.Param("id"))
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid type ID"})
+    idStr := strings.TrimSpace(c.Param("id"))
+    id, err := strconv.Atoi(idStr)
+    if err != nil || id <= 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid type ID"})
         return
     }
 
@@ -240,7 +242,7 @@ func handleUpdateType(c *gin.Context) {
                 WHERE id = $4
             `), *body.ValidID, valueOrEmpty(body.Name), valueOrEmpty(body.Comments), id)
             if execErr != nil {
-                c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update type"})
+                c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update type"})
                 return
             }
             if rows, _ := res.RowsAffected(); rows == 0 {
@@ -262,7 +264,7 @@ func handleUpdateType(c *gin.Context) {
             WHERE id = $3
         `), *body.ValidID, valueOrEmpty(body.Name), id)
         if execErr != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update type"})
+            c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update type"})
             return
         }
         if rows, _ := res.RowsAffected(); rows == 0 {
@@ -293,13 +295,14 @@ func handleUpdateType(c *gin.Context) {
 
 func handleDeleteType(c *gin.Context) {
     if os.Getenv("APP_ENV") != "test" && !checkAdminPermission(c) {
-        c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+        c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "Admin access required"})
         return
     }
 	
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid type ID"})
+    idStr := strings.TrimSpace(c.Param("id"))
+    id, err := strconv.Atoi(idStr)
+    if err != nil || id <= 0 {
+        c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid type ID"})
 		return
 	}
 	
@@ -311,7 +314,7 @@ func handleDeleteType(c *gin.Context) {
             WHERE id = $1
         `), id, 1)
         if execErr != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete type"})
+            c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete type"})
             return
         }
         if rows, _ := res.RowsAffected(); rows == 0 {

@@ -148,8 +148,9 @@ func handleAddTicketMessage(c *gin.Context) {
 		req.Subject = fmt.Sprintf("Re: Ticket #%d", ticketID)
 	}
 	
-    // Determine message type based on user role and internal flag
-	isInternal := req.IsInternal && (userRole == "admin" || userRole == "agent")
+    // Determine message type based on user role and internal flag (case-insensitive)
+    roleLower := strings.ToLower(userRole)
+    isInternal := req.IsInternal && (roleLower == "admin" || roleLower == "agent")
 	
     // Create the message
     message := &service.SimpleTicketMessage{
@@ -185,7 +186,7 @@ func handleAddTicketMessage(c *gin.Context) {
         newMessage.IsVisibleForCustomer = 0
         newMessage.ArticleTypeID = models.ArticleTypeNoteInternal
     }
-    if userRole == "customer" {
+    if roleLower == "customer" {
         newMessage.SenderTypeID = models.SenderTypeCustomer
     }
 
