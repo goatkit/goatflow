@@ -1364,7 +1364,108 @@ func handleTicketCustomerUsers(db *sql.DB) gin.HandlerFunc {
 
 func handleAgentQueues(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Queue list"})
+		// Get user ID from context (middleware sets "user_id" not "userID")
+		userIDInterface, exists := c.Get("user_id")
+		if !exists {
+			log.Printf("handleAgentQueues: user_id not found in context")
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+			return
+		}
+
+		userID := uint(0)
+		switch v := userIDInterface.(type) {
+		case uint:
+			userID = v
+		case int:
+			userID = uint(v)
+		case float64:
+			userID = uint(v)
+		default:
+			log.Printf("handleAgentQueues: user_id has unexpected type %T", userIDInterface)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+			return
+		}
+
+		log.Printf("handleAgentQueues: userID = %d", userID)
+
+		// Build query to get queues the user has access to
+		query := `
+			SELECT q.id, q.name, q.comments, q.valid_id,
+				   COUNT(t.id) as ticket_count,
+				   COUNT(CASE WHEN t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2)) THEN 1 END) as open_ticket_count
+			FROM queue q
+			LEFT JOIN ticket t ON q.id = t.queue_id
+			WHERE q.group_id IN (
+				SELECT group_id FROM group_user WHERE user_id = $1
+			)
+			GROUP BY q.id, q.name, q.comments, q.valid_id
+			ORDER BY q.name
+		`
+
+		// Execute query
+		rows, err := db.Query(database.ConvertPlaceholders(query), userID)
+		if err != nil {
+			log.Printf("handleAgentQueues: error querying queues: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		defer rows.Close()
+
+		queues := []map[string]interface{}{}
+		for rows.Next() {
+			var queue struct {
+				ID               int
+				Name             string
+				Comments         sql.NullString
+				ValidID          int
+				TicketCount      int
+				OpenTicketCount  int
+			}
+
+			err := rows.Scan(&queue.ID, &queue.Name, &queue.Comments, &queue.ValidID, &queue.TicketCount, &queue.OpenTicketCount)
+			if err != nil {
+				log.Printf("handleAgentQueues: error scanning queue: %v", err)
+				continue
+			}
+
+			queues = append(queues, map[string]interface{}{
+				"ID":              queue.ID,
+				"Name":            queue.Name,
+				"Comments":        queue.Comments.String,
+				"ValidID":         queue.ValidID,
+				"TicketCount":     queue.TicketCount,
+				"OpenTicketCount": queue.OpenTicketCount,
+			})
+		}
+
+		// Get user from context for navigation display
+		user := getUserFromContext(c)
+
+		// Check if user is in admin group for Dev tab
+		var isInAdminGroup bool
+		adminErr := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT EXISTS(
+				SELECT 1 FROM group_user gu
+				JOIN groups g ON gu.group_id = g.id
+				WHERE gu.user_id = $1 AND g.name = 'admin'
+			)
+		`), userID).Scan(&isInAdminGroup)
+
+		if adminErr == nil && isInAdminGroup && user != nil {
+			// Set a flag in context or add to user struct if it has the field
+			c.Set("isInAdminGroup", true)
+		}
+
+		// Pass the isInAdminGroup flag to template
+		adminGroupFlag, _ := c.Get("isInAdminGroup")
+
+		pongo2Renderer.HTML(c, http.StatusOK, "pages/agent/queues.pongo2", pongo2.Context{
+			"Title":          "Queue Management",
+			"ActivePage":     "agent",
+			"User":           user,
+			"IsInAdminGroup": adminGroupFlag,
+			"Queues":         queues,
+		})
 	}
 }
 

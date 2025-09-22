@@ -1,0 +1,71 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Queue Management - GOTRS{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Queue Management</h1>
+        <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+            View and manage ticket queues assigned to you
+        </p>
+    </div>
+
+    <!-- Queues list -->
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+        <div class="px-4 py-5 sm:p-6">
+            {% if Queues and Queues|length > 0 %}
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {% for queue in Queues %}
+                <div class="relative rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400 dark:hover:border-gray-500 focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gotrs-500">
+                    <div class="flex-shrink-0">
+                        <div class="h-10 w-10 bg-gotrs-100 dark:bg-gotrs-900 rounded-lg flex items-center justify-center">
+                            <svg class="h-6 w-6 text-gotrs-600 dark:text-gotrs-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <a href="/agent/tickets?queue={{ queue.ID }}" class="focus:outline-none">
+                            <span class="absolute inset-0" aria-hidden="true"></span>
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">
+                                {{ queue.Name }}
+                            </p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">
+                                {% if queue.Comments %}
+                                    {{ queue.Comments }}
+                                {% else %}
+                                    No description
+                                {% endif %}
+                            </p>
+                            <div class="flex items-center space-x-4 mt-2">
+                                <div class="flex items-center text-xs text-gray-400 dark:text-gray-500">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                        {{ queue.OpenTicketCount }} open
+                                    </span>
+                                </div>
+                                <div class="text-xs text-gray-400 dark:text-gray-500">
+                                    {{ queue.TicketCount }} total
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No queues available</h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    You don't have access to any ticket queues, or no queues are configured in the system.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
