@@ -12,6 +12,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/api"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 	"github.com/gotrs-io/gotrs-ce/internal/services/k8s"
@@ -67,24 +68,24 @@ func main() {
 		"dashboard_activity_stream": api.HandleActivityStream,
 
 		// Agent handlers
-		"handleAgentTickets":         api.HandleAgentTickets,
-		"handleAgentTicketView":      api.HandleAgentTicketView,
-		"handleAgentTicketReply":     api.HandleAgentTicketReply,
-		"handleAgentTicketNote":      api.HandleAgentTicketNote,
-		"handleAgentTicketPhone":     api.HandleAgentTicketPhone,
-		"handleAgentTicketStatus":    api.HandleAgentTicketStatus,
-		"handleAgentTicketAssign":    api.HandleAgentTicketAssign,
-		"handleAgentTicketPriority":  api.HandleAgentTicketPriority,
-		"handleAgentTicketQueue":     api.HandleAgentTicketQueue,
-		"handleAgentTicketMerge":     api.HandleAgentTicketMerge,
-		"handleAgentSearch":          api.HandleAgentSearch,
-		"handleAgentQueues":          api.HandleAgentQueues,
-		"handleAgentQueueView":       api.HandleAgentQueueView,
-		"handleAgentQueueLock":       api.HandleAgentQueueLock,
-		"handleAgentCustomers":       api.HandleAgentCustomers,
-		"handleAgentCustomerView":    api.HandleAgentCustomerView,
-		"handleAgentCustomerTickets": api.HandleAgentCustomerTickets,
-		"handleAgentSearchResults":   api.HandleAgentSearchResults,
+		"handleAgentTickets":         api.AgentHandlerExports.HandleAgentTickets,
+		"handleAgentTicketView":      api.AgentHandlerExports.HandleAgentTicketView,
+		"handleAgentTicketReply":     api.AgentHandlerExports.HandleAgentTicketReply,
+		"handleAgentTicketNote":      api.AgentHandlerExports.HandleAgentTicketNote,
+		"handleAgentTicketPhone":     api.AgentHandlerExports.HandleAgentTicketPhone,
+		"handleAgentTicketStatus":    api.AgentHandlerExports.HandleAgentTicketStatus,
+		"handleAgentTicketAssign":    api.AgentHandlerExports.HandleAgentTicketAssign,
+		"handleAgentTicketPriority":  api.AgentHandlerExports.HandleAgentTicketPriority,
+		"handleAgentTicketQueue":     api.AgentHandlerExports.HandleAgentTicketQueue,
+		"handleAgentTicketMerge":     api.AgentHandlerExports.HandleAgentTicketMerge,
+		"handleAgentSearch":          api.AgentHandlerExports.HandleAgentSearch,
+		"handleAgentQueues":          api.AgentHandlerExports.HandleAgentQueues,
+		"handleAgentQueueView":       api.AgentHandlerExports.HandleAgentQueueView,
+		"handleAgentQueueLock":       api.AgentHandlerExports.HandleAgentQueueLock,
+		"handleAgentCustomers":       api.AgentHandlerExports.HandleAgentCustomers,
+		"handleAgentCustomerView":    api.AgentHandlerExports.HandleAgentCustomerView,
+		"handleAgentCustomerTickets": api.AgentHandlerExports.HandleAgentCustomerTickets,
+		"handleAgentSearchResults":   api.AgentHandlerExports.HandleAgentSearchResults,
 		"handleAgentDashboard": func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"message": "Agent Dashboard",
@@ -124,44 +125,60 @@ func main() {
 		},
 
 		// Ticket handlers
-		"handleTicketDetail":              api.HandleTicketDetail,
-		"handleTicketCustomerUsers":       api.HandleTicketCustomerUsers,
-		"handleAgentTicketDraft":          api.HandleAgentTicketDraft,
-		"handleArticleAttachmentDownload": api.HandleArticleAttachmentDownload,
+		"handleTicketDetail": api.HandleTicketDetail,
+		// "handleTicketCustomerUsers": api.HandleTicketCustomerUsers,
+		"handleAgentTicketDraft": api.AgentHandlerExports.HandleAgentTicketDraft,
+		// "handleArticleAttachmentDownload": api.HandleArticleAttachmentDownload,
 
 		// API v1 handlers (using actual API handlers, not v1 router wrappers)
-		"HandleListTicketsAPI":    api.HandleListTicketsAPI,
-		"HandleCreateTicketAPI":   api.HandleCreateTicketAPI,
-		"HandleGetTicketAPI":      api.HandleGetTicketAPI,
-		"HandleUpdateTicketAPI":   api.HandleUpdateTicketAPI,
-		"HandleDeleteTicketAPI":   api.HandleDeleteTicketAPI,
-		"HandleListArticlesAPI":   api.HandleListArticlesAPI,
-		"HandleCreateArticleAPI":  api.HandleCreateArticleAPI,
-		"HandleGetArticleAPI":     api.HandleGetArticleAPI,
-		"HandleUpdateArticleAPI":  api.HandleUpdateArticleAPI,
-		"HandleDeleteArticleAPI":  api.HandleDeleteArticleAPI,
-		"HandleUserMeAPI":         api.HandleUserMeAPI,
-		"HandleListUsersAPI":      api.HandleListUsersAPI,
-		"HandleGetUserAPI":        api.HandleGetUserAPI,
-		"HandleCreateUserAPI":     api.HandleCreateUserAPI,
-		"HandleUpdateUserAPI":     api.HandleUpdateUserAPI,
-		"HandleDeleteUserAPI":     api.HandleDeleteUserAPI,
-		"HandleListQueuesAPI":     api.HandleListQueuesAPI,
-		"HandleGetQueueAPI":       api.HandleGetQueueAPI,
-		"HandleCreateQueueAPI":    api.HandleCreateQueueAPI,
-		"HandleUpdateQueueAPI":    api.HandleUpdateQueueAPI,
-		"HandleDeleteQueueAPI":    api.HandleDeleteQueueAPI,
-		"HandleGetQueueStatsAPI":  api.HandleGetQueueStatsAPI,
-		"HandleAssignQueueGroupAPI": api.HandleAssignQueueGroupAPI,
-		"HandleRemoveQueueGroupAPI": api.HandleRemoveQueueGroupAPI,
-		"HandleListPrioritiesAPI": api.HandleListPrioritiesAPI,
-		"HandleGetPriorityAPI":    api.HandleGetPriorityAPI,
-		"HandleListTypesAPI":      api.HandleListTypesAPI,
-		"HandleListStatesAPI":     api.HandleListStatesAPI,
-		"HandleSearchAPI":         api.HandleSearchAPI,
+		"HandleListTicketsAPI":  api.HandleListTicketsAPI,
+		"HandleCreateTicketAPI": api.HandleCreateTicketAPI,
+		"HandleGetTicketAPI":    api.HandleGetTicketAPI,
+		"HandleUpdateTicketAPI": api.HandleUpdateTicketAPI,
+		"HandleDeleteTicketAPI": api.HandleDeleteTicketAPI,
+		"HandleAgentNewTicket": func(c *gin.Context) {
+			db, _ := database.GetDB()
+			if db == nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+				return
+			}
+			api.HandleAgentNewTicket(db)(c)
+		},
+		"HandleAgentCreateTicket": func(c *gin.Context) {
+			db, _ := database.GetDB()
+			if db == nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
+				return
+			}
+			api.HandleAgentCreateTicket(db)(c)
+		},
+		"HandleListArticlesAPI":      api.HandleListArticlesAPI,
+		"HandleCreateArticleAPI":     api.HandleCreateArticleAPI,
+		"HandleGetArticleAPI":        api.HandleGetArticleAPI,
+		"HandleUpdateArticleAPI":     api.HandleUpdateArticleAPI,
+		"HandleDeleteArticleAPI":     api.HandleDeleteArticleAPI,
+		"HandleUserMeAPI":            api.HandleUserMeAPI,
+		"HandleListUsersAPI":         api.HandleListUsersAPI,
+		"HandleGetUserAPI":           api.HandleGetUserAPI,
+		"HandleCreateUserAPI":        api.HandleCreateUserAPI,
+		"HandleUpdateUserAPI":        api.HandleUpdateUserAPI,
+		"HandleDeleteUserAPI":        api.HandleDeleteUserAPI,
+		"HandleListQueuesAPI":        api.HandleListQueuesAPI,
+		"HandleGetQueueAPI":          api.HandleGetQueueAPI,
+		"HandleCreateQueueAPI":       api.HandleCreateQueueAPI,
+		"HandleUpdateQueueAPI":       api.HandleUpdateQueueAPI,
+		"HandleDeleteQueueAPI":       api.HandleDeleteQueueAPI,
+		"HandleGetQueueStatsAPI":     api.HandleGetQueueStatsAPI,
+		"HandleAssignQueueGroupAPI":  api.HandleAssignQueueGroupAPI,
+		"HandleRemoveQueueGroupAPI":  api.HandleRemoveQueueGroupAPI,
+		"HandleListPrioritiesAPI":    api.HandleListPrioritiesAPI,
+		"HandleGetPriorityAPI":       api.HandleGetPriorityAPI,
+		"HandleListTypesAPI":         api.HandleListTypesAPI,
+		"HandleListStatesAPI":        api.HandleListStatesAPI,
+		"HandleSearchAPI":            api.HandleSearchAPI,
 		"HandleSearchSuggestionsAPI": api.HandleSearchSuggestionsAPI,
-		"HandleReindexAPI":        api.HandleReindexAPI,
-		"HandleSearchHealthAPI":   api.HandleSearchHealthAPI,
+		"HandleReindexAPI":           api.HandleReindexAPI,
+		"HandleSearchHealthAPI":      api.HandleSearchHealthAPI,
 
 		// Dev handlers
 		"HandleDevDashboard":  api.HandleDevDashboard,
@@ -401,10 +418,10 @@ func main() {
 		"handleDemoCustomerLogin": func(c *gin.Context) {
 			// Create a demo customer token
 			token := fmt.Sprintf("demo_customer_%s_%d", "john.customer", time.Now().Unix())
-			
+
 			// Set cookie with 24 hour expiry
 			c.SetCookie("access_token", token, 86400, "/", "", false, true)
-			
+
 			// Redirect to customer dashboard
 			c.Redirect(http.StatusFound, "/customer/")
 		},

@@ -95,11 +95,12 @@ func HandleUpdateArticleAPI(c *gin.Context) {
 	}
 
 	// Update ticket change time
-    updateTicketQuery := database.ConvertPlaceholders(`
-        UPDATE ticket 
-        SET change_time = NOW(), change_by = $1
-        WHERE id = $2
-    `)
+	updateTicketQuery := database.ConvertPlaceholders(`
+		UPDATE ticket 
+		SET change_time = NOW(), change_by = $1
+		WHERE id = $2
+	`)
+	// Argument order already matches placeholders left-to-right for MySQL
 	db.Exec(updateTicketQuery, userID, ticketID)
 
 	// Return updated article

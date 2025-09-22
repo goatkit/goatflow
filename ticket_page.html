@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="" dir="" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Ticket - GOTRS</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    
+    <!-- Dark mode detection script (must be inline to avoid flash) -->
+    <script>
+        // Set dark mode class before Tailwind loads to prevent flash
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+    </script>
+    
+    <!-- Tailwind CSS (production build) -->
+    <link rel="stylesheet" href="/static/css/output.css">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Alpine.js for interactivity -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- HTMX for dynamic updates -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- HTMX extensions -->
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+    
+    <!-- Tiptap Rich Text Editor (bundled for airgapped environments) -->
+    <script src="/static/js/tiptap.min.js"></script>
+    <script src="/static/js/tiptap-editor.js"></script>
+    
+    <!-- Custom styles -->
+    <style>
+        /* Smooth transitions for dark mode */
+        * {
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+    
+    
+</head>
+<body class="h-full bg-gray-50 dark:bg-gray-900">
+    <div class="min-h-full">
+        <!-- Navigation -->
+        <nav class="bg-white dark:bg-gray-800 shadow-sm">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="flex h-16 justify-between">
+                    <div class="flex">
+                        <div class="flex flex-shrink-0 items-center">
+                            <img src="/static/favicon.svg" alt="GOTRS Logo" class="h-8 w-8 mr-2">
+                            <span class="text-2xl font-bold text-gotrs-600 dark:text-gotrs-400">GOTRS</span>
+                        </div>
+                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                            <a href="/dashboard" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                                Dashboard
+                            </a>
+                            <a href="/tickets" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                                Tickets
+                            </a>
+                            <a href="/queues" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                                Queues
+                            </a>
+                            
+                            
+                        </div>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:items-center">
+                        <!-- Dark mode toggle -->
+                        <button type="button" onclick="toggleDarkMode()" class="rounded-md p-1 text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200">
+                            <i class="fas fa-moon icon-md"></i>
+                        </button>
+                        
+                        <!-- User menu -->
+                        <div class="relative ml-3" x-data="{ open: false }">
+                            <button @click="open = !open" type="button" class="flex rounded-full bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
+                                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-500">
+                                    <span class="text-sm font-medium leading-none text-white">
+                                        DU
+                                    </span>
+                                </span>
+                            </button>
+                            <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white dark:bg-gray-800 py-1 shadow-lg ring-1 ring-black ring-opacity-5">
+                                <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Profile</a>
+                                <a href="/settings" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</a>
+                                <hr class="my-1 border-gray-200 dark:border-gray-700">
+                                <a href="/logout" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">Logout</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main content -->
+        <main>
+            
+<div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Page header -->
+    <div class="md:flex md:items-center md:justify-between mb-8">
+        <div class="min-w-0 flex-1">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:truncate sm:text-3xl sm:tracking-tight">
+                Create New Ticket
+            </h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Fill out the form below to create a new support ticket
+            </p>
+        </div>
+        <div class="mt-4 flex md:ml-4 md:mt-0">
+            <a href="/tickets" 
+               class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7.793 2.232a.75.75 0 01-.025 1.06L3.622 7.25h10.003a5.375 5.375 0 010 10.75H10.75a.75.75 0 010-1.5h2.875a3.875 3.875 0 000-7.75H3.622l4.146 3.957a.75.75 0 01-1.036 1.085l-5.5-5.25a.75.75 0 010-1.085l5.5-5.25a.75.75 0 011.06.025z" clip-rule="evenodd" />
+                </svg>
+                Back to Tickets
+            </a>
+        </div>
+    </div>
+
+    <!-- Ticket Creation Form -->
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <form method="post" 
+              action="/tickets"
+              enctype="multipart/form-data"
+              class="space-y-6 p-6">
+            
+            <!-- Form Messages -->
+            <div id="form-messages"></div>
+
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <!-- Left Column -->
+                <div class="space-y-6">
+                    <!-- Subject -->
+                    <div>
+                        <label for="subject" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Subject <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-2">
+                            <input type="text" 
+                                   name="subject" 
+                                   id="subject" 
+                                   required
+                                   class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                                   placeholder="Brief description of the issue">
+                        </div>
+                    </div>
+
+                    <!-- Customer Email -->
+                    <div>
+                        <label for="customer_email" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Customer Email <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-2">
+                            <input type="email" 
+                                   name="customer_email" 
+                                   id="customer_email" 
+                                   required
+                                   class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                                   placeholder="customer@example.com">
+                        </div>
+                    </div>
+
+                    <!-- Customer Name -->
+                    <div>
+                        <label for="customer_name" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Customer Name
+                        </label>
+                        <div class="mt-2">
+                            <input type="text" 
+                                   name="customer_name" 
+                                   id="customer_name"
+                                   class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                                   placeholder="John Doe">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="space-y-6">
+                    <!-- Priority -->
+                    <div>
+                        <label for="priority" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Priority
+                        </label>
+                        <div class="mt-2">
+                            <select name="priority" 
+                                    id="priority"
+                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                
+                                <option value="very_low" >1 very low</option>
+                                
+                                <option value="low" >2 low</option>
+                                
+                                <option value="normal" selected>3 normal</option>
+                                
+                                <option value="high" >4 high</option>
+                                
+                                <option value="very_high" >5 very high</option>
+                                
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Queue -->
+                    <div>
+                        <label for="queue_id" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Queue
+                        </label>
+                        <div class="mt-2">
+                            <select name="queue_id" 
+                                    id="queue_id"
+                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                
+                                <option value="3" >Junk</option>
+                                
+                                <option value="4" >Misc</option>
+                                
+                                <option value="5" >OBC</option>
+                                
+                                <option value="1" selected>Postmaster</option>
+                                
+                                <option value="2" >Raw</option>
+                                
+                                <option value="6" >Support</option>
+                                
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Type -->
+                    <div>
+                        <label for="type_id" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Type
+                        </label>
+                        <div class="mt-2">
+                            <select name="type_id" 
+                                    id="type_id"
+                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                
+                                <option value="1" selected>Unclassified</option>
+                                
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Body -->
+            <div>
+                <label for="body" class="block text-sm font-medium text-gray-900 dark:text-white">
+                    Message <span class="text-red-500">*</span>
+                </label>
+                <div class="mt-2">
+                    <textarea name="body" 
+                              id="body" 
+                              rows="8"
+                              required
+                              class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                              placeholder="Describe the issue in detail..."></textarea>
+                </div>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    Provide as much detail as possible to help us resolve your issue quickly.
+                </p>
+            </div>
+
+            <!-- File Upload -->
+            <div>
+                <label class="block text-sm font-medium text-gray-900 dark:text-white">
+                    Attachments
+                </label>
+                <div class="mt-2">
+                    <div class="flex justify-center rounded-lg border border-dashed border-gray-900/25 dark:border-gray-600 px-6 py-10">
+                        <div class="text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="currentColor">
+                                <path fill-rule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clip-rule="evenodd" />
+                            </svg>
+                            <label for="file-upload" class="relative cursor-pointer">
+                                <span class="mt-4 text-sm leading-6 text-gray-600 dark:text-gray-400">
+                                    <span class="font-semibold text-gotrs-600 dark:text-gotrs-400 hover:text-gotrs-500">Upload files</span>
+                                    <span class="ml-1">or drag and drop</span>
+                                </span>
+                                <input id="file-upload" name="attachments" type="file" class="sr-only" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.doc,.docx,.xls,.xlsx">
+                            </label>
+                            <p class="text-xs leading-5 text-gray-600 dark:text-gray-400 mt-2">PNG, JPG, PDF up to 10MB each</p>
+                            <div id="file-list" class="mt-4 text-sm text-gray-600 dark:text-gray-400"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <a href="/tickets" 
+                   class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </a>
+                <button type="submit"
+                        class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="htmx-indicator absolute left-0 inset-y-0 flex items-center pl-3">
+                        <svg class="animate-spin h-4 w-4 text-gotrs-300" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                    Create Ticket
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+        </main>
+    </div>
+
+    <!-- Toast container for notifications -->
+    <div id="toast-container" class="fixed bottom-0 right-0 p-6 space-y-4 z-50"></div>
+
+    <!-- Include Guru Meditation component for error handling -->
+    <!-- Amiga-style Guru Meditation Error -->
+<div id="guru-meditation" class="fixed top-0 left-0 right-0 z-50 guru-meditation" style="display: none;">
+    <div class="guru-box" style="margin: 20px auto; max-width: 800px; padding: 20px;">
+        <div class="text-center" style="color: #ff0000; background: #000000; padding: 15px;">
+            <div class="guru-text amiga-font" style="font-size: 18px; margin-bottom: 15px; color: #ff0000;">
+                Software Failure.&nbsp;&nbsp;&nbsp;Press left mouse button to continue.
+            </div>
+            <div class="guru-error-code amiga-font" style="font-size: 24px; margin-bottom: 15px; color: #ff0000; font-weight: bold;">
+                Guru Meditation #<span id="guru-code">00000005.0000DEAD</span>
+            </div>
+            <div class="amiga-font" style="font-size: 14px; color: #ff8888; margin-bottom: 10px;">
+                <span id="guru-message">Database connection failed</span>
+            </div>
+            <div id="guru-details" class="amiga-font" style="display: none; margin-top: 15px; padding: 10px; border: 2px solid #ff0000; background: #000000;">
+                <div style="color: #ff8888; font-size: 12px; text-align: left;">
+                    <div>TASK: <span id="guru-task" style="color: #ffaaaa;">DATABASE.CONNECTION</span></div>
+                    <div>LOCATION: <span id="guru-location" style="color: #ffaaaa;">htmx_routes.go:817</span></div>
+                    <div>TIME: <span id="guru-time" style="color: #ffaaaa;">--</span></div>
+                </div>
+            </div>
+            <button onclick="dismissGuruMeditation()" class="amiga-font" style="margin-top: 20px; padding: 8px 20px; background: #ff0000; color: #000000; border: none; font-size: 14px; cursor: pointer; text-transform: uppercase;">
+                Left Mouse Button
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Amiga Topaz font approximation using CSS */
+/* Using only fallback fonts - no broken base64 font */
+.amiga-font {
+    font-family: 'Courier New', 'Lucida Console', 'Monaco', 
+                 'Fixedsys', 'Terminal', 'Courier New', monospace;
+    font-size: 16px;
+    line-height: 1.2;
+    letter-spacing: 0px;
+    font-weight: normal;
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeSpeed;
+}
+
+/* Amiga Guru Meditation styling */
+@keyframes guru-flash {
+    0%, 100% { 
+        border-color: #ff0000;
+        box-shadow: 0 0 20px #ff0000, inset 0 0 20px rgba(255,0,0,0.1);
+        background-color: #000000;
+    }
+    50% { 
+        border-color: #880000;
+        box-shadow: 0 0 5px #880000;
+        background-color: #000000;
+    }
+}
+
+@keyframes text-flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.guru-meditation .guru-box {
+    animation: guru-flash 1s infinite;
+    font-family: 'Topaz', 'Perfect DOS VGA 437', 'Fixedsys', 'Terminal', 'Courier New', monospace;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    background: #000000;
+    border-width: 8px;
+    border-style: solid;
+    text-transform: uppercase;
+}
+
+.guru-meditation .guru-text {
+    animation: text-flash 1.5s infinite;
+}
+
+.guru-meditation .guru-error-code {
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+/* Scanline effect for authenticity */
+.guru-meditation::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(255, 0, 0, 0.03),
+        rgba(255, 0, 0, 0.03) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    pointer-events: none;
+}
+</style>
+
+<script>
+// Guru Meditation error handler
+function showGuruMeditation(errorCode, message, details) {
+    const guru = document.getElementById('guru-meditation');
+    if (!guru) return;
+    
+    // Update error content
+    const codeEl = document.getElementById('guru-code');
+    const msgEl = document.getElementById('guru-message');
+    const detailsEl = document.getElementById('guru-details');
+    const taskEl = document.getElementById('guru-task');
+    const locationEl = document.getElementById('guru-location');
+    const timeEl = document.getElementById('guru-time');
+    
+    if (errorCode && codeEl) {
+        codeEl.textContent = errorCode;
+    }
+    
+    if (message && msgEl) {
+        msgEl.textContent = message.toUpperCase();
+    }
+    
+    if (details) {
+        if (detailsEl) detailsEl.style.display = 'block';
+        if (details.task && taskEl) taskEl.textContent = details.task.toUpperCase();
+        if (details.location && locationEl) locationEl.textContent = details.location;
+        if (timeEl) timeEl.textContent = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    }
+    
+    // Show the meditation
+    guru.style.display = 'block';
+    
+    // Authentic Amiga beep sound (simple square wave)
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.type = 'square';
+        oscillator.frequency.value = 880; // A5 note
+        gainNode.gain.value = 0.1;
+        
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.1); // Short beep
+    } catch(e) {}
+}
+
+function dismissGuruMeditation() {
+    const guru = document.getElementById('guru-meditation');
+    if (guru) {
+        guru.style.display = 'none';
+    }
+}
+
+// Listen for custom HTMX trigger
+document.addEventListener('htmx:trigger', function(evt) {
+    if (evt.detail.name === 'show-guru-meditation') {
+        const data = evt.detail.value;
+        showGuruMeditation(data.code, data.message, {
+            task: data.task || 'UNKNOWN',
+            location: data.location || 'UNKNOWN'
+        });
+    }
+});
+
+// Auto-show on HTMX errors
+document.addEventListener('htmx:responseError', function(evt) {
+    const status = evt.detail.xhr.status;
+    const response = evt.detail.xhr.responseText;
+    
+    // Generate Amiga-style error codes
+    let errorCode = '00000000.00000000';
+    if (status === 500) errorCode = '00000005.0000DEAD'; // Database error
+    else if (status === 503) errorCode = '00000503.DEADBEEF'; // Service unavailable
+    else if (status === 404) errorCode = '00000404.NOTFOUND'; // Not found
+    else if (status === 401) errorCode = '00000401.NOACCESS'; // Unauthorized
+    else if (status === 403) errorCode = '00000403.FORBIDDEN'; // Forbidden
+    else errorCode = `0000${('0000' + status).slice(-4)}.HTTPERR0`;
+    
+    // Parse error message and details
+    let message = `HTTP ${status} ERROR`;
+    let details = null;
+    
+    try {
+        const data = JSON.parse(response);
+        if (data.guru_meditation) {
+            // Use server-provided Guru Meditation data
+            errorCode = data.guru_meditation.code || errorCode;
+            message = data.guru_meditation.message || data.error || message;
+            details = {
+                task: data.guru_meditation.task || `${evt.detail.xhr.method} REQUEST`,
+                location: data.guru_meditation.location || evt.detail.pathInfo.requestPath
+            };
+        } else {
+            message = data.error || data.message || message;
+        }
+    } catch {
+        if (response.includes('Database') || response.includes('database')) {
+            message = 'DATABASE CONNECTION FAILED';
+            errorCode = '00000005.DEADBEEF';
+        } else if (response.includes('timeout')) {
+            message = 'REQUEST TIMEOUT';
+            errorCode = '00000005.TIMEOUT0';
+        } else {
+            message = response.substring(0, 100).toUpperCase();
+        }
+    }
+    
+    showGuruMeditation(errorCode, message, details);
+});
+
+// Also catch unhandled errors
+window.addEventListener('error', function(e) {
+    showGuruMeditation('DEADBEEF.CAFEBABE', e.message || 'Unhandled JavaScript error');
+});
+</script>
+
+    <!-- Dark mode toggle script -->
+    <script>
+        function toggleDarkMode() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
+        }
+
+        // Handle HTMX target errors - show Guru Meditation
+        document.body.addEventListener('htmx:targetError', (event) => {
+            console.error('HTMX target error full details:', {
+                event: event,
+                detail: event.detail,
+                target: event.detail.target,
+                xhr: event.detail.xhr,
+                targetElement: document.querySelector(event.detail.target)
+            });
+            
+            // Show Amiga-style Guru Meditation error
+            const errorCode = '00000007.DEADBEEF';
+            const guruHtml = `
+                <div id="guru-meditation" class="relative cursor-pointer" onclick="this.remove()">
+                    <style>
+                        @keyframes flash-border {
+                            0%, 50% { border-color: #ff0000; }
+                            25%, 75% { border-color: #000000; }
+                        }
+                        #guru-meditation {
+                            animation: flash-border 0.8s infinite;
+                        }
+                    </style>
+                    <div class="bg-black border-8 p-8 font-mono">
+                        <div class="text-center">
+                            <div class="text-white text-xl mb-2">Software Failure.    Press left mouse button to continue.</div>
+                            <div class="text-white text-2xl font-bold">Guru Meditation #${errorCode}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Insert at the top of the page, before main content
+            const mainContent = document.querySelector('main') || document.body.firstChild;
+            if (mainContent) {
+                mainContent.insertAdjacentHTML('beforebegin', guruHtml);
+            } else {
+                document.body.insertAdjacentHTML('afterbegin', guruHtml);
+            }
+        });
+
+        // Add debugging for all htmx events
+        document.body.addEventListener('htmx:beforeRequest', (event) => {
+            console.log('HTMX request starting:', event.detail.pathInfo.requestPath);
+        });
+        
+        document.body.addEventListener('htmx:afterRequest', (event) => {
+            console.log('HTMX request completed:', {
+                path: event.detail.pathInfo.requestPath,
+                successful: event.detail.successful,
+                failed: event.detail.failed,
+                xhr: event.detail.xhr
+            });
+        });
+        
+        // Also handle response errors (like redirects)
+        document.body.addEventListener('htmx:responseError', (event) => {
+            console.error('HTMX response error full details:', {
+                event: event,
+                detail: event.detail,
+                xhr: event.detail.xhr,
+                status: event.detail.xhr.status,
+                responseText: event.detail.xhr.responseText?.substring(0, 200)
+            });
+            
+            // Show Guru Meditation error for auth redirects
+            if (event.detail.xhr && event.detail.xhr.status === 303) {
+                const errorCode = '00000008.CAFEBABE';
+                const guruHtml = `
+                    <div id="guru-meditation-auth" class="relative cursor-pointer" onclick="window.location.href='/login';">
+                        <style>
+                            @keyframes flash-border-auth {
+                                0%, 50% { border-color: #ff0000; }
+                                25%, 75% { border-color: #000000; }
+                            }
+                            #guru-meditation-auth {
+                                animation: flash-border-auth 0.8s infinite;
+                            }
+                        </style>
+                        <div class="bg-black border-8 p-8 font-mono">
+                            <div class="text-center">
+                                <div class="text-white text-xl mb-2">Software Failure.    Press left mouse button to continue.</div>
+                                <div class="text-white text-2xl font-bold">Guru Meditation #${errorCode}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Insert at the top of the page, before main content
+                const mainContent = document.querySelector('main') || document.body.firstChild;
+                if (mainContent) {
+                    mainContent.insertAdjacentHTML('beforebegin', guruHtml);
+                } else {
+                    document.body.insertAdjacentHTML('afterbegin', guruHtml);
+                }
+            }
+        });
+    </script>
+    
+    
+<!-- Handle form response and file uploads -->
+<script>
+    // Handle file selection
+    document.getElementById('file-upload').addEventListener('change', function(e) {
+        const fileList = document.getElementById('file-list');
+        fileList.innerHTML = '';
+        
+        if (e.target.files.length > 0) {
+            const list = document.createElement('ul');
+            list.className = 'text-left space-y-1';
+            
+            for (let i = 0; i < e.target.files.length; i++) {
+                const file = e.target.files[i];
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between';
+                li.innerHTML = `
+                    <span>${file.name}</span>
+                    <span class="text-xs text-gray-500">${(file.size / 1024).toFixed(1)} KB</span>
+                `;
+                list.appendChild(li);
+            }
+            
+            fileList.appendChild(list);
+        }
+    });
+    
+    document.body.addEventListener('htmx:beforeRequest', function(evt) {
+        // Clear any previous messages
+        document.getElementById('form-messages').innerHTML = '';
+    });
+    
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+        if (evt.detail.xhr.status === 201) {
+            // Success - show success message and redirect
+            const response = JSON.parse(evt.detail.xhr.response);
+            document.getElementById('form-messages').innerHTML = `
+                <div class="rounded-md bg-green-50 dark:bg-green-900/20 p-4 mb-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.236 4.53L7.53 10.361a.75.75 0 00-1.06 1.06l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-green-800 dark:text-green-200">
+                                Ticket created successfully! Redirecting to ticket #${response.ticket_number}...
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            // Redirect after 2 seconds
+            setTimeout(() => {
+                if (response.id) {
+                    window.location.href = `/tickets/${response.id}`;
+                } else {
+                    window.location.href = '/tickets';
+                }
+            }, 2000);
+        } else if (evt.detail.xhr.status >= 400) {
+            // Error - show error message
+            let errorMessage = 'An error occurred while creating the ticket.';
+            try {
+                const response = JSON.parse(evt.detail.xhr.response);
+                if (response.error) {
+                    errorMessage = response.error;
+                }
+            } catch (e) {
+                // Use default message
+            }
+            
+            document.getElementById('form-messages').innerHTML = `
+                <div class="rounded-md bg-red-50 dark:bg-red-900/20 p-4 mb-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-red-800 dark:text-red-200">
+                                ${errorMessage}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    });
+</script>
+
+    
+    <!-- Claude Code Chat Assistant -->
+    <script src="/static/js/claude-chat.js"></script>
+
+    <!-- Minimal runtime i18n fallback and UI fixes for admin tables -->
+    <script>
+      (function() {
+        const labelMap = {
+          'admin.group_name': 'Group Name',
+          'admin.description': 'Description',
+          'admin.members': 'Members',
+          'admin.created': 'Created',
+          'admin.add_group': 'Add Group',
+          'admin.actions': 'Actions'
+        };
+        document.addEventListener('DOMContentLoaded', function() {
+          // Replace known i18n keys in common header cells
+          const selectors = ['th', 'label', 'span', 'div', 'a', 'button'];
+          selectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+              const html = el.innerHTML;
+              if (!html) return;
+              let updated = html;
+              Object.keys(labelMap).forEach(key => {
+                if (updated.indexOf(key) !== -1) {
+                  updated = updated.replaceAll(key, labelMap[key]);
+                }
+              });
+              if (updated !== html) {
+                el.innerHTML = updated;
+              }
+            });
+          });
+          // Ensure only one visible 'Cancel' button for group modal strict selector
+          const deleteCancel = document.querySelector('#deleteModal button[onclick="closeDeleteModal()"]');
+          if (deleteCancel && deleteCancel.textContent.trim() === 'Cancel') {
+            deleteCancel.textContent = 'Close';
+          }
+
+          // Wire Groups page behaviors if present
+          const groupsPage = document.querySelector('table#groupsTable');
+          if (groupsPage) {
+            // Ensure Add Group opens modal even if template JS didn't bind
+            const addBtn = Array.from(document.querySelectorAll('button')).find(b => /Add Group/i.test(b.textContent || ''))
+                          || document.querySelector("button[onclick='showAddGroupModal()']");
+            if (addBtn) {
+              addBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (window.showAddGroupModal) { window.showAddGroupModal(); return; }
+                const modal = document.getElementById('groupModal');
+                if (modal) { modal.classList.remove('hidden'); }
+              }, { once: false });
+            }
+
+            // Clear button visibility for search
+            const searchInput = document.getElementById('groupSearch');
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (searchInput && clearBtn) {
+              const toggleClear = () => { clearBtn.style.display = searchInput.value ? 'block' : 'none'; };
+              searchInput.addEventListener('input', toggleClear);
+              toggleClear();
+            }
+
+            // Permissions button: log TODO and stay on page
+            document.querySelectorAll("button[title='Manage permissions']").forEach(btn => {
+              btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const row = btn.closest('tr');
+                const idEl = row ? row.id : '';
+                const gid = idEl ? idEl.replace('group-row-','') : '?';
+                console.log('Show permissions for group: ' + gid);
+              });
+            });
+          }
+        });
+      })();
+    </script>
+</body>
+</html>

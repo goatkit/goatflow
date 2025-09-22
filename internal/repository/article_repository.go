@@ -25,6 +25,9 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	fmt.Printf("DEBUG: Creating article for ticket ID %d\n", article.TicketID)
 
 	// Set defaults
+	if article.ArticleTypeID == 0 {
+		article.ArticleTypeID = 1 // external email default
+	}
 	if article.SenderTypeID == 0 {
 		article.SenderTypeID = 3 // Customer
 	}
@@ -42,7 +45,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	}
 	defer tx.Rollback()
 
-	// Insert into article table
+	// Insert into article table (OTRS legacy-compatible columns)
 	articleQuery := database.ConvertPlaceholders(`
 		INSERT INTO article (
 			ticket_id, article_sender_type_id,
@@ -82,14 +85,14 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 			$1, $2, $3, $4, $5, $6, $7, $8, $9
 		)`)
 
-	// Convert body to bytea
-	var bodyBytes []byte
+	// Normalize body to string for MySQL TEXT column compatibility
+	var bodyStr string
 	if str, ok := article.Body.(string); ok {
-		bodyBytes = []byte(str)
+		bodyStr = str
 	} else if bytes, ok := article.Body.([]byte); ok {
-		bodyBytes = bytes
-	} else {
-		bodyBytes = []byte(fmt.Sprintf("%v", article.Body))
+		bodyStr = string(bytes)
+	} else if article.Body != nil {
+		bodyStr = fmt.Sprintf("%v", article.Body)
 	}
 
 	contentType := "text/plain; charset=utf-8"
@@ -104,7 +107,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 		mimeQuery,
 		articleID64,
 		article.Subject,
-		bodyBytes,
+		bodyStr,
 		contentType,
 		int(now.Unix()),
 		now,
@@ -114,17 +117,21 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	)
 
 	if err != nil {
+		// Surface the DB error to logs to aid debugging
+		fmt.Printf("ERROR: article_data_mime insert failed for ticket %d, article %d: %v\n", article.TicketID, articleID64, err)
 		return err
 	}
 
 	// Update ticket's change_time when an article is added
+	// Use left-to-right placeholders so MySQL '?' binding matches arg order
 	updateTicketQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
-		SET change_time = $2, change_by = $3
-		WHERE id = $1`)
+		SET change_time = $1, change_by = $2
+		WHERE id = $3`)
 
-	_, err = tx.Exec(updateTicketQuery, article.TicketID, now, article.CreateBy)
+	_, err = tx.Exec(updateTicketQuery, now, article.CreateBy, article.TicketID)
 	if err != nil {
+		fmt.Printf("ERROR: ticket change_time update failed for ticket %d: %v\n", article.TicketID, err)
 		return err
 	}
 
@@ -132,33 +139,34 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	return tx.Commit()
 }
 
-// GetByID retrieves an article by its ID
+// GetByID retrieves an article by its ID (joins MIME content)
 func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT 
-			id, ticket_id, article_type_id, sender_type_id,
-			communication_channel_id, is_visible_for_customer,
-			subject, body, body_type, charset, mime_type,
-			content_path, valid_id,
-			create_time, create_by, change_time, change_by
-		FROM article
-		WHERE id = $1`)
+			a.id, a.ticket_id, a.article_sender_type_id,
+			a.communication_channel_id, a.is_visible_for_customer,
+			adm.a_subject, adm.a_body, adm.a_content_type, adm.content_path,
+			a.create_time, a.create_by, a.change_time, a.change_by
+		FROM article a
+		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
+		WHERE a.id = $1`)
 
 	var article models.Article
+	var subject sql.NullString
+	var bodyBytes []byte
+	var contentType sql.NullString
+	var contentPath sql.NullString
+
 	err := r.db.QueryRow(query, id).Scan(
 		&article.ID,
 		&article.TicketID,
-		&article.ArticleTypeID,
 		&article.SenderTypeID,
 		&article.CommunicationChannelID,
 		&article.IsVisibleForCustomer,
-		&article.Subject,
-		&article.Body,
-		&article.BodyType,
-		&article.Charset,
-		&article.MimeType,
-		&article.ContentPath,
-		&article.ValidID,
+		&subject,
+		&bodyBytes,
+		&contentType,
+		&contentPath,
 		&article.CreateTime,
 		&article.CreateBy,
 		&article.ChangeTime,
@@ -167,6 +175,20 @@ func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("article not found")
+	}
+
+	if subject.Valid {
+		article.Subject = subject.String
+	}
+	if bodyBytes != nil {
+		article.Body = string(bodyBytes)
+	}
+	if contentType.Valid {
+		article.MimeType = contentType.String
+	}
+	if contentPath.Valid {
+		cp := contentPath.String
+		article.ContentPath = &cp
 	}
 
 	return &article, err
@@ -199,7 +221,8 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 	var articles []models.Article
 	for rows.Next() {
 		var article models.Article
-		var subject, body, contentType sql.NullString
+		var subject, contentType sql.NullString
+		var bodyBytes []byte
 
 		err := rows.Scan(
 			&article.ID,
@@ -208,7 +231,7 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 			&article.CommunicationChannelID,
 			&article.IsVisibleForCustomer,
 			&subject,
-			&body,
+			&bodyBytes,
 			&contentType,
 			&article.CreateTime,
 			&article.CreateBy,
@@ -223,8 +246,8 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 		if subject.Valid {
 			article.Subject = subject.String
 		}
-		if body.Valid {
-			article.Body = body.String
+		if bodyBytes != nil {
+			article.Body = string(bodyBytes)
 		}
 		if contentType.Valid {
 			article.MimeType = contentType.String
@@ -243,7 +266,7 @@ func (r *ArticleRepository) Update(article *models.Article) error {
 	query := database.ConvertPlaceholders(`
 		UPDATE article SET
 			article_type_id = $2,
-			sender_type_id = $3,
+			article_sender_type_id = $3,
 			communication_channel_id = $4,
 			is_visible_for_customer = $5,
 			subject = $6,
@@ -289,12 +312,13 @@ func (r *ArticleRepository) Update(article *models.Article) error {
 	}
 
 	// Update ticket's change_time when an article is updated
+	// Use left-to-right placeholders so MySQL '?' binding matches arg order
 	updateTicketQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
-		SET change_time = $2, change_by = $3
-		WHERE id = $1`)
+		SET change_time = $1, change_by = $2
+		WHERE id = $3`)
 
-	_, err = r.db.Exec(updateTicketQuery, article.TicketID, time.Now(), article.ChangeBy)
+	_, err = r.db.Exec(updateTicketQuery, time.Now(), article.ChangeBy, article.TicketID)
 
 	return err
 }
@@ -352,7 +376,7 @@ func (r *ArticleRepository) GetVisibleArticlesForCustomer(ticketID uint) ([]mode
 func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Article, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT 
-			id, ticket_id, article_type_id, sender_type_id,
+			id, ticket_id, article_type_id, article_sender_type_id,
 			communication_channel_id, is_visible_for_customer,
 			subject, body, body_type, charset, mime_type,
 			content_path, valid_id,

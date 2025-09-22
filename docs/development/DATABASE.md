@@ -4,6 +4,10 @@
 
 GOTRS uses a **100% OTRS-compatible database schema** to ensure seamless migration and interoperability. The schema is frozen (see [SCHEMA_FREEZE.md](../../SCHEMA_FREEZE.md)) and uses the exact OTRS table structures with integer primary keys, not UUIDs.
 
+## Database Access Policy
+
+All SQL must use the mandatory `database.ConvertPlaceholders` wrapper to support both PostgreSQL and MySQL. See `../../DATABASE_ACCESS_PATTERNS.md`.
+
 ## Schema Management Approach
 
 ### Baseline Schema (Current)

@@ -70,27 +70,44 @@ func HandleAdminTickets(c *gin.Context) {
 		args = append(args, searchStr)
 	}
 
-	// Count total for pagination
-	countQuery := "SELECT COUNT(*) FROM ticket t JOIN ticket_state ts ON t.ticket_state_id = ts.id JOIN queue q ON t.queue_id = q.id WHERE 1=1"
-	if statusFilter != "" && statusFilter != "all" {
-		countQuery += " AND ts.name = '" + statusFilter + "'"
-	}
-	if queueFilter != "" && queueFilter != "all" {
-		countQuery += " AND q.name = '" + queueFilter + "'"
-	}
-	if searchQuery != "" {
-		countQuery += " AND (t.tn ILIKE '%" + searchQuery + "%' OR t.title ILIKE '%" + searchQuery + "%')"
-	}
+    // Count total for pagination (parameterized, cross-DB)
+    countQuery := `
+        SELECT COUNT(*)
+        FROM ticket t
+        JOIN ticket_state ts ON t.ticket_state_id = ts.id
+        JOIN queue q ON t.queue_id = q.id
+        WHERE 1=1
+    `
 
-	var totalCount int
-	db.QueryRow(countQuery).Scan(&totalCount)
+    var countArgs []interface{}
+    countArgCount := 0
+    if statusFilter != "" && statusFilter != "all" {
+        countArgCount++
+        countQuery += fmt.Sprintf(" AND ts.name = $%d", countArgCount)
+        countArgs = append(countArgs, statusFilter)
+    }
+    if queueFilter != "" && queueFilter != "all" {
+        countArgCount++
+        countQuery += fmt.Sprintf(" AND q.name = $%d", countArgCount)
+        countArgs = append(countArgs, queueFilter)
+    }
+    if searchQuery != "" {
+        countArgCount++
+        countQuery += fmt.Sprintf(" AND (t.tn ILIKE $%d OR t.title ILIKE $%d)", countArgCount, countArgCount)
+        countArgs = append(countArgs, "%"+searchQuery+"%")
+    }
+
+    var totalCount int
+    if err := db.QueryRow(database.ConvertPlaceholders(countQuery), countArgs...).Scan(&totalCount); err != nil {
+        totalCount = 0
+    }
 
 	// Add ordering and pagination
 	query += " ORDER BY t.create_time DESC LIMIT $" + strconv.Itoa(argCount+1) + " OFFSET $" + strconv.Itoa(argCount+2)
 	args = append(args, limit, offset)
 
 	// Execute query
-	rows, err := db.Query(query, args...)
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		pongo2Renderer.HTML(c, http.StatusInternalServerError, "error.pongo2", pongo2.Context{
 			"error": fmt.Sprintf("Failed to fetch tickets: %v", err),
@@ -140,7 +157,7 @@ func HandleAdminTickets(c *gin.Context) {
 	}
 
 	// Get available states for filter
-	stateRows, _ := db.Query("SELECT DISTINCT name FROM ticket_state WHERE valid_id = 1 ORDER BY name")
+    stateRows, _ := db.Query(database.ConvertPlaceholders("SELECT DISTINCT name FROM ticket_state WHERE valid_id = 1 ORDER BY name"))
 	var states []string
 	if stateRows != nil {
 		defer stateRows.Close()
@@ -152,7 +169,7 @@ func HandleAdminTickets(c *gin.Context) {
 	}
 
 	// Get available queues for filter
-	queueRows, _ := db.Query("SELECT DISTINCT name FROM queue WHERE valid_id = 1 ORDER BY name")
+    queueRows, _ := db.Query(database.ConvertPlaceholders("SELECT DISTINCT name FROM queue WHERE valid_id = 1 ORDER BY name"))
 	var queues []string
 	if queueRows != nil {
 		defer queueRows.Close()

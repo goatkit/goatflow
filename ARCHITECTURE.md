@@ -146,7 +146,7 @@ type UserService interface {
 }
 ```
 
-### 4. Database Abstraction Layer (Critical: MySQL Compatibility)
+### 4. Database Access Patterns (Thin Wrapper + Repositories)
 
 **Achievement: Full MySQL compatibility restored (August 29, 2025)**
 
@@ -487,7 +487,7 @@ var (
 - **Language**: Go 1.23
 - **Web Framework**: Gin
 - **Template Engine**: Pongo2 (Django-like syntax)
-- **ORM**: GORM with raw SQL for complex queries
+- **Data Access**: database/sql with ConvertPlaceholders (no ORM)
 - **Authentication**: JWT with refresh tokens
 - **Validation**: go-playground/validator
 - **Binary Name**: goats (GoatKit platform)

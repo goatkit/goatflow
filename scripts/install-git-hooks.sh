@@ -218,6 +218,16 @@ fi
 
 echo -e "${GREEN}✅ No attribution detected${NC}"
 
+# Check 4: SQL guard
+echo -e "${BLUE}🧯 Running SQL guard...${NC}"
+
+if [ -x scripts/tools/check-sql.sh ]; then
+    scripts/tools/check-sql.sh --staged || true
+else
+    echo -e "${YELLOW}⚠️  SQL guard script not found at scripts/tools/check-sql.sh${NC}"
+    echo -e "${YELLOW}   Skipping (recommended to run scripts/tools/check-sql.sh manually)${NC}"
+fi
+
 echo -e "${GREEN}🎉 All pre-commit checks passed!${NC}"
 exit 0
 EOF
@@ -233,6 +243,7 @@ echo "    • Secret scanning with Gitleaks"
 echo "    • Binary file prevention"
 echo "    • Large file warnings (>10MB)"
 echo "    • Attribution pattern blocking"
+echo "    • SQL guard for placeholder wrapping and ILIKE"
 echo ""
 echo "The hook will run automatically before each commit."
 echo "To bypass (use with caution): git commit --no-verify"
@@ -245,3 +256,4 @@ echo "  • Accidental secret commits"
 echo "  • Binary bloat"
 echo "  • Attribution leaks"
 echo "  • Repository size issues"
+echo "  • SQL placeholder mistakes and unsafe ILIKE"

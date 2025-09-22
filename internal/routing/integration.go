@@ -17,17 +17,17 @@ import (
 func IntegrateWithExistingSystem(router *gin.Engine, db *sql.DB, jwtManager interface{}) error {
 	// Create handler registry
 	registry := NewHandlerRegistry()
-	
+
 	// Register all existing handlers
 	if err := registerExistingHandlers(registry, db, jwtManager); err != nil {
 		return fmt.Errorf("failed to register handlers: %w", err)
 	}
-	
+
 	// Register middleware
 	if err := registerExistingMiddleware(registry, jwtManager); err != nil {
 		return fmt.Errorf("failed to register middleware: %w", err)
 	}
-	
+
 	// Create route loader
 	loader, err := NewRouteLoader(
 		"routes", // Path to route YAML files
@@ -39,14 +39,14 @@ func IntegrateWithExistingSystem(router *gin.Engine, db *sql.DB, jwtManager inte
 	if err != nil {
 		return fmt.Errorf("failed to create route loader: %w", err)
 	}
-	
+
 	// Load all routes from YAML files
 	if err := loader.LoadRoutes(); err != nil {
 		return fmt.Errorf("failed to load routes: %w", err)
 	}
-	
+
 	log.Printf("Successfully loaded %d route configurations", len(loader.GetLoadedRoutes()))
-	
+
 	return nil
 }
 
@@ -56,51 +56,60 @@ func registerExistingHandlers(registry *HandlerRegistry, db *sql.DB, jwtManager 
 		// Health checks
 		"handleHealthCheck": func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
-				"status": "healthy",
+				"status":  "healthy",
 				"version": "1.0.0",
 			})
 		},
-		
+
 		"handleDetailedHealthCheck": func(c *gin.Context) {
 			// Check database connection
 			dbStatus := "healthy"
 			if err := db.Ping(); err != nil {
 				dbStatus = "unhealthy"
 			}
-			
+
 			c.JSON(http.StatusOK, gin.H{
 				"status": "healthy",
 				"components": gin.H{
 					"database": dbStatus,
-					"cache": "healthy",
-					"queue": "healthy",
+					"cache":    "healthy",
+					"queue":    "healthy",
 				},
 			})
 		},
-		
+
 		"handleMetrics": func(c *gin.Context) {
 			// Placeholder for Prometheus metrics
 			c.String(http.StatusOK, "# HELP gotrs_up GOTRS is up\n# TYPE gotrs_up gauge\ngotrs_up 1\n")
 		},
-		
+
 		// Authentication handlers would be registered here
 		// "handleLogin": api.HandleLogin(db, jwtManager),
 		// "handleLogout": api.HandleLogout(),
 		// etc...
 	}
-	
+
 	// Register core handlers (including redirects)
 	registerCoreHandlers(handlers, db)
-	
+
 	// Register admin handlers
 	registerAdminHandlers(handlers, db)
-	
+
 	// Register agent handlers
 	registerAgentHandlers(handlers, db)
-	
+
+	// Register agent handlers for YAML routing
+	api.RegisterAgentHandlersForRouting()
+	if api.GlobalAgentHandlers.NewTicket != nil {
+		handlers["handleAgentNewTicket"] = api.GlobalAgentHandlers.NewTicket
+	}
+	if api.GlobalAgentHandlers.CreateTicket != nil {
+		handlers["handleAgentCreateTicket"] = api.GlobalAgentHandlers.CreateTicket
+	}
+
 	// Register customer handlers
 	registerCustomerHandlers(handlers, db)
-	
+
 	// Register dev handlers
 	registerDevHandlers(handlers, db)
 
@@ -170,7 +179,7 @@ func registerAdminHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	handlers["handleAdminCustomerPortalSettings"] = wrapHandler(db, "handleAdminCustomerPortalSettings")
 	handlers["handleAdminUpdateCustomerPortalSettings"] = wrapHandler(db, "handleAdminUpdateCustomerPortalSettings")
 	handlers["handleAdminUploadCustomerPortalLogo"] = wrapHandler(db, "handleAdminUploadCustomerPortalLogo")
-	
+
 	// Add other admin handlers...
 }
 
@@ -187,24 +196,17 @@ func registerAgentHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	handlers["handleAgentCustomers"] = wrapHandler(db, "handleAgentCustomers")
 	handlers["handleAgentCustomerView"] = wrapHandler(db, "handleAgentCustomerView")
 	handlers["handleAgentCustomerTickets"] = wrapHandler(db, "handleAgentCustomerTickets")
-	
-	// Profile handlers
-	handlers["profile"] = wrapHandler(db, "handleProfile")
-	handlers["get_session_timeout"] = wrapHandler(db, "HandleGetSessionTimeout")
-	handlers["set_session_timeout"] = wrapHandler(db, "HandleSetSessionTimeout")
-	
+
+	// New agent ticket creation handlers - direct registration
+	handlers["HandleAgentNewTicket"] = api.HandleAgentNewTicket(db)
+	handlers["HandleAgentCreateTicket"] = api.HandleAgentCreateTicket(db)
+
 	// Add other agent handlers...
 }
 
 // registerCustomerHandlers registers customer-specific handlers
 func registerCustomerHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
-	// These would come from customer_routes.go
-	handlers["handleCustomerDashboard"] = wrapHandler(db, "handleCustomerDashboard")
-	handlers["handleCustomerTickets"] = wrapHandler(db, "handleCustomerTickets")
-	handlers["handleCustomerNewTicket"] = wrapHandler(db, "handleCustomerNewTicket")
-	handlers["handleCustomerCreateTicket"] = wrapHandler(db, "handleCustomerCreateTicket")
-	handlers["handleCustomerTicketView"] = wrapHandler(db, "handleCustomerTicketView")
-	handlers["handleCustomerTicketReply"] = wrapHandler(db, "handleCustomerTicketReply")
+
 	handlers["handleCustomerCloseTicket"] = wrapHandler(db, "handleCustomerCloseTicket")
 	handlers["handleCustomerProfile"] = wrapHandler(db, "handleCustomerProfile")
 	handlers["handleCustomerUpdateProfile"] = wrapHandler(db, "handleCustomerUpdateProfile")
@@ -226,7 +228,7 @@ func registerExistingMiddleware(registry *HandlerRegistry, jwtManager interface{
 			jwtManager := shared.GetJWTManager()
 			middleware.SessionMiddleware(jwtManager)(c)
 		},
-		
+
 		// Admin authorization middleware
 		"admin": func(c *gin.Context) {
 			role, exists := c.Get("user_role")
@@ -237,7 +239,7 @@ func registerExistingMiddleware(registry *HandlerRegistry, jwtManager interface{
 			}
 			c.Next()
 		},
-		
+
 		// Agent authorization middleware
 		"agent": func(c *gin.Context) {
 			role, exists := c.Get("user_role")
@@ -248,7 +250,7 @@ func registerExistingMiddleware(registry *HandlerRegistry, jwtManager interface{
 			}
 			c.Next()
 		},
-		
+
 		// Customer authorization middleware
 		"customer": func(c *gin.Context) {
 			isCustomer, _ := c.Get("is_customer")
@@ -259,7 +261,7 @@ func registerExistingMiddleware(registry *HandlerRegistry, jwtManager interface{
 			}
 			c.Next()
 		},
-		
+
 		// Audit logging middleware
 		"audit": func(c *gin.Context) {
 			// Log the request
@@ -269,28 +271,28 @@ func registerExistingMiddleware(registry *HandlerRegistry, jwtManager interface{
 			// Log the response status
 			log.Printf("Audit: Response %d for %s %s", c.Writer.Status(), c.Request.Method, c.Request.URL.Path)
 		},
-		
+
 		// CORS middleware
 		"cors": func(c *gin.Context) {
 			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			
+
 			if c.Request.Method == "OPTIONS" {
 				c.AbortWithStatus(http.StatusNoContent)
 				return
 			}
-			
+
 			c.Next()
 		},
-		
+
 		// Rate limiting middleware (placeholder)
 		"rateLimit": func(c *gin.Context) {
 			// Implement rate limiting logic here
 			c.Next()
 		},
 	}
-	
+
 	return registry.RegisterMiddlewareBatch(middlewares)
 }
 
@@ -323,11 +325,11 @@ func wrapHandler(db *sql.DB, handlerName string) gin.HandlerFunc {
 func MigrateExistingRoutes() error {
 	// This function could analyze existing route registrations
 	// and generate corresponding YAML files automatically
-	
+
 	log.Println("Route migration helper - analyzes existing routes and suggests YAML configurations")
-	
+
 	// Example: Parse existing route files and generate YAML
 	// This would be a more complex implementation in practice
-	
+
 	return nil
 }

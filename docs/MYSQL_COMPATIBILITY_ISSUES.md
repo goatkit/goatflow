@@ -52,7 +52,7 @@ SELECT id::text, created_at::date
 
 ## Recommended Solution
 
-1. **Create database adapter layer**:
+1. **Extend thin compatibility helpers**:
    - Detect database type (MySQL vs PostgreSQL)
    - Use appropriate syntax for each database
    
@@ -63,7 +63,7 @@ SELECT id::text, created_at::date
 
 3. **Use database-agnostic approaches**:
    - Avoid database-specific syntax where possible
-   - Use ORM or query builder for complex queries
+   - Prefer small repository helpers built on database/sql with ConvertPlaceholders
 
 ## Testing Required
 

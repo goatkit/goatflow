@@ -291,7 +291,7 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 			return
 		}
 		
-		// Insert article content in article_data_mime table
+	// Insert article content in article_data_mime table
 		if subject != "" || body != "" {
 			contentQuery := database.ConvertPlaceholders(`
 				INSERT INTO article_data_mime (

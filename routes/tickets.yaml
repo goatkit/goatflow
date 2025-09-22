@@ -21,14 +21,14 @@ spec:
     # Individual ticket view page
     - path: /:id
       method: GET
-      handler: handleAgentTicketView
-      template: pages/tickets/show.pongo2
+      handler: handleTicketDetail
+      template: pages/agent/ticket_view.pongo2
       description: "Display individual ticket details and conversation"
 
     # New ticket creation form
     - path: /new
       method: GET
-      handler: handleCustomerNewTicket
+      handler: HandleAgentNewTicket
       template: pages/tickets/new.pongo2
       middleware:
         - auth
@@ -37,7 +37,7 @@ spec:
     # Create new ticket API
     - path: /
       method: POST
-      handler: handleCustomerCreateTicket
+      handler: HandleAgentCreateTicket
       description: "Process new ticket creation"
 
     # Update ticket status API

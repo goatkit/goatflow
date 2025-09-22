@@ -3,7 +3,6 @@ package service
 import (
 	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
@@ -11,15 +10,17 @@ import (
 
 // TicketService handles business logic for tickets
 type TicketService struct {
-	ticketRepo   *repository.TicketRepository
-	db           *sql.DB
+	ticketRepo  *repository.TicketRepository
+	articleRepo *repository.ArticleRepository
+	db          *sql.DB
 }
 
 // NewTicketService creates a new ticket service
 func NewTicketService(db *sql.DB) *TicketService {
 	return &TicketService{
-		ticketRepo: repository.NewTicketRepository(db),
-		db:         db,
+		ticketRepo:  repository.NewTicketRepository(db),
+		articleRepo: repository.NewArticleRepository(db),
+		db:          db,
 	}
 }
 
@@ -43,16 +44,9 @@ type CreateTicketResponse struct {
 
 // CreateTicket creates a new ticket from a simplified request
 func (s *TicketService) CreateTicket(req *CreateTicketRequest, createBy int) (*CreateTicketResponse, error) {
-	// Begin transaction
-	tx, err := s.db.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
 	// Parse priority (format: "3 normal" -> priority_id = 3)
 	priorityID := s.parsePriorityID(req.Priority)
-	
+
 	// Set defaults
 	if req.QueueID == 0 {
 		req.QueueID = 1 // Default to General Support
@@ -64,20 +58,20 @@ func (s *TicketService) CreateTicket(req *CreateTicketRequest, createBy int) (*C
 	// Create ticket
 	typeID := req.TypeID
 	ticket := &models.Ticket{
-		Title:               req.Subject,
-		QueueID:             req.QueueID,
-		TicketLockID:        models.TicketUnlocked,
-		TypeID:              &typeID,
-		TicketStateID:       models.TicketStateNew,
-		TicketPriorityID:    priorityID,
-		UntilTime:           0,
-		EscalationTime:      0,
-		EscalationUpdateTime: 0,
+		Title:                  req.Subject,
+		QueueID:                req.QueueID,
+		TicketLockID:           models.TicketUnlocked,
+		TypeID:                 &typeID,
+		TicketStateID:          models.TicketStateNew,
+		TicketPriorityID:       priorityID,
+		UntilTime:              0,
+		EscalationTime:         0,
+		EscalationUpdateTime:   0,
 		EscalationResponseTime: 0,
 		EscalationSolutionTime: 0,
-		ArchiveFlag:         0,
-		CreateBy:            createBy,
-		ChangeBy:            createBy,
+		ArchiveFlag:            0,
+		CreateBy:               createBy,
+		ChangeBy:               createBy,
 	}
 
 	// For demo purposes, we'll store customer info in the customer fields
@@ -87,37 +81,30 @@ func (s *TicketService) CreateTicket(req *CreateTicketRequest, createBy int) (*C
 	}
 
 	// Create the ticket
-	err = s.ticketRepo.Create(ticket)
-	if err != nil {
+	if err := s.ticketRepo.Create(ticket); err != nil {
 		return nil, fmt.Errorf("failed to create ticket: %w", err)
 	}
 
 	// Create the initial article (the customer's message)
 	article := &models.Article{
-		TicketID:              ticket.ID,
-		ArticleTypeID:         models.ArticleTypeWebRequest,
-		SenderTypeID:          models.SenderTypeCustomer,
+		TicketID:               ticket.ID,
+		ArticleTypeID:          models.ArticleTypeWebRequest,
+		SenderTypeID:           models.SenderTypeCustomer,
 		CommunicationChannelID: 1, // Web
-		IsVisibleForCustomer:  1,  // Visible to customer
-		Subject:               req.Subject,
-		Body:                  req.Body,
-		BodyType:              "text/plain",
-		Charset:               "utf-8",
-		MimeType:              "text/plain",
-		ValidID:               1,
-		CreateBy:              createBy,
-		ChangeBy:              createBy,
+		IsVisibleForCustomer:   1, // Visible to customer
+		Subject:                req.Subject,
+		Body:                   req.Body,
+		BodyType:               "text/plain",
+		Charset:                "utf-8",
+		MimeType:               "text/plain",
+		ValidID:                1,
+		CreateBy:               createBy,
+		ChangeBy:               createBy,
 	}
 
-	// Insert article
-	err = s.createArticle(tx, article)
-	if err != nil {
+	// Insert article via repository (handles schema + tx)
+	if err := s.articleRepo.Create(article); err != nil {
 		return nil, fmt.Errorf("failed to create article: %w", err)
-	}
-
-	// Commit transaction
-	if err = tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return &CreateTicketResponse{
@@ -143,43 +130,6 @@ func (s *TicketService) parsePriorityID(priority string) int {
 	default:
 		return 3 // Default to normal
 	}
-}
-
-// createArticle creates an article in the given transaction
-func (s *TicketService) createArticle(tx *sql.Tx, article *models.Article) error {
-	article.CreateTime = time.Now()
-	article.ChangeTime = time.Now()
-
-	query := `
-		INSERT INTO article (
-			ticket_id, article_type_id, sender_type_id, 
-			communication_channel_id, is_visible_for_customer,
-			a_subject, a_body, a_body_type, a_charset, a_mime_type,
-			valid_id, create_time, create_by, change_time, change_by
-		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
-		) RETURNING id`
-
-	err := tx.QueryRow(
-		query,
-		article.TicketID,
-		article.ArticleTypeID,
-		article.SenderTypeID,
-		article.CommunicationChannelID,
-		article.IsVisibleForCustomer,
-		article.Subject,
-		article.Body,
-		article.BodyType,
-		article.Charset,
-		article.MimeType,
-		article.ValidID,
-		article.CreateTime,
-		article.CreateBy,
-		article.ChangeTime,
-		article.ChangeBy,
-	).Scan(&article.ID)
-
-	return err
 }
 
 // GetTicket retrieves a ticket by ID

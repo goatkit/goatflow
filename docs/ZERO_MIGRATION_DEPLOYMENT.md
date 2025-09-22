@@ -2,7 +2,7 @@
 
 ## 🎯 The Game-Changing Feature
 
-GOTRS can connect directly to your existing OTRS MySQL/MariaDB database without any migration, data conversion, or downtime. This is possible thanks to our database abstraction layer that provides 100% OTRS schema compatibility.
+GOTRS can connect directly to your existing OTRS MySQL/MariaDB database without any migration, data conversion, or downtime. This is possible thanks to our thin database access compatibility wrapper (ConvertPlaceholders) and strict OTRS schema alignment.
 
 ## 🚀 What This Means
 
@@ -174,7 +174,7 @@ Use GOTRS Zero-Migration when you:
 ## 🔗 Technical Details
 
 GOTRS achieves this through:
-- **Database Abstraction Layer**: Supports MySQL, PostgreSQL, SQLite
+- **Database Access Compatibility**: Thin wrapper over database/sql (ConvertPlaceholders) supporting MySQL and PostgreSQL
 - **OTRS Schema Compatibility**: 100% compatible table structure
 - **Smart Query Generation**: Database-specific SQL generation
 - **Type Mapping**: Automatic type conversion between databases

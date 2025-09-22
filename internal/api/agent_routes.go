@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-    "os"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -362,7 +362,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		query += fmt.Sprintf(" ORDER BY t.%s %s", sanitizeSortColumn(sortBy), sortOrder)
 
 		// Execute query
-		rows, err := db.Query(query, args...)
+		rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -513,29 +513,29 @@ func sanitizeSortColumn(col string) string {
 // handleAgentTicketView shows detailed ticket view
 func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-        ticketID := c.Param("id")
+		ticketID := c.Param("id")
 
-        // Test-mode, DB-less fallback: provide minimal HTML content expected by tests
-        if os.Getenv("APP_ENV") == "test" && db == nil {
-            // Validate ticket ID
-            if _, err := strconv.Atoi(ticketID); err != nil {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
-                return
-            }
-            idVal, _ := strconv.Atoi(ticketID)
-            if idVal >= 99999 {
-                c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-                return
-            }
-            // Return deterministic HTML containing required markers
-            c.Header("Content-Type", "text/html; charset=utf-8")
-            c.String(http.StatusOK, "<!DOCTYPE html><html><body>\n"+
-                "<div class=\"template\">ticket_zoom.pongo2</div>\n"+
-                "<h1>Ticket #"+ticketID+"</h1>\n"+
-                "<section>Articles</section>\n"+
-                "</body></html>")
-            return
-        }
+		// Test-mode, DB-less fallback: provide minimal HTML content expected by tests
+		if os.Getenv("APP_ENV") == "test" && db == nil {
+			// Validate ticket ID
+			if _, err := strconv.Atoi(ticketID); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
+				return
+			}
+			idVal, _ := strconv.Atoi(ticketID)
+			if idVal >= 99999 {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+				return
+			}
+			// Return deterministic HTML containing required markers
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(http.StatusOK, "<!DOCTYPE html><html><body>\n"+
+				"<div class=\"template\">ticket_zoom.pongo2</div>\n"+
+				"<h1>Ticket #"+ticketID+"</h1>\n"+
+				"<section>Articles</section>\n"+
+				"</body></html>")
+			return
+		}
 
 		// Use repository pattern to get ticket - handle both numeric IDs and ticket numbers
 		ticketRepo := repository.NewTicketRepository(db)
@@ -552,10 +552,10 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 			if _, parseErr := fmt.Sscanf(ticketID, "%d", &id); parseErr == nil {
 				log.Printf("Debug: Parsed as numeric ID: %d, calling GetByID", id)
 				ticket, err = ticketRepo.GetByID(uint(id))
-            } else {
-                log.Printf("Debug: Failed to parse as numeric ID, calling GetByTicketNumber: %s", ticketID)
-                ticket, err = ticketRepo.GetByTicketNumber(ticketID)
-            }
+			} else {
+				log.Printf("Debug: Failed to parse as numeric ID, calling GetByTicketNumber: %s", ticketID)
+				ticket, err = ticketRepo.GetByTicketNumber(ticketID)
+			}
 		} else {
 			// Longer IDs are likely ticket numbers
 			log.Printf("Debug: Long ID '%s', calling GetByTicketNumber", ticketID)
@@ -676,33 +676,33 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 		subject := c.PostForm("subject")
 		body := c.PostForm("body")
 
-        // Test-mode, DB-less fallback with validation
-        if os.Getenv("APP_ENV") == "test" && db == nil {
-            // Validate ticket id
-            if _, parseErr := strconv.Atoi(ticketID); parseErr != nil {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
-                return
-            }
-            idVal, _ := strconv.Atoi(ticketID)
-            if idVal >= 99999 {
-                c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})
-                return
-            }
-            // Validate recipient email
-            if strings.TrimSpace(to) == "" {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "recipient required"})
-                return
-            }
-            if !strings.Contains(to, "@") {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
-                return
-            }
-            // Minimal validation for body/subject is optional here
-            _ = subject
-            _ = body
-            c.JSON(http.StatusOK, gin.H{"success": true, "article_id": 1})
-            return
-        }
+		// Test-mode, DB-less fallback with validation
+		if os.Getenv("APP_ENV") == "test" && db == nil {
+			// Validate ticket id
+			if _, parseErr := strconv.Atoi(ticketID); parseErr != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
+				return
+			}
+			idVal, _ := strconv.Atoi(ticketID)
+			if idVal >= 99999 {
+				c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})
+				return
+			}
+			// Validate recipient email
+			if strings.TrimSpace(to) == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "recipient required"})
+				return
+			}
+			if !strings.Contains(to, "@") {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
+				return
+			}
+			// Minimal validation for body/subject is optional here
+			_ = subject
+			_ = body
+			c.JSON(http.StatusOK, gin.H{"success": true, "article_id": 1})
+			return
+		}
 
 		// Get user info
 		userID := c.GetUint("user_id")
@@ -831,30 +831,30 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 			isVisibleForCustomer = 1
 		}
 
-        // Test-mode, DB-less fallback with validation
-        if os.Getenv("APP_ENV") == "test" && db == nil {
-            if _, parseErr := strconv.Atoi(ticketID); parseErr != nil {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
-                return
-            }
-            idVal, _ := strconv.Atoi(ticketID)
-            if idVal >= 99999 {
-                c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})
-                return
-            }
-            if strings.TrimSpace(body) == "" {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "body required"})
-                return
-            }
-            // Use subject defaulting rules but no DB writes
-            if subject == "" {
-                subject = "Internal Note"
-            }
-            c.JSON(http.StatusOK, gin.H{"success": true, "article_id": 1})
-            return
-        }
+		// Test-mode, DB-less fallback with validation
+		if os.Getenv("APP_ENV") == "test" && db == nil {
+			if _, parseErr := strconv.Atoi(ticketID); parseErr != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
+				return
+			}
+			idVal, _ := strconv.Atoi(ticketID)
+			if idVal >= 99999 {
+				c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})
+				return
+			}
+			if strings.TrimSpace(body) == "" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "body required"})
+				return
+			}
+			// Use subject defaulting rules but no DB writes
+			if subject == "" {
+				subject = "Internal Note"
+			}
+			c.JSON(http.StatusOK, gin.H{"success": true, "article_id": 1})
+			return
+		}
 
-        // Get user info
+		// Get user info
 		userID := c.GetUint("user_id")
 
 		// Sanitize HTML content if detected
@@ -955,22 +955,22 @@ func handleAgentTicketPhone(db *sql.DB) gin.HandlerFunc {
 			contentType = "text/html"
 		}
 
-        // Test-mode, DB-less fallback
-        if os.Getenv("APP_ENV") == "test" && db == nil {
-            if _, parseErr := strconv.Atoi(ticketID); parseErr != nil {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
-                return
-            }
-            idVal, _ := strconv.Atoi(ticketID)
-            if idVal >= 99999 {
-                c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})
-                return
-            }
-            c.JSON(http.StatusOK, gin.H{"success": true, "article_id": 1})
-            return
-        }
+		// Test-mode, DB-less fallback
+		if os.Getenv("APP_ENV") == "test" && db == nil {
+			if _, parseErr := strconv.Atoi(ticketID); parseErr != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
+				return
+			}
+			idVal, _ := strconv.Atoi(ticketID)
+			if idVal >= 99999 {
+				c.JSON(http.StatusNotFound, gin.H{"error": "ticket not found"})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"success": true, "article_id": 1})
+			return
+		}
 
-        // Start transaction
+		// Start transaction
 		tx, err := db.Begin()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})

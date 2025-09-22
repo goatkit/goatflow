@@ -341,3 +341,90 @@ tickets, err := queryBuilder.
 **⚠️ CRITICAL REMINDER**: Every single database query MUST use `database.ConvertPlaceholders()`. No exceptions. This ensures MySQL compatibility and prevents the "$1" placeholder errors that took significant effort to fix.
 
 *This pattern is now mandatory for all GOTRS development going forward.*
+
+## Guardrails
+
+- Pre-commit: scan for direct `$[0-9]+` usage not wrapped by `ConvertPlaceholders`.
+- CI: run tests against PostgreSQL and MySQL matrices.
+- Code review: reject PRs with unwrapped SQL or DAL/ORM introductions.
+
+
+## 🔎 Case-Insensitive Search (ILIKE)
+
+There are three safe ways to implement case-insensitive LIKE across PostgreSQL and MySQL:
+
+- Use ILIKE in the SQL and wrap with `database.ConvertPlaceholders` or `database.ConvertQuery`.
+  - `ConvertPlaceholders` already converts `ILIKE` to `LIKE` on MySQL.
+  - `ConvertQuery` extends this with additional adaptations (e.g., type cast conversions).
+- Use `database.GetAdapter().CaseInsensitiveLike(column, patternParam)` to generate a DB-specific expression.
+  - PostgreSQL: `column ILIKE $n`
+  - MySQL: `LOWER(column) LIKE LOWER($n)`
+- Avoid manual LOWER(...) on values only; prefer adapter-based or ILIKE-based patterns for portability.
+
+### Recommended patterns
+
+```go
+// Simple: write ILIKE and wrap
+rows, err := db.Query(database.ConvertPlaceholders(`
+    SELECT id, title FROM ticket
+    WHERE title ILIKE $1 OR tn ILIKE $1
+    ORDER BY create_time DESC
+    LIMIT 50
+`), "%"+search+"%")
+```
+
+```go
+// Explicit: build with adapter for complex/dynamic queries
+argCount++
+p := fmt.Sprintf("$%d", argCount)
+conds = append(conds, fmt.Sprintf("(%s OR %s)",
+    database.GetAdapter().CaseInsensitiveLike("t.tn", p),
+    database.GetAdapter().CaseInsensitiveLike("t.title", p),
+))
+args = append(args, "%"+search+"%")
+```
+
+```go
+// ConvertQuery: when your SQL also uses PG-specific casts or you prefer one call
+query := `SELECT * FROM users WHERE login ILIKE $1::text`
+rows, err := db.Query(database.ConvertQuery(query), "%"+login+"%")
+```
+
+### Dynamic query building tips
+
+- Keep placeholder indexing with `fmt.Sprintf("$%d", ...)` while appending conditions.
+- Always pass the final SQL through `database.ConvertPlaceholders(...)` or `database.ConvertQuery(...)` at execution time.
+- For multi-column search, prefer the adapter helper to avoid sprinkling `ILIKE` across fragments.
+
+```go
+query := "SELECT t.id, t.tn, t.title FROM ticket t WHERE 1=1"
+var args []interface{}
+arg := 0
+if search != "" {
+    arg++
+    p := fmt.Sprintf("$%d", arg)
+    query += " AND (" +
+        database.GetAdapter().CaseInsensitiveLike("t.tn", p) +
+        " OR " + database.GetAdapter().CaseInsensitiveLike("t.title", p) + ")"
+    args = append(args, "%"+search+"%")
+}
+query += " ORDER BY t.create_time DESC LIMIT 50"
+rows, err := db.Query(database.ConvertPlaceholders(query), args...)
+```
+
+### When to choose which
+
+- `ConvertPlaceholders`: default choice; handles placeholders and `ILIKE`→`LIKE` for MySQL.
+- `ConvertQuery`: use when your SQL also needs cross-DB tweaks beyond placeholders (casts, etc.).
+- `GetAdapter().CaseInsensitiveLike`: best for dynamic builders or when you want explicit per-DB expressions.
+
+### Anti-patterns
+
+- Writing raw SQL without conversion wrappers.
+- Applying `LOWER(value)` without applying it to the column on MySQL.
+- Mixing different patterns within the same module — be consistent.
+
+### Verification
+
+- Run the guard: `scripts/tools/check-sql.sh --all` and ensure no critical issues.
+- Optional: prefer adapter-based construction to reduce ILIKE warnings in dynamic builders.

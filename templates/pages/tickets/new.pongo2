@@ -28,7 +28,7 @@
     <!-- Ticket Creation Form -->
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
         <form method="post" 
-              action="/customer/ticket/create"
+              action="/tickets"
               enctype="multipart/form-data"
               class="space-y-6 p-6">
             
@@ -53,34 +53,28 @@
                         </div>
                     </div>
 
-                    <!-- Customer Email -->
-                    <div>
-                        <label for="customer_email" class="block text-sm font-medium text-gray-900 dark:text-white">
-                            Customer Email <span class="text-red-500">*</span>
-                        </label>
-                        <div class="mt-2">
-                            <input type="email" 
-                                   name="customer_email" 
-                                   id="customer_email" 
-                                   required
-                                   class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
-                                   placeholder="customer@example.com">
-                        </div>
-                    </div>
+                     <!-- Customer User -->
+                     <div>
+                         <label for="customer_user_id" class="block text-sm font-medium text-gray-900 dark:text-white">
+                             Customer User <span class="text-red-500">*</span>
+                         </label>
+                         <div class="mt-2 relative">
+                             <input type="text"
+                                    id="customer_user_input"
+                                    autocomplete="off"
+                                    placeholder="Type customer name or email..."
+                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                             <input type="hidden" name="customer_user_id" id="customer_user_id" required>
 
-                    <!-- Customer Name -->
-                    <div>
-                        <label for="customer_name" class="block text-sm font-medium text-gray-900 dark:text-white">
-                            Customer Name
-                        </label>
-                        <div class="mt-2">
-                            <input type="text" 
-                                   name="customer_name" 
-                                   id="customer_name"
-                                   class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
-                                   placeholder="John Doe">
-                        </div>
-                    </div>
+                             <!-- Autocomplete dropdown -->
+                             <div id="customer_user_suggestions"
+                                  class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm hidden">
+                             </div>
+                         </div>
+                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                             Start typing to search for customers by name or email address.
+                         </p>
+                     </div>
                 </div>
 
                 <!-- Right Column -->
@@ -95,7 +89,7 @@
                                     id="priority"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
                                 {% for priority in Priorities %}
-                                <option value="{{ priority.Value }}" {% if priority.Value == "normal" %}selected{% endif %}>{{ priority.Label }}</option>
+                                <option value="{{ priority.ID }}" {% if priority.ID == 3 %}selected{% endif %}>{{ priority.Name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -131,6 +125,26 @@
                                 {% endfor %}
                             </select>
                         </div>
+                    </div>
+
+                    <!-- Initial Interaction -->
+                    <div>
+                        <label for="interaction_type" class="block text-sm font-medium text-gray-900 dark:text-white">
+                            Initial Interaction
+                        </label>
+                        <div class="mt-2">
+                            <select name="interaction_type"
+                                    id="interaction_type"
+                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                <option value="email">Email (customer visible)</option>
+                                <option value="phone">Phone Call (customer visible)</option>
+                                <option value="internal_note" selected>Internal Note (private)</option>
+                                <option value="external_note">External Note (customer visible)</option>
+                            </select>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                            Determines the first article's type & visibility.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -225,6 +239,156 @@
             
             fileList.appendChild(list);
         }
+    });
+    
+    // Customer user autocomplete functionality
+    let customerUsers = [
+        {% for customerUser in CustomerUsers %}
+        {
+            login: "{{ customerUser.Login }}",
+            email: "{{ customerUser.Email }}",
+            firstName: "{{ customerUser.FirstName }}",
+            lastName: "{{ customerUser.LastName }}",
+            displayName: "{{ customerUser.FirstName }} {{ customerUser.LastName }} ({{ customerUser.Email }})"
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const customerInput = document.getElementById('customer_user_input');
+    const customerHidden = document.getElementById('customer_user_id');
+    const suggestionsDiv = document.getElementById('customer_user_suggestions');
+    let selectedIndex = -1;
+
+    function showSuggestions(filteredUsers) {
+        suggestionsDiv.innerHTML = '';
+        if (filteredUsers.length === 0) {
+            suggestionsDiv.classList.add('hidden');
+            return;
+        }
+
+        filteredUsers.forEach((user, index) => {
+            const div = document.createElement('div');
+            div.className = 'cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 dark:text-white hover:bg-gotrs-600 hover:text-white';
+            div.textContent = user.displayName;
+            div.dataset.index = index;
+            div.dataset.login = user.login;
+
+            div.addEventListener('click', () => {
+                selectUser(user);
+            });
+
+            if (index === selectedIndex) {
+                div.classList.add('bg-gotrs-600', 'text-white');
+            }
+
+            suggestionsDiv.appendChild(div);
+        });
+
+        suggestionsDiv.classList.remove('hidden');
+    }
+
+    function selectUser(user) {
+        customerInput.value = user.displayName;
+        customerHidden.value = user.login;
+        customerInput.classList.add('ring-green-500', 'border-green-500');
+        customerInput.classList.remove('ring-red-500', 'border-red-500');
+        suggestionsDiv.classList.add('hidden');
+        selectedIndex = -1;
+    }
+
+    function filterUsers(query) {
+        if (query.length < 2) {
+            suggestionsDiv.classList.add('hidden');
+            return [];
+        }
+
+        const filtered = customerUsers.filter(user =>
+            user.firstName.toLowerCase().includes(query.toLowerCase()) ||
+            user.lastName.toLowerCase().includes(query.toLowerCase()) ||
+            user.email.toLowerCase().includes(query.toLowerCase()) ||
+            user.displayName.toLowerCase().includes(query.toLowerCase())
+        );
+
+        return filtered.slice(0, 10); // Limit to 10 suggestions
+    }
+
+    function selectUser(user) {
+        customerInput.value = user.displayName;
+        customerHidden.value = user.login;
+        customerInput.classList.add('ring-green-500', 'border-green-500');
+        customerInput.classList.remove('ring-red-500', 'border-red-500');
+        suggestionsDiv.classList.add('hidden');
+        selectedIndex = -1;
+    }
+
+    function clearSelection() {
+        customerHidden.value = '';
+        customerInput.classList.remove('ring-green-500', 'border-green-500', 'ring-red-500', 'border-red-500');
+    }
+
+    customerInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+        selectedIndex = -1;
+
+        if (query === '') {
+            clearSelection();
+            suggestionsDiv.classList.add('hidden');
+            return;
+        }
+
+        const filteredUsers = filterUsers(query);
+        showSuggestions(filteredUsers);
+
+        // Clear selection if input doesn't match any user
+        const matchingUser = customerUsers.find(user =>
+            user.displayName.toLowerCase() === query.toLowerCase()
+        );
+        if (!matchingUser) {
+            clearSelection();
+        }
+    });
+
+    customerInput.addEventListener('keydown', function(e) {
+        const suggestions = suggestionsDiv.querySelectorAll('div');
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+            showSuggestions(filterUsers(e.target.value.trim()));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, -1);
+            showSuggestions(filterUsers(e.target.value.trim()));
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+                const selectedDiv = suggestions[selectedIndex];
+                const user = customerUsers.find(u => u.login === selectedDiv.dataset.login);
+                if (user) {
+                    selectUser(user);
+                }
+            }
+        } else if (e.key === 'Escape') {
+            suggestionsDiv.classList.add('hidden');
+            selectedIndex = -1;
+        }
+    });
+
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!customerInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.classList.add('hidden');
+            selectedIndex = -1;
+        }
+    });
+
+    // Clear hidden field if input is cleared
+    customerInput.addEventListener('blur', function() {
+        setTimeout(() => {
+            if (customerInput.value.trim() === '') {
+                customerHidden.value = '';
+            }
+        }, 150);
     });
     
     document.body.addEventListener('htmx:beforeRequest', function(evt) {
