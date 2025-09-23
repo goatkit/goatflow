@@ -92,6 +92,7 @@ var (
 // Ticket handlers
 var (
 	HandleTicketDetail = handleTicketDetail
+	HandleQueueDetail  = handleQueueDetail
 )
 
 // Dev handlers

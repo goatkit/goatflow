@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{{ t("nav.tickets") }} - GOTRS{% endblock %}
+{% block title %}{% if QueueName %}Queue: {{ QueueName }}{% else %}{{ t("nav.tickets") }}{% endif %} - GOTRS{% endblock %}
 
 {% block content %}
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -8,13 +8,20 @@
     <div class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("nav.tickets") }}</h1>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                    {% if QueueName %}Queue: {{ QueueName }}{% else %}{{ t("nav.tickets") }}{% endif %}
+                </h1>
                 <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                    View and manage support tickets
+                    {% if QueueName %}View tickets in this queue{% else %}View and manage support tickets{% endif %}
                 </p>
+                {% if QueueName %}
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <a href="/queues" class="text-gotrs-600 hover:text-gotrs-500">← Back to all queues</a>
+                </p>
+                {% endif %}
             </div>
             <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-                <a href="/ticket/new" class="block rounded-md bg-gotrs-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
+                <a href="/ticket/new{% if QueueID %}?queue={{ QueueID }}{% endif %}" class="block rounded-md bg-gotrs-600 px-3 py-2 text-center text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
                     New Ticket
                 </a>
             </div>
@@ -166,7 +173,7 @@
                 {% for ticket in Tickets %}
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        							<a href="/ticket/{{ ticket.tn }}" class="text-gotrs-600 hover:text-gotrs-500">
+                        							<a href="/tickets/{{ ticket.id }}" class="text-gotrs-600 hover:text-gotrs-500">
                             {{ ticket.id }}
                         </a>
                     </td>

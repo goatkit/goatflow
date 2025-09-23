@@ -12,6 +12,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/api"
+	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
@@ -127,6 +128,7 @@ func main() {
 
 		// Ticket handlers
 		"handleTicketDetail": api.HandleTicketDetail,
+		"HandleQueueDetail":  api.HandleQueueDetail,
 		// "handleTicketCustomerUsers": api.HandleTicketCustomerUsers,
 		"handleAgentTicketDraft": api.AgentHandlerExports.HandleAgentTicketDraft,
 		// "handleArticleAttachmentDownload": api.HandleArticleAttachmentDownload,
@@ -430,6 +432,16 @@ func main() {
 	}
 
 	routing.RegisterAPIHandlers(handlerRegistry, apiHandlers)
+
+	// Load configuration
+	configDir := os.Getenv("CONFIG_DIR")
+	if configDir == "" {
+		configDir = "/app/config"
+	}
+	if err := config.Load(configDir); err != nil {
+		log.Printf("Warning: Failed to load config: %v", err)
+		// Continue with defaults
+	}
 
 	// Create router for YAML routes
 	r := gin.New()

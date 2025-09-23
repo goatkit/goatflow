@@ -31,6 +31,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// TicketDisplay represents ticket data for display purposes
+type TicketDisplay struct {
+	models.Ticket
+	QueueName     string
+	PriorityName  string
+	StateName     string
+	OwnerName     string
+	CustomerName  string
+}
+
 // selectedAttr is a tiny helper for fallback HTML to mark selected options
 func selectedAttr(current, expected string) string {
 	if strings.TrimSpace(strings.ToLower(current)) == strings.ToLower(expected) {
@@ -1958,11 +1968,146 @@ func handleQueueDetail(c *gin.Context) {
 		return
 	}
 
-	pongo2Renderer.HTML(c, http.StatusOK, "pages/queue_detail.pongo2", pongo2.Context{
-		"Title":      "Queue: " + queue.Name + " - GOTRS",
-		"Queue":      queue,
-		"User":       getUserMapForTemplate(c),
-		"ActivePage": "queues",
+	// Get filter and search parameters (similar to handleTickets but with queue pre-set)
+	status := c.Query("status")
+	priority := c.Query("priority")
+	search := c.Query("search")
+	sortBy := c.DefaultQuery("sort", "created_desc")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	if page < 1 {
+		page = 1
+	}
+	limit := 25
+
+	// Build ticket list request with queue pre-filtered
+	queueIDUint := uint(idUint)
+	req := &models.TicketListRequest{
+		Search:  search,
+		SortBy:  sortBy,
+		Page:    page,
+		PerPage: limit,
+		QueueID: &queueIDUint, // Pre-set the queue filter
+	}
+
+	// Apply additional filters
+	if status != "" && status != "all" {
+		stateID, _ := strconv.Atoi(status)
+		if stateID > 0 {
+			stateIDPtr := uint(stateID)
+			req.StateID = &stateIDPtr
+		}
+	}
+
+	if priority != "" && priority != "all" {
+		priorityID, _ := strconv.Atoi(priority)
+		if priorityID > 0 {
+			priorityIDPtr := uint(priorityID)
+			req.PriorityID = &priorityIDPtr
+		}
+	}
+
+	// Get tickets from repository
+	ticketRepo := repository.NewTicketRepository(db)
+	result, err := ticketRepo.List(req)
+	if err != nil {
+		log.Printf("Error fetching tickets: %v", err)
+		// Return empty list on error
+		result = &models.TicketListResponse{
+			Tickets: []models.Ticket{},
+			Total:   0,
+		}
+	}
+
+	// Convert tickets to template format
+	tickets := make([]gin.H, 0, len(result.Tickets))
+	for _, t := range result.Tickets {
+		// Get state name from database
+		stateName := "unknown"
+		var stateRow struct {
+			Name string
+		}
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), t.TicketStateID).Scan(&stateRow.Name)
+		if err == nil {
+			stateName = stateRow.Name
+		}
+
+		// Get priority name from database
+		priorityName := "normal"
+		var priorityRow struct {
+			Name string
+		}
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = $1"), t.TicketPriorityID).Scan(&priorityRow.Name)
+		if err == nil {
+			priorityName = priorityRow.Name
+		}
+
+		tickets = append(tickets, gin.H{
+			"id":       t.TicketNumber,
+			"subject":  t.Title,
+			"status":   stateName,
+			"priority": priorityName,
+			"queue":    queue.Name, // Use the actual queue name
+			"customer": func() string {
+				if t.CustomerID != nil {
+					return fmt.Sprintf("Customer %s", *t.CustomerID)
+				}
+				return "Customer Unknown"
+			}(),
+			"agent": func() string {
+				if t.UserID != nil {
+					return fmt.Sprintf("User %d", *t.UserID)
+				}
+				return "User Unknown"
+			}(),
+			"created":  t.CreateTime.Format("2006-01-02 15:04"),
+			"updated":  t.ChangeTime.Format("2006-01-02 15:04"),
+		})
+	}
+
+	// Get available filters
+	states := []gin.H{
+		{"id": 1, "name": "new"},
+		{"id": 2, "name": "open"},
+		{"id": 3, "name": "pending"},
+		{"id": 4, "name": "closed"},
+	}
+
+	priorities := []gin.H{
+		{"id": 1, "name": "low"},
+		{"id": 2, "name": "normal"},
+		{"id": 3, "name": "high"},
+		{"id": 4, "name": "critical"},
+	}
+
+	// Get queues for filter (but highlight the current one)
+	queueRepo = repository.NewQueueRepository(db)
+	queues, _ := queueRepo.List()
+	queueList := make([]gin.H, 0, len(queues))
+	for _, q := range queues {
+		queueList = append(queueList, gin.H{
+			"id":   q.ID,
+			"name": q.Name,
+		})
+	}
+
+	pongo2Renderer.HTML(c, http.StatusOK, "pages/tickets.pongo2", pongo2.Context{
+		"Title":          fmt.Sprintf("Queue: %s - GOTRS", queue.Name),
+		"Tickets":        tickets,
+		"User":           getUserMapForTemplate(c),
+		"ActivePage":     "queues",
+		"Statuses":       states,
+		"Priorities":     priorities,
+		"Queues":         queueList,
+		"FilterStatus":   status,
+		"FilterPriority": priority,
+		"FilterQueue":    queueID, // Pre-set to current queue
+		"SearchQuery":    search,
+		"SortBy":         sortBy,
+		"CurrentPage":    page,
+		"TotalPages":     (result.Total + limit - 1) / limit,
+		"TotalTickets":   result.Total,
+		"QueueName":      queue.Name, // Add queue name for display
+		"QueueID":        queueID,
 	})
 }
 
@@ -2426,39 +2571,64 @@ func handleRecentTickets(c *gin.Context) {
 				priorityName = priorityRow.Name
 			}
 
-			priorityClass := "bg-green-100 text-green-800"
+			priorityClass := "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
 			switch strings.ToLower(priorityName) {
 			case "1 very low", "2 low":
-				priorityClass = "bg-red-100 text-red-800"
+				priorityClass = "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
 			case "3 normal":
-				priorityClass = "bg-green-100 text-green-800"
+				priorityClass = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
 			case "4 high", "5 very high":
-				priorityClass = "bg-yellow-100 text-yellow-800"
+				priorityClass = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+			case "critical":
+				priorityClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+			}
+
+			statusClass := "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+			switch strings.ToLower(statusLabel) {
+			case "new":
+				statusClass = "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+			case "open":
+				statusClass = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+			case "pending":
+				statusClass = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+			case "closed":
+				statusClass = "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
 			}
 
 			html.WriteString(fmt.Sprintf(`
                         <li class="py-4">
-                            <div class="flex items-center space-x-4">
+                            <div class="flex items-start space-x-4">
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">%s</p>
-                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">%s</p>
-                                </div>
-                                <div>
-                                    <span class="inline-flex items-center rounded-full %s px-2.5 py-0.5 text-xs font-medium">
-                                        %s
-                                    </span>
+                                    <a href="/tickets/%s" class="text-sm font-medium text-gray-900 dark:text-white hover:text-gotrs-600 dark:hover:text-gotrs-400">
+                                        %s: %s
+                                    </a>
+                                    <div class="mt-2 flex flex-wrap gap-1">
+                                        <span class="inline-flex items-center rounded-full %s px-2 py-0.5 text-xs font-medium">
+                                            %s
+                                        </span>
+                                        <span class="inline-flex items-center rounded-full %s px-2 py-0.5 text-xs font-medium">
+                                            %s
+                                        </span>
+                                        <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300 px-2 py-0.5 text-xs font-medium">
+                                            %s
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </li>`,
+				ticket.TicketNumber,
+				ticket.TicketNumber,
 				ticket.Title,
+				priorityClass,
+				priorityName,
+				statusClass,
+				statusLabel,
 				func() string {
 					if ticket.CustomerUserID != nil {
 						return fmt.Sprintf("Customer: %s", *ticket.CustomerUserID)
 					}
 					return "Customer: Unknown"
-				}(),
-				priorityClass,
-				statusLabel))
+				}()))
 		}
 	}
 
@@ -2480,19 +2650,39 @@ func dashboard_queue_status(c *gin.Context) {
 		return
 	}
 
-	// Get open ticket state ID
-	var openStateID int
-	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'open'").Scan(&openStateID)
+	// Get all ticket state IDs
+	stateRows, err := db.Query("SELECT id, name FROM ticket_state WHERE valid_id = 1 ORDER BY id")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to load ticket states",
+		})
+		return
+	}
+	defer stateRows.Close()
 
-	// Query queues with their open ticket counts
+	var states []gin.H
+	for stateRows.Next() {
+		var id int
+		var name string
+		if err := stateRows.Scan(&id, &name); err == nil {
+			states = append(states, gin.H{"id": id, "name": name})
+		}
+	}
+
+	// Query queues with ticket counts by state
 	rows, err := db.Query(`
-		SELECT q.name, COUNT(t.id) as open_count
+		SELECT q.id, q.name,
+		       SUM(CASE WHEN t.ticket_state_id = 1 THEN 1 ELSE 0 END) as new_count,
+		       SUM(CASE WHEN t.ticket_state_id = 2 THEN 1 ELSE 0 END) as open_count,
+		       SUM(CASE WHEN t.ticket_state_id = 3 THEN 1 ELSE 0 END) as pending_count,
+		       SUM(CASE WHEN t.ticket_state_id = 4 THEN 1 ELSE 0 END) as closed_count
 		FROM queue q
-		LEFT JOIN ticket t ON t.queue_id = q.id AND t.ticket_state_id = ?
+		LEFT JOIN ticket t ON t.queue_id = q.id
 		WHERE q.valid_id = 1
 		GROUP BY q.id, q.name
 		ORDER BY q.name
-		LIMIT 10`, openStateID)
+		LIMIT 10`)
 
 	if err != nil {
 		// Return JSON error on query failure
@@ -2504,36 +2694,95 @@ func dashboard_queue_status(c *gin.Context) {
 	}
 	defer rows.Close()
 
-	// Build HTML response
+	// Build HTML response with table format
 	var html strings.Builder
-	html.WriteString(`<dl class="mt-6 space-y-4">`)
+	html.WriteString(`<div class="mt-6">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Queue
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            New
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Open
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Pending
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Closed
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            Total
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">`)
 
 	queueCount := 0
 	for rows.Next() {
+		var queueID int
 		var queueName string
-		var openCount int
-		if err := rows.Scan(&queueName, &openCount); err != nil {
+		var newCount, openCount, pendingCount, closedCount int
+		if err := rows.Scan(&queueID, &queueName, &newCount, &openCount, &pendingCount, &closedCount); err != nil {
 			continue
 		}
 
+		totalCount := newCount + openCount + pendingCount + closedCount
+
 		html.WriteString(fmt.Sprintf(`
-                    <div class="flex items-center justify-between">
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">%s</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">%d open</dd>
-                    </div>`, queueName, openCount))
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="/queues/%d" class="text-sm font-medium text-gray-900 dark:text-white hover:text-gotrs-600 dark:hover:text-gotrs-400">
+                                %s
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+                                %d
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                %d
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">
+                                %d
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+                                %d
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                            %d
+                        </td>
+                    </tr>`, queueID, queueName, newCount, openCount, pendingCount, closedCount, totalCount))
 		queueCount++
 	}
 
 	// If no queues found, show a message
 	if queueCount == 0 {
 		html.WriteString(`
-                    <div class="flex items-center justify-between">
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">No queues found</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">0 open</dd>
-                    </div>`)
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                            No queues found
+                        </td>
+                    </tr>`)
 	}
 
-	html.WriteString(`</dl>`)
+	html.WriteString(`
+                </tbody>
+            </table>
+        </div>
+    </div>`)
 
 	c.Header("Content-Type", "text/html")
 	c.String(http.StatusOK, html.String())
