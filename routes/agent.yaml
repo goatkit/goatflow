@@ -45,25 +45,25 @@ spec:
 
     # Update ticket status
     - path: /tickets/:id/status
-      method: PUT
+      method: POST
       handler: handleAgentTicketStatus
       description: "Update ticket status"
 
     # Assign ticket to agent
     - path: /tickets/:id/assign
-      method: PUT
+      method: POST
       handler: handleAgentTicketAssign
       description: "Assign ticket to specific agent"
 
     # Update ticket priority
     - path: /tickets/:id/priority
-      method: PUT
+      method: POST
       handler: handleAgentTicketPriority
       description: "Update ticket priority"
 
     # Update ticket queue
     - path: /tickets/:id/queue
-      method: PUT
+      method: POST
       handler: handleAgentTicketQueue
       description: "Move ticket to different queue"
 

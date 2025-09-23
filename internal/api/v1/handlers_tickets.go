@@ -100,6 +100,17 @@ func (router *APIRouter) handleListTickets(c *gin.Context) {
 	// Convert to API format
 	tickets := []gin.H{}
 	for _, t := range response.Tickets {
+		// Get queue name from database
+		queueName := fmt.Sprintf("Queue %d", t.QueueID)
+		var queueRow struct {
+			Name string
+		}
+		db := database.GetDB()
+		err := db.QueryRow(database.ConvertPlaceholders("SELECT name FROM queue WHERE id = $1"), t.QueueID).Scan(&queueRow.Name)
+		if err == nil {
+			queueName = queueRow.Name
+		}
+
 		ticket := gin.H{
 			"id":             t.ID,
 			"number":         t.TicketNumber,
@@ -107,7 +118,7 @@ func (router *APIRouter) handleListTickets(c *gin.Context) {
 			"status":         mapTicketState(t.TicketStateID),
 			"priority":       mapTicketPriority(t.TicketPriorityID),
 			"queue_id":       t.QueueID,
-			"queue_name":     fmt.Sprintf("Queue %d", t.QueueID), // TODO: Get actual queue name
+			"queue_name":     queueName,
 			"customer_email": t.CustomerUserID,
 			"created_at":     t.CreateTime,
 			"updated_at":     t.ChangeTime,
@@ -1458,33 +1469,25 @@ func (router *APIRouter) handleBulkMoveQueue(c *gin.Context) {
 // Helper functions for mapping ticket states and priorities
 
 func mapTicketState(stateID int) string {
-	switch stateID {
-	case 1:
-		return "new"
-	case 2:
-		return "open"
-	case 3:
-		return "pending"
-	case 4:
-		return "resolved"
-	case 5, 6:
-		return "closed"
-	default:
-		return "unknown"
+	db := database.GetDB()
+	var stateRow struct {
+		Name string
 	}
+	err := db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), stateID).Scan(&stateRow.Name)
+	if err == nil {
+		return stateRow.Name
+	}
+	return "unknown"
 }
 
 func mapTicketPriority(priorityID int) string {
-	switch priorityID {
-	case 1:
-		return "low"
-	case 2, 3:
-		return "normal"
-	case 4:
-		return "high"
-	case 5:
-		return "urgent"
-	default:
-		return "normal"
+	db := database.GetDB()
+	var priorityRow struct {
+		Name string
 	}
+	err := db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = $1"), priorityID).Scan(&priorityRow.Name)
+	if err == nil {
+		return priorityRow.Name
+	}
+	return "normal"
 }

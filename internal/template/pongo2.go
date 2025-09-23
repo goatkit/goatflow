@@ -136,10 +136,7 @@ func (r *Pongo2Renderer) Render(c *gin.Context, code int, name string, data inte
 
 // HTML renders an HTML template
 func (r *Pongo2Renderer) HTML(c *gin.Context, code int, name string, data interface{}) {
-	fmt.Printf("DEBUG Pongo2: Rendering template %s\n", name)
 	if err := r.Render(c, code, name, data); err != nil {
-		fmt.Printf("DEBUG Pongo2 Error: %v\n", err)
 		c.String(http.StatusInternalServerError, "Template error: %v", err)
 	}
-	fmt.Println("DEBUG Pongo2: Render completed")
 }

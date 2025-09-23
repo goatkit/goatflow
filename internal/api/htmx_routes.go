@@ -324,6 +324,24 @@ func NewPongo2Renderer(templateDir string) *Pongo2Renderer {
 		return key
 	}
 
+	// Validate that critical templates can be loaded
+	criticalTemplates := []string{
+		"layouts/base.pongo2",
+		"pages/dashboard.pongo2",
+		"pages/login.pongo2",
+		"pages/queues.pongo2",
+		"pages/tickets.pongo2",
+	}
+
+	for _, templatePath := range criticalTemplates {
+		if _, err := templateSet.FromFile(templatePath); err != nil {
+			log.Printf("Failed to load critical template %s: %v", templatePath, err)
+			return nil
+		}
+	}
+
+	log.Printf("Successfully validated %d critical templates", len(criticalTemplates))
+
 	return &Pongo2Renderer{
 		templateSet: templateSet,
 	}
@@ -603,9 +621,13 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 	}
 	if _, err := os.Stat(templateDir); err == nil {
 		pongo2Renderer = NewPongo2Renderer(templateDir)
+		if pongo2Renderer == nil {
+			log.Fatalf("Failed to initialize template renderer - critical templates missing or invalid from %s", templateDir)
+		} else {
+			log.Printf("Template renderer initialized successfully from %s", templateDir)
+		}
 	} else {
-		log.Printf("Templates directory not available; using fallback renderer: %v", err)
-		pongo2Renderer = nil
+		log.Fatalf("Templates directory not available: %v", err)
 	}
 
 	// Serve static files (guard missing directory in tests)
@@ -1081,178 +1103,12 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 	// Ticket endpoints
 	{
 		protectedAPI.GET("/tickets", func(c *gin.Context) {
-			// DB-less fallback JSON for tests
+			// Check database availability
 			if db, err := database.GetDB(); err != nil || db == nil {
-				// Collect filters (support multi-values) - rely on URL query map to preserve duplicates
-				qmap := c.Request.URL.Query()
-				statusVals := qmap["status"]
-				if len(statusVals) == 0 {
-					if s := strings.TrimSpace(c.Query("status")); s != "" {
-						statusVals = []string{s}
-					}
-				}
-				priorityVals := qmap["priority"]
-				if len(priorityVals) == 0 {
-					if p := strings.TrimSpace(c.Query("priority")); p != "" {
-						priorityVals = []string{p}
-					}
-				}
-				queueVals := qmap["queue"]
-				if len(queueVals) == 0 {
-					if q := strings.TrimSpace(c.Query("queue")); q != "" {
-						queueVals = []string{q}
-					}
-				}
-
-				log.Printf("DEBUG tickets fallback: status=%v priority=%v queue=%v", statusVals, priorityVals, queueVals)
-				all := []gin.H{
-					{"id": "T-2024-001", "subject": "Unable to access email", "status": "open", "priority": "high", "priority_label": "High Priority", "queue_name": "General Support"},
-					{"id": "T-2024-002", "subject": "Software installation request", "status": "pending", "priority": "medium", "priority_label": "Normal Priority", "queue_name": "Technical Support"},
-					{"id": "T-2024-003", "subject": "Login issues", "status": "closed", "priority": "low", "priority_label": "Low Priority", "queue_name": "Billing"},
-					{"id": "T-2024-004", "subject": "Server down - urgent", "status": "open", "priority": "critical", "priority_label": "Critical Priority", "queue_name": "Technical Support"},
-					{"id": "TICKET-001", "subject": "Login issues", "status": "open", "priority": "high", "priority_label": "High Priority", "queue_name": "General Support"},
-				}
-
-				// helpers
-				contains := func(list []string, v string) bool {
-					if len(list) == 0 {
-						return true
-					}
-					for _, x := range list {
-						if x == v {
-							return true
-						}
-						// Special-case: treat "normal" filter as matching our "medium" seed
-						if x == "normal" && v == "medium" {
-							return true
-						}
-					}
-					return false
-				}
-				queueMatch := func(qname string) bool {
-					if len(queueVals) == 0 {
-						return true
-					}
-					for _, qv := range queueVals {
-						if (qv == "1" && strings.Contains(qname, "General")) || (qv == "2" && strings.Contains(qname, "Technical")) || strings.Contains(qname, qv) {
-							return true
-						}
-					}
-					return false
-				}
-
-				result := make([]gin.H, 0, len(all))
-				// Assignee filters (test-mode only)
-				assignedParam := strings.TrimSpace(c.Query("assigned"))
-				assigneeParam := strings.TrimSpace(c.Query("assignee"))
-				for _, t := range all {
-					if !contains(statusVals, t["status"].(string)) {
-						continue
-					}
-					if !contains(priorityVals, t["priority"].(string)) {
-						continue
-					}
-					if !queueMatch(t["queue_name"].(string)) {
-						continue
-					}
-					// decorate with assignee_name for tests
-					tCopy := gin.H{}
-					for k, v := range t {
-						tCopy[k] = v
-					}
-					if assignedParam == "false" {
-						tCopy["assignee_name"] = "Unassigned"
-					} else if assignedParam == "true" {
-						tCopy["assignee_name"] = "Agent"
-					}
-					if assigneeParam == "1" {
-						tCopy["assignee_name"] = "Agent Smith"
-					}
-					result = append(result, tCopy)
-				}
-				// Ensure presence of expected items for tests
-				hasCritical := false
-				hasTechnical := false
-				for _, t := range result {
-					if t["priority"] == "critical" {
-						hasCritical = true
-					}
-					if t["queue_name"] == "Technical Support" {
-						hasTechnical = true
-					}
-				}
-				if len(priorityVals) > 0 {
-					for _, pv := range priorityVals {
-						if pv == "critical" && !hasCritical {
-							// append critical ticket from seed
-							for _, t := range all {
-								if t["priority"] == "critical" {
-									result = append(result, t)
-									hasCritical = true
-									break
-								}
-							}
-						}
-					}
-				}
-				if len(queueVals) > 0 {
-					needTechnical := false
-					for _, qv := range queueVals {
-						if qv == "2" {
-							needTechnical = true
-						}
-					}
-					if needTechnical && !hasTechnical {
-						for _, t := range all {
-							if t["queue_name"] == "Technical Support" {
-								result = append(result, t)
-								break
-							}
-						}
-					}
-				}
-				log.Printf("DEBUG tickets fallback: result_count=%d", len(result))
-				// Render simple HTML list for tests expecting text content
-				title := "Tickets"
-				if s := strings.TrimSpace(c.Query("status")); s != "" {
-					if s == "open" {
-						title = "Open Tickets"
-					}
-					if s == "closed" {
-						title = "Closed Tickets"
-					}
-				}
-				var b strings.Builder
-				b.WriteString("<!DOCTYPE html><html><head><title>")
-				b.WriteString(title)
-				b.WriteString("</title></head><body><h1>")
-				b.WriteString(title)
-				b.WriteString("</h1>")
-				for _, t := range result {
-					b.WriteString("<div class=\"ticket\">")
-					// base info
-					b.WriteString(fmt.Sprintf("%s - %s - %s - %s", t["id"], t["subject"], t["status"], t["priority"]))
-					// priority label for tests like "High Priority" / "Low Priority"
-					if pl, ok := t["priority_label"]; ok {
-						b.WriteString(" - ")
-						b.WriteString(fmt.Sprintf("%s", pl))
-					}
-					// Include queue name textually for filter assertions
-					b.WriteString(" - ")
-					b.WriteString(fmt.Sprintf("%s", t["queue_name"]))
-					// Include assignee name if present (Agent/Unassigned/Agent Smith)
-					if an, ok := t["assignee_name"]; ok {
-						b.WriteString(" - ")
-						b.WriteString(fmt.Sprintf("%s", an))
-					}
-					b.WriteString("</div>")
-				}
-				b.WriteString("</body></html>")
-				c.Header("Content-Type", "text/html; charset=utf-8")
-				c.String(http.StatusOK, b.String())
+				sendErrorResponse(c, http.StatusInternalServerError, "Database connection unavailable")
 				return
 			}
-			// Otherwise, use the full handler
+			// Use the full handler
 			handleAPITickets(c)
 		})
 		if os.Getenv("APP_ENV") != "test" {
@@ -1526,23 +1382,14 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			FROM users
 			WHERE login = $1
 			AND valid_id = 1`)
-		log.Printf("DEBUG: Querying for user '%s' with query: %s", username, query)
 		err = db.QueryRow(query, username).Scan(&dbUserID, &dbPassword, &validID)
 		if err != nil {
-			log.Printf("DEBUG: Query error: %v", err)
-		} else {
-			log.Printf("DEBUG: Found user ID %d with password hash starting with: %.20s", dbUserID, dbPassword)
-		}
-
-		if err == nil && validID == 1 {
+			// User not found or other database error
+		} else if validID == 1 {
 			// Verify the password (handles both salted and unsalted)
-			log.Printf("DEBUG: Verifying password for user %d", dbUserID)
 			if verifyPassword(password, dbPassword) {
-				log.Printf("DEBUG: Password verification successful for user %d", dbUserID)
 				validLogin = true
 				userID = uint(dbUserID)
-			} else {
-				log.Printf("DEBUG: Password verification failed for user %d", dbUserID)
 			}
 		} else {
 			// If database check fails, try legacy plain text (for migration period)
@@ -1634,6 +1481,7 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		c.Redirect(http.StatusFound, "/dashboard")
 	}
 }
+
 
 // handleHTMXLogin handles HTMX login requests
 func handleHTMXLogin(c *gin.Context) {
@@ -1736,35 +1584,12 @@ func handleLogout(c *gin.Context) {
 
 // handleDashboard shows the main dashboard
 func handleDashboard(c *gin.Context) {
-	// If templates unavailable, provide minimal dashboard HTML with dark classes
+	// If templates unavailable, return JSON error
 	if pongo2Renderer == nil || pongo2Renderer.templateSet == nil {
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		role := strings.ToLower(strings.TrimSpace(c.GetString("user_role")))
-		adminLink := ""
-		if role == "admin" {
-			adminLink = `<a class="dark:text-gray-400 dark:hover:text-gray-200" href="/admin">Admin</a>`
-		}
-		c.String(http.StatusOK, `<!DOCTYPE html>
-<html>
-  <head><title>Dashboard - GOTRS</title></head>
-  <body class="dark:bg-gray-900 dark:text-white">
-    <nav class="dark:text-white dark:hover:text-gray-200 dark:hover:border-gray-600">
-      <button class="sm:hidden" @click="mobileMenuOpen = !mobileMenuOpen">Menu</button>
-      <a class="inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium border-indigo-500 text-gray-900 dark:text-white" href="/dashboard">Dashboard</a>
-      <a class="dark:text-gray-400 dark:hover:text-gray-200" href="/tickets">Tickets</a>
-      <a class="dark:text-gray-400 dark:hover:text-gray-200" href="/queues">Queues</a>
-      `+adminLink+`
-      <button class="bg-gotrs-600 text-white hover:bg-gotrs-500">Action</button>
-    </nav>
-    <main>
-      <h1 class="text-2xl sm:text-3xl">Tickets</h1>
-      <div class="dark:bg-gray-800">Card</div>
-      <div class="sr-only">screenreader</div>
-      <div role="region" aria-label="dashboard"></div>
-      <svg viewBox="0 0 20 20" fill="currentColor"></svg>
-    </main>
-  </body>
-</html>`)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Template system unavailable",
+		})
 		return
 	}
 
@@ -1826,17 +1651,24 @@ func handleDashboard(c *gin.Context) {
 	recentTickets := []gin.H{}
 	if err == nil && tickets != nil {
 		for _, ticket := range tickets {
-			// Determine status label
+			// Get status label from database
 			statusLabel := "unknown"
-			switch ticket.TicketStateID {
-			case 1:
-				statusLabel = "new"
-			case 2:
-				statusLabel = "open"
-			case 3:
-				statusLabel = "closed"
-			case 5:
-				statusLabel = "pending"
+			var statusRow struct {
+				Name string
+			}
+			err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), ticket.TicketStateID).Scan(&statusRow.Name)
+			if err == nil {
+				statusLabel = statusRow.Name
+			}
+
+			// Get priority label from database
+			priorityLabel := "normal"
+			var priorityRow struct {
+				Name string
+			}
+			err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = $1"), ticket.TicketPriorityID).Scan(&priorityRow.Name)
+			if err == nil {
+				priorityLabel = priorityRow.Name
 			}
 
 			// Calculate time ago
@@ -1846,7 +1678,7 @@ func handleDashboard(c *gin.Context) {
 				"id":       ticket.TicketNumber,
 				"subject":  ticket.Title,
 				"status":   statusLabel,
-				"priority": getPriorityLabel(ticket.TicketPriorityID),
+				"priority": priorityLabel,
 				"customer": ticket.CustomerUserID,
 				"updated":  timeAgo,
 			})
@@ -1867,73 +1699,11 @@ func handleTickets(c *gin.Context) {
 	// Get database connection (graceful fallback to empty list)
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Minimal HTML fallback that includes HTMX attributes and filter UI for tests
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		// Title reflects status filter where provided to satisfy tests
-		title := "Tickets"
-		if s := strings.TrimSpace(c.Query("status")); s != "" {
-			switch s {
-			case "open":
-				title = "Open Tickets"
-			case "closed":
-				title = "Closed Tickets"
-			default:
-				title = "Tickets"
-			}
-		}
-		c.String(http.StatusOK, `<!DOCTYPE html>
-<html><head><title>Tickets - GOTRS</title></head>
-<body class="dark:bg-gray-900 dark:text-white">
-<nav><a href="/dashboard">Dashboard</a> <a href="/tickets">Tickets</a></nav>
-
-<!-- Filter form -->
-<form id="filter-form" hx-get="/api/tickets" hx-target="#ticket-list" hx-trigger="submit">
-  <select name="status"><option value="">All</option><option value="open"`+selectedAttr(c.Query("status"), "open")+`>open</option><option value="closed"`+selectedAttr(c.Query("status"), "closed")+`>closed</option><option value="pending"`+selectedAttr(c.Query("status"), "pending")+`>pending</option></select>
-  <select name="priority"><option value="">All</option><option value="low"`+selectedAttr(c.Query("priority"), "low")+`>low</option><option value="normal"`+selectedAttr(c.Query("priority"), "normal")+`>normal</option><option value="high"`+selectedAttr(c.Query("priority"), "high")+`>high</option><option value="critical"`+selectedAttr(c.Query("priority"), "critical")+`>critical</option></select>
-  <select name="queue"><option value="">All</option><option value="1"`+selectedAttr(c.Query("queue"), "1")+`>General Support</option><option value="2"`+selectedAttr(c.Query("queue"), "2")+`>Technical Support</option></select>
-  <button type="submit">Apply Filters</button>
-  <a class="clear" href="/tickets">Clear</a>
-</form>
-
-<!-- Active filter badges example -->
-<div class="badges"><span class="badge">`+strings.TrimSpace(c.Query("status"))+`</span><span class="badge">`+strings.TrimSpace(c.Query("priority"))+`</span><span>×</span></div>
-
-<div id="ticket-list">`+title+`</div>
-
-<form id="new-ticket-form" hx-post="/api/tickets" hx-target="#ticket-list" hx-swap="innerHTML">
-  <input type="text" name="subject" placeholder="Subject" />
-  <input type="email" name="customer_email" placeholder="Email" />
-  <textarea name="body" placeholder="Description"></textarea>
-  <button type="submit">Create</button>
-  <a hx-get="/api/tickets" hx-target="#ticket-list" hx-swap="innerHTML">Load</a>
-  <input type="hidden" name="priority" value="normal" />
-  <input type="hidden" name="queue_id" value="1" />
-  <input type="hidden" name="type_id" value="1" />
-  <input type="hidden" name="hx" value="1" />
-  <span class="hx-swap"></span>
-  <span class="hx-target"></span>
-  <span class="hx-post"></span>
-  <span class="hx-get"></span>
-  <span class="dark:text-white"></span>
-  <span class="dark:text-gray-400"></span>
-  <span class="dark:hover:text-gray-200"></span>
-  <span class="dark:hover:border-gray-600"></span>
-  <span class="sm:hidden"></span>
-  <span class="sm:text-3xl"></span>
-  <span class="text-2xl"></span>
-  <span class="sr-only"></span>
-  <svg viewBox="0 0 20 20" fill="currentColor"></svg>
-  <label for="x"></label>
-  <input id="x" />
-  <img alt="" />
-  <div role="region" aria-label="tickets"></div>
-  <button class="bg-gotrs-600 text-white hover:bg-gotrs-500">Submit</button>
-  <div class="dark:bg-gray-800"></div>
-  <div class="dark:bg-gray-700"></div>
-  <div class="sm:grid-cols-2 lg:grid-cols-3 grid-cols-1"></div>
-  <div class="inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium border-indigo-500 text-gray-900 dark:text-white"></div>
-</form>
-</body></html>`)
+		// Return JSON error for database issues
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database unavailable",
+		})
 		return
 	}
 
@@ -1996,38 +1766,27 @@ func handleTickets(c *gin.Context) {
 		}
 	}
 
-	log.Printf("DEBUG: Found %d tickets from database", len(result.Tickets))
-	if len(result.Tickets) > 0 {
-		log.Printf("DEBUG: First ticket: ID=%d, TN=%s, Title=%s", result.Tickets[0].ID, result.Tickets[0].TicketNumber, result.Tickets[0].Title)
-	}
-
 	// Convert tickets to template format
 	tickets := make([]gin.H, 0, len(result.Tickets))
 	for _, t := range result.Tickets {
-		// Get state name
+		// Get state name from database
 		stateName := "unknown"
-		switch t.TicketStateID {
-		case 1:
-			stateName = "new"
-		case 2:
-			stateName = "open"
-		case 3:
-			stateName = "pending"
-		case 4:
-			stateName = "closed"
+		var stateRow struct {
+			Name string
+		}
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), t.TicketStateID).Scan(&stateRow.Name)
+		if err == nil {
+			stateName = stateRow.Name
 		}
 
-		// Get priority name
+		// Get priority name from database
 		priorityName := "normal"
-		switch t.TicketPriorityID {
-		case 1:
-			priorityName = "low"
-		case 2:
-			priorityName = "normal"
-		case 3:
-			priorityName = "high"
-		case 4:
-			priorityName = "critical"
+		var priorityRow struct {
+			Name string
+		}
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = $1"), t.TicketPriorityID).Scan(&priorityRow.Name)
+		if err == nil {
+			priorityName = priorityRow.Name
 		}
 
 		tickets = append(tickets, gin.H{
@@ -2036,14 +1795,22 @@ func handleTickets(c *gin.Context) {
 			"status":   stateName,
 			"priority": priorityName,
 			"queue":    fmt.Sprintf("Queue %d", t.QueueID), // Will fix with proper queue name lookup
-			"customer": fmt.Sprintf("Customer %d", t.CustomerID),
-			"agent":    fmt.Sprintf("User %d", t.UserID),
+			"customer": func() string {
+				if t.CustomerID != nil {
+					return fmt.Sprintf("Customer %s", *t.CustomerID)
+				}
+				return "Customer Unknown"
+			}(),
+			"agent": func() string {
+				if t.UserID != nil {
+					return fmt.Sprintf("User %d", *t.UserID)
+				}
+				return "User Unknown"
+			}(),
 			"created":  t.CreateTime.Format("2006-01-02 15:04"),
 			"updated":  t.ChangeTime.Format("2006-01-02 15:04"),
 		})
 	}
-
-	log.Printf("DEBUG: Created %d tickets for template", len(tickets))
 
 	// Get available filters
 	states := []gin.H{
@@ -2092,40 +1859,22 @@ func handleTickets(c *gin.Context) {
 
 // handleQueues shows the queues list page
 func handleQueues(c *gin.Context) {
-	// If templates are unavailable, provide minimal HTML fallback
+	// If templates are unavailable, return JSON error
 	if pongo2Renderer == nil || pongo2Renderer.templateSet == nil {
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<!DOCTYPE html><html><head><title>Queues - GOTRS</title></head><body class="dark:bg-gray-900 dark:text-white">
-<h1 class="text-2xl sm:text-3xl">Queue Management</h1>
-<p>Manage ticket queues</p>
-<div class="dark:bg-gray-800 p-2">
-  <button class="dark:hover:bg-gray-700">New Queue</button>
-  <ul>
-    <li>General Support - 3 tickets <span class="text-green-600">Active</span></li>
-    <li>Technical Support - 2 tickets <span class="text-green-600">Active</span></li>
-    <li>Billing - 1 tickets <span class="text-green-600">Active</span></li>
-  </ul>
-</div>
-</body></html>`)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Template system unavailable",
+		})
 		return
 	}
 
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback: explicit minimal HTML (ensures tests see expected content)
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<!DOCTYPE html><html><head><title>Queues - GOTRS</title></head><body class="dark:bg-gray-900 dark:text-white">
-<h1 class="text-2xl sm:text-3xl">Queue Management</h1>
-<p>Manage ticket queues</p>
-<div class="dark:bg-gray-800 p-2">
-  <button class="dark:hover:bg-gray-700">New Queue</button>
-  <ul>
-    <li>General Support - 3 tickets <span class="text-green-600">Active</span></li>
-    <li>Technical Support - 2 tickets <span class="text-green-600">Active</span></li>
-    <li>Billing - 1 tickets <span class="text-green-600">Active</span></li>
-  </ul>
-</div>
-</body></html>`)
+		// Return JSON error for database issues
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database unavailable",
+		})
 		return
 	}
 
@@ -2194,34 +1943,10 @@ func handleQueueDetail(c *gin.Context) {
 		return
 	}
 
-	// Try database; if unavailable, provide graceful fallback for tests
+	// Try database; if unavailable, fail hard
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback: minimal HTML/fragment without DB access
-		if c.GetHeader("HX-Request") != "" {
-			c.Header("Content-Type", "text/html; charset=utf-8")
-			if idUint == 1 {
-				c.String(http.StatusOK, "Raw <span>2</span> tickets")
-				return
-			}
-			if idUint == 3 {
-				c.String(http.StatusOK, "Misc <span>0</span> tickets\nNo tickets in this queue")
-				return
-			}
-			c.String(http.StatusNotFound, "queue not found")
-			return
-		}
-		// Full HTML fallback
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		if idUint == 1 {
-			c.String(http.StatusOK, "<html><head></head><body>Raw</body></html>")
-			return
-		}
-		if idUint == 3 {
-			c.String(http.StatusOK, "<html><head></head><body>Misc</body></html>")
-			return
-		}
-		c.String(http.StatusNotFound, "queue not found")
+		sendErrorResponse(c, http.StatusInternalServerError, "Database connection unavailable")
 		return
 	}
 
@@ -2245,21 +1970,11 @@ func handleQueueDetail(c *gin.Context) {
 func handleNewTicket(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil || pongo2Renderer == nil || pongo2Renderer.templateSet == nil {
-		// Minimal form with HTMX attributes for tests
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<!DOCTYPE html><html><head><title>New Ticket - GOTRS</title></head>
-<body class="dark:bg-gray-900 dark:text-white">
-<form hx-post="/api/tickets" hx-target="#result" hx-swap="innerHTML">
-  <label for="subject">Subject</label>
-  <input id="subject" name="subject" />
-  <label for="email">Email</label>
-  <input id="email" name="customer_email" />
-  <label for="body">Body</label>
-  <textarea id="body" name="body"></textarea>
-  <button type="submit">Create</button>
-</form>
-<div id="result"></div>
-</body></html>`)
+		// Return JSON error for unavailable systems
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "System unavailable",
+		})
 		return
 	}
 
@@ -2303,43 +2018,44 @@ func handleNewTicket(c *gin.Context) {
 		}
 	}
 
+	// Get ticket types from database
+	types := []gin.H{}
+	tRows, err := db.Query("SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name")
+	if err == nil {
+		defer tRows.Close()
+		for tRows.Next() {
+			var id int
+			var name string
+			if err := tRows.Scan(&id, &name); err == nil {
+				types = append(types, gin.H{"id": strconv.Itoa(id), "name": name})
+			}
+		}
+	}
+
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/ticket_new.pongo2", pongo2.Context{
 		"Title":      "New Ticket - GOTRS",
 		"User":       getUserMapForTemplate(c),
 		"ActivePage": "tickets",
 		"Queues":     queues,
 		"Priorities": priorities,
+		"Types":      types,
 	})
 }
 
 // handleNewEmailTicket shows the email ticket creation form
 func handleNewEmailTicket(c *gin.Context) {
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, `<!DOCTYPE html><html><head><title>New Email Ticket - GOTRS</title></head>
-<body><h1>Email Ticket Creation</h1>
-<form method="post" action="/api/tickets">
-  <input type="hidden" name="channel" value="email" />
-  <label>Subject <input name="subject" /></label>
-  <label>Email <input name="customer_email" /></label>
-  <label>Body <textarea name="body"></textarea></label>
-  <button type="submit">Create Email Ticket</button>
-</form>
-</body></html>`)
+	c.JSON(http.StatusInternalServerError, gin.H{
+		"success": false,
+		"error":   "Template system unavailable",
+	})
 }
 
 // handleNewPhoneTicket shows the phone ticket creation form
 func handleNewPhoneTicket(c *gin.Context) {
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, `<!DOCTYPE html><html><head><title>New Phone Ticket - GOTRS</title></head>
-<body><h1>Phone Ticket Creation</h1>
-<form method="post" action="/api/tickets">
-  <input type="hidden" name="channel" value="phone" />
-  <label>Subject <input name="subject" /></label>
-  <label>Phone <input name="customer_phone" /></label>
-  <label>Body <textarea name="body"></textarea></label>
-  <button type="submit">Create Phone Ticket</button>
-</form>
-</body></html>`)
+	c.JSON(http.StatusInternalServerError, gin.H{
+		"success": false,
+		"error":   "Template system unavailable",
+	})
 }
 
 // handleTicketDetail shows ticket details
@@ -2361,14 +2077,12 @@ func handleTicketDetail(c *gin.Context) {
 		ticket *models.Ticket
 		tktErr error
 	)
-	log.Printf("DEBUG: handleTicketDetail primary lookup by ticket number tn=%s", ticketID)
 	if t, err := ticketRepo.GetByTN(ticketID); err == nil {
 		ticket = t
 		tktErr = nil
 	} else {
 		// Fallback: if the path is numeric, try as primary key ID
 		if n, convErr := strconv.Atoi(ticketID); convErr == nil {
-			log.Printf("DEBUG: handleTicketDetail fallback lookup by numeric id=%d", n)
 			ticket, tktErr = ticketRepo.GetByID(uint(n))
 		} else {
 			tktErr = err
@@ -2390,7 +2104,6 @@ func handleTicketDetail(c *gin.Context) {
 		log.Printf("Error fetching articles: %v", err)
 		articles = []models.Article{}
 	}
-	log.Printf("DEBUG: handleTicketDetail loaded %d articles for ticket id=%d", len(articles), ticket.ID)
 
 	// Convert articles to template format
 	notes := make([]gin.H, 0, len(articles))
@@ -2411,49 +2124,36 @@ func handleTicketDetail(c *gin.Context) {
 		})
 	}
 
-	// Get state name (matching OTRS states from database)
+	// Get state name from database
 	stateName := "unknown"
-	switch ticket.TicketStateID {
-	case 1:
-		stateName = "new"
-	case 2:
-		stateName = "open"
-	case 3:
-		stateName = "closed successful"
-	case 4:
-		stateName = "closed unsuccessful"
-	case 5:
-		stateName = "pending reminder"
-	case 6:
-		stateName = "pending auto close+"
-	case 7:
-		stateName = "pending auto close-"
-	case 8:
-		stateName = "removed"
-	case 9:
-		stateName = "merged"
-	default:
-		// For any other state, try to get from database
-		var stateRow struct {
-			Name string
-		}
-		err := db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), ticket.TicketStateID).Scan(&stateRow.Name)
-		if err == nil {
-			stateName = stateRow.Name
-		}
+	var stateRow struct {
+		Name string
+	}
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), ticket.TicketStateID).Scan(&stateRow.Name)
+	if err == nil {
+		stateName = stateRow.Name
 	}
 
 	// Get priority name
 	priorityName := "normal"
-	switch ticket.TicketPriorityID {
-	case 1:
-		priorityName = "low"
-	case 2:
-		priorityName = "normal"
-	case 3:
-		priorityName = "high"
-	case 4:
-		priorityName = "critical"
+	var priorityRow struct {
+		Name string
+	}
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = $1"), ticket.TicketPriorityID).Scan(&priorityRow.Name)
+	if err == nil {
+		priorityName = priorityRow.Name
+	}
+
+	// Get ticket type name
+	typeName := "Unclassified"
+	if ticket.TypeID != nil && *ticket.TypeID > 0 {
+		var typeRow struct {
+			Name string
+		}
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_type WHERE id = $1"), *ticket.TypeID).Scan(&typeRow.Name)
+		if err == nil {
+			typeName = typeRow.Name
+		}
 	}
 
 	// Check if ticket is closed
@@ -2462,25 +2162,99 @@ func handleTicketDetail(c *gin.Context) {
 		isClosed = true
 	}
 
+	// Get customer information
+	var customerName, customerEmail, customerPhone string
+	if ticket.CustomerUserID != nil && *ticket.CustomerUserID != "" {
+		customerRow := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT CONCAT(first_name, ' ', last_name), email, phone
+			FROM customer_user
+			WHERE login = $1 AND valid_id = 1
+		`), *ticket.CustomerUserID)
+		err = customerRow.Scan(&customerName, &customerEmail, &customerPhone)
+		if err != nil {
+			// Fallback if customer not found
+			customerName = *ticket.CustomerUserID
+			customerEmail = ""
+			customerPhone = ""
+		}
+	} else {
+		customerName = "Unknown Customer"
+		customerEmail = ""
+		customerPhone = ""
+	}
+
+	// Get assigned agent information
+	var agentName, agentEmail string
+	var assignedTo string
+	if ticket.ResponsibleUserID != nil && *ticket.ResponsibleUserID > 0 {
+		agentRow := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT CONCAT(first_name, ' ', last_name), login
+			FROM users
+			WHERE id = $1 AND valid_id = 1
+		`), *ticket.ResponsibleUserID)
+		err = agentRow.Scan(&agentName, &agentEmail)
+		if err == nil {
+			assignedTo = agentName
+		} else {
+			assignedTo = fmt.Sprintf("User %d", *ticket.ResponsibleUserID)
+			agentEmail = ""
+		}
+	} else {
+		assignedTo = "Unassigned"
+		agentName = ""
+		agentEmail = ""
+	}
+
+	// Get queue name from database
+	queueName := fmt.Sprintf("Queue %d", ticket.QueueID)
+	var queueRow struct {
+		Name string
+	}
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM queue WHERE id = $1"), ticket.QueueID).Scan(&queueRow.Name)
+	if err == nil {
+		queueName = queueRow.Name
+	}
+
+	// Get ticket description from first article
+	var description string
+	if len(articles) > 0 {
+		if body, ok := articles[0].Body.(string); ok {
+			description = body
+		} else {
+			description = "Article content not available"
+		}
+	} else {
+		description = "No description available"
+	}
+
 	ticketData := gin.H{
-		"id":        ticket.TicketNumber,
-		"subject":   ticket.Title,
-		"status":    stateName,
+		"id":        ticket.ID,
+		"tn":        ticket.TicketNumber,
+		"title":     ticket.Title,
+		"state":     stateName,
+		"state_type": strings.ToLower(strings.Fields(stateName)[0]), // First word of state for badge colors
 		"is_closed": isClosed,
 		"priority":  priorityName,
-		"queue":     fmt.Sprintf("Queue %d", ticket.QueueID),
+		"queue":     queueName,
+		"queue_id":  ticket.QueueID,
+		"customer_name": customerName,
+		"customer_user_id": ticket.CustomerUserID,
 		"customer": gin.H{
-			"name":  fmt.Sprintf("Customer %d", ticket.CustomerID),
-			"email": "customer@example.com",
-			"phone": "",
+			"name":  customerName,
+			"email": customerEmail,
+			"phone": customerPhone,
 		},
 		"agent": gin.H{
-			"name":  fmt.Sprintf("User %d", ticket.UserID),
-			"email": "agent@gotrs.com",
+			"name":  agentName,
+			"email": agentEmail,
 		},
-		"created":     ticket.CreateTime.Format("2006-01-02 15:04"),
-		"updated":     ticket.ChangeTime.Format("2006-01-02 15:04"),
-		"description": "Ticket description", // Need to get from first article
+		"assigned_to": assignedTo,
+		"type":      typeName,
+		"service":   "-",            // TODO: Get from service table
+		"sla":       "-",            // TODO: Get from SLA table
+		"create_time":     ticket.CreateTime.Format("2006-01-02 15:04"),
+		"change_time":     ticket.ChangeTime.Format("2006-01-02 15:04"),
+		"description": description,
 		"notes":       notes,
 	}
 
@@ -2533,48 +2307,73 @@ func handleSettings(c *gin.Context) {
 func handleDashboardStats(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Fallback stats for test environment or when DB is unavailable
-		c.JSON(http.StatusOK, gin.H{
-			"openTickets":     0,
-			"pendingTickets":  0,
-			"closedToday":     0,
-			"avgResponseTime": "N/A",
-			"satisfaction":    "N/A",
+		// Return JSON error when database is unavailable
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database unavailable",
 		})
 		return
 	}
 
 	var openTickets, pendingTickets, closedToday int
 
+	// Get actual ticket state IDs from database instead of hardcoded values
+	var openStateID, pendingStateID, closedStateID int
+	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'open'").Scan(&openStateID)
+	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'pending'").Scan(&pendingStateID)
+	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'closed'").Scan(&closedStateID)
+
 	// Count open tickets
-	_ = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = 2").Scan(&openTickets)
+	if openStateID > 0 {
+		_ = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?", openStateID).Scan(&openTickets)
+	}
 
 	// Count pending tickets
-	_ = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = 5").Scan(&pendingTickets)
+	if pendingStateID > 0 {
+		_ = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?", pendingStateID).Scan(&pendingTickets)
+	}
 
 	// Count tickets closed today
-	_ = db.QueryRow(database.ConvertPlaceholders(`
-        SELECT COUNT(*) FROM ticket
-        WHERE ticket_state_id = 3
-        AND change_time >= CURRENT_DATE
-    `)).Scan(&closedToday)
-
-	stats := gin.H{
-		"openTickets":     openTickets,
-		"pendingTickets":  pendingTickets,
-		"closedToday":     closedToday,
-		"avgResponseTime": "N/A",
-		"satisfaction":    "N/A",
+	if closedStateID > 0 {
+		_ = db.QueryRow(database.ConvertPlaceholders(`
+			SELECT COUNT(*) FROM ticket
+			WHERE ticket_state_id = ?
+			AND DATE(change_time) = CURDATE()
+		`), closedStateID).Scan(&closedToday)
 	}
-	c.JSON(http.StatusOK, stats)
+
+	// Return HTML for HTMX
+	c.Header("Content-Type", "text/html")
+	html := fmt.Sprintf(`
+        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Open Tickets</dt>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
+        </div>
+        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">New Today</dt>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
+        </div>
+        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Pending</dt>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
+        </div>
+        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Overdue</dt>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
+        </div>`, openTickets, closedToday, pendingTickets, 0) // Note: Overdue calculation not implemented yet
+
+	c.String(http.StatusOK, html)
 }
 
 // handleRecentTickets returns recent tickets for dashboard
 func handleRecentTickets(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		// Provide a minimal recent tickets list when DB is unavailable
-		c.JSON(http.StatusOK, gin.H{"tickets": []gin.H{}})
+		// Return JSON error when database is unavailable
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database unavailable",
+		})
 		return
 	}
 
@@ -2591,32 +2390,153 @@ func handleRecentTickets(c *gin.Context) {
 		tickets = ticketResponse.Tickets
 	}
 
-	ticketList := []gin.H{}
-	for _, ticket := range tickets {
-		// Determine status label
-		statusLabel := "unknown"
-		switch ticket.TicketStateID {
-		case 1:
-			statusLabel = "new"
-		case 2:
-			statusLabel = "open"
-		case 3:
-			statusLabel = "closed"
-		case 5:
-			statusLabel = "pending"
-		}
+	// Build HTML response
+	var html strings.Builder
+	html.WriteString(`<ul role="list" class="-my-5 divide-y divide-gray-200 dark:divide-gray-700">`)
 
-		ticketList = append(ticketList, gin.H{
-			"id":       ticket.TicketNumber,
-			"subject":  ticket.Title,
-			"status":   statusLabel,
-			"priority": getPriorityLabel(ticket.TicketPriorityID),
-			"customer": ticket.CustomerUserID,
-			"updated":  timeago.English.Format(ticket.ChangeTime),
-		})
+	if len(tickets) == 0 {
+		html.WriteString(`
+                        <li class="py-4">
+                            <div class="flex items-center space-x-4">
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">No recent tickets</p>
+                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">No tickets found in the system</p>
+                                </div>
+                            </div>
+                        </li>`)
+	} else {
+		for _, ticket := range tickets {
+			// Get status label from database
+			statusLabel := "unknown"
+			var statusRow struct {
+				Name string
+			}
+			err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), ticket.TicketStateID).Scan(&statusRow.Name)
+			if err == nil {
+				statusLabel = statusRow.Name
+			}
+
+			// Get priority name and determine CSS class
+			priorityName := "normal"
+			var priorityRow struct {
+				Name string
+			}
+			err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = $1"), ticket.TicketPriorityID).Scan(&priorityRow.Name)
+			if err == nil {
+				priorityName = priorityRow.Name
+			}
+
+			priorityClass := "bg-green-100 text-green-800"
+			switch strings.ToLower(priorityName) {
+			case "1 very low", "2 low":
+				priorityClass = "bg-red-100 text-red-800"
+			case "3 normal":
+				priorityClass = "bg-green-100 text-green-800"
+			case "4 high", "5 very high":
+				priorityClass = "bg-yellow-100 text-yellow-800"
+			}
+
+			html.WriteString(fmt.Sprintf(`
+                        <li class="py-4">
+                            <div class="flex items-center space-x-4">
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">%s</p>
+                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">%s</p>
+                                </div>
+                                <div>
+                                    <span class="inline-flex items-center rounded-full %s px-2.5 py-0.5 text-xs font-medium">
+                                        %s
+                                    </span>
+                                </div>
+                            </div>
+                        </li>`,
+				ticket.Title,
+				func() string {
+					if ticket.CustomerUserID != nil {
+						return fmt.Sprintf("Customer: %s", *ticket.CustomerUserID)
+					}
+					return "Customer: Unknown"
+				}(),
+				priorityClass,
+				statusLabel))
+		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"tickets": ticketList})
+	html.WriteString(`</ul>`)
+
+	c.Header("Content-Type", "text/html")
+	c.String(http.StatusOK, html.String())
+}
+
+// dashboard_queue_status returns queue status for dashboard
+func dashboard_queue_status(c *gin.Context) {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		// Return JSON error when database is unavailable
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database unavailable",
+		})
+		return
+	}
+
+	// Get open ticket state ID
+	var openStateID int
+	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'open'").Scan(&openStateID)
+
+	// Query queues with their open ticket counts
+	rows, err := db.Query(`
+		SELECT q.name, COUNT(t.id) as open_count
+		FROM queue q
+		LEFT JOIN ticket t ON t.queue_id = q.id AND t.ticket_state_id = ?
+		WHERE q.valid_id = 1
+		GROUP BY q.id, q.name
+		ORDER BY q.name
+		LIMIT 10`, openStateID)
+
+	if err != nil {
+		// Return JSON error on query failure
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to load queue status",
+		})
+		return
+	}
+	defer rows.Close()
+
+	// Build HTML response
+	var html strings.Builder
+	html.WriteString(`<dl class="mt-6 space-y-4">`)
+
+	queueCount := 0
+	for rows.Next() {
+		var queueName string
+		var openCount int
+		if err := rows.Scan(&queueName, &openCount); err != nil {
+			continue
+		}
+
+		html.WriteString(fmt.Sprintf(`
+                    <div class="flex items-center justify-between">
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">%s</dt>
+                        <dd class="text-sm text-gray-900 dark:text-white">%d open</dd>
+                    </div>`, queueName, openCount))
+		queueCount++
+	}
+
+	// If no queues found, show a message
+	if queueCount == 0 {
+		html.WriteString(`
+                    <div class="flex items-center justify-between">
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">No queues found</dt>
+                        <dd class="text-sm text-gray-900 dark:text-white">0 open</dd>
+                    </div>`)
+	}
+
+	html.WriteString(`</dl>`)
+
+	c.Header("Content-Type", "text/html")
+	c.String(http.StatusOK, html.String())
 }
 
 // handleNotifications returns user notifications
@@ -2707,7 +2627,6 @@ func handleAPITickets(c *gin.Context) {
 			}
 		}
 
-		log.Printf("DEBUG tickets fallback: status=%v priority=%v queue=%v", statusVals, priorityVals, queueVals)
 		all := []gin.H{
 			{"id": "T-2024-001", "subject": "Unable to access email", "status": "open", "priority": "high", "priority_label": "High Priority", "queue_name": "General Support"},
 			{"id": "T-2024-002", "subject": "Software installation request", "status": "pending", "priority": "medium", "priority_label": "Normal Priority", "queue_name": "Technical Support"},
@@ -2766,7 +2685,6 @@ func handleAPITickets(c *gin.Context) {
 
 // handleCreateTicket creates a new ticket
 func handleCreateTicket(c *gin.Context) {
-	log.Println("DEBUG: handleCreateTicket called - NEW VERSION WITH DATABASE SAVE")
 
 	if os.Getenv("APP_ENV") == "test" {
 		// Handle malformed multipart early
@@ -3261,25 +3179,18 @@ func handleGetAvailableAgents(c *gin.Context) {
 func handleAssignTicket(c *gin.Context) {
 	ticketID := c.Param("id")
 
-	var assignment struct {
-		AgentID int `json:"agentId"`
+	// Get agent ID from form data
+	userID := c.PostForm("user_id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No agent selected"})
+		return
 	}
-	if err := c.ShouldBindJSON(&assignment); err != nil {
-		// In unit tests, allow empty body and default agent
-		if os.Getenv("APP_ENV") == "test" {
-			assignment.AgentID = 1
-		} else {
-			// Try form value fallback (x-www-form-urlencoded)
-			if v := c.PostForm("agent_id"); v != "" {
-				if n, convErr := strconv.Atoi(v); convErr == nil {
-					assignment.AgentID = n
-				}
-			}
-			if assignment.AgentID == 0 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
-		}
+
+	// Convert userID to int
+	agentID, err := strconv.Atoi(userID)
+	if err != nil || agentID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent ID"})
+		return
 	}
 
 	// Get database connection
@@ -3293,10 +3204,10 @@ func handleAssignTicket(c *gin.Context) {
 	}
 
 	// Get current user for change_by
-	userID := 1 // Default system user
+	changeByUserID := 1 // Default system user
 	if userCtx, ok := c.Get("user"); ok {
 		if user, ok := userCtx.(*models.User); ok && user.ID > 0 {
-			userID = int(user.ID)
+			changeByUserID = int(user.ID)
 		}
 	}
 
@@ -3307,7 +3218,7 @@ func handleAssignTicket(c *gin.Context) {
             UPDATE ticket
             SET responsible_user_id = $1, change_time = NOW(), change_by = $2
             WHERE id = $3
-        `), assignment.AgentID, userID, ticketIDInt)
+        `), agentID, changeByUserID, ticketIDInt)
 		if err != nil {
 			// In tests, still return success to satisfy handler contract
 			if os.Getenv("APP_ENV") != "test" {
@@ -3324,19 +3235,19 @@ func handleAssignTicket(c *gin.Context) {
             SELECT first_name || ' ' || last_name
             FROM users
             WHERE id = $1
-        `), assignment.AgentID).Scan(&agentName)
+        `), agentID).Scan(&agentName)
 		if err != nil {
-			agentName = fmt.Sprintf("Agent %d", assignment.AgentID)
+			agentName = fmt.Sprintf("Agent %d", agentID)
 		}
 	} else {
-		agentName = fmt.Sprintf("Agent %d", assignment.AgentID)
+		agentName = fmt.Sprintf("Agent %d", agentID)
 	}
 
 	// HTMX trigger header expected by tests
 	c.Header("HX-Trigger", `{"showMessage":{"type":"success","text":"Assigned"}}`)
 	c.JSON(http.StatusOK, gin.H{
 		"message":   fmt.Sprintf("Ticket %s assigned to %s", ticketID, agentName),
-		"agent_id":  assignment.AgentID,
+		"agent_id":  agentID,
 		"ticket_id": ticketID,
 		"time":      time.Now().Format("2006-01-02 15:04"),
 	})
@@ -4038,22 +3949,122 @@ func handleActivityStream(c *gin.Context) {
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
 
-	// Send activity updates periodically
-	ticker := time.NewTicker(10 * time.Second)
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		// If no database, send a simple heartbeat
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				activity := gin.H{
+					"type":   "system",
+					"user":   "System",
+					"action": "Heartbeat - Database unavailable",
+					"time":   time.Now().Format("15:04:05"),
+				}
+				data, _ := json.Marshal(activity)
+				fmt.Fprintf(c.Writer, "event: activity\ndata: %s\n\n", data)
+				c.Writer.Flush()
+			case <-c.Request.Context().Done():
+				return
+			}
+		}
+		return
+	}
+
+	// Send real activity updates from ticket_history
+	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			activity := gin.H{
-				"type":   "ticket_update",
-				"user":   "System",
-				"action": "Ticket updated",
-				"time":   time.Now().Format("15:04:05"),
+			// Query recent ticket activity (last 24 hours)
+			rows, err := db.Query(`
+				SELECT
+					th.name,
+					tht.name as history_type,
+					t.tn as ticket_number,
+					u.login as user_name,
+					th.create_time
+				FROM ticket_history th
+				JOIN ticket_history_type tht ON th.history_type_id = tht.id
+				JOIN ticket t ON th.ticket_id = t.id
+				LEFT JOIN users u ON th.create_by = u.id
+				WHERE th.create_time >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+				ORDER BY th.create_time DESC
+				LIMIT 5
+			`)
+
+			if err == nil && rows != nil {
+				defer rows.Close()
+
+				activities := []gin.H{}
+				for rows.Next() {
+					var name, historyType, ticketNumber, userName sql.NullString
+					var createTime time.Time
+
+					err := rows.Scan(&name, &historyType, &ticketNumber, &userName, &createTime)
+					if err != nil {
+						continue
+					}
+
+					// Format activity message
+					action := "Unknown activity"
+					if historyType.Valid {
+						switch historyType.String {
+						case "NewTicket":
+							action = fmt.Sprintf("created ticket %s", ticketNumber.String)
+						case "TicketStateUpdate":
+							action = fmt.Sprintf("updated ticket %s", ticketNumber.String)
+						case "AddNote":
+							action = fmt.Sprintf("added note to ticket %s", ticketNumber.String)
+						case "SendAnswer":
+							action = fmt.Sprintf("replied to ticket %s", ticketNumber.String)
+						case "Close":
+							action = fmt.Sprintf("closed ticket %s", ticketNumber.String)
+						default:
+							if name.Valid && name.String != "" {
+								action = fmt.Sprintf("%s on ticket %s", name.String, ticketNumber.String)
+							} else {
+								action = fmt.Sprintf("%s on ticket %s", historyType.String, ticketNumber.String)
+							}
+						}
+					}
+
+					user := "System"
+					if userName.Valid && userName.String != "" {
+						user = userName.String
+					}
+
+					activities = append(activities, gin.H{
+						"type":   "ticket_activity",
+						"user":   user,
+						"action": action,
+						"time":   createTime.Format("15:04:05"),
+					})
+				}
+
+				// Send the most recent activity
+				if len(activities) > 0 {
+					data, _ := json.Marshal(activities[0])
+					fmt.Fprintf(c.Writer, "event: activity\ndata: %s\n\n", data)
+					c.Writer.Flush()
+				} else {
+					// No recent activity
+					activity := gin.H{
+						"type":   "system",
+						"user":   "System",
+						"action": "No recent activity",
+						"time":   time.Now().Format("15:04:05"),
+					}
+					data, _ := json.Marshal(activity)
+					fmt.Fprintf(c.Writer, "event: activity\ndata: %s\n\n", data)
+					c.Writer.Flush()
+				}
 			}
-			data, _ := json.Marshal(activity)
-			fmt.Fprintf(c.Writer, "event: activity\ndata: %s\n\n", data)
-			c.Writer.Flush()
 		case <-c.Request.Context().Done():
 			return
 		}
@@ -4064,41 +4075,16 @@ func handleActivityStream(c *gin.Context) {
 
 // handleAdminDashboard shows the admin dashboard
 func handleAdminDashboard(c *gin.Context) {
-	// If renderer/templates or DB are unavailable in test, provide a minimal HTML fallback
+	// If renderer/templates or DB are unavailable, return JSON error
 	db, _ := database.GetDB()
 	if pongo2Renderer == nil || pongo2Renderer.templateSet == nil || db == nil {
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<!DOCTYPE html>
-<html>
-  <head><title>Admin Dashboard - GOTRS</title></head>
-  <body class="dark:bg-gray-900 dark:text-white">
-    <header>
-      <button class="sm:hidden" @click="mobileMenuOpen = !mobileMenuOpen">Menu</button>
-    </header>
-    <main>
-      <h1 class="text-2xl sm:text-3xl">System Administration</h1>
-      <section aria-label="system-health" class="dark:bg-gray-800">
-        <h2>System Health</h2>
-        <p>99.9% uptime</p>
-        <p>uptime</p>
-      </section>
-      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div class="dark:bg-gray-700"><h3>User Management</h3></div>
-        <div class="dark:bg-gray-700"><h3>System Configuration</h3></div>
-        <div class="dark:bg-gray-700"><h3>Reports & Analytics</h3></div>
-        <div class="dark:bg-gray-700"><h3>Audit Logs</h3></div>
-        <div class="dark:bg-gray-700"><h3>Recent Admin Activity</h3>
-          <ul>
-            <li>User account created</li>
-            <li>System configuration updated</li>
-          </ul>
-        </div>
-      </section>
-    </main>
-  </body>
-</html>`)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "System unavailable",
+		})
 		return
 	}
+
 
 	// Get some stats from the database (real path)
 	userCount := 0
@@ -4142,24 +4128,19 @@ func handleSchemaMonitoring(c *gin.Context) {
 
 // handleAdminUsers shows the admin users page
 func handleAdminUsers(c *gin.Context) {
-	fmt.Println("DEBUG: handleAdminUsers - Starting")
 	db, err := database.GetDB()
 	if err != nil {
-		fmt.Printf("DEBUG: handleAdminUsers - Database connection failed: %v\n", err)
 		sendErrorResponse(c, http.StatusInternalServerError, "Database connection failed")
 		return
 	}
 
-	fmt.Println("DEBUG: handleAdminUsers - Database connected, fetching users")
 	// Get users from database with their groups
 	userRepo := repository.NewUserRepository(db)
 	users, err := userRepo.ListWithGroups()
 	if err != nil {
-		fmt.Printf("DEBUG: handleAdminUsers - Failed to fetch users: %v\n", err)
 		sendErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to fetch users: %v", err))
 		return
 	}
-	fmt.Printf("DEBUG: handleAdminUsers - Fetched %d users\n", len(users))
 
 	// Get groups for filter
 	groupRepo := repository.NewGroupRepository(db)
@@ -4626,8 +4607,11 @@ func handleResetUserPassword(c *gin.Context) {
 // handleAdminGroups shows the admin groups page
 func handleAdminGroups(c *gin.Context) {
 	if os.Getenv("APP_ENV") == "test" {
-		// Minimal HTML for tests (template-free)
-		c.String(http.StatusOK, "<h1>Group Management</h1><button>Add Group</button>")
+		// JSON response for tests
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Group management available",
+		})
 		return
 	}
 	db, err := database.GetDB()
@@ -4992,18 +4976,11 @@ func handleAdminLookups(c *gin.Context) {
 
 	db, err := database.GetDB()
 	if err != nil || db == nil || pongo2Renderer == nil || pongo2Renderer.templateSet == nil {
-		// Graceful fallback HTML that matches ui_test and lookup_handlers_test expectations
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, `<!DOCTYPE html><html><head><title>Lookups - GOTRS</title></head><body>
-<h1>Manage Lookup Values</h1>
-<ul>
-  <li>Queues</li>
-  <li>Priorities</li>
-  <li>Ticket Types</li>
-  <li>Statuses</li>
-  <li><button>Refresh Cache</button></li>
-</ul>
-</body></html>`)
+		// Return JSON error for unavailable systems
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "System unavailable",
+		})
 		return
 	}
 
@@ -5144,253 +5121,7 @@ func handleAdminLookups(c *gin.Context) {
 
 // Advanced search handlers are defined in ticket_advanced_search_handler.go
 
-/* Commented out - defined in ticket_advanced_search_handler.go
-func handleAdvancedTicketSearch(c *gin.Context) {
-	// Get search parameters
-	searchParams := gin.H{
-		"ticket_number": c.Query("ticket_number"),
-		"subject":       c.Query("subject"),
-		"body":          c.Query("body"),
-		"customer":      c.Query("customer"),
-		"agent":         c.Query("agent"),
-		"queue":         c.Query("queue"),
-		"priority":      c.Query("priority"),
-		"state":         c.Query("state"),
-		"created_from":  c.Query("created_from"),
-		"created_to":    c.Query("created_to"),
-		"updated_from":  c.Query("updated_from"),
-		"updated_to":    c.Query("updated_to"),
-	}
-
-	// Mock search results
-	results := []gin.H{
-		{
-			"id":       "T-2024-001",
-			"subject":  "Advanced search result",
-			"customer": "John Doe",
-			"status":   "open",
-			"priority": "high",
-		},
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"params":  searchParams,
-		"results": results,
-		"total":   len(results),
-	})
-}
-
-func handleSearchSuggestions(c *gin.Context) {
-	query := c.Query("q")
-	field := c.Query("field")
-
-	suggestions := []string{}
-
-	// Provide suggestions based on field
-	switch field {
-	case "customer":
-		suggestions = []string{"John Doe", "Jane Smith", "Bob Johnson"}
-	case "agent":
-		suggestions = []string{"Alice Agent", "Bob Tech", "Charlie Support"}
-	case "queue":
-		suggestions = []string{"Support", "IT", "Network", "Billing"}
-	default:
-		// General suggestions
-		if len(query) > 0 {
-			suggestions = []string{
-				query + " suggestion 1",
-				query + " suggestion 2",
-				query + " suggestion 3",
-			}
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"suggestions": suggestions,
-	})
-}
-
-func handleExportSearchResults(c *gin.Context) {
-	format := c.Query("format") // csv, xlsx, pdf
-
-	// Mock export data
-	data := [][]string{
-		{"Ticket ID", "Subject", "Customer", "Status", "Priority"},
-		{"T-2024-001", "Email issue", "John Doe", "Open", "High"},
-		{"T-2024-002", "Password reset", "Jane Smith", "Closed", "Medium"},
-	}
-
-	switch format {
-	case "csv":
-		c.Header("Content-Disposition", "attachment; filename=\"search-results.csv\"")
-		c.Header("Content-Type", "text/csv")
-
-		// Write CSV data
-		for _, row := range data {
-			c.Writer.WriteString(strings.Join(row, ",") + "\n")
-		}
-	default:
-		c.JSON(http.StatusOK, gin.H{
-			"format": format,
-			"data":   data,
-		})
-	}
-}
-
-func handleSaveSearchHistory(c *gin.Context) {
-	var searchData gin.H
-	if err := c.ShouldBindJSON(&searchData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Save to history (in memory for demo)
-	historyEntry := gin.H{
-		"id":        fmt.Sprintf("SH-%d", time.Now().Unix()),
-		"query":     searchData["query"],
-		"filters":   searchData["filters"],
-		"timestamp": time.Now().Format("2006-01-02 15:04:05"),
-	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"success": true,
-		"entry":   historyEntry,
-	})
-}
-
-func handleGetSearchHistory(c *gin.Context) {
-	// Mock search history
-	history := []gin.H{
-		{
-			"id":        "SH-1",
-			"query":     "email problem",
-			"filters":   gin.H{"status": "open", "priority": "high"},
-			"timestamp": "2024-01-10 14:30",
-		},
-		{
-			"id":        "SH-2",
-			"query":     "password reset",
-			"filters":   gin.H{"queue": "Support"},
-			"timestamp": "2024-01-10 13:15",
-		},
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"history": history,
-	})
-}
-
-func handleDeleteSearchHistory(c *gin.Context) {
-	historyID := c.Param("id")
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": fmt.Sprintf("Search history %s deleted", historyID),
-	})
-}
-
-func handleCreateSavedSearch(c *gin.Context) {
-	var searchData gin.H
-	if err := c.ShouldBindJSON(&searchData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	savedSearch := gin.H{
-		"id":          fmt.Sprintf("SS-%d", time.Now().Unix()),
-		"name":        searchData["name"],
-		"description": searchData["description"],
-		"query":       searchData["query"],
-		"filters":     searchData["filters"],
-		"created":     time.Now().Format("2006-01-02 15:04:05"),
-	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"success": true,
-		"search":  savedSearch,
-	})
-}
-
-func handleGetSavedSearches(c *gin.Context) {
-	// Mock saved searches
-	searches := []gin.H{
-		{
-			"id":          "SS-1",
-			"name":        "Open High Priority",
-			"description": "All open tickets with high priority",
-			"query":       "",
-			"filters":     gin.H{"status": "open", "priority": "high"},
-			"created":     "2024-01-01",
-		},
-		{
-			"id":          "SS-2",
-			"name":        "My Tickets",
-			"description": "Tickets assigned to me",
-			"query":       "",
-			"filters":     gin.H{"assigned": "me"},
-			"created":     "2024-01-05",
-		},
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"searches": searches,
-	})
-}
-*/ // End of saved search duplicates
-
 // Ticket merge handlers are defined in ticket_merge_handler.go
-
-/* Commented out - defined in ticket_merge_handler.go */
-/*
-func handleMergeTickets(c *gin.Context) {
-	mainTicketID := c.Param("id")
-
-	var mergeRequest struct {
-		TicketIDs []string `json:"ticket_ids"`
-	}
-
-	if err := c.ShouldBindJSON(&mergeRequest); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success":      true,
-		"mainTicket":   mainTicketID,
-		"mergedTickets": mergeRequest.TicketIDs,
-		"message":      fmt.Sprintf("Successfully merged %d tickets", len(mergeRequest.TicketIDs)),
-	})
-}
-
-func handleUnmergeTicket(c *gin.Context) {
-	ticketID := c.Param("id")
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"ticketId": ticketID,
-		"message": "Ticket unmerged successfully",
-	})
-}
-
-func handleGetMergeHistory(c *gin.Context) {
-	ticketID := c.Param("id")
-
-	history := []gin.H{
-		{
-			"id":        "MH-1",
-			"action":    "merged",
-			"tickets":   []string{"T-2024-002", "T-2024-003"},
-			"user":      "admin",
-			"timestamp": "2024-01-10 10:00",
-		},
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"ticketId": ticketID,
-		"history":  history,
-	})
-}
-*/ // End of merge handler duplicates
 
 // Permission Management handlers
 
@@ -5434,12 +5165,6 @@ func handleAdminPermissions(c *gin.Context) {
 			log.Printf("Failed to get permission matrix for user %d: %v", selectedUserID, err)
 		} else if permissionMatrix != nil {
 			log.Printf("Got permission matrix for user %d: %d groups", selectedUserID, len(permissionMatrix.Groups))
-			// Debug: Log OBC permissions specifically
-			for _, gp := range permissionMatrix.Groups {
-				if gp.Group.Name == "OBC" {
-					log.Printf("OBC permissions for user %d: %+v", selectedUserID, gp.Permissions)
-				}
-			}
 		} else {
 			log.Printf("Permission matrix is nil for user %d", selectedUserID)
 		}
@@ -5512,14 +5237,6 @@ func handleUpdateUserPermissions(c *gin.Context) {
 			return
 		}
 		formValues = c.Request.PostForm
-	}
-
-	// Debug: Log all received form data
-	log.Printf("DEBUG: Received form data for user %d (Content-Type: %s):", userID, contentType)
-	for key, values := range formValues {
-		if strings.HasPrefix(key, "perm_") {
-			log.Printf("  %s = %v", key, values)
-		}
 	}
 
 	// First, collect all groups that have checkboxes
@@ -5863,24 +5580,6 @@ func handleCustomerSearch(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, customers)
-}
-
-// getPriorityLabel returns a human-readable priority label
-func getPriorityLabel(priorityID int) string {
-	switch priorityID {
-	case 1:
-		return "very low"
-	case 2:
-		return "low"
-	case 3:
-		return "normal"
-	case 4:
-		return "high"
-	case 5:
-		return "very high"
-	default:
-		return "unknown"
-	}
 }
 
 // handleGetGroups returns all groups as JSON for API requests

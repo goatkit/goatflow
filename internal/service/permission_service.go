@@ -49,8 +49,6 @@ func (s *PermissionService) GetUserPermissionMatrix(userID uint) (*PermissionMat
 	if err != nil {
 		return nil, fmt.Errorf("failed to get groups: %w", err)
 	}
-	
-	fmt.Printf("DEBUG: Found %d groups for user %d\n", len(groups), userID)
 
 	matrix := &PermissionMatrix{
 		User:   user,
@@ -59,7 +57,6 @@ func (s *PermissionService) GetUserPermissionMatrix(userID uint) (*PermissionMat
 
 	// Get permissions for each group
 	for _, group := range groups {
-		fmt.Printf("DEBUG: Processing group %s with ID %v (type: %T)\n", group.Name, group.ID, group.ID)
 		
 		// Convert group.ID to uint
 		var groupID uint
@@ -72,10 +69,8 @@ func (s *PermissionService) GetUserPermissionMatrix(userID uint) (*PermissionMat
 			groupID = uint(v)
 		case string:
 			// Skip string IDs (LDAP groups)
-			fmt.Printf("DEBUG: Skipping string ID group %s\n", group.Name)
 			continue
 		default:
-			fmt.Printf("DEBUG: Skipping group %s with unknown ID type %T\n", group.Name, v)
 			continue
 		}
 		
@@ -83,8 +78,6 @@ func (s *PermissionService) GetUserPermissionMatrix(userID uint) (*PermissionMat
 		if err != nil {
 			return nil, fmt.Errorf("failed to get permissions for group %d: %w", groupID, err)
 		}
-		
-		fmt.Printf("DEBUG: Retrieved from DB for Group %s (ID: %v): %v\n", group.Name, groupID, perms)
 
 		matrix.Groups = append(matrix.Groups, &GroupPermissions{
 			Group:       group,

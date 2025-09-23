@@ -909,7 +909,7 @@ function submitReply(event) {
     formData.set('to', '{{ ticket.customer_user_id }}');
     
     // Submit the form
-    fetch(`/agent/tickets/${ticketId}/reply`, {
+    apiFetch(`/agent/tickets/${ticketId}/reply`, {
         method: 'POST',
         body: formData
     })
@@ -941,7 +941,7 @@ function submitNote(event) {
     }
     
     // Submit the form
-    fetch(`/agent/tickets/${ticketId}/note`, {
+    apiFetch(`/agent/tickets/${ticketId}/note`, {
         method: 'POST',
         body: formData
     })
@@ -967,7 +967,7 @@ function submitPhone(event) {
     const formData = new FormData(event.target);
     
     // Submit the form
-    fetch(`/agent/tickets/${ticketId}/phone`, {
+    apiFetch(`/agent/tickets/${ticketId}/phone`, {
         method: 'POST',
         body: formData
     })
@@ -991,7 +991,7 @@ function submitAssign(event) {
     
     const formData = new FormData(event.target);
     
-    fetch(`/agent/tickets/${ticketId}/assign`, {
+    apiFetch(`/agent/tickets/${ticketId}/assign`, {
         method: 'POST',
         body: formData
     })
@@ -1015,7 +1015,7 @@ function submitPriority(event) {
     
     const formData = new FormData(event.target);
     
-    fetch(`/agent/tickets/${ticketId}/priority`, {
+    apiFetch(`/agent/tickets/${ticketId}/priority`, {
         method: 'POST',
         body: formData
     })
@@ -1128,7 +1128,7 @@ function saveDraft() {
     }
     
     // Save draft via API
-    fetch(`/agent/tickets/${ticketId}/draft`, {
+    apiFetch(`/agent/tickets/${ticketId}/draft`, {
         method: 'POST',
         body: formData
     })

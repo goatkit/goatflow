@@ -85,7 +85,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 		QueueID:          int(queueID),
 		TypeID:           &typeIDInt,
 		TicketPriorityID: getPriorityID(req.Priority),
-		TicketStateID:    1, // New
+		TicketStateID:    getStateID("new"),
 		TicketLockID:     1, // Unlocked
 		CustomerUserID:   &customerEmail,
 		CreateBy:         int(createdBy),

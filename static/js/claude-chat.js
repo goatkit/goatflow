@@ -470,7 +470,7 @@
         }
         
         // Check ticket status
-        fetch('/api/claude/tickets/status', {
+        apiFetch('/api/claude/tickets/status', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -769,7 +769,7 @@
         statusEl.textContent = 'Sending via HTTP...';
 
         // Send to backend
-        fetch('/api/claude-feedback', {
+        apiFetch('/api/claude-feedback', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

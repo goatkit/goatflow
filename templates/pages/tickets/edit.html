@@ -29,7 +29,7 @@
 
     <!-- Edit Form -->
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
-        <form hx-put="/api/tickets/{{.TicketID}}" 
+        <form hx-put="/api/v1/tickets/{{.TicketID}}" 
               hx-ext="json-enc"
               hx-target="#form-messages"
               hx-on::after-request="if(event.detail.successful) { showSuccess(); setTimeout(() => window.location.href = '/tickets/{{.TicketID}}', 1500); }"

@@ -99,7 +99,7 @@ function loadCustomerUsers() {
         helpText.textContent = 'Loading customer users...';
     }
     
-    fetch(`/agent/tickets/${ticketId}/customer-users`)
+    apiFetch(`/agent/tickets/${ticketId}/customer-users`)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.customer_users) {
@@ -173,32 +173,36 @@ function changeStatus() {
 function assignAgent() {
     // Load available agents first
     const ticketQueueId = document.querySelector('[data-queue-id]')?.getAttribute('data-queue-id') || 1;
+    console.log('Loading agents for queue:', ticketQueueId);
     
-    fetch(`/api/v1/queues/${ticketQueueId}/agents`)
+    apiFetch(`/api/v1/queues/${ticketQueueId}/agents`)
         .then(r => r.json())
         .then(data => {
+            console.log('Agents API response:', data);
             const select = document.querySelector('#assignModal select[name="user_id"]');
             select.innerHTML = '<option value="">Select agent...</option>';
-            if (data.agents) {
+            if (data.success && data.agents) {
                 data.agents.forEach(agent => {
                     select.innerHTML += `<option value="${agent.id}">${agent.name}</option>`;
                 });
+                console.log('Populated select with', data.agents.length, 'agents');
+            } else {
+                console.warn('No agents returned from API');
             }
         })
-        .catch(() => {
-            // Fallback to hardcoded agents
+        .catch(error => {
+            console.error('API call failed:', error);
+            // No fallback - fail hard so we know the API is broken
             const select = document.querySelector('#assignModal select[name="user_id"]');
-            select.innerHTML = `
-                <option value="">Select agent...</option>
-                <option value="2">admin</option>
-                <option value="4">agent.jones</option>
-            `;
+            select.innerHTML = '<option value="">Failed to load agents - API error</option>';
+            showToast('Failed to load agents - check API connection', 'error');
         });
         
     const assignModal = document.getElementById('assignModal');
     if (assignModal) {
         assignModal.classList.remove('hidden');
-        console.log('Assign modal opened');
+    } else {
+        console.error('Assign modal not found');
     }
 }
 
@@ -218,7 +222,7 @@ function changePriority() {
  */
 function moveQueue() {
     // Load available queues
-    fetch('/api/v1/queues')
+    apiFetch('/api/v1/queues')
         .then(r => r.json())
         .then(data => {
             const select = document.querySelector('#queueModal select[name="queue_id"]');
@@ -236,16 +240,10 @@ function moveQueue() {
         })
         .catch(error => {
             console.error('Error loading queues:', error);
-            // Fallback to common queues
+            // No fallback - fail hard so we know the API is broken
             const select = document.querySelector('#queueModal select[name="queue_id"]');
-            select.innerHTML = `
-                <option value="">Select queue...</option>
-                <option value="1">Postmaster</option>
-                <option value="2">Junk</option>
-                <option value="3">Raw</option>
-                <option value="4">Misc</option>
-                <option value="5">Support</option>
-            `;
+            select.innerHTML = '<option value="">Failed to load queues - API error</option>';
+            showToast('Failed to load queues - check API connection', 'error');
         });
         
     const queueModal = document.getElementById('queueModal');
@@ -291,7 +289,7 @@ function submitReply(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
     
-    fetch(`/agent/tickets/${currentTicketId}/reply`, {
+    apiFetch(`/agent/tickets/${currentTicketId}/reply`, {
         method: 'POST',
         body: formData
     })
@@ -315,7 +313,7 @@ function submitNote(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
     
-    fetch(`/agent/tickets/${currentTicketId}/note`, {
+    apiFetch(`/agent/tickets/${currentTicketId}/note`, {
         method: 'POST',
         body: formData
     })
@@ -339,7 +337,7 @@ function submitStatus(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
     
-    fetch(`/agent/tickets/${currentTicketId}/status`, {
+    apiFetch(`/agent/tickets/${currentTicketId}/status`, {
         method: 'POST',
         body: formData
     })
@@ -363,7 +361,13 @@ function submitAssign(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
     
-    fetch(`/agent/tickets/${currentTicketId}/assign`, {
+    // Log the form data for debugging
+    console.log('Submitting assignment form data:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`${key}: ${value}`);
+    }
+    
+    apiFetch(`/agent/tickets/${currentTicketId}/assign`, {
         method: 'POST',
         body: formData
     })
@@ -387,7 +391,7 @@ function submitPriority(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
     
-    fetch(`/agent/tickets/${currentTicketId}/priority`, {
+    apiFetch(`/agent/tickets/${currentTicketId}/priority`, {
         method: 'POST',
         body: formData
     })
@@ -411,7 +415,7 @@ function submitQueue(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
     
-    fetch(`/agent/tickets/${currentTicketId}/queue`, {
+    apiFetch(`/agent/tickets/${currentTicketId}/queue`, {
         method: 'POST',
         body: formData
     })
@@ -435,7 +439,7 @@ function submitMerge(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
     
-    fetch(`/agent/tickets/${currentTicketId}/merge`, {
+    apiFetch(`/agent/tickets/${currentTicketId}/merge`, {
         method: 'POST',
         body: formData
     })
@@ -453,52 +457,6 @@ function submitMerge(event) {
         console.error('Error merging tickets:', error);
         showToast('Error merging tickets', 'error');
     });
-}
-
-/**
- * Show toast notification
- */
-function showToast(message, type) {
-    // Create toast element if it doesn't exist
-    let toast = document.getElementById('toast-notification');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'toast-notification';
-        toast.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 4px;
-            color: white;
-            font-weight: bold;
-            z-index: 9999;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        `;
-        document.body.appendChild(toast);
-    }
-    
-    // Set message and type
-    toast.textContent = message;
-    toast.className = `toast-${type}`;
-    
-    // Set background color based on type
-    const colors = {
-        success: '#22c55e',
-        error: '#ef4444',
-        warning: '#f59e0b',
-        info: '#3b82f6'
-    };
-    toast.style.backgroundColor = colors[type] || colors.info;
-    
-    // Show toast
-    toast.style.opacity = '1';
-    
-    // Hide after 3 seconds
-    setTimeout(() => {
-        toast.style.opacity = '0';
-    }, 3000);
 }
 
 /**

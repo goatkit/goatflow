@@ -1,19 +1,40 @@
-# GOTRS Development Roadmap
+# GOTRS Development ### Test Stabilization Progress (Internal/API)
+- ✅ Queue API/HTMX suites pass (DB-less fallbacks for CI without DB)
+- ✅ Priority API suites pass
+- ✅ User API suites pass (list/get/create/update/delete, groups)
+- ✅ Ticket search UI/API pass (q/search, pagination, "No results")
+- ✅ Queue detail JSON/HTML and pagination helpers aligned with tests
+- ✅ Type CRUD handlers aligned with sqlmock expectations (DB-backed and fallback)
+- ✅ Agent Ticket Zoom handlers gain deterministic test-mode fallbacks
+- ✅ Admin middleware bypassed in test env to avoid 403 HTML noise
+- ✅ **TEMPLATE VALIDATION** - Critical templates validated at startup
+- ✅ **HTML FALLBACK CLEANUP** - Replaced embedded HTML with JSON responses
+- ✅ **CODE CLEANUP** - Removed duplicate commented code blocks
+- ✅ Core toolbox-test now green (cmd/goats, internal/api, generated)
+- ⚠️ Some DB-heavy integration tests still skipped when DB/templates unavailable
 
-## 🚀 Current Status (September 3, 2025) 
+### Code Quality Improvements (September 23, 2025)
+- ✅ **Template System Robustness**: Enhanced validation validates 5 critical templates at startup
+- ✅ **HTML Fallback Cleanup**: Replaced complex embedded HTML with clean JSON error responses
+- ✅ **Code Deduplication**: Removed 200+ lines of duplicate commented code from htmx_routes.go
+- ✅ **Error Handling**: Consistent JSON error responses across HTMX endpoints
+- ✅ **Architecture**: Better separation between template rendering and error handling 🚀 Current Status (September 23, 2025)
 
-**Major Milestone: MySQL Compatibility Achieved**
+**Major Milestone: Code Quality & Architecture Improvements**
 - ✅ Database schema exists (OTRS-compatible)
 - ✅ Admin UI modules display (functionality varies)
 - ✅ Authentication works (root@localhost:admin123)
 - ✅ **FULL MYSQL COMPATIBILITY** - Fixed all placeholder conversion issues
+- ✅ **TEMPLATE SYSTEM ROBUSTNESS** - Enhanced validation and error handling
+- ✅ **HTML FALLBACK CLEANUP** - Replaced embedded HTML with JSON error responses
+- ✅ **CODE CLEANUP** - Removed 200+ lines of duplicate commented code
 - ✅ Agent/tickets endpoint working without database errors
 - ❌ Ticket functionality limited (filtering issues but database layer works)
 - ❌ No ticket creation UI, viewing, or management UIs
 - ❌ No customer portal
 - ❌ No email integration
 
-**Recent Success**: System now properly connects to OTRS MySQL databases with zero "$1" placeholder errors. Core test workflow stabilized in containers with Podman auto-detection, named volumes for Go caches, and DB-less fallbacks for APP_ENV=test.
+**Recent Success**: Completed comprehensive code quality improvements including template system robustness, HTML fallback cleanup, and removal of duplicate code. System now has proper error handling and cleaner architecture.
 
 ### Test Stabilization Progress (Internal/API)
 - ✅ Queue API/HTMX suites pass (DB-less fallbacks for CI without DB)
@@ -50,6 +71,14 @@
 - **OTRS MySQL Integration**: System now connects to live OTRS MySQL databases
 - **Zero Placeholder Errors**: Eliminated all "$1" MySQL syntax errors
 - **Testing Protocol**: Database access patterns validated against both PostgreSQL and MySQL
+
+### ✅ Phase 2.6: Code Quality & Architecture (September 23, 2025) - COMPLETE
+- **Template System Robustness**: Enhanced validation of critical templates at startup
+- **HTML Fallback Cleanup**: Replaced embedded HTML strings with JSON error responses
+- **Code Deduplication**: Removed 200+ lines of duplicate commented code
+- **Error Handling Consistency**: Standardized JSON responses for HTMX endpoints
+- **Architecture Improvements**: Better separation of concerns between templates and error handling
+- **Build Reliability**: Application fails fast when critical templates are missing
 
 ### ⚠️ Phase 3: Admin Interface - PARTIALLY COMPLETE
 
@@ -311,4 +340,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
-*Last updated: September 3, 2025 - Core tests stable in containers; next up: full ticket create/update flows*
+*Last updated: September 23, 2025 - Code quality improvements completed: template system robustness, HTML fallback cleanup, and code deduplication. Core architecture now cleaner and more maintainable.*

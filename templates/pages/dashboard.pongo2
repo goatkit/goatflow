@@ -26,29 +26,27 @@
     </div>
 
     <!-- Stats grid -->
-    <div class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <!-- Open Tickets -->
+    <div class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
+         hx-get="/dashboard/api/stats"
+         hx-trigger="load"
+         hx-target="this"
+         hx-swap="innerHTML">
+        <!-- Loading placeholder -->
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("status.open") }} {{ t("tickets.title") }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">24</dd>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</dt>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
         </div>
-
-        <!-- New Today -->
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("status.new") }} {{ t("time.today") }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">8</dd>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</dt>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
         </div>
-
-        <!-- Pending -->
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("status.pending") }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">12</dd>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</dt>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
         </div>
-
-        <!-- Overdue -->
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("tickets.overdue") }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">3</dd>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</dt>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
         </div>
     </div>
 
@@ -58,44 +56,18 @@
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow">
             <div class="p-6">
                 <h3 class="text-base font-semibold leading-6 text-gray-900 dark:text-white">{{ t("dashboard.recent_tickets") }}</h3>
-                <div class="mt-6 flow-root">
+                <div class="mt-6 flow-root"
+                     hx-get="/dashboard/api/recent-tickets"
+                     hx-trigger="load"
+                     hx-target="this"
+                     hx-swap="innerHTML">
+                    <!-- Loading placeholder -->
                     <ul role="list" class="-my-5 divide-y divide-gray-200 dark:divide-gray-700">
                         <li class="py-4">
                             <div class="flex items-center space-x-4">
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">TICKET-001</p>
-                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">Login issues reported by user</p>
-                                </div>
-                                <div>
-                                    <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-                                        {{ t("priority.high") }}
-                                    </span>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="py-4">
-                            <div class="flex items-center space-x-4">
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">TICKET-002</p>
-                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">Feature request for dark mode</p>
-                                </div>
-                                <div>
-                                    <span class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-                                        {{ t("priority.medium") }}
-                                    </span>
-                                </div>
-                            </div>
-                        </li>
-                        <li class="py-4">
-                            <div class="flex items-center space-x-4">
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">TICKET-003</p>
-                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">Database connection timeout</p>
-                                </div>
-                                <div>
-                                    <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                                        {{ t("priority.low") }}
-                                    </span>
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">Loading...</p>
+                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">Loading recent tickets...</p>
                                 </div>
                             </div>
                         </li>
@@ -113,24 +85,19 @@
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow">
             <div class="p-6">
                 <h3 class="text-base font-semibold leading-6 text-gray-900 dark:text-white">{{ t("queues.queue_status") }}</h3>
-                <dl class="mt-6 space-y-4">
-                    <div class="flex items-center justify-between">
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Support</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">8 {{ t("status.open")|lower }}</dd>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Sales</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">3 {{ t("status.open")|lower }}</dd>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Technical</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">12 {{ t("status.open")|lower }}</dd>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Billing</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">1 {{ t("status.open")|lower }}</dd>
-                    </div>
-                </dl>
+                <div class="mt-6"
+                     hx-get="/dashboard/api/queue-status"
+                     hx-trigger="load"
+                     hx-target="this"
+                     hx-swap="innerHTML">
+                    <!-- Loading placeholder -->
+                    <dl class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</dt>
+                            <dd class="text-sm text-gray-900 dark:text-white">-</dd>
+                        </div>
+                    </dl>
+                </div>
             </div>
         </div>
     </div>

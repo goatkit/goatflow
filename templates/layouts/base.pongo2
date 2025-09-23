@@ -37,6 +37,9 @@
     <script src="/static/js/tiptap.min.js"></script>
     <script src="/static/js/tiptap-editor.js"></script>
     
+    <!-- Common utilities -->
+    <script src="/static/js/common.js"></script>
+    
     <!-- Custom styles -->
     <style>
         /* Smooth transitions for dark mode */

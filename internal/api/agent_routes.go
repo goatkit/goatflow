@@ -19,6 +19,36 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
+// formatAge formats a timestamp as a human-readable relative time
+func formatAge(t time.Time) string {
+	now := time.Now()
+	diff := now.Sub(t)
+
+	if diff < time.Minute {
+		return "just now"
+	} else if diff < time.Hour {
+		minutes := int(diff.Minutes())
+		if minutes == 1 {
+			return "1 minute ago"
+		}
+		return fmt.Sprintf("%d minutes ago", minutes)
+	} else if diff < 24*time.Hour {
+		hours := int(diff.Hours())
+		if hours == 1 {
+			return "1 hour ago"
+		}
+		return fmt.Sprintf("%d hours ago", hours)
+	} else if diff < 7*24*time.Hour {
+		days := int(diff.Hours() / 24)
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	} else {
+		return t.Format("2006-01-02")
+	}
+}
+
 // RegisterAgentRoutes registers all agent interface routes
 func RegisterAgentRoutes(r *gin.RouterGroup, db *sql.DB) {
 	// Note: Routes are now handled via YAML configuration files
@@ -478,23 +508,6 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 // Other handler functions would continue here...
 
 // Helper functions
-func formatAge(t time.Time) string {
-	duration := time.Since(t)
-
-	if duration.Hours() < 1 {
-		return fmt.Sprintf("%dm", int(duration.Minutes()))
-	} else if duration.Hours() < 24 {
-		return fmt.Sprintf("%dh", int(duration.Hours()))
-	} else if duration.Hours() < 24*7 {
-		return fmt.Sprintf("%dd", int(duration.Hours()/24))
-	} else if duration.Hours() < 24*30 {
-		return fmt.Sprintf("%dw", int(duration.Hours()/(24*7)))
-	} else if duration.Hours() < 24*365 {
-		return fmt.Sprintf("%dmo", int(duration.Hours()/(24*30)))
-	}
-	return fmt.Sprintf("%dy", int(duration.Hours()/(24*365)))
-}
-
 func sanitizeSortColumn(col string) string {
 	allowedColumns := map[string]bool{
 		"create_time": true,
@@ -546,19 +559,15 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 		// Ticket numbers in OTRS are typically 16-digit strings like 2025082610000014
 		// Database IDs are small integers like 1, 2, 3
 		var id int
-		log.Printf("Debug: ticketID = '%s'", ticketID)
 		if len(ticketID) <= 5 && len(ticketID) > 0 {
 			// Short IDs (5 digits or less) are likely database IDs
 			if _, parseErr := fmt.Sscanf(ticketID, "%d", &id); parseErr == nil {
-				log.Printf("Debug: Parsed as numeric ID: %d, calling GetByID", id)
 				ticket, err = ticketRepo.GetByID(uint(id))
 			} else {
-				log.Printf("Debug: Failed to parse as numeric ID, calling GetByTicketNumber: %s", ticketID)
 				ticket, err = ticketRepo.GetByTicketNumber(ticketID)
 			}
 		} else {
 			// Longer IDs are likely ticket numbers
-			log.Printf("Debug: Long ID '%s', calling GetByTicketNumber", ticketID)
 			ticket, err = ticketRepo.GetByTicketNumber(ticketID)
 		}
 
@@ -590,7 +599,20 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 			}
 		}
 
-		// Get articles using repository pattern (same as working /ticket/:id route)
+		// Get responsible user details
+		var responsibleUserName string
+		if ticket.ResponsibleUserID != nil && *ticket.ResponsibleUserID > 0 {
+			err := db.QueryRow(database.ConvertPlaceholders(`
+				SELECT COALESCE(CONCAT(first_name, ' ', last_name), login) as name
+				FROM users
+				WHERE id = $1
+			`), *ticket.ResponsibleUserID).Scan(&responsibleUserName)
+			if err != nil {
+				responsibleUserName = fmt.Sprintf("User %d", *ticket.ResponsibleUserID)
+			}
+		} else {
+			responsibleUserName = "Unassigned"
+		}
 		log.Printf("Fetching articles for ticket ID: %s", ticketID)
 		articleRepo := repository.NewArticleRepository(db)
 		articles, err := articleRepo.GetByTicketID(uint(ticket.ID), true) // true = include internal articles
@@ -635,6 +657,7 @@ func handleAgentTicketView(db *sql.DB) gin.HandlerFunc {
 				"customer_name":    customerName,
 				"customer_email":   customerEmail,
 				"customer_company": customerCompany,
+				"assigned_to": responsibleUserName,
 				"queue_id":         ticket.QueueID,
 				"state_id":         ticket.TicketStateID,
 				"priority_id":      ticket.TicketPriorityID,
@@ -1092,18 +1115,36 @@ func handleAgentTicketAssign(db *sql.DB) gin.HandlerFunc {
 		ticketID := c.Param("id")
 		userID := c.PostForm("user_id")
 
+		// Validate input
+		if userID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "No agent selected"})
+			return
+		}
+
+		// Convert userID to int for validation
+		agentID, err := strconv.Atoi(userID)
+		if err != nil || agentID <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid agent ID"})
+			return
+		}
+
+		// Log the assignment for debugging
+		currentUserID := c.GetUint("user_id")
+
 		// Update responsible user
-		_, err := db.Exec(database.ConvertPlaceholders(`
+		_, err = db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
 			SET responsible_user_id = $1, change_time = CURRENT_TIMESTAMP, change_by = $2
 			WHERE id = $3
-		`), userID, c.GetUint("user_id"), ticketID)
+		`), agentID, currentUserID, ticketID)
 
 		if err != nil {
+			log.Printf("ERROR: Failed to assign ticket %s to agent %d: %v", ticketID, agentID, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign agent"})
 			return
 		}
 
+		log.Printf("SUCCESS: Assigned ticket %s to agent %d", ticketID, agentID)
 		c.JSON(http.StatusOK, gin.H{"success": true})
 	}
 }

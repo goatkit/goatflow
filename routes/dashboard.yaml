@@ -35,3 +35,9 @@ spec:
       method: GET
       handler: dashboard_recent_tickets
       description: "Get recent ticket activity for dashboard widget"
+
+    # Queue status widget
+    - path: /api/queue-status
+      method: GET
+      handler: dashboard_queue_status
+      description: "Get queue status and ticket counts for dashboard widget"

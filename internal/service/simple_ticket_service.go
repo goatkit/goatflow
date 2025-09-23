@@ -324,7 +324,6 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 						CreatedAt:   msg.CreatedAt,
 					}
 					msg.Attachments = append(msg.Attachments, attachment)
-					fmt.Printf("DEBUG: Added attachment %s to message %d\n", filename, articleID)
 				}
 			}
 		}
@@ -332,10 +331,6 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 
 	// Return database messages if found
 	if len(dbMessages) > 0 {
-		fmt.Printf("DEBUG: Returning %d messages for ticket %d\n", len(dbMessages), ticketID)
-		for _, msg := range dbMessages {
-			fmt.Printf("DEBUG: Message %d has %d attachments\n", msg.ID, len(msg.Attachments))
-		}
 		return dbMessages, nil
 	}
 

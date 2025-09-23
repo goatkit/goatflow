@@ -430,7 +430,7 @@
             <div class="p-6">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                    <select name="state_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
+                    <select name="status_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                         <option value="">Select status...</option>
                         <option value="1">open</option>
                         <option value="2">closed successful</option>
@@ -536,7 +536,7 @@
             <div class="p-6">
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Ticket</label>
-                    <input type="number" name="target_ticket_id" placeholder="Enter ticket ID" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
+                    <input type="text" name="target_tn" placeholder="Enter ticket number (e.g. T-2024-001)" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">

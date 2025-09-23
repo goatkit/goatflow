@@ -17,7 +17,7 @@
             </div>
 
             <!-- Form -->
-            <form hx-put="/api/queues/{{.Queue.id}}" 
+            <form hx-put="/api/queues/{{.Queue.id}}/status" 
                   hx-trigger="submit"
                   hx-target="#edit-queue-modal"
                   hx-swap="outerHTML"

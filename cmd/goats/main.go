@@ -65,6 +65,7 @@ func main() {
 		"handleDashboard":           api.HandleDashboard,
 		"dashboard_stats":           api.HandleDashboardStats,
 		"dashboard_recent_tickets":  api.HandleRecentTickets,
+		"dashboard_queue_status":    api.DashboardQueueStatus,
 		"dashboard_activity_stream": api.HandleActivityStream,
 
 		// Agent handlers
@@ -165,6 +166,7 @@ func main() {
 		"HandleDeleteUserAPI":        api.HandleDeleteUserAPI,
 		"HandleListQueuesAPI":        api.HandleListQueuesAPI,
 		"HandleGetQueueAPI":          api.HandleGetQueueAPI,
+		"HandleGetQueueAgentsAPI":    api.HandleGetQueueAgentsAPI,
 		"HandleCreateQueueAPI":       api.HandleCreateQueueAPI,
 		"HandleUpdateQueueAPI":       api.HandleUpdateQueueAPI,
 		"HandleDeleteQueueAPI":       api.HandleDeleteQueueAPI,

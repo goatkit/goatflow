@@ -117,13 +117,9 @@ function assignAgent() {
             }
         })
         .catch(() => {
-            // Fallback to hardcoded agents
+            // No fallback - fail hard so we know the API is broken
             const select = document.querySelector('#assignModal select[name="user_id"]');
-            select.innerHTML = `
-                <option value="">Select agent...</option>
-                <option value="2">admin</option>
-                <option value="4">agent.jones</option>
-            `;
+            select.innerHTML = '<option value="">Failed to load agents - API error</option>';
         });
         
     const assignModal = document.getElementById('assignModal');
@@ -167,16 +163,9 @@ function moveQueue() {
         })
         .catch(error => {
             console.error('Error loading queues:', error);
-            // Fallback to common queues
+            // No fallback - fail hard so we know the API is broken
             const select = document.querySelector('#queueModal select[name="queue_id"]');
-            select.innerHTML = `
-                <option value="">Select queue...</option>
-                <option value="1">Postmaster</option>
-                <option value="2">Junk</option>
-                <option value="3">Raw</option>
-                <option value="4">Misc</option>
-                <option value="5">Support</option>
-            `;
+            select.innerHTML = '<option value="">Failed to load queues - API error</option>';
         });
         
     const queueModal = document.getElementById('queueModal');

@@ -202,7 +202,7 @@ function searchCustomers(query) {
     }
     
     searchTimeout = setTimeout(() => {
-        fetch('/api/customers/search?q=' + encodeURIComponent(query))
+        apiFetch('/api/customers/search?q=' + encodeURIComponent(query))
             .then(response => response.json())
             .then(customers => {
                 displayCustomerResults(customers);

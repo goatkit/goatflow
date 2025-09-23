@@ -24,6 +24,15 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := m.extractToken(c)
 		if token == "" {
+			// Check if this is a web page request (accepts HTML) vs API request
+			accept := c.GetHeader("Accept")
+			if strings.Contains(accept, "text/html") {
+				// Web page request - redirect to login
+				c.Redirect(http.StatusFound, "/login")
+				c.Abort()
+				return
+			}
+			// API request - return JSON error
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "Missing authorization token",
 			})
@@ -33,6 +42,15 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 
 		claims, err := m.jwtManager.ValidateToken(token)
 		if err != nil {
+			// Check if this is a web page request (accepts HTML) vs API request
+			accept := c.GetHeader("Accept")
+			if strings.Contains(accept, "text/html") {
+				// Web page request - redirect to login
+				c.Redirect(http.StatusFound, "/login")
+				c.Abort()
+				return
+			}
+			// API request - return JSON error
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "Invalid or expired token",
 			})

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
@@ -138,20 +139,41 @@ func sendGuruMeditation(c *gin.Context, err error, message string) {
 	})
 }
 
+// getStateID converts a state string to its database ID
+func getStateID(state string) int {
+	db, err := database.GetDB()
+	if err != nil {
+		return 1 // Default to "new" state
+	}
+	var stateRow struct {
+		ID int
+	}
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = $1 AND valid_id = 1"), state).Scan(&stateRow.ID)
+	if err == nil {
+		return stateRow.ID
+	}
+	return 1 // Default to "new" state
+}
+
 // getPriorityID converts a priority string to its database ID
 func getPriorityID(priority string) int {
-	switch priority {
-	case "low":
-		return 1
-	case "normal", "medium":
-		return 2
-	case "high":
-		return 3
-	case "critical", "very-high":
-		return 4
-	default:
+	db, err := database.GetDB()
+	if err != nil {
 		return 2 // Default to normal priority
 	}
+	var priorityRow struct {
+		ID int
+	}
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_priority WHERE name = $1 AND valid_id = 1"), priority).Scan(&priorityRow.ID)
+	if err == nil {
+		return priorityRow.ID
+	}
+	// Fallback to default priority (normal/medium)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_priority WHERE name IN ('normal', 'medium') AND valid_id = 1 LIMIT 1")).Scan(&priorityRow.ID)
+	if err == nil {
+		return priorityRow.ID
+	}
+	return 2 // Ultimate fallback
 }
 
 // loadTemplate loads and parses HTML template files

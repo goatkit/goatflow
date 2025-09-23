@@ -92,7 +92,7 @@
                 </a>
                 <button type="button"
                         id="assign-btn"
-                        hx-post="/api/tickets/{{.TicketID}}/assign"
+                        hx-post="/agent/tickets/{{.TicketID}}/assign"
                         hx-swap="none"
                         hx-on::after-request="handleAssignSuccess(event)"
                         class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
@@ -103,7 +103,7 @@
                 </button>
                 <button type="button"
                         id="open-btn"
-                        hx-post="/api/tickets/{{.TicketID}}/status"
+                        hx-post="/agent/tickets/{{.TicketID}}/status"
                         hx-vals='{"status": "open"}'
                         hx-swap="none"
                         hx-on::after-request="handleStatusChange(event, 'open')"
@@ -115,7 +115,7 @@
                 </button>
                 <button type="button"
                         id="close-btn"
-                        hx-post="/api/tickets/{{.TicketID}}/status"
+                        hx-post="/agent/tickets/{{.TicketID}}/status"
                         hx-vals='{"status": "closed"}'
                         hx-swap="none"
                         hx-on::after-request="handleStatusChange(event, 'closed')"
@@ -266,7 +266,7 @@
 
             <!-- Reply Form -->
             <div class="px-4 py-5 sm:px-6">
-                <form hx-post="/api/tickets/{{.TicketID}}/reply"
+                <form hx-post="/agent/tickets/{{.TicketID}}/reply"
                       hx-target="#messages-list"
                       hx-swap="beforeend"
                       hx-on::after-request="if(event.detail.successful) { this.reset(); showNotification('Reply added successfully', 'success'); }"

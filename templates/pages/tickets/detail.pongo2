@@ -90,7 +90,7 @@
             
             <!-- Add Comment Form -->
             <div class="mt-6">
-                <form hx-post="/api/tickets/{{ TicketID }}/messages" 
+                <form hx-post="/agent/tickets/{{ TicketID }}/note" 
                       hx-target="#messages-container" 
                       hx-swap="beforeend"
                       hx-reset="true">
@@ -326,7 +326,7 @@ function showPDFViewer(url, filename) {
 
 // Code Viewer with syntax highlighting
 function showCodeViewer(url, filename, contentType) {
-    fetch(url)
+    apiFetch(url)
         .then(response => response.text())
         .then(code => {
             const modal = document.createElement('div');

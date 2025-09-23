@@ -80,6 +80,11 @@ spec:
     handler: HandleGetQueueAPI
     description: "Get queue by ID"
     
+  - path: /queues/:id/agents
+    method: GET
+    handler: HandleGetQueueAgentsAPI
+    description: "Get agents with permissions for queue"
+    
   # Priority endpoints
   - path: /priorities
     method: GET
