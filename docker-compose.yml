@@ -298,7 +298,7 @@ services:
       GOCACHE: /tmp/.cache/go-build
       GOMODCACHE: /tmp/.cache/go-mod
       GOTOOLCHAIN: local
-      PATH: /usr/local/go/bin:/usr/local/bin:$PATH
+      PATH: /usr/local/go/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
     volumes:
       - .:/workspace:Z
       - /tmp/.cache/go-build:/tmp/.cache/go-build:Z
