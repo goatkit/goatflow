@@ -32,7 +32,7 @@ FROM deps AS tools
 # Build migration tool
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+    go install -tags 'postgres,mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 # ============================================
 # Stage 3: Build application
