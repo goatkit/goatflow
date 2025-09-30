@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: profile
+  description: "User profile routes"
+  namespace: default
+  enabled: true
+spec:
+  prefix: /profile
+  middleware:
+    - auth
+  routes:
+    - path: /
+      method: GET
+      handler: handleProfile
+      template: pages/profile.pongo2
+      description: "Display user profile page"

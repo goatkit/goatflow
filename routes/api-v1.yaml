@@ -1,9 +1,28 @@
-# API v1 Routes Configuration
+# API v1 Public Routes Configuration
 apiVersion: v1
 kind: RouteGroup
 metadata:
-  name: api-v1
-  description: "REST API v1 endpoints"
+  name: api-v1-public
+  description: "REST API v1 public endpoints"
+  namespace: default
+  enabled: true
+spec:
+  prefix: /api/v1
+  middleware: []  # No auth required
+  routes:
+  # Authentication endpoints (public)
+  - path: /auth/login
+    method: POST
+    handler: HandleLoginAPI
+    description: "Authenticate user and return JWT tokens"
+
+---
+# API v1 Protected Routes Configuration
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: api-v1-protected
+  description: "REST API v1 protected endpoints"
   namespace: default
   enabled: true
 spec:
@@ -11,7 +30,6 @@ spec:
   middleware:
     - auth
   routes:
-  # Ticket endpoints
   - path: /tickets
     method: GET
     handler: HandleListTicketsAPI
@@ -211,3 +229,4 @@ spec:
     method: DELETE
     handler: HandleRemoveQueueGroupAPI
     description: "Remove group from queue"
+

@@ -2,6 +2,7 @@
 package api
 
 import (
+    "fmt"
     "net/http"
     "os"
 	
@@ -13,10 +14,18 @@ import (
 
 // handleAdminLookups is already defined in htmx_routes.go for templates
 
-// handleGetQueues returns list of queues as JSON
-func handleGetQueues(c *gin.Context) {
+// HandleGetQueues returns list of queues as JSON or HTML options for HTMX
+func HandleGetQueues(c *gin.Context) {
+    isHTMX := c.GetHeader("HX-Request") == "true"
+    
     // In test mode, always return predictable default data
     if os.Getenv("APP_ENV") == "test" {
+        if isHTMX {
+            c.Header("Content-Type", "text/html")
+            c.String(http.StatusOK, `<option value="">Select queue</option>
+<option value="1">Test Queue</option>`)
+            return
+        }
         c.JSON(http.StatusOK, gin.H{
             "success": true,
             "data":    []models.QueueInfo{{ID: 1, Name: "Test Queue", Description: "Test", Active: true}},
@@ -25,6 +34,12 @@ func handleGetQueues(c *gin.Context) {
     }
     // If DB not available, still return a minimal default queue
     if err := database.InitTestDB(); err != nil {
+        if isHTMX {
+            c.Header("Content-Type", "text/html")
+            c.String(http.StatusOK, `<option value="">Select queue</option>
+<option value="1">Test Queue</option>`)
+            return
+        }
         c.JSON(http.StatusOK, gin.H{
             "success": true,
             "data":    []models.QueueInfo{{ID: 1, Name: "Test Queue", Description: "Test", Active: true}},
@@ -39,13 +54,36 @@ func handleGetQueues(c *gin.Context) {
     if len(queues) == 0 {
         queues = []models.QueueInfo{{ID: 1, Name: "Test Queue", Description: "Test", Active: true}}
     }
+    
+    if isHTMX {
+        c.Header("Content-Type", "text/html")
+        c.String(http.StatusOK, `<option value="">Select queue</option>`)
+        for _, queue := range queues {
+            if queue.Active {
+                c.Writer.WriteString(fmt.Sprintf(`<option value="%d">%s</option>`, queue.ID, queue.Name))
+            }
+        }
+        return
+    }
+    
     c.JSON(http.StatusOK, gin.H{"success": true, "data": queues})
 }
 
-// handleGetPriorities returns list of priorities as JSON
-func handleGetPriorities(c *gin.Context) {
+// HandleGetPriorities returns list of priorities as JSON or HTML options for HTMX
+func HandleGetPriorities(c *gin.Context) {
+    isHTMX := c.GetHeader("HX-Request") == "true"
+    
     // Explicit default priorities when running DB-less tests
     if os.Getenv("APP_ENV") == "test" {
+        if isHTMX {
+            c.Header("Content-Type", "text/html")
+            c.String(http.StatusOK, `<option value="">Select priority</option>
+<option value="low">Low</option>
+<option value="normal" selected>Normal</option>
+<option value="high">High</option>
+<option value="urgent">Urgent</option>`)
+            return
+        }
         priorities := []models.LookupItem{
             {ID: 1, Value: "low", Label: "Low", Order: 1, Active: true},
             {ID: 2, Value: "normal", Label: "Normal", Order: 2, Active: true},
@@ -59,13 +97,38 @@ func handleGetPriorities(c *gin.Context) {
     lang := middleware.GetLanguage(c)
 
     if lookupService == nil {
+        if isHTMX {
+            c.Header("Content-Type", "text/html")
+            c.String(http.StatusOK, `<option value="">Select priority</option>`)
+            return
+        }
         c.JSON(http.StatusOK, gin.H{"success": true, "data": []any{}})
         return
     }
 
     formData := lookupService.GetTicketFormDataWithLang(lang)
     if formData == nil {
+        if isHTMX {
+            c.Header("Content-Type", "text/html")
+            c.String(http.StatusOK, `<option value="">Select priority</option>`)
+            return
+        }
         c.JSON(http.StatusOK, gin.H{"success": true, "data": []any{}})
+        return
+    }
+
+    if isHTMX {
+        c.Header("Content-Type", "text/html")
+        c.String(http.StatusOK, `<option value="">Select priority</option>`)
+        for _, priority := range formData.Priorities {
+            if priority.Active {
+                selected := ""
+                if priority.Value == "normal" {
+                    selected = " selected"
+                }
+                c.Writer.WriteString(fmt.Sprintf(`<option value="%s"%s>%s</option>`, priority.Value, selected, priority.Label))
+            }
+        }
         return
     }
 
@@ -75,21 +138,47 @@ func handleGetPriorities(c *gin.Context) {
     })
 }
 
-// handleGetTypes returns list of ticket types as JSON
+// HandleGetTypes returns list of ticket types as JSON or HTML options for HTMX
 // Behavior:
 // - If a DB connection is available (including sqlmock in tests), return SQL-backed shape:
 //   [{id, name, comments, valid_id}]
 // - If no DB is available, return in-memory lookup shape from service (value/label/order/active)
 // - If a DB query fails, return 500 with an error (matches unit test expectations)
-func handleGetTypes(c *gin.Context) {
+// - For HTMX requests, returns HTML <option> elements instead of JSON
+func HandleGetTypes(c *gin.Context) {
+    isHTMX := c.GetHeader("HX-Request") == "true"
+    
     if db, err := database.GetDB(); err == nil && db != nil {
-        rows, qerr := db.Query(database.ConvertPlaceholders(`SELECT id, name, comments, valid_id FROM ticket_type`))
+        rows, qerr := db.Query(database.ConvertPlaceholders(`SELECT id, name, comments, valid_id FROM ticket_type WHERE valid_id = 1 ORDER BY name`))
         if qerr != nil {
+            if isHTMX {
+                c.String(http.StatusInternalServerError, "Error loading types")
+                return
+            }
             c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch types"})
             return
         }
         defer rows.Close()
 
+        if isHTMX {
+            // Return HTML options for HTMX
+            c.Header("Content-Type", "text/html")
+            c.String(http.StatusOK, `<option value="">Select type</option>`)
+            for rows.Next() {
+                var (
+                    id, validID int
+                    name string
+                    comments sqlNullString
+                )
+                if err := scanTypeRow(rows, &id, &name, &comments, &validID); err != nil {
+                    continue
+                }
+                c.Writer.WriteString(fmt.Sprintf(`<option value="%d">%s</option>`, id, name))
+            }
+            return
+        }
+
+        // Return JSON for API requests
         data := make([]map[string]interface{}, 0)
         for rows.Next() {
             var (
@@ -97,9 +186,7 @@ func handleGetTypes(c *gin.Context) {
                 name string
                 comments sqlNullString
             )
-            // Local alias to avoid importing database/sql here; use a tiny wrapper
             if err := scanTypeRow(rows, &id, &name, &comments, &validID); err != nil {
-                // Skip malformed rows
                 continue
             }
             data = append(data, map[string]interface{}{
@@ -117,6 +204,19 @@ func handleGetTypes(c *gin.Context) {
     lookupService := GetLookupService()
     lang := middleware.GetLanguage(c)
     formData := lookupService.GetTicketFormDataWithLang(lang)
+    
+    if isHTMX {
+        // Return HTML options for HTMX
+        c.Header("Content-Type", "text/html")
+        c.String(http.StatusOK, `<option value="">Select type</option>`)
+        for _, item := range formData.Types {
+            if item.Active {
+                c.Writer.WriteString(fmt.Sprintf(`<option value="%s">%s</option>`, item.Value, item.Label))
+            }
+        }
+        return
+    }
+    
     c.JSON(http.StatusOK, gin.H{"success": true, "data": formData.Types})
 }
 
@@ -151,8 +251,8 @@ func scanTypeRow(scanner sqlRowScanner, id *int, name *string, comments *sqlNull
     return scanner.Scan(id, name, comments, validID)
 }
 
-// handleGetStatuses returns list of ticket statuses as JSON
-func handleGetStatuses(c *gin.Context) {
+// HandleGetStatuses returns list of ticket statuses as JSON
+func HandleGetStatuses(c *gin.Context) {
     // In test mode, return a fixed 5-status workflow list
     if os.Getenv("APP_ENV") == "test" {
         statuses := []models.LookupItem{
@@ -188,8 +288,8 @@ func handleGetStatuses(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"success": true, "data": statuses})
 }
 
-// handleGetFormData returns all form data (queues, priorities, types, statuses) as JSON
-func handleGetFormData(c *gin.Context) {
+// HandleGetFormData returns form data for ticket creation as JSON
+func HandleGetFormData(c *gin.Context) {
 	lookupService := GetLookupService()
 	lang := middleware.GetLanguage(c)
 	formData := lookupService.GetTicketFormDataWithLang(lang)
@@ -200,8 +300,8 @@ func handleGetFormData(c *gin.Context) {
 	})
 }
 
-// handleInvalidateLookupCache forces a refresh of the lookup cache
-func handleInvalidateLookupCache(c *gin.Context) {
+// HandleInvalidateLookupCache forces a refresh of the lookup cache
+func HandleInvalidateLookupCache(c *gin.Context) {
 	userRole := c.GetString("user_role")
 	if userRole != "Admin" {
 		c.JSON(http.StatusForbidden, gin.H{

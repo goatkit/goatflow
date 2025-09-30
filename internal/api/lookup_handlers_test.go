@@ -46,7 +46,7 @@ func TestHandleGetQueues(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			router.GET("/api/lookups/queues", handleGetQueues)
+			router.GET("/api/lookups/queues", HandleGetQueues)
 			
 			req, _ := http.NewRequest("GET", "/api/lookups/queues", nil)
 			w := httptest.NewRecorder()
@@ -67,8 +67,7 @@ func TestHandleGetPriorities(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	
 	router := gin.New()
-	router.GET("/api/lookups/priorities", handleGetPriorities)
-	
+    router.GET("/api/lookups/priorities", HandleGetPriorities)
 	req, _ := http.NewRequest("GET", "/api/lookups/priorities", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -100,8 +99,7 @@ func TestHandleGetTypes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	
 	router := gin.New()
-	router.GET("/api/lookups/types", handleGetTypes)
-	
+    router.GET("/api/lookups/types", HandleGetTypes)
 	req, _ := http.NewRequest("GET", "/api/lookups/types", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -136,7 +134,7 @@ func TestHandleGetStatuses(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	
 	router := gin.New()
-	router.GET("/api/lookups/statuses", handleGetStatuses)
+	router.GET("/api/lookups/statuses", HandleGetStatuses)
 	
 	req, _ := http.NewRequest("GET", "/api/lookups/statuses", nil)
 	w := httptest.NewRecorder()
@@ -168,8 +166,7 @@ func TestHandleGetFormData(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	
 	router := gin.New()
-	router.GET("/api/lookups/form-data", handleGetFormData)
-	
+    router.GET("/api/lookups/form-data", HandleGetFormData)
 	req, _ := http.NewRequest("GET", "/api/lookups/form-data", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -250,7 +247,7 @@ func TestHandleInvalidateLookupCache(t *testing.T) {
 				c.Set("user_role", tt.userRole)
 				c.Next()
 			})
-			router.POST("/api/lookups/cache/invalidate", handleInvalidateLookupCache)
+			router.POST("/api/lookups/cache/invalidate", HandleInvalidateLookupCache)
 			
 			req, _ := http.NewRequest("POST", "/api/lookups/cache/invalidate", nil)
 			w := httptest.NewRecorder()
@@ -319,11 +316,11 @@ func TestLookupEndpointIntegration(t *testing.T) {
 	
 	// Test that all endpoints use the same service instance (singleton)
 	router := gin.New()
-	router.GET("/api/lookups/queues", handleGetQueues)
-	router.GET("/api/lookups/priorities", handleGetPriorities)
+	router.GET("/api/lookups/queues", HandleGetQueues)
+	router.GET("/api/lookups/priorities", HandleGetPriorities)
 	router.POST("/api/lookups/cache/invalidate", func(c *gin.Context) {
 		c.Set("user_role", "Admin")
-		handleInvalidateLookupCache(c)
+		HandleInvalidateLookupCache(c)
 	})
 	
 	// Get initial data
@@ -358,11 +355,11 @@ func TestConcurrentAPIAccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	
 	router := gin.New()
-	router.GET("/api/lookups/queues", handleGetQueues)
-	router.GET("/api/lookups/priorities", handleGetPriorities)
-	router.GET("/api/lookups/types", handleGetTypes)
-	router.GET("/api/lookups/statuses", handleGetStatuses)
-	router.GET("/api/lookups/form-data", handleGetFormData)
+	router.GET("/api/lookups/queues", HandleGetQueues)
+	router.GET("/api/lookups/priorities", HandleGetPriorities)
+	router.GET("/api/lookups/types", HandleGetTypes)
+	router.GET("/api/lookups/statuses", HandleGetStatuses)
+	router.GET("/api/lookups/form-data", HandleGetFormData)
 	
 	// Make concurrent requests
 	numRequests := 50

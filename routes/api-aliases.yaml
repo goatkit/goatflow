@@ -1,0 +1,25 @@
+## Temporary backward-compatible API aliases (without version prefix)
+## Purpose: Serve legacy /api/... paths while frontend migrates to /api/v1
+## Remove after frontend updated and clients switched.
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: api-aliases-protected
+  description: "Legacy /api alias routes mapping to v1 handlers"
+  namespace: default
+  enabled: true
+spec:
+  prefix: /api
+  middleware:
+    - auth
+  routes:
+  - path: /tickets/:id/reopen
+    method: POST
+    handler: HandleReopenTicketAPI
+    description: "Alias reopen ticket (maps to /api/v1/tickets/:id/reopen)"
+
+  # (Optional future) Add other needed aliases if more 404s appear
+  # - path: /tickets
+  #   method: GET
+  #   handler: HandleListTicketsAPI
+  #   description: "Alias list tickets"

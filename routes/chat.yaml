@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: chat
+  description: "Realtime chat and AI demo routes"
+  namespace: default
+  enabled: true
+spec:
+  prefix: ""
+  middleware:
+    - auth
+  routes:
+    - path: /ws/chat
+      method: GET
+      handler: HandleWebSocketChat
+      description: "WebSocket endpoint for real-time chat"
+      websocket: true
+
+    - path: /claude-chat-demo
+      method: GET
+      handler: handleClaudeChatDemo
+      template: pages/claude_chat_demo.pongo2
+      description: "Claude chat demo UI page"

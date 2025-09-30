@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: settings
+  description: "User settings and preferences routes"
+  namespace: default
+  enabled: true
+spec:
+  prefix: ""
+  middleware:
+    - auth
+  routes:
+    - path: /settings
+      method: GET
+      handler: handleSettings
+      template: pages/settings.pongo2
+      description: "Display user settings page"
+
+    # Session timeout preference (GET current value)
+    - path: /api/preferences/session-timeout
+      method: GET
+      handler: HandleGetSessionTimeout
+      description: "Get current session timeout preference"
+
+    # Session timeout preference (POST update)
+    - path: /api/preferences/session-timeout
+      method: POST
+      handler: HandleSetSessionTimeout
+      description: "Update session timeout preference"

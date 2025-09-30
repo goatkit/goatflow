@@ -1,0 +1,42 @@
+# API Lookups Routes Configuration
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: api-lookups
+  description: "Lookup API endpoints"
+  namespace: default
+  enabled: true
+spec:
+  prefix: /api
+  middleware:
+    - auth
+  routes:
+  - path: /lookups/queues
+    method: GET
+    handler: HandleGetQueues
+    description: "Get list of queues"
+
+  - path: /lookups/priorities
+    method: GET
+    handler: HandleGetPriorities
+    description: "Get list of priorities"
+
+  - path: /lookups/types
+    method: GET
+    handler: HandleGetTypes
+    description: "Get list of ticket types"
+
+  - path: /lookups/statuses
+    method: GET
+    handler: HandleGetStatuses
+    description: "Get list of ticket statuses"
+
+  - path: /lookups/form-data
+    method: GET
+    handler: HandleGetFormData
+    description: "Get form data for ticket creation"
+
+  - path: /lookups/cache/invalidate
+    method: POST
+    handler: HandleInvalidateLookupCache
+    description: "Invalidate lookup cache"

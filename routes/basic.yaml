@@ -48,3 +48,28 @@ spec:
       handler: HandleQueueDetail
       template: pages/tickets.pongo2
       description: "Display tickets filtered by specific queue"
+
+    # Ticket creation routes
+    - path: /ticket/new
+      method: GET
+      handler: handleNewTicket
+      template: pages/tickets/new.pongo2
+      middleware:
+        - auth
+      description: "Redirect to email ticket creation form"
+
+    - path: /ticket/new/email
+      method: GET
+      handler: handleNewEmailTicket
+      template: ticket_page.html
+      middleware:
+        - auth
+      description: "Display email ticket creation form"
+
+    - path: /ticket/new/phone
+      method: GET
+      handler: handleNewPhoneTicket
+      template: ticket_page.html
+      middleware:
+        - auth
+      description: "Display phone ticket creation form"
