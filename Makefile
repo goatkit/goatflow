@@ -97,6 +97,9 @@ DB_PASSWORD ?= gotrs_password
 VALKEY_HOST ?= localhost
 VALKEY_PORT ?= 6388
 
+# Macro to wrap Go commands inside toolbox container (ensures container-first dev)
+TOOLBOX_GO=$(MAKE) toolbox-exec ARGS=
+
 # --- Auto-detect DB driver (mariadb/postgres) if not provided ---
 # Priority: existing DB_DRIVER env/.env > running compose services > compose file contents > default mariadb
 ifeq ($(origin DB_DRIVER), undefined)
@@ -551,20 +554,15 @@ toolbox-build:
 toolbox-run:
 	@printf "\n🔧 Starting toolbox shell...\n"
 	@printf "💡 Type 'exit' or Ctrl+D to exit the shell\n"
-	@$(call ensure_caches)
-	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm -it toolbox $(if $(ARGS),$(ARGS),/bin/bash); \
-	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm -it toolbox $(if $(ARGS),$(ARGS),/bin/bash); \
-	fi
+	@$(TOOLBOX_GO)"golangci-lint run ./..."
 
 # Non-interactive toolbox exec
 toolbox-exec:
 	@$(call ensure_caches)
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox bash -lc 'export GOFLAGS="-buildvcs=false $$GOFLAGS"; $(ARGS)'; \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox bash -c 'export GOFLAGS="-buildvcs=false $$GOFLAGS"; export PATH="/usr/local/go/bin:$$PATH"; $(ARGS)'; \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm toolbox bash -lc 'export GOFLAGS="-buildvcs=false $$GOFLAGS"; $(ARGS)'; \
+		$(COMPOSE_CMD) --profile toolbox run --rm toolbox bash -c 'export GOFLAGS="-buildvcs=false $$GOFLAGS"; export PATH="/usr/local/go/bin:$$PATH"; $(ARGS)'; \
 	fi
 
 # API testing with automatic authentication
@@ -659,7 +657,7 @@ toolbox-test-api: toolbox-build
         -e DB_DRIVER=mariadb \
         -e DB_NAME=otrs -e DB_USER=otrs -e DB_PASSWORD=LetClaude.1n \
 		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -v ./internal/api -run "^Test(BuildRoutesManifest|Queue|Article|Search|Priority|User)"'
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; $(TOOLBOX_GO)"go test -v ./internal/api -run ^Test(BuildRoutesManifest|Queue|Article|Search|Priority|User)"'
 
 # Run core tests (cmd/goats + internal/api + generated/tdd-comprehensive)
 toolbox-test:
@@ -686,9 +684,9 @@ toolbox-test:
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
-		echo Running: ./cmd/goats; go test -v ./cmd/goats; \
-		echo Running: ./internal/api focused; go test -v ./internal/api -run "^Test(AdminType|Queue|Article|Search|Priority|User|TicketZoom|AdminService|AdminStates|AdminGroupManagement|HandleGetQueues|HandleGetPriorities|DatabaseIntegrity)"; \
-		echo Running: ./internal/service; go test -v ./internal/service'
+		echo Running: ./cmd/goats; $(TOOLBOX_GO)"go test -v ./cmd/goats"; \
+		echo Running: ./internal/api focused; $(TOOLBOX_GO)"go test -v ./internal/api -run ^Test(AdminType|Queue|Article|Search|Priority|User|TicketZoom|AdminService|AdminStates|AdminGroupManagement|HandleGetQueues|HandleGetPriorities|DatabaseIntegrity)"; \
+		echo Running: ./internal/service; $(TOOLBOX_GO)"go test -v ./internal/service"'
 
 .PHONY: tdd-comprehensive-quick
 tdd-comprehensive-quick:
@@ -747,10 +745,10 @@ toolbox-test-all:
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
 		echo Running curated set: cmd/goats internal/api internal/service generated/tdd-comprehensive; \
-		go test -buildvcs=false -v ./cmd/goats; \
-		go test -buildvcs=false -v ./internal/api -run "^Test(AdminType|Queue|Article|Search|Priority|User|TicketZoom|AdminService|AdminStates|AdminGroupManagement|HandleGetQueues|HandleGetPriorities|DatabaseIntegrity)"; \
-		go test -buildvcs=false -v ./internal/service; \
-		go test -buildvcs=false -v ./generated/tdd-comprehensive'
+		$(TOOLBOX_GO)"go test -buildvcs=false -v ./cmd/goats"; \
+		$(TOOLBOX_GO)"go test -buildvcs=false -v ./internal/api -run ^Test(AdminType|Queue|Article|Search|Priority|User|TicketZoom|AdminService|AdminStates|AdminGroupManagement|HandleGetQueues|HandleGetPriorities|DatabaseIntegrity)"; \
+		$(TOOLBOX_GO)"go test -buildvcs=false -v ./internal/service"; \
+		$(TOOLBOX_GO)"go test -buildvcs=false -v ./generated/tdd-comprehensive"'
 
 .PHONY: test-unit
 test-unit:
@@ -767,7 +765,7 @@ test-unit:
 		-e GOFLAGS=-buildvcs=false \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; \
-		go test -count=1 -buildvcs=false -v ./cmd/goats ./internal/... ./generated/... | tee generated/test-results/unit_stable.log'
+		$(TOOLBOX_GO)"go test -count=1 -buildvcs=false -v ./cmd/goats ./internal/... ./generated/..." | tee generated/test-results/unit_stable.log'
 
 .PHONY: test-e2e
 test-e2e:
@@ -2071,7 +2069,7 @@ test-specific:
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		gotrs-toolbox:latest \
-		sh -c 'echo "Testing with DB_HOST=$$DB_HOST"; go test -v ./internal/repository -run $(TEST)'
+			bash -lc 'export PATH=/usr/local/go/bin:$$PATH; echo "Testing with DB_HOST=$$DB_HOST"; go test -buildvcs=false -v ./internal/repository -run $(TEST)'
 
 # Show TDD dashboard with current status and metrics
 tdd-dashboard:
