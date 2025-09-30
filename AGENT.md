@@ -161,6 +161,7 @@ Checklist before committing new Go targets:
 1. No plain `\tgo test` or `\tgo build` lines unless inside an existing `podman/docker run gotrs-toolbox` block.
 2. `make verify-container-first` returns green.
 3. For multi-step script-like flows prefer a dedicated script invoked via `toolbox-exec` instead of many Makefile inline commands.
+4. CI runs `Container-First Guard` workflow on PRs/push to block violations automatically.
 
 ## Troubleshooting Checklist
 - **Go command fails**: Go is not installed on host. Use `make toolbox-exec ARGS="go <command>"` instead

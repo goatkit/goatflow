@@ -1,0 +1,23 @@
+name: Container-First Guard
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-container-first:
+    name: Verify Container-First Policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run container-first verification
+        run: |
+          chmod +x scripts/tools/check-container-go.sh
+          ./scripts/tools/check-container-go.sh
