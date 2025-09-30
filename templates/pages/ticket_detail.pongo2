@@ -2,6 +2,55 @@
 
 {% block title %}Ticket {{ Ticket.tn }} - GOTRS{% endblock %}
 
+{% block styles %}
+<style>
+/* Table styles for note content */
+div[id^="note-content-"] table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    border: 1px solid #d1d5db !important;
+    margin-bottom: 1rem !important;
+}
+
+div[id^="note-content-"] table th,
+div[id^="note-content-"] table td {
+    border: 1px solid #d1d5db !important;
+    padding: 0.5rem 0.75rem !important;
+    text-align: left !important;
+}
+
+div[id^="note-content-"] table th {
+    background-color: #f9fafb !important;
+    font-weight: 600 !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    color: #6b7280 !important;
+}
+
+.dark div[id^="note-content-"] table th {
+    background-color: #374151 !important;
+    color: #9ca3af !important;
+}
+
+div[id^="note-content-"] table td {
+    color: #374151 !important;
+}
+
+.dark div[id^="note-content-"] table td {
+    color: #d1d5db !important;
+}
+
+div[id^="note-content-"] table tbody tr {
+    border-bottom: 1px solid #d1d5db !important;
+}
+
+.dark div[id^="note-content-"] table tbody tr {
+    border-bottom: 1px solid #4b5563 !important;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
     <!-- Page header -->
@@ -100,7 +149,7 @@
                                             <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{{ note.time }}</p>
                                         </div>
                                         <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                                            <div id="note-content-{{ note_counter }}" class="prose dark:prose-invert max-w-none">
+                                            <div id="note-content-{{ note_counter }}" class="max-w-none">
                                                 {{ note.body|safe }}
                                             </div>
                                         </div>

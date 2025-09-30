@@ -220,17 +220,9 @@
                             <select name="priority" 
                                     id="priority"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                
-                                <option value="very_low" >1 very low</option>
-                                
-                                <option value="low" >2 low</option>
-                                
-                                <option value="normal" selected>3 normal</option>
-                                
-                                <option value="high" >4 high</option>
-                                
-                                <option value="very_high" >5 very high</option>
-                                
+                                {{range .Priorities}}
+                                <option value="{{.id}}" {{if eq .id "3"}}selected{{end}}>{{.name}}</option>
+                                {{end}}
                             </select>
                         </div>
                     </div>
@@ -244,19 +236,9 @@
                             <select name="queue_id" 
                                     id="queue_id"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                
-                                <option value="3" >Junk</option>
-                                
-                                <option value="4" >Misc</option>
-                                
-                                <option value="5" >OBC</option>
-                                
-                                <option value="1" selected>Postmaster</option>
-                                
-                                <option value="2" >Raw</option>
-                                
-                                <option value="6" >Support</option>
-                                
+                                {{range .Queues}}
+                                <option value="{{.id}}" {{if eq .id "1"}}selected{{end}}>{{.name}}</option>
+                                {{end}}
                             </select>
                         </div>
                     </div>
@@ -270,9 +252,9 @@
                             <select name="type_id" 
                                     id="type_id"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                
-                                <option value="1" selected>Unclassified</option>
-                                
+                                {{range .Types}}
+                                <option value="{{.id}}" {{if eq .id "1"}}selected{{end}}>{{.name}}</option>
+                                {{end}}
                             </select>
                         </div>
                     </div>

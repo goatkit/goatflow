@@ -139,13 +139,12 @@
                                 <select name="ticket_type" 
                                         id="ticket-type"
                                         required
+                                        hx-get="/api/lookups/types"
+                                        hx-trigger="load"
+                                        hx-target="#ticket-type"
+                                        hx-swap="innerHTML"
                                         class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                                    <option value="">Select type</option>
-                                    <option value="incident">Incident</option>
-                                    <option value="request">Service Request</option>
-                                    <option value="problem">Problem</option>
-                                    <option value="change">Change</option>
-                                    <option value="task">Task</option>
+                                    <option value="">Loading types...</option>
                                 </select>
                             </div>
                             
@@ -154,11 +153,12 @@
                                 <select name="priority" 
                                         id="ticket-priority"
                                         required
+                                        hx-get="/api/lookups/priorities"
+                                        hx-trigger="load"
+                                        hx-target="#ticket-priority"
+                                        hx-swap="innerHTML"
                                         class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                                    <option value="low">Low</option>
-                                    <option value="normal" selected>Normal</option>
-                                    <option value="high">High</option>
-                                    <option value="urgent">Urgent</option>
+                                    <option value="">Loading priorities...</option>
                                 </select>
                             </div>
                             
@@ -167,16 +167,18 @@
                                 <select name="queue_id" 
                                         id="ticket-queue"
                                         required
-                                        hx-get="/api/queues/sla"
-                                        hx-trigger="change"
-                                        hx-target="#sla-info"
+                                        hx-get="/api/lookups/queues"
+                                        hx-trigger="load"
+                                        hx-target="#ticket-queue"
+                                        hx-swap="innerHTML"
                                         class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                                    <option value="">Select queue</option>
-                                    <option value="1">General Support</option>
-                                    <option value="2">Technical Support</option>
-                                    <option value="3">Billing</option>
-                                    <option value="4">Sales</option>
+                                    <option value="">Loading queues...</option>
                                 </select>
+                                <!-- Separate element for SLA loading -->
+                                <div hx-get="/api/queues/sla"
+                                     hx-trigger="change from:#ticket-queue"
+                                     hx-target="#sla-info">
+                                </div>
                             </div>
                         </div>
                         
