@@ -1,0 +1,17 @@
+# Static Routes Baseline
+#
+# This file is auto-created by scripts/validate_routes.sh the first time
+# code-defined (non-YAML) business routes are detected in htmx_routes.go.
+#
+# Purpose: Prevent reintroduction or growth of hard-coded routes. All
+# business/API routes must live in YAML route files. Only keep /health,
+# /static assets and minimal bootstrap in code.
+#
+# Migration Workflow:
+# 1. Move a code route to YAML.
+# 2. Remove it from htmx_routes.go.
+# 3. Regenerate: make build (script will show no new code routes).
+# 4. Manually edit this baseline to delete the moved path.
+# 5. Commit changes.
+#
+# Do NOT add new entries here unless absolutely necessary and temporary.
