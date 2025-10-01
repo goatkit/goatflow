@@ -308,7 +308,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.toolbox
-    image: localhost/gotrs-toolbox:latest
+    image: gotrs-toolbox:latest
     container_name: gotrs-toolbox
     user: "1000:1000" # Run as non-root user (matching backend)
     environment:

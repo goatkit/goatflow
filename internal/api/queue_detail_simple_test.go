@@ -12,6 +12,7 @@ import (
 
 func TestQueueDetailSimple(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	if !dbAvailable() { t.Skip("DB not available (GOTRS_TEST_DB_READY!=1) - skipping queue detail HTML tests") }
 	
 	router := gin.New()
 	router.GET("/api/queues/:id", handleQueueDetail)
@@ -34,6 +35,7 @@ func TestQueueDetailSimple(t *testing.T) {
 	
 	// Test HTMX request (should return fragment)
 	t.Run("HTMX request returns fragment", func(t *testing.T) {
+		if !dbAvailable() { t.Skip("DB not available - skipping fragment variant") }
 		req, _ := http.NewRequest("GET", "/api/queues/1", nil)
 		req.Header.Set("HX-Request", "true")
 		w := httptest.NewRecorder()

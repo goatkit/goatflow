@@ -658,7 +658,7 @@ toolbox-test-api: toolbox-build
         -e DB_DRIVER=mariadb \
         -e DB_NAME=otrs -e DB_USER=otrs -e DB_PASSWORD=LetClaude.1n \
 		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; $(TOOLBOX_GO)"go test -v ./internal/api -run ^Test(BuildRoutesManifest|Queue|Article|Search|Priority|User)"'
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test(BuildRoutesManifest|Queue|Article|Search|Priority|User)'
 
 # Run core tests (cmd/goats + internal/api + generated/tdd-comprehensive)
 toolbox-test:
@@ -685,13 +685,21 @@ toolbox-test:
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
-		echo Running: ./cmd/goats; $(TOOLBOX_GO)"go test -v ./cmd/goats"; \
-		echo Running: ./internal/api focused; $(TOOLBOX_GO)"go test -v ./internal/api -run ^Test(AdminType|Queue|Article|Search|Priority|User|TicketZoom|AdminService|AdminStates|AdminGroupManagement|HandleGetQueues|HandleGetPriorities|DatabaseIntegrity)"; \
-		echo Running: ./internal/service; $(TOOLBOX_GO)"go test -v ./internal/service"'
+		echo Running: ./cmd/goats; go test -buildvcs=false -v ./cmd/goats; \
+		echo Running: ./internal/api focused; go test -buildvcs=false -v ./internal/api -run ^Test\(AdminType\|Queue\|Article\|Search\|Priority\|User\|TicketZoom\|AdminService\|AdminStates\|AdminGroupManagement\|HandleGetQueues\|HandleGetPriorities\|DatabaseIntegrity\); \
+		echo Running: ./internal/service; go test -buildvcs=false -v ./internal/service'
 
 .PHONY: tdd-comprehensive-quick
 tdd-comprehensive-quick:
 	@printf "\n📋 Running comprehensive TDD gates...\n"
+	@if ! $(CONTAINER_CMD) image inspect gotrs-toolbox:latest >/dev/null 2>&1; then \
+		echo "🔧 Building missing toolbox image (gotrs-toolbox:latest)"; \
+		if [ -f Dockerfile.toolbox ]; then \
+			($(CONTAINER_CMD) compose build toolbox 2>/dev/null || $(CONTAINER_CMD) build -f Dockerfile.toolbox -t gotrs-toolbox:latest .) || { echo "❌ Failed to build toolbox image" >&2; exit 1; }; \
+		else \
+			echo "❌ Dockerfile.toolbox not found" >&2; exit 1; \
+		fi; \
+	fi
 	@mkdir -p generated/tdd-comprehensive generated/evidence generated/test-results || true
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
@@ -1983,17 +1991,18 @@ tdd-comprehensive-init:
 
 # Run comprehensive TDD verification with ALL quality gates (containerized)
 tdd-comprehensive:
-	@printf "🧪 Running COMPREHENSIVE TDD verification (containerized)...\n"
+	@printf "🧪 Running COMPREHENSIVE TDD verification (host orchestrated)...\n"
 	@mkdir -p generated/tdd-comprehensive generated/evidence generated/test-results || true
-	@$(CONTAINER_CMD) run --rm \
-		--security-opt label=disable \
-		-v "$$PWD:/workspace" \
-		-v "$$PWD/generated:/workspace/generated" \
-		-w /workspace \
-		--network host \
-		-u 0 \
-		gotrs-toolbox:latest \
-		bash -lc 'bash scripts/tdd-comprehensive.sh comprehensive || true; echo "See generated/evidence for report"'
+	@if ! $(CONTAINER_CMD) image inspect gotrs-toolbox:latest >/dev/null 2>&1; then \
+		echo "🔧 Building toolbox image (gotrs-toolbox:latest) via compose"; \
+		if [ -f Dockerfile.toolbox ]; then \
+			($(CONTAINER_CMD) compose build toolbox 2>/dev/null || $(CONTAINER_CMD) build -f Dockerfile.toolbox -t gotrs-toolbox:latest .) || { echo "❌ Failed to build toolbox image" >&2; exit 1; }; \
+		else \
+			echo "❌ Dockerfile.toolbox not found" >&2; exit 1; \
+		fi; \
+	fi
+	@bash scripts/tdd-comprehensive.sh comprehensive || true
+	@echo "See generated/evidence for report"
 
 # Anti-gaslighting detection - prevents false success claims
 anti-gaslighting:

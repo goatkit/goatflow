@@ -13,6 +13,7 @@ import (
 
 func TestQueueDetailAPI(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	if !dbAvailable() { t.Skip("DB not available - skipping queue detail API tests") }
 
 	tests := []struct {
 		name           string
@@ -79,6 +80,7 @@ func TestQueueDetailAPI(t *testing.T) {
 
 func TestQueueDetailJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	if !dbAvailable() { t.Skip("DB not available - skipping queue JSON tests") }
 
 	tests := []struct {
 		name           string
@@ -143,6 +145,7 @@ func TestQueueDetailJSON(t *testing.T) {
 
 func TestQueueTicketsAPI(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	if !dbAvailable() { t.Skip("DB not available - skipping queue tickets API tests") }
 
 	tests := []struct {
 		name           string
@@ -218,6 +221,7 @@ func TestQueueTicketsAPI(t *testing.T) {
 
 func TestQueueDetailHTMX(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	if !dbAvailable() { t.Skip("DB not available - skipping queue detail HTMX tests") }
 
 	tests := []struct {
 		name           string
@@ -277,6 +281,7 @@ func TestQueueDetailHTMX(t *testing.T) {
 
 func TestQueueDetailErrorHandling(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	if !dbAvailable() { t.Skip("DB not available - skipping queue error handling tests") }
 
 	tests := []struct {
 		name           string

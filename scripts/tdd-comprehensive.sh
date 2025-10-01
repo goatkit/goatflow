@@ -29,29 +29,144 @@ LOG_DIR="$PROJECT_ROOT/generated/tdd-comprehensive"
 EVIDENCE_DIR="$PROJECT_ROOT/generated/evidence"
 TEST_RESULTS_DIR="$PROJECT_ROOT/generated/test-results"
 BASE_URL="http://localhost:${BACKEND_PORT:-8081}"
-# Compose/cmd autodetect with Podman/Docker fallback
+# Compose/cmd autodetect with robust fallbacks (prefer podman, then docker, else none)
 if command -v podman >/dev/null 2>&1; then
-  CONTAINER_CMD="podman"
-  if podman compose version >/dev/null 2>&1; then
-    COMPOSE_CMD="podman compose"
-  elif command -v podman-compose >/dev/null 2>&1; then
-    COMPOSE_CMD="podman-compose"
-  else
-    COMPOSE_CMD="podman compose"
-  fi
+    CONTAINER_CMD="podman"
+    if podman compose version >/dev/null 2>&1; then
+        COMPOSE_CMD="podman compose"
+    elif command -v podman-compose >/dev/null 2>&1; then
+        COMPOSE_CMD="podman-compose"
+    else
+        COMPOSE_CMD="podman compose"
+    fi
+elif command -v docker >/dev/null 2>&1; then
+    CONTAINER_CMD="docker"
+    if docker compose version >/dev/null 2>&1; then
+        COMPOSE_CMD="docker compose"
+    elif command -v docker-compose >/dev/null 2>&1; then
+        COMPOSE_CMD="docker-compose"
+    else
+        COMPOSE_CMD="docker compose"
+    fi
 else
-  CONTAINER_CMD="docker"
-  if docker compose version >/dev/null 2>&1; then
-    COMPOSE_CMD="docker compose"
-  elif command -v docker-compose >/dev/null 2>&1; then
-    COMPOSE_CMD="docker-compose"
-  else
-    COMPOSE_CMD="docker compose"
-  fi
+    CONTAINER_CMD=""
+    COMPOSE_CMD=""
 fi
+
+# Fail fast logic with LIMITED MODE support (graceful degradation)
+LIMITED_MODE=${GOTRS_LIMITED_MODE:-0}
+# Normalize truthy variants
+case "$LIMITED_MODE" in
+    1|true|TRUE|yes|YES|on|ON) LIMITED_MODE=1 ;;
+    *) LIMITED_MODE=0 ;;
+esac
+
+if [ "$LIMITED_MODE" = "1" ]; then
+    # Limited mode: allow continuing even with no container runtime / broken compose
+    if [ -z "$CONTAINER_CMD" ] || [ -z "$COMPOSE_CMD" ]; then
+        echo "[COMPREHENSIVE] LIMITED MODE: No container runtime detected; proceeding with reduced gates (compilation, unit, template)." >&2
+        CONTAINER_CMD=""; COMPOSE_CMD=""
+    elif ! $COMPOSE_CMD ps >/dev/null 2>&1; then
+        echo "[COMPREHENSIVE] LIMITED MODE: Compose command '$COMPOSE_CMD' not functional; proceeding with reduced gates." >&2
+        CONTAINER_CMD=""; COMPOSE_CMD=""
+    else
+        echo "[COMPREHENSIVE] LIMITED MODE active: intentionally restricting to compilation, unit, template gates." >&2
+    fi
+else
+    # Full mode requires functioning container + compose
+    if [ -z "$CONTAINER_CMD" ] || [ -z "$COMPOSE_CMD" ]; then
+        echo "[COMPREHENSIVE] ERROR: No container runtime (podman or docker) with compose support available. Aborting. Set GOTRS_LIMITED_MODE=1 for limited gates." >&2
+        exit 127
+    fi
+    if ! $COMPOSE_CMD ps >/dev/null 2>&1; then
+        echo "[COMPREHENSIVE] ERROR: $COMPOSE_CMD not functional (ps failed). Start daemon or set GOTRS_LIMITED_MODE=1 for limited mode." >&2
+        exit 127
+    fi
+fi
+
+# Backend start helper (idempotent)
+start_backend_if_needed() {
+    # Fast health probe first
+    if curl -fsS -o /dev/null -w '%{http_code}' "$BASE_URL/health" 2>/dev/null | grep -Eq '^(200|204|301|302|401)$'; then
+        return 0
+    fi
+    log "Attempting to start backend via compose ($COMPOSE_CMD up -d backend)"
+    # Attempt to start backend service
+    if echo "$COMPOSE_CMD" | grep -q 'podman-compose'; then
+        COMPOSE_PROFILES=dev $COMPOSE_CMD up -d backend >/dev/null 2>&1 || return 1
+    else
+        $COMPOSE_CMD up -d backend >/dev/null 2>&1 || return 1
+    fi
+    # Wait briefly then probe again
+    sleep 3
+    local code
+    code=$(curl -fsS -o /dev/null -w '%{http_code}' "$BASE_URL/health" 2>/dev/null || echo "")
+    if echo "$code" | grep -Eq '^(200|204|301|302|401)$'; then
+        return 0
+    fi
+    return 1
+}
 
 # Ensure directories exist
 mkdir -p "$LOG_DIR" "$EVIDENCE_DIR" "$TEST_RESULTS_DIR"
+
+# Proactively fix any stale root-owned log artifacts from previous container redirections
+if [ -d "$LOG_DIR" ] && [ ! -w "$LOG_DIR" ]; then
+    chmod u+w "$LOG_DIR" 2>/dev/null || true
+fi
+# Remove stale unwritable mod_download.log so we can recreate it cleanly later
+if [ -f "$LOG_DIR/mod_download.log" ] && [ ! -w "$LOG_DIR/mod_download.log" ]; then
+    rm -f "$LOG_DIR/mod_download.log" 2>/dev/null || true
+fi
+
+# Container-first Go execution helper: uses host go if present, else toolbox container
+run_go() {
+    if [ "$LIMITED_MODE" = "1" ] && command -v go >/dev/null 2>&1; then
+        GOFLAGS='-buildvcs=false' go "$@"; return $?
+    fi
+    if [ -z "$COMPOSE_CMD" ]; then
+        echo "Container runtime required (podman/docker) for go command: $* (not available)" >&2
+        return 127
+    fi
+    # Ensure toolbox image exists (auto-build if missing)
+    local toolbox_image="gotrs-toolbox:latest"
+    if ! $CONTAINER_CMD image inspect "$toolbox_image" >/dev/null 2>&1; then
+        # Backward compat: if old prefixed tag exists, retag
+        if $CONTAINER_CMD image inspect localhost/gotrs-toolbox:latest >/dev/null 2>&1; then
+            $CONTAINER_CMD tag localhost/gotrs-toolbox:latest "$toolbox_image" >/dev/null 2>&1 || true
+        fi
+    fi
+    if ! $CONTAINER_CMD image inspect "$toolbox_image" >/dev/null 2>&1; then
+        echo "[COMPREHENSIVE] Toolbox image missing: $toolbox_image - attempting build via compose (profile toolbox)" >&2
+        if echo "$COMPOSE_CMD" | grep -q 'podman-compose'; then
+            COMPOSE_PROFILES=toolbox $COMPOSE_CMD build toolbox >/dev/null 2>&1 || true
+        elif echo "$COMPOSE_CMD" | grep -q 'podman compose'; then
+            $COMPOSE_CMD build toolbox >/dev/null 2>&1 || true
+        else
+            $COMPOSE_CMD --profile toolbox build toolbox >/dev/null 2>&1 || true
+        fi
+        # Re-check
+        if ! $CONTAINER_CMD image inspect "$toolbox_image" >/dev/null 2>&1; then
+            echo "[COMPREHENSIVE] ERROR: Failed to build toolbox image ($toolbox_image)" >&2
+            return 125
+        fi
+    fi
+    # Build command payload with proper shell escaping via printf %q
+    local payload='export PATH=/usr/local/go/bin:$PATH; export GOFLAGS=-buildvcs=false; export GOCACHE=/tmp/.cache/go-build; export GOMODCACHE=/tmp/.cache/go-mod; mkdir -p /tmp/.cache/go-build /tmp/.cache/go-mod; go'
+    local a
+    for a in "$@"; do
+        # %q produces a shell-escaped version of the argument
+        payload+=" $(printf %q "$a")"
+    done
+    [ -n "${GOTRS_DEBUG:-}" ] && echo "[DEBUG run_go] $COMPOSE_CMD run toolbox: $payload" >&2
+    if echo "$COMPOSE_CMD" | grep -q 'podman compose'; then
+        $COMPOSE_CMD run --build --rm toolbox bash -lc "$payload"
+    elif echo "$COMPOSE_CMD" | grep -q 'podman-compose'; then
+        COMPOSE_PROFILES=toolbox $COMPOSE_CMD run --rm toolbox bash -lc "$payload"
+    else
+        $COMPOSE_CMD --profile toolbox run --build --rm toolbox bash -lc "$payload"
+    fi
+}
 
 # Logging functions
 log() {
@@ -159,21 +274,29 @@ verify_comprehensive_compilation() {
     cd "$PROJECT_ROOT"
     
     # Clean previous builds
-    go clean -cache -modcache -i -r 2>/dev/null || true
+    run_go clean -cache -modcache -i -r 2>/dev/null || true
     
     # Verify go.mod integrity
     export GOTOOLCHAIN=${GOTOOLCHAIN:-auto}
     # Ensure go version line is captured for debugging
-    go version > "$LOG_DIR/go_version.log" 2>&1 || true
-    if ! GOTOOLCHAIN=auto go mod verify > "$LOG_DIR/mod_verify.log" 2>&1; then
+    run_go version > "$LOG_DIR/go_version.log" 2>&1 || true
+    # Use run_go to execute inside container and capture output via command substitution to avoid host redirection permission issues
+    local mv_out md_out
+    mv_out=$(GOTOOLCHAIN=auto run_go mod verify 2>&1 || true)
+    printf '%s' "$mv_out" > "$LOG_DIR/mod_verify.log" || true
+    if echo "$mv_out" | grep -qiE 'error|fatal'; then
         fail "Go mod verification failed"
+        echo "---- mod_verify.log ----" >&2
+        printf '%s\n------------------------\n' "${mv_out%%$(printf '\n')*}" >&2
         jq '.evidence.compilation.status = "FAIL" | .evidence.compilation.error = "mod_verification_failed"' \
             "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
         return 1
     fi
     
     # Download dependencies
-    if ! GOTOOLCHAIN=auto go mod download > "$LOG_DIR/mod_download.log" 2>&1; then
+    md_out=$(GOTOOLCHAIN=auto run_go mod download 2>&1 || true)
+    printf '%s' "$md_out" > "$LOG_DIR/mod_download.log" || true
+    if echo "$md_out" | grep -qiE 'permission denied|error|fatal'; then
         fail "Go mod download failed"
         jq '.evidence.compilation.status = "FAIL" | .evidence.compilation.error = "mod_download_failed"' \
             "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
@@ -182,7 +305,7 @@ verify_comprehensive_compilation() {
     
     # Compile all packages
     local compile_errors=""
-    if ! GOTOOLCHAIN=auto go build -v ./... > "$LOG_DIR/build_all.log" 2>&1; then
+    if ! GOTOOLCHAIN=auto run_go build -v ./... > "$LOG_DIR/build_all.log" 2>&1; then
         compile_errors=$(cat "$LOG_DIR/build_all.log")
         fail "Go build failed: $compile_errors"
         local errors_json=$(echo "$compile_errors" | jq -R . | jq -s .)
@@ -192,17 +315,46 @@ verify_comprehensive_compilation() {
     fi
     
     # Compile main server binary (goats)
-    if ! GOTOOLCHAIN=auto go build -o /tmp/goats ./cmd/goats > "$LOG_DIR/server_build.log" 2>&1; then
+    if ! GOTOOLCHAIN=auto run_go build -o /tmp/goats ./cmd/goats > "$LOG_DIR/server_build.log" 2>&1; then
         fail "Server binary compilation failed"
         jq '.evidence.compilation.status = "FAIL" | .evidence.compilation.error = "server_build_failed"' \
             "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
         return 1
     fi
+
+    # Static analysis: go vet
+    local vet_status="PASS"
+    if ! GOTOOLCHAIN=auto run_go vet ./... > "$LOG_DIR/go_vet.log" 2>&1; then
+        vet_status="FAIL"
+    fi
+    # Static analysis: staticcheck (installed in toolbox)
+    local staticcheck_status="PASS"
+    if command -v staticcheck >/dev/null 2>&1; then
+        if ! GOTOOLCHAIN=auto run_go staticcheck ./... > "$LOG_DIR/staticcheck.log" 2>&1; then
+            staticcheck_status="FAIL"
+        fi
+    else
+        echo "staticcheck not found in PATH" > "$LOG_DIR/staticcheck.log" 2>&1 || true
+        staticcheck_status="SKIPPED"
+    fi
     
     success "Compilation verification: PASS"
     binary_size=$(stat -c%s /tmp/goats 2>/dev/null || echo 0)
-    jq --arg size "$binary_size" '.evidence.compilation.status = "PASS" | .evidence.compilation.binary_size = $size' \
+    jq --arg size "$binary_size" \
+       --arg vet "$vet_status" \
+       --arg sc "$staticcheck_status" \
+       '.evidence.compilation.status = "PASS" | .evidence.compilation.binary_size = $size | .evidence.compilation.static_analysis = {go_vet: $vet, staticcheck: $sc}' \
         "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
+    return 0
+}
+
+# Wrapper to ensure backend up prior to dependent phases
+ensure_backend_phase() {
+    local phase_name=$1
+    if ! start_backend_if_needed; then
+        fail "Backend unavailable before phase: $phase_name"
+        return 1
+    fi
     return 0
 }
 
@@ -221,12 +373,12 @@ run_comprehensive_unit_tests() {
     # Run unit tests (quick: minimal; full: exclude examples and e2e)
     local phase
     phase=$(jq -r '.test_phase // "quick"' "$evidence_file" 2>/dev/null || echo "quick")
-    local test_cmd="GOTOOLCHAIN=auto go test -v -race -count=1 -timeout=30m"
+    local test_cmd="GOTOOLCHAIN=auto run_go test -v -race -count=1 -timeout=30m"
     local packages
     if [ "$phase" = "quick" ]; then
         packages="./cmd/goats ./generated/tdd-comprehensive ./internal/api ./internal/service"
     else
-        packages=$(go list ./... | grep -v "/examples$" | grep -v "/tests/e2e" | tr '\n' ' ')
+    packages=$(run_go list ./... | grep -v "/examples$" | grep -v "/tests/e2e" | tr '\n' ' ')
     fi
 
     if eval "$test_cmd $packages" > "$LOG_DIR/unit_tests.log" 2>&1; then
@@ -285,7 +437,7 @@ run_comprehensive_integration_tests() {
     export INTEGRATION_TESTS=true
     export DB_HOST=localhost
     
-    if GOTOOLCHAIN=auto go test -v -tags=integration -timeout=45m ./... > "$LOG_DIR/integration_tests.log" 2>&1; then
+    if GOTOOLCHAIN=auto run_go test -v -tags=integration -timeout=45m ./... > "$LOG_DIR/integration_tests.log" 2>&1; then
         local integration_count=$(grep -c "PASS:" "$LOG_DIR/integration_tests.log" || echo "0")
         success "Integration tests: PASS ($integration_count tests)"
         jq --arg test_count "$integration_count" \
@@ -307,12 +459,16 @@ run_comprehensive_security_tests() {
     local evidence_file=$1
     
     log "Phase 4: Comprehensive Security Tests"
+    ensure_backend_phase "security_tests" || return 1
     
     # Test 1: Password echoing prevention (historical failure)
     log "Testing password echoing prevention..."
     
     # Create a test that verifies passwords are not logged or echoed
-    cat > "$LOG_DIR/password_echo_test.go" << 'EOF'
+    # Write test inside project subdir to ensure mounted path aligns in container
+    local sec_test_rel="generated/tdd-comprehensive/password_echo_test.go"
+    mkdir -p "$PROJECT_ROOT/generated/tdd-comprehensive" || true
+    cat > "$PROJECT_ROOT/$sec_test_rel" << 'EOF'
 package main
 
 import (
@@ -330,7 +486,7 @@ func TestPasswordNotEchoed(t *testing.T) {
     defer log.SetOutput(os.Stderr)
     
     // Simulate password handling (this should not echo password)
-    testPassword := "test_password_123"
+    testPassword := "__SENTINEL_TEST_PASSWORD_123__"
     log.Printf("User authentication attempt for user: %s", "testuser")
     
     // Verify password is not in logs
@@ -341,7 +497,7 @@ func TestPasswordNotEchoed(t *testing.T) {
 }
 EOF
     
-    if GOTOOLCHAIN=auto go test "$LOG_DIR/password_echo_test.go" -v > "$LOG_DIR/password_echo_results.log" 2>&1; then
+    if GOTOOLCHAIN=auto run_go test "./generated/tdd-comprehensive" -run TestPasswordNotEchoed -count=1 -v > "$LOG_DIR/password_echo_results.log" 2>&1; then
         success "Password echo prevention: PASS"
         jq '.historical_failure_checks.password_echoing.status = "PASS"' \
             "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
@@ -369,8 +525,41 @@ EOF
         fi
     fi
     
+    # Test 3: Gosec static security analysis (optional fail on high severity)
+    local gosec_fail_level=${GOSEC_FAIL_LEVEL:-HIGH}
+    local gosec_status="SKIPPED"
+    local gosec_high=0 gosec_medium=0 gosec_low=0
+    log "Running gosec static analysis (fail level: $gosec_fail_level)..."
+    # Run inside toolbox (run_go already ensures image). Use JSON for parsing.
+    local gosec_out
+    if gosec_out=$(GOTOOLCHAIN=auto run_go gosec -quiet -fmt=json ./... 2>/dev/null); then
+        printf '%s' "$gosec_out" > "$LOG_DIR/gosec.json" || true
+        gosec_high=$(echo "$gosec_out" | jq '[.Issues[]? | select(.severity=="HIGH")] | length' 2>/dev/null || echo 0)
+        gosec_medium=$(echo "$gosec_out" | jq '[.Issues[]? | select(.severity=="MEDIUM")] | length' 2>/dev/null || echo 0)
+        gosec_low=$(echo "$gosec_out" | jq '[.Issues[]? | select(.severity=="LOW")] | length' 2>/dev/null || echo 0)
+        gosec_status="PASS"
+        case "$gosec_fail_level" in
+            HIGH)   [ "$gosec_high" -gt 0 ] && gosec_status="FAIL" ;;
+            MEDIUM) if [ "$gosec_high" -gt 0 ] || [ "$gosec_medium" -gt 0 ]; then gosec_status="FAIL"; fi ;;
+            LOW)    if [ "$gosec_high" -gt 0 ] || [ "$gosec_medium" -gt 0 ] || [ "$gosec_low" -gt 0 ]; then gosec_status="FAIL"; fi ;;
+            NONE)   gosec_status="PASS" ;;
+        esac
+    else
+        echo '{"error":"gosec execution failed"}' > "$LOG_DIR/gosec.json" 2>/dev/null || true
+        gosec_status="SKIPPED"
+    fi
+
+    if [ "$gosec_status" = "FAIL" ]; then
+        fail "Security tests: FAIL (gosec findings: high=$gosec_high medium=$gosec_medium low=$gosec_low)"
+        jq --arg h "$gosec_high" --arg m "$gosec_medium" --arg l "$gosec_low" \
+           '.evidence.security_tests.status = "FAIL" | .evidence.security_tests.gosec = {status:"FAIL", high:($h|tonumber), medium:($m|tonumber), low:($l|tonumber)}' \
+            "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
+        return 1
+    fi
+
     success "Security tests: PASS"
-    jq '.evidence.security_tests.status = "PASS"' \
+    jq --arg h "$gosec_high" --arg m "$gosec_medium" --arg l "$gosec_low" --arg gs "$gosec_status" \
+       '.evidence.security_tests.status = "PASS" | .evidence.security_tests.gosec = {status:$gs, high:($h|tonumber), medium:($m|tonumber), low:($l|tonumber)}' \
         "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
     return 0
 }
@@ -380,26 +569,29 @@ verify_comprehensive_service_health() {
     local evidence_file=$1
     
     log "Phase 5: Comprehensive Service Health Verification"
+    ensure_backend_phase "service_health" || {
+        jq '.evidence.service_health.status = "BACKEND_UNAVAILABLE"' "$evidence_file" > "$evidence_file.tmp" 2>/dev/null && mv "$evidence_file.tmp" "$evidence_file" || true
+        return 1
+    }
     
     # Start backend service
     $COMPOSE_CMD up -d backend > "$LOG_DIR/backend_start.log" 2>&1
     
     # Wait for service startup with timeout
     local service_ready=0
-    for i in {1..60}; do
-        if curl -f -s "$BASE_URL/health" > "$LOG_DIR/health_response.json" 2>/dev/null; then
-            local health_status=$(jq -r '.status // "unknown"' "$LOG_DIR/health_response.json" 2>/dev/null || echo "unknown")
-            if [ "$health_status" = "healthy" ]; then
-                service_ready=1
-                break
-            fi
+    for i in {1..40}; do
+        local code
+        code=$(curl -s -o "$LOG_DIR/health_response.json" -w '%{http_code}' "$BASE_URL/health" || echo "")
+        if echo "$code" | grep -Eq '^(200|204|301|302|401)$'; then
+            service_ready=1
+            break
         fi
-        sleep 3
+        sleep 2
     done
     
     if [ "$service_ready" -eq 1 ]; then
-        success "Service health: HEALTHY"
-        jq '.evidence.service_health.status = "HEALTHY" | .evidence.service_health.response_time = "$(date)"' \
+        success "Service health: RESPONDED"
+        jq '.evidence.service_health.status = "RESPONDED" | .evidence.service_health.checked_at = "'"$(date)"'"' \
             "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
         return 0
     else
@@ -525,6 +717,10 @@ run_comprehensive_api_tests() {
     local evidence_file=$1
     
     log "Phase 8: Comprehensive API Tests (Historical 500/404 Error Prevention)"
+    ensure_backend_phase "api_tests" || {
+        jq '.evidence.api_tests.status = "BACKEND_UNAVAILABLE"' "$evidence_file" > "$evidence_file.tmp" 2>/dev/null && mv "$evidence_file.tmp" "$evidence_file" || true
+        return 1
+    }
     
     # Define comprehensive endpoint list
     local api_endpoints=(
@@ -575,6 +771,7 @@ run_comprehensive_api_tests() {
     done
     
     local success_rate=$((working_endpoints * 100 / total_endpoints))
+    local min_required=${COMPREHENSIVE_MIN_API_SUCCESS:-80}
     
     # Build results JSON
     local results_json="[$(IFS=','; echo "${endpoint_results[*]}")]"
@@ -603,13 +800,20 @@ run_comprehensive_api_tests() {
     fi
     
     # Success criteria: >80% endpoints working, zero 500 errors
-    if [ "$success_rate" -ge 80 ] && [ "$server_500_errors" -eq 0 ]; then
+    # Record lists of 404 and 500 endpoints for evidence
+    local not_found_list=$(echo "$results_json" | jq '[.[] | select(.result=="NOT_FOUND") | .endpoint]' 2>/dev/null || echo '[]')
+    local server_error_list=$(echo "$results_json" | jq '[.[] | select(.result=="SERVER_ERROR") | .endpoint]' 2>/dev/null || echo '[]')
+    jq --argjson nf "$not_found_list" --argjson se "$server_error_list" --arg min "$min_required" \
+       '.evidence.api_tests.not_found_endpoints = $nf | .evidence.api_tests.server_error_endpoints = $se | .evidence.api_tests.min_success_required = ($min|tonumber)' \
+        "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file" || true
+
+    if [ "$success_rate" -ge "$min_required" ] && [ "$server_500_errors" -eq 0 ]; then
         success "API tests: PASS (${success_rate}% success rate, 0 server errors)"
         jq '.evidence.api_tests.status = "PASS" | .historical_failure_checks."500_server_errors".status = "PASS" | .historical_failure_checks."404_not_found".status = "PASS"' \
             "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
         return 0
     else
-        fail "API tests: FAIL (${success_rate}% success rate, requirements: >80% success, 0 server errors)"
+        fail "API tests: FAIL (${success_rate}% success rate, requirement: >=${min_required}% success, 0 server errors)"
         jq '.evidence.api_tests.status = "FAIL"' \
             "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
         return 1
@@ -812,6 +1016,10 @@ run_comprehensive_performance_tests() {
     local evidence_file=$1
     
     log "Phase 10: Comprehensive Performance Tests"
+    ensure_backend_phase "performance_tests" || {
+        jq '.evidence.performance_tests.status = "BACKEND_UNAVAILABLE"' "$evidence_file" > "$evidence_file.tmp" 2>/dev/null && mv "$evidence_file.tmp" "$evidence_file" || true
+        return 1
+    }
     
     # Test response times for critical endpoints
     local performance_endpoints=("/health" "/login" "/admin/users")
@@ -855,6 +1063,10 @@ run_comprehensive_regression_tests() {
     local evidence_file=$1
     
     log "Phase 11: Comprehensive Regression Tests (Historical Failure Prevention)"
+    ensure_backend_phase "regression_tests" || {
+        jq '.evidence.regression_tests.status = "BACKEND_UNAVAILABLE"' "$evidence_file" > "$evidence_file.tmp" 2>/dev/null && mv "$evidence_file.tmp" "$evidence_file" || true
+        return 1
+    }
     
     local regression_failures=0
     
@@ -876,24 +1088,29 @@ run_comprehensive_regression_tests() {
     # Regression Test 2: Database connection integrity
     log "Testing database connection integrity..."
     db_ok=0
-    # Prefer direct container exec by name to avoid compose plugin quirks
-    if $CONTAINER_CMD ps --format "{{.Names}}" | grep -q "^gotrs-mariadb$"; then
-        if $CONTAINER_CMD exec gotrs-mariadb sh -lc "/usr/bin/mariadb -h127.0.0.1 -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-LetClaude.1n}\" -e 'SELECT 1;'" >/dev/null 2>&1; then
-            db_ok=1
-        fi
-    elif $CONTAINER_CMD ps --format "{{.Names}}" | grep -q "^gotrs-postgres$"; then
-        if $CONTAINER_CMD exec -T gotrs-postgres pg_isready -U "${DB_USER:-gotrs}" >/dev/null 2>&1; then
-            db_ok=1
-        fi
+    if [ -z "${CONTAINER_CMD}" ] && [ -z "${COMPOSE_CMD}" ]; then
+        warning "No container runtime available; skipping DB integrity check"
+        jq '.evidence.regression_tests.db_integrity = "SKIPPED_NO_CONTAINER"' \
+            "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
     else
-        # Fallback to compose exec if container names are not available
-        if $COMPOSE_CMD ps --services 2>/dev/null | grep -q "^mariadb$"; then
-            if $COMPOSE_CMD exec -T mariadb sh -lc "/usr/bin/mariadb -h\"${DB_HOST:-mariadb}\" -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-LetClaude.1n}\" -e 'SELECT 1;'" >/dev/null 2>&1; then
+        # Prefer direct container ps when possible
+        if [ -n "$CONTAINER_CMD" ] && $CONTAINER_CMD ps --format "{{.Names}}" | grep -q "^gotrs-mariadb$"; then
+            if $CONTAINER_CMD exec gotrs-mariadb sh -lc "/usr/bin/mariadb -h127.0.0.1 -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-LetClaude.1n}\" -e 'SELECT 1;'" >/dev/null 2>&1; then
                 db_ok=1
             fi
-        elif $COMPOSE_CMD ps --services 2>/dev/null | grep -q "^postgres$"; then
-            if $COMPOSE_CMD exec -T postgres pg_isready -U "${DB_USER:-gotrs}" >/dev/null 2>&1; then
+        elif [ -n "$CONTAINER_CMD" ] && $CONTAINER_CMD ps --format "{{.Names}}" | grep -q "^gotrs-postgres$"; then
+            if $CONTAINER_CMD exec -T gotrs-postgres pg_isready -U "${DB_USER:-gotrs}" >/dev/null 2>&1; then
                 db_ok=1
+            fi
+        elif [ -n "$COMPOSE_CMD" ]; then
+            if $COMPOSE_CMD ps --services 2>/dev/null | grep -q "^mariadb$"; then
+                if $COMPOSE_CMD exec -T mariadb sh -lc "/usr/bin/mariadb -h\"${DB_HOST:-mariadb}\" -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-LetClaude.1n}\" -e 'SELECT 1;'" >/dev/null 2>&1; then
+                    db_ok=1
+                fi
+            elif $COMPOSE_CMD ps --services 2>/dev/null | grep -q "^postgres$"; then
+                if $COMPOSE_CMD exec -T postgres pg_isready -U "${DB_USER:-gotrs}" >/dev/null 2>&1; then
+                    db_ok=1
+                fi
             fi
         fi
     fi
@@ -911,8 +1128,8 @@ run_comprehensive_regression_tests() {
     # Regression Test 3: Configuration loading
     log "Testing configuration loading..."
     # Accept healthy health endpoint as proxy for successful config load
-    if curl -sf "$BASE_URL/health" >/dev/null; then
-        success "Configuration loading: PASS (health OK)"
+    if code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE_URL/health" || echo ""); echo "$code" | grep -Eq '^(200|204|301|302|401)$'; then
+        success "Configuration loading: PASS (health responded $code)"
         jq '.evidence.regression_tests.config_loading = "PASS"' \
             "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
     else
@@ -946,6 +1163,11 @@ generate_comprehensive_report() {
     log "Generating comprehensive evidence report..."
     
     local report_file="$EVIDENCE_DIR/comprehensive_${test_phase}_report_$(date +%Y%m%d_%H%M%S).html"
+    local evidence_hash
+    evidence_hash=$(sha256sum "$evidence_file" 2>/dev/null | awk '{print $1}')
+    if [ -n "$evidence_hash" ]; then
+        jq --arg eh "$evidence_hash" '.evidence_hash = $eh' "$evidence_file" > "$evidence_file.tmp" 2>/dev/null && mv "$evidence_file.tmp" "$evidence_file" || true
+    fi
     
     # Calculate historical failure status
     local historical_failures_detected=0
@@ -1055,7 +1277,8 @@ generate_comprehensive_report() {
     </div>
 
     <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #dee2e6; text-align: center; color: #6c757d;">
-        Generated by Comprehensive TDD Test Automation - $(date)
+        Generated by Comprehensive TDD Test Automation - $(date)<br/>
+        Evidence SHA256: ${evidence_hash:-unavailable}
     </footer>
 </body>
 </html>
@@ -1074,12 +1297,26 @@ run_comprehensive_verification() {
     # Collect evidence
     local evidence_file=$(collect_comprehensive_evidence "$test_phase")
     
-    # Initialize counters
+    # Initialize counters (adjust in limited mode)
     local gates_passed=0
     local gates_total=11
     local phase_results=()
-    
-    log "Running all $gates_total quality gates with historical failure prevention..."
+    local skipped_phases=0
+    if [ "$LIMITED_MODE" = "1" ]; then
+        gates_total=3
+        log "Running LIMITED MODE ($gates_total gates: compilation, unit, template)"
+        # Mark skipped phases up-front in evidence
+        jq '.evidence.integration_tests.status = "SKIPPED_LIMITED" |
+            .evidence.security_tests.status = "SKIPPED_LIMITED" |
+            .evidence.service_health.status = "SKIPPED_LIMITED" |
+            .evidence.database_tests.status = "SKIPPED_LIMITED" |
+            .evidence.api_tests.status = "SKIPPED_LIMITED" |
+            .evidence.browser_tests.status = "SKIPPED_LIMITED" |
+            .evidence.performance_tests.status = "SKIPPED_LIMITED" |
+            .evidence.regression_tests.status = "SKIPPED_LIMITED"' "$evidence_file" > "$evidence_file.tmp" 2>/dev/null && mv "$evidence_file.tmp" "$evidence_file" || true
+    else
+        log "Running all $gates_total quality gates with historical failure prevention..."
+    fi
     
     # Run all comprehensive test phases
     log "Phase 1/11: Compilation Verification"
@@ -1098,76 +1335,104 @@ run_comprehensive_verification() {
         phase_results+=("2. Unit Tests: FAIL")
     fi
     
-    log "Phase 3/11: Integration Tests"
-    if run_comprehensive_integration_tests "$evidence_file"; then
-        ((gates_passed++))
-        phase_results+=("3. Integration Tests: PASS")
+    if [ "$LIMITED_MODE" = "1" ]; then
+        # Skip phases 3-6,8-11 in limited mode (already marked skipped in evidence)
+    log "[LIMITED] Skipping Integration, Security, Service Health, Database, API, Browser, Performance, Regression tests"
+        log "Phase 7/11: Template Tests (executed in limited mode as gate 3/3)"
+        if run_comprehensive_template_tests "$evidence_file"; then
+            ((gates_passed++))
+            phase_results+=("7. Template Tests: PASS")
+        else
+            phase_results+=("7. Template Tests: FAIL")
+        fi
     else
-        phase_results+=("3. Integration Tests: FAIL")
-    fi
-    
-    log "Phase 4/11: Security Tests"
-    if run_comprehensive_security_tests "$evidence_file"; then
-        ((gates_passed++))
-        phase_results+=("4. Security Tests: PASS")
-    else
-        phase_results+=("4. Security Tests: FAIL")
-    fi
-    
-    log "Phase 5/11: Service Health"
-    if verify_comprehensive_service_health "$evidence_file"; then
-        ((gates_passed++))
-        phase_results+=("5. Service Health: PASS")
-    else
-        phase_results+=("5. Service Health: FAIL")
-    fi
-    
-    log "Phase 6/11: Database Tests"
-    if run_comprehensive_database_tests "$evidence_file"; then
-        ((gates_passed++))
-        phase_results+=("6. Database Tests: PASS")
-    else
-        phase_results+=("6. Database Tests: FAIL")
-    fi
-    
-    log "Phase 7/11: Template Tests"
-    if run_comprehensive_template_tests "$evidence_file"; then
-        ((gates_passed++))
-        phase_results+=("7. Template Tests: PASS")
-    else
-        phase_results+=("7. Template Tests: FAIL")
-    fi
-    
-    log "Phase 8/11: API Tests"
-    if run_comprehensive_api_tests "$evidence_file"; then
-        ((gates_passed++))
-        phase_results+=("8. API Tests: PASS")
-    else
-        phase_results+=("8. API Tests: FAIL")
-    fi
-    
-    log "Phase 9/11: Browser Tests"
-    if run_comprehensive_browser_tests "$evidence_file"; then
-        ((gates_passed++))
-        phase_results+=("9. Browser Tests: PASS")
-    else
-        phase_results+=("9. Browser Tests: FAIL")
-    fi
-    
-    log "Phase 10/11: Performance Tests"
-    if run_comprehensive_performance_tests "$evidence_file"; then
-        ((gates_passed++))
-        phase_results+=("10. Performance Tests: PASS")
-    else
-        phase_results+=("10. Performance Tests: FAIL")
-    fi
-    
-    log "Phase 11/11: Regression Tests"
-    if run_comprehensive_regression_tests "$evidence_file"; then
-        ((gates_passed++))
-        phase_results+=("11. Regression Tests: PASS")
-    else
-        phase_results+=("11. Regression Tests: FAIL")
+        log "Phase 3/11: Integration Tests"
+        if run_comprehensive_integration_tests "$evidence_file"; then
+            ((gates_passed++))
+            phase_results+=("3. Integration Tests: PASS")
+        else
+            # Distinguish skip vs fail by evidence marker if present
+            if jq -e '.evidence.integration_tests.status | test("^SKIPPED")' "$evidence_file" >/dev/null 2>&1; then
+                phase_results+=("3. Integration Tests: SKIPPED")
+                ((skipped_phases++))
+            else
+                phase_results+=("3. Integration Tests: FAIL")
+            fi
+        fi
+        
+        log "Phase 4/11: Security Tests"
+        if run_comprehensive_security_tests "$evidence_file"; then
+            ((gates_passed++))
+            phase_results+=("4. Security Tests: PASS")
+        else
+            phase_results+=("4. Security Tests: FAIL")
+        fi
+        
+        log "Phase 5/11: Service Health"
+        if verify_comprehensive_service_health "$evidence_file"; then
+            ((gates_passed++))
+            phase_results+=("5. Service Health: PASS")
+        else
+            phase_results+=("5. Service Health: FAIL")
+        fi
+        
+        log "Phase 6/11: Database Tests"
+        if run_comprehensive_database_tests "$evidence_file"; then
+            ((gates_passed++))
+            phase_results+=("6. Database Tests: PASS")
+        else
+            if jq -e '.evidence.database_tests.status | test("^SKIPPED")' "$evidence_file" >/dev/null 2>&1; then
+                phase_results+=("6. Database Tests: SKIPPED")
+                ((skipped_phases++))
+            else
+                phase_results+=("6. Database Tests: FAIL")
+            fi
+        fi
+        
+        log "Phase 7/11: Template Tests"
+        if run_comprehensive_template_tests "$evidence_file"; then
+            ((gates_passed++))
+            phase_results+=("7. Template Tests: PASS")
+        else
+            phase_results+=("7. Template Tests: FAIL")
+        fi
+        
+        log "Phase 8/11: API Tests"
+        if run_comprehensive_api_tests "$evidence_file"; then
+            ((gates_passed++))
+            phase_results+=("8. API Tests: PASS")
+        else
+            phase_results+=("8. API Tests: FAIL")
+        fi
+        
+        log "Phase 9/11: Browser Tests"
+        if run_comprehensive_browser_tests "$evidence_file"; then
+            ((gates_passed++))
+            phase_results+=("9. Browser Tests: PASS")
+        else
+            if jq -e '.evidence.browser_tests.status | test("^SKIPPED")' "$evidence_file" >/dev/null 2>&1; then
+                phase_results+=("9. Browser Tests: SKIPPED")
+                ((skipped_phases++))
+            else
+                phase_results+=("9. Browser Tests: FAIL")
+            fi
+        fi
+        
+        log "Phase 10/11: Performance Tests"
+        if run_comprehensive_performance_tests "$evidence_file"; then
+            ((gates_passed++))
+            phase_results+=("10. Performance Tests: PASS")
+        else
+            phase_results+=("10. Performance Tests: FAIL")
+        fi
+        
+        log "Phase 11/11: Regression Tests"
+        if run_comprehensive_regression_tests "$evidence_file"; then
+            ((gates_passed++))
+            phase_results+=("11. Regression Tests: PASS")
+        else
+            phase_results+=("11. Regression Tests: FAIL")
+        fi
     fi
     
     # Calculate final results

@@ -94,6 +94,7 @@ func TestDarkThemeContrast(t *testing.T) {
 
 func TestQueueView(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	if !dbAvailable() { t.Skip("DB not available - skipping QueueView UI tests") }
 
 	tests := []struct {
 		name           string
