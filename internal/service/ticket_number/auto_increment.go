@@ -61,29 +61,24 @@ func (g *AutoIncrementGenerator) Reset() error {
 // getNextCounterWithStart gets the next counter, handling the StartFrom value
 func (g *AutoIncrementGenerator) getNextCounterWithStart() (int64, error) {
 	var counter int64
-	
-	// First, check if counter exists
+
+	// Check if counter exists already
 	err := g.db.QueryRow(database.ConvertPlaceholders(`
 		SELECT counter FROM ticket_number_counter 
 		WHERE counter_uid = $1
 	`), g.counterUID).Scan(&counter)
-	
+
 	if err == sql.ErrNoRows {
-		// Counter doesn't exist, use the shared getNextCounter function
-		// which handles MySQL/PostgreSQL differences
+		// Initialize starting point so next increment yields StartFrom
+		start := g.config.StartFrom
+		if start <= 0 { start = 1 }
+		if err := resetCounter(g.db, g.counterUID, start-1); err != nil {
+			return 0, err
+		}
 		return getNextCounter(g.db, g.counterUID)
 	}
-	
 	if err != nil {
 		return 0, err
 	}
-	
-	// Counter exists, use the shared getNextCounter function
 	return getNextCounter(g.db, g.counterUID)
-	
-	if err != nil {
-		return 0, err
-	}
-	
-	return counter, nil
 }
