@@ -350,3 +350,110 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 ---
 
 *Last updated: September 23, 2025 - Queue detail enhancement completed: added real-time statistics and enhanced ticket display with navigation. One admin module (Queues) now has verified working functionality.*
+
+---
+
+## 🔄 Update: October 2, 2025 – MVP Focus & Anti-Regression Plan
+
+No additional core ticketing capabilities have been implemented since the September 23 update. All previously marked ✅ items remain valid. Work now shifts from infrastructural cleanup to delivering the first true ticket vertical slice while aggressively preventing further regressions.
+
+### 🎯 Immediate MVP Focus (Strict Priority Order)
+1. Ticket Creation Vertical Slice (API + HTMX form + persistence)  
+   - Implement create handler (remove stubs)  
+   - Validation (queue, priority, title length, customer optional)  
+   - Persist ticket + initial article (even if blank body)  
+   - Return canonical ticket number & redirect to zoom  
+2. Deterministic Ticket Number Generator  
+   - Monotonic, collision-safe (DB sequence or allocation table)  
+   - Property test + concurrency test (race detector)  
+3. Real Ticket Zoom (replace test-mode fallback)  
+   - Load ticket + articles (empty state friendly)  
+   - Consistent JSON test fixture + HTML template snapshot  
+4. Articles / Comments System  
+   - Add public reply + internal note differentiation  
+   - Basic article list rendering (reverse chronological)  
+5. Status Transitions & Assignment  
+   - Minimal workflow (new → open → closed)  
+   - Assign/transfer: agent + queue change endpoints  
+6. Minimal Customer Portal  
+   - Login (reuse auth)  
+   - Submit ticket (subset of agent form)  
+   - View own tickets + add reply  
+7. Outbound Email Notification (One-Way)  
+   - Pluggable mail sender interface (no inbound yet)  
+   - Fire on ticket create + public article add  
+8. Hardening / Regression Pass (stabilization freeze)  
+   - Only bug fixes + test debt clearance before tagging 0.4.0
+
+### ✅ Already Done / Do NOT Rework Now
+- Queue detail statistics + ticket list
+- Search API/UI basic pagination
+- Type CRUD & fallback test harness
+- Template validation for critical set (extend later, not now)
+
+### 🧪 Anti-Regression Strategy (Actionable)
+| Layer | Action | Purpose |
+|-------|--------|---------|
+| Unit (domain) | Ticket number generator property & race tests | Prevent duplicate / out-of-order numbers |
+| Repo Contract | Interface-level tests run against Postgres & MySQL containers | Ensures placeholder conversion stability |
+| API Contract | JSON golden files for create/view/update ticket endpoints | Detect schema drift |
+| HTML Snapshot | Deterministic template render (strip dynamic timestamps) | Catch accidental markup changes |
+| Template Validation | Expand from 5 to +ticket_create + ticket_zoom after they land | Fast fail on missing templates |
+| DB-Less Mode | Maintain lightweight in-memory ticket repo for CI quick path | Keep feedback loop fast |
+| CI Gates | Require green: unit, repo contract (2 DBs), API goldens, template validation | Block regressions early |
+| Merge Discipline | <300 LOC functional changes per PR, vertical slice increments | Reduce blast radius |
+
+### 🔐 Risk Mitigations
+- Placeholder Conversion Regressions → Keep ConvertPlaceholders unit + integration tests per new query
+- Template Drift → Snapshot tests + startup validation expansion
+- Concurrency Issues (ticket create) → Sequence backed + race test
+- Silent HTML Errors → Force JSON + HTML dual asserts in tests for new handlers
+
+### 📌 Success Definition for This Slice
+- Create → redirect to real zoom (not fallback)
+- Ticket number visible & stable across refreshes
+- Add at least one public and one internal article
+- Change status & assign agent without error
+- Customer can create & view only their tickets
+- Notification event logged (even if email sink is noop in dev)
+
+### 🗂 Work Packaging (Suggested PR Sequence)
+1. Data Model Additions: ticket number sequence + article table (if not present)
+2. Ticket Create API + repository methods + tests (unit + contract)
+3. HTMX Create Form + template + HTML snapshot test
+4. Real Ticket Zoom (read path) + JSON/HTML tests
+5. Ticket Number Generator hardening (property + race tests)
+6. Articles add/list + differentiation (public/internal)
+7. Status & assignment endpoints + minimal UI controls
+8. Customer portal minimal (auth reuse + list/create/view)
+9. Notification interface + outbound stub implementation
+10. Stabilization: expand template validation + goldens + docs
+
+### 🧱 Deferred (Post-MVP Explicitly)
+- Inbound email processing
+- Advanced search facets / reporting
+- SLA engine
+- Dynamic fields system
+- Full admin module audit
+
+### 📉 Scope Guardrails
+- No workflow engine now (only 3 status states)
+- No bulk actions
+- No rich text (plain text articles)
+- No attachment handling yet
+
+### 🔍 Metrics to Track During Implementation
+- Time from commit to green CI (<5 min target with DB-less fast path)
+- Test count & duration per layer (watch for >20% jump per PR)
+- Ticket creation p95 in local container (<150ms target)
+
+### 🕓 Target Calendar Adjustment
+Given slippage past original Sept 30 MVP, set a realistic 0.4.0 target: **October 31, 2025** with weekly stabilization checkpoints (no new scope last 5 days of month).
+
+### 📘 Documentation To Update Incrementally
+- ROADMAP (this file)
+- API reference: ticket create / view / update endpoints
+- Template validation list
+- Testing README: how to run contract + snapshot suites
+
+*Last updated: October 2, 2025 – Added MVP focus sequence and anti-regression strategy. No new core ticket features since prior update; execution pivots to ticket vertical slice.*
