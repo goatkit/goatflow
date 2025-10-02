@@ -5,7 +5,7 @@
 # ============================================
 # Stage 1: Dependencies (cached separately)
 # ============================================
-FROM docker.io/golang:1.23-alpine AS deps
+FROM docker.io/golang:1.24-alpine AS deps
 
 # Set shell for better error handling
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
@@ -72,8 +72,7 @@ FROM docker.io/alpine:3.19 AS runtime
 RUN apk add --no-cache \
     ca-certificates \
     postgresql15-client \
-    tzdata \
-    go
+    tzdata
 
 # Create non-root user
 RUN addgroup -g 1000 -S appgroup && \
