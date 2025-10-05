@@ -7,6 +7,7 @@
 # ============================================
 FROM docker.io/golang:1.24-alpine AS deps
 
+ARG name=defaultValue
 # Set shell for better error handling
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
@@ -68,6 +69,10 @@ RUN gosec -fmt json -out /tmp/security.json ./... || true && \
 # ============================================
 FROM docker.io/alpine:3.19 AS runtime
 
+# Allow customizing runtime UID/GID so host bind mounts/caches are not root-owned
+ARG UID=1000
+ARG GID=1000
+
 # Install runtime dependencies
 RUN apk add --no-cache \
     ca-certificates \
@@ -75,12 +80,15 @@ RUN apk add --no-cache \
     tzdata
 
 # Create non-root user
-RUN addgroup -g 1000 -S appgroup && \
-    adduser -u 1000 -S appuser -G appgroup
+RUN addgroup -g ${GID} -S appgroup && \
+    adduser -u ${UID} -S appuser -G appgroup
 
-# Create app directory
-RUN mkdir -p /app /app/tmp && \
-    chown -R appuser:appgroup /app
+# Create app directory and pre-create cache home (some libs may use XDG base dirs)
+RUN mkdir -p /app /app/tmp /home/appuser/.cache && \
+    chown -R appuser:appgroup /app /home/appuser/.cache
+
+# Set cache-related envs (Go build cache mostly relevant in toolbox, but harmless here)
+ENV XDG_CACHE_HOME=/home/appuser/.cache
 
 # Switch to non-root user
 USER appuser

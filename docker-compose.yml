@@ -19,7 +19,7 @@ services:
     expose:
       - "3306"
     volumes:
-      - mariadb_data:/var/lib/mysql:Z
+      - mariadb_data:/var/lib/mysql
       - ./docker/mariadb/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro,Z
       - /etc/localtime:/etc/localtime:ro
     healthcheck:
@@ -61,7 +61,7 @@ services:
     ports:
       - "${VALKEY_PORT:-6388}:6379"
     volumes:
-      - valkey_data:/data:Z
+      - valkey_data:/data
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 10s
@@ -75,6 +75,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
     image: localhost/gotrs-backend:latest
     command: >
       sh -c "
@@ -308,9 +311,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.toolbox
+      args:
+        UID: ${HOST_UID:-1000}
+        GID: ${HOST_GID:-1000}
     image: gotrs-toolbox:latest
     container_name: gotrs-toolbox
-    user: "1000:1000" # Run as non-root user (matching backend)
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}" # Match host user to avoid root-owned artifacts
     environment:
       # Go development environment
       GOCACHE: /workspace/.cache/go-build

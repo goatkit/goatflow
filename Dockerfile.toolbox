@@ -7,25 +7,19 @@ FROM localhost/gotrs-backend:latest AS backend
 # Build additional toolbox utilities
 FROM docker.io/golang:1.24.6-alpine AS toolbox-builder
 
-# Install build dependencies
-RUN apk add --no-cache \
-    git \
-    gcc \
-    musl-dev \
-    ca-certificates
+ARG TOOLCHAIN_PKGS="git gcc musl-dev ca-certificates"
+RUN apk add --no-cache $TOOLCHAIN_PKGS
 
 # Set working directory
 WORKDIR /workspace
 
-# Copy go mod files for caching
 COPY go.mod go.sum ./
 
-# Download and verify dependencies
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     go mod download && go mod verify
 
-# Copy source code
+# Copy only necessary source first (exclude heavy directories by .dockerignore)
 COPY . .
 
 # Build additional toolbox utilities with optimization
@@ -37,79 +31,42 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/gotrs-db cmd/gotrs-db/main.go 2>/dev/null || true && \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o /usr/local/bin/schema-discovery cmd/schema-discovery/main.go 2>/dev/null || true
 
-# Install Go development tools (use compatible versions)
+# Install Go development tools (pinned for reproducibility)
+ARG GOIMPORTS_VERSION=v0.24.0
+ARG GOSEC_VERSION=v2.21.4
+ARG STATICCHECK_VERSION=2024.1.1
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    go install golang.org/x/tools/cmd/goimports@latest && \
-    go install github.com/securego/gosec/v2/cmd/gosec@v2.21.4 && \
-    go install honnef.co/go/tools/cmd/staticcheck@latest
+    go install golang.org/x/tools/cmd/goimports@${GOIMPORTS_VERSION} && \
+    go install github.com/securego/gosec/v2/cmd/gosec@${GOSEC_VERSION} && \
+    go install honnef.co/go/tools/cmd/staticcheck@${STATICCHECK_VERSION}
 
 # ============================================
 # Final toolbox image
 # ============================================
 FROM alpine:3.19 AS toolbox
 
+ARG UID=1000
+ARG GID=1000
+
 # Install runtime and dev tools
+ARG TOOLBOX_APKS='ca-certificates postgresql15-client mysql-client sqlite git bash make curl jq openssl python3 py3-pip yamllint nodejs npm ripgrep fd tree nss freetype harfbuzz libx11 libxcomposite libxdamage libxext libxfixes libxi libxrandr libxrender libxshmfence libxtst alsa-lib dumb-init ttf-freefont woff2 gcc musl-dev libc6-compat gcompat libstdc++ icu-libs'
 RUN apk add --no-cache \
     # Runtime essentials\
-    ca-certificates \
-    postgresql15-client \
-    mysql-client \
-    sqlite \
-    # Dev tools\
-    git \
-    bash \
-    make \
-    curl \
-    jq \
-    openssl \
-    python3 \
-    py3-pip \
-    yamllint \
-    nodejs \
-    npm \
-    # Text processing\
-    ripgrep \
-    fd \
-    tree \
-    # Playwright deps (Chromium minimal subset) \
-    nss \
-    freetype \
-    harfbuzz \
-    libx11 \
-    libxcomposite \
-    libxdamage \
-    libxext \
-    libxfixes \
-    libxi \
-    libxrandr \
-    libxrender \
-    libxshmfence \
-    libxtst \
-    alsa-lib \
-    dumb-init \
-    ttf-freefont \
-    woff2 \
-    # Go development\
-    gcc \
-    musl-dev \
-    # Go runtime\
-    libc6-compat \
-    gcompat \
-    libstdc++ \
-    icu-libs
+    $TOOLBOX_APKS
 
 # Create python symlink for compatibility
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
-# Create non-root user (matching backend)
-RUN addgroup -g 1000 -S appgroup && \
-    adduser -u 1000 -S appuser -G appgroup
+# Create non-root user (matching backend, overridable)
+RUN addgroup -g ${GID} -S appgroup && \
+    adduser -u ${UID} -S appuser -G appgroup
 
 # Set up workspace
 WORKDIR /workspace
-RUN mkdir -p /tmp/.cache/go-build /tmp/.cache/go-mod /home/appuser/.cache/ms-playwright-go && \
-    chown -R appuser:appgroup /tmp/.cache /workspace /home/appuser/.cache
+# Pre-create cache directories for Go, Playwright, and NPM to avoid root-owned creation during first run
+RUN mkdir -p /tmp/.cache/go-build /tmp/.cache/go-mod /home/appuser/.cache/ms-playwright-go /tmp/npm-cache /home/appuser/.cache && \
+    chown -R appuser:appgroup /tmp/.cache /tmp/npm-cache /workspace /home/appuser/.cache
 
 # Copy binaries from backend image
 COPY --from=backend --chown=appuser:appgroup /app/goats /usr/local/bin/goats
@@ -128,11 +85,20 @@ COPY --chown=appuser:appgroup . /workspace/
 # Switch to non-root user
 USER appuser
 
+# Pre-install frontend dependencies (tailwindcss, esbuild, etc.) to avoid
+# on-demand npm install failures in CI/offline builds. Non-fatal if it fails.
+RUN if [ -f package.json ]; then \
+        echo "Installing frontend dependencies (toolbox bake)..." && \
+        npm install --no-audit --no-fund --no-progress || echo "(frontend deps install skipped)"; \
+    fi
+
 # Set environment for Go caching and prevent auto toolchain downloads
-ENV GOCACHE=/tmp/.cache/go-build
-ENV GOMODCACHE=/tmp/.cache/go-mod
-ENV GOTOOLCHAIN=local
-ENV PATH=/usr/local/go/bin:/usr/local/bin:$PATH
+ENV GOCACHE=/tmp/.cache/go-build \
+    GOMODCACHE=/tmp/.cache/go-mod \
+    GOTOOLCHAIN=local \
+    NPM_CONFIG_CACHE=/tmp/npm-cache \
+    XDG_CACHE_HOME=/home/appuser/.cache \
+    PATH=/usr/local/go/bin:/usr/local/bin:$PATH
 
 # Default to bash shell for interactive use
 CMD ["/bin/bash"]

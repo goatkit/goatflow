@@ -51,7 +51,12 @@ IMAGE_PREFIX := $(if $(findstring podman,$(CONTAINER_CMD)),localhost/,docker.io/
 
 # Runtime-specific flags
 COMPOSE_UP_FLAGS := $(if $(findstring podman-compose,$(COMPOSE_CMD)),--remove-orphans,--remove-orphans)
-COMPOSE_BUILD_FLAGS := $(if $(findstring podman-compose,$(COMPOSE_CMD)),,--no-cache)
+# Compose build flags (allow opt-in no cache rebuild for toolbox)
+TOOLBOX_NO_CACHE ?= 0
+COMPOSE_BUILD_FLAGS :=
+ifeq ($(TOOLBOX_NO_CACHE),1)
+COMPOSE_BUILD_FLAGS += --no-cache
+endif
 CONTAINER_EXEC_FLAGS := $(if $(findstring podman-compose,$(COMPOSE_CMD)),,--user 1000)
 
 # Validate compose command is available
@@ -79,6 +84,27 @@ endif
 define ensure_caches
 @mkdir -p .cache .cache/go-build .cache/go-mod >/dev/null 2>&1 || true
 @chmod 777 .cache .cache/go-build .cache/go-mod >/dev/null 2>&1 || true
+endef
+
+# Rootless cache mounting strategy (default): bind host .cache directories instead of named volumes.
+# Set CACHE_USE_VOLUMES=1 to revert to legacy named volumes (may require ownership fixes if originally created as root).
+CACHE_USE_VOLUMES ?= 0
+ifeq ($(CACHE_USE_VOLUMES),1)
+MOD_CACHE_MOUNT := -v gotrs_go_mod_cache:/workspace/.cache/go-mod
+BUILD_CACHE_MOUNT := -v gotrs_go_build_cache:/workspace/.cache/go-build
+else
+MOD_CACHE_MOUNT := -v "$$PWD/.cache/go-mod:/workspace/.cache/go-mod$(VZ)"
+BUILD_CACHE_MOUNT := -v "$$PWD/.cache/go-build:/workspace/.cache/go-build$(VZ)"
+endif
+
+# Guard: warn if any .cache entries owned by foreign UID/GID (can disable with CACHE_GUARD_DISABLE=1)
+CACHE_GUARD_DISABLE ?= 0
+define cache_guard
+@if [ "$(CACHE_GUARD_DISABLE)" != "1" ]; then \
+	if find .cache -mindepth 1 -printf '%u:%g\n' 2>/dev/null | grep -qv "^$$(id -u):$$(id -g)$$"; then \
+		 echo "⚠  Detected foreign-owned entries in .cache. Run 'make cache-audit' then 'make toolbox-fix-cache' if needed."; \
+	fi; \
+fi
 endef
 
 # Common run flags
@@ -145,6 +171,14 @@ go-cache-clean:
 	@$(MAKE) toolbox-exec ARGS='bash -lc "rm -rf $$GOCACHE/* $$GOMODCACHE/pkg/mod/cache/download 2>/dev/null || true"'
 	@echo "Done"
 
+# Audit cache ownership to detect files created by unexpected UIDs/GIDs
+.PHONY: cache-audit
+cache-audit:
+	@echo "🔍 Auditing .cache ownership (showing differing UID/GID entries first)..."
+	@find .cache -mindepth 1 -printf '%u:%g %M %p\n' 2>/dev/null | sort | awk -v U=$$(id -u) -v G=$$(id -g) '($$1!="" ) {split($$1,ug,/:/); if(ug[1]!=U || ug[2]!=G) print;}' || true
+	@echo "Full listing (UID:GID perms path):"
+	@find .cache -mindepth 1 -printf '%u:%g %M %p\n' 2>/dev/null | sort || true
+
 # GolangCI-Lint cache management
 .PHONY: lint-cache-info lint-cache-clean
 lint-cache-info:
@@ -159,13 +193,19 @@ lint-cache-clean:
 # One-off fix to adjust ownership/permissions of named Go cache volumes
 .PHONY: toolbox-fix-cache
 toolbox-fix-cache:
-	@echo "🔧 Fixing permissions on Go cache volumes..."
-	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm --user 0 toolbox bash -lc 'chown -R 1000:1000 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true; chmod -R 777 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true'; \
-	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm --user 0 toolbox bash -lc 'chown -R 1000:1000 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true; chmod -R 777 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true'; \
-	fi
-	@echo "✅ Cache volume permissions adjusted"
+	@echo "🔧 Checking cache ownership before attempting fix..."
+	@if find .cache -mindepth 1 -printf '%u:%g\n' 2>/dev/null | grep -qv "^$$(id -u):$$(id -g)$$"; then \
+	   echo "🔧 Foreign ownership detected; applying chown/chmod fix"; \
+	   if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
+	     COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm --user 0 toolbox bash -lc 'chown -R 1000:1000 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true; chmod -R 775 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true'; \
+	   else \
+	     $(COMPOSE_CMD) --profile toolbox run --rm --user 0 toolbox bash -lc 'chown -R 1000:1000 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true; chmod -R 775 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true'; \
+	   fi; \
+	   echo "✅ Cache ownership normalized"; \
+	 else \
+	   echo "✅ No foreign ownership detected; nothing to do"; \
+	 fi
+	@$(call cache_guard)
 
 # Aggregate cache clean (Go + lint + node_modules optional purge)
 .PHONY: cache-clean-all
@@ -179,25 +219,27 @@ cache-clean-all:
 # Aggregate Go security scan (container-first)
 .PHONY: security-scan
 security-scan:
-	@echo "🔐 Running Go security & quality scan (govulncheck, gosec, vet, golangci-lint)" 
-	@$(MAKE) toolbox-exec ARGS='bash -lc "go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./..."'
+	@echo "🔐 Running Go security & quality scan (pinned versions)" 
+	@$(MAKE) toolbox-exec ARGS='bash -lc "go install golang.org/x/vuln/cmd/govulncheck@v1.1.3 && govulncheck ./..."'
+	@$(MAKE) toolbox-exec ARGS='bash -lc "go install honnef.co/go/tools/cmd/staticcheck@2024.1.1 && staticcheck -checks=all ./... || true"'
 	@$(MAKE) toolbox-exec ARGS='bash -lc "go install github.com/securego/gosec/v2/cmd/gosec@v2.21.0 && gosec -conf .gosec.json -fmt json -out gosec-results.json ./... || true"'
 	@$(MAKE) toolbox-exec ARGS='bash -lc "gosec -conf .gosec.json -fmt text ./... || true"'
 	@$(MAKE) toolbox-exec ARGS='bash -lc "go vet ./..."'
-	@$(MAKE) toolbox-exec ARGS='bash -lc "curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$GOPATH/bin v1.55.2 && golangci-lint run --timeout=5m"'
+	@$(MAKE) toolbox-exec ARGS='bash -lc "(command -v golangci-lint >/dev/null 2>&1 || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$GOPATH/bin v1.55.2); golangci-lint run --timeout=5m"'
 	@echo "✅ Security scan complete"
 
 # Extended security scan capturing artifacts similar to CI script
 .PHONY: security-scan-artifacts
 security-scan-artifacts:
-	@echo "🔐 Running Go security scan with artifact capture"
+	@echo "🔐 Running Go security scan with artifact capture (pinned)"
 	@rm -rf security-artifacts && mkdir -p security-artifacts
-	@$(MAKE) toolbox-exec ARGS='bash -lc "go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./... | tee security-artifacts/govulncheck.txt || true"'
+	@$(MAKE) toolbox-exec ARGS='bash -lc "go install golang.org/x/vuln/cmd/govulncheck@v1.1.3 && govulncheck ./... | tee security-artifacts/govulncheck.txt || true"'
 	@$(MAKE) toolbox-exec ARGS='bash -lc "govulncheck -json ./... > security-artifacts/govulncheck.json 2>/dev/null || true"'
+	@$(MAKE) toolbox-exec ARGS='bash -lc "go install honnef.co/go/tools/cmd/staticcheck@2024.1.1 && staticcheck -checks=all ./... > security-artifacts/staticcheck.txt 2>&1 || true"'
 	@$(MAKE) toolbox-exec ARGS='bash -lc "go install github.com/securego/gosec/v2/cmd/gosec@v2.21.0 && gosec -conf .gosec.json -fmt json -out security-artifacts/gosec-results.json ./... || true"'
 	@$(MAKE) toolbox-exec ARGS='bash -lc "gosec -conf .gosec.json -fmt text ./... | tee security-artifacts/gosec.txt || true"'
 	@$(MAKE) toolbox-exec ARGS='bash -lc "go vet ./... > security-artifacts/go-vet.txt 2>&1 || true"'
-	@$(MAKE) toolbox-exec ARGS='bash -lc "curl -sSfL https://raw.githubusercontent.com/golangci-lint/master/install.sh | sh -s -- -b $$GOPATH/bin v1.55.2"'
+	@$(MAKE) toolbox-exec ARGS='bash -lc "(command -v golangci-lint >/dev/null 2>&1 || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$GOPATH/bin v1.55.2)"'
 	@$(MAKE) toolbox-exec ARGS='bash -lc "golangci-lint run --timeout=5m -out-format json > security-artifacts/golangci-lint.json || true"'
 	@$(MAKE) toolbox-exec ARGS='bash -lc "golangci-lint run --timeout=5m > security-artifacts/golangci-lint.txt || true"'
 	@echo "Artifacts written to security-artifacts/:" && ls -1 security-artifacts || true
@@ -225,6 +267,18 @@ help:
 	@printf "  \033[1;33m🧪 TDD Workflow (Quality Gates Enforced)\033[0m\n"
 	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
 	@printf "\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[1;33m🗃 Cache & Ownership Utilities\033[0m\n"
+	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
+	@printf "  \033[0;32mmake go-cache-info\033[0m             🔍 Show Go build/module cache sizes\n"
+	@printf "  \033[0;32mmake go-cache-clean\033[0m            🧹 Clear Go build/module caches\n"
+	@printf "  \033[0;32mmake lint-cache-info\033[0m           🔍 Show golangci-lint cache size\n"
+	@printf "  \033[0;32mmake lint-cache-clean\033[0m          🧹 Clear golangci-lint cache\n"
+	@printf "  \033[0;32mmake cache-audit\033[0m               🔎 Audit ownership of .cache entries\n"
+	@printf "  \033[0;32mmake toolbox-fix-cache\033[0m         🔧 Fix foreign-owned cache entries (conditional)\n"
+	@printf "  \033[0;32mCACHE_USE_VOLUMES=1 make toolbox-test\033[0m  (opt-in legacy named volume caches)\n"
+	@printf "  \033[0;32mCACHE_USE_VOLUMES=0 (default)\033[0m       Rootless bind-mounted host .cache directories\n"
+	@printf "  \033[0;32mmake cache-clean-all\033[0m           🚿 Purge all Go/lint caches\n"
 	@printf "  \033[0;32mmake tdd-init\033[0m                     🏁 Initialize TDD workflow\n"
 	@printf "  \033[0;32mmake tdd-test-first\033[0m FEATURE=name  ❌ Start with failing test\n"
 	@printf "  \033[0;32mmake tdd-implement\033[0m                ✅ Implement to pass tests\n"
@@ -282,7 +336,8 @@ help:
 	@printf "  \033[1;33m🧰 Toolbox (Fast Container Dev)\033[0m\n"
 	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
 	@printf "\n"
-	@printf "  \033[0;32mmake toolbox-build\033[0m                🔨 Build toolbox container\n"
+	@printf "  \033[0;32mmake toolbox-build\033[0m                🔨 Build toolbox container (cached)\n"
+	@printf "  \033[0;32mTOOLBOX_NO_CACHE=1 make toolbox-build\033[0m  ♻ Force rebuild without cache\n"
 	@printf "  \033[0;32mmake toolbox-run\033[0m                  🐚 Interactive shell\n"
 	@printf "  \033[0;32mmake toolbox-exec ARGS='go version'\033[0m   ⚡ Execute commands in toolbox\n"
 	@printf "  \033[0;32mmake verify-container-first\033[0m      🔒 Check for raw host Go commands\n"
@@ -606,6 +661,7 @@ toolbox-run:
 # Non-interactive toolbox exec
 toolbox-exec:
 	@$(call ensure_caches)
+	@$(call cache_guard)
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
 		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox bash -c 'mkdir -p /workspace/.cache/go-build /workspace/.cache/go-mod; chmod 777 /workspace/.cache /workspace/.cache/go-build /workspace/.cache/go-mod 2>/dev/null || true; export GOCACHE=/workspace/.cache/go-build; export GOMODCACHE=/workspace/.cache/go-mod; export GOFLAGS="-buildvcs=false $$GOFLAGS"; export PATH="/usr/local/go/bin:$$PATH"; $(ARGS)'; \
 	else \
@@ -629,6 +685,7 @@ toolbox-compile:
 	@$(MAKE) toolbox-build
 	@printf "\n🔨 Checking compilation...\n"
 	@$(call ensure_caches)
+	@$(call cache_guard)
 	$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
@@ -644,6 +701,7 @@ toolbox-compile-api:
 	@$(MAKE) toolbox-build
 	@printf "\n🔨 Compiling API and goats packages only...\n"
 	@$(call ensure_caches)
+	@$(call cache_guard)
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
@@ -659,6 +717,7 @@ toolbox-compile-api:
 compile: toolbox-build
 	@printf "🔨 Compiling goats binary...\n"
 	@mkdir -p bin
+	@$(call cache_guard)
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
         -v "$$(pwd):/workspace" \
@@ -692,11 +751,11 @@ toolbox-test-api: toolbox-build
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
 		--network host \
-		-v gotrs_go_mod_cache:/go/pkg/mod \
-		-v gotrs_go_build_cache:/home/appuser/.cache/go-build \
+		$(MOD_CACHE_MOUNT) \
+		$(BUILD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/home/appuser/.cache/go-build \
-		-e GOMODCACHE=/go/pkg/mod \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e APP_ENV=test \
 		-e STORAGE_PATH=/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
@@ -711,17 +770,18 @@ toolbox-test:
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running core test suite in toolbox...\n"
 	@$(call ensure_caches)
+	@$(call cache_guard)
 	@printf "📡 Starting dependencies (mariadb, valkey)...\n"
 	@$(COMPOSE_CMD) up -d mariadb valkey >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
 		--network host \
-		-v gotrs_go_mod_cache:/go/pkg/mod \
-		-v gotrs_go_build_cache:/home/appuser/.cache/go-build \
+		$(MOD_CACHE_MOUNT) \
+		$(BUILD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/home/appuser/.cache/go-build \
-		-e GOMODCACHE=/go/pkg/mod \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e APP_ENV=test \
 		-e STORAGE_PATH=/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
@@ -780,17 +840,18 @@ toolbox-test-all:
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running broad test suite (excluding e2e/integration) in toolbox...\n"
 	@$(call ensure_caches)
+	@$(call cache_guard)
 	@printf "📡 Starting dependencies (mariadb, valkey)...\n"
 	@$(COMPOSE_CMD) up -d mariadb valkey >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD:/workspace" \
 		--network host \
-		-v gotrs_go_mod_cache:/go/pkg/mod \
-		-v gotrs_go_build_cache:/home/appuser/.cache/go-build \
+		$(MOD_CACHE_MOUNT) \
+		$(BUILD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/home/appuser/.cache/go-build \
-		-e GOMODCACHE=/go/pkg/mod \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e APP_ENV=test \
 		-e STORAGE_PATH=/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
@@ -876,15 +937,16 @@ toolbox-test-run:
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running specific test: $(TEST)\n"
 	@$(call ensure_caches)
+	@$(call cache_guard)
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
-		-v gotrs_go_mod_cache:/go/pkg/mod \
-		-v gotrs_go_build_cache:/home/appuser/.cache/go-build \
+		$(MOD_CACHE_MOUNT) \
+		$(BUILD_CACHE_MOUNT) \
 		-w /workspace \
 		--network host \
-		-e GOCACHE=/home/appuser/.cache/go-build \
-		-e GOMODCACHE=/go/pkg/mod \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
@@ -1953,13 +2015,9 @@ css-deps-stable:
 		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && if [ ! -d node_modules/tailwindcss ]; then echo "🧹 Cleaning existing node_modules (fresh install)"; rm -rf node_modules 2>/dev/null || true; fi; export NPM_CONFIG_CACHE=/tmp/npm-cache && mkdir -p $$NPM_CONFIG_CACHE && cp package-lock.json /tmp/lock.json 2>/dev/null || true && npm install --no-audit --no-fund --no-save && touch .frontend_deps_installed || true'; \
 	fi
 	@printf "✅ CSS dependencies installed\n"
-# Build production CSS (in container with user permissions)
-css-build:
+# Build production CSS (in container with user permissions) - ensure deps first
+css-build: css-deps-stable
 	@printf "🎨 Building production CSS...\n"
-	@if [ ! -d "node_modules/tailwindcss" ]; then \
-		echo "📦 Installing CSS dependencies first (tailwindcss not present)..."; \
-		$(MAKE) css-deps-stable; \
-	fi
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
 		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && npm run build-css'; \
 	else \
