@@ -453,3 +453,6 @@ static/js/test_write
 # TDD ephemeral state
 .tdd-state
 .tdd-state.tmp
+
+# Frontend install sentinel
+.frontend_deps_installed
