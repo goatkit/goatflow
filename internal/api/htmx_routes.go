@@ -1994,7 +1994,10 @@ func handleQueues(c *gin.Context) {
 		return
 	}
 
-	// Get queues from database
+	// Optional search filter
+	search := strings.TrimSpace(c.Query("search"))
+	searchLower := strings.ToLower(search)
+
 	queueRepo := repository.NewQueueRepository(db)
 	queues, err := queueRepo.List()
 	if err != nil {
@@ -2002,9 +2005,60 @@ func handleQueues(c *gin.Context) {
 		return
 	}
 
+	// Build stats: map queueID -> counts
+	// State category mapping (simplified; adjust to real state names as schema evolves)
+	// new: 'new'
+	// open: 'open'
+	// pending: states containing 'pending'
+	// closed: states containing 'closed' or 'resolved'
+	query := `SELECT queue_id, ts.name, COUNT(*)
+		FROM ticket t
+		JOIN ticket_state ts ON t.ticket_state_id = ts.id
+		GROUP BY queue_id, ts.name`
+	rows, qerr := db.Query(query)
+	stats := map[uint]map[string]int{}
+	if qerr == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var qid uint
+			var stateName string
+			var cnt int
+			if err := rows.Scan(&qid, &stateName, &cnt); err == nil {
+				m, ok := stats[qid]
+				if !ok { m = map[string]int{}; stats[qid] = m }
+				cat := "open"
+				lname := strings.ToLower(stateName)
+				if lname == "new" { cat = "new" } else if strings.Contains(lname, "pending") { cat = "pending" } else if strings.Contains(lname, "closed") || strings.Contains(lname, "resolved") { cat = "closed" }
+				m[cat] += cnt
+				m["total"] += cnt
+			}
+		}
+	}
+
+	// Transform for template
+	var viewQueues []gin.H
+	for _, q := range queues {
+		if searchLower != "" && !strings.Contains(strings.ToLower(q.Name), searchLower) {
+			continue
+		}
+		m := stats[uint(q.ID)]
+		viewQueues = append(viewQueues, gin.H{
+			"ID":     q.ID,
+			"Name":   q.Name,
+			"Comment": q.Comment,
+			"ValidID": q.ValidID,
+			"New":    m["new"],
+			"Open":   m["open"],
+			"Pending": m["pending"],
+			"Closed": m["closed"],
+			"Total":  m["total"],
+		})
+	}
+
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/queues.pongo2", pongo2.Context{
 		"Title":      "Queues - GOTRS",
-		"Queues":     queues,
+		"Queues":     viewQueues,
+		"Search":     search,
 		"User":       getUserMapForTemplate(c),
 		"ActivePage": "queues",
 	})

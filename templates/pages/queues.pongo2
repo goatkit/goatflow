@@ -16,53 +16,52 @@
         </div>
     </div>
 
-    <!-- Queues list -->
+    <!-- Search / Actions -->
+    <form method="get" action="/queues" class="mb-4 flex items-center space-x-3">
+        <input type="text" name="search" value="{{ Search }}" placeholder="Search queues..." class="block w-60 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-gotrs-500 focus:ring-gotrs-500" />
+        <button type="submit" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">Search</button>
+        {% if Search %}
+        <a href="/queues" class="text-sm text-gray-600 dark:text-gray-300 hover:text-gotrs-600">Clear</a>
+        {% endif %}
+        <a href="/queues" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gotrs-600">Refresh</a>
+    </form>
+
     <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
-        <div class="px-4 py-5 sm:p-6">
-            {% if Queues and Queues|length > 0 %}
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Queue</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">New</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Open</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pending</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Closed</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {% if Queues and Queues|length > 0 %}
                 {% for queue in Queues %}
-                <div class="relative rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400 dark:hover:border-gray-500 focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gotrs-500">
-                    <div class="flex-shrink-0">
-                        <div class="h-10 w-10 bg-gotrs-100 dark:bg-gotrs-900 rounded-lg flex items-center justify-center">
-                            <svg class="h-6 w-6 text-gotrs-600 dark:text-gotrs-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <a href="/queues/{{ queue.ID }}" class="focus:outline-none">
-                            <span class="absolute inset-0" aria-hidden="true"></span>
-                            <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                {{ queue.Name }}
-                            </p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                {% if queue.Comment %}
-                                    {{ queue.Comment }}
-                                {% else %}
-                                    No description
-                                {% endif %}
-                            </p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                ID: {{ queue.ID }} • Valid: {% if queue.ValidID == 1 %}Yes{% else %}No{% endif %}
-                            </p>
-                        </a>
-                    </div>
-                </div>
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td class="px-4 py-2 text-sm">
+                        <div class="font-medium text-gray-900 dark:text-white"><a href="/queues/{{ queue.ID }}" class="hover:text-gotrs-600">{{ queue.Name }}</a></div>
+                        {% if queue.Comment %}
+                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ queue.Comment }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2 text-right text-sm"><a href="/tickets?queue={{ queue.ID }}&state=new" class="text-blue-600 dark:text-blue-400 hover:underline">{{ queue.New|default:0 }}</a></td>
+                    <td class="px-4 py-2 text-right text-sm"><a href="/tickets?queue={{ queue.ID }}&state=open" class="text-blue-600 dark:text-blue-400 hover:underline">{{ queue.Open|default:0 }}</a></td>
+                    <td class="px-4 py-2 text-right text-sm"><a href="/tickets?queue={{ queue.ID }}&state=pending" class="text-blue-600 dark:text-blue-400 hover:underline">{{ queue.Pending|default:0 }}</a></td>
+                    <td class="px-4 py-2 text-right text-sm"><a href="/tickets?queue={{ queue.ID }}&state=closed" class="text-blue-600 dark:text-blue-400 hover:underline">{{ queue.Closed|default:0 }}</a></td>
+                    <td class="px-4 py-2 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">{{ queue.Total|default:0 }}</td>
+                </tr>
                 {% endfor %}
-            </div>
-            {% else %}
-            <div class="text-center py-12">
-                <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-                </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No queues available</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    There are no ticket queues configured in the system.
-                </p>
-            </div>
-            {% endif %}
-        </div>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No queues found</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}

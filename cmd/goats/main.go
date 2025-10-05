@@ -393,22 +393,8 @@ func main() {
 			}
 		},
 		"handleQueuesRedirect": func(c *gin.Context) {
-			// Get user role from context
-			role, exists := c.Get("user_role")
-			if !exists {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
-				return
-			}
-
-			// Redirect based on role
-			switch role {
-			case "Admin":
-				c.Redirect(http.StatusFound, "/admin/queues")
-			case "Agent":
-				c.Redirect(http.StatusFound, "/agent/queues")
-			default:
-				c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
-			}
+			// Use unified redirect handler (which now renders user queues page for Admin/Agent)
+			api.HandleRedirectQueues(c)
 		},
 		"handleDemoCustomerLogin": func(c *gin.Context) {
 			// Create a demo customer token

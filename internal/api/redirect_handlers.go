@@ -53,10 +53,13 @@ func handleRedirectQueues(c *gin.Context) {
 	}
 	
 	switch role.(string) {
-	case "Admin":
-		c.Redirect(http.StatusSeeOther, "/admin/queues")
-	case "Agent":
-		c.Redirect(http.StatusSeeOther, "/agent/queues")
+	case "Admin", "Agent":
+		// Show the standard queues list page (not the admin management UI)
+		// to keep the primary nav consistent. Avoid redirect to admin queues.
+		// Directly invoke handleQueues to prevent redirect loops if this handler
+		// is bound at /queues.
+		handleQueues(c)
+		return
 	default:
 		// Customers don't have queue access
 		c.Redirect(http.StatusSeeOther, "/dashboard")

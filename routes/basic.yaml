@@ -40,7 +40,7 @@ spec:
       handler: handleQueuesRedirect
       middleware:
         - auth # Require authentication to determine role
-      description: "Redirect to appropriate queues page based on user role"
+      description: "Role-aware redirect/render for queues"
 
     # Queue detail page - shows tickets filtered by queue
     - path: /queues/:id
