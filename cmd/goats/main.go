@@ -11,11 +11,15 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/api"
+	"github.com/gotrs-io/gotrs-ce/internal/service"
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 	"github.com/gotrs-io/gotrs-ce/internal/services/k8s"
+	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
+	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 )
 
 func main() {
@@ -431,6 +435,17 @@ func main() {
 		// Continue with defaults
 	}
 
+	// Ticket number generator wiring (prep refactor)
+	setup := ticketnumber.SetupFromConfig(configDir)
+	// Provide adapter to auth service (unchanged behavior)
+	{
+		vm := yamlmgmt.NewVersionManager(configDir)
+		adapter := yamlmgmt.NewConfigAdapter(vm)
+		service.SetConfigAdapter(adapter)
+	}
+	ticketNumGen := setup.Generator
+	systemID := setup.SystemID
+
 	// Create router for YAML routes
 	r := gin.New()
 
@@ -474,7 +489,48 @@ func main() {
 		}
 	}()
 
+	// Initialize real DB-backed ticket number store (OTRS-compatible)
+	if db, dbErr := database.GetDB(); dbErr == nil && db != nil && ticketNumGen != nil {
+		if _, err := db.Exec("SELECT 1 FROM ticket_number_counter LIMIT 1"); err != nil {
+			log.Printf("🚨 ticket_number_counter table not accessible: %v", err)
+		} else {
+			store := ticketnumber.NewDBStore(db, systemID)
+			repository.SetTicketNumberGenerator(ticketNumGen, store)
+			log.Printf("🧮 Ticket number store initialized (date-based=%v)", ticketNumGen.IsDateBased())
+		}
+	} else {
+		log.Printf("⚠️  Ticket number store not initialized (dbErr=%v)", dbErr)
+	}
+
+	// Config duplicate key audit (best-effort; non-fatal)
+	func() {
+		vm := yamlmgmt.GetVersionManager()
+		if vm == nil { return }
+		adapter := yamlmgmt.NewConfigAdapter(vm)
+		settings, err := adapter.GetConfigSettings()
+		if err != nil || len(settings) == 0 { return }
+		seen := make(map[string]bool)
+		dups := []string{}
+		for _, s := range settings {
+			name, _ := s["name"].(string)
+			if name == "" { continue }
+			if seen[name] { dups = append(dups, name); continue }
+			seen[name] = true
+		}
+		if len(dups) > 0 {
+			log.Printf("⚠️  Duplicate config setting names detected (first occurrence wins): %v", dups)
+		}
+	}()
+
 	log.Println("✅ Backend initialized successfully")
+
+	// Direct debug route for ticket number generator introspection
+	r.GET("/admin/debug/ticket-number", api.HandleDebugTicketNumber)
+	// Config sources introspection
+	r.GET("/admin/debug/config-sources", api.HandleDebugConfigSources)
+
+	// Example of using generator early (warm path) – ensure repository updated elsewhere to accept it
+	_ = ticketNumGen
 
 	// Start server
 	port := os.Getenv("APP_PORT")

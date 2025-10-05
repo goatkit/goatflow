@@ -1,23 +1,44 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
 )
 
 // TicketRepository handles database operations for tickets
 type TicketRepository struct {
-	db *sql.DB
+	db        *sql.DB
+	generator ticketnumber.Generator
+	store     ticketnumber.CounterStore
+}
+
+var defaultTicketNumberGen ticketnumber.Generator
+var defaultTicketNumberStore ticketnumber.CounterStore
+
+// SetTicketNumberGenerator injects the global ticket number generator and store used by new repositories.
+func SetTicketNumberGenerator(gen ticketnumber.Generator, store ticketnumber.CounterStore) {
+	defaultTicketNumberGen = gen
+	defaultTicketNumberStore = store
+}
+
+// TicketNumberGeneratorInfo returns current generator name and date-based flag.
+func TicketNumberGeneratorInfo() (string, bool) {
+	if defaultTicketNumberGen == nil { return "", false }
+	return defaultTicketNumberGen.Name(), defaultTicketNumberGen.IsDateBased()
 }
 
 // NewTicketRepository creates a new ticket repository
 func NewTicketRepository(db *sql.DB) *TicketRepository {
-	return &TicketRepository{db: db}
+	return &TicketRepository{db: db, generator: defaultTicketNumberGen, store: defaultTicketNumberStore}
 }
 
 // GetDB returns the database connection
@@ -27,23 +48,52 @@ func (r *TicketRepository) GetDB() *sql.DB {
 
 // Create creates a new ticket in the database
 func (r *TicketRepository) Create(ticket *models.Ticket) error {
-	// Generate ticket number
-	ticket.TicketNumber = r.generateTicketNumber()
-	ticket.CreateTime = time.Now()
-	ticket.ChangeTime = time.Now()
+	log.Println("DEBUG: SENTINEL TicketRepository.Create entered")
+	if (r.generator == nil || r.store == nil) && (defaultTicketNumberGen != nil && defaultTicketNumberStore != nil) {
+		r.generator = defaultTicketNumberGen
+		r.store = defaultTicketNumberStore
+		log.Printf("DEBUG: late-binding ticket number generator=%s", r.generator.Name())
+	}
+	if r.generator == nil || r.store == nil { return fmt.Errorf("ticket number generator not initialized") }
+
+	const randomRetries = 5
+	try := 0
+	for {
+		try++
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		n, err := r.generator.Next(ctx, r.store)
+		cancel()
+		if err != nil { return fmt.Errorf("ticket number generation failed: %w", err) }
+		ticket.TicketNumber = n
+		ticket.CreateTime = time.Now()
+		ticket.ChangeTime = time.Now()
+
+		err = r.insertTicket(ticket)
+		if err == nil { return nil }
+
+		if r.generator.Name() == "Random" && isUniqueTNError(err) && try < randomRetries {
+			log.Printf("⚠️  Random TN collision on %s (attempt %d) retrying", n, try)
+			continue
+		}
+		return err
+	}
+}
+
+// insertTicket performs the actual INSERT returning ticket id.
+func (r *TicketRepository) insertTicket(ticket *models.Ticket) error {
 
 	query := `
 		INSERT INTO ticket (
 			tn, title, queue_id, ticket_lock_id, type_id,
 			service_id, sla_id, user_id, responsible_user_id,
 			customer_id, customer_user_id, ticket_state_id,
-			ticket_priority_id, until_time, escalation_time,
+			ticket_priority_id, timeout, until_time, escalation_time,
 			escalation_update_time, escalation_response_time,
 			escalation_solution_time, archive_flag,
 			create_time, create_by, change_time, change_by
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-			$13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+			$13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
 		) RETURNING id`
 
 	// Convert placeholders for MySQL compatibility
@@ -67,6 +117,7 @@ func (r *TicketRepository) Create(ticket *models.Ticket) error {
 		ticket.CustomerUserID,
 		ticket.TicketStateID,
 		ticket.TicketPriorityID,
+		ticket.Timeout,
 		ticket.UntilTime,
 		ticket.EscalationTime,
 		ticket.EscalationUpdateTime,
@@ -78,13 +129,18 @@ func (r *TicketRepository) Create(ticket *models.Ticket) error {
 		ticket.ChangeTime,
 		ticket.ChangeBy,
 	)
-
-	if err != nil {
-		return err
-	}
-
+	if err != nil { return err }
 	ticket.ID = int(ticketID)
 	return nil
+}
+
+// isUniqueTNError detects a unique constraint violation on the ticket number.
+func isUniqueTNError(err error) bool {
+	if err == nil { return false }
+	msg := err.Error()
+	if strings.Contains(msg, "unique") && strings.Contains(msg, "tn") { return true }
+	if errors.Is(err, sql.ErrNoRows) { return false }
+	return false
 }
 
 // GetByID retrieves a ticket by its ID
@@ -735,22 +791,6 @@ func (r *TicketRepository) UpdateQueue(ticketID uint, queueID uint, userID uint)
 	return err
 }
 
-// generateTicketNumber generates a unique ticket number
-func (r *TicketRepository) generateTicketNumber() string {
-	// Format: YYYYMMDD-NNNNNN
-	now := time.Now()
-	dateStr := now.Format("20060102")
-
-	// Get the count of tickets created today
-	var count int
-	query := `SELECT COUNT(*) FROM ticket WHERE DATE(create_time) = DATE($1)`
-	// Convert placeholders for MySQL compatibility
-	query = database.ConvertPlaceholders(query)
-	r.db.QueryRow(query, now).Scan(&count)
-
-	// Generate ticket number with sequential counter
-	return fmt.Sprintf("%s-%06d", dateStr, count+1)
-}
 
 // GetQueues retrieves all active queues
 func (r *TicketRepository) GetQueues() ([]models.Queue, error) {
