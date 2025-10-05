@@ -98,12 +98,12 @@
                             <a href="/queues" rel="nofollow" class="{% if ActivePage == 'queues' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
                                 Queues
                             </a>
-                            {% if User and User.Role == "Admin" %}
+                            {% if User and (User.Role == "Admin" or User.IsInAdminGroup or IsInAdminGroup) %}
                             <a href="/admin" class="{% if ActivePage == 'admin' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
                                 Admin
                             </a>
                             {% endif %}
-                            {% if IsInAdminGroup or (User and User.IsInAdminGroup) %}
+                            {% if IsInAdminGroup or (User and (User.IsInAdminGroup or User.Role == "Admin")) %}
                             <a href="/dev" class="{% if ActivePage == 'dev' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
                                 Dev
                             </a>

@@ -338,60 +338,7 @@ func main() {
 			ticketID := c.Param("id")
 			c.Redirect(http.StatusMovedPermanently, "/tickets/"+ticketID)
 		},
-		"handleAdminDashboard": func(c *gin.Context) {
-			// Render admin dashboard template with data
-			userID, _ := c.Get("user_id")
-			userRole, _ := c.Get("user_role")
-
-			// Get database connection
-			db, err := adapter.GetDatabase()
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-				return
-			}
-
-			// Get counts for dashboard
-			var userCount, groupCount, activeTickets, queueCount int
-
-			// Count users
-			err = db.QueryRow(c.Request.Context(), "SELECT COUNT(*) FROM users").Scan(&userCount)
-			if err != nil {
-				log.Printf("Error counting users: %v", err)
-			}
-
-			// Count groups
-			err = db.QueryRow(c.Request.Context(), "SELECT COUNT(*) FROM groups").Scan(&groupCount)
-			if err != nil {
-				log.Printf("Error counting groups: %v", err)
-			}
-
-			// Count active tickets
-			err = db.QueryRow(c.Request.Context(), "SELECT COUNT(*) FROM ticket WHERE ticket_state_id IN (1, 2, 3, 4)").Scan(&activeTickets)
-			if err != nil {
-				log.Printf("Error counting active tickets: %v", err)
-			}
-
-			// Count queues
-			err = db.QueryRow(c.Request.Context(), "SELECT COUNT(*) FROM queue").Scan(&queueCount)
-			if err != nil {
-				log.Printf("Error counting queues: %v", err)
-			}
-
-			// Render template with data using Pongo2 renderer
-			renderer := api.GetPongo2Renderer()
-			if renderer != nil {
-				renderer.HTML(c, http.StatusOK, "pages/admin/dashboard.pongo2", pongo2.Context{
-					"UserCount":     userCount,
-					"GroupCount":    groupCount,
-					"ActiveTickets": activeTickets,
-					"QueueCount":    queueCount,
-					"UserID":        userID,
-					"UserRole":      userRole,
-				})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Template renderer not available"})
-			}
-		},
+		"handleAdminDashboard": api.HandleAdminDashboard,
 		"handleQueuesRedirect": func(c *gin.Context) {
 			// Use unified redirect handler (which now renders user queues page for Admin/Agent)
 			api.HandleRedirectQueues(c)
