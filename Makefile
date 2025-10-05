@@ -670,14 +670,14 @@ toolbox-exec:
 
 # API testing with automatic authentication
 api-call:
-	@if [ -z "$(METHOD)" ]; then echo "❌ METHOD required. Usage: make api-call METHOD=GET ENDPOINT=/api/v1/tickets [BODY='{}']"; exit 1; fi
-	@if [ -z "$(ENDPOINT)" ]; then echo "❌ ENDPOINT required. Usage: make api-call METHOD=GET ENDPOINT=/api/v1/tickets [BODY='{}']"; exit 1; fi
-	@printf "\n🔧 Making API call: $(METHOD) $(ENDPOINT)\n"
-	@$(call ensure_caches)
-	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox bash scripts/api-test.sh "$(METHOD)" "$(ENDPOINT)" "$(BODY)"; \
+	@if [ -z "$(ENDPOINT)" ]; then echo "❌ ENDPOINT required. Usage: make api-call [METHOD=GET] ENDPOINT=/api/v1/tickets [BODY='{}']"; exit 1; fi
+	@if [ -z "$(METHOD)" ]; then METHOD=GET; fi; \
+	printf "\n🔧 Making API call: $$METHOD $(ENDPOINT)\n"; \
+	$(call ensure_caches); \
+	if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox bash scripts/api-test.sh "$$METHOD" "$(ENDPOINT)" "$(BODY)"; \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm toolbox bash scripts/api-test.sh "$(METHOD)" "$(ENDPOINT)" "$(BODY)"; \
+		$(COMPOSE_CMD) --profile toolbox run --rm toolbox bash scripts/api-test.sh "$$METHOD" "$(ENDPOINT)" "$(BODY)"; \
 	fi
 
 # Compile everything (bind mounts + caches)

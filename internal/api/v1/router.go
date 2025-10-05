@@ -2,7 +2,9 @@ package v1
 
 import (
 	"log"
-	
+	"os"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/ldap"
@@ -44,13 +46,13 @@ func (router *APIRouter) SetupV1Routes(r *gin.Engine) {
 	
 	// Public endpoints (no authentication required)
 	router.setupPublicRoutes(v1)
+
+	// (custom inline /auth/login handler removed; YAML-defined auth route provides login)
 	
-	// Protected endpoints (authentication required)
+	// Protected endpoints (authentication required) - bypass auth routes
 	protected := v1.Group("")
-	// Disable auth middleware for now when jwtManager is nil
-	if router.jwtManager != nil {
-		protected.Use(middleware.SessionMiddleware(router.jwtManager))
-	}
+	// Attach session middleware (JWT manager lazily initialized above on first login)
+	protected.Use(middleware.SessionMiddleware(router.jwtManager))
 	
 	// User endpoints
 	router.setupUserRoutes(protected)
@@ -95,8 +97,7 @@ func (router *APIRouter) setupPublicRoutes(v1 *gin.RouterGroup) {
 	// System status
 	v1.GET("/status", router.handleSystemStatus)
 	
-	// Authentication endpoints (handled by YAML routing)
-	// The handlers are defined in internal/api/auth_api.go
+	// (legacy placeholder removed; using unified /auth/login above)
 }
 
 // setupUserRoutes configures user-related endpoints

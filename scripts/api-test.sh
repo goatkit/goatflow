@@ -28,7 +28,7 @@ if [[ -f ".env" ]]; then
     fi
 fi
 
-echo "DEBUG: BACKEND_URL=$BACKEND_URL"
+echo "DEBUG: BACKEND_URL=${BACKEND_URL:-<not set>}"
 echo "DEBUG: ADMIN_USER=${ADMIN_USER:-<not set>}"
 echo "DEBUG: ADMIN_PASSWORD=${ADMIN_PASSWORD:-<not set>}"
 echo "DEBUG: TEST_USERNAME=${TEST_USERNAME:-<not set>}"
@@ -38,7 +38,14 @@ echo "DEBUG: TEST_PASSWORD=${TEST_PASSWORD:-<not set>}"
 # Prefer ADMIN_USER/ADMIN_PASSWORD, fall back to TEST_USERNAME/TEST_PASSWORD, then defaults
 TEST_USERNAME="${ADMIN_USER:-${TEST_USERNAME:-root@localhost}}"
 TEST_PASSWORD="${ADMIN_PASSWORD:-${TEST_PASSWORD:-admin123}}"
-BACKEND_URL="${BACKEND_URL:-https://gotrs-backend:8080}"
+# Infer BACKEND_URL if not set: prefer https container name else http localhost
+if [[ -z "${BACKEND_URL:-}" ]]; then
+    if getent hosts gotrs-backend >/dev/null 2>&1; then
+        BACKEND_URL="https://gotrs-backend:8080"
+    else
+        BACKEND_URL="http://localhost:8080"
+    fi
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -58,65 +65,52 @@ log_error() {
     echo -e "${RED}❌ $1${NC}"
 }
 
-# Function to authenticate and get JWT token
-get_auth_token() {
-    echo "DEBUG: Authenticating with $TEST_USERNAME..." >&2
-
-    local response
-    echo "DEBUG: Making request to $BACKEND_URL/api/v1/auth/login" >&2
-    response=$(curl -s --max-time 30 -X POST "$BACKEND_URL/api/v1/auth/login" \
-        -H "Content-Type: application/json" \
-        -d "{\"login\":\"$TEST_USERNAME\",\"password\":\"$TEST_PASSWORD\"}")
-
-    echo "DEBUG: Response: $response" >&2
-
-    # Check if login was successful
-    if echo "$response" | jq -e '.success == true' >/dev/null 2>&1; then
-        local access_token
-        access_token=$(echo "$response" | jq -r '.access_token')
-        echo "DEBUG: Authentication successful" >&2
-        echo "$access_token"
-    else
-        echo "DEBUG: Authentication failed. Response: $response" >&2
-        return 1
-    fi
+auth_json() {
+    local payload
+    payload=$(jq -nc --arg l "$TEST_USERNAME" --arg p "$TEST_PASSWORD" '{login:$l,password:$p}')
+    local endpoints=("/api/auth/login" "/api/v1/auth/login")
+    local e response body http_code token
+    for e in "${endpoints[@]}"; do
+        response=$(curl -k -s -w '\n%{http_code}' -X POST "$BACKEND_URL$e" -H 'Content-Type: application/json' -H 'Accept: application/json' -d "$payload" || true)
+        body="${response%$'\n'*}"; http_code="${response##*$'\n'}"
+        echo "DEBUG: (POST $e) HTTP $http_code body: $body" >&2
+        if [[ "$http_code" != "200" ]]; then continue; fi
+        token=$(echo "$body" | jq -r '.access_token // .token // empty')
+        if [[ -n "$token" && "$token" != "null" ]]; then
+            echo "$token"
+            return 0
+        fi
+    done
+    return 1
 }
 
 # Function to make API call
 make_api_call() {
-    local method="$1"
-    local endpoint="$2"
-    local body="${3:-}"
-
-    echo "DEBUG: Calling get_auth_token" >&2
-    local auth_token
-    auth_token=$(get_auth_token)
-
-    echo "DEBUG: auth_token=$auth_token" >&2
-
-    echo "DEBUG: Making $method request to $endpoint" >&2
-
-    local curl_cmd=("curl" "-s" "--max-time" "30" "-X" "$method" "$BACKEND_URL$endpoint" \
-        -H "Content-Type: application/json" \
-        -H "Authorization: Bearer $auth_token")
-
-    if [[ -n "$body" ]]; then
-        curl_cmd+=(-d "$body")
-    fi
-
-    echo "DEBUG: curl command: ${curl_cmd[*]}" >&2
-
-    local response
-    response=$("${curl_cmd[@]}")
-
-    echo "DEBUG: API response: $response" >&2
-
-    # Pretty print JSON response
-    if echo "$response" | jq . >/dev/null 2>&1; then
-        echo "$response" | jq .
-    else
-        echo "$response"
-    fi
+    local method="$1" endpoint="$2" body="${3:-}" attempts=0 max_attempts=2 token csrf header_args response status_line resp_body http_code
+    while (( attempts < max_attempts )); do
+        attempts=$((attempts+1))
+        echo "DEBUG: Auth attempt $attempts" >&2
+        token=$(auth_json) || { echo "DEBUG: auth failed" >&2; return 1; }
+    header_args=(-H "Authorization: Bearer $token" -H 'Content-Type: application/json' -H 'Accept: application/json')
+    echo "DEBUG: Using token=$token" >&2
+        local curl_parts=(-k -s -w '\n%{http_code}' -X "$method" "$BACKEND_URL$endpoint" "${header_args[@]}")
+        if [[ -n "$body" ]]; then curl_parts+=(-d "$body"); fi
+        status_line=$(curl "${curl_parts[@]}") || true
+        resp_body="${status_line%$'\n'*}"; http_code="${status_line##*$'\n'}"
+        echo "DEBUG: ($method $endpoint) HTTP $http_code body: $resp_body" >&2
+        if [[ "$http_code" == "401" && $attempts -lt $max_attempts ]]; then
+            echo "DEBUG: 401 received, retrying auth" >&2
+            continue
+        fi
+        if echo "$resp_body" | jq . >/dev/null 2>&1; then
+            echo "$resp_body" | jq .
+        else
+            echo "$resp_body"
+        fi
+        return 0
+    done
+    echo "ERROR: Request failed after $attempts attempts" >&2
+    return 1
 }
 
 # Main script
@@ -130,6 +124,7 @@ fi
 
 METHOD="$1"
 ENDPOINT="$2"
+if [[ -z "$METHOD" ]]; then METHOD="GET"; fi
 BODY="${3:-}"
 
 echo "DEBUG: METHOD=$METHOD, ENDPOINT=$ENDPOINT, BODY=$BODY"
