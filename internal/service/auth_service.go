@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
+	"log"
+	"strings"
 
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 )
 
 // AuthService handles authentication and authorization
@@ -18,29 +20,48 @@ type AuthService struct {
 
 // NewAuthService creates a new authentication service with a JWT manager
 func NewAuthService(db *sql.DB, jwtManager *auth.JWTManager) *AuthService {
-	// Create authenticator with database provider by default
-	authenticator := auth.NewAuthenticator(
-		auth.NewDatabaseAuthProvider(db),
-	)
-	
-	// Add LDAP provider if configured
-	if os.Getenv("LDAP_ENABLED") == "true" {
-		ldapConfig := &auth.LDAPConfig{
-			Server:     os.Getenv("LDAP_SERVER"),
-			Port:       389, // TODO: Parse from env
-			BaseDN:     os.Getenv("LDAP_BASE_DN"),
-			BindDN:     os.Getenv("LDAP_BIND_DN"),
-			BindPass:   os.Getenv("LDAP_BIND_PASSWORD"),
-			UserFilter: os.Getenv("LDAP_USER_FILTER"),
-			TLS:        os.Getenv("LDAP_TLS") == "true",
+	providers := []auth.AuthProvider{}
+	order := getConfiguredProviderOrder()
+	deps := auth.ProviderDependencies{DB: db}
+	for _, name := range order {
+		p, err := auth.CreateProvider(name, deps)
+		if err != nil {
+			// Skip missing/disabled providers quietly
+			log.Printf("auth: provider '%s' skipped: %v", name, err)
+			continue
 		}
-		authenticator.AddProvider(auth.NewLDAPAuthProvider(ldapConfig))
+		providers = append(providers, p)
 	}
-	
-	return &AuthService{
-		authenticator: authenticator,
-		jwtManager:    jwtManager,
+	if len(providers) == 0 {
+		// Always fall back to direct database provider
+		p, err := auth.CreateProvider("database", deps)
+		if err == nil { providers = append(providers, p) }
 	}
+	authenticator := auth.NewAuthenticator(providers...)
+	return &AuthService{authenticator: authenticator, jwtManager: jwtManager}
+}
+
+// global accessor injected from main to avoid import cycles
+var globalConfigAdapter *yamlmgmt.ConfigAdapter
+
+func SetConfigAdapter(ca *yamlmgmt.ConfigAdapter) { globalConfigAdapter = ca }
+
+func getConfiguredProviderOrder() []string {
+	if globalConfigAdapter == nil { return []string{"database"} }
+	v, err := globalConfigAdapter.GetConfigValue("Auth::Providers")
+	if err != nil { return []string{"database"} }
+	// Expect slice
+	switch raw := v.(type) {
+	case []interface{}:
+		out := []string{}
+		for _, r := range raw { if s, ok := r.(string); ok { out = append(out, strings.ToLower(s)) } }
+		if len(out) > 0 { return out }
+	case []string:
+		tmp := []string{}
+		for _, s := range raw { tmp = append(tmp, strings.ToLower(s)) }
+		if len(tmp) > 0 { return tmp }
+	}
+	return []string{"database"}
 }
 
 // Login authenticates a user and returns JWT tokens

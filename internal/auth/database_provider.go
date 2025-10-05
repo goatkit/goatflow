@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"errors"
 
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
@@ -164,4 +165,12 @@ func (p *DatabaseAuthProvider) authenticateCustomerUser(ctx context.Context, use
 
 	fmt.Printf("DatabaseAuthProvider: Customer authentication successful for %s\n", login)
 	return user, nil
+}
+
+// Register database provider factory.
+func init() {
+	_ = RegisterProvider("database", func(deps ProviderDependencies) (AuthProvider, error) {
+		if deps.DB == nil { return nil, errors.New("db required for database auth provider") }
+		return NewDatabaseAuthProvider(deps.DB), nil
+	})
 }

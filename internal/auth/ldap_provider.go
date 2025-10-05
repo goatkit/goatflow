@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"fmt"
+	"errors"
+	"os"
 
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
@@ -64,4 +66,15 @@ func (p *LDAPAuthProvider) Name() string {
 // Priority returns the priority of this provider
 func (p *LDAPAuthProvider) Priority() int {
 	return 5 // Higher priority than database
+}
+
+// Register ldap provider factory (only if enabled via env for now).
+func init() {
+	_ = RegisterProvider("ldap", func(deps ProviderDependencies) (AuthProvider, error) {
+		if os.Getenv("LDAP_ENABLED") != "true" {
+			return nil, errors.New("ldap disabled")
+		}
+		cfg := &LDAPConfig{Server: os.Getenv("LDAP_SERVER"), BaseDN: os.Getenv("LDAP_BASE_DN"), BindDN: os.Getenv("LDAP_BIND_DN"), BindPass: os.Getenv("LDAP_BIND_PASSWORD"), TLS: os.Getenv("LDAP_TLS") == "true"}
+		return NewLDAPAuthProvider(cfg), nil
+	})
 }
