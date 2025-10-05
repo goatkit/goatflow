@@ -114,9 +114,15 @@ div[id^="note-content-"] table tbody tr {
             <!-- Ticket Description -->
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
                 <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Description</h2>
+                {% if Ticket.description_is_html %}
                 <div id="descriptionViewer" class="prose dark:prose-invert max-w-none">
                     {{ Ticket.description|safe }}
                 </div>
+                {% else %}
+                <div id="descriptionViewer" data-plain="1" class="text-sm leading-5 whitespace-pre-wrap break-words text-gray-800 dark:text-gray-200 bg-transparent p-0 m-0 font-normal" style="line-height:1.25;">
+{{ Ticket.description }}
+                </div>
+                {% endif %}
             </div>
 
             <!-- Ticket Notes/History -->

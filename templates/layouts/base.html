@@ -78,6 +78,8 @@
         @keyframes fadeIn {
             to { opacity: 1; }
         }
+    /* Preserve line breaks for ticket description plain text and avoid double spacing */
+    #descriptionViewer { white-space: pre-wrap; line-height: 1.25; }
     </style>
     
     {{block "head" .}}{{end}}

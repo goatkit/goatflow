@@ -113,3 +113,5 @@ func (m *JWTManager) ValidateRefreshToken(tokenString string) (*jwt.RegisteredCl
 
 	return claims, nil
 }
+
+func (m *JWTManager) TokenDuration() time.Duration { return m.tokenDuration }

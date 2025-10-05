@@ -59,3 +59,17 @@ function showToast(message, type = 'info') {
         toast.style.opacity = '0';
     }, 3000);
 }
+
+// Preserve plain text formatting in ticket description if Tailwind prose collapses newlines.
+document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('descriptionViewer');
+    if (!el) return;
+    // If server marked it as plain text (data-plain) collapse excessive blank lines only
+    if (el.dataset && el.dataset.plain === '1') {
+        const original = el.textContent;
+        const collapsed = original.replace(/\n{4,}/g, '\n\n');
+        if (collapsed !== original) el.textContent = collapsed;
+        return;
+    }
+    // HTML description: no changes
+});

@@ -2521,22 +2521,18 @@ func handleTicketDetail(c *gin.Context) {
 		} else if bodyStr, ok := article.Body.(string); ok {
 			// Check content type and render appropriately
 			contentType := article.MimeType
-			preview := bodyStr
-			if len(bodyStr) > 50 {
-				preview = bodyStr[:50] + "..."
-			}
-			log.Printf("DEBUG: Article %d - MimeType: %q, Body preview: %q", article.ID, contentType, preview)
+			// preview logic removed (debug)
 
 			// Handle different content types
 			if strings.Contains(contentType, "text/html") || (strings.Contains(bodyStr, "<") && strings.Contains(bodyStr, ">")) {
-				log.Printf("DEBUG: Rendering HTML for article %d", article.ID)
+				// debug removed: rendering HTML article
 				// For HTML content, use it directly (assuming it's from a trusted editor like Tiptap)
 				bodyContent = bodyStr
 			} else if contentType == "text/markdown" || isMarkdownContent(bodyStr) {
-				log.Printf("DEBUG: Rendering markdown for article %d", article.ID)
+				// debug removed: rendering markdown article
 				bodyContent = RenderMarkdown(bodyStr)
 			} else {
-				log.Printf("DEBUG: Using plain text for article %d", article.ID)
+				// debug removed: using plain text article
 				bodyContent = bodyStr
 			}
 		} else {
@@ -2675,7 +2671,7 @@ func handleTicketDetail(c *gin.Context) {
 	var description string
 	var descriptionJSON string
 	if len(articles) > 0 {
-		fmt.Printf("DEBUG: First article ID=%d, Body type=%T, Body value=%v\n", articles[0].ID, articles[0].Body, articles[0].Body)
+		// debug removed: first article body dump
 		
 		// First try to get HTML body content from attachment
 		htmlContent, err := articleRepo.GetHTMLBodyContent(uint(articles[0].ID))
@@ -2683,34 +2679,30 @@ func handleTicketDetail(c *gin.Context) {
 			log.Printf("Error getting HTML body content: %v", err)
 		} else if htmlContent != "" {
 			description = htmlContent
-			fmt.Printf("DEBUG: Using HTML description: %q\n", description)
+			// debug removed: html description
 		} else {
 			// Fall back to plain text body
 			if body, ok := articles[0].Body.(string); ok {
 				// Check content type and render appropriately
 				contentType := articles[0].MimeType
-				preview := body
-				if len(body) > 50 {
-					preview = body[:50] + "..."
-				}
-				log.Printf("DEBUG: Description - MimeType: %q, Body preview: %q", contentType, preview)
+				// preview logic removed (debug)
 
 				// Handle different content types
 				if strings.Contains(contentType, "text/html") || (strings.Contains(body, "<") && strings.Contains(body, ">")) {
-					log.Printf("DEBUG: Rendering HTML for description")
+					// debug removed: rendering HTML description
 					// For HTML content, use it directly (assuming it's from a trusted editor like Tiptap)
 					description = body
 				} else if contentType == "text/markdown" || isMarkdownContent(body) || ticketID == "20250924194013" {
-					log.Printf("DEBUG: Rendering markdown for description")
+					// debug removed: rendering markdown description
 					description = RenderMarkdown(body)
 				} else {
-					log.Printf("DEBUG: Using plain text for description")
+					// debug removed: using plain text description
 					description = body
 				}
-				fmt.Printf("DEBUG: Using processed description: %q\n", description)
+				// debug removed: processed description
 			} else {
 				description = "Article content not available"
-				fmt.Printf("DEBUG: Body is not a string, type assertion failed\n")
+				// debug removed: non-string body
 			}
 		}
 		
@@ -2723,7 +2715,7 @@ func handleTicketDetail(c *gin.Context) {
 	} else {
 		description = "No description available"
 		descriptionJSON = `"No description available"`
-		fmt.Printf("DEBUG: No articles found\n")
+		// debug removed: no articles found
 	}
 
 	ticketData := gin.H{
@@ -2758,6 +2750,7 @@ func handleTicketDetail(c *gin.Context) {
 		"description_json": descriptionJSON, // JSON-encoded for JavaScript
 		"notes":       notes,        // Pass notes array directly
 		"note_bodies_json": noteBodiesJSON, // JSON-encoded note bodies for JavaScript
+		"description_is_html": strings.Contains(description, "<") && strings.Contains(description, ">"),
 	}
 
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/ticket_detail.pongo2", pongo2.Context{

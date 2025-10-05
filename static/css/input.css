@@ -148,4 +148,14 @@
     .prose table tbody tr:hover {
         @apply bg-gray-100 dark:bg-gray-800/50;
     }
+
+    /* Plain text article rendering */
+    .article-plain {
+        @apply whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        overflow-wrap: anywhere;
+    }
+    .article-html {
+        @apply text-sm text-gray-800 dark:text-gray-200;
+    }
 }

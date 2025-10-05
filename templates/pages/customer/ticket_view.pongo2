@@ -137,7 +137,13 @@
                             {{ article.subject }}
                         </div>
                         {% endif %}
-                        <div class="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ article.body }}</div>
+                        <div class="text-sm text-gray-700 dark:text-gray-300">
+                            {% if '<p' in article.body or '<div' in article.body or '<table' in article.body or '<br' in article.body or '<ul' in article.body or '<ol' in article.body or '<h1' in article.body or '<h2' in article.body or '<h3' in article.body %}
+                                <div data-article-body class="text-sm text-gray-700 dark:text-gray-300">{{ article.body|safe }}</div>
+                            {% else %}
+                                <div data-article-body class="whitespace-pre-wrap break-words font-mono text-sm text-gray-700 dark:text-gray-300">{{ article.body }}</div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -160,8 +160,13 @@
                                 <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
                                     <p>{{ article.subject }}</p>
                                 </div>
-                                <div class="mt-2 prose prose-sm dark:prose-invert max-w-none article-content">
-                                    {{ article.body|safe }}
+                                <div class="mt-2 max-w-none article-content">
+                                    {# Treat as HTML only if we see common block/line break tags. Otherwise preserve whitespace. #}
+                                    {% if '<p' in article.body or '<div' in article.body or '<table' in article.body or '<br' in article.body or '<ul' in article.body or '<ol' in article.body or '<h1' in article.body or '<h2' in article.body or '<h3' in article.body %}
+                                        <div data-article-body class="prose prose-sm dark:prose-invert text-sm text-gray-800 dark:text-gray-200">{{ article.body|safe }}</div>
+                                    {% else %}
+                                        <div data-article-body class="whitespace-pre-wrap break-words font-mono text-sm text-gray-800 dark:text-gray-200">{{ article.body }}</div>
+                                    {% endif %}
                                 </div>
                                 {% if article.attachments %}
                                 <div class="mt-4">
