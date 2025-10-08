@@ -149,4 +149,57 @@
 	const style=document.createElement('style');
 	style.textContent=`.gk-ta-active{background:#2563eb;color:#fff !important}.dark .gk-ta-active{background:#1d4ed8}.gk-ta-committed{outline:2px solid #2563eb;}`;
 	document.head.appendChild(style);
+
+	// Customer info panel integration (specific enhancement; no dependency)
+	function loadCustomerInfo(login){
+		if(!login) return;
+		const panel=document.getElementById('customer-info-panel');
+		fetch(`/tickets/customer-info/${encodeURIComponent(login)}`,{headers:{'HX-Request':'true'}})
+			.then(r=>{if(!r.ok) throw r.status; return r.text();})
+			.then(html=>{ if(panel){ panel.innerHTML=html; panel.classList.remove('hidden'); } })
+			.catch(err=>{ if(window.GK_DEBUG) console.warn('customer-info fetch failed',err); });
+	}
+
+	function bindCustomerUserEvents(){
+		const hidden=document.getElementById('customer_user_id');
+		const input=document.getElementById('customer_user_input');
+		if(!input) return;
+		if(hidden && !hidden.dataset.gkBound){
+			hidden.addEventListener('change',()=>{ if(window.GK_DEBUG) console.log('customer_user_id change ->',hidden.value); loadCustomerInfo(hidden.value); });
+			hidden.dataset.gkBound='1';
+		}
+		if(!input.dataset.gkCustBound){
+			input.addEventListener('blur',()=>{
+				const val=input.value.trim();
+				if(val && /.+@.+\..+/.test(val)){
+					// Prefer explicit email typed even if hidden login already populated
+					if(window.GK_DEBUG){ console.log('customer-info blur prefers email', val, 'over hidden', hidden && hidden.value); }
+					loadCustomerInfo(val);
+					return;
+				}
+				// Fallback: no email typed; if no hidden value yet, try raw value when it looks like an identifier
+				const hiddenVal=hidden?hidden.value:"";
+				if(!hiddenVal && val){
+					loadCustomerInfo(val);
+				}
+			});
+			// If user edits after commit and adds '@', trigger lookup quickly (debounced minimal)
+			let emailDebounce;
+			input.addEventListener('input',()=>{
+				const v=input.value.trim();
+				if(/.+@.+\..+/.test(v)){
+					clearTimeout(emailDebounce);
+					emailDebounce=setTimeout(()=>{ if(window.GK_DEBUG) console.log('customer-info live email detect', v); loadCustomerInfo(v); },350);
+				}
+			});
+			// Listen for custom event when a suggestion is committed (emitted in commit logic)
+			input.addEventListener('gk:typeahead:commit',e=>{ const v=e.detail && e.detail.value; if(v){ if(window.GK_DEBUG) console.log('typeahead commit ->',v); loadCustomerInfo(v); }});
+			input.dataset.gkCustBound='1';
+		}
+	}
+
+	// Attempt immediate bind
+	bindCustomerUserEvents();
+	// Re-bind after DOMContentLoaded just in case template loaded later
+	document.addEventListener('DOMContentLoaded',bindCustomerUserEvents);
 })();

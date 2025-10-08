@@ -43,6 +43,17 @@
     <script src="/static/js/goatkit-typeahead.js"></script>
     <script src="/static/js/goatkit-autocomplete.js"></script>
     <script src="/static/js/goatkit-validate.js"></script>
+        <!-- Validation i18n (only current language) -->
+        <script id="gk-validation-msgs" type="application/json">{
+            "lang": "{{ getLang()|default:"en" }}",
+            "messages": {
+                "validation.required": "{field} {{ t("validation.required_suffix")|default:"is required" }}",
+                "validation.minlength": "{field} {{ t("validation.minlength_suffix")|default:"must be at least {min} characters" }}",
+                "validation.pattern": "{field} {{ t("validation.pattern_suffix")|default:"has invalid format" }}",
+                "validation.filesize": "{file} {{ t("validation.filesize_suffix")|default:"exceeds maximum size {size}MB" }}",
+                "validation.summary": "{{ t("validation.summary_title")|default:"Please correct the following:" }}"
+            }
+        }</script>
     
     <!-- Custom styles -->
     <style>

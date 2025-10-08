@@ -86,7 +86,26 @@ func (r *Pongo2Renderer) Render(c *gin.Context, code int, name string, data inte
 	
 	// Add i18n function that captures the language
 	ctx["t"] = func(key string, args ...interface{}) string {
-		return i18nInstance.T(lang, key, args...)
+		v := i18nInstance.T(lang, key, args...)
+		if v != key {
+			return v
+		}
+		// English fallback
+		enVal := i18nInstance.T("en", key, args...)
+		if enVal != key {
+			return enVal
+		}
+		// Humanize
+		last := key
+		if strings.Contains(key, ".") {
+			parts := strings.Split(key, ".")
+			last = parts[len(parts)-1]
+		}
+		last = strings.ReplaceAll(last, "_", " ")
+		if len(last) > 0 {
+			last = strings.ToUpper(last[:1]) + last[1:]
+		}
+		return last
 	}
 	
 	// Add language helpers

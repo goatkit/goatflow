@@ -1,0 +1,4 @@
+<div class="space-y-2">
+  <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ t("forms.customer_info.panel_title") }}</h3>
+  <p class="text-sm text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.unregistered") }}: <span class="font-medium">{{ email }}</span></p>
+</div>

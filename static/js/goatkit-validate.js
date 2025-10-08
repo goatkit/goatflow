@@ -1,6 +1,22 @@
 // GoatKit Form Validation - minimal client-side required field & pattern enforcement
 (function(){
  if(window.GoatKitValidateLoaded) return; window.GoatKitValidateLoaded=true;
+ // Load per-language validation messages (if present)
+ function loadBundle(){
+  const el=document.getElementById('gk-validation-msgs');
+  if(!el) return {lang:'en',messages:{}};
+  try { const obj=JSON.parse(el.textContent||'{}'); if(!obj.messages) obj.messages={}; return obj; } catch(_){ return {lang:'en',messages:{}}; }
+ }
+ const BUNDLE=loadBundle();
+ const FALLBACK={
+  'validation.required':'{field} is required',
+  'validation.minlength':'{field} must be at least {min} characters',
+  'validation.pattern':'{field} has invalid format',
+  'validation.filesize':'{file} exceeds maximum size {size}MB',
+  'validation.summary':'Please correct the following:'
+ };
+ function tpl(t,v){ return Object.keys(v).reduce((s,k)=> s.replace(new RegExp('\\{'+k+'\\}','g'), v[k]), t); }
+ function msg(key, vars){ const raw=BUNDLE.messages[key]||FALLBACK[key]||key; return tpl(raw, vars); }
  const SEL_FORM='form[data-gk-validate]';
  const ATTR_ERROR='data-gk-error';
  const CLASS_ERROR='gk-field-error';
@@ -23,16 +39,44 @@
  function validateField(input){
   if(input.disabled) return null;
   const v=(input.value||'').trim();
-  if(input.hasAttribute('required') && !v){ return {input, msg: fieldLabel(input)+' is required'}; }
-  if(v && input.dataset.minLength){ const m=parseInt(input.dataset.minLength,10); if(!isNaN(m) && v.length<m){ return {input,msg: fieldLabel(input)+` must be at least ${m} characters`}; }}
-  if(v && input.dataset.pattern){ try { const re=new RegExp(input.dataset.pattern); if(!re.test(v)){ return {input,msg: fieldLabel(input)+' has invalid format'}; } }catch(_){/* ignore invalid pattern */} }
-  if(input.type==='file' && input.files){ const max=parseInt(input.dataset.maxFileSize||'',10); if(!isNaN(max)){ for(const f of input.files){ if(f.size>max){ return {input,msg: `${f.name} exceeds maximum size ${(max/1024/1024).toFixed(1)}MB`}; } } } }
+    const label=fieldLabel(input);
+    if(input.hasAttribute('required') && !v){
+        const custom=input.dataset.msgRequired || (input.dataset.msgRequiredKey && msg(input.dataset.msgRequiredKey,{field:label}));
+        return {input, msg: custom || msg('validation.required',{field:label})};
+    }
+    if(v && input.dataset.minLength){
+        const m=parseInt(input.dataset.minLength,10);
+        if(!isNaN(m) && v.length<m){
+            const custom=input.dataset.msgMinlength || (input.dataset.msgMinlengthKey && msg(input.dataset.msgMinlengthKey,{field:label,min:m}));
+            return {input,msg: custom || msg('validation.minlength',{field:label,min:m})};
+        }
+    }
+    if(v && input.dataset.pattern){
+        try {
+            const re=new RegExp(input.dataset.pattern);
+            if(!re.test(v)){
+                const custom=input.dataset.msgPattern || (input.dataset.msgPatternKey && msg(input.dataset.msgPatternKey,{field:label}));
+                return {input,msg: custom || msg('validation.pattern',{field:label})};
+            }
+        }catch(_){/* ignore invalid pattern */}
+    }
+    if(input.type==='file' && input.files){
+        const max=parseInt(input.dataset.maxFileSize||'',10);
+        if(!isNaN(max)){
+            for(const f of input.files){
+                if(f.size>max){
+                    const custom=input.dataset.msgFilesize || (input.dataset.msgFilesizeKey && msg(input.dataset.msgFilesizeKey,{file:f.name,size:(max/1024/1024).toFixed(1)}));
+                    return {input,msg: custom || msg('validation.filesize',{file:f.name,size:(max/1024/1024).toFixed(1)})};
+                }
+            }
+        }
+    }
   return null;
  }
  function gatherInputs(form){ return $all('input,textarea,select',form).filter(i=>!i.closest('[data-gk-ignore]')); }
  function validateForm(form){ const failures=[]; gatherInputs(form).forEach(inp=>{ const r=validateField(inp); if(r) failures.push(r); }); return report(form,failures); }
 function attach(form){ if(form.__gkValidateAttached) return; form.__gkValidateAttached=true; 
- function maybeSummary(failures){ const box=form.querySelector('#form-messages'); if(!box) return; if(!failures||!failures.length){ box.innerHTML=''; return; } const list=failures.map(f=>`<li>${fieldLabel(f.input)}: ${f.msg.replace(/^.*? is required$/,'required')}</li>`).join(''); box.innerHTML=`<div class="rounded-md bg-red-50 dark:bg-red-900/20 p-3 mb-4"><p class="text-sm font-medium text-red-700 dark:text-red-200 mb-1">Please correct the following:</p><ul class="list-disc list-inside text-xs space-y-0.5 text-red-700 dark:text-red-300">${list}</ul></div>`; }
+ function maybeSummary(failures){ const box=form.querySelector('#form-messages'); if(!box) return; if(!failures||!failures.length){ box.innerHTML=''; return; } const list=failures.map(f=>`<li>${f.msg}</li>`).join(''); box.innerHTML=`<div class="rounded-md bg-red-50 dark:bg-red-900/20 p-3 mb-4"><p class="text-sm font-medium text-red-700 dark:text-red-200 mb-1">${msg('validation.summary',{})}</p><ul class="list-disc list-inside text-xs space-y-0.5 text-red-700 dark:text-red-300">${list}</ul></div>`; }
  form.addEventListener('gk:validation:block',e=>maybeSummary(e.detail.failures));
  form.addEventListener('gk:validation:ok',()=>maybeSummary([]));
  form.addEventListener('submit',function(e){ if(!validateForm(form)){ e.preventDefault(); e.stopPropagation(); } });

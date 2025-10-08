@@ -1,211 +1,105 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}New Ticket - GOTRS{% endblock %}
+{% block title %}{{ t("tickets.new_ticket") }} - GOTRS{% endblock %}
 
 {% block content %}
 <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Page header -->
     <div class="md:flex md:items-center md:justify-between mb-8">
         <div class="min-w-0 flex-1">
-            <h2 class="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:truncate sm:text-3xl sm:tracking-tight">
-                Create New Ticket
-            </h2>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Fill out the form below to create a new support ticket
-            </p>
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:truncate sm:text-3xl sm:tracking-tight">{{ t("tickets.new_ticket") }}</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("forms.mandatory_note")|default:"All fields marked with an asterisk (*) are mandatory." }}</p>
         </div>
         <div class="mt-4 flex md:ml-4 md:mt-0">
-            <a href="/tickets" 
-               class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
-                <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M7.793 2.232a.75.75 0 01-.025 1.06L3.622 7.25h10.003a5.375 5.375 0 010 10.75H10.75a.75.75 0 010-1.5h2.875a3.875 3.875 0 000-7.75H3.622l4.146 3.957a.75.75 0 01-1.036 1.085l-5.5-5.25a.75.75 0 010-1.085l5.5-5.25a.75.75 0 011.06.025z" clip-rule="evenodd" />
-                </svg>
-                Back to Tickets
-            </a>
+            <a href="/tickets" class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">{{ t("tickets.back_to_list")|default:t("common.back") }}</a>
         </div>
     </div>
 
-    <!-- Ticket Creation Form -->
-    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
-      <form method="post" 
-          action="/tickets"
-          enctype="multipart/form-data"
-          data-gk-validate
-          class="space-y-6 p-6">
-            
-            <!-- Form Messages -->
+    <div class="bg-white dark:bg-gray-800 shadow rounded-lg" x-data="{ }">
+        <form method="post" action="/tickets" enctype="multipart/form-data" data-gk-validate class="space-y-6 p-6">
             <div id="form-messages"></div>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <!-- Left Column -->
                 <div class="space-y-6">
-                    <!-- Subject -->
+                    {{ macros.forms.i18n_text("subject", "tickets.subject", "", true, "tickets_form.subject_placeholder", "", "3") }}
                     <div>
-                        <label for="subject" class="block text-sm font-medium text-gray-900 dark:text-white">
-                            Subject <span class="text-red-500">*</span>
-                        </label>
-                        <div class="mt-2">
-                <input type="text" 
-                    name="subject" 
-                    id="subject" 
-                    required
-                    data-min-length="3"
-                                   class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
-                                   placeholder="Brief description of the issue">
+                        <label for="customer_user_input" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.customer_user") }} <span class="text-red-500">*</span></label>
+                        <div class="mt-2 relative">
+                            <input type="text" id="customer_user_input" data-typeahead data-gk-autocomplete="customer-user" data-display-template="{firstName} {lastName} ({email})" data-value-field="login" data-min-chars="1" data-hidden-target="customer_user_id" aria-controls="customer_user_suggestions" autocomplete="off" placeholder="{{ t("tickets_form.customer_user_placeholder") }}" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6" required data-msg-required-key="validation.required">
+                            <input type="hidden" name="customer_user_id" id="customer_user_id" required>
+                            <div id="customer_user_suggestions" role="listbox" class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm hidden"></div>
                         </div>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ t("tickets_form.customer_user_help") }}</p>
                     </div>
-
-                     <!-- Customer User -->
-                     <div>
-                         <label for="customer_user_id" class="block text-sm font-medium text-gray-900 dark:text-white">Customer User <span class="text-red-500">*</span></label>
-                         <div class="mt-2 relative">
-                             <input type="text"
-                                    id="customer_user_input"
-                                    data-typeahead
-                                    data-gk-autocomplete="customer-user"
-                                    data-display-template="{firstName} {lastName} ({email})"
-                                    data-value-field="login"
-                                    data-min-chars="1"
-                                    data-hidden-target="customer_user_id"
-                                    aria-controls="customer_user_suggestions"
-                                    autocomplete="off"
-                                    placeholder="Type customer name or email..."
-                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                             <input type="hidden" name="customer_user_id" id="customer_user_id" required>
-                             <div id="customer_user_suggestions" role="listbox" class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm hidden"></div>
-                         </div>
-                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Start typing to search for customers by name or email address.</p>
-                     </div>
+                    <div id="customer-info-panel" class="hidden border border-gray-200 dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-900"></div>
                 </div>
-
-                <!-- Right Column -->
                 <div class="space-y-6">
-                    <!-- Priority -->
                     <div>
-                        <label for="priority" class="block text-sm font-medium text-gray-900 dark:text-white">
-                            Priority
-                        </label>
+                        <label for="priority" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets.priority") }}</label>
                         <div class="mt-2">
-                            <select name="priority" 
-                                    id="priority"
-                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                {% for priority in Priorities %}
-                                <option value="{{ priority.ID }}" {% if priority.ID == 3 %}selected{% endif %}>{{ priority.Name }}</option>
-                                {% endfor %}
+                            <select name="priority" id="priority" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                {% for priority in Priorities %}<option value="{{ priority.ID }}" {% if priority.ID == 3 %}selected{% endif %}>{{ priority.Name }}</option>{% endfor %}
                             </select>
                         </div>
                     </div>
-
-                    <!-- Queue -->
                     <div>
-                        <label for="queue_id" class="block text-sm font-medium text-gray-900 dark:text-white">
-                            Queue
-                        </label>
+                        <label for="queue_id" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets.queue") }}</label>
                         <div class="mt-2">
-                            <select name="queue_id" 
-                                    id="queue_id"
-                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                {% for queue in Queues %}
-                                <option value="{{ queue.ID }}" {% if queue.ID == 1 %}selected{% endif %}>{{ queue.Name }}</option>
-                                {% endfor %}
+                            <select name="queue_id" id="queue_id" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                {% for queue in Queues %}<option value="{{ queue.ID }}" {% if queue.ID == 1 %}selected{% endif %}>{{ queue.Name }}</option>{% endfor %}
                             </select>
                         </div>
                     </div>
-
-                    <!-- Type -->
                     <div>
-                        <label for="type_id" class="block text-sm font-medium text-gray-900 dark:text-white">
-                            Type
-                        </label>
+                        <label for="type_id" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets.type") }}</label>
                         <div class="mt-2">
-                            <select name="type_id" 
-                                    id="type_id"
-                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                {% for type in Types %}
-                                <option value="{{ type.ID }}" {% if type.ID == 1 %}selected{% endif %}>{{ type.Label }}</option>
-                                {% endfor %}
+                            <select name="type_id" id="type_id" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                {% for type in Types %}<option value="{{ type.ID }}" {% if type.ID == 1 %}selected{% endif %}>{{ type.Label }}</option>{% endfor %}
                             </select>
                         </div>
                     </div>
-
-                    <!-- Initial Interaction -->
                     <div>
-                        <label for="interaction_type" class="block text-sm font-medium text-gray-900 dark:text-white">
-                            Initial Interaction
-                        </label>
+                        <label for="interaction_type" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.initial_interaction") }}</label>
                         <div class="mt-2">
-                            <select name="interaction_type"
-                                    id="interaction_type"
-                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                <option value="email">Email (customer visible)</option>
-                                <option value="phone">Phone Call (customer visible)</option>
-                                <option value="internal_note" selected>Internal Note (private)</option>
-                                <option value="external_note">External Note (customer visible)</option>
+                            <select name="interaction_type" id="interaction_type" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                                <option value="email">{{ t("tickets_form.interaction.email") }} ({{ t("tickets_form.customer_visible") }})</option>
+                                <option value="phone">{{ t("tickets_form.interaction.phone") }} ({{ t("tickets_form.customer_visible") }})</option>
+                                <option value="internal_note" selected>{{ t("tickets_form.interaction.internal_note") }} ({{ t("tickets_form.private") }})</option>
+                                <option value="external_note">{{ t("tickets_form.interaction.external_note") }} ({{ t("tickets_form.customer_visible") }})</option>
                             </select>
                         </div>
-                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Determines the first article's type & visibility.
-                        </p>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ t("tickets_form.initial_interaction_help") }}</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Message Body -->
             <div>
-                <label for="body" class="block text-sm font-medium text-gray-900 dark:text-white">
-                    Message <span class="text-red-500">*</span>
-                </label>
+                <label for="body" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.message") }} <span class="text-red-500">*</span></label>
                 <div class="mt-2">
-                    <div id="bodyEditor" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-within:ring-2 focus-within:ring-inset focus-within:ring-gotrs-600 dark:focus-within:ring-gotrs-500 sm:text-sm sm:leading-6 min-h-[120px] p-3">
-                        <!-- Tiptap editor will be initialized here -->
-                    </div>
-                    <input type="hidden" name="body" id="body" required data-min-length="5">
+                    <div id="bodyEditor" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-within:ring-2 focus-within:ring-inset focus-within:ring-gotrs-600 dark:focus-within:ring-gotrs-500 sm:text-sm sm:leading-6 min-h-[120px] p-3"></div>
+                    <input type="hidden" name="body" id="body" required data-min-length="5" data-msg-required-key="validation.required" data-msg-minlength-key="validation.minlength">
                 </div>
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    Provide as much detail as possible to help us resolve your issue quickly.
-                </p>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ t("tickets_form.message_help") }}</p>
             </div>
 
-            <!-- File Upload -->
             <div>
-                <label class="block text-sm font-medium text-gray-900 dark:text-white">
-                    Attachments
-                </label>
+                <label class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.attachments") }}</label>
                 <div class="mt-2">
                     <div class="flex justify-center rounded-lg border border-dashed border-gray-900/25 dark:border-gray-600 px-6 py-10">
                         <div class="text-center">
-                            <svg class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="currentColor">
-                                <path fill-rule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clip-rule="evenodd" />
-                            </svg>
-                            <label for="file-upload" class="relative cursor-pointer">
-                                <span class="mt-4 text-sm leading-6 text-gray-600 dark:text-gray-400">
-                                    <span class="font-semibold text-gotrs-600 dark:text-gotrs-400 hover:text-gotrs-500">Upload files</span>
-                                    <span class="ml-1">or drag and drop</span>
-                                </span>
-                                <input id="file-upload" name="attachments" type="file" class="sr-only" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.doc,.docx,.xls,.xlsx">
-                            </label>
-                            <p class="text-xs leading-5 text-gray-600 dark:text-gray-400 mt-2">PNG, JPG, PDF up to 10MB each</p>
+                            <svg class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clip-rule="evenodd" /></svg>
+                            <label for="file-upload" class="relative cursor-pointer"><span class="mt-4 text-sm leading-6 text-gray-600 dark:text-gray-400"><span class="font-semibold text-gotrs-600 dark:text-gotrs-400 hover:text-gotrs-500">{{ t("tickets_form.upload_files") }}</span><span class="ml-1">{{ t("tickets_form.or_drag_and_drop") }}</span></span><input id="file-upload" name="attachments" type="file" class="sr-only" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.doc,.docx,.xls,.xlsx"></label>
+                            <p class="text-xs leading-5 text-gray-600 dark:text-gray-400 mt-2">{{ t("tickets_form.upload_hint") }}</p>
                             <div id="file-list" class="mt-4 text-sm text-gray-600 dark:text-gray-400"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Form Actions -->
             <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <a href="/tickets" 
-                   class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    Cancel
-                </a>
-                <button type="submit"
-                        class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span class="htmx-indicator absolute left-0 inset-y-0 flex items-center pl-3">
-                        <svg class="animate-spin h-4 w-4 text-gotrs-300" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                    </span>
-                    Create Ticket
+                <a href="/tickets" class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">{{ t("common.cancel")|default:"Cancel" }}</a>
+                <button type="submit" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="htmx-indicator absolute left-0 inset-y-0 flex items-center pl-3"><svg class="animate-spin h-4 w-4 text-gotrs-300" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></span>
+                    {{ t("tickets_form.create_ticket") }}
                 </button>
             </div>
         </form>
@@ -259,6 +153,7 @@
         if (evt.detail.xhr.status === 201) {
             // Success - show success message and redirect
             const response = JSON.parse(evt.detail.xhr.response);
+            const successTpl = `{{ t("tickets_form.created_success_redirect") }}`.replace("{{number}}", response.ticket_number || "?");
             document.getElementById('form-messages').innerHTML = `
                 <div class="rounded-md bg-green-50 dark:bg-green-900/20 p-4 mb-4">
                     <div class="flex">
@@ -268,13 +163,10 @@
                             </svg>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-green-800 dark:text-green-200">
-                                Ticket created successfully! Redirecting to ticket #${response.ticket_number}...
-                            </p>
+                            <p class="text-sm font-medium text-green-800 dark:text-green-200">${successTpl}</p>
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
             // Redirect after 2 seconds
             setTimeout(() => {
                 if (response.id) {
@@ -285,7 +177,7 @@
             }, 2000);
         } else if (evt.detail.xhr.status >= 400) {
             // Error - show error message
-            let errorMessage = 'An error occurred while creating the ticket.';
+            let errorMessage = `{{ t("tickets_form.create_error") }}`;
             try {
                 const response = JSON.parse(evt.detail.xhr.response);
                 if (response.error) {
@@ -322,7 +214,7 @@
         }
         
         TiptapEditor.init('bodyEditor', {
-            placeholder: 'Describe the issue in detail...',
+            placeholder: `{{ t("tickets_form.body_placeholder") }}`,
             editorMode: 'richtext', // Default to rich text, users can toggle to markdown
             onUpdate: (content) => {
                 document.getElementById('body').value = content;

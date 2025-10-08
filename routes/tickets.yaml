@@ -75,3 +75,10 @@ spec:
       method: PUT
       handler: handleAgentTicketAssign
       description: "Assign ticket to agent"
+
+    # Customer info panel (partial)
+    - path: /customer-info/:login
+      method: GET
+      handler: HandleCustomerInfoPanel
+      template: partials/tickets/customer_info.pongo2
+      description: "Return customer info panel partial for selected login"

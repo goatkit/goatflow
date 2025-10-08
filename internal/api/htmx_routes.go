@@ -23,6 +23,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/ldap"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
+	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 
@@ -108,7 +109,7 @@ func isMarkdownContent(content string) bool {
 			line = strings.TrimSpace(line)
 			if strings.HasPrefix(line, "#") {
 				// Find where the # sequence ends
-				i := 1
+				i := 0
 				for i < len(line) && line[i] == '#' {
 					i++
 				}
@@ -205,6 +206,35 @@ func (r *Pongo2Renderer) HTML(c *gin.Context, code int, name string, data interf
 	default:
 		ctx = pongo2.Context{"data": data}
 	}
+
+	// Language helpers injected via middleware detection
+	lang := middleware.GetLanguage(c)
+	i18nInst := i18n.GetInstance()
+	ctx["t"] = func(key string, args ...interface{}) string {
+		val := i18nInst.T(lang, key, args...)
+		if val != key {
+			return val
+		}
+		// Try English fallback
+		enVal := i18nInst.T("en", key, args...)
+		if enVal != key {
+			return enVal
+		}
+		// Humanize as last resort
+		last := key
+		if strings.Contains(key, ".") {
+			parts := strings.Split(key, ".")
+			last = parts[len(parts)-1]
+		}
+		last = strings.ReplaceAll(last, "_", " ")
+		if len(last) > 0 {
+			last = strings.ToUpper(last[:1]) + last[1:]
+		}
+		return last
+	}
+	ctx["getLang"] = func() string { return lang }
+	ctx["getDirection"] = func() string { return string(i18n.GetDirection(lang)) }
+	ctx["isRTL"] = func() bool { return i18n.IsRTL(lang) }
 
 	// Get the template (fallback for tests when templates missing)
 	if r == nil || r.templateSet == nil {
@@ -356,6 +386,32 @@ func NewPongo2Renderer(templateDir string) *Pongo2Renderer {
 			"admin.lookups.description": "Manage system lookups and configurations",
 			"dashboard.welcome_back":    "Welcome back",
 			"tickets.new_ticket":        "New Ticket",
+			"tickets.create_new_ticket_subheading": "Fill out the form below to create a new support ticket",
+			"forms.mandatory_note": "All fields marked with an asterisk (*) are mandatory.",
+			"tickets.back_to_list": "Back to Tickets",
+			"tickets.subject": "Subject",
+			"tickets.subject_placeholder": "Brief description of the issue",
+			"tickets.customer_user": "Customer User",
+			"tickets.customer_user_placeholder": "Type customer name or email...",
+			"tickets.customer_user_help": "Start typing to search for customers by name or email address.",
+			"tickets.priority": "Priority",
+			"tickets.queue": "Queue",
+			"tickets.type": "Type",
+			"tickets.initial_interaction": "Initial Interaction",
+			"tickets.interaction.email": "Email",
+			"tickets.interaction.phone": "Phone Call",
+			"tickets.interaction.internal_note": "Internal Note",
+			"tickets.interaction.external_note": "External Note",
+			"tickets.customer_visible": "customer visible",
+			"tickets.private": "private",
+			"tickets.initial_interaction_help": "Determines the first article's type & visibility.",
+			"tickets.message": "Message",
+			"tickets.message_help": "Provide as much detail as possible to help us resolve your issue quickly.",
+			"tickets.attachments": "Attachments",
+			"tickets.upload_files": "Upload files",
+			"tickets.or_drag_and_drop": "or drag and drop",
+			"tickets.upload_hint": "PNG, JPG, PDF up to 10MB each",
+			"tickets.create_ticket": "Create Ticket",
 			"tickets.title":             "Tickets",
 			"tickets.overdue":           "Overdue",
 			"dashboard.recent_tickets":  "Recent Tickets",

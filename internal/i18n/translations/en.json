@@ -71,7 +71,6 @@
     "priorities": "Priorities",
     "system_settings": "System Settings",
     "system_settings_desc": "Configure system-wide settings",
-    "lookups": "Lookups",
     "lookups_title": "Lookups",
     "lookups_desc": "Manage lookup data",
     "email_templates": "Email Templates",
@@ -83,7 +82,6 @@
     "description": "Description",
     "status": "Status",
     "created": "Created",
-    "actions": "Actions",
     "active": "Active",
     "inactive": "Inactive",
     "states": "States",
@@ -365,6 +363,28 @@
     "email": "Email",
     "name": "Name",
     "phone": "Phone"
+  },
+  "forms": {
+    "mandatory_note": "All fields marked with an asterisk (*) are mandatory.",
+    "customer_info": {
+      "panel_title": "Customer Information",
+      "unregistered": "Unregistered email",
+      "open_tickets": "Open tickets (customer)",
+      "title": "Title or salutation",
+      "first_name": "Firstname",
+      "last_name": "Lastname",
+      "username": "Username",
+      "email": "Email",
+      "phone": "Phone",
+      "mobile": "Mobile",
+      "customer": "Customer",
+      "street": "Street",
+      "postcode": "Postcode",
+      "city": "City",
+      "country": "Country",
+      "url": "URL",
+      "comment": "Comment"
+    }
   },
   "dashboard": {
     "my_tickets": "My Tickets",
@@ -755,6 +775,32 @@
     "unlocked": "Unlocked",
     "updated_at": "Updated At",
     "watch": "Watch"
+  },
+  "tickets_form": {
+    "subject_placeholder": "Brief summary of the issue...",
+    "customer_user": "Customer User",
+    "customer_user_placeholder": "Search customer by name, login or email...",
+    "customer_user_help": "Start typing to search existing customer users. New email addresses are allowed.",
+    "initial_interaction": "Initial Interaction",
+    "initial_interaction_help": "Choose how the initial customer interaction should be recorded.",
+    "interaction": {
+      "email": "Email",
+      "phone": "Phone",
+      "internal_note": "Internal Note",
+      "external_note": "External Note"
+    },
+    "customer_visible": "customer visible",
+    "private": "private",
+    "message": "Message",
+    "message_help": "Provide detailed information to help resolve the ticket.",
+    "attachments": "Attachments",
+    "upload_files": "Upload files",
+    "or_drag_and_drop": "or drag and drop",
+    "upload_hint": "PNG, JPG, GIF, PDF or Office documents up to 10MB each",
+    "create_ticket": "Create Ticket",
+    "body_placeholder": "Describe the issue in detail...",
+    "created_success_redirect": "Ticket created successfully! Redirecting to ticket #{{number}}...",
+    "create_error": "An error occurred while creating the ticket."
   },
   "time": {
     "days_ago": "days ago",

@@ -13,6 +13,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
@@ -381,6 +382,10 @@ func main() {
 	// Create router for YAML routes
 	r := gin.New()
 
+	// Global i18n middleware (language detection via ?lang=, cookie, user, Accept-Language)
+	i18nMW := middleware.NewI18nMiddleware()
+	r.Use(i18nMW.Handle())
+
 	// Configure larger multipart memory limit for large article content
 	r.MaxMultipartMemory = 128 << 20 // 128MB
 
@@ -455,6 +460,11 @@ func main() {
 	}()
 
 	log.Println("✅ Backend initialized successfully")
+
+	// Ensure /api/v1 i18n endpoints are registered (after YAML so we can augment)
+	v1Group := r.Group("/api/v1")
+	i18nHandlers := api.NewI18nHandlers()
+	i18nHandlers.RegisterRoutes(v1Group)
 
 	// Direct debug route for ticket number generator introspection
 	r.GET("/admin/debug/ticket-number", api.HandleDebugTicketNumber)
