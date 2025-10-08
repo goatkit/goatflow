@@ -64,16 +64,22 @@
 		item.classList.add('gk-ta-active');
 	}
 	function commit(input,item){
-		const val=extractValue(item);
-		if(!val) return false;
-		const changed = input.value!==val;
-		input.value=val;
+		const canonical=extractValue(item);
+		if(!canonical) return false;
+		let displayVal=canonical;
+		// For GoatKit autocomplete enhanced inputs, prefer the rendered display (textContent) over canonical login
+		if(input.dataset && input.dataset.gkAutocomplete){
+			const txt=(item.textContent||'').trim();
+			if(txt) displayVal=txt; // textContent holds compiled template (e.g., "Hans Barto (email)")
+		}
+		const changed = input.value!==displayVal;
+		input.value=displayVal;
 		// Hidden target support (data-hidden-target points to hidden input ID)
 		if(input.dataset.hiddenTarget){
 			const hidden=document.getElementById(input.dataset.hiddenTarget);
 			if(hidden){
-				// Prefer explicit data-login/data-id value from item for hidden field
-				const hiddenVal=item.getAttribute('data-login')||item.getAttribute('data-id')||val;
+				// Prefer explicit data-login/data-id value from item for hidden field, fallback to canonical
+				const hiddenVal=item.getAttribute('data-login')||item.getAttribute('data-id')||canonical;
 				if(hidden.value!==hiddenVal){
 					hidden.value=hiddenVal;
 					hidden.dispatchEvent(new Event('input',{bubbles:true}));

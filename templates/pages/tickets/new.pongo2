@@ -27,10 +27,11 @@
 
     <!-- Ticket Creation Form -->
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
-        <form method="post" 
-              action="/tickets"
-              enctype="multipart/form-data"
-              class="space-y-6 p-6">
+      <form method="post" 
+          action="/tickets"
+          enctype="multipart/form-data"
+          data-gk-validate
+          class="space-y-6 p-6">
             
             <!-- Form Messages -->
             <div id="form-messages"></div>
@@ -44,10 +45,11 @@
                             Subject <span class="text-red-500">*</span>
                         </label>
                         <div class="mt-2">
-                            <input type="text" 
-                                   name="subject" 
-                                   id="subject" 
-                                   required
+                <input type="text" 
+                    name="subject" 
+                    id="subject" 
+                    required
+                    data-min-length="3"
                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
                                    placeholder="Brief description of the issue">
                         </div>
@@ -157,7 +159,7 @@
                     <div id="bodyEditor" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-within:ring-2 focus-within:ring-inset focus-within:ring-gotrs-600 dark:focus-within:ring-gotrs-500 sm:text-sm sm:leading-6 min-h-[120px] p-3">
                         <!-- Tiptap editor will be initialized here -->
                     </div>
-                    <input type="hidden" name="body" id="body" required>
+                    <input type="hidden" name="body" id="body" required data-min-length="5">
                 </div>
                 <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                     Provide as much detail as possible to help us resolve your issue quickly.

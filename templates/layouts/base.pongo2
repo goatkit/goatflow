@@ -42,6 +42,7 @@
     <!-- GoatKit typeahead enhancement -->
     <script src="/static/js/goatkit-typeahead.js"></script>
     <script src="/static/js/goatkit-autocomplete.js"></script>
+    <script src="/static/js/goatkit-validate.js"></script>
     
     <!-- Custom styles -->
     <style>
