@@ -60,7 +60,7 @@ div[id^="note-content-"] table tbody tr {
                 <nav class="flex" aria-label="Breadcrumb">
                     <ol class="flex items-center space-x-4">
                         <li>
-                            <a href="/tickets" class="text-gray-900 dark:text-white hover:text-gotrs-500">Tickets</a>
+                            <a href="/tickets" class="text-gray-900 dark:text-white hover:text-gotrs-500">{{ t("tickets.title") }}</a>
                         </li>
                         <li>
                             <svg class="flex-shrink-0 h-5 w-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
@@ -87,18 +87,18 @@ div[id^="note-content-"] table tbody tr {
                         {% elif Ticket.priority == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
                         {% elif Ticket.priority == 'low' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                         {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200{% endif %}">
-                        {{ Ticket.priority|title }} Priority
+                        {{ Ticket.priority|title }} {{ t("priority.title")|default:"Priority" }}
                     </span>
                     <span>{{ Ticket.queue }}</span>
-                    <span>Created {{ Ticket.created }}</span>
-                    <span>Updated {{ Ticket.updated }}</span>
+                    <span>{{ t("common.created")|default:"Created" }} {{ Ticket.created }}</span>
+                    <span>{{ t("tickets.updated_at")|default:"Updated" }} {{ Ticket.updated }}</span>
                 </div>
             </div>
             <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
                 <div class="flex space-x-2">
                     <button type="button" onclick="updateTicket()"
                         class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
-                        Update Ticket
+                        {{ t("tickets.update_ticket")|default:"Update Ticket" }}
                     </button>
                 </div>
             </div>
@@ -113,7 +113,7 @@ div[id^="note-content-"] table tbody tr {
         <div class="lg:col-span-2 space-y-6">
             <!-- Ticket Description -->
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Description</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.description") }}</h2>
                 {% if Ticket.description_is_html %}
                 <div id="descriptionViewer" class="prose dark:prose-invert max-w-none">
                     {{ Ticket.description|safe }}
@@ -128,7 +128,7 @@ div[id^="note-content-"] table tbody tr {
             <!-- Ticket Notes/History -->
             {% if Ticket.notes and Ticket.notes|length > 0 %}
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Notes & Updates</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.notes_updates")|default:"Notes & Updates" }}</h2>
                 <div class="flow-root">
                     <ul class="-mb-8">
                         {% set note_counter = 0 %}
@@ -171,11 +171,11 @@ div[id^="note-content-"] table tbody tr {
 
             <!-- Add Note Form -->
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Add Note</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.add_note")|default:"Add Note" }}</h2>
                 <form id="noteForm" class="space-y-4">
                     <div>
                         <label for="note_content" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Note Content
+                            {{ t("tickets.note_content")|default:"Note Content" }}
                         </label>
                         <div id="noteEditor" class="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus-within:border-gotrs-500 focus-within:ring-gotrs-500 min-h-[120px] p-3">
                             <!-- Tiptap editor will be initialized here -->
@@ -185,7 +185,7 @@ div[id^="note-content-"] table tbody tr {
                     <div class="flex justify-end">
                         <button type="submit"
                             class="rounded-md bg-gotrs-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
-                            Add Note
+                            {{ t("tickets.add_note")|default:"Add Note" }}
                         </button>
                     </div>
                 </form>
@@ -197,15 +197,15 @@ div[id^="note-content-"] table tbody tr {
             <!-- Customer Information -->
             {% if Ticket.customer %}
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Customer</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.customer") }}</h2>
                 <dl class="space-y-3">
                     <div>
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Name</dt>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("common.name")|default:"Name" }}</dt>
                         <dd class="text-sm text-gray-900 dark:text-white">{{ Ticket.customer.name }}</dd>
                     </div>
                     {% if Ticket.customer.email %}
                     <div>
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("common.email") }}</dt>
                         <dd class="text-sm text-gray-900 dark:text-white">
                             <a href="mailto:{{ Ticket.customer.email }}" class="text-gotrs-600 hover:text-gotrs-500">
                                 {{ Ticket.customer.email }}
@@ -215,7 +215,7 @@ div[id^="note-content-"] table tbody tr {
                     {% endif %}
                     {% if Ticket.customer.phone %}
                     <div>
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</dt>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("tickets.phone") }}</dt>
                         <dd class="text-sm text-gray-900 dark:text-white">
                             <a href="tel:{{ Ticket.customer.phone }}" class="text-gotrs-600 hover:text-gotrs-500">
                                 {{ Ticket.customer.phone }}
@@ -230,15 +230,15 @@ div[id^="note-content-"] table tbody tr {
             <!-- Assigned Agent -->
             {% if Ticket.agent %}
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Assigned Agent</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.assigned_to")|default:"Assigned Agent" }}</h2>
                 <dl class="space-y-3">
                     <div>
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Name</dt>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("common.name")|default:"Name" }}</dt>
                         <dd class="text-sm text-gray-900 dark:text-white">{{ Ticket.agent.name }}</dd>
                     </div>
                     {% if Ticket.agent.email %}
                     <div>
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("common.email") }}</dt>
                         <dd class="text-sm text-gray-900 dark:text-white">
                             <a href="mailto:{{ Ticket.agent.email }}" class="text-gotrs-600 hover:text-gotrs-500">
                                 {{ Ticket.agent.email }}
@@ -252,41 +252,41 @@ div[id^="note-content-"] table tbody tr {
 
             <!-- Ticket Actions -->
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Actions</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("common.actions") }}</h2>
                 <div class="space-y-3">
                     {% if Ticket.is_closed %}
                     {# TODO: Check config option for allowing ticket reopen #}
                     <button type="button" onclick="reopenTicket()"
                         class="w-full rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                        <i class="fas fa-undo mr-2"></i>Reopen Ticket
+                        <i class="fas fa-undo mr-2"></i>{{ t("tickets.reopen") }} {{ t("tickets.ticket")|default:"Ticket" }}
                     </button>
                     {% else %}
                     {% if Ticket.status != 'merged' and Ticket.status != 'removed' %}
                     <button type="button" onclick="closeTicket()"
                         class="w-full rounded-md bg-gray-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                        <i class="fas fa-times mr-2"></i>Close Ticket
+                        <i class="fas fa-times mr-2"></i>{{ t("tickets.close")|default:"Close" }} {{ t("tickets.ticket")|default:"Ticket" }}
                     </button>
                     {% endif %}
                     {% endif %}
                     <button type="button" onclick="changeStatus()"
                         class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
-                        <i class="fas fa-tasks mr-2"></i>Change Status
+                        <i class="fas fa-tasks mr-2"></i>{{ t("tickets.change_status")|default:"Change Status" }}
                     </button>
                     <button type="button" onclick="assignTicket()"
                         class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
-                        <i class="fas fa-user-check mr-2"></i>Assign Agent
+                        <i class="fas fa-user-check mr-2"></i>{{ t("tickets.assign_agent")|default:"Assign Agent" }}
                     </button>
                     <button type="button" onclick="changePriority()"
                         class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
-                        <i class="fas fa-flag mr-2"></i>Change Priority
+                        <i class="fas fa-flag mr-2"></i>{{ t("tickets.change_priority")|default:"Change Priority" }}
                     </button>
                     <button type="button" onclick="moveQueue()"
                         class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
-                        <i class="fas fa-inbox mr-2"></i>Move to Queue
+                        <i class="fas fa-inbox mr-2"></i>{{ t("tickets.move_to_queue")|default:"Move to Queue" }}
                     </button>
                     <button type="button" onclick="mergeTicket()"
                         class="w-full rounded-md border border-red-300 dark:border-red-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-red-700 dark:text-red-300 shadow-sm hover:bg-red-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
-                        <i class="fas fa-code-branch mr-2"></i>Merge Ticket
+                        <i class="fas fa-code-branch mr-2"></i>{{ t("tickets.merge_ticket")|default:"Merge Ticket" }}
                     </button>
                 </div>
             </div>
@@ -304,7 +304,7 @@ div[id^="note-content-"] table tbody tr {
         <div class="relative z-50 w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    Assign Agent to Ticket #{{ Ticket.tn }}
+                    {{ t("tickets.assign_agent")|default:"Assign Agent" }} {{ t("tickets.to")|default:"to" }} {{ t("tickets.ticket")|default:"Ticket" }} #{{ Ticket.tn }}
                 </h3>
             </div>
             
@@ -312,14 +312,14 @@ div[id^="note-content-"] table tbody tr {
                 <!-- Agent Selection -->
                 <div class="mb-4">
                     <label for="assignAgent" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Select Agent <span class="text-red-500">*</span>
+                        {{ t("tickets.select_agent")|default:"Select Agent" }} <span class="text-red-500">*</span>
                     </label>
                     <select id="assignAgent" name="assignAgent" required
                         class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-gray-900">
-                        <option value="">Loading agents...</option>
+                        <option value="">{{ t("tickets.loading_agents")|default:"Loading agents..." }}</option>
                     </select>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        Only agents with permissions for this queue are shown
+                        {{ t("tickets.agents_with_permissions_only")|default:"Only agents with permissions for this queue are shown" }}
                     </p>
                 </div>
                 
@@ -327,11 +327,11 @@ div[id^="note-content-"] table tbody tr {
                 <div class="flex justify-end gap-3">
                     <button type="button" onclick="hideAssignDialog()"
                         class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600">
-                        Cancel
+                        {{ t("common.cancel") }}
                     </button>
                     <button type="submit"
                         class="px-4 py-2 text-sm font-medium text-white bg-gotrs-600 rounded-md hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
-                        Assign Agent
+                        {{ t("tickets.assign_agent")|default:"Assign Agent" }}
                     </button>
                 </div>
             </form>
@@ -349,7 +349,7 @@ div[id^="note-content-"] table tbody tr {
         <div class="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    Close Ticket - {{ Ticket.tn }}
+                    {{ t("tickets.close")|default:"Close" }} {{ t("tickets.ticket")|default:"Ticket" }} - {{ Ticket.tn }}
                 </h3>
             </div>
             
@@ -357,42 +357,42 @@ div[id^="note-content-"] table tbody tr {
                 <!-- State Selection -->
                 <div class="mb-4">
                     <label for="closeState" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Close State <span class="text-red-500">*</span>
+                        {{ t("tickets.close_state")|default:"Close State" }} <span class="text-red-500">*</span>
                     </label>
                     <select id="closeState" name="closeState" required
                         class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-gray-900">
-                        <option value="3">Closed Successful</option>
-                        <option value="4">Closed Unsuccessful</option>
+                        <option value="3">{{ t("tickets.closed_successful")|default:"Closed Successful" }}</option>
+                        <option value="4">{{ t("tickets.closed_unsuccessful")|default:"Closed Unsuccessful" }}</option>
                     </select>
                 </div>
 
                 <!-- Resolution -->
                 <div class="mb-4">
                     <label for="resolution" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Resolution/Solution
+                        {{ t("tickets.resolution")|default:"Resolution/Solution" }}
                     </label>
                     <textarea id="resolution" name="resolution" rows="3"
-                        placeholder="Describe the resolution or solution provided..."
+                        placeholder="{{ t('tickets.resolution_placeholder')|default:'Describe the resolution or solution provided...' }}"
                         class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"></textarea>
                 </div>
 
                 <!-- Close Notes -->
                 <div class="mb-4">
                     <label for="closeNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Close Notes <span class="text-red-500">*</span>
+                        {{ t("tickets.close_notes")|default:"Close Notes" }} <span class="text-red-500">*</span>
                     </label>
                     <textarea id="closeNotes" name="closeNotes" rows="4" required
-                        placeholder="Add notes about closing this ticket..."
+                        placeholder="{{ t('tickets.close_notes_placeholder')|default:'Add notes about closing this ticket...' }}"
                         class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"></textarea>
                 </div>
 
                 <!-- Time Units -->
                 <div class="mb-4">
                     <label for="timeUnits" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Time Units (minutes)
+                        {{ t("tickets.time_units_minutes")|default:"Time Units (minutes)" }}
                     </label>
                     <input type="number" id="timeUnits" name="timeUnits" min="0" step="1"
-                        placeholder="Time spent on resolution"
+                        placeholder="{{ t('tickets.time_spent_placeholder')|default:'Time spent on resolution' }}"
                         class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
                 </div>
 
@@ -402,7 +402,7 @@ div[id^="note-content-"] table tbody tr {
                         <input type="checkbox" id="notifyCustomer" name="notifyCustomer" checked
                             class="rounded border-gray-300 dark:border-gray-600 text-gotrs-600 focus:ring-gotrs-500">
                         <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                            Notify customer about ticket closure
+                            {{ t("tickets.notify_close")|default:"Notify customer about ticket closure" }}
                         </span>
                     </label>
                 </div>
@@ -411,11 +411,11 @@ div[id^="note-content-"] table tbody tr {
                 <div class="flex justify-end space-x-3">
                     <button type="button" onclick="hideCloseDialog()"
                         class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500">
-                        Cancel
+                        {{ t("common.cancel") }}
                     </button>
                     <button type="submit"
                         class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-                        Close Ticket
+                        {{ t("tickets.close")|default:"Close" }} {{ t("tickets.ticket")|default:"Ticket" }}
                     </button>
                 </div>
             </form>
@@ -433,7 +433,7 @@ div[id^="note-content-"] table tbody tr {
         <div class="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    Reopen Ticket - {{ Ticket.tn }}
+                    {{ t("tickets.reopen") }} {{ t("tickets.ticket")|default:"Ticket" }} - {{ Ticket.tn }}
                 </h3>
             </div>
             
@@ -441,32 +441,32 @@ div[id^="note-content-"] table tbody tr {
                 <!-- Target State Selection -->
                 <div class="mb-4">
                     <label for="reopenState" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Target State <span class="text-red-500">*</span>
+                        {{ t("tickets.target_state")|default:"Target State" }} <span class="text-red-500">*</span>
                     </label>
                     <select id="reopenState" name="reopenState" required
                         class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-gray-900">
-                        <option value="1">New</option>
-                        <option value="2" selected>Open</option>
+                        <option value="1">{{ t("status.new") }}</option>
+                        <option value="2" selected>{{ t("status.open") }}</option>
                     </select>
                 </div>
 
                 <!-- Reason for Reopening -->
                 <div class="mb-4">
                     <label for="reopenReason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Reason for Reopening <span class="text-red-500">*</span>
+                        {{ t("tickets.reopen_reason")|default:"Reason for Reopening" }} <span class="text-red-500">*</span>
                     </label>
                     <textarea id="reopenReason" name="reopenReason" rows="3" required
-                        placeholder="Explain why this ticket needs to be reopened..."
+                        placeholder="{{ t('tickets.reopen_reason_placeholder')|default:'Explain why this ticket needs to be reopened...' }}"
                         class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"></textarea>
                 </div>
 
                 <!-- Additional Notes -->
                 <div class="mb-4">
                     <label for="reopenNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Additional Notes
+                        {{ t("tickets.additional_notes")|default:"Additional Notes" }}
                     </label>
                     <textarea id="reopenNotes" name="reopenNotes" rows="3"
-                        placeholder="Any additional information or context..."
+                        placeholder="{{ t('tickets.additional_info_placeholder')|default:'Any additional information or context...' }}"
                         class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"></textarea>
                 </div>
 
@@ -476,7 +476,7 @@ div[id^="note-content-"] table tbody tr {
                         <input type="checkbox" id="notifyCustomerReopen" name="notifyCustomerReopen" checked
                             class="rounded border-gray-300 dark:border-gray-600 text-gotrs-600 focus:ring-gotrs-500">
                         <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                            Notify customer about ticket reopening
+                            {{ t("tickets.notify_reopen")|default:"Notify customer about ticket reopening" }}
                         </span>
                     </label>
                 </div>
@@ -485,11 +485,11 @@ div[id^="note-content-"] table tbody tr {
                 <div class="flex justify-end space-x-3">
                     <button type="button" onclick="hideReopenDialog()"
                         class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500">
-                        Cancel
+                        {{ t("common.cancel") }}
                     </button>
                     <button type="submit"
                         class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
-                        Reopen Ticket
+                        {{ t("tickets.reopen") }} {{ t("tickets.ticket")|default:"Ticket" }}
                     </button>
                 </div>
             </form>
@@ -501,22 +501,22 @@ div[id^="note-content-"] table tbody tr {
 <div id="queueModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Move to Queue</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.move_to_queue")|default:"Move to Queue" }}</h3>
         </div>
         <form onsubmit="submitQueue(event)">
             <div class="p-6">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Queue</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("tickets.queue") }}</label>
                     <select name="queue_id" required
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
-                        <option value="">Select queue...</option>
+                        <option value="">{{ t("tickets.select_queue")|default:"Select queue..." }}</option>
                         <!-- Will be populated dynamically -->
                     </select>
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
-                <button type="button" onclick="closeModal('queueModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-gotrs-600 text-white rounded hover:bg-gotrs-700">Move</button>
+                <button type="button" onclick="closeModal('queueModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">{{ t("common.cancel") }}</button>
+                <button type="submit" class="px-4 py-2 bg-gotrs-600 text-white rounded hover:bg-gotrs-700">{{ t("common.move")|default:"Move" }}</button>
             </div>
         </form>
     </div>
@@ -526,22 +526,22 @@ div[id^="note-content-"] table tbody tr {
 <div id="priorityModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Change Priority</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.change_priority")|default:"Change Priority" }}</h3>
         </div>
         <form onsubmit="submitPriority(event)">
             <div class="p-6">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("tickets.priority") }}</label>
                     <select name="priority_id" required
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
-                        <option value="">Select priority...</option>
+                        <option value="">{{ t("tickets.select_priority")|default:"Select priority..." }}</option>
                         <!-- Will be populated dynamically -->
                     </select>
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
-                <button type="button" onclick="closeModal('priorityModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-gotrs-600 text-white rounded hover:bg-gotrs-700">Update</button>
+                <button type="button" onclick="closeModal('priorityModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">{{ t("common.cancel") }}</button>
+                <button type="submit" class="px-4 py-2 bg-gotrs-600 text-white rounded hover:bg-gotrs-700">{{ t("common.update")|default:"Update" }}</button>
             </div>
         </form>
     </div>
@@ -551,28 +551,28 @@ div[id^="note-content-"] table tbody tr {
 <div id="statusModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Change Status</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.change_status")|default:"Change Status" }}</h3>
         </div>
         <form onsubmit="submitStatus(event)">
             <div class="p-6">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("tickets.status") }}</label>
                     <select name="status_id" required
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
-                        <option value="">Select status...</option>
+                        <option value="">{{ t("tickets.select_status")|default:"Select status..." }}</option>
                         <!-- Will be populated dynamically -->
                     </select>
                 </div>
                 <div class="mb-4" id="pendingTimeContainer" style="display: none;">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pending Until</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("tickets.pending_until")|default:"Pending Until" }}</label>
                     <input type="datetime-local" name="pending_until"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Required for pending states</p>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("tickets.pending_required")|default:"Required for pending states" }}</p>
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
-                <button type="button" onclick="closeModal('statusModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-gotrs-600 text-white rounded hover:bg-gotrs-700">Update</button>
+                <button type="button" onclick="closeModal('statusModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">{{ t("common.cancel") }}</button>
+                <button type="submit" class="px-4 py-2 bg-gotrs-600 text-white rounded hover:bg-gotrs-700">{{ t("common.update")|default:"Update" }}</button>
             </div>
         </form>
     </div>
@@ -582,19 +582,19 @@ div[id^="note-content-"] table tbody tr {
 <div id="mergeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Merge Ticket</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.merge_ticket")|default:"Merge Ticket" }}</h3>
         </div>
         <form onsubmit="submitMerge(event)">
             <div class="p-6">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Target Ticket Number</label>
-                    <input type="text" name="target_tn" required placeholder="Enter ticket number to merge into"
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("tickets.target_ticket_number")|default:"Target Ticket Number" }}</label>
+              <input type="text" name="target_tn" required placeholder="{{ t('tickets.merge_target_placeholder')|default:'Enter ticket number to merge into' }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
                 </div>
             </div>
             <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
-                <button type="button" onclick="closeModal('mergeModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Merge</button>
+                <button type="button" onclick="closeModal('mergeModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">{{ t("common.cancel") }}</button>
+                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">{{ t("tickets.merge")|default:"Merge" }}</button>
             </div>
         </form>
     </div>

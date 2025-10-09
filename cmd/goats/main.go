@@ -209,8 +209,8 @@ func main() {
 		"handleLogout":    api.HandleLogout,
 		"HandleLoginAPI":  api.HandleLoginAPI,
 
-		// Admin handlers
-		"handleAdminUsers":            api.HandleAdminUsers,
+	// Admin handlers
+	// Users handled by dynamic module system and specific admin user handlers
 		"handleAdminUserGet":          api.HandleAdminUserGet,
 		"handleAdminUserEdit":         api.HandleAdminUserEdit,
 		"handleAdminUserUpdate":       api.HandleAdminUserUpdate,

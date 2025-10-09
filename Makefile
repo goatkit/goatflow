@@ -83,7 +83,7 @@ endif
 # Ensure Go caches exist for toolbox runs
 define ensure_caches
 @mkdir -p .cache .cache/go-build .cache/go-mod >/dev/null 2>&1 || true
-@chmod 777 .cache .cache/go-build .cache/go-mod >/dev/null 2>&1 || true
+@chmod 775 .cache .cache/go-build .cache/go-mod >/dev/null 2>&1 || true
 endef
 
 # Rootless cache mounting strategy (default): bind host .cache directories instead of named volumes.
@@ -99,10 +99,16 @@ endif
 
 # Guard: warn if any .cache entries owned by foreign UID/GID (can disable with CACHE_GUARD_DISABLE=1)
 CACHE_GUARD_DISABLE ?= 0
+# Set CACHE_GUARD_ENFORCE=1 to fail the build when foreign-owned cache entries are detected
+CACHE_GUARD_ENFORCE ?= 0
 define cache_guard
 @if [ "$(CACHE_GUARD_DISABLE)" != "1" ]; then \
-	if find .cache -mindepth 1 -printf '%u:%g\n' 2>/dev/null | grep -qv "^$$(id -u):$$(id -g)$$"; then \
-		 echo "⚠  Detected foreign-owned entries in .cache. Run 'make cache-audit' then 'make toolbox-fix-cache' if needed."; \
+	if find .cache -mindepth 1 -printf '%U:%G\n' 2>/dev/null | grep -qv "^$$(id -u):$$(id -g)$$"; then \
+		 if [ "$(CACHE_GUARD_ENFORCE)" = "1" ]; then \
+			 echo "❌ Foreign-owned entries in .cache detected. Run 'make cache-audit' and explicitly acknowledge: 'make toolbox-fix-cache CONFIRM=YES'."; exit 1; \
+		 else \
+			 echo "⚠  Detected foreign-owned entries in .cache. Run 'make cache-audit' then 'make toolbox-fix-cache CONFIRM=YES' if needed."; \
+		 fi; \
 	fi; \
 fi
 endef
@@ -175,9 +181,9 @@ go-cache-clean:
 .PHONY: cache-audit
 cache-audit:
 	@echo "🔍 Auditing .cache ownership (showing differing UID/GID entries first)..."
-	@find .cache -mindepth 1 -printf '%u:%g %M %p\n' 2>/dev/null | sort | awk -v U=$$(id -u) -v G=$$(id -g) '($$1!="" ) {split($$1,ug,/:/); if(ug[1]!=U || ug[2]!=G) print;}' || true
+	@find .cache -mindepth 1 -printf '%U:%G %M %p\n' 2>/dev/null | sort | awk -v U=$$(id -u) -v G=$$(id -g) '($$1!="" ) {split($$1,ug,/:/); if(ug[1]!=U || ug[2]!=G) print;}' || true
 	@echo "Full listing (UID:GID perms path):"
-	@find .cache -mindepth 1 -printf '%u:%g %M %p\n' 2>/dev/null | sort || true
+	@find .cache -mindepth 1 -printf '%U:%G %M %p\n' 2>/dev/null | sort || true
 
 # GolangCI-Lint cache management
 .PHONY: lint-cache-info lint-cache-clean
@@ -193,19 +199,40 @@ lint-cache-clean:
 # One-off fix to adjust ownership/permissions of named Go cache volumes
 .PHONY: toolbox-fix-cache
 toolbox-fix-cache:
-	@echo "🔧 Checking cache ownership before attempting fix..."
-	@if find .cache -mindepth 1 -printf '%u:%g\n' 2>/dev/null | grep -qv "^$$(id -u):$$(id -g)$$"; then \
-	   echo "🔧 Foreign ownership detected; applying chown/chmod fix"; \
-	   if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-	     COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm --user 0 toolbox bash -lc 'chown -R 1000:1000 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true; chmod -R 775 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true'; \
-	   else \
-	     $(COMPOSE_CMD) --profile toolbox run --rm --user 0 toolbox bash -lc 'chown -R 1000:1000 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true; chmod -R 775 /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/golangci-lint 2>/dev/null || true'; \
-	   fi; \
-	   echo "✅ Cache ownership normalized"; \
-	 else \
-	   echo "✅ No foreign ownership detected; nothing to do"; \
-	 fi
-	@$(call cache_guard)
+		@echo "🔧 Checking cache ownership before attempting fix..."
+		@$(call ensure_caches)
+		@if [ "$(CONFIRM)" != "YES" ]; then \
+			 echo "Refusing to change ownership automatically."; \
+			 echo "To proceed, re-run: make toolbox-fix-cache CONFIRM=YES"; \
+			 exit 1; \
+		fi
+		@if find .cache -mindepth 1 -printf '%u:%g\n' 2>/dev/null | grep -qv "^$$(id -u):$$(id -g)$$"; then \
+			 echo "🔧 Foreign ownership detected; applying scoped chown/chmod fix via toolbox container (cache dirs only)"; \
+			 echo "🧱 Ensuring gotrs-toolbox image exists..."; \
+			 if ! $(CONTAINER_CMD) image inspect gotrs-toolbox:latest >/dev/null 2>&1; then \
+					$(MAKE) toolbox-build; \
+			 fi; \
+			 $(CONTAINER_CMD) run --rm \
+					--security-opt label=disable \
+					-v "$$PWD:/workspace$(VZ)" \
+					-w /workspace \
+					--user 0 \
+					-e HUID=$$(id -u) -e HGID=$$(id -g) \
+					gotrs-toolbox:latest \
+					bash -lc 'set -e; \
+						mkdir -p /workspace/.cache; chown $$HUID:$$HGID /workspace/.cache || true; chmod 775 /workspace/.cache || true; \
+						for d in go-build go-mod golangci-lint; do \
+							mkdir -p "/workspace/.cache/$$d"; \
+							chown -R $$HUID:$$HGID "/workspace/.cache/$$d" || true; \
+							chmod -R 775 "/workspace/.cache/$$d" || true; \
+						done'; \
+			 echo "✅ Attempted cache ownership normalization"; \
+			 echo "🔎 Post-fix audit:"; \
+			 find .cache -mindepth 1 -printf '%u:%g %M %p\n' 2>/dev/null | sort | awk -v U=$$(id -u) -v G=$$(id -g) '($$1!="" ) {split($$1,ug,/:/); if(ug[1]!=U || ug[2]!=G) print;}' || true; \
+		 else \
+			 echo "✅ No foreign ownership detected; nothing to do"; \
+		 fi
+		@$(call cache_guard)
 
 # Aggregate cache clean (Go + lint + node_modules optional purge)
 .PHONY: cache-clean-all
@@ -263,7 +290,7 @@ help:
 	@printf "  \033[0;32mmake lint-cache-info\033[0m           🔍 Show golangci-lint cache size\n"
 	@printf "  \033[0;32mmake lint-cache-clean\033[0m          🧹 Clear golangci-lint cache\n"
 	@printf "  \033[0;32mmake cache-audit\033[0m               🔎 Audit ownership of .cache entries\n"
-	@printf "  \033[0;32mmake toolbox-fix-cache\033[0m         🔧 Fix foreign-owned cache entries (conditional)\n"
+	@printf "  \033[0;32mmake toolbox-fix-cache CONFIRM=YES\033[0m  🔧 Fix foreign-owned cache entries (cache dirs only)\n"
 	@printf "  \033[0;32mCACHE_USE_VOLUMES=1 make toolbox-test\033[0m  (opt-in legacy named volume caches)\n"
 	@printf "  \033[0;32mCACHE_USE_VOLUMES=0 (default)\033[0m       Rootless bind-mounted host .cache directories\n"
 	@printf "  \033[0;32mmake cache-clean-all\033[0m           🚿 Purge all Go/lint caches\n"

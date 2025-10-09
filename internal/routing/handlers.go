@@ -6,13 +6,25 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/api"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+    "github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
+
+// buildUserContext produces a consistent User map and admin flags
+func buildUserContext(c *gin.Context) (gin.H, bool) {
+	user := api.GetUserMapForTemplate(c)
+	isAdminGroup := false
+	if v, ok := user["IsInAdminGroup"].(bool); ok {
+		isAdminGroup = v
+	}
+	return user, isAdminGroup
+}
 
 // RegisterExistingHandlers registers existing handlers with the registry
 func RegisterExistingHandlers(registry *HandlerRegistry) {
@@ -28,6 +40,12 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 
 			// Check for token in cookie (auth_token) or Authorization header
 			token, err := c.Cookie("auth_token")
+			if err != nil || token == "" {
+				// Accept legacy cookie name used by non-YAML routes
+				if alt, err2 := c.Cookie("access_token"); err2 == nil && alt != "" {
+					token = alt
+				}
+			}
 			if err != nil || token == "" {
 				// Check Authorization header as fallback
 				authHeader := c.GetHeader("Authorization")
@@ -57,7 +75,8 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			claims, err := jwtManager.ValidateToken(token)
             if err != nil {
                 // Clear invalid cookie
-                c.SetCookie("auth_token", "", -1, "/", "", false, true)
+				c.SetCookie("auth_token", "", -1, "/", "", false, true)
+				c.SetCookie("access_token", "", -1, "/", "", false, true)
                 accept := strings.ToLower(c.GetHeader("Accept"))
                 if strings.Contains(accept, "text/html") || accept == "" {
                     c.Redirect(http.StatusSeeOther, "/login")
@@ -68,11 +87,63 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
                 return
             }
 
-			// Store user info in context
-			c.Set("user_id", claims.UserID)
+			// Store user info in context (normalize and enrich)
 			c.Set("user_email", claims.Email)
 			c.Set("user_role", claims.Role)
 			c.Set("user_name", claims.Email)
+
+			// Try to resolve numeric user_id and set full user object for parity with non-YAML routes
+			var resolvedID int64
+			// claims.UserID is uint in our JWT implementation; convert directly
+			resolvedID = int64(claims.UserID)
+
+			// If still zero, try DB lookup by email or login
+			var userObj *models.User
+			if resolvedID == 0 {
+				if db, dbErr := database.GetDB(); dbErr == nil && db != nil {
+					var id int64
+					var login, firstName, lastName sql.NullString
+					// Our schema doesn't have users.email; login acts as email. Lookup by login.
+					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, login, first_name, last_name FROM users WHERE login = $1 LIMIT 1`), claims.Email).Scan(&id, &login, &firstName, &lastName); err == nil {
+						resolvedID = id
+						userObj = &models.User{ID: uint(id), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, ValidID: 1}
+					}
+				}
+			} else {
+				if db, dbErr := database.GetDB(); dbErr == nil && db != nil {
+					var login, firstName, lastName sql.NullString
+					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT login, first_name, last_name FROM users WHERE id = $1`), resolvedID).Scan(&login, &firstName, &lastName); err == nil {
+						userObj = &models.User{ID: uint(resolvedID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, ValidID: 1}
+					}
+				}
+			}
+
+			// Determine role from group membership if possible
+			if userObj != nil {
+				if db, dbErr := database.GetDB(); dbErr == nil && db != nil {
+					var cnt int
+					_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT COUNT(*) FROM group_user ug JOIN groups g ON ug.group_id = g.id WHERE ug.user_id = $1 AND LOWER(g.name) = 'admin'`), userObj.ID).Scan(&cnt)
+					if cnt > 0 {
+						c.Set("user_role", "Admin")
+					} else if c.GetString("user_role") == "" {
+						c.Set("user_role", "Agent")
+					}
+				}
+			}
+
+			if resolvedID > 0 {
+				c.Set("user_id", uint(resolvedID))
+			} else {
+				// claims.UserID is already a uint in our implementation
+				c.Set("user_id", claims.UserID)
+			}
+			if userObj != nil {
+				c.Set("user", userObj)
+				// Also provide a friendly name
+				if userObj.FirstName != "" || userObj.LastName != "" {
+					c.Set("user_name", strings.TrimSpace(userObj.FirstName+" "+userObj.LastName))
+				}
+			}
 
 			// Set is_customer based on role (for customer middleware compatibility)
 			if claims.Role == "Customer" {
@@ -130,6 +201,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 
 	// Register non-API handlers referenced by YAML
 	registry.Override("HandleCustomerInfoPanel", HandleCustomerInfoPanel)
+	registry.Override("HandleAgentNewTicket", HandleAgentNewTicket)
 }
 
 // RegisterAPIHandlers registers API handlers with the registry
@@ -197,6 +269,93 @@ func HandleCustomerInfoPanel(c *gin.Context) {
 	_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT count(*) FROM tickets WHERE customer_user_id = $1 AND state NOT IN ('closed','resolved')`), user.Login.String).Scan(&openCount)
 
 	api.GetPongo2Renderer().HTML(c, http.StatusOK, "partials/tickets/customer_info.pongo2", gin.H{"user": tmplUser, "company": tmplCompany, "open": openCount})
+}
+
+// HandleAgentNewTicket renders the new ticket form with proper nav context
+func HandleAgentNewTicket(c *gin.Context) {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "System unavailable"})
+		return
+	}
+
+	// Build user context consistently
+	user, isInAdminGroup := buildUserContext(c)
+
+	// Queues
+	queues := []gin.H{}
+	if rows, err := db.QueryContext(c.Request.Context(), `SELECT id, name FROM queue WHERE valid_id = 1 ORDER BY name`); err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var id int; var name string
+			if err := rows.Scan(&id, &name); err == nil { queues = append(queues, gin.H{"ID": id, "Name": name}) }
+		}
+	}
+	// Priorities
+	priorities := []gin.H{}
+	if rows, err := db.QueryContext(c.Request.Context(), `SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id`); err == nil {
+		defer rows.Close()
+		for rows.Next() { var id int; var name string; if err := rows.Scan(&id,&name); err==nil { priorities=append(priorities, gin.H{"ID": id, "Name": name}) } }
+	}
+	// Types
+	types := []gin.H{}
+	if rows, err := db.QueryContext(c.Request.Context(), `SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name`); err == nil {
+		defer rows.Close()
+		for rows.Next() { var id int; var name string; if err := rows.Scan(&id,&name); err==nil { types=append(types, gin.H{"ID": id, "Name": name}) } }
+	}
+	// Customer users seed (limited)
+	customerUsers := []gin.H{}
+	if rows, err := db.QueryContext(c.Request.Context(), `SELECT login, email, first_name, last_name FROM customer_user ORDER BY last_name, first_name LIMIT 250`); err == nil {
+		defer rows.Close()
+		for rows.Next() { var login, email, fn, ln sql.NullString; if err := rows.Scan(&login,&email,&fn,&ln); err==nil { customerUsers=append(customerUsers, gin.H{"Login": login.String, "Email": email.String, "FirstName": fn.String, "LastName": ln.String}) } }
+	}
+
+	// Render template set by YAML (pages/tickets/new.pongo2)
+	// Derive admin role similar to getUserMapForTemplate for consistency
+	isAdmin := false
+	// From group membership
+	if isInAdminGroup { isAdmin = true }
+	// From user ID heuristic (1/2)
+	if uid, ok := user["ID"]; ok {
+		switch v := uid.(type) {
+		case int:
+			if v == 1 || v == 2 { isAdmin = true }
+		case int32:
+			if v == 1 || v == 2 { isAdmin = true }
+		case int64:
+			if v == 1 || v == 2 { isAdmin = true }
+		case uint:
+			if v == 1 || v == 2 { isAdmin = true }
+		case uint32:
+			if v == 1 || v == 2 { isAdmin = true }
+		case uint64:
+			if v == 1 || v == 2 { isAdmin = true }
+		case float64:
+			if int(v) == 1 || int(v) == 2 { isAdmin = true }
+		case string:
+			if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil { if n == 1 || n == 2 { isAdmin = true } }
+		}
+	}
+	// From login naming
+	if !isAdmin {
+		if loginVal, ok := user["Login"].(string); ok {
+			if strings.Contains(strings.ToLower(loginVal), "admin") || loginVal == "root@localhost" {
+				isAdmin = true
+			}
+		}
+	}
+	user["IsAdmin"] = isAdmin
+	user["IsInAdminGroup"] = isInAdminGroup
+	user["Role"] = map[bool]string{true: "Admin", false: "Agent"}[isAdmin]
+	api.GetPongo2Renderer().HTML(c, http.StatusOK, "pages/tickets/new.pongo2", gin.H{
+		"User":           user,
+		"IsInAdminGroup": isInAdminGroup,
+		"ActivePage":     "tickets",
+		"Queues":         queues,
+		"Priorities":     priorities,
+		"Types":          types,
+		"CustomerUsers":  customerUsers,
+	})
 }
 
 func init() {

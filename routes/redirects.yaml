@@ -9,10 +9,4 @@ spec:
   prefix: ""
   middleware:
     - auth
-  routes:
-    # Legacy plural new ticket path
-    - path: /tickets/new
-      method: GET
-      redirectTo: /ticket/new
-      status: 302
-      description: "Redirect plural tickets/new to singular ticket/new"
+  routes: []

@@ -111,16 +111,16 @@
                                 {{ t("navigation.tickets") }}
                             </a>
                             <a href="/queues" rel="nofollow" class="{% if ActivePage == 'queues' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
-                                Queues
+                                {{ t("navigation.queues") }}
                             </a>
                             {% if User and (User.Role == "Admin" or User.IsInAdminGroup or IsInAdminGroup) %}
                             <a href="/admin" class="{% if ActivePage == 'admin' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
-                                Admin
+                                {{ t("navigation.admin") }}
                             </a>
                             {% endif %}
                             {% if IsInAdminGroup or (User and (User.IsInAdminGroup or User.Role == "Admin")) %}
                             <a href="/dev" class="{% if ActivePage == 'dev' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
-                                Dev
+                                {{ t("navigation.dev") }}
                             </a>
                             {% endif %}
                         </div>
@@ -136,7 +136,9 @@
                             <button @click="open = !open" type="button" class="flex rounded-full bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
                                 <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-500">
                                     <span class="text-sm font-medium leading-none text-white">
-                                        {% if User %}{{ User.FirstName|slice:"0:1"|upper }}{{ User.LastName|slice:"0:1"|upper }}{% else %}DU{% endif %}
+                                        {% if User and (User.FirstName or User.LastName) %}
+                                            {{ User.FirstName|default:""|slice:"0:1"|upper }}{{ User.LastName|default:""|slice:"0:1"|upper }}
+                                        {% else %}DU{% endif %}
                                     </span>
                                 </span>
                             </button>

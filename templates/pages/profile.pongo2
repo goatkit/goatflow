@@ -1,37 +1,37 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}User Profile{% endblock %}
+{% block title %}{{ t("navigation.profile") }} - GOTRS{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto">
     <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg">
         <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
             <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
-                User Profile
+                {{ t("navigation.profile") }}
             </h3>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Manage your account settings and preferences
+                {{ t("settings.general") }}
             </p>
         </div>
 
         <!-- Profile Information -->
         <div class="px-4 py-5 sm:p-6">
-            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">Account Information</h4>
+            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">{{ t("settings.account") }}</h4>
             <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Username</dt>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("auth.username")|default:t("login.username")|default:t("common.username")|default:"Username" }}</dt>
                     <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ User.username|default:"—" }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Email</dt>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("common.email") }}</dt>
                     <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ User.email|default:"—" }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">First Name</dt>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("user.first_name")|default:"First Name" }}</dt>
                     <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ User.first_name|default:"—" }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Last Name</dt>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("user.last_name")|default:"Last Name" }}</dt>
                     <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ User.last_name|default:"—" }}</dd>
                 </div>
             </dl>
@@ -39,33 +39,28 @@
 
         <!-- Session Preferences -->
         <div class="px-4 py-5 sm:p-6 border-t border-gray-200 dark:border-gray-700">
-            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">Session Settings</h4>
+            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">{{ t("settings.sessions")|default:"Session Settings" }}</h4>
             
             <form id="session-preferences-form" class="space-y-4">
                 <div>
-                    <label for="session-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Session Timeout
-                    </label>
+                    <label for="session-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("settings.sessions")|default:"Session Timeout" }}</label>
                     <select id="session-timeout" name="session_timeout" 
                             class="mt-1 block w-full sm:w-64 pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                        <option value="0">System Default (24 hours)</option>
-                        <option value="3600">1 hour</option>
-                        <option value="14400">4 hours</option>
-                        <option value="28800">8 hours</option>
-                        <option value="86400">24 hours</option>
-                        <option value="259200">3 days</option>
-                        <option value="604800">7 days</option>
+                        <option value="0">{{ t("settings.default")|default:"System Default" }} (24 {{ t("time.hours_ago")|default:"hours" }})</option>
+                        <option value="3600">1 {{ t("time.hours_ago")|default:"hour" }}</option>
+                        <option value="14400">4 {{ t("time.hours_ago")|default:"hours" }}</option>
+                        <option value="28800">8 {{ t("time.hours_ago")|default:"hours" }}</option>
+                        <option value="86400">24 {{ t("time.hours_ago")|default:"hours" }}</option>
+                        <option value="259200">3 {{ t("time.days_ago")|default:"days" }}</option>
+                        <option value="604800">7 {{ t("time.days_ago")|default:"days" }}</option>
                     </select>
                     <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                        How long should your session stay active before requiring you to log in again?
+                        {{ t("settings.session_timeout_help")|default:"How long should your session stay active before requiring you to log in again?" }}
                     </p>
                 </div>
 
                 <div>
-                    <button type="submit" 
-                            class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Save Preferences
-                    </button>
+                    <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">{{ t("common.save") }}</button>
                 </div>
             </form>
             
@@ -78,9 +73,7 @@
                             </svg>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-green-800 dark:text-green-200">
-                                Preferences saved successfully
-                            </p>
+                            <p class="text-sm font-medium text-green-800 dark:text-green-200">{{ t("success.saved")|default:"Saved successfully" }}</p>
                         </div>
                     </div>
                 </div>
@@ -89,10 +82,8 @@
 
         <!-- Other Preferences (future expansion) -->
         <div class="px-4 py-5 sm:p-6 border-t border-gray-200 dark:border-gray-700">
-            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">Display Settings</h4>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                Additional preferences will be available here in future updates.
-            </p>
+            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">{{ t("settings.appearance")|default:"Display Settings" }}</h4>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("settings.more_coming")|default:"Additional preferences will be available here in future updates." }}</p>
         </div>
     </div>
 </div>

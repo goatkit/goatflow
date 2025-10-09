@@ -3,6 +3,7 @@
 {% block title %}{{ t("tickets.new_ticket") }} - GOTRS{% endblock %}
 
 {% block content %}
+
 <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
     <div class="md:flex md:items-center md:justify-between mb-8">
         <div class="min-w-0 flex-1">

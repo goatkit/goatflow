@@ -355,37 +355,33 @@ func HandleAdminUserUpdate(c *gin.Context) {
         }
     }
 
-    // Update group memberships
-    // If DB not available, we already returned; otherwise proceed
-    if _, delErr := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), id); delErr == nil {
-        // Then add new group memberships
-        for _, groupName := range req.Groups {
-            groupName = strings.TrimSpace(groupName)
-            if groupName == "" {
-                continue
-            }
-            var groupID int
-            // Ensure group exists; create if missing (test-friendly)
-            if err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1 AND valid_id = 1"), groupName).Scan(&groupID); err != nil {
-                // Create group with minimal fields
-                _, _ = db.Exec(database.ConvertPlaceholders(`
-                    INSERT INTO groups (name, comments, valid_id, create_time, create_by, change_time, change_by)
-                    SELECT $1, '', 1, NOW(), 1, NOW(), 1
-                    WHERE NOT EXISTS (SELECT 1 FROM groups WHERE name = $1)`), groupName)
-                // Look up again
-                _ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1 AND valid_id = 1"), groupName).Scan(&groupID)
-                if groupID == 0 {
-                    // Could not create or find group; skip
-                    continue
-                }
-            }
-            // Insert membership with required permission_value
-            _, _ = db.Exec(database.ConvertPlaceholders(`
-                INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-                VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)`),
-                id, groupID)
-        }
-    }
+	// Update group memberships only if groups were provided.
+	if len(req.Groups) > 0 {
+		if _, delErr := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), id); delErr == nil {
+			for _, groupName := range req.Groups {
+				groupName = strings.TrimSpace(groupName)
+				if groupName == "" {
+					continue
+				}
+				var groupID int
+				// Ensure group exists; create if missing (test-friendly)
+				if err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1 AND valid_id = 1"), groupName).Scan(&groupID); err != nil {
+					_, _ = db.Exec(database.ConvertPlaceholders(`
+						INSERT INTO groups (name, comments, valid_id, create_time, create_by, change_time, change_by)
+						SELECT $1, '', 1, NOW(), 1, NOW(), 1
+						WHERE NOT EXISTS (SELECT 1 FROM groups WHERE name = $1)`), groupName)
+					_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1 AND valid_id = 1"), groupName).Scan(&groupID)
+					if groupID == 0 {
+						continue
+					}
+				}
+				_, _ = db.Exec(database.ConvertPlaceholders(`
+					INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
+					VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)`),
+					id, groupID)
+			}
+		}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

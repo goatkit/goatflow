@@ -18,8 +18,14 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 			// Return mock data for testing
 			renderer := GetPongo2Renderer()
 			if renderer != nil {
+				user := GetUserMapForTemplate(c)
+				isInAdminGroup := false
+				if v, ok := user["IsInAdminGroup"].(bool); ok { isInAdminGroup = v }
 				renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", gin.H{
-					"Title": "Create New Ticket",
+					"Title":      "New Ticket - GOTRS",
+					"User":       user,
+					"ActivePage": "tickets",
+					"IsInAdminGroup": isInAdminGroup,
 					"Queues": []gin.H{
 						{"ID": 1, "Name": "Raw"},
 						{"ID": 2, "Name": "Junk"},
@@ -90,8 +96,14 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 		// Render the form with data
 		renderer := GetPongo2Renderer()
 		if renderer != nil {
+			user := GetUserMapForTemplate(c)
+			isInAdminGroup := false
+			if v, ok := user["IsInAdminGroup"].(bool); ok { isInAdminGroup = v }
 			renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", gin.H{
-				"Title":         "Create New Ticket",
+				"Title":         "New Ticket - GOTRS",
+				"User":          user,
+				"ActivePage":    "tickets",
+				"IsInAdminGroup": isInAdminGroup,
 				"Queues":        queues,
 				"Types":         types,
 				"Priorities":    priorities,

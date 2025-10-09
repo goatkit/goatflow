@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+    "strings"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"

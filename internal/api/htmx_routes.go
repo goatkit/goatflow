@@ -501,6 +501,12 @@ func NewPongo2Renderer(templateDir string) *Pongo2Renderer {
 	}
 }
 
+// GetUserMapForTemplate exposes the internal user-context builder for reuse
+// across packages without duplicating logic.
+func GetUserMapForTemplate(c *gin.Context) gin.H {
+	return getUserMapForTemplate(c)
+}
+
 // getUserFromContext safely extracts user from Gin context
 func getUserMapForTemplate(c *gin.Context) gin.H {
 	// First try to get the user object
@@ -508,6 +514,19 @@ func getUserMapForTemplate(c *gin.Context) gin.H {
 		// Convert the user object to gin.H for template usage
 		if user, ok := userCtx.(*models.User); ok {
 			isAdmin := user.ID == 1 || strings.Contains(strings.ToLower(user.Login), "admin")
+			// Also determine admin group membership for consistent nav (Dev/Admin menus)
+			isInAdminGroup := false
+			if db, err := database.GetDB(); err == nil && db != nil {
+				var cnt int
+				_ = db.QueryRow(database.ConvertPlaceholders(`
+					SELECT COUNT(*)
+					FROM group_user ug
+					JOIN groups g ON ug.group_id = g.id
+					WHERE ug.user_id = $1 AND LOWER(g.name) = 'admin'`), user.ID).Scan(&cnt)
+				if cnt > 0 {
+					isInAdminGroup = true
+				}
+			}
 			return gin.H{
 				"ID":        user.ID,
 				"Login":     user.Login,
@@ -516,6 +535,7 @@ func getUserMapForTemplate(c *gin.Context) gin.H {
 				"Email":     user.Email,
 				"IsActive":  user.ValidID == 1,
 				"IsAdmin":   isAdmin,
+				"IsInAdminGroup": isInAdminGroup,
 				"Role":      map[bool]string{true: "Admin", false: "Agent"}[isAdmin],
 			}
 		}
@@ -530,7 +550,7 @@ func getUserMapForTemplate(c *gin.Context) gin.H {
 		userEmail, _ := c.Get("user_email")
 		userRole, _ := c.Get("user_role")
 
-		// Try to load user details from database
+	// Try to load user details from database
 		firstName := ""
 		lastName := ""
 		login := fmt.Sprintf("%v", userEmail)
@@ -577,7 +597,7 @@ func getUserMapForTemplate(c *gin.Context) gin.H {
 					SELECT COUNT(*)
 					FROM group_user ug
 					JOIN groups g ON ug.group_id = g.id
-					WHERE ug.user_id = $1 AND g.name = 'admin'`),
+					WHERE ug.user_id = $1 AND LOWER(g.name) = 'admin'`),
 						userIDVal).Scan(&count)
 					if err == nil && count > 0 {
 						isInAdminGroup = true
@@ -605,7 +625,7 @@ func getUserMapForTemplate(c *gin.Context) gin.H {
 			"Login":          login,
 			"FirstName":      firstName,
 			"LastName":       lastName,
-			"Email":          fmt.Sprintf("%v", userEmail),
+			"Email":          login,
 			"IsActive":       true,
 			"IsAdmin":        isAdmin,
 			"IsInAdminGroup": isInAdminGroup,
@@ -680,7 +700,7 @@ func checkAdmin() gin.HandlerFunc {
 					SELECT COUNT(*)
 					FROM group_user ug
 					JOIN groups g ON ug.group_id = g.id
-					WHERE ug.user_id = $1 AND g.name = 'admin'`),
+					WHERE ug.user_id = $1 AND LOWER(g.name) = 'admin'`),
 					userID).Scan(&count)
 				if err == nil && count > 0 {
 					c.Next()
@@ -1516,7 +1536,6 @@ func handleLoginPage(c *gin.Context) {
 	errorMsg := c.Query("error")
 
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/login.pongo2", pongo2.Context{
-		"Title": "Login - GOTRS",
 		"error": errorMsg,
 	})
 }
@@ -1605,7 +1624,6 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			}
 			// For regular form submission, redirect back to login with error
 			pongo2Renderer.HTML(c, http.StatusUnauthorized, "pages/login.pongo2", pongo2.Context{
-				"Title": "Login - GOTRS",
 				"Error": "Invalid username or password",
 			})
 			return
@@ -1636,8 +1654,9 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			}
 		}
 
-		// Set cookie
-		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
+	// Set cookies (support both names for YAML vs legacy paths)
+	c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
+	c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
 
 		// For HTMX requests, send redirect header
 		if c.GetHeader("HX-Request") == "true" {
@@ -1731,6 +1750,7 @@ func handleHTMXLogin(c *gin.Context) {
 func handleHTMXLogout(c *gin.Context) {
 	// Clear the session cookie
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
+	c.SetCookie("auth_token", "", -1, "/", "", false, true)
 	c.Header("HX-Redirect", "/login")
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
@@ -1751,6 +1771,7 @@ func handleDemoCustomerLogin(c *gin.Context) {
 func handleLogout(c *gin.Context) {
 	// Clear the session cookie
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
+	c.SetCookie("auth_token", "", -1, "/", "", false, true)
 	c.Redirect(http.StatusFound, "/login")
 }
 
@@ -1858,7 +1879,6 @@ func handleDashboard(c *gin.Context) {
 	}
 
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/dashboard.pongo2", pongo2.Context{
-		"Title":         "Dashboard - GOTRS",
 		"Stats":         stats,
 		"RecentTickets": recentTickets,
 		"User":          getUserMapForTemplate(c),
@@ -2011,7 +2031,6 @@ func handleTickets(c *gin.Context) {
 	}
 
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/tickets.pongo2", pongo2.Context{
-		"Title":          "Tickets - GOTRS",
 		"Tickets":        tickets,
 		"User":           getUserMapForTemplate(c),
 		"ActivePage":     "tickets",
@@ -2112,7 +2131,6 @@ func handleQueues(c *gin.Context) {
 	}
 
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/queues.pongo2", pongo2.Context{
-		"Title":      "Queues - GOTRS",
 		"Queues":     viewQueues,
 		"Search":     search,
 		"User":       getUserMapForTemplate(c),
@@ -2307,7 +2325,6 @@ func handleQueueDetail(c *gin.Context) {
 	}
 
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/tickets.pongo2", pongo2.Context{
-		"Title":          fmt.Sprintf("Queue: %s - GOTRS", queue.Name),
 		"Tickets":        tickets,
 		"User":           getUserMapForTemplate(c),
 		"ActivePage":     "queues",
@@ -2393,13 +2410,23 @@ func handleNewTicket(c *gin.Context) {
 		}
 	}
 
-	pongo2Renderer.HTML(c, http.StatusOK, "pages/ticket_new.pongo2", pongo2.Context{
-		"Title":      "New Ticket - GOTRS",
-		"User":       getUserMapForTemplate(c),
-		"ActivePage": "tickets",
-		"Queues":     queues,
-		"Priorities": priorities,
-		"Types":      types,
+	// Derive IsInAdminGroup for nav consistency (mirrors earlier context builder logic)
+	isInAdminGroup := false
+	if userMap, ok := getUserMapForTemplate(c)["ID"]; ok {
+		// Attempt group membership check only if DB available
+		if db != nil {
+			var cnt int
+			_ = db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM group_user ug JOIN groups g ON ug.group_id = g.id WHERE ug.user_id = $1 AND g.name = 'admin'`), userMap).Scan(&cnt)
+			if cnt > 0 { isInAdminGroup = true }
+		}
+	}
+	pongo2Renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", pongo2.Context{
+		"User":          getUserMapForTemplate(c),
+		"IsInAdminGroup": isInAdminGroup,
+		"ActivePage":    "tickets",
+		"Queues":        queues,
+		"Priorities":    priorities,
+		"Types":         types,
 	})
 }
 
@@ -2471,7 +2498,6 @@ func handleNewEmailTicket(c *gin.Context) {
 
 	// Render the HTML template with lookup data
 	c.HTML(http.StatusOK, "ticket_page.html", gin.H{
-		"Title":      "New Email Ticket - GOTRS",
 		"User":       getUserMapForTemplate(c),
 		"ActivePage": "tickets",
 		"Queues":     queues,
@@ -2549,7 +2575,6 @@ func handleNewPhoneTicket(c *gin.Context) {
 
 	// Render the HTML template with lookup data
 	c.HTML(http.StatusOK, "ticket_page.html", gin.H{
-		"Title":      "New Phone Ticket - GOTRS",
 		"User":       getUserMapForTemplate(c),
 		"ActivePage": "tickets",
 		"Queues":     queues,
@@ -2864,7 +2889,6 @@ func handleTicketDetail(c *gin.Context) {
 	}
 
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/ticket_detail.pongo2", pongo2.Context{
-		"Title":      fmt.Sprintf("Ticket #%s - %s - GOTRS", ticket.TicketNumber, ticket.Title),
 		"Ticket":     ticketData,
 		"User":       getUserMapForTemplate(c),
 		"ActivePage": "tickets",
@@ -2876,7 +2900,6 @@ func handleProfile(c *gin.Context) {
 	user := getUserMapForTemplate(c)
 
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/profile.pongo2", pongo2.Context{
-		"Title":      "Profile - GOTRS",
 		"User":       user,
 		"ActivePage": "profile",
 	})
@@ -2898,7 +2921,6 @@ func handleSettings(c *gin.Context) {
 	}
 
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/settings.pongo2", pongo2.Context{
-		"Title":      "Settings - GOTRS",
 		"User":       user,
 		"Settings":   settings,
 		"ActivePage": "settings",
@@ -4877,493 +4899,6 @@ func handleSchemaMonitoring(c *gin.Context) {
 	})
 }
 
-// handleAdminUsers shows the admin users page
-func handleAdminUsers(c *gin.Context) {
-	db, err := database.GetDB()
-	if err != nil {
-		sendErrorResponse(c, http.StatusInternalServerError, "Database connection failed")
-		return
-	}
-
-	// Get users from database with their groups
-	userRepo := repository.NewUserRepository(db)
-	users, err := userRepo.ListWithGroups()
-	if err != nil {
-		sendErrorResponse(c, http.StatusInternalServerError, fmt.Sprintf("Failed to fetch users: %v", err))
-		return
-	}
-
-	// Get groups for filter
-	groupRepo := repository.NewGroupRepository(db)
-	groups, err := groupRepo.List()
-	if err != nil {
-		// If we can't get groups, just continue with empty list
-		groups = []*models.Group{}
-	}
-
-	// Apply filters if present
-	search := c.Query("search")
-	statusFilter := c.Query("status")
-	groupFilter := c.Query("group")
-
-	// Filter users based on search and filters
-	var filteredUsers []*models.User
-	for _, user := range users {
-		// Skip if search doesn't match
-		if search != "" {
-			searchLower := strings.ToLower(search)
-			if !strings.Contains(strings.ToLower(user.Login), searchLower) &&
-				!strings.Contains(strings.ToLower(user.FirstName), searchLower) &&
-				!strings.Contains(strings.ToLower(user.LastName), searchLower) &&
-				!strings.Contains(strings.ToLower(user.Email), searchLower) {
-				continue
-			}
-		}
-
-		// Skip if status doesn't match
-		if statusFilter != "" && statusFilter != "all" {
-			if statusFilter == "active" && user.ValidID != 1 {
-				continue
-			}
-			if statusFilter == "inactive" && user.ValidID != 2 {
-				continue
-			}
-		}
-
-		// Skip if group doesn't match
-		if groupFilter != "" && groupFilter != "all" {
-			// TODO: Check if user is in the specified group
-			// For now, just include all users when group filter is set
-		}
-
-		filteredUsers = append(filteredUsers, user)
-	}
-
-	pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/users.pongo2", pongo2.Context{
-		"Users":        filteredUsers,
-		"Groups":       groups,
-		"Search":       search,
-		"StatusFilter": statusFilter,
-		"GroupFilter":  groupFilter,
-		"User":         getUserMapForTemplate(c),
-		"ActivePage":   "admin",
-		"t": func(key string) string {
-			// Simple translation fallback - just return the key for now
-			translations := map[string]string{
-				"admin.users":             "Users",
-				"app.name":                "GOTRS",
-				"admin.users_description": "Manage system users and their permissions",
-				"admin.add_user_tooltip":  "Add new user",
-			}
-			if val, ok := translations[key]; ok {
-				return val
-			}
-			return key
-		},
-	})
-}
-
-// handleNewUser shows the new user form
-func handleNewUser(c *gin.Context) {
-	db, err := database.GetDB()
-	if err != nil || db == nil {
-		// Graceful fallback: render lookups page with empty datasets so tests don't 500 without DB
-		pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/lookups.pongo2", pongo2.Context{
-			"TicketStates": []gin.H{},
-			"Priorities":   []gin.H{},
-			"TicketTypes":  []gin.H{},
-			"Services":     []gin.H{},
-			"SLAs":         []gin.H{},
-			"User":         getUserMapForTemplate(c),
-			"ActivePage":   "admin",
-			"CurrentTab":   "priorities",
-		})
-		return
-	}
-
-	// Get groups for the form
-	groupRepo := repository.NewGroupRepository(db)
-	groups, _ := groupRepo.List()
-
-	pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/user_form.pongo2", pongo2.Context{
-		"Title":      "New User",
-		"Groups":     groups,
-		"User":       getUserMapForTemplate(c),
-		"ActivePage": "admin",
-	})
-}
-
-// ============================================================================
-// ARCHIVED USER HANDLERS - Replaced by Dynamic Module System
-// These handlers are no longer used. The /admin/users routes now forward to
-// the dynamic module system. Kept here temporarily for reference.
-// TODO: Remove these functions once migration is fully verified
-// ============================================================================
-
-// handleCreateUser creates a new user - ARCHIVED: Use dynamic module instead
-func handleCreateUser(c *gin.Context) {
-	var userForm struct {
-		Login     string   `form:"login" binding:"required"`
-		Email     string   `form:"email"`
-		FirstName string   `form:"first_name" binding:"required"`
-		LastName  string   `form:"last_name" binding:"required"`
-		Password  string   `form:"password" binding:"required"`
-		Groups    []string `form:"groups[]"`
-		IsActive  bool     `form:"is_active"`
-	}
-
-	if err := c.ShouldBind(&userForm); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-        if os.Getenv("APP_ENV") == "test" {
-                // Simulate duplicate name handling for common system group 'admin'
-                if strings.EqualFold(userForm.Login, "admin") {
-                        c.JSON(http.StatusOK, gin.H{"success": false, "error": "Group with this name already exists"})
-                        return
-                }
-                c.JSON(http.StatusOK, gin.H{"success": true, "group": gin.H{"id": 0, "name": userForm.Login}})
-                return
-        }
-
-        db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	userRepo := repository.NewUserRepository(db)
-
-	// Create the user
-	user := &models.User{
-		Login:     userForm.Login,
-		Email:     userForm.Email,
-		FirstName: userForm.FirstName,
-		LastName:  userForm.LastName,
-		ValidID:   1, // Active by default
-	}
-
-	if !userForm.IsActive {
-		user.ValidID = 2 // Inactive
-	}
-
-	// Hash the password
-	// TODO: Implement proper password hashing
-	user.Password = userForm.Password // For now, store as plain text (NOT FOR PRODUCTION!)
-
-	if err := userRepo.Create(user); err != nil {
-		// Duplicate detection for UX/tests
-		if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(strings.ToLower(err.Error()), "exists") || strings.Contains(strings.ToLower(err.Error()), "unique") {
-			c.JSON(http.StatusOK, gin.H{"success": false, "error": "Group with this name already exists"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
-		return
-	}
-
-	// Add user to groups
-	if len(userForm.Groups) > 0 {
-		groupRepo := repository.NewGroupRepository(db)
-		for _, groupIDStr := range userForm.Groups {
-			if groupID, err := strconv.ParseUint(groupIDStr, 10, 32); err == nil {
-				groupRepo.AddUserToGroup(user.ID, uint(groupID))
-			}
-		}
-	}
-
-	c.JSON(http.StatusCreated, gin.H{
-		"success":  true,
-		"user":     gin.H{"login": userForm.Login, "first_name": userForm.FirstName, "last_name": userForm.LastName, "email": userForm.Email, "valid_id": 1},
-		"redirect": "/admin/users",
-	})
-}
-
-// handleGetUser returns user details
-func handleGetUser(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	userRepo := repository.NewUserRepository(db)
-	user, err := userRepo.GetByID(uint(userID))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	// Get user's groups
-	groupRepo := repository.NewGroupRepository(db)
-	groupNames, _ := groupRepo.GetUserGroups(user.ID)
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data": gin.H{
-			"id":         user.ID,
-			"login":      user.Login,
-			"title":      user.Title,
-			"first_name": user.FirstName,
-			"last_name":  user.LastName,
-			"email":      user.Email,
-			"valid_id":   user.ValidID,
-			"groups":     groupNames,
-		},
-	})
-}
-
-// handleEditUser shows the edit user form
-func handleEditUser(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		sendErrorResponse(c, http.StatusBadRequest, "Invalid user ID")
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		sendErrorResponse(c, http.StatusInternalServerError, "Database connection failed")
-		return
-	}
-
-	userRepo := repository.NewUserRepository(db)
-	user, err := userRepo.GetByID(uint(userID))
-	if err != nil {
-		sendErrorResponse(c, http.StatusNotFound, "User not found")
-		return
-	}
-
-	// Get all groups and user's current groups
-	groupRepo := repository.NewGroupRepository(db)
-	groups, _ := groupRepo.List()
-	userGroups, _ := groupRepo.GetUserGroups(user.ID)
-
-	pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/user_form.pongo2", pongo2.Context{
-		"Title":      "Edit User",
-		"EditUser":   user,
-		"Groups":     groups,
-		"UserGroups": userGroups,
-		"User":       getUserMapForTemplate(c),
-		"ActivePage": "admin",
-	})
-}
-
-// handleUpdateUser updates a user
-func handleUpdateUser(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	var userForm struct {
-		Login     string   `form:"login" json:"login"`
-		Email     string   `form:"email" json:"email"`
-		FirstName string   `form:"first_name" json:"first_name"`
-		LastName  string   `form:"last_name" json:"last_name"`
-		Password  string   `form:"password" json:"password"`
-		Groups    []string `form:"groups[]" json:"groups"`
-		IsActive  bool     `form:"is_active" json:"is_active"`
-	}
-
-	if err := c.ShouldBind(&userForm); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	userRepo := repository.NewUserRepository(db)
-	user, err := userRepo.GetByID(uint(userID))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	// Update user fields
-	if userForm.Login != "" {
-		user.Login = userForm.Login
-	}
-	if userForm.Email != "" {
-		user.Email = userForm.Email
-	}
-	if userForm.FirstName != "" {
-		user.FirstName = userForm.FirstName
-	}
-	if userForm.LastName != "" {
-		user.LastName = userForm.LastName
-	}
-	if userForm.Password != "" {
-		// TODO: Implement proper password hashing
-		user.Password = userForm.Password
-	}
-
-	user.ValidID = 1
-	if !userForm.IsActive {
-		user.ValidID = 2
-	}
-
-	if err := userRepo.Update(user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
-		return
-	}
-
-	// Update group memberships
-	// TODO: Implement group membership updates
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"user":    user,
-	})
-}
-
-// handleDeleteUser deletes a user
-func handleDeleteUser(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	userRepo := repository.NewUserRepository(db)
-
-	// In OTRS style, we don't actually delete users, we mark them as invalid
-	user, err := userRepo.GetByID(uint(userID))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	user.ValidID = 2 // Mark as invalid
-	if err := userRepo.Update(user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "User deleted successfully",
-	})
-}
-
-// handleUpdateUserStatus updates a user's active/inactive status
-func handleUpdateUserStatus(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	var request struct {
-		ValidID int `json:"valid_id"`
-	}
-
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	userRepo := repository.NewUserRepository(db)
-	user, err := userRepo.GetByID(uint(userID))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	user.ValidID = request.ValidID
-	user.ChangeTime = time.Now()
-	user.ChangeBy = int(getUserFromContext(c).ID)
-
-	if err := userRepo.Update(user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user status"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "User status updated successfully",
-	})
-}
-
-// handleResetUserPassword resets a user's password
-func handleResetUserPassword(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	var request struct {
-		Password string `json:"password"`
-	}
-
-	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
-		return
-	}
-
-	if request.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Password is required"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database connection failed"})
-		return
-	}
-
-	userRepo := repository.NewUserRepository(db)
-	user, err := userRepo.GetByID(uint(userID))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	// Hash the new password - use bcrypt
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
-		return
-	}
-
-	user.Password = string(hashedPassword)
-	user.ChangeTime = time.Now()
-	user.ChangeBy = int(getUserFromContext(c).ID)
-
-	if err := userRepo.Update(user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset password"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "Password reset successfully",
-	})
-}
 
 // handleAdminGroups shows the admin groups page
 func handleAdminGroups(c *gin.Context) {

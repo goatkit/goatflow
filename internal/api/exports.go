@@ -25,7 +25,7 @@ var (
 // Admin handlers
 var (
 	HandleAdminDashboard          = handleAdminDashboard
-	HandleAdminUsers              = handleAdminUsers
+	// Users are handled by dynamic modules and admin_users_handlers.go
 	HandleAdminUserEdit           = HandleAdminUserGet // Same handler for edit form
 	HandleAdminPasswordPolicy     = HandlePasswordPolicy
 	HandleAdminGroups             = handleAdminGroups

@@ -9,33 +9,31 @@
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("nav.queues") }}</h1>
-                <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                    View and manage ticket queues
-                </p>
+                <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">{{ t("queues.manage_description") }}</p>
             </div>
         </div>
     </div>
 
     <!-- Search / Actions -->
     <form method="get" action="/queues" class="mb-4 flex items-center space-x-3">
-        <input type="text" name="search" value="{{ Search }}" placeholder="Search queues..." class="block w-60 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-gotrs-500 focus:ring-gotrs-500" />
-        <button type="submit" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">Search</button>
+        <input type="text" name="search" value="{{ Search }}" placeholder="{{ t('queues.search_placeholder') }}" class="block w-60 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-gotrs-500 focus:ring-gotrs-500" />
+        <button type="submit" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">{{ t('search.search') }}</button>
         {% if Search %}
-        <a href="/queues" class="text-sm text-gray-600 dark:text-gray-300 hover:text-gotrs-600">Clear</a>
+        <a href="/queues" class="text-sm text-gray-600 dark:text-gray-300 hover:text-gotrs-600">{{ t('search.clear')|default:t('common.clear') }}</a>
         {% endif %}
-        <a href="/queues" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gotrs-600">Refresh</a>
+        <a href="/queues" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gotrs-600">{{ t('common.refresh')|default:'Refresh' }}</a>
     </form>
 
     <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Queue</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">New</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Open</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pending</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Closed</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('tickets.queue') }}</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('status.new') }}</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('status.open') }}</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('status.pending') }}</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('status.closed') }}</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('common.total')|default:'Total' }}</th>
                 </tr>
             </thead>
             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -57,7 +55,7 @@
                 {% endfor %}
                 {% else %}
                 <tr>
-                    <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No queues found</td>
+                    <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">{{ t('queues.no_queues') }}</td>
                 </tr>
                 {% endif %}
             </tbody>
