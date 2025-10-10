@@ -43,8 +43,11 @@
                 <div class="flex items-center justify-between">
                     <label for="password" class="block text-sm font-medium leading-6 text-gray-900 dark:text-gray-300">{{ t("auth.password")|default:"Password" }}</label>
                 </div>
-                <div class="mt-2">
-                    <input id="password" name="password" type="password" autocomplete="current-password" required class="block w-full rounded-md border-0 px-3 py-2.5 text-gray-900 dark:text-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 sm:text-sm sm:leading-6">
+                <div class="mt-2 relative">
+                    <input id="password" name="password" type="password" autocomplete="current-password" required class="block w-full rounded-md border-0 px-3 pr-14 py-2.5 text-gray-900 dark:text-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 sm:text-sm sm:leading-6">
+                    <div id="capsLockIcon" class="absolute inset-y-0 right-2 hidden items-center" title="Caps Lock is ON">
+                        <span class="text-[10px] font-mono px-1 rounded bg-amber-100 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700">CAPS</span>
+                    </div>
                 </div>
             </div>
 
@@ -72,28 +75,105 @@
 </div>
 
 <script>
-    // Handle HTMX login response
-    document.body.addEventListener('htmx:afterRequest', function(evt) {
-        // Only handle login form responses
-        if (evt.detail.elt && evt.detail.elt.matches('form')) {
-            console.log('Login form response received');
-            if (evt.detail.xhr && evt.detail.xhr.status === 200) {
-                const redirectUrl = evt.detail.xhr.getResponseHeader('HX-Redirect') || 
-                                   evt.detail.xhr.getResponseHeader('hx-redirect');
-                if (redirectUrl) {
-                    console.log('Login successful, forcing redirect to:', redirectUrl);
-                    // Force immediate redirect - multiple methods to ensure it works
-                    try {
-                        window.location.replace(redirectUrl);
-                    } catch(e) {
-                        console.error('Replace failed:', e);
-                        window.location = redirectUrl;
-                    }
-                    // Fallback if neither worked
-                    setTimeout(function() {
-                        document.location.href = redirectUrl;
-                    }, 10);
+    // Caps Lock indicator
+    const capsLockIcon = document.getElementById('capsLockIcon');
+    function updateCapsLock(e) {
+        try {
+            const on = e && typeof e.getModifierState === 'function' && e.getModifierState('CapsLock');
+            if (on) {
+                capsLockIcon.classList.remove('hidden');
+                capsLockIcon.classList.add('flex');
+            } else {
+                capsLockIcon.classList.add('hidden');
+                capsLockIcon.classList.remove('flex');
+            }
+        } catch (_) { /* no-op */ }
+    }
+    ['keydown','keyup'].forEach(ev => document.addEventListener(ev, updateCapsLock));
+
+    // Error feedback + client-side exponential backoff after repeated failures
+    const errorBox = document.getElementById('error-message');
+    const submitBtn = document.querySelector('form button[type="submit"]');
+    const FAIL_KEY = 'loginFailCount';
+    const UNTIL_KEY = 'loginBackoffUntil';
+
+    function setError(msg) {
+        if (!errorBox) return;
+        errorBox.innerHTML = '<div class="rounded-md bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-800 dark:text-red-200">' + (msg || 'Invalid username or password') + '</div>';
+    }
+    function clearError() { if (errorBox) errorBox.innerHTML = ''; }
+
+    function failCount() { return parseInt(localStorage.getItem(FAIL_KEY) || '0', 10) || 0; }
+    function setFailCount(n) { localStorage.setItem(FAIL_KEY, String(n)); }
+    function setBackoff(seconds) {
+        const until = Date.now() + seconds * 1000;
+        localStorage.setItem(UNTIL_KEY, String(until));
+        applyBackoff();
+    }
+    function remainingBackoff() {
+        const until = parseInt(localStorage.getItem(UNTIL_KEY) || '0', 10) || 0;
+        return Math.max(0, Math.ceil((until - Date.now()) / 1000));
+    }
+    let backoffTimer;
+    function applyBackoff() {
+        const rem = remainingBackoff();
+        if (rem > 0) {
+            if (submitBtn) submitBtn.disabled = true;
+            setError('Too many failed attempts. Please wait ' + rem + 's and try again.');
+            clearInterval(backoffTimer);
+            backoffTimer = setInterval(() => {
+                const r = remainingBackoff();
+                if (r <= 0) {
+                    clearInterval(backoffTimer);
+                    if (submitBtn) submitBtn.disabled = false;
+                    clearError();
+                } else {
+                    setError('Too many failed attempts. Please wait ' + r + 's and try again.');
                 }
+            }, 500);
+        } else {
+            if (submitBtn) submitBtn.disabled = false;
+        }
+    }
+    // On page load, respect existing backoff if any
+    applyBackoff();
+
+    // Intercept htmx swap to handle errors without replacing the whole body
+    document.body.addEventListener('htmx:beforeSwap', function(evt) {
+        if (!(evt.detail && evt.detail.xhr)) return;
+        const status = evt.detail.xhr.status;
+        if (status >= 400) {
+            evt.detail.shouldSwap = false;
+            let msg = 'Invalid username or password';
+            try {
+                const ct = evt.detail.xhr.getResponseHeader('Content-Type') || '';
+                if (ct.includes('application/json')) {
+                    const j = JSON.parse(evt.detail.xhr.responseText || '{}');
+                    if (j && (j.error || j.message)) msg = j.error || j.message;
+                }
+            } catch (_) {}
+            setError(msg);
+            const n = failCount() + 1;
+            setFailCount(n);
+            if (n >= 3) {
+                const seconds = Math.min(60, Math.pow(2, n - 3)); // 1,2,4,8... up to 60s
+                setBackoff(seconds);
+            }
+        }
+    });
+
+    // Handle HTMX login response (success path with HX-Redirect)
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+        if (!(evt.detail && evt.detail.elt && evt.detail.elt.matches('form'))) return;
+        if (evt.detail.xhr && evt.detail.xhr.status === 200) {
+            const redirectUrl = evt.detail.xhr.getResponseHeader('HX-Redirect') || evt.detail.xhr.getResponseHeader('hx-redirect');
+            if (redirectUrl) {
+                try { window.location.replace(redirectUrl); } catch(_) { window.location = redirectUrl; }
+                setTimeout(function() { document.location.href = redirectUrl; }, 10);
+                // Reset failure/backoff on success
+                setFailCount(0);
+                localStorage.removeItem(UNTIL_KEY);
+                clearError();
             }
         }
     });
