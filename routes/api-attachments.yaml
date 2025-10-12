@@ -1,0 +1,42 @@
+# Ticket Attachments API Routes Configuration
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: api-attachments
+  description: "Ticket attachment API endpoints"
+  namespace: default
+  enabled: true
+spec:
+  prefix: /api
+  middleware:
+    - auth
+  routes:
+    - path: /tickets/:id/attachments
+      method: GET
+      handler: HandleGetAttachments
+      description: "List attachments for a ticket"
+
+    - path: /tickets/:id/attachments
+      method: POST
+      handler: HandleUploadAttachment
+      description: "Upload attachment to a ticket"
+
+    - path: /tickets/:id/attachments/:attachment_id
+      method: GET
+      handler: HandleDownloadAttachment
+      description: "Download a specific attachment"
+
+    - path: /tickets/:id/attachments/:attachment_id
+      method: DELETE
+      handler: HandleDeleteAttachment
+      description: "Delete a specific attachment"
+
+    - path: /tickets/:id/attachments/:attachment_id/thumbnail
+      method: GET
+      handler: HandleGetThumbnail
+      description: "Get thumbnail/preview for an image attachment"
+
+    - path: /tickets/:id/attachments/:attachment_id/view
+      method: GET
+      handler: HandleViewAttachment
+      description: "Inline viewer for common attachment types"
