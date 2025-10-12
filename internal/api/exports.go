@@ -95,6 +95,16 @@ var (
 	HandleQueueDetail  = handleQueueDetail
 )
 
+// Attachment handlers (exported for routing)
+var (
+	HandleGetAttachments   = handleGetAttachments
+	HandleUploadAttachment = handleUploadAttachment
+	HandleDownloadAttachment = handleDownloadAttachment
+	HandleDeleteAttachment = handleDeleteAttachment
+	HandleGetThumbnail     = handleGetThumbnail
+	HandleViewAttachment   = handleViewAttachment
+)
+
 // Dev handlers
 var (
 	HandleDevDashboard = handleDevDashboard

@@ -493,6 +493,20 @@ No roadmap timeline adjustments required; proceeding with vertical slice executi
 
 ---
 
+### ✅ Update: October 12, 2025 – OTRS FS Compatibility, Compose Wiring, Docs
+
+Delivered items:
+- [x] Adopted OTRS/Znuny filesystem layout for attachments across runtime
+- [x] docker-compose unified: STORAGE_PATH env + volume mapping kept in sync
+- [x] Documentation: added compose examples for mounting existing OTRS var/article (read-only and read-write), with SELinux notes
+
+Impact:
+- Smooth runtime compatibility with existing OTRS/Znuny attachment stores (read and write in-place)
+- Clear migration path for filesystem-based installs
+- No changes to MVP ticket vertical slice status; remaining work continues per Immediate MVP Focus
+
+---
+
 ## 🧩 Planned: Ticket Number Generator Integration & Config Wiring (October 2025)
 
 This section captures the precise, minimal, non-duplicative plan to wire the existing unified YAML configuration platform to the already implemented ticket number generators in `internal/ticketnumber/` without recreating solved components.

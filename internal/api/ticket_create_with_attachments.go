@@ -1,17 +1,23 @@
 package api
 
 import (
+    "context"
 	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
 	"strconv"
+    "time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"log"
+    "strings"
+
+    "github.com/gotrs-io/gotrs-ce/internal/service"
+    "github.com/gotrs-io/gotrs-ce/internal/config"
 )
 
 // handleCreateTicketWithAttachments is an enhanced version that properly handles file attachments
@@ -126,7 +132,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	
 	if err := articleRepo.Create(article); err != nil {
 		log.Printf("ERROR: Failed to add initial article: %v", err)
-		// Don't fail the ticket creation, just log the error
+		// Without an article we cannot safely attach files; continue ticket creation
 	} else {
 		log.Printf("Successfully created article ID: %d for ticket %d", article.ID, ticket.ID)
 	}
@@ -137,9 +143,8 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	if c.Request.MultipartForm != nil && c.Request.MultipartForm.File != nil {
 		// Check both singular and plural field names for compatibility
 		files := c.Request.MultipartForm.File["attachments"]
-		if files == nil {
-			files = c.Request.MultipartForm.File["attachment"]
-		}
+		if files == nil { files = c.Request.MultipartForm.File["attachment"] }
+		if files == nil { files = c.Request.MultipartForm.File["file"] }
 		log.Printf("Processing %d attachment(s) for ticket %d", len(files), ticket.ID)
 		
 		for _, fileHeader := range files {
@@ -167,53 +172,103 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 				log.Printf("ERROR: Failed to open uploaded file %s: %v", fileHeader.Filename, err)
 				continue
 			}
-			defer file.Close()
-			
-			// Read file content into memory
-			fileContent, err := io.ReadAll(file)
-			if err != nil {
-				log.Printf("ERROR: Failed to read file content: %v", err)
-				continue
-			}
-			
-			// Determine content type
-			contentType := fileHeader.Header.Get("Content-Type")
-			if contentType == "" {
-				contentType = "application/octet-stream"
-			}
-			
-			// Save attachment record to database
-			// OTRS stores attachments in article_data_mime_attachment table
-			_, err = db.Exec(database.ConvertPlaceholders(`
-				INSERT INTO article_data_mime_attachment 
-				(article_id, filename, content_type, content_size, content, 
-				 disposition, create_by, change_by)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`),
-				article.ID, 
-				fileHeader.Filename,
-				contentType,
-				fmt.Sprintf("%d", len(fileContent)),
-				fileContent, // Store actual content
-				"attachment",
-				createdBy,
-				createdBy,
-			)
-			if err != nil {
-				log.Printf("WARNING: Failed to save attachment record to database: %v", err)
-			} else {
-				log.Printf("Successfully saved attachment record to database for article %d", article.ID)
-			}
-			
-			// Track the info for response
-			attachmentInfo = append(attachmentInfo, map[string]interface{}{
-				"filename":     fileHeader.Filename,
-				"size":         len(fileContent),
-				"content_type": contentType,
-				"saved":        true,
-			})
-			
-			log.Printf("Successfully saved attachment: %s (%d bytes) for ticket %d", 
-				fileHeader.Filename, len(fileContent), ticket.ID)
+			// Ensure we close after processing this iteration
+			func() {
+				defer file.Close()
+
+				// Determine content type (fallback using simple detection)
+				contentType := fileHeader.Header.Get("Content-Type")
+				if contentType == "" || contentType == "application/octet-stream" {
+					buf := make([]byte, 512)
+					if n, _ := file.Read(buf); n > 0 {
+						contentType = detectContentType(fileHeader.Filename, buf[:n])
+					}
+					file.Seek(0, 0)
+				}
+
+				// Enforce config limits/types if set
+				if cfg := config.Get(); cfg != nil {
+					max := cfg.Storage.Attachments.MaxSize
+					if max > 0 && fileHeader.Size > max {
+						log.Printf("WARNING: %s exceeds max size, skipping", fileHeader.Filename)
+						return
+					}
+					if len(cfg.Storage.Attachments.AllowedTypes) > 0 && contentType != "" && contentType != "application/octet-stream" {
+						allowed := map[string]struct{}{}
+						for _, t := range cfg.Storage.Attachments.AllowedTypes { allowed[strings.ToLower(t)] = struct{}{} }
+						if _, ok := allowed[strings.ToLower(contentType)]; !ok {
+							log.Printf("WARNING: %s type %s not allowed, skipping", fileHeader.Filename, contentType)
+							return
+						}
+					}
+				}
+
+				// Resolve uploader ID
+				uploaderID := int(createdBy)
+				if v, ok := c.Get("user_id"); ok {
+					switch t := v.(type) {
+					case int: uploaderID = t
+					case int64: uploaderID = int(t)
+					case uint: uploaderID = int(t)
+					case uint64: uploaderID = int(t)
+					case string:
+						if n, e := strconv.Atoi(t); e == nil { uploaderID = n }
+					}
+				}
+
+				// Use unified storage service; ensure we have an article
+				if article != nil && article.ID > 0 {
+					storageSvc := GetStorageService()
+					storagePath := service.GenerateOTRSStoragePath(int(ticket.ID), article.ID, fileHeader.Filename)
+					ctx := c.Request.Context()
+					ctx = context.WithValue(ctx, service.CtxKeyArticleID, article.ID)
+					ctx = service.WithUserID(ctx, uploaderID)
+
+					if _, err := storageSvc.Store(ctx, file, fileHeader, storagePath); err != nil {
+						log.Printf("ERROR: storage Store failed for ticket %d article %d: %v", ticket.ID, article.ID, err)
+						return
+					}
+
+					// If backend is local FS, also insert DB metadata row for listing/download
+					if _, isDB := storageSvc.(*service.DatabaseStorageService); !isDB {
+						// Re-open to read bytes for DB row
+						if f2, e2 := fileHeader.Open(); e2 == nil {
+							defer f2.Close()
+							b, rerr := io.ReadAll(f2)
+							if rerr == nil {
+								ct := contentType
+								if ct == "" { ct = "application/octet-stream" }
+								_, ierr := db.Exec(database.ConvertPlaceholders(`
+									INSERT INTO article_data_mime_attachment (
+										article_id, filename, content_type, content_size, content,
+										disposition, create_time, create_by, change_time, change_by
+									) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`),
+									article.ID,
+									fileHeader.Filename,
+									ct,
+									int64(len(b)),
+									b,
+									"attachment",
+									time.Now(), uploaderID, time.Now(), uploaderID,
+								)
+								if ierr != nil { log.Printf("ERROR: attachment metadata insert failed: %v", ierr) }
+							}
+						}
+					}
+
+					// Track the info for response
+					attachmentInfo = append(attachmentInfo, map[string]interface{}{
+						"filename":     fileHeader.Filename,
+						"size":         fileHeader.Size,
+						"content_type": contentType,
+						"saved":        true,
+					})
+					c.Header("HX-Trigger", "attachments-updated")
+					log.Printf("Successfully saved attachment: %s (%d bytes) for ticket %d", fileHeader.Filename, fileHeader.Size, ticket.ID)
+				} else {
+					log.Printf("WARNING: No article available for attachments on ticket %d", ticket.ID)
+				}
+			}()
 		}
 	}
 	

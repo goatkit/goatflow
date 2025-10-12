@@ -1,4 +1,4 @@
-package api
+package api_test
 
 import (
     "net/http"
@@ -7,6 +7,7 @@ import (
     "testing"
 
     "github.com/gin-gonic/gin"
+    apipkg "github.com/gotrs-io/gotrs-ce/internal/api"
     "github.com/gotrs-io/gotrs-ce/internal/routing"
 )
 
@@ -21,9 +22,9 @@ func TestLoginFlowSetsCookie(t *testing.T) {
 
     // Register required handlers
     reg.OverrideBatch(map[string]gin.HandlerFunc{
-        "handleLoginPage": HandleLoginPage,
-        "handleAuthLogin": HandleAuthLogin,
-        "handleDashboard": HandleDashboard,
+        "handleLoginPage": apipkg.HandleLoginPage,
+        "handleAuthLogin": apipkg.HandleAuthLogin,
+        "handleDashboard": apipkg.HandleDashboard,
     })
 
     // Simulate route registrations (subset)

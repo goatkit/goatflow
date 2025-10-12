@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
@@ -79,14 +80,29 @@ func InitializeServices() {
 		// Initialize lookup service
 		lookupService = service.NewLookupService()
 		
-        // Initialize storage service - respect STORAGE_PATH env, fallback to ./storage
-        storagePath := os.Getenv("STORAGE_PATH")
-        if storagePath == "" {
-            storagePath = "./storage"
-        }
-        storageService, err = service.NewLocalStorageService(storagePath)
-		if err != nil {
-			log.Fatalf("FATAL: Cannot initialize storage service: %v", err)
+		// Initialize storage service from config
+		cfg := config.Get()
+			// Initialize storage service by config
+			if cfg != nil && cfg.Storage.Type == "db" {
+				storageService, err = service.NewDatabaseStorageService()
+				if err != nil {
+					log.Fatalf("FATAL: Cannot initialize DB storage service: %v", err)
+				}
+				log.Printf("StorageService: using DB backend")
+			} else {
+				storagePath := os.Getenv("STORAGE_PATH")
+				if storagePath == "" {
+					if cfg != nil && cfg.Storage.Local.Path != "" {
+						storagePath = cfg.Storage.Local.Path
+					} else {
+						storagePath = "./storage"
+					}
+				}
+				storageService, err = service.NewLocalStorageService(storagePath)
+				if err != nil {
+					log.Fatalf("FATAL: Cannot initialize storage service: %v", err)
+				}
+				log.Printf("StorageService: using local backend at %s", storagePath)
 		}
 		
 		// Initialize auth service

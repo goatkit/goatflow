@@ -111,6 +111,26 @@ div[id^="note-content-"] table tbody tr {
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Main content -->
         <div class="lg:col-span-2 space-y-6">
+            <!-- Attachments Section -->
+            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-medium text-gray-900 dark:text-white">Attachments</h2>
+                    <form id="attachmentUploadForm" hx-post="/api/tickets/{{ Ticket.tn }}/attachments" hx-trigger="change from:#attachment-upload" hx-swap="none" enctype="multipart/form-data" hx-encoding="multipart/form-data">
+                        <input id="attachment-upload" type="file" name="file" class="hidden" />
+                        <button type="button" onclick="document.getElementById('attachment-upload').click()"
+                                class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm leading-5 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                            Upload
+                        </button>
+                    </form>
+                </div>
+                <div id="attachments-list"
+                     hx-get="/api/tickets/{{ Ticket.tn }}/attachments"
+                     hx-trigger="load, attachments-updated from:#attachmentUploadForm, changed from:#attachment-uploaded"
+                     hx-swap="innerHTML">
+                    <div class="text-center py-4 text-sm text-gray-500 dark:text-gray-400">Loading attachments...</div>
+                </div>
+                <input type="hidden" id="attachment-uploaded" />
+            </div>
             <!-- Ticket Description -->
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
                 <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.description") }}</h2>

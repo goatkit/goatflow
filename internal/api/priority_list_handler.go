@@ -22,9 +22,9 @@ func HandleListPrioritiesAPI(c *gin.Context) {
         return
     }
 
-    // Build query based on filters (exclude color column since it doesn't exist)
+    // Build query based on filters
     query := database.ConvertPlaceholders(`
-        SELECT id, name, valid_id
+        SELECT id, name, color, valid_id
         FROM ticket_priority
         WHERE 1=1
     `)
@@ -49,11 +49,11 @@ func HandleListPrioritiesAPI(c *gin.Context) {
     var items []gin.H
     for rows.Next() {
         var id, validID int
-        var name string
-        if err := rows.Scan(&id, &name, &validID); err != nil {
+        var name, color string
+        if err := rows.Scan(&id, &name, &color, &validID); err != nil {
             continue
         }
-        items = append(items, gin.H{"id": id, "name": name, "valid_id": validID})
+        items = append(items, gin.H{"id": id, "name": name, "color": color, "valid_id": validID})
     }
 
     c.JSON(http.StatusOK, gin.H{"success": true, "data": items})

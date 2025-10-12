@@ -112,7 +112,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 		}
 	}
 
-	// Set cookies for tokens - use auth_token name that AuthMiddleware expects
+	// Set cookies for tokens - set both names for compatibility across middlewares
 	c.SetCookie(
 		"auth_token", // AuthMiddleware looks for this name
 		accessToken,
@@ -121,6 +121,17 @@ var HandleAuthLogin = func(c *gin.Context) {
 		"",
 		false, // Not HTTPS in dev
 		true,  // HttpOnly
+	)
+
+	// Also set access_token for components expecting this name
+	c.SetCookie(
+		"access_token",
+		accessToken,
+		sessionTimeout,
+		"/",
+		"",
+		false,
+		true,
 	)
 
 	c.SetCookie(
@@ -154,6 +165,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 var HandleAuthLogout = func(c *gin.Context) {
 	// Clear cookies
 	c.SetCookie("auth_token", "", -1, "/", "", false, true)
+	c.SetCookie("access_token", "", -1, "/", "", false, true)
 	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
 
 	// Redirect to login

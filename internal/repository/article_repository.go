@@ -13,6 +13,8 @@ import (
 // ArticleRepository handles database operations for articles
 type ArticleRepository struct {
 	db *sql.DB
+	hasArticleTypeID *bool
+	hasCommunicationChannelID *bool
 }
 
 // NewArticleRepository creates a new article repository
@@ -38,6 +40,8 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	if article.IsVisibleForCustomer == 0 {
 		article.IsVisibleForCustomer = 1 // Visible by default
 	}
+	if article.CreateBy == 0 { article.CreateBy = 1 }
+	if article.ChangeBy == 0 { article.ChangeBy = article.CreateBy }
 
 	// Begin transaction
 	tx, err := r.db.Begin()
@@ -46,30 +50,45 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	}
 	defer tx.Rollback()
 
-	// Insert into article table (OTRS legacy-compatible columns)
-	articleQuery := database.ConvertPlaceholders(`
-		INSERT INTO article (
-			ticket_id, article_sender_type_id,
-			communication_channel_id, is_visible_for_customer,
-			create_time, create_by, change_time, change_by
-		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8
-		) RETURNING id`)
+	// Determine if schema has article_type_id; build INSERT accordingly
+	hasType, derr := r.ensureArticleTypeColumn()
+	if derr != nil {
+		return derr
+	}
+	// Determine if schema has communication_channel_id
+	hasComm, derr2 := r.ensureCommunicationChannelColumn()
+	if derr2 != nil {
+		return derr2
+	}
+
+	// Build column list and args dynamically to fit actual schema
+	cols := []string{"ticket_id"}
+	args := []interface{}{article.TicketID}
+	if hasType {
+		cols = append(cols, "article_type_id")
+		args = append(args, article.ArticleTypeID)
+	}
+	cols = append(cols, "article_sender_type_id")
+	args = append(args, article.SenderTypeID)
+	if hasComm {
+		cols = append(cols, "communication_channel_id")
+		args = append(args, article.CommunicationChannelID)
+	}
+	cols = append(cols, "is_visible_for_customer", "create_time", "create_by", "change_time", "change_by")
+	args = append(args, article.IsVisibleForCustomer, now, article.CreateBy, now, article.ChangeBy)
+
+	// Build placeholders according to current DB
+	placeholders := make([]string, len(cols))
+	for i := range cols {
+		if database.IsMySQL() { placeholders[i] = "?" } else { placeholders[i] = fmt.Sprintf("$%d", i+1) }
+	}
+	articleQuery := fmt.Sprintf("INSERT INTO article (%s) VALUES (%s) RETURNING id", strings.Join(cols, ", "), strings.Join(placeholders, ", "))
+	articleQuery = database.ConvertPlaceholders(articleQuery)
 
 	// Use adapter for database-specific handling
 	adapter := database.GetAdapter()
-	articleID64, err := adapter.InsertWithReturningTx(
-		tx,
-		articleQuery,
-		article.TicketID,
-		article.SenderTypeID,
-		article.CommunicationChannelID,
-		article.IsVisibleForCustomer,
-		now,
-		article.CreateBy,
-		now,
-		article.ChangeBy,
-	)
+	var articleID64 int64
+	articleID64, err = adapter.InsertWithReturningTx(tx, articleQuery, args...)
 
 	if err != nil {
 		return err
@@ -177,6 +196,52 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 
 	// Commit transaction
 	return tx.Commit()
+}
+
+// ensureArticleTypeColumn checks once whether article.article_type_id exists
+func (r *ArticleRepository) ensureArticleTypeColumn() (bool, error) {
+	if r.hasArticleTypeID != nil {
+		return *r.hasArticleTypeID, nil
+	}
+	// Default false
+	has := false
+	// MySQL/MariaDB needs TABLE_SCHEMA = DATABASE()
+	if database.IsMySQL() {
+		row := r.db.QueryRow(`SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = 'article_type_id'`)
+		var cnt int
+		if err := row.Scan(&cnt); err != nil {
+			return false, err
+		}
+		has = cnt > 0
+	} else {
+		row := r.db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'article' AND column_name = 'article_type_id'`)
+		var cnt int
+		if err := row.Scan(&cnt); err != nil {
+			return false, err
+		}
+		has = cnt > 0
+	}
+	r.hasArticleTypeID = &has
+	return has, nil
+}
+
+// ensureCommunicationChannelColumn checks once whether article.communication_channel_id exists
+func (r *ArticleRepository) ensureCommunicationChannelColumn() (bool, error) {
+	if r.hasCommunicationChannelID != nil { return *r.hasCommunicationChannelID, nil }
+	has := false
+	if database.IsMySQL() {
+		row := r.db.QueryRow(`SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = 'communication_channel_id'`)
+		var cnt int
+		if err := row.Scan(&cnt); err != nil { return false, err }
+		has = cnt > 0
+	} else {
+		row := r.db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'article' AND column_name = 'communication_channel_id'`)
+		var cnt int
+		if err := row.Scan(&cnt); err != nil { return false, err }
+		has = cnt > 0
+	}
+	r.hasCommunicationChannelID = &has
+	return has, nil
 }
 
 // GetByID retrieves an article by its ID (joins MIME content)

@@ -188,6 +188,14 @@ func main() {
 		"HandleReindexAPI":           api.HandleReindexAPI,
 		"HandleSearchHealthAPI":      api.HandleSearchHealthAPI,
 
+		// Attachment API handlers
+		"HandleGetAttachments":     api.HandleGetAttachments,
+		"HandleUploadAttachment":   api.HandleUploadAttachment,
+		"HandleDownloadAttachment": api.HandleDownloadAttachment,
+		"HandleDeleteAttachment":   api.HandleDeleteAttachment,
+		"HandleGetThumbnail":       api.HandleGetThumbnail,
+		"HandleViewAttachment":     api.HandleViewAttachment,
+
 		// Lookup handlers
 		"HandleGetQueues":             api.HandleGetQueues,
 		"HandleGetPriorities":         api.HandleGetPriorities,

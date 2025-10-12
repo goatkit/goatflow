@@ -42,7 +42,7 @@ if command -v podman >/dev/null 2>&1; then
         COMPOSE_CMD="podman compose"
     fi
 elif command -v docker >/dev/null 2>&1; then
-    CONTAINER_CMD=docker
+    CONTAINER_CMD="docker"
     if docker compose version >/dev/null 2>&1; then
         COMPOSE_CMD="docker compose"
     elif command -v docker-compose >/dev/null 2>&1; then
@@ -139,7 +139,7 @@ run_go() {
             joined+=" $arg"
         fi
     done
-    # Ensure Go binary path inside container
+    # Ensure Go binary path; cache locations will be provided via env (-e) if available
     # Defer PATH expansion inside container by escaping $PATH to avoid host PATH (with parens/spaces) injection
     local shell_cmd='export PATH=/usr/local/go/bin:\$PATH; export GOFLAGS="-buildvcs=false"; '
     [ "${GOTRS_DEBUG_RUN_GO:-0}" = "1" ] && echo "[run_go] compose='$COMPOSE_CMD' shell_cmd=$shell_cmd" >&2 || true
@@ -154,24 +154,31 @@ run_go() {
         # Properly split multi-word command (e.g. 'docker compose') into array elements
         IFS=' ' read -r -a compose_exec <<< "$COMPOSE_CMD"
     fi
+    # Prefer compose-mounted cache volume at /workspace/.cache
+    mkdir -p .cache/go-build .cache/go-mod >/dev/null 2>&1 || true
+    local vol_build=()
+    local vol_mod=()
+    local env_cache=( -e GOCACHE=/workspace/.cache/go-build -e GOMODCACHE=/workspace/.cache/go-mod )
+    local user_flag=( -u "$(id -u):$(id -g)" )
+
     if echo "$COMPOSE_CMD" | grep -q 'podman compose'; then
-        if ! "${compose_exec[@]}" run --rm toolbox bash -lc "$preflight_cmd" >/dev/null 2>&1; then
+    if ! "${compose_exec[@]}" run --rm "${user_flag[@]}" "${env_cache[@]}" "${vol_build[@]}" "${vol_mod[@]}" toolbox bash -lc "$preflight_cmd" >/dev/null 2>&1; then
             [ "${GOTRS_DEBUG_RUN_GO:-0}" = "1" ] && echo "[run_go] preflight failed; rebuilding toolbox image" >&2 || true
             "${compose_exec[@]}" build toolbox >/dev/null 2>&1 || true
         fi
-        "${compose_exec[@]}" run --rm toolbox bash -lc "$shell_cmd" || run_success=$?
+        "${compose_exec[@]}" run --rm "${user_flag[@]}" "${env_cache[@]}" "${vol_build[@]}" "${vol_mod[@]}" toolbox bash -lc "$shell_cmd" || run_success=$?
     elif echo "$COMPOSE_CMD" | grep -q 'podman-compose'; then
-        if ! COMPOSE_PROFILES=toolbox $COMPOSE_CMD run --rm toolbox bash -lc "$preflight_cmd" >/dev/null 2>&1; then
+    if ! COMPOSE_PROFILES=toolbox $COMPOSE_CMD run --rm "${user_flag[@]}" "${env_cache[@]}" "${vol_build[@]}" "${vol_mod[@]}" toolbox bash -lc "$preflight_cmd" >/dev/null 2>&1; then
             [ "${GOTRS_DEBUG_RUN_GO:-0}" = "1" ] && echo "[run_go] preflight failed; rebuilding toolbox image" >&2 || true
             COMPOSE_PROFILES=toolbox $COMPOSE_CMD build toolbox >/dev/null 2>&1 || true
         fi
-        COMPOSE_PROFILES=toolbox $COMPOSE_CMD run --rm toolbox bash -lc "$shell_cmd" || run_success=$?
+        COMPOSE_PROFILES=toolbox $COMPOSE_CMD run --rm "${user_flag[@]}" "${env_cache[@]}" "${vol_build[@]}" "${vol_mod[@]}" toolbox bash -lc "$shell_cmd" || run_success=$?
     else
-        if ! "${compose_exec[@]}" --profile toolbox run --rm toolbox bash -lc "$preflight_cmd" >/dev/null 2>&1; then
+    if ! "${compose_exec[@]}" --profile toolbox run --rm "${user_flag[@]}" "${env_cache[@]}" "${vol_build[@]}" "${vol_mod[@]}" toolbox bash -lc "$preflight_cmd" >/dev/null 2>&1; then
             [ "${GOTRS_DEBUG_RUN_GO:-0}" = "1" ] && echo "[run_go] preflight failed; rebuilding toolbox image" >&2 || true
             "${compose_exec[@]}" --profile toolbox build toolbox >/dev/null 2>&1 || true
         fi
-        "${compose_exec[@]}" --profile toolbox run --rm toolbox bash -lc "$shell_cmd" || run_success=$?
+    "${compose_exec[@]}" --profile toolbox run --rm "${user_flag[@]}" "${env_cache[@]}" "${vol_build[@]}" "${vol_mod[@]}" toolbox bash -lc "$shell_cmd" || run_success=$?
     fi
     if [ $run_success -ne 0 ]; then
         echo "[run_go] ERROR: toolbox execution failed (exit $run_success). Ensure 'toolbox' image exists (make toolbox-build)." >&2
@@ -284,26 +291,23 @@ verify_compilation() {
             fi
         fi
     fi
-    # Attempt to build goats
-    # Use direct compose invocation to avoid run_go abstraction masking errors
+    # Attempt to build goats with the same cache mounts and user mapping as tests
+    # Use compose-mounted cache volume
+    mkdir -p .cache/go-build .cache/go-mod >/dev/null 2>&1 || true
+    local vol_build=""
+    local vol_mod=""
+    local env_cache="-e GOCACHE=/workspace/.cache/go-build -e GOMODCACHE=/workspace/.cache/go-mod"
+    local user_flag="-u $(id -u):$(id -g)"
+    local build_inner='export PATH=/usr/local/go/bin:\$PATH; export GOFLAGS=-buildvcs=false; go build ./cmd/goats'
     local build_cmd
-    local go_abs="/usr/local/go/bin/go"
-    # Avoid host PATH expansion (which may contain parens/spaces) by deferring $PATH expansion inside container.
-    # Use minimal required PATH plus container's existing PATH via escaped $PATH reference.
-    local build_inner='export PATH=/usr/local/go/bin:\$PATH; export GOFLAGS=-buildvcs=false; '
-    if [ -x /usr/local/go/bin/go ]; then
-        build_inner+="$go_abs build ./cmd/goats"
-    else
-        build_inner+="go build ./cmd/goats"
-    fi
     if echo "$COMPOSE_CMD" | grep -q 'podman-compose'; then
-        build_cmd="COMPOSE_PROFILES=toolbox $COMPOSE_CMD run --rm toolbox bash -c '$build_inner'"
+        build_cmd="COMPOSE_PROFILES=toolbox $COMPOSE_CMD run --rm $user_flag $env_cache $vol_build $vol_mod toolbox bash -lc '$build_inner'"
     elif echo "$COMPOSE_CMD" | grep -q 'podman compose'; then
-        build_cmd="$COMPOSE_CMD run --rm toolbox bash -c '$build_inner'"
+        build_cmd="$COMPOSE_CMD run --rm $user_flag $env_cache $vol_build $vol_mod toolbox bash -lc '$build_inner'"
     elif echo "$COMPOSE_CMD" | grep -q 'docker compose'; then
-        build_cmd="$COMPOSE_CMD run --rm toolbox bash -c '$build_inner'"
+        build_cmd="$COMPOSE_CMD run --rm $user_flag $env_cache $vol_build $vol_mod toolbox bash -lc '$build_inner'"
     else
-        build_cmd="$COMPOSE_CMD --profile toolbox run --rm toolbox bash -c '$build_inner'"
+        build_cmd="$COMPOSE_CMD --profile toolbox run --rm $user_flag $env_cache $vol_build $vol_mod toolbox bash -lc '$build_inner'"
     fi
     echo "[TDD ENFORCER] build command: $build_cmd" > "$LOG_DIR/compile_errors.log"
     if eval "$build_cmd" >> "$LOG_DIR/compile_errors.log" 2>&1; then
@@ -523,18 +527,28 @@ EOF
     # Run console check if Node.js and Playwright are available
     if command -v node >/dev/null 2>&1; then
         if node -e "require('playwright')" >/dev/null 2>&1; then
-            local console_results=$(node "$LOG_DIR/console_check.js" "${test_pages[@]}" 2>/dev/null || echo '[]')
-            local total_errors=$(echo "$console_results" | jq '[.[].errorCount] | add // 0')
-            
-            jq --argjson results "$console_results" --arg total_errors "$total_errors" \
-                '.evidence.browser_console.results = $results | .evidence.browser_console.total_errors = ($total_errors | tonumber)' \
-                "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
-            
-            if [ "$total_errors" -eq 0 ]; then
+            local console_results
+            console_results=$(node "$LOG_DIR/console_check.js" "${test_pages[@]}" 2>/dev/null || echo '[]')
+            # Ensure console_results is valid JSON array
+            if ! echo "$console_results" | jq -e . >/dev/null 2>&1; then
+                console_results='[]'
+            fi
+            local total_errors
+            total_errors=$(echo "$console_results" | jq -r '[.[].errorCount] | add // 0 | tostring')
+
+            # Safely write evidence; coerce total_errors to number inside jq
+            jq --argjson results "$console_results" \
+               --argjson total_errors "$total_errors" \
+               '.evidence.browser_console.results = $results | .evidence.browser_console.total_errors = $total_errors' \
+               "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
+
+            # Fallback to zero if not a number
+            total_errors=${total_errors:-0}
+            if [ "${total_errors}" -eq 0 ] 2>/dev/null; then
                 success "Browser console: CLEAN (0 errors)"
                 return 0
             else
-                fail "Browser console: $total_errors ERRORS"
+                fail "Browser console: ${total_errors} ERRORS"
                 return 1
             fi
         else

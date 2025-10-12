@@ -6,6 +6,7 @@ import (
     "sync"
 
     "github.com/gin-gonic/gin"
+    "github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // Simple global handler registry to decouple YAML route loader from hardcoded map.
@@ -49,6 +50,25 @@ func ensureCoreHandlers() {
         "handleNewTicket": handleNewTicket,
         "handleNewEmailTicket": handleNewEmailTicket,
         "handleNewPhoneTicket": handleNewPhoneTicket,
+        // Agent ticket creation flow (YAML expects names without db param)
+        "HandleAgentCreateTicket": func(c *gin.Context) {
+            // Use enhanced multipart-aware path
+            handleCreateTicketWithAttachments(c)
+        },
+        "HandleAgentNewTicket": func(c *gin.Context) {
+            // Resolve DB if available, else pass nil (agent handler supports test/nil)
+            db, _ := database.GetDB()
+            HandleAgentNewTicket(db)(c)
+        },
+        // Attachment handlers exposed for API routes
+        "HandleGetAttachments": handleGetAttachments,
+        "HandleUploadAttachment": handleUploadAttachment,
+        "HandleDownloadAttachment": handleDownloadAttachment,
+        "HandleDeleteAttachment": handleDeleteAttachment,
+        "HandleGetThumbnail": handleGetThumbnail,
+    "HandleViewAttachment": handleViewAttachment,
+        // Optional customer info partial used by YAML
+        "HandleCustomerInfoPanel": func(c *gin.Context) { c.String(200, "") },
         "handleSettings": handleSettings,
         "handleProfile": handleProfile,
         "HandleWebSocketChat": HandleWebSocketChat,

@@ -29,28 +29,32 @@ LOG_DIR="$PROJECT_ROOT/generated/tdd-comprehensive"
 EVIDENCE_DIR="$PROJECT_ROOT/generated/evidence"
 TEST_RESULTS_DIR="$PROJECT_ROOT/generated/test-results"
 BASE_URL="http://localhost:${BACKEND_PORT:-8081}"
-# Compose/cmd autodetect with robust fallbacks (prefer podman, then docker, else none)
-if command -v podman >/dev/null 2>&1; then
-    CONTAINER_CMD="podman"
-    if podman compose version >/dev/null 2>&1; then
-        COMPOSE_CMD="podman compose"
-    elif command -v podman-compose >/dev/null 2>&1; then
-        COMPOSE_CMD="podman-compose"
-    else
-        COMPOSE_CMD="podman compose"
-    fi
-elif command -v docker >/dev/null 2>&1; then
-    CONTAINER_CMD="docker"
-    if docker compose version >/dev/null 2>&1; then
-        COMPOSE_CMD="docker compose"
-    elif command -v docker-compose >/dev/null 2>&1; then
-        COMPOSE_CMD="docker-compose"
-    else
-        COMPOSE_CMD="docker compose"
-    fi
+# Compose/cmd autodetect with robust fallbacks (prefer env provided by Makefile; otherwise detect)
+if [ -n "${CONTAINER_CMD:-}" ] && [ -n "${COMPOSE_CMD:-}" ]; then
+    true
 else
-    CONTAINER_CMD=""
-    COMPOSE_CMD=""
+    if command -v podman >/dev/null 2>&1; then
+        CONTAINER_CMD="podman"
+        if podman compose version >/dev/null 2>&1; then
+            COMPOSE_CMD="podman compose"
+        elif command -v podman-compose >/dev/null 2>&1; then
+            COMPOSE_CMD="podman-compose"
+        else
+            COMPOSE_CMD="podman compose"
+        fi
+    elif command -v docker >/dev/null 2>&1; then
+        CONTAINER_CMD="docker"
+        if docker compose version >/dev/null 2>&1; then
+            COMPOSE_CMD="docker compose"
+        elif command -v docker-compose >/dev/null 2>&1; then
+            COMPOSE_CMD="docker-compose"
+        else
+            COMPOSE_CMD="docker compose"
+        fi
+    else
+        CONTAINER_CMD=""
+        COMPOSE_CMD=""
+    fi
 fi
 
 # Fail fast logic with LIMITED MODE support (graceful degradation)
@@ -131,7 +135,6 @@ run_go() {
     # Ensure toolbox image exists (auto-build if missing)
     local toolbox_image="gotrs-toolbox:latest"
     if ! $CONTAINER_CMD image inspect "$toolbox_image" >/dev/null 2>&1; then
-        # Backward compat: if old prefixed tag exists, retag
         if $CONTAINER_CMD image inspect localhost/gotrs-toolbox:latest >/dev/null 2>&1; then
             $CONTAINER_CMD tag localhost/gotrs-toolbox:latest "$toolbox_image" >/dev/null 2>&1 || true
         fi
@@ -145,26 +148,48 @@ run_go() {
         else
             $COMPOSE_CMD --profile toolbox build toolbox >/dev/null 2>&1 || true
         fi
-        # Re-check
         if ! $CONTAINER_CMD image inspect "$toolbox_image" >/dev/null 2>&1; then
             echo "[COMPREHENSIVE] ERROR: Failed to build toolbox image ($toolbox_image)" >&2
             return 125
         fi
     fi
-    # Build command payload with proper shell escaping via printf %q
-    local payload='export PATH=/usr/local/go/bin:$PATH; export GOFLAGS=-buildvcs=false; export GOCACHE=/tmp/.cache/go-build; export GOMODCACHE=/tmp/.cache/go-mod; mkdir -p /tmp/.cache/go-build /tmp/.cache/go-mod; go'
+
+    # Prepare cache mounts and env; self-heal root-owned caches by moving aside and recreating
+    if [ -d "$PROJECT_ROOT/.cache" ] && [ ! -w "$PROJECT_ROOT/.cache" ]; then
+        mv "$PROJECT_ROOT/.cache" "$PROJECT_ROOT/.cache.root-owned.$(date +%s)" 2>/dev/null || true
+    fi
+    mkdir -p "$PROJECT_ROOT/.cache/go-build" "$PROJECT_ROOT/.cache/go-mod" >/dev/null 2>&1 || true
+    if [ ! -w "$PROJECT_ROOT/.cache/go-build" ] || [ ! -w "$PROJECT_ROOT/.cache/go-mod" ]; then
+        rm -rf "$PROJECT_ROOT/.cache" 2>/dev/null || true
+        mkdir -p "$PROJECT_ROOT/.cache/go-build" "$PROJECT_ROOT/.cache/go-mod" >/dev/null 2>&1 || true
+    fi
+    local use_host_cache=1
+    [ -w "$PROJECT_ROOT/.cache/go-build" ] && [ -w "$PROJECT_ROOT/.cache/go-mod" ] || use_host_cache=0
+    local selinux_label=""
+    if echo "$CONTAINER_CMD" | grep -q 'podman'; then selinux_label=':Z'; fi
+    local USER_FLAG="-u $(id -u):$(id -g)"
+    # When using compose's toolbox service, it already mounts gotrs_cache to /workspace/.cache
+    # so we only need to point env vars there. Fallback to /tmp cache if no compose volume is present.
+    local CACHE_ENV="-e GOCACHE=/workspace/.cache/go-build -e GOMODCACHE=/workspace/.cache/go-mod -e GOTOOLCHAIN=${GOTOOLCHAIN:-auto}"
+    local CACHE_MOUNTS=""
+
+    # Build command payload safely
+    local payload='export PATH=/usr/local/go/bin:$PATH; export GOFLAGS=-buildvcs=false; go'
     local a
     for a in "$@"; do
-        # %q produces a shell-escaped version of the argument
         payload+=" $(printf %q "$a")"
     done
-    [ -n "${GOTRS_DEBUG:-}" ] && echo "[DEBUG run_go] $COMPOSE_CMD run toolbox: $payload" >&2
+    [ -n "${GOTRS_DEBUG:-}" ] && echo "[DEBUG run_go] $COMPOSE_CMD run toolbox $USER_FLAG $CACHE_ENV $CACHE_MOUNTS: $payload" >&2
+
     if echo "$COMPOSE_CMD" | grep -q 'podman compose'; then
-        $COMPOSE_CMD run --build --rm toolbox bash -lc "$payload"
+        # shellcheck disable=SC2086
+        $COMPOSE_CMD run --build --rm $USER_FLAG $CACHE_ENV $CACHE_MOUNTS toolbox bash -lc "$payload"
     elif echo "$COMPOSE_CMD" | grep -q 'podman-compose'; then
-        COMPOSE_PROFILES=toolbox $COMPOSE_CMD run --rm toolbox bash -lc "$payload"
+        # shellcheck disable=SC2086
+        COMPOSE_PROFILES=toolbox $COMPOSE_CMD run --rm $USER_FLAG $CACHE_ENV $CACHE_MOUNTS toolbox bash -lc "$payload"
     else
-        $COMPOSE_CMD --profile toolbox run --build --rm toolbox bash -lc "$payload"
+        # shellcheck disable=SC2086
+        $COMPOSE_CMD --profile toolbox run --build --rm $USER_FLAG $CACHE_ENV $CACHE_MOUNTS toolbox bash -lc "$payload"
     fi
 }
 

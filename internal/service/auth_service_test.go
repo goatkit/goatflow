@@ -4,6 +4,7 @@ import (
     "testing"
     "os"
     "context"
+    "time"
     "github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
     "github.com/gotrs-io/gotrs-ce/internal/auth"
 )
@@ -33,9 +34,8 @@ func testConfigAdapter(t *testing.T, providers []string) *yamlmgmt.ConfigAdapter
 
 // minimal jwt manager constructor (reuse existing shared constructor if available); here we just create one directly
 func testJWTManager(t *testing.T) *auth.JWTManager {
-    jm, err := auth.NewJWTManager([]byte("test-secret"))
-    if err != nil { t.Fatalf("jwt manager: %v", err) }
-    return jm
+    t.Helper()
+    return auth.NewJWTManager("test-secret", time.Hour)
 }
 
 func TestAuthService_UsesStaticProviderFirst(t *testing.T) {

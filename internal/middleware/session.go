@@ -1,7 +1,7 @@
 package middleware
 
 import (
-    "context"
+	"context"
     "net/http"
     "strconv"
     "strings"
@@ -20,12 +20,17 @@ func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// Check for token in cookie first
 		token, err := c.Cookie("access_token")
 		if err != nil || token == "" {
-			// Check Authorization header as fallback
-			authHeader := c.GetHeader("Authorization")
-			if authHeader != "" {
-				parts := strings.Split(authHeader, " ")
-				if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
-					token = parts[1]
+			// Fallback to legacy cookie name used by some login flows
+			if at, err2 := c.Cookie("auth_token"); err2 == nil && at != "" {
+				token = at
+			} else {
+				// Check Authorization header as fallback
+				authHeader := c.GetHeader("Authorization")
+				if authHeader != "" {
+					parts := strings.Split(authHeader, " ")
+					if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+						token = parts[1]
+					}
 				}
 			}
 		}
@@ -92,6 +97,7 @@ func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		if jwtManager == nil {
 			// No JWT manager configured and not a demo token
 			c.SetCookie("access_token", "", -1, "/", "", false, true)
+			c.SetCookie("auth_token", "", -1, "/", "", false, true)
 			if isAPIRequest(c) {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication not configured"})
 				c.Abort()
@@ -106,6 +112,7 @@ func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		if err != nil {
 			// Clear invalid cookie
 			c.SetCookie("access_token", "", -1, "/", "", false, true)
+			c.SetCookie("auth_token", "", -1, "/", "", false, true)
 			
 			if isAPIRequest(c) {
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
@@ -218,12 +225,17 @@ func OptionalAuth(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// Check for token in cookie first
 		token, err := c.Cookie("access_token")
 		if err != nil || token == "" {
-			// Check Authorization header as fallback
-			authHeader := c.GetHeader("Authorization")
-			if authHeader != "" {
-				parts := strings.Split(authHeader, " ")
-				if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
-					token = parts[1]
+			// Fallback to legacy cookie name used by some login flows
+			if at, err2 := c.Cookie("auth_token"); err2 == nil && at != "" {
+				token = at
+			} else {
+				// Check Authorization header as fallback
+				authHeader := c.GetHeader("Authorization")
+				if authHeader != "" {
+					parts := strings.Split(authHeader, " ")
+					if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+						token = parts[1]
+					}
 				}
 			}
 		}

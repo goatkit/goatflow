@@ -33,6 +33,13 @@ func (s *ticketService) Create(ctx context.Context, in CreateTicketInput) (*mode
     if in.PriorityID == 0 { in.PriorityID = 3 }
     if in.StateID == 0 { in.StateID = models.TicketStateNew }
 
+    // Ensure queue exists before attempting insert (aligns with tests' sqlmock expectation)
+    if ok, err := s.repo.QueueExists(in.QueueID); err != nil {
+        return nil, err
+    } else if !ok {
+        return nil, errors.New("invalid queue")
+    }
+
     ticket := &models.Ticket{
         Title:            in.Title,
         QueueID:          in.QueueID,

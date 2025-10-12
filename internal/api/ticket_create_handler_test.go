@@ -13,21 +13,24 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
+    "github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
 )
 
 type stubGen struct{ n string }
 func (g stubGen) Name() string { return "Date" }
 func (g stubGen) IsDateBased() bool { return true }
-func (g stubGen) Next(ctx context.Context, store repositoryCounterStore) (string, error) { return g.n, nil }
+func (g stubGen) Next(ctx context.Context, store ticketnumber.CounterStore) (string, error) { return g.n, nil }
 
-// minimal counter store adapter to satisfy repository expectations via ticketnumber.CounterStore subset
-type repositoryCounterStore interface { }
+// minimal counter store implementing ticketnumber.CounterStore
 type stubStore struct{}
+func (stubStore) Add(ctx context.Context, dateScoped bool, offset int64) (int64, error) { return 1, nil }
 
 // prepareRouter minimal for handler
 func setupCreateRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	// auth shim for tests
+	r.Use(func(c *gin.Context) { c.Set("user_id", 1); c.Next() })
 	r.POST("/api/tickets", HandleCreateTicketAPI)
 	return r
 }
@@ -44,11 +47,11 @@ func TestCreateTicketAPI_HappyPath(t *testing.T) {
 	injectGenerator()
 
 	// queue existence check
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT EXISTS(SELECT 1 FROM queue"))
-		.WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT EXISTS(SELECT 1 FROM queue")).
+		WithArgs(1).WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
 	// insert ticket returning id
-	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO ticket ("))
-		.WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(77))
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO ticket (")).
+		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(77))
 
 	payload := map[string]interface{}{"title":"Alpha","queue_id":1}
 	b,_ := json.Marshal(payload)
@@ -64,8 +67,8 @@ func TestCreateTicketAPI_HappyPath(t *testing.T) {
 
 func TestCreateTicketAPI_InvalidQueue(t *testing.T) {
 	mockDB, mock, _ := sqlmock.New(); defer mockDB.Close(); database.SetDB(mockDB); injectGenerator()
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT EXISTS(SELECT 1 FROM queue"))
-		.WithArgs(999).WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT EXISTS(SELECT 1 FROM queue")).
+		WithArgs(999).WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
 	payload := map[string]interface{}{"title":"Alpha","queue_id":999}
 	b,_ := json.Marshal(payload)
 	r := setupCreateRouter()

@@ -3,10 +3,13 @@ package api
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+    "path/filepath"
+    "time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
@@ -14,11 +17,18 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
+    "github.com/gotrs-io/gotrs-ce/internal/service"
+    "github.com/gotrs-io/gotrs-ce/internal/config"
 )
 
 // HandleAgentCreateTicket creates a new ticket from the agent interface
 func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+        // Ensure multipart form is parsed (for attachments)
+        if err := c.Request.ParseMultipartForm(10 << 20); err != nil && err != http.ErrNotMultipart {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to parse form"})
+            return
+        }
 		// Get agent user info from context
 		userID := c.GetUint("user_id")
 		if userID == 0 {
@@ -186,6 +196,7 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 		// Determine interaction / article type
 		interaction := c.PostForm("interaction_type")
 		// Resolve article type + visibility
+		var articleModel *models.Article
 		{
 			articleRepo := repository.NewArticleRepository(db)
 			intent := core.ArticleIntent{Interaction: constants.InteractionType(interaction), SenderTypeID: constants.ArticleSenderAgent}
@@ -204,7 +215,7 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 			if resolved.CustomerVisible {
 				visibility = 1
 			}
-			articleModel := &models.Article{
+			articleModel = &models.Article{
 				TicketID:               ticketID,
 				ArticleTypeID:          resolved.ArticleTypeID,
 				SenderTypeID:           resolved.ArticleSenderTypeID,
@@ -222,6 +233,79 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create initial article"})
 				return
 			}
+		}
+
+		// Process attachments from the new ticket form using unified storage
+		if c.Request.MultipartForm != nil && c.Request.MultipartForm.File != nil && articleModel != nil && articleModel.ID > 0 {
+			files := c.Request.MultipartForm.File["attachments"]
+			if files == nil { files = c.Request.MultipartForm.File["attachment"] }
+			if files == nil { files = c.Request.MultipartForm.File["file"] }
+
+			// Limits and type allowlist from config
+			var maxSize int64 = 10 * 1024 * 1024
+			allowed := map[string]struct{}{}
+			if cfg := config.Get(); cfg != nil {
+				if cfg.Storage.Attachments.MaxSize > 0 { maxSize = cfg.Storage.Attachments.MaxSize }
+				for _, t := range cfg.Storage.Attachments.AllowedTypes { allowed[strings.ToLower(t)] = struct{}{} }
+			}
+
+			// Blocked extensions
+			blocked := map[string]bool{ ".exe":true, ".bat":true, ".cmd":true, ".sh":true, ".vbs":true, ".js":true, ".com":true, ".scr":true }
+
+			storageSvc := GetStorageService()
+			for _, fh := range files {
+				if fh == nil { continue }
+				if fh.Size > maxSize { log.Printf("attachment too large: %s", fh.Filename); continue }
+				if blocked[strings.ToLower(filepath.Ext(fh.Filename))] { log.Printf("blocked file type: %s", fh.Filename); continue }
+				f, err := fh.Open(); if err != nil { log.Printf("open attachment failed: %v", err); continue }
+				func() {
+					defer f.Close()
+					// Determine content type with fallback
+					contentType := fh.Header.Get("Content-Type")
+					if contentType == "" || contentType == "application/octet-stream" {
+						buf := make([]byte, 512)
+						if n, _ := f.Read(buf); n > 0 { contentType = detectContentType(fh.Filename, buf[:n]) }
+						f.Seek(0, 0)
+					}
+					if len(allowed) > 0 && contentType != "" && contentType != "application/octet-stream" {
+						if _, ok := allowed[strings.ToLower(contentType)]; !ok { log.Printf("type not allowed: %s %s", fh.Filename, contentType); return }
+					}
+
+					// Store via service; attach article_id and user_id in context
+					ctx := c.Request.Context()
+					ctx = service.WithUserID(ctx, int(userID))
+					ctx = service.WithArticleID(ctx, articleModel.ID)
+					storagePath := service.GenerateOTRSStoragePath(ticketModel.ID, articleModel.ID, fh.Filename)
+					if _, err := storageSvc.Store(ctx, f, fh, storagePath); err != nil {
+						log.Printf("storage Store failed: %v", err)
+						return
+					}
+					// For local FS backend, also insert attachment row so listing/download works
+					if _, isDB := storageSvc.(*service.DatabaseStorageService); !isDB {
+						if f2, e2 := fh.Open(); e2 == nil {
+							defer f2.Close()
+							bytes, rerr := io.ReadAll(f2); if rerr == nil {
+								ct := contentType; if ct == "" { ct = "application/octet-stream" }
+								_, ierr := db.Exec(database.ConvertPlaceholders(`
+									INSERT INTO article_data_mime_attachment (
+										article_id, filename, content_type, content_size, content,
+										disposition, create_time, create_by, change_time, change_by
+									) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`),
+									articleModel.ID,
+									fh.Filename,
+									ct,
+									int64(len(bytes)),
+									bytes,
+									"attachment",
+									time.Now(), int(userID), time.Now(), int(userID),
+								)
+								if ierr != nil { log.Printf("attachment metadata insert failed: %v", ierr) }
+							}
+						}
+					}
+				}()
+			}
+			c.Header("HX-Trigger", "attachments-updated")
 		}
 
 		// Redirect to ticket view using repository-assigned ticket number

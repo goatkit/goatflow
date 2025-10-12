@@ -51,6 +51,42 @@ type StorageService interface {
 	GetMetadata(ctx context.Context, path string) (*FileMetadata, error)
 }
 
+// Context keys for passing storage-related metadata (article/user IDs)
+type ctxKey string
+
+const (
+	// CtxKeyArticleID is the context key to pass the target article ID
+	CtxKeyArticleID ctxKey = "article_id"
+	// CtxKeyUserID is the context key to pass the acting user ID
+	CtxKeyUserID    ctxKey = "user_id"
+)
+
+// WithArticleID attaches an article ID to context
+func WithArticleID(ctx context.Context, articleID int) context.Context {
+	return context.WithValue(ctx, CtxKeyArticleID, articleID)
+}
+
+// ArticleIDFromContext retrieves article ID from context
+func ArticleIDFromContext(ctx context.Context) (int, bool) {
+	v := ctx.Value(CtxKeyArticleID)
+	if v == nil { return 0, false }
+	if id, ok := v.(int); ok { return id, true }
+	return 0, false
+}
+
+// WithUserID attaches a user ID to context
+func WithUserID(ctx context.Context, userID int) context.Context {
+	return context.WithValue(ctx, CtxKeyUserID, userID)
+}
+
+// UserIDFromContext retrieves user ID from context
+func UserIDFromContext(ctx context.Context) (int, bool) {
+	v := ctx.Value(CtxKeyUserID)
+	if v == nil { return 0, false }
+	if id, ok := v.(int); ok { return id, true }
+	return 0, false
+}
+
 // LocalStorageService implements StorageService for local file system
 type LocalStorageService struct {
 	basePath string
@@ -224,28 +260,34 @@ func generateFileID() string {
 	return fmt.Sprintf("%d_%d", time.Now().Unix(), time.Now().Nanosecond())
 }
 
-// GenerateStoragePath creates a structured path for storing files
-// Format: tickets/{ticket_id}/{year}/{month}/{day}/{filename}
-func GenerateStoragePath(ticketID int, filename string) string {
+// (Legacy GOTRS layout removed)
+
+// GenerateOTRSStoragePath creates an OTRS/Znuny‑style path for storing files
+// Format: var/article/{year}/{month}/{day}/{ticket_id}/{article_id}/{filename}
+// Note: We do not add a timestamp suffix here as uniqueness is provided by article_id scoping.
+func GenerateOTRSStoragePath(ticketID int, articleID int, filename string) string {
 	now := time.Now()
-	
+
 	// Sanitize filename
 	safeFilename := sanitizeFilename(filename)
-	
-	// Add timestamp to filename to ensure uniqueness
-	ext := filepath.Ext(safeFilename)
-	nameWithoutExt := strings.TrimSuffix(safeFilename, ext)
-	uniqueFilename := fmt.Sprintf("%s_%d%s", nameWithoutExt, now.Unix(), ext)
-	
-	// Build path
-	path := fmt.Sprintf("tickets/%d/%d/%02d/%02d/%s",
-		ticketID,
+	// Ensure uniqueness for mock/no-article flows
+	if articleID <= 0 {
+		ext := filepath.Ext(safeFilename)
+		nameWithoutExt := strings.TrimSuffix(safeFilename, ext)
+		safeFilename = fmt.Sprintf("%s_%d%s", nameWithoutExt, now.Unix(), ext)
+		articleID = 0
+	}
+
+	// Build path mirroring OTRS article storage directory structure
+	path := fmt.Sprintf("var/article/%d/%02d/%02d/%d/%d/%s",
 		now.Year(),
 		now.Month(),
 		now.Day(),
-		uniqueFilename,
+		ticketID,
+		articleID,
+		safeFilename,
 	)
-	
+
 	return path
 }
 

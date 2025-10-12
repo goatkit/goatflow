@@ -219,3 +219,46 @@ The GOTRS OTRS migration system provides enterprise-grade compatibility with exi
 **OTRS compatibility claims: ✅ Verified**
 
 For technical support or migration assistance, refer to the GOTRS documentation or contact the development team.
+
+## Mounting an Existing OTRS Filesystem (Attachments)
+
+GOTRS now uses the OTRS/Znuny filesystem layout for attachments:
+
+- var/article/YYYY/MM/DD/<TicketID>/<ArticleID>/<filename>
+
+This means you can bind-mount your existing OTRS attachment store and GOTRS will read old attachments and write new ones in the same structure.
+
+### Recommended docker-compose configuration
+
+In `docker-compose.yml` for the backend service:
+
+1) Keep a base storage mount for GOTRS caches/thumbs
+
+- ./storage:/app/storage:Z
+
+2) Mount OTRS article tree at the correct path
+
+- /opt/znuny/var/article:/app/storage/var/article:Z
+
+3) Ensure runtime environment points to storage root
+
+- STORAGE_PATH=/app/storage
+
+Example snippet:
+
+```yaml
+services:
+	backend:
+		environment:
+			STORAGE_PATH: /app/storage
+		volumes:
+			- ./storage:/app/storage:Z
+			- /opt/znuny/var/article:/app/storage/var/article:Z
+```
+
+### Notes
+
+- Read-only option: Use `:ro,Z` on the OTRS mount if you want GOTRS to read from OTRS but not write to it.
+- Full write compatibility: Use `:Z` to allow GOTRS to write new attachments in OTRS format and location.
+- Permissions: Containers run as UID 1000; ensure the host path allows read/write as needed. On SELinux systems, `:Z` is required (already included above).
+- Alternate approach: If your host folder already contains `var/article` at its root, you can mount that folder directly at `/app/storage` instead of a nested mount. Be aware this will also store GOTRS thumbnails under that host folder.

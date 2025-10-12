@@ -29,7 +29,8 @@ func TestCreateUserWithGroups(t *testing.T) {
 
 	// Create a test router
 	router := gin.New()
-	router.POST("/admin/users", handleCreateUser)
+	// Use existing admin create handler that accepts form data
+	router.POST("/admin/users", HandleAdminUsersCreate)
 
 	tests := []struct {
 		name           string

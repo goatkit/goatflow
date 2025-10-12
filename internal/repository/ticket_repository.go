@@ -41,6 +41,17 @@ func NewTicketRepository(db *sql.DB) *TicketRepository {
 	return &TicketRepository{db: db, generator: defaultTicketNumberGen, store: defaultTicketNumberStore}
 }
 
+// QueueExists checks whether a queue with the given ID exists.
+func (r *TicketRepository) QueueExists(queueID int) (bool, error) {
+	var exists bool
+	// Keep SQL shape matching tests: SELECT EXISTS(SELECT 1 FROM queue ...)
+	q := database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM queue WHERE id = $1)")
+	if err := r.db.QueryRow(q, queueID).Scan(&exists); err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 // GetDB returns the database connection
 func (r *TicketRepository) GetDB() *sql.DB {
 	return r.db

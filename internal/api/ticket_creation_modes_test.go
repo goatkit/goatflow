@@ -13,6 +13,11 @@ import (
 
 // helper to perform requests
 func performRequest(r http.Handler, method, path string, body *strings.Reader, headers map[string]string) *httptest.ResponseRecorder {
+	// Avoid nil body panic in httptest.NewRequest when Len() is called on nil Reader
+	if body == nil {
+		empty := strings.NewReader("")
+		body = empty
+	}
 	req := httptest.NewRequest(method, path, body)
 	if headers != nil {
 		for k, v := range headers {
