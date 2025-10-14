@@ -315,28 +315,16 @@ div[id^="note-content-"] table tbody tr {
                 {% endif %}
             </div>
 
-            <!-- Assigned Agent -->
-            {% if Ticket.agent %}
+            <!-- Responsible Agent (OTRS Responsible field) -->
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.assigned_to")|default:"Assigned Agent" }}</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.responsible")|default:"Responsible" }}</h2>
                 <dl class="space-y-3">
                     <div>
                         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("common.name")|default:"Name" }}</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">{{ Ticket.agent.name }}</dd>
+                        <dd class="text-sm text-gray-900 dark:text-white">{{ Ticket.assigned_to|default:"Unassigned" }}</dd>
                     </div>
-                    {% if Ticket.agent.email %}
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("common.email") }}</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">
-                            <a href="mailto:{{ Ticket.agent.email }}" class="text-gotrs-600 hover:text-gotrs-500">
-                                {{ Ticket.agent.email }}
-                            </a>
-                        </dd>
-                    </div>
-                    {% endif %}
                 </dl>
             </div>
-            {% endif %}
 
             <!-- Ticket Actions -->
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">

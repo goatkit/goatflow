@@ -2871,26 +2871,35 @@ func handleTicketDetail(c *gin.Context) {
 		customerPhone = ""
 	}
 
-	// Get assigned agent information
-	var agentName, agentEmail string
-	var assignedTo string
+	// Get owner information
+	ownerName := "Unassigned"
+	if ticket.UserID != nil && *ticket.UserID > 0 {
+		ownerRow := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT CONCAT(first_name, ' ', last_name)
+			FROM users
+			WHERE id = $1 AND valid_id = 1
+		`), *ticket.UserID)
+		if err := ownerRow.Scan(&ownerName); err != nil {
+			ownerName = fmt.Sprintf("User %d", *ticket.UserID)
+		}
+	}
+
+	// Get responsible/assigned agent information (ResponsibleUserID in OTRS)
+	assignedTo := "Unassigned"
+	responsibleLogin := ""
 	if ticket.ResponsibleUserID != nil && *ticket.ResponsibleUserID > 0 {
 		agentRow := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT CONCAT(first_name, ' ', last_name), login
 			FROM users
 			WHERE id = $1 AND valid_id = 1
 		`), *ticket.ResponsibleUserID)
-		err = agentRow.Scan(&agentName, &agentEmail)
-		if err == nil {
-			assignedTo = agentName
+		var responsibleName string
+		if err := agentRow.Scan(&responsibleName, &responsibleLogin); err == nil {
+			assignedTo = responsibleName
 		} else {
 			assignedTo = fmt.Sprintf("User %d", *ticket.ResponsibleUserID)
-			agentEmail = ""
+			responsibleLogin = ""
 		}
-	} else {
-		assignedTo = "Unassigned"
-		agentName = ""
-		agentEmail = ""
 	}
 
 	// Get queue name from database
@@ -3011,6 +3020,13 @@ func handleTicketDetail(c *gin.Context) {
 	timeTotalHours := totalMinutes / 60
 	timeTotalRemainder := totalMinutes % 60
 	hasTimeHours := totalMinutes >= 60
+	var agent gin.H
+	if assignedTo != "Unassigned" {
+		agent = gin.H{
+			"name":  assignedTo,
+			"login": responsibleLogin,
+		}
+	}
 	ticketData := gin.H{
 		"id":               ticket.ID,
 		"tn":               ticket.TicketNumber,
@@ -3035,12 +3051,9 @@ func handleTicketDetail(c *gin.Context) {
 			"email": customerEmail,
 			"phone": customerPhone,
 		},
-		"agent": gin.H{
-			"name":  agentName,
-			"email": agentEmail,
-		},
+		"agent":                        agent,
 		"assigned_to":                  assignedTo,
-		"owner":                        assignedTo,
+		"owner":                        ownerName,
 		"type":                         typeName,
 		"service":                      "-", // TODO: Get from service table
 		"sla":                          "-", // TODO: Get from SLA table
