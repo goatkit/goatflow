@@ -10,8 +10,18 @@ spec:
   prefix: ""
   middleware: [] # No group-level middleware - auth applied per route if needed
   routes:
-    # Redirect /ticket/:id to /tickets/:id for compatibility
-    - path: /ticket/:id
+    # Legacy agent ticket path: /agent/tickets/:id -> unified ticket detail (by TN)
+    - path: /agent/tickets/:id
       method: GET
-      handler: handleTicketRedirect
-      description: "Redirect /ticket/:id to /tickets/:id for compatibility"
+      middleware:
+        - auth
+      handler: HandleLegacyAgentTicketViewRedirect
+      description: "Redirect legacy agent ticket URL to unified /ticket/:tn"
+
+    # Legacy tickets path: /tickets/:id -> unified ticket detail (by TN)
+    - path: /tickets/:id
+      method: GET
+      middleware:
+        - auth
+      handler: HandleLegacyTicketsViewRedirect
+      description: "Redirect legacy tickets URL to unified /ticket/:tn"

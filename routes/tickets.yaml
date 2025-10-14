@@ -18,12 +18,8 @@ spec:
       template: pages/tickets/list.pongo2
       description: "Display tickets list with search and filtering"
 
-    # Individual ticket view page
-    - path: /:id
-      method: GET
-      handler: handleTicketDetail
-      template: pages/ticket_detail.pongo2
-      description: "Display individual ticket details and conversation"
+    # Note: ticket detail is served from unified /ticket/:id route (see basic.yaml; compatibility.yaml keeps legacy redirects).
+    # Do not register a duplicate /tickets/:id handler here to avoid conflicts.
 
     # New ticket creation form
     - path: /new

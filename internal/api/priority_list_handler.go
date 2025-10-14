@@ -2,7 +2,6 @@ package api
 
 import (
     "net/http"
-    "strconv"
 
     "github.com/gin-gonic/gin"
     "github.com/gotrs-io/gotrs-ce/internal/database"
@@ -10,38 +9,22 @@ import (
 
 // HandleListPrioritiesAPI handles GET /api/v1/priorities
 func HandleListPrioritiesAPI(c *gin.Context) {
-    // Require auth
-    if _, exists := c.Get("user_id"); !exists {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-        return
-    }
-
     db, err := database.GetDB()
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
+    if err != nil || db == nil {
+        c.Header("X-Guru-Error", "Priorities lookup failed: database unavailable")
+        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "priorities lookup failed: database unavailable"})
         return
     }
 
-    // Build query based on filters
-    query := database.ConvertPlaceholders(`
-        SELECT id, name, color, valid_id
+    rows, err := db.Query(database.ConvertPlaceholders(`
+        SELECT id, name, valid_id
         FROM ticket_priority
-        WHERE 1=1
-    `)
-    args := []interface{}{}
-    paramCount := 0
-
-    if validFilter := c.Query("valid"); validFilter == "true" {
-        paramCount++
-        query += database.ConvertPlaceholders(` AND valid_id = $` + strconv.Itoa(paramCount))
-        args = append(args, 1)
-    }
-
-    query += ` ORDER BY id`
-
-    rows, err := db.Query(query, args...)
+        WHERE valid_id = $1
+        ORDER BY id
+    `), 1)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch priorities"})
+        c.Header("X-Guru-Error", "Priorities lookup failed: query error")
+        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to fetch priorities"})
         return
     }
     defer rows.Close()
@@ -49,11 +32,11 @@ func HandleListPrioritiesAPI(c *gin.Context) {
     var items []gin.H
     for rows.Next() {
         var id, validID int
-        var name, color string
-        if err := rows.Scan(&id, &name, &color, &validID); err != nil {
+        var name string
+        if err := rows.Scan(&id, &name, &validID); err != nil {
             continue
         }
-        items = append(items, gin.H{"id": id, "name": name, "color": color, "valid_id": validID})
+        items = append(items, gin.H{"id": id, "name": name, "valid_id": validID})
     }
 
     c.JSON(http.StatusOK, gin.H{"success": true, "data": items})

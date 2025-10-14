@@ -931,8 +931,11 @@ func handleViewAttachment(c *gin.Context) {
 	  }, 1000);
 	}
 	window.addEventListener('mousemove', showNav, {passive:true});
-	window.addEventListener('keydown', function(e){
-	  if (e.key === 'Escape') {
+		window.addEventListener('keydown', function(e){
+			// Ignore hotkeys when user is typing in an input, textarea, or contenteditable editor
+			var ae = document.activeElement;
+			if (ae && (ae.isContentEditable || ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) { return; }
+			if (e.key === 'Escape') {
 		window.location.href = '/tickets/%s';
 	  } else if (e.key === 'ArrowLeft' && %t) {
 		window.location.href = '%s';

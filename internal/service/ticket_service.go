@@ -24,6 +24,8 @@ type CreateTicketInput struct {
     StateID   int
     UserID    int
     Body      string // reserved for future article create
+    PendingUntil int // unix seconds when pending should elapse; 0 = none
+    TypeID    int // optional ticket type to set on create (0 = none)
 }
 
 func (s *ticketService) Create(ctx context.Context, in CreateTicketInput) (*models.Ticket, error) {
@@ -52,6 +54,13 @@ func (s *ticketService) Create(ctx context.Context, in CreateTicketInput) (*mode
         ResponsibleUserID: &in.UserID,
         CreateTime:       time.Now(),
         ChangeTime:       time.Now(),
+    }
+    if in.TypeID > 0 {
+        tid := in.TypeID
+        ticket.TypeID = &tid
+    }
+    if in.StateID == models.TicketStatePending && in.PendingUntil > 0 {
+        ticket.UntilTime = in.PendingUntil
     }
     if err := s.repo.Create(ticket); err != nil { return nil, err }
     return ticket, nil

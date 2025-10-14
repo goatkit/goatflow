@@ -43,14 +43,15 @@ func (s *DBStore) Add(ctx context.Context, dateScoped bool, offset int64) (int64
         return c, nil
     }
     if database.IsMySQL() {
-        // LAST_INSERT_ID trick to fetch updated value atomically
-        // INSERT (counter=offset) or increment existing by offset then expose new value via LAST_INSERT_ID(counter)
+        // Use MySQL LAST_INSERT_ID trick and read it from Exec result to stay on the same session/connection.
+        // This avoids relying on a subsequent SELECT LAST_INSERT_ID() that might hit a different pooled connection.
         q := `INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
               VALUES (?, ?, NOW())
               ON DUPLICATE KEY UPDATE counter = LAST_INSERT_ID(counter + VALUES(counter))`
-        if _, err := s.db.ExecContext(ctx, q, offset, uid); err != nil { return 0, err }
-        var c int64
-        if err := s.db.QueryRowContext(ctx, `SELECT LAST_INSERT_ID()`).Scan(&c); err != nil { return 0, err }
+        res, err := s.db.ExecContext(ctx, q, offset, uid)
+        if err != nil { return 0, err }
+        c, err := res.LastInsertId()
+        if err != nil { return 0, err }
         return c, nil
     }
     // Generic fallback (rare path): emulate with transaction + SELECT FOR UPDATE

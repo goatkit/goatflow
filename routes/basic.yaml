@@ -51,6 +51,14 @@ spec:
         - auth
       description: "Display tickets filtered by specific queue"
 
+    # Unified ticket detail view
+    - path: /ticket/:id
+      method: GET
+      handler: handleTicketDetail
+      middleware:
+        - auth
+      description: "Display ticket detail using the unified handler"
+
     # Ticket creation routes
     - path: /ticket/new
       method: GET
@@ -63,7 +71,7 @@ spec:
     - path: /ticket/new/email
       method: GET
       handler: handleNewEmailTicket
-      template: ticket_page.html
+      template: pages/tickets/new.pongo2
       middleware:
         - auth
       description: "Display email ticket creation form"
@@ -71,7 +79,13 @@ spec:
     - path: /ticket/new/phone
       method: GET
       handler: handleNewPhoneTicket
-      template: ticket_page.html
+      template: pages/tickets/new.pongo2
       middleware:
         - auth
       description: "Display phone ticket creation form"
+
+    # Lightweight liveness endpoint
+    - path: /healthz
+      method: GET
+      handler: handleHealthCheck
+      description: "Quick liveness probe"

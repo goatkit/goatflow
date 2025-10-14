@@ -59,6 +59,12 @@ spec:
     method: POST
     handler: HandleReopenTicketAPI
     description: "Reopen ticket"
+
+  # Time accounting endpoint
+  - path: /tickets/:id/time
+    method: POST
+    handler: handleAddTicketTime
+    description: "Add time accounting entry to ticket"
     
   # Article endpoints
   - path: /tickets/:id/articles

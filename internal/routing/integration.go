@@ -211,6 +211,9 @@ func registerAgentHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	handlers["HandleAgentNewTicket"] = api.HandleAgentNewTicket(db)
 	handlers["HandleAgentCreateTicket"] = api.HandleAgentCreateTicket(db)
 
+	// Time accounting API handler used by YAML
+	handlers["handleAddTicketTime"] = api.HandleAddTicketTime
+
 	// Add other agent handlers...
 }
 

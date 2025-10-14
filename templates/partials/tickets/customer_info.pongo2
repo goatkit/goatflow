@@ -2,33 +2,39 @@
   <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ t("forms.customer_info.panel_title") }}</h3>
   <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.title") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ user.Title.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ user.Title|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.first_name") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ user.FirstName.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ user.FirstName|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.last_name") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ user.LastName.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ user.LastName|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.username") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ user.Login.String }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.email") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ user.Email.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ user.Login|default:"" }}</dd>
+  <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.email") }}</dt>
+  <dd class="text-gray-900 dark:text-gray-100 break-words">{{ user.Email|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.phone") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ user.Phone.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ user.Phone|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.mobile") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ user.Mobile.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ user.Mobile|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.customer") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ company.Name.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ company.Name|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.street") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ company.Street.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ company.Street|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.postcode") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ company.Postcode.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ company.Postcode|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.city") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ company.City.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ company.City|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.country") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ company.Country.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ company.Country|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.url") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100"><a href="{{ company.URL.String }}" class="text-gotrs-600 dark:text-gotrs-400 hover:underline" target="_blank" rel="noopener">{{ company.URL.String }}</a></dd>
+    <dd class="text-gray-900 dark:text-gray-100 break-words">
+      {% if company.URL %}
+        <a href="{{ company.URL }}" class="text-gotrs-600 dark:text-gotrs-400 hover:underline break-words" target="_blank" rel="noopener">{{ company.URL }}</a>
+      {% else %}
+        
+      {% endif %}
+    </dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.comment") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ user.Comment.String }}</dd>
+  <dd class="text-gray-900 dark:text-gray-100">{{ user.Comment|default:"" }}</dd>
     <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.open_tickets") }}</dt>
     <dd class="text-gray-900 dark:text-gray-100">{{ open }}</dd>
   </dl>

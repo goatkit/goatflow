@@ -7,6 +7,13 @@ let editors = {};
 document.addEventListener('DOMContentLoaded', function() {
     // Make initTiptapEditor available globally
     window.initTiptapEditor = initTiptapEditor;
+    // Back-compat: templates call TiptapEditor.init(id, opts)
+    if (!window.TiptapEditor || typeof window.TiptapEditor !== 'object') {
+        window.TiptapEditor = {};
+    }
+    window.TiptapEditor.init = function(elementId, options) {
+        return initTiptapEditor(elementId, options);
+    };
 });
 
 function initTiptapEditor(elementId, options = {}) {

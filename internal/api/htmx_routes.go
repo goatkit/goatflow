@@ -813,103 +813,14 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		log.Printf("⚠️ Templates directory not available; continuing without renderer")
 	}
 
-	// Serve static files (guard missing directory in tests)
-	if _, err := os.Stat("./static"); err == nil {
-		r.Static("/static", "./static")
-		r.StaticFile("/favicon.ico", "./static/favicon.ico")
-		r.StaticFile("/favicon.svg", "./static/favicon.svg")
-	}
+	// Static files are served via YAML routes (handleStaticFiles)
 
 	// Optional routes watcher (dev only)
 	startRoutesWatcher()
 
-	// Health check endpoint - comprehensive check
-	r.GET("/health", func(c *gin.Context) {
-		health := gin.H{
-			"status": "healthy",
-			"checks": gin.H{},
-		}
+	// Health, liveness, and root are governed by YAML routes now
 
-		// Check template rendering
-		if pongo2Renderer != nil && pongo2Renderer.templateSet != nil {
-			// Try to load a basic template
-			if _, err := pongo2Renderer.templateSet.FromFile("layouts/base.pongo2"); err != nil {
-				health["status"] = "unhealthy"
-				health["checks"].(gin.H)["templates"] = gin.H{
-					"status": "unhealthy",
-					"error":  err.Error(),
-				}
-			} else {
-				health["checks"].(gin.H)["templates"] = gin.H{
-					"status": "healthy",
-				}
-			}
-		} else {
-			health["status"] = "unhealthy"
-			health["checks"].(gin.H)["templates"] = gin.H{
-				"status": "unhealthy",
-				"error":  "Template renderer not initialized",
-			}
-		}
-
-		// In tests, force healthy to satisfy unit checks
-		if os.Getenv("APP_ENV") == "test" {
-			health["status"] = "healthy"
-			c.JSON(http.StatusOK, health)
-			return
-		}
-
-		// Return appropriate status code otherwise
-		if health["status"] == "unhealthy" {
-			c.JSON(http.StatusServiceUnavailable, health)
-			return
-		}
-		c.JSON(http.StatusOK, health)
-	})
-
-	// Lightweight liveness endpoint (no heavy template checks) for quick probes
-	r.GET("/healthz", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
-
-	// Root: serve login if unauthenticated (avoid redirect loops) else redirect to dashboard
-	r.GET("/", func(c *gin.Context) {
-		// Validate existing session quickly
-		if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
-			if jwtManager != nil {
-				if _, err := jwtManager.ValidateToken(cookie); err == nil {
-					c.Redirect(http.StatusFound, "/dashboard")
-					return
-				}
-			} else if strings.HasPrefix(cookie, "demo_session_") {
-				c.Redirect(http.StatusFound, "/dashboard")
-				return
-			}
-		}
-		// Instead of redirect loop, directly serve login page content (avoid 301 chain for tests)
-		handleLoginPage(c)
-	})
-
-	// Public routes (no auth required)
-	// Commented out - now handled by YAML routes
-	r.GET("/login", func(c *gin.Context) {
-		// If already authenticated, send to dashboard
-		if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
-			if jwtManager != nil {
-				if _, err := jwtManager.ValidateToken(cookie); err == nil {
-					c.Redirect(http.StatusFound, "/dashboard")
-					return
-				}
-			} else if strings.HasPrefix(cookie, "demo_session_") {
-				c.Redirect(http.StatusFound, "/dashboard")
-				return
-			}
-		}
-		handleLoginPage(c)
-	})
-	r.POST("/login", handleLogin(jwtManager))
-	r.GET("/logout", handleLogout)
-	r.POST("/logout", handleLogout)
+	// Public login/logout now handled via YAML routes
 
 	// Protected routes - require authentication
 	protected := r.Group("")
@@ -956,9 +867,8 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 			handleTickets(c)
 		})
 	}
+	// Legacy view redirects are registered in YAML (compatibility routes)
 	protected.GET("/ticket/:id", handleTicketDetail)
-	// Provide plural alias for ticket detail HTML view
-	protected.GET("/tickets/:id", handleTicketDetail)
 	protected.GET("/queues", handleQueues)
 	protected.GET("/queues/:id", handleQueueDetail)
 
@@ -970,6 +880,8 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 	}
 
 	// Admin routes group - require admin privileges
+	// In test mode, we skip legacy hardcoded admin route registrations to allow YAML-only routing
+	if os.Getenv("APP_ENV") != "test" {
 	adminRoutes := protected.Group("/admin")
 	adminRoutes.Use(checkAdmin())
 	{
@@ -1234,6 +1146,9 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 			log.Printf("WARNING: Cannot setup dynamic modules without database: %v", err)
 		}
 	}
+	} else {
+		log.Printf("Test mode: skipping legacy admin route registrations; YAML routes will provide admin pages")
+	}
 
 	// HTMX API endpoints (return HTML fragments)
 	api := r.Group("/api")
@@ -1359,7 +1274,7 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		protectedAPI.GET("/tickets/:id", handleGetTicket)
 		protectedAPI.PUT("/tickets/:id", handleUpdateTicket)
 		protectedAPI.DELETE("/tickets/:id", handleDeleteTicket)
-		protectedAPI.POST("/tickets/:id/notes", handleAddTicketNote)
+	protectedAPI.POST("/tickets/:id/notes", handleAddTicketNote)
 		protectedAPI.GET("/tickets/:id/history", handleGetTicketHistory)
 		protectedAPI.GET("/tickets/:id/available-agents", handleGetAvailableAgents)
 		if os.Getenv("APP_ENV") != "test" {
@@ -1369,10 +1284,6 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		protectedAPI.POST("/tickets/:id/reopen", handleReopenTicket)
 		protectedAPI.GET("/tickets/search", handleSearchTickets)
 		protectedAPI.GET("/tickets/filter", handleFilterTickets)
-		protectedAPI.POST("/tickets/:id/attachments", handleUploadAttachment)
-		protectedAPI.GET("/tickets/:id/attachments/:attachment_id", handleDownloadAttachment)
-		protectedAPI.GET("/tickets/:id/attachments/:attachment_id/thumbnail", handleGetThumbnail)
-		protectedAPI.DELETE("/tickets/:id/attachments/:attachment_id", handleDeleteAttachment)
 		protectedAPI.GET("/files/*path", handleServeFile)
 
 		// Group management API endpoints
@@ -1458,15 +1369,10 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 				c.JSON(http.StatusOK, gin.H{"message": "Assigned to agent", "agent_id": 1, "ticket_id": id})
 			})
 		}
-		apiGroup.POST("/tickets/:id/status", func(c *gin.Context) {
-			status := c.PostForm("status")
-			if strings.TrimSpace(status) == "" {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "status is required"})
-				return
-			}
-			c.JSON(http.StatusOK, gin.H{"message": "Status updated", "status": status})
-		})
 		apiGroup.POST("/tickets/:id/reply", handleTicketReply)
+		apiGroup.POST("/tickets/:id/priority", handleUpdateTicketPriority)
+		apiGroup.POST("/tickets/:id/queue", handleUpdateTicketQueue)
+		apiGroup.POST("/tickets/:id/status", handleUpdateTicketStatus)
 
 		// State CRUD endpoints (disabled - handlers not implemented)
 		// protectedAPI.GET("/states", handleGetStates)
@@ -2655,15 +2561,19 @@ func handleNewEmailTicket(c *gin.Context) {
 		}
 	}
 
-	// Render the HTML template with lookup data
-	c.HTML(http.StatusOK, "ticket_page.html", gin.H{
-		"User":       getUserMapForTemplate(c),
-		"ActivePage": "tickets",
-		"Queues":     queues,
-		"Priorities": priorities,
-		"Types":      types,
-		"TicketType": "email",
-	})
+	// Render unified Pongo2 new ticket form
+	if pongo2Renderer != nil {
+		pongo2Renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", pongo2.Context{
+			"User":        getUserMapForTemplate(c),
+			"ActivePage":  "tickets",
+			"Queues":      queues,
+			"Priorities":  priorities,
+			"Types":       types,
+			"TicketType":  "email",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
 // handleNewPhoneTicket shows the phone ticket creation form
@@ -2732,15 +2642,19 @@ func handleNewPhoneTicket(c *gin.Context) {
 		}
 	}
 
-	// Render the HTML template with lookup data
-	c.HTML(http.StatusOK, "ticket_page.html", gin.H{
-		"User":       getUserMapForTemplate(c),
-		"ActivePage": "tickets",
-		"Queues":     queues,
-		"Priorities": priorities,
-		"Types":      types,
-		"TicketType": "phone",
-	})
+	// Render unified Pongo2 new ticket form
+	if pongo2Renderer != nil {
+		pongo2Renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", pongo2.Context{
+			"User":        getUserMapForTemplate(c),
+			"ActivePage":  "tickets",
+			"Queues":      queues,
+			"Priorities":  priorities,
+			"Types":       types,
+			"TicketType":  "phone",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
 // handleTicketDetail shows ticket details
@@ -2808,10 +2722,12 @@ func handleTicketDetail(c *gin.Context) {
 
 	// Convert articles to template format - skip the first article (it's the description)
 	notes := make([]gin.H, 0, len(articles))
+	firstArticleID := 0
 	noteBodiesJSON := make([]string, 0, len(articles))
 	for i, article := range articles {
 		// Skip the first article as it's already shown in the description section
 		if i == 0 {
+			firstArticleID = int(article.ID)
 			continue
 		}
 		// Determine sender type based on CreateBy (simplified logic)
@@ -3028,6 +2944,54 @@ func handleTicketDetail(c *gin.Context) {
 		// debug removed: no articles found
 	}
 
+	// Time accounting: compute total minutes and per-article minutes for this ticket
+	taRepo := repository.NewTimeAccountingRepository(db)
+	taEntries, taErr := taRepo.ListByTicket(int(ticket.ID))
+	if taErr != nil {
+		log.Printf("Error fetching time accounting for ticket %d: %v", ticket.ID, taErr)
+	}
+	totalMinutes := 0
+	perArticleMinutes := make(map[int]int)
+	for _, e := range taEntries {
+		totalMinutes += e.TimeUnit
+		if e.ArticleID != nil {
+			perArticleMinutes[*e.ArticleID] += e.TimeUnit
+		} else {
+			// Use 0 to represent main description/global time
+			perArticleMinutes[0] += e.TimeUnit
+		}
+	}
+
+	// Compute ticket age (approximate, human-friendly)
+	age := func() string {
+		d := time.Since(ticket.CreateTime)
+		if d < time.Hour {
+			m := int(d.Minutes())
+			if m < 1 { return "<1 minute" }
+			return fmt.Sprintf("%d minutes", m)
+		}
+		if d < 24*time.Hour {
+			h := int(d.Hours())
+			return fmt.Sprintf("%d hours", h)
+		}
+		days := int(d.Hours()) / 24
+		return fmt.Sprintf("%d days", days)
+	}()
+
+	// Build time entries for template breakdown
+	timeEntries := make([]gin.H, 0, len(taEntries))
+	for _, e := range taEntries {
+		var aid interface{}
+		if e.ArticleID != nil { aid = *e.ArticleID } else { aid = nil }
+		timeEntries = append(timeEntries, gin.H{
+			"minutes":     e.TimeUnit,
+			"create_time": e.CreateTime.Format("2006-01-02 15:04"),
+			"article_id":  aid,
+		})
+	}
+
+	// Expose per-article minutes for client/template consumption
+	// We'll add a helper that returns the chip minutes by article id
 	ticketData := gin.H{
 		"id":        ticket.ID,
 		"tn":        ticket.TicketNumber,
@@ -3041,6 +3005,7 @@ func handleTicketDetail(c *gin.Context) {
 		"queue_id":  ticket.QueueID,
 		"customer_name": customerName,
 		"customer_user_id": ticket.CustomerUserID,
+		"customer_id": func() string { if ticket.CustomerID != nil { return *ticket.CustomerID }; return "" }(),
 		"customer": gin.H{
 			"name":  customerName,
 			"email": customerEmail,
@@ -3051,6 +3016,7 @@ func handleTicketDetail(c *gin.Context) {
 			"email": agentEmail,
 		},
 		"assigned_to": assignedTo,
+		"owner":       assignedTo,
 		"type":      typeName,
 		"service":   "-",            // TODO: Get from service table
 		"sla":       "-",            // TODO: Get from SLA table
@@ -3061,13 +3027,131 @@ func handleTicketDetail(c *gin.Context) {
 		"notes":       notes,        // Pass notes array directly
 		"note_bodies_json": noteBodiesJSON, // JSON-encoded note bodies for JavaScript
 		"description_is_html": strings.Contains(description, "<") && strings.Contains(description, ">"),
+		"time_total_minutes": totalMinutes,
+		"time_entries":       timeEntries,
+		"time_by_article":    perArticleMinutes,
+		"first_article_id":   firstArticleID,
+		"age":                age,
+		"status_id":          ticket.TicketStateID,
+	}
+
+	// Customer panel (DRY: same details as ticket creation selection panel)
+	var panelUser = gin.H{}
+	var panelCompany = gin.H{}
+	panelOpen := 0
+	if ticket.CustomerUserID != nil && *ticket.CustomerUserID != "" {
+		// Fetch customer user + company in one query
+		var title, firstName, lastName, login, email, phone, mobile, customerID, compName, street, zip, city, country, url sql.NullString
+		err := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT cu.title, cu.first_name, cu.last_name, cu.login, cu.email, cu.phone, cu.mobile, cu.customer_id,
+				   cc.name, cc.street, cc.zip, cc.city, cc.country, cc.url
+			FROM customer_user cu
+			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
+			WHERE cu.login = $1
+		`), *ticket.CustomerUserID).Scan(&title, &firstName, &lastName, &login, &email, &phone, &mobile, &customerID, &compName, &street, &zip, &city, &country, &url)
+		if err == nil {
+			panelUser = gin.H{
+				"Title":     title.String,
+				"FirstName": firstName.String,
+				"LastName":  lastName.String,
+				"Login":     login.String,
+				"Email":     email.String,
+				"Phone":     phone.String,
+				"Mobile":    mobile.String,
+				"Comment":   "",
+			}
+			panelCompany = gin.H{
+				"Name":     compName.String,
+				"Street":   street.String,
+				"Postcode": zip.String,
+				"City":     city.String,
+				"Country":  country.String,
+				"URL":      url.String,
+			}
+			// Open tickets count for the same customer_id (exclude closed states)
+			if customerID.Valid && customerID.String != "" {
+				_ = db.QueryRow(database.ConvertPlaceholders(`
+					SELECT COUNT(*)
+					FROM ticket t
+					JOIN ticket_state s ON s.id = t.ticket_state_id
+					WHERE t.customer_id = $1 AND LOWER(s.name) NOT LIKE 'closed%'
+				`), customerID.String).Scan(&panelOpen)
+			}
+		}
 	}
 
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/ticket_detail.pongo2", pongo2.Context{
-		"Ticket":     ticketData,
-		"User":       getUserMapForTemplate(c),
-		"ActivePage": "tickets",
+		"Ticket":              ticketData,
+		"User":                getUserMapForTemplate(c),
+		"ActivePage":          "tickets",
+		"CustomerPanelUser":   panelUser,
+		"CustomerPanelCompany": panelCompany,
+		"CustomerPanelOpen":   panelOpen,
 	})
+}
+
+// handleLegacyAgentTicketViewRedirect redirects legacy agent ticket URLs to the unified ticket detail route
+// Example: /agent/tickets/123 -> /ticket/202510131000003
+// HandleLegacyAgentTicketViewRedirect exported for YAML routing
+func HandleLegacyAgentTicketViewRedirect(c *gin.Context) {
+	legacyID := c.Param("id")
+	if strings.TrimSpace(legacyID) == "" {
+		c.Redirect(http.StatusFound, "/tickets")
+		return
+	}
+
+	// If it's clearly a TN already, just redirect directly
+	if _, err := strconv.Atoi(legacyID); err != nil {
+		c.Redirect(http.StatusMovedPermanently, "/ticket/"+legacyID)
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		// Fallback: best-effort redirect
+		c.Redirect(http.StatusFound, "/ticket/"+legacyID)
+		return
+	}
+
+	ticketRepo := repository.NewTicketRepository(db)
+	// Convert numeric legacy ID to TN
+	idNum, _ := strconv.Atoi(legacyID)
+	t, terr := ticketRepo.GetByID(uint(idNum))
+	if terr == nil && t != nil && t.TicketNumber != "" {
+		c.Redirect(http.StatusMovedPermanently, "/ticket/"+t.TicketNumber)
+		return
+	}
+
+	// Final fallback
+	c.Redirect(http.StatusFound, "/ticket/"+legacyID)
+}
+
+// handleLegacyTicketsViewRedirect supports old /tickets/:id URLs and redirects to /ticket/:tn
+// HandleLegacyTicketsViewRedirect exported for YAML routing
+func HandleLegacyTicketsViewRedirect(c *gin.Context) {
+	legacyID := c.Param("id")
+	if strings.TrimSpace(legacyID) == "" {
+		c.Redirect(http.StatusFound, "/tickets")
+		return
+	}
+	// If it's non-numeric, assume TN and redirect
+	if _, err := strconv.Atoi(legacyID); err != nil {
+		c.Redirect(http.StatusMovedPermanently, "/ticket/"+legacyID)
+		return
+	}
+	db, err := database.GetDB()
+	if err != nil {
+		c.Redirect(http.StatusFound, "/ticket/"+legacyID)
+		return
+	}
+	ticketRepo := repository.NewTicketRepository(db)
+	idNum, _ := strconv.Atoi(legacyID)
+	t, terr := ticketRepo.GetByID(uint(idNum))
+	if terr == nil && t != nil && t.TicketNumber != "" {
+		c.Redirect(http.StatusMovedPermanently, "/ticket/"+t.TicketNumber)
+		return
+	}
+	c.Redirect(http.StatusFound, "/ticket/"+legacyID)
 }
 
 // handleProfile shows user profile page
@@ -3780,6 +3864,9 @@ func handleCreateTicket(c *gin.Context) {
 		TypeID        int
 		CustomerEmail string
 		CustomerName  string
+		NextState     string
+		PendingUntil  string
+		TimeUnits     int
 	}
 
 	contentType := c.GetHeader("Content-Type")
@@ -3799,19 +3886,36 @@ func handleCreateTicket(c *gin.Context) {
 		if req.Body == "" {
 			req.Body = c.PostForm("body")
 		}
-		req.Priority = c.PostForm("priority")
+	req.Priority = c.PostForm("priority")
+	req.NextState = c.PostForm("next_state")
+	req.PendingUntil = c.PostForm("pending_until")
 
-		// Parse queue ID
-		if queueStr := c.PostForm("queue"); queueStr != "" {
+		// Parse queue ID (support both queue_id and legacy queue)
+		if queueStr := c.PostForm("queue_id"); queueStr != "" {
+			if queueID, err := strconv.Atoi(queueStr); err == nil {
+				req.QueueID = queueID
+			}
+		} else if queueStr := c.PostForm("queue"); queueStr != "" {
 			if queueID, err := strconv.Atoi(queueStr); err == nil {
 				req.QueueID = queueID
 			}
 		}
 
-		// Parse type ID
-		if typeStr := c.PostForm("type"); typeStr != "" {
+		// Parse type ID (support both type_id and legacy type)
+		if typeStr := c.PostForm("type_id"); typeStr != "" {
 			if typeID, err := strconv.Atoi(typeStr); err == nil {
 				req.TypeID = typeID
+			}
+		} else if typeStr := c.PostForm("type"); typeStr != "" {
+			if typeID, err := strconv.Atoi(typeStr); err == nil {
+				req.TypeID = typeID
+			}
+		}
+
+		// Parse time units if provided
+		if tu := strings.TrimSpace(c.PostForm("time_units")); tu != "" {
+			if v, err := strconv.Atoi(tu); err == nil && v >= 0 {
+				req.TimeUnits = v
 			}
 		}
 
@@ -3871,11 +3975,31 @@ func handleCreateTicket(c *gin.Context) {
 	}
 	repo := repository.NewTicketRepository(db)
 	ticketService := service.NewTicketService(repo)
+	// Map next_state string to a TicketStateID; treat any value starting with "pending" as pending
+	stateID := 0
+	if strings.HasPrefix(strings.ToLower(strings.TrimSpace(req.NextState)), "pending") {
+		stateID = models.TicketStatePending
+	}
+
+	// Parse pending_until if provided (expect RFC3339 or HTML datetime-local yyyy-MM-ddTHH:mm)
+	pendingUnix := 0
+	if v := strings.TrimSpace(req.PendingUntil); v != "" {
+		// Try time.Parse with seconds then without
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			pendingUnix = int(t.Unix())
+		} else if t, err2 := time.Parse("2006-01-02T15:04", v); err2 == nil {
+			pendingUnix = int(t.Unix())
+		}
+	}
+
 	createInput := service.CreateTicketInput{
-		Title:   req.Subject,
-		QueueID: req.QueueID,
-		UserID:  createBy,
-		Body:    req.Body,
+		Title:        req.Subject,
+		QueueID:      req.QueueID,
+		UserID:       createBy,
+		Body:         req.Body,
+		StateID:      stateID,
+		PendingUntil: pendingUnix,
+		TypeID:       req.TypeID,
 	}
 	result, err := ticketService.Create(c, createInput)
 	if err != nil {
@@ -3907,6 +4031,11 @@ func handleCreateTicket(c *gin.Context) {
 			})
 		}
 		return
+	}
+
+	// If time units were provided, persist to time_accounting table
+	if req.TimeUnits > 0 && db != nil {
+		_ = saveTimeEntry(db, result.ID, nil, req.TimeUnits, createBy)
 	}
 
 	// Return success with the actual ticket number
@@ -4039,13 +4168,30 @@ func handleAddTicketNote(c *gin.Context) {
 
 	// Parse the note data
 	var noteData struct {
-		Content  string `json:"content" binding:"required"`
-		Internal bool   `json:"internal"`
+		Content   string `json:"content" binding:"required"`
+		Internal  bool   `json:"internal"`
+		TimeUnits int    `json:"time_units"`
 	}
-
-	if err := c.ShouldBindJSON(&noteData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Note content is required"})
-		return
+	contentType := strings.ToLower(c.GetHeader("Content-Type"))
+	if strings.Contains(contentType, "application/json") {
+		if err := c.ShouldBindJSON(&noteData); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Note content is required"})
+			return
+		}
+	} else {
+		// Accept form submissions too (agent path compatibility)
+		noteData.Content = strings.TrimSpace(c.PostForm("body"))
+		if noteData.Content == "" {
+			noteData.Content = strings.TrimSpace(c.PostForm("content"))
+		}
+		noteData.Internal = c.PostForm("internal") == "true" || c.PostForm("internal") == "1"
+		if tu := strings.TrimSpace(c.PostForm("time_units")); tu != "" {
+			if v, err := strconv.Atoi(tu); err == nil && v >= 0 { noteData.TimeUnits = v }
+		}
+		if noteData.Content == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Note content is required"})
+			return
+		}
 	}
 
 	// Get database connection
@@ -4096,8 +4242,17 @@ func handleAddTicketNote(c *gin.Context) {
 	err = articleRepo.Create(article)
 	if err != nil {
 		log.Printf("Error creating note: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save note"})
+		c.Header("X-Guru-Error", "Failed to save note")
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to save note"})
 		return
+	}
+
+	// Persist time accounting if provided (associate with created article)
+	if noteData.TimeUnits > 0 {
+		articleID := int(article.ID)
+		if err := saveTimeEntry(db, ticketIDInt, &articleID, noteData.TimeUnits, userID); err != nil {
+			c.Header("X-Guru-Error", "Failed to save time entry (note)")
+		}
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -4107,6 +4262,82 @@ func handleAddTicketNote(c *gin.Context) {
 		"created":  article.CreateTime.Format("2006-01-02 15:04"),
 	})
 }
+
+// handleAddTicketTime adds a time accounting entry to a ticket and returns updated total minutes
+func handleAddTicketTime(c *gin.Context) {
+	ticketID := c.Param("id")
+
+	// Accept JSON or form
+	var payload struct {
+		TimeUnits int `json:"time_units"`
+	}
+	contentType := c.GetHeader("Content-Type")
+	if strings.Contains(strings.ToLower(contentType), "application/json") {
+		if err := c.ShouldBindJSON(&payload); err != nil {
+			log.Printf("addTicketTime: JSON bind error for ticket %s: %v", ticketID, err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid time payload"})
+			return
+		}
+		log.Printf("addTicketTime: parsed JSON payload for ticket %s -> time_units=%d", ticketID, payload.TimeUnits)
+	} else {
+		tu := strings.TrimSpace(c.PostForm("time_units"))
+		if tu != "" {
+			if v, err := strconv.Atoi(tu); err == nil && v >= 0 { payload.TimeUnits = v }
+		}
+		log.Printf("addTicketTime: parsed FORM payload for ticket %s -> time_units=%d (raw='%s')", ticketID, payload.TimeUnits, tu)
+	}
+
+	if payload.TimeUnits <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "time_units must be > 0"})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.Header("X-Guru-Error", "Database connection failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
+		return
+	}
+
+	// Resolve ticket numeric ID from path (accepts id or ticket number)
+	ticketRepo := repository.NewTicketRepository(db)
+	ticketIDInt, convErr := strconv.Atoi(ticketID)
+	if convErr != nil || ticketIDInt <= 0 {
+		t, getErr := ticketRepo.GetByTicketNumber(ticketID)
+		if getErr != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
+			return
+		}
+		ticketIDInt = t.ID
+	}
+
+	// Current user
+	userID := 1
+	if userCtx, ok := c.Get("user"); ok {
+		if user, ok := userCtx.(*models.User); ok && user.ID > 0 {
+			userID = int(user.ID)
+		}
+	}
+
+	taRepo := repository.NewTimeAccountingRepository(db)
+	if err := saveTimeEntry(db, ticketIDInt, nil, payload.TimeUnits, userID); err != nil {
+		c.Header("X-Guru-Error", "Failed to save time entry")
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to save time entry"})
+		return
+	}
+	log.Printf("addTicketTime: saved time entry ticket_id=%d minutes=%d by user=%d", ticketIDInt, payload.TimeUnits, userID)
+
+	// Return updated total
+	entries, _ := taRepo.ListByTicket(ticketIDInt)
+	total := 0
+	for _, e := range entries { total += e.TimeUnit }
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "time_total_minutes": total})
+}
+
+// HandleAddTicketTime is the exported wrapper for YAML routing in the routing package
+// It delegates to handleAddTicketTime to keep the implementation in one place.
+func HandleAddTicketTime(c *gin.Context) { handleAddTicketTime(c) }
 
 // handleGetTicketHistory returns ticket history
 func handleGetTicketHistory(c *gin.Context) {
@@ -4288,6 +4519,11 @@ func handleTicketReply(c *gin.Context) {
 	ticketID := c.Param("id")
 	replyText := c.PostForm("reply")
 	isInternal := c.PostForm("internal") == "true" || c.PostForm("internal") == "1"
+	timeUnitsStr := strings.TrimSpace(c.PostForm("time_units"))
+	timeUnits := 0
+	if timeUnitsStr != "" {
+		if v, err := strconv.Atoi(timeUnitsStr); err == nil && v >= 0 { timeUnits = v }
+	}
 
 	if strings.TrimSpace(replyText) == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "reply text is required"})
@@ -4300,6 +4536,17 @@ func handleTicketReply(c *gin.Context) {
 	badge := ""
 	if isInternal {
 		badge = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200 ml-2">Internal</span>`
+	}
+
+	// Persist time accounting if provided
+	if timeUnits > 0 {
+		if db, err := database.GetDB(); err == nil && db != nil {
+			if idInt, convErr := strconv.Atoi(ticketID); convErr == nil {
+				if err := saveTimeEntry(db, idInt, nil, timeUnits, 1); err != nil {
+					c.Header("X-Guru-Error", "Failed to save time entry (reply)")
+				}
+			}
+		}
 	}
 
 	c.Header("Content-Type", "text/html; charset=utf-8")
@@ -4331,10 +4578,20 @@ func handleUpdateTicketPriority(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message":  fmt.Sprintf("Ticket %s priority updated", ticketID),
-		"priority": priority,
-	})
+	pid, err := strconv.Atoi(priority)
+	if err != nil || pid <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid priority"})
+		return
+	}
+	db, err := database.GetDB()
+	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"}); return }
+	repo := repository.NewTicketRepository(db)
+	tid, _ := strconv.Atoi(ticketID)
+	if err := repo.UpdatePriority(uint(tid), uint(pid), 1); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update priority"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Ticket %s priority updated", ticketID), "priority": pid})
 }
 
 // handleUpdateTicketQueue moves a ticket to another queue (HTMX/API helper)
@@ -4352,10 +4609,67 @@ func handleUpdateTicketQueue(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message":  fmt.Sprintf("Ticket %s moved to queue %d", ticketID, qid),
-		"queue_id": qid,
-	})
+	db, err := database.GetDB()
+	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"}); return }
+	repo := repository.NewTicketRepository(db)
+	tid, _ := strconv.Atoi(ticketID)
+	if err := repo.UpdateQueue(uint(tid), uint(qid), 1); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to move queue"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Ticket %s moved to queue %d", ticketID, qid), "queue_id": qid})
+}
+
+// handleUpdateTicketStatus updates ticket state (supports pending_until)
+func handleUpdateTicketStatus(c *gin.Context) {
+	ticketID := c.Param("id")
+	status := strings.TrimSpace(c.PostForm("status"))
+	pendingUntil := strings.TrimSpace(c.PostForm("pending_until"))
+	if status == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "status is required"})
+		return
+	}
+	// Accept either numeric state_id or known names
+	var stateID int
+	if v, err := strconv.Atoi(status); err == nil {
+		stateID = v
+	} else {
+		// Basic mapping (could extend to DB lookup):
+		switch strings.ToLower(status) {
+		case "new": stateID = 1
+		case "open": stateID = 2
+		case "closed", "closed_successful": stateID = 3
+		case "closed_unsuccessful": stateID = 4
+		case "pending", "pending_reminder": stateID = 5
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "unknown status"})
+			return
+		}
+	}
+
+	db, err := database.GetDB()
+	if err != nil { c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"}); return }
+	repo := repository.NewTicketRepository(db)
+	tid, _ := strconv.Atoi(ticketID)
+
+	if err := repo.UpdateStatus(uint(tid), uint(stateID), 1); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update status"})
+		return
+	}
+
+	// If pending, set UntilTime accordingly via Update (simple path; full service could be used)
+	if stateID == 5 && pendingUntil != "" {
+		if ts, perr := time.Parse("2006-01-02T15:04", pendingUntil); perr == nil {
+			// Load ticket and update UntilTime
+			t, gerr := repo.GetByID(uint(tid))
+			if gerr == nil {
+				t.UntilTime = int(ts.Unix())
+				_ = repo.Update(t)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Ticket %s status updated", ticketID), "status": stateID, "pending_until": pendingUntil})
 }
 
 // handleCloseTicket closes a ticket
@@ -4432,7 +4746,10 @@ func handleCloseTicket(c *gin.Context) {
 	// We'll just update the ticket state for now
 	// TODO: Add transaction support to article repository
 
-	// TODO: Store time units if time tracking is implemented
+	// Persist time accounting for close operation if provided
+	if closeData.TimeUnits > 0 {
+		_ = saveTimeEntry(db, ticketIDInt, nil, closeData.TimeUnits, userID)
+	}
 
 	// Commit transaction
 	if err = tx.Commit(); err != nil {

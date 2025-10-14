@@ -173,6 +173,15 @@ Implementation note: the `Auth::Providers` list is read at startup via the unifi
 - Database access: This project uses `database/sql` with a thin `database.ConvertPlaceholders` wrapper to support PostgreSQL and MySQL. All SQL must be wrapped. See `DATABASE_ACCESS_PATTERNS.md`.
 - Templating: Use Pongo2 templates exclusively. Do not use Go's `html/template`. Render user-facing views via Pongo2 with `layouts/base.pongo2` and proper context.
 - Routing: Define all HTTP routes in YAML under `routes/*.yaml` using the YAML router. Do not register routes directly in Go code.
+  - YAML is the single source of truth for routes; hardcoded Gin registrations are prohibited.
+  - Health endpoints (including `/healthz`) are declared in YAML. Static files are served via YAML using `handleStaticFiles`.
+  - In test mode (`APP_ENV=test`), legacy admin hardcoded routes are skipped so SSR/YAML tests don’t double-register paths.
+  - YAML route loader is idempotent in dev/tests: it skips registering a route if the same method+path already exists and logs a dedupe message to avoid Gin panics.
+
+### SSR Smoke Tests
+
+- The SSR smoke test discovers GET routes with templates from YAML and ensures they render without 5xx errors.
+- Non-strict by default: logs 5xx; to fail on 5xx and on invalid/missing YAML-referenced templates, set `SSR_SMOKE_STRICT=1`.
 
 ## CI/CD & Quality
 

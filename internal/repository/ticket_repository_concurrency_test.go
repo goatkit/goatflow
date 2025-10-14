@@ -8,16 +8,16 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
 )
 
 type seqGen struct{ mu sync.Mutex; i int }
 func (g *seqGen) Name() string { return "Increment" }
 func (g *seqGen) IsDateBased() bool { return false }
-func (g *seqGen) Next(ctx context.Context, store noopStore) (string, error) { g.mu.Lock(); defer g.mu.Unlock(); g.i++; return fmt.Sprintf("TN%05d", g.i), nil }
+func (g *seqGen) Next(ctx context.Context, store ticketnumber.CounterStore) (string, error) { g.mu.Lock(); defer g.mu.Unlock(); g.i++; return fmt.Sprintf("TN%05d", g.i), nil }
 
 type noopStore struct{}
-func (noopStore) NextCounter(scope, date string) (int64, error) { return 1, nil }
-func (noopStore) IncrementCounter(scope, date string) (int64, error) { return 1, nil }
+func (noopStore) Add(ctx context.Context, dateScoped bool, offset int64) (int64, error) { return 1, nil }
 
 func TestTicketRepository_Create_ConcurrencyUnique(t *testing.T) {
 	mockDB, mock, err := sqlmock.New(); if err != nil { t.Fatalf("sqlmock: %v", err) }

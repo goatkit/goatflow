@@ -48,6 +48,17 @@ div[id^="note-content-"] table tbody tr {
 .dark div[id^="note-content-"] table tbody tr {
     border-bottom: 1px solid #4b5563 !important;
 }
+
+.note-highlight {
+    outline: 3px solid rgba(59, 130, 246, 0.45);
+    outline-offset: 4px;
+    border-radius: 0.75rem;
+    transition: outline-color 0.2s ease-in-out;
+}
+
+.dark .note-highlight {
+    outline-color: rgba(191, 219, 254, 0.7);
+}
 </style>
 {% endblock %}
 
@@ -94,56 +105,78 @@ div[id^="note-content-"] table tbody tr {
                     <span>{{ t("tickets.updated_at")|default:"Updated" }} {{ Ticket.updated }}</span>
                 </div>
             </div>
-            <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-                <div class="flex space-x-2">
-                    <button type="button" onclick="updateTicket()"
-                        class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
-                        {{ t("tickets.update_ticket")|default:"Update Ticket" }}
-                    </button>
-                </div>
-            </div>
         </div>
     </div>
 
     <!-- Add hidden queue ID, priority ID, and status ID for JavaScript -->
     <div data-queue-id="{{ Ticket.queue_id }}" data-priority-id="{{ Ticket.priority_id }}" data-status-id="{{ Ticket.status_id }}" style="display: none;"></div>
 
+    <!-- Meta grid like OTRS top info bar -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.queue") }}</div>
+            <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.queue }}</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.state") }}</div>
+            <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.status|title }}</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.priority") }}</div>
+            <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.priority|title }}</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.owner")|default:"Owner" }}</div>
+            <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.owner|default:"Unassigned" }}</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.age")|default:"Age" }}</div>
+            <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.age }}</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.customer_id")|default:"CustomerID" }}</div>
+            <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.customer_id|default:"-" }}</div>
+        </div>
+    </div>
+
+    <!-- Tabs like OTRS: Communication, Time Accounting, History, Links -->
+    <div class="mb-6">
+        <div class="border-b border-gray-200 dark:border-gray-700">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150 hover:text-gotrs-500 dark:hover:text-gotrs-200" data-target="tab-comm" data-default-active="true">{{ t("tickets.communication")|default:"Communication" }}</a>
+                <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150 hover:text-gotrs-500 dark:hover:text-gotrs-200" data-target="tab-time">{{ t("tickets.time_accounting")|default:"Time Accounting" }}</a>
+                <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150 hover:text-gotrs-500 dark:hover:text-gotrs-200" data-target="tab-history">{{ t("tickets.history")|default:"History" }}</a>
+                <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150 hover:text-gotrs-500 dark:hover:text-gotrs-200" data-target="tab-links">{{ t("tickets.links")|default:"Links" }}</a>
+            </nav>
+        </div>
+    </div>
+
+    <div id="tab-comm" class="tab-panel">
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Main content -->
         <div class="lg:col-span-2 space-y-6">
-            <!-- Attachments Section -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-medium text-gray-900 dark:text-white">Attachments</h2>
-                    <form id="attachmentUploadForm" hx-post="/api/tickets/{{ Ticket.tn }}/attachments" hx-trigger="change from:#attachment-upload" hx-swap="none" enctype="multipart/form-data" hx-encoding="multipart/form-data">
-                        <input id="attachment-upload" type="file" name="file" class="hidden" />
-                        <button type="button" onclick="document.getElementById('attachment-upload').click()"
-                                class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm leading-5 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
-                            Upload
-                        </button>
-                    </form>
-                </div>
-                <div id="attachments-list"
-                     hx-get="/api/tickets/{{ Ticket.tn }}/attachments"
-                     hx-trigger="load, attachments-updated from:#attachmentUploadForm, changed from:#attachment-uploaded"
-                     hx-swap="innerHTML">
-                    <div class="text-center py-4 text-sm text-gray-500 dark:text-gray-400">Loading attachments...</div>
-                </div>
-                <input type="hidden" id="attachment-uploaded" />
-            </div>
             <!-- Ticket Description -->
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
                 <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.description") }}</h2>
-                {% if Ticket.description_is_html %}
-                <div id="descriptionViewer" class="prose dark:prose-invert max-w-none">
-                    {{ Ticket.description|safe }}
-                </div>
-                {% else %}
-                <div id="descriptionViewer" data-plain="1" class="text-sm leading-5 whitespace-pre-wrap break-words text-gray-800 dark:text-gray-200 bg-transparent p-0 m-0 font-normal" style="line-height:1.25;">
+                <div class="relative"{% if Ticket.first_article_id %} id="note-{{ Ticket.first_article_id }}"{% endif %}>
+                    {% if Ticket.description_is_html %}
+                    <div id="descriptionViewer" class="prose dark:prose-invert max-w-none">
+                        {{ Ticket.description|safe }}
+                    </div>
+                    {% else %}
+                    <div id="descriptionViewer" data-plain="1" class="text-sm leading-5 whitespace-pre-wrap break-words text-gray-800 dark:text-gray-200 bg-transparent p-0 m-0 font-normal" style="line-height:1.25;">
 {{ Ticket.description }}
+                    </div>
+                    {% endif %}
+                    {% if Ticket.first_article_id and Ticket.time_by_article and Ticket.time_by_article[Ticket.first_article_id] and Ticket.time_by_article[Ticket.first_article_id] > 0 %}
+                    <span class="absolute bottom-2 right-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+                        ⏱ {{ Ticket.time_by_article[Ticket.first_article_id] }} {{ t("tickets.minutes")|default:"minutes" }}
+                    </span>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
+
+            
 
             <!-- Ticket Notes/History -->
             {% if Ticket.notes and Ticket.notes|length > 0 %}
@@ -154,7 +187,8 @@ div[id^="note-content-"] table tbody tr {
                         {% set note_counter = 0 %}
                         {% for note in Ticket.notes %}
                         {% set note_counter = note_counter + 1 %}
-                        <li>
+                        {% set note_anchor = note.id|default:note_counter %}
+                        <li id="note-{{ note_anchor }}" class="note-entry">
                             <div class="relative pb-8">
                                 {% if not forloop.last %}
                                 <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-600" aria-hidden="true"></span>
@@ -174,10 +208,15 @@ div[id^="note-content-"] table tbody tr {
                                             </div>
                                             <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{{ note.time }}</p>
                                         </div>
-                                        <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                                        <div class="mt-2 text-sm text-gray-700 dark:text-gray-300 relative">
                                             <div id="note-content-{{ note_counter }}" class="max-w-none">
                                                 {{ note.body|safe }}
                                             </div>
+                                            {% if Ticket.time_by_article and Ticket.time_by_article[note.id] and Ticket.time_by_article[note.id] > 0 %}
+                                            <span class="absolute bottom-0 right-0 translate-y-full inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200 mt-1">
+                                                ⏱ {{ Ticket.time_by_article[note.id] }} {{ t("tickets.minutes")|default:"minutes" }}
+                                            </span>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
@@ -202,6 +241,17 @@ div[id^="note-content-"] table tbody tr {
                         </div>
                         <input type="hidden" name="content" id="note_content" required>
                     </div>
+                    <div>
+                        <label for="note_time_units" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {{ t("tickets.time_units_minutes")|default:"Time Units (minutes)" }}
+                        </label>
+                        <input type="number" id="note_time_units" name="time_units" min="0" step="1"
+                               placeholder="0"
+                               class="block w-40 rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {{ t("tickets.time_units_help")|default:"Record work minutes to add to this ticket." }}
+                        </p>
+                    </div>
                     <div class="flex justify-end">
                         <button type="submit"
                             class="rounded-md bg-gotrs-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
@@ -210,42 +260,52 @@ div[id^="note-content-"] table tbody tr {
                     </div>
                 </form>
             </div>
+
+            <!-- Attachments Section (moved below Add Note) -->
+            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-medium text-gray-900 dark:text-white">Attachments</h2>
+                    <form id="attachmentUploadForm" hx-post="/api/tickets/{{ Ticket.tn }}/attachments" hx-trigger="change from:#attachment-upload" hx-swap="none" enctype="multipart/form-data" hx-encoding="multipart/form-data">
+                        <input id="attachment-upload" type="file" name="file" class="hidden" />
+                        <button type="button" onclick="document.getElementById('attachment-upload').click()"
+                                class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm leading-5 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                            Upload
+                        </button>
+                    </form>
+                </div>
+                <div id="attachments-list"
+                     hx-get="/api/tickets/{{ Ticket.tn }}/attachments"
+                     hx-trigger="load, attachments-updated from:#attachmentUploadForm, changed from:#attachment-uploaded"
+                     hx-swap="innerHTML">
+                    <div class="text-center py-4 text-sm text-gray-500 dark:text-gray-400">Loading attachments...</div>
+                </div>
+                <input type="hidden" id="attachment-uploaded" />
+            </div>
         </div>
 
         <!-- Sidebar -->
         <div class="space-y-6">
-            <!-- Customer Information -->
-            {% if Ticket.customer %}
+            <!-- Time Tracking -->
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.customer") }}</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.time_tracking")|default:"Time Tracking" }}</h2>
                 <dl class="space-y-3">
                     <div>
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("common.name")|default:"Name" }}</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">{{ Ticket.customer.name }}</dd>
-                    </div>
-                    {% if Ticket.customer.email %}
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("common.email") }}</dt>
+                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("tickets.total_time")|default:"Total Time" }}</dt>
                         <dd class="text-sm text-gray-900 dark:text-white">
-                            <a href="mailto:{{ Ticket.customer.email }}" class="text-gotrs-600 hover:text-gotrs-500">
-                                {{ Ticket.customer.email }}
-                            </a>
+                            {{ Ticket.time_total_minutes|default:0 }} {{ t("tickets.minutes")|default:"minutes" }}
                         </dd>
                     </div>
-                    {% endif %}
-                    {% if Ticket.customer.phone %}
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("tickets.phone") }}</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">
-                            <a href="tel:{{ Ticket.customer.phone }}" class="text-gotrs-600 hover:text-gotrs-500">
-                                {{ Ticket.customer.phone }}
-                            </a>
-                        </dd>
-                    </div>
-                    {% endif %}
                 </dl>
             </div>
-            {% endif %}
+            <!-- Customer Information (reused partial from creation panel) -->
+            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+                {% if CustomerPanelUser and CustomerPanelUser.Login %}
+                    {% include "partials/tickets/customer_info.pongo2" with user=CustomerPanelUser company=CustomerPanelCompany open=CustomerPanelOpen %}
+                {% else %}
+                    <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ t("tickets.customer") }}</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("tickets.no_customer_assigned")|default:"No customer is assigned to this ticket." }}</p>
+                {% endif %}
+            </div>
 
             <!-- Assigned Agent -->
             {% if Ticket.agent %}
@@ -310,6 +370,56 @@ div[id^="note-content-"] table tbody tr {
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+    </div>
+
+    <div id="tab-time" class="tab-panel hidden">
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+            <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.time_accounting")|default:"Time Accounting" }}</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">{{ t("tickets.total_time")|default:"Total Time" }}: <strong>{{ Ticket.time_total_minutes|default:0 }}</strong> {{ t("tickets.minutes")|default:"minutes" }}</p>
+            {% if Ticket.time_entries and Ticket.time_entries|length > 0 %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead class="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("common.date")|default:"Date" }}</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("tickets.minutes")|default:"Minutes" }}</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("tickets.article")|default:"Article" }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for e in Ticket.time_entries %}
+                        <tr>
+                            <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">{{ e.create_time }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">{{ e.minutes }}</td>
+                            <td class="px-4 py-2 text-sm text-gotrs-600">
+                                {% if e.article_id %}
+                                    <a href="#note-{{ e.article_id }}" class="time-entry-note-link hover:underline" data-note-target="note-{{ e.article_id }}">#{{ e.article_id }}</a>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-sm text-gray-500 dark:text-gray-400">{{ t("tickets.no_time_entries")|default:"No time entries recorded yet." }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div id="tab-history" class="tab-panel hidden">
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 text-sm text-gray-600 dark:text-gray-300">
+            {{ t("tickets.history_placeholder")|default:"History view coming soon." }}
+        </div>
+    </div>
+
+    <div id="tab-links" class="tab-panel hidden">
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 text-sm text-gray-600 dark:text-gray-300">
+            {{ t("tickets.links_placeholder")|default:"Links view coming soon." }}
         </div>
     </div>
 </div>
@@ -628,6 +738,103 @@ div[id^="note-content-"] table tbody tr {
 <script>
 const ticketId = '{{ Ticket.id }}';
 
+const tabLinks = Array.from(document.querySelectorAll('.tab-link'));
+const tabPanels = Array.from(document.querySelectorAll('.tab-panel'));
+const tabIds = new Set(tabPanels.map(panel => panel.id));
+const activeTabClasses = ['border-gotrs-500', 'text-gotrs-600', 'dark:text-gotrs-200'];
+const inactiveTabClasses = ['border-transparent', 'text-gray-500', 'dark:text-gray-200'];
+
+function setActiveTab(target, updateHash = false) {
+    const targetPanel = document.getElementById(target);
+    if (!targetPanel) {
+        return;
+    }
+
+    tabLinks.forEach(link => {
+        const isActive = link.dataset.target === target;
+        link.classList.remove(...activeTabClasses, ...inactiveTabClasses);
+        link.classList.add(...(isActive ? activeTabClasses : inactiveTabClasses));
+        link.setAttribute('aria-current', isActive ? 'page' : 'false');
+    });
+
+    tabPanels.forEach(panel => {
+        panel.classList.toggle('hidden', panel.id !== target);
+    });
+
+    if (updateHash) {
+        if (history && 'replaceState' in history) {
+            history.replaceState(null, '', `#${target}`);
+        } else {
+            window.location.hash = `#${target}`;
+        }
+    }
+}
+
+function focusNote(noteId) {
+    requestAnimationFrame(() => {
+        const targetElement = document.getElementById(noteId);
+        if (!targetElement) {
+            return;
+        }
+        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        targetElement.classList.add('note-highlight');
+        setTimeout(() => targetElement.classList.remove('note-highlight'), 2000);
+        if (history && 'replaceState' in history) {
+            history.replaceState(null, '', `#${noteId}`);
+        } else {
+            window.location.hash = `#${noteId}`;
+        }
+    });
+}
+
+tabLinks.forEach(link => {
+    link.addEventListener('click', (event) => {
+        event.preventDefault();
+        const target = link.dataset.target;
+        if (!target) {
+            return;
+        }
+        setActiveTab(target, true);
+    });
+});
+
+const initialState = (() => {
+    const hashTarget = window.location.hash.replace('#', '');
+    if (tabIds.has(hashTarget)) {
+        return { tab: hashTarget, note: null };
+    }
+    if (hashTarget && document.getElementById(hashTarget)) {
+        return { tab: 'tab-comm', note: hashTarget };
+    }
+    const defaultLink = tabLinks.find(link => link.dataset.defaultActive === 'true');
+    const fallbackTab = defaultLink ? defaultLink.dataset.target : (tabLinks[0] ? tabLinks[0].dataset.target : null);
+    return { tab: fallbackTab, note: null };
+})();
+
+if (initialState.tab) {
+    setActiveTab(initialState.tab);
+    if (initialState.note) {
+        focusNote(initialState.note);
+    }
+}
+
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('.time-entry-note-link');
+    if (!link) {
+        return;
+    }
+    event.preventDefault();
+    const hrefTarget = (link.dataset.noteTarget || link.getAttribute('href') || '').replace('#', '');
+    if (!hrefTarget) {
+        return;
+    }
+
+    setActiveTab('tab-comm', true);
+    link.blur();
+
+    focusNote(hrefTarget);
+});
+
 // Helper function to show notifications instead of alerts
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
@@ -653,10 +860,7 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-function updateTicket() {
-    // Placeholder for ticket update functionality
-    showNotification('Update ticket functionality coming soon!', 'info');
-}
+
 
 function closeTicket() {
     // Show the close ticket dialog instead of using confirm()
@@ -782,6 +986,13 @@ function hideReopenDialog() {
     document.getElementById('reopenTicketForm').reset();
 }
 
+// Queue modal wiring
+
+// Priority modal wiring
+// Priority/Queue handlers are provided by /static/js/ticket-zoom.js (API-backed)
+
+// Status modal wiring handled by /static/js/ticket-zoom.js (API-backed)
+
 function assignTicket() {
     // Show the assign agent dialog
     document.getElementById('assignAgentDialog').classList.remove('hidden');
@@ -883,31 +1094,34 @@ document.getElementById('noteForm').addEventListener('submit', function(e) {
     submitBtn.textContent = 'Adding Note...';
     submitBtn.disabled = true;
     
-    apiFetch(`/tickets/${ticketId}/comments`, {
+    const timeUnitsVal = document.getElementById('note_time_units')?.value;
+    const fd = new FormData();
+    fd.append('body', content);
+    fd.append('internal', 'true');
+    if (timeUnitsVal && String(timeUnitsVal).trim() !== '') {
+        fd.append('time_units', String(parseInt(timeUnitsVal)));
+    }
+    apiFetch(`/agent/tickets/${ticketId}/note`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ body: content })
+        body: fd
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            // Show error message properly
-            const errorDiv = document.getElementById('note-error') || (() => {
-                const div = document.createElement('div');
-                div.id = 'note-error';
-                div.className = 'bg-red-50 text-red-800 p-3 rounded mb-3';
-                document.getElementById('note_content').parentElement.prepend(div);
-                return div;
-            })();
-            errorDiv.textContent = 'Error adding note: ' + (data.error || 'Unknown error');
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
+    .then(async response => {
+        // Try to parse JSON, but the agent endpoint may return HTML on success
+        let data = null;
+        try { data = await response.clone().json(); } catch (_) {}
+        if (!response.ok) {
+            const msg = (data && (data.error || data.message)) || `HTTP ${response.status}`;
+            throw new Error(msg);
         }
+        // Treat 2xx as success even if no JSON or success flag
+        const isJsonError = data && data.success === false;
+        if (isJsonError) {
+            const errMsg = data.error || data.message || 'Unknown error';
+            throw new Error(errMsg);
+        }
+        return true;
     })
+    .then(() => { location.reload(); })
     .catch(error => {
         console.error('Error:', error);
         // Show error message properly
@@ -918,7 +1132,7 @@ document.getElementById('noteForm').addEventListener('submit', function(e) {
             document.getElementById('note_content').parentElement.prepend(div);
             return div;
         })();
-        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.textContent = 'Error adding note: ' + (error && error.message ? error.message : 'Network error');
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
     });

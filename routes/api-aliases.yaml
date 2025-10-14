@@ -18,6 +18,11 @@ spec:
     handler: HandleReopenTicketAPI
     description: "Alias reopen ticket (maps to /api/v1/tickets/:id/reopen)"
 
+  - path: /tickets/:id/time
+    method: POST
+    handler: handleAddTicketTime
+    description: "Alias time accounting (maps to /api/v1/tickets/:id/time)"
+
   # (Optional future) Add other needed aliases if more 404s appear
   # - path: /tickets
   #   method: GET

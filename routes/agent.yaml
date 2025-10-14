@@ -19,11 +19,9 @@ spec:
       description: "Display agent tickets list with full functionality"
 
     # Agent ticket zoom view - shows full ticket with S/MIME articles
-    - path: /tickets/:id
-      method: GET
-      handler: handleAgentTicketView
-      template: pages/agent/ticket_view.pongo2
-      description: "Display full ticket details with S/MIME articles and conversation"
+    # Note: GET /agent/tickets/:id is handled as a legacy redirect in routes/compatibility.yaml
+    # to unify ticket detail navigation. Do not register a direct GET handler here to avoid
+    # duplicate route conflicts.
 
     # Agent ticket reply (customer reply)
     - path: /tickets/:id/reply

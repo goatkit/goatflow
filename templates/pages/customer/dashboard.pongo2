@@ -215,7 +215,7 @@
                             <a href="/customer/tickets/{{ ticket.id }}" class="text-blue-600 hover:text-blue-700 dark:text-blue-400">
                                 View
                             </a>
-                            {% if 'closed' not in ticket.state|lower %}
+                            {% if not ('closed' in ticket.state|lower) %}
                             <span class="mx-2 text-gray-300">|</span>
                             <a href="/customer/tickets/{{ ticket.id }}#reply" class="text-green-600 hover:text-green-700 dark:text-green-400">
                                 Reply

@@ -11,7 +11,7 @@
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("forms.mandatory_note")|default:"All fields marked with an asterisk (*) are mandatory." }}</p>
         </div>
         <div class="mt-4 flex md:ml-4 md:mt-0">
-            <a href="/tickets" class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">{{ t("tickets.back_to_list")|default:t("common.back") }}</a>
+            <a href="/tickets" class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">{{ t("tickets.back_to_list")|default:"Back" }}</a>
         </div>
     </div>
 
@@ -63,14 +63,8 @@
                             </select>
                         </div>
                     </div>
-                    <div>
-                        <label for="type_id" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets.type") }}</label>
-                        <div class="mt-2">
-                            <select name="type_id" id="type_id" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                {% for type in Types %}<option value="{{ type.ID }}" {% if type.ID == 1 %}selected{% endif %}>{{ type.Label }}</option>{% endfor %}
-                            </select>
-                        </div>
-                    </div>
+                    {# Hide Type field (not used like OTRS) but retain default via hidden input #}
+                    <input type="hidden" name="type_id" id="type_id" value="{{ Types.0.ID|default:1 }}">
                     <div>
                         <label for="interaction_type" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.initial_interaction") }}</label>
                         <div class="mt-2">
@@ -116,6 +110,34 @@
                     {{ t("tickets_form.create_ticket") }}
                 </button>
             </div>
+
+            {# Accounting: Time units (work units) #}
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div>
+                    <label for="time_units" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.time_units")|default:"Time units (work units)" }}</label>
+                    <div class="mt-2">
+                        <input type="number" min="0" step="1" name="time_units" id="time_units" placeholder="0" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6" />
+                    </div>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ t("tickets_form.time_units_help")|default:"Record work units spent on this ticket." }}</p>
+                </div>
+                <div>
+                    <label for="next_state" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.next_state")|default:"Next Ticket State" }}</label>
+                    <div class="mt-2">
+                        <select name="next_state" id="next_state" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                            <option value="" selected>{{ t("tickets_form.state.keep_open")|default:"(leave as open)" }}</option>
+                            <option value="pending_reminder">{{ t("tickets_form.state.pending_reminder")|default:"Pending reminder" }}</option>
+                            <option value="pending_auto_close+">{{ t("tickets_form.state.pending_auto_close_plus")|default:"Pending auto close+" }}</option>
+                            <option value="pending_auto_close-">{{ t("tickets_form.state.pending_auto_close_minus")|default:"Pending auto close-" }}</option>
+                            <option value="closed_successful">{{ t("tickets_form.state.closed_successful")|default:"Closed successful" }}</option>
+                            <option value="closed_unsuccessful">{{ t("tickets_form.state.closed_unsuccessful")|default:"Closed unsuccessful" }}</option>
+                        </select>
+                    </div>
+                    <div class="mt-4" id="pending_until_wrap" style="display:none;">
+                        <label for="pending_until" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.pending_until")|default:"Pending date (for pending states)" }}</label>
+                        <input type="datetime-local" name="pending_until" id="pending_until" class="mt-2 block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                    </div>
+                </div>
+            </div>
         </form>
     </div>
 </div>
@@ -128,11 +150,25 @@
         "login": "{{ customerUser.Login }}",
         "email": "{{ customerUser.Email }}",
         "firstName": "{{ customerUser.FirstName }}",
-        "lastName": "{{ customerUser.LastName }}"
+        "lastName": "{{ customerUser.LastName }}",
+        "customerId": "{{ customerUser.CustomerID|default:customerUser.CustomerId|default:"" }}",
+        "preferredQueueId": "{{ customerUser.PreferredQueueID|default:customerUser.PreferredQueueId|default:"" }}"
     }{% if not loop.last %},{% endif %}{% endfor %}
 ]</script>
 <!-- Handle form response and file uploads -->
 <script>
+    // Hidden field to carry CustomerID; set automatically when a known user is selected
+    (function ensureCustomerIdField(){
+        var existing = document.getElementById('customer_id');
+        if (!existing) {
+            var hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'customer_id';
+            hidden.id = 'customer_id';
+            document.querySelector('form[action="/tickets"]').appendChild(hidden);
+        }
+    })();
+
     // Handle file selection
     document.getElementById('file-upload').addEventListener('change', function(e) {
         const fileList = document.getElementById('file-list');
@@ -255,6 +291,64 @@
                 document.getElementById('body').value = content;
             }
         });
+
+        // Map customer users from seed for auto-fill behaviors
+        try {
+            var seedEl = document.querySelector('script[data-gk-seed="customer-user"]');
+            var customerSeed = JSON.parse(seedEl.textContent || '[]');
+            var customerIndex = Object.create(null);
+            customerSeed.forEach(u => { if (u && u.login) customerIndex[u.login] = u; });
+
+            // When autocomplete sets hidden target (#customer_user_id), we auto-populate customer_id and preferred queue
+            var hiddenUserInput = document.getElementById('customer_user_id');
+            var queueSelect = document.getElementById('queue_id');
+            var infoPanel = document.getElementById('customer-info-panel');
+            var userVisibleInput = document.getElementById('customer_user_input');
+            function updateCustomerBindings() {
+                var login = hiddenUserInput.value || '';
+                if (!login) { return; }
+                var u = customerIndex[login];
+                if (!u) { return; }
+                var cid = (u.customerId || '').trim();
+                if (cid) {
+                    var cidEl = document.getElementById('customer_id');
+                    if (cidEl) cidEl.value = cid;
+                }
+                // Prefer queue if provided
+                if (queueSelect && u.preferredQueueId) {
+                    var opt = Array.from(queueSelect.options).find(o => o.value === String(u.preferredQueueId));
+                    if (opt) {
+                        queueSelect.value = String(u.preferredQueueId);
+                    }
+                }
+                // Show compact info panel
+                if (infoPanel) {
+                    infoPanel.classList.remove('hidden');
+                    infoPanel.innerHTML = `<div class="text-sm">
+                        <div><strong>User:</strong> ${u.firstName||''} ${u.lastName||''} &lt;${u.email||''}&gt;</div>
+                        ${cid ? `<div><strong>Customer ID:</strong> ${cid}</div>` : ''}
+                        ${u.preferredQueueId ? `<div><strong>Preferred Queue:</strong> ${u.preferredQueueId}</div>` : ''}
+                    </div>`;
+                }
+            }
+            // Autocomplete likely updates hidden target; listen for changes on hidden and visible inputs
+            hiddenUserInput.addEventListener('change', updateCustomerBindings);
+            userVisibleInput.addEventListener('change', function(){ setTimeout(updateCustomerBindings, 0); });
+        } catch (e) {
+            console.warn('Customer seed parse failed', e);
+        }
+
+        // Toggle pending date visibility based on next state
+        var nextStateSel = document.getElementById('next_state');
+        var pendingWrap = document.getElementById('pending_until_wrap');
+        if (nextStateSel && pendingWrap) {
+            var togglePending = function(){
+                var v = nextStateSel.value || '';
+                pendingWrap.style.display = (v.startsWith('pending')) ? '' : 'none';
+            };
+            nextStateSel.addEventListener('change', togglePending);
+            togglePending();
+        }
     });
 </script>
 {% endblock %}

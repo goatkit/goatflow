@@ -12,7 +12,7 @@
     "contracts:all": "npm run generate-types && npm run generate-docs && cd web && npm run test:contracts",
     "build-css": "npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify",
     "watch-css": "npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch",
-  "build-tiptap": "esbuild static/js/tiptap-bundle.js --bundle --minify --format=iife --global-name=TiptapBundle --outfile=static/js/tiptap.min.js",
+    "build-tiptap": "esbuild static/js/tiptap-bundle.js --bundle --minify --format=iife --global-name=TiptapBundle --outfile=static/js/tiptap.min.js",
     "build-js": "npm run build-tiptap",
     "build": "npm run build-css && npm run build-js"
   },
@@ -37,6 +37,7 @@
   "author": "GOTRS Team",
   "dependencies": {
     "@playwright/test": "^1.55.1",
+    "@sajithrw/mcp-mysql": "^1.0.0",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.18",
     "@tiptap/core": "^3.5.1",

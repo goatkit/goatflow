@@ -553,7 +553,7 @@ function submitMerge(event) {
         if (data.success) {
             showToast('Tickets merged successfully', 'success');
             closeModal('mergeModal');
-            setTimeout(() => location.href = '/agent/tickets', 1000);
+            setTimeout(() => location.href = '/tickets', 1000);
         } else {
             showToast('Failed to merge tickets: ' + (data.error || 'Unknown error'), 'error');
         }
@@ -604,23 +604,69 @@ function loadAttachmentImages() {
  * Initialize keyboard shortcuts
  */
 function initializeKeyboardShortcuts() {
+    // Helper: determine if the event target is inside an editor or editable field
+    function isEditableTarget(target) {
+        if (!target) return false;
+        // Standard inputs
+        const tag = target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return true;
+        if (target.isContentEditable) return true;
+        // Tiptap/ProseMirror/editor containers
+        if (target.closest('[contenteditable="true"], .ProseMirror, .tiptap, #noteEditor, #bodyEditor')) return true;
+        return false;
+    }
+
+    function shouldIgnoreShortcut(e) {
+        // Ignore when composing (IME), or when focus is in any editable context
+        if (e.isComposing) return true;
+        if (isEditableTarget(e.target)) return true;
+        // Also check activeElement in case event target is a child of the editor
+        const ae = document.activeElement;
+        if (ae && (ae.isContentEditable || isEditableTarget(ae))) return true;
+        return false;
+    }
+
     document.addEventListener('keydown', function(e) {
-        // Only handle shortcuts when not in input fields
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-            return;
-        }
-        
-        switch(e.key.toLowerCase()) {
+        // Only handle shortcuts when not typing in editors/fields
+        if (shouldIgnoreShortcut(e)) return;
+
+        const key = (e.key || '').toLowerCase();
+        switch(key) {
             case 'r':
                 if (!isComposing) {
-                    e.preventDefault();
-                    replyToTicket();
+                    // Only act when a modifier is held to avoid clobbering typing
+                    const withModifier = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
+                    if (!withModifier) return;
+                    const hasReplyModal = !!document.getElementById('replyModal');
+                    if (hasReplyModal) {
+                        e.preventDefault();
+                        replyToTicket();
+                    }
+                    // If no reply modal on this page, don't prevent typing or other handlers
                 }
                 break;
             case 'n':
                 if (!isComposing) {
-                    e.preventDefault();
-                    addNote(currentTicketId);
+                    // Only act when a modifier is held to avoid clobbering typing
+                    const withModifier = e.ctrlKey || e.metaKey || e.altKey || e.shiftKey;
+                    if (!withModifier) return;
+                    const hasNoteModal = !!document.getElementById('noteModal');
+                    if (hasNoteModal) {
+                        e.preventDefault();
+                        addNote(currentTicketId);
+                        break;
+                    }
+                    // Fallback: focus inline note editor if present on this page
+                    const noteEditorRoot = document.getElementById('noteEditor');
+                    if (noteEditorRoot) {
+                        const editable = noteEditorRoot.querySelector('[contenteditable="true"], .ProseMirror');
+                        if (editable && typeof editable.focus === 'function') {
+                            e.preventDefault();
+                            editable.focus();
+                            isComposing = true;
+                        }
+                    }
+                    // Else, do not prevent default so typing continues
                 }
                 break;
             case 'escape':
@@ -658,7 +704,10 @@ function saveDraft() {
 
 // Close modals on Escape key (duplicate from template - keeping for compatibility)  
 document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
+    // Don't steal Escape while typing in editors/fields
+    const target = event.target;
+    const inEditor = target && (target.isContentEditable || target.closest('[contenteditable="true"], .ProseMirror, .tiptap, #noteEditor, #bodyEditor'));
+    if (!inEditor && event.key === 'Escape') {
         document.querySelectorAll('[id$="Modal"]').forEach(modal => {
             modal.classList.add('hidden');
         });

@@ -188,6 +188,9 @@ func main() {
 		"HandleReindexAPI":           api.HandleReindexAPI,
 		"HandleSearchHealthAPI":      api.HandleSearchHealthAPI,
 
+		// Time accounting
+		"handleAddTicketTime": api.HandleAddTicketTime,
+
 		// Attachment API handlers
 		"HandleGetAttachments":     api.HandleGetAttachments,
 		"HandleUploadAttachment":   api.HandleUploadAttachment,
@@ -203,6 +206,10 @@ func main() {
 		"HandleGetStatuses":           api.HandleGetStatuses,
 		"HandleGetFormData":           api.HandleGetFormData,
 		"HandleInvalidateLookupCache": api.HandleInvalidateLookupCache,
+
+		// Legacy compatibility handlers (redirects)
+		"HandleLegacyAgentTicketViewRedirect": api.HandleLegacyAgentTicketViewRedirect,
+		"HandleLegacyTicketsViewRedirect":    api.HandleLegacyTicketsViewRedirect,
 
 		// Dev handlers
 		"HandleDevDashboard":  api.HandleDevDashboard,

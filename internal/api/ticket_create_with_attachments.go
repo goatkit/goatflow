@@ -26,12 +26,15 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	var req struct {
 		Title         string `json:"title" form:"title"`
 		Subject       string `json:"subject" form:"subject"`
-		CustomerEmail string `json:"customer_email" form:"customer_email" binding:"required,email"`
+		CustomerEmail string `json:"customer_email" form:"customer_email" binding:"omitempty,email"`
+		CustomerUserID string `json:"customer_user_id" form:"customer_user_id"`
 		CustomerName  string `json:"customer_name" form:"customer_name"`
 		Priority      string `json:"priority" form:"priority"`
 		QueueID       string `json:"queue_id" form:"queue_id"`
 		TypeID        string `json:"type_id" form:"type_id"`
 		Body          string `json:"body" form:"body" binding:"required"`
+		// Optional time accounting minutes provided on the new ticket form
+		TimeUnits     string `json:"time_units" form:"time_units"`
 	}
 
 	// Parse multipart form first to handle both fields and files
@@ -49,6 +52,36 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Fallback: if customer_email missing but customer_user_id present (autocomplete sets this), treat it as email login
+	if strings.TrimSpace(req.CustomerEmail) == "" {
+		candidate := strings.TrimSpace(req.CustomerUserID)
+		if candidate == "" {
+			candidate = strings.TrimSpace(c.PostForm("customer_user_id"))
+		}
+		if candidate != "" && strings.Contains(candidate, "@") {
+			req.CustomerEmail = candidate
+			log.Printf("CreateTicketWithAttachments: filled CustomerEmail from customer_user_id='%s'", candidate)
+		}
+	}
+
+	// Enforce: we must have a customer email by now
+	if strings.TrimSpace(req.CustomerEmail) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "customer_email or customer_user_id (email) is required"})
+		return
+	}
+
+	// Debug: log raw time_units from form/json and possible camelCase field
+	rawTime := strings.TrimSpace(req.TimeUnits)
+	if rawTime == "" {
+		// Accept camelCase "timeUnits" as a fallback
+		rawTime = strings.TrimSpace(c.PostForm("timeUnits"))
+		if rawTime != "" {
+			req.TimeUnits = rawTime
+			log.Printf("CreateTicketWithAttachments: picked timeUnits (camelCase)='%s'", rawTime)
+		}
+	}
+	log.Printf("CreateTicketWithAttachments: raw time_units='%s'", req.TimeUnits)
 	
 	// Use title if provided, otherwise use subject
 	ticketTitle := req.Title
@@ -79,6 +112,15 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	if req.Priority == "" {
 		req.Priority = "normal"
 	}
+
+	// Parse optional time units (minutes)
+	minutes := 0
+	if v := strings.TrimSpace(req.TimeUnits); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			minutes = n
+		}
+	}
+    log.Printf("CreateTicketWithAttachments: parsed minutes=%d", minutes)
 
 	// For demo purposes, use a fixed user ID (admin)
 	createdBy := uint(1)
@@ -290,6 +332,17 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 		response["attachments"] = attachmentInfo
 		response["attachment_count"] = len(attachmentInfo)
 	}
+
+		// Persist time accounting entry if minutes were provided on creation
+		if minutes > 0 {
+			log.Printf("CreateTicketWithAttachments: attempting to save time entry ticket_id=%d minutes=%d", ticket.ID, minutes)
+			if err := saveTimeEntry(db, ticket.ID, nil, minutes, int(createdBy)); err != nil {
+				// Non-fatal: log and proceed with success response
+				log.Printf("WARNING: Failed to save initial time entry for ticket %d: %v", ticket.ID, err)
+			} else {
+				log.Printf("Saved initial time entry for ticket %d: %d minutes", ticket.ID, minutes)
+			}
+		}
 	
 	// For HTMX, set the redirect header to the ticket detail page
 	c.Header("HX-Redirect", fmt.Sprintf("/tickets/%d", ticket.ID))

@@ -48,6 +48,11 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 		customerEmail := c.PostForm("customer_email")
 		// customerName := c.PostForm("customer_name")
 		customerID := c.PostForm("customer_id")
+		// Optional time accounting (minutes)
+		timeUnitsStr := strings.TrimSpace(c.PostForm("time_units"))
+		if timeUnitsStr == "" { timeUnitsStr = strings.TrimSpace(c.PostForm("timeUnits")) }
+		timeUnits := 0
+		if timeUnitsStr != "" { if n, err := strconv.Atoi(timeUnitsStr); err == nil && n > 0 { timeUnits = n } }
 
 		// Validate required fields
 		if title == "" || message == "" {
@@ -306,6 +311,16 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 				}()
 			}
 			c.Header("HX-Trigger", "attachments-updated")
+		}
+
+		// Persist initial time accounting if provided
+		if timeUnits > 0 {
+			articleID := int(articleModel.ID)
+			if err := saveTimeEntry(db, ticketID, &articleID, timeUnits, int(userID)); err != nil {
+				log.Printf("WARNING: Failed to save initial time entry for ticket %d: %v", ticketID, err)
+			} else {
+				log.Printf("Saved initial time entry for ticket %d: %d minutes", ticketID, timeUnits)
+			}
 		}
 
 		// Redirect to ticket view using repository-assigned ticket number

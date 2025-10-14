@@ -2,14 +2,12 @@ package auth
 
 import (
     "context"
-    "os"
-    "testing"
-    "database/sql"
+    "github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
 // simpleFakeProvider for ordering tests
 type simpleFakeProvider struct { name string; priority int }
-func (p *simpleFakeProvider) Authenticate(ctx context.Context, u, pw string) (*UserStub, error) { return nil, ErrInvalidCredentials }
+func (p *simpleFakeProvider) Authenticate(ctx context.Context, u, pw string) (*models.User, error) { return nil, ErrInvalidCredentials }
 
 // We can't import models.User here without pulling other deps in tests below; use real interface implementations instead.
 

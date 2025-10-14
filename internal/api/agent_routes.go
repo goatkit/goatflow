@@ -861,6 +861,18 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 
 		subject := c.PostForm("subject")
 
+		// Parse optional time units (minutes) from form; accept both snake and camel case
+		timeUnits := 0
+		if tu := strings.TrimSpace(c.PostForm("time_units")); tu != "" {
+			if v, err := strconv.Atoi(tu); err == nil && v > 0 {
+				timeUnits = v
+			}
+		} else if tu := strings.TrimSpace(c.PostForm("timeUnits")); tu != "" { // fallback
+			if v, err := strconv.Atoi(tu); err == nil && v > 0 {
+				timeUnits = v
+			}
+		}
+
 		// Get communication channel from form (defaults to Internal if not specified)
 		communicationChannelID := c.DefaultPostForm("communication_channel_id", "3")
 		channelID, err := strconv.Atoi(communicationChannelID)
@@ -976,6 +988,21 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 			log.Printf("Error committing transaction: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save note"})
 			return
+		}
+
+		// Persist time accounting (after commit to avoid orphaning on rollback)
+		if timeUnits > 0 {
+			if tid, err := strconv.Atoi(ticketID); err == nil {
+				aid := int(articleID)
+				uid := int(userID)
+				if err := saveTimeEntry(db, tid, &aid, timeUnits, uid); err != nil {
+					log.Printf("Failed to save time entry for ticket %d article %d: %v", tid, aid, err)
+				} else {
+					log.Printf("Saved time entry for ticket %d article %d: %d minutes", tid, aid, timeUnits)
+				}
+			} else {
+				log.Printf("Invalid ticket id for time entry: %s", ticketID)
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{"success": true, "article_id": articleID})

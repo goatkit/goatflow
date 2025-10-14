@@ -11,23 +11,20 @@ import (
 func HandleListStatesAPI(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": []gin.H{
-			{"id": 1, "name": "new"},
-			{"id": 2, "name": "open"},
-			{"id": 3, "name": "pending"},
-			{"id": 4, "name": "resolved"},
-			{"id": 5, "name": "closed"},
-		}})
+		c.Header("X-Guru-Error", "States lookup failed: database unavailable")
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "states lookup failed: database unavailable"})
 		return
 	}
 
 	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, name, valid_id
 		FROM ticket_state
+		WHERE valid_id = $1
 		ORDER BY id
-	`))
+	`), 1)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"success": true, "data": []interface{}{}})
+		c.Header("X-Guru-Error", "States lookup failed: query error")
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "states lookup failed: query error"})
 		return
 	}
 	defer rows.Close()
@@ -39,6 +36,12 @@ func HandleListStatesAPI(c *gin.Context) {
 		if err := rows.Scan(&id, &name, &validID); err == nil {
 			items = append(items, gin.H{"id": id, "name": name, "valid_id": validID})
 		}
+	}
+	// If DB returned zero rows, fail clearly to avoid masking misconfigurations
+	if len(items) == 0 {
+		c.Header("X-Guru-Error", "States lookup returned 0 rows (check seeds/migrations)")
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "states lookup returned 0 rows"})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": items})
 }
