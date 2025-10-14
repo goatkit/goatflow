@@ -296,7 +296,11 @@ div[id^="note-content-"] table tbody tr {
                     <div>
                         <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("tickets.total_time")|default:"Total Time" }}</dt>
                         <dd class="text-sm text-gray-900 dark:text-white">
-                            {{ Ticket.time_total_minutes|default:0 }} {{ t("tickets.minutes")|default:"minutes" }}
+                            {% if Ticket.time_total_has_hours %}
+                                {{ Ticket.time_total_hours }}h{% if Ticket.time_total_remaining_minutes > 0 %} {{ Ticket.time_total_remaining_minutes }}m{% endif %}
+                            {% else %}
+                                {{ Ticket.time_total_minutes|default:0 }} {{ t("tickets.minutes")|default:"minutes" }}
+                            {% endif %}
                         </dd>
                     </div>
                 </dl>

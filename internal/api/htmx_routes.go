@@ -3008,6 +3008,9 @@ func handleTicketDetail(c *gin.Context) {
 
 	// Expose per-article minutes for client/template consumption
 	// We'll add a helper that returns the chip minutes by article id
+	timeTotalHours := totalMinutes / 60
+	timeTotalRemainder := totalMinutes % 60
+	hasTimeHours := totalMinutes >= 60
 	ticketData := gin.H{
 		"id":               ticket.ID,
 		"tn":               ticket.TicketNumber,
@@ -3036,24 +3039,27 @@ func handleTicketDetail(c *gin.Context) {
 			"name":  agentName,
 			"email": agentEmail,
 		},
-		"assigned_to":         assignedTo,
-		"owner":               assignedTo,
-		"type":                typeName,
-		"service":             "-", // TODO: Get from service table
-		"sla":                 "-", // TODO: Get from SLA table
-		"created":             ticket.CreateTime.Format("2006-01-02 15:04"),
-		"updated":             ticket.ChangeTime.Format("2006-01-02 15:04"),
-		"description":         description,     // Raw description for display
-		"description_json":    descriptionJSON, // JSON-encoded for JavaScript
-		"notes":               notes,           // Pass notes array directly
-		"note_bodies_json":    noteBodiesJSON,  // JSON-encoded note bodies for JavaScript
-		"description_is_html": strings.Contains(description, "<") && strings.Contains(description, ">"),
-		"time_total_minutes":  totalMinutes,
-		"time_entries":        timeEntries,
-		"time_by_article":     perArticleMinutes,
-		"first_article_id":    firstArticleID,
-		"age":                 age,
-		"status_id":           ticket.TicketStateID,
+		"assigned_to":                  assignedTo,
+		"owner":                        assignedTo,
+		"type":                         typeName,
+		"service":                      "-", // TODO: Get from service table
+		"sla":                          "-", // TODO: Get from SLA table
+		"created":                      ticket.CreateTime.Format("2006-01-02 15:04"),
+		"updated":                      ticket.ChangeTime.Format("2006-01-02 15:04"),
+		"description":                  description,     // Raw description for display
+		"description_json":             descriptionJSON, // JSON-encoded for JavaScript
+		"notes":                        notes,           // Pass notes array directly
+		"note_bodies_json":             noteBodiesJSON,  // JSON-encoded note bodies for JavaScript
+		"description_is_html":          strings.Contains(description, "<") && strings.Contains(description, ">"),
+		"time_total_minutes":           totalMinutes,
+		"time_total_hours":             timeTotalHours,
+		"time_total_remaining_minutes": timeTotalRemainder,
+		"time_total_has_hours":         hasTimeHours,
+		"time_entries":                 timeEntries,
+		"time_by_article":              perArticleMinutes,
+		"first_article_id":             firstArticleID,
+		"age":                          age,
+		"status_id":                    ticket.TicketStateID,
 	}
 
 	// Customer panel (DRY: same details as ticket creation selection panel)
