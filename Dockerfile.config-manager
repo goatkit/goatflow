@@ -2,9 +2,9 @@
 # syntax=docker/dockerfile:1
 
 # ============================================
-# Use backend as base for consistency
+# Reuse backend binaries from artifacts image
 # ============================================
-FROM gotrs:latest AS backend
+FROM gotrs-artifacts:latest AS artifacts
 
 # ============================================
 # Build config manager
@@ -42,14 +42,14 @@ RUN adduser -D -s /bin/sh -u 1000 configmgr
 
 # Copy binaries from builders
 COPY --from=config-builder /usr/local/bin/gotrs-config /usr/local/bin/
-COPY --from=backend /app/goats /usr/local/bin/goats
+COPY --from=artifacts /artifacts/goats /usr/local/bin/goats
 
 # Create config directories
 RUN mkdir -p /app/config /app/routes /app/dashboards /app/.versions && \
     chown -R configmgr:configmgr /app
 
 # Create wrapper script for better UX
-RUN cat > /usr/local/bin/config-manager << 'EOF'
+RUN cat <<'EOF' >/usr/local/bin/config-manager
 #!/bin/bash
 
 # GOTRS Unified Configuration Manager

@@ -52,7 +52,15 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go build -ldflags="-w -s" -a -installsuffix cgo -o goats ./cmd/goats
 
 # ============================================
-# Stage 4: Security scanner (optional, for CI/CD)
+# Stage 4: Export build artifacts
+# ============================================
+FROM scratch AS artifacts
+
+COPY --from=builder /build/goats /artifacts/goats
+COPY --from=tools /go/bin/migrate /artifacts/migrate
+
+# ============================================
+# Stage 5: Security scanner (optional, for CI/CD)
 # ============================================
 FROM builder AS security
 
@@ -65,7 +73,7 @@ RUN gosec -fmt json -out /tmp/security.json ./... || true && \
     staticcheck -f json ./... > /tmp/staticcheck.json || true
 
 # ============================================
-# Stage 5: Final minimal runtime
+# Stage 6: Final minimal runtime
 # ============================================
 FROM docker.io/alpine:3.19 AS runtime
 
@@ -94,9 +102,9 @@ ENV XDG_CACHE_HOME=/home/appuser/.cache
 USER appuser
 WORKDIR /app
 
-# Copy binaries from build stages
-COPY --from=builder --chown=appuser:appgroup /build/goats ./goats
-COPY --from=tools --chown=appuser:appgroup /go/bin/migrate ./migrate
+# Copy binaries from build artifacts
+COPY --from=artifacts --chown=appuser:appgroup /artifacts/goats ./goats
+COPY --from=artifacts --chown=appuser:appgroup /artifacts/migrate ./migrate
 
 # Copy necessary files
 COPY --chown=appuser:appgroup templates ./templates/

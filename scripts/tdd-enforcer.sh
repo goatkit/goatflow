@@ -298,7 +298,7 @@ verify_compilation() {
     local vol_mod=""
     local env_cache="-e GOCACHE=/workspace/.cache/go-build -e GOMODCACHE=/workspace/.cache/go-mod"
     local user_flag="-u $(id -u):$(id -g)"
-    local build_inner='export PATH=/usr/local/go/bin:\$PATH; export GOFLAGS=-buildvcs=false; go build ./cmd/goats'
+    local build_inner='bash scripts/internal/check_go_build.sh'
     local build_cmd
     if echo "$COMPOSE_CMD" | grep -q 'podman-compose'; then
         build_cmd="COMPOSE_PROFILES=toolbox $COMPOSE_CMD run --rm $user_flag $env_cache $vol_build $vol_mod toolbox bash -lc '$build_inner'"

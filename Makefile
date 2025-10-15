@@ -181,7 +181,7 @@ DB_HOST ?= postgres
 DB_PORT ?= 5432
 endif
 
-.PHONY: help up down logs logs-follow restart clean setup test build debug-env build-cached toolbox-build toolbox-run toolbox-exec api-call toolbox-compile toolbox-compile-api \
+.PHONY: help up down logs logs-follow restart clean setup test build build-artifacts debug-env build-cached toolbox-build toolbox-run toolbox-exec api-call toolbox-compile toolbox-compile-api \
 	toolbox-test-api toolbox-test toolbox-test-all toolbox-test-run toolbox-run-file toolbox-staticcheck test-actions-dropdown
 
 .PHONY: go-cache-info go-cache-clean
@@ -567,6 +567,8 @@ else
 	@echo "🧪 TDD workflow active - using TDD test verification..."
 	@$(MAKE) tdd-verify
 endif
+	@rm -f goats gotrs gotrs-* generator migrate server 2>/dev/null || true
+	@rm -f bin/goats bin/gotrs bin/gotrs-* bin/generator bin/migrate bin/schema-discovery 2>/dev/null || true
 
 # Debug environment detection
 debug-env:
@@ -696,7 +698,7 @@ k8s-secrets:
 	@./scripts/generate-k8s-secrets.sh
 
 # Build toolbox image
-toolbox-build:
+toolbox-build: build-artifacts
 	@printf "\n🔧 Building GOTRS toolbox container...\n"
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		echo "⚠️  compose not available; falling back to direct docker build"; \
@@ -1964,8 +1966,13 @@ scan-vulnerabilities:
 # Run all security scans
 security-scan: scan-secrets scan-vulnerabilities
 	@printf "Security scanning completed!\n"
+
+.PHONY: build-artifacts
+build-artifacts:
+	@printf "🎯 Building backend artifacts image...\n"
+	@$(CONTAINER_CMD) build --target artifacts -t gotrs-artifacts:latest .
 # Build for production (includes CSS, JS and container build)
-build: pre-build frontend-build
+build: build-artifacts pre-build frontend-build
 	@printf "🔨 Building backend container...\n" \
 		&& $(CONTAINER_CMD) build -f Dockerfile -t gotrs:latest .
 	@printf "🧹 Cleaning host binaries...\n"
@@ -2001,19 +2008,19 @@ export COMPOSE_DOCKER_CLI_BUILD=1
 endif
 
 # Build with caching (70% faster rebuilds)
-build-cached:
+build-cached: build-artifacts
 	@printf "🚀 Building backend image (cache flags disabled for podman compatibility)...\n"	$(CONTAINER_CMD) build -t gotrs:latest .
 	@$(CONTAINER_CMD) build -t gotrs:latest .
 	@printf "✅ Build complete\n"
 # Security scan build (CI/CD)
-build-secure:
+build-secure: build-artifacts
 	@printf "🔒 Building with security scanning...\n"	$(CONTAINER_CMD) build \
 		--target security \
 		--output type=local,dest=./security-reports \
 		.
 	@printf "📊 Security reports saved to ./security-reports/\n"
 # Multi-platform build (AMD64 and ARM64)
-build-multi:
+build-multi: build-artifacts
 	@printf "🌍 Building for multiple platforms...\n"	$(CONTAINER_CMD) buildx build \
 		--platform linux/amd64,linux/arm64 \
 		-t gotrs:latest .
@@ -2030,7 +2037,7 @@ analyze-size:
 	fi
 
 # Build without cache (clean build)
-build-clean:
+build-clean: build-artifacts
 	@printf "🧹 Clean build without cache...\n"	$(CONTAINER_CMD) build --no-cache -t gotrs:latest .
 	@printf "✅ Clean build complete\n"
 # Show build cache usage

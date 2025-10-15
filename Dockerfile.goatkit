@@ -2,9 +2,9 @@
 # syntax=docker/dockerfile:1
 
 # ============================================
-# Use backend as base for consistency
+# Reuse backend binaries from artifacts image
 # ============================================
-FROM gotrs:latest AS backend
+FROM gotrs-artifacts:latest AS artifacts
 
 # ============================================
 # Build GoatKit tools
@@ -43,15 +43,15 @@ RUN adduser -D -s /bin/sh -u 1000 goat
 # Copy GoatKit binary from builder
 COPY --from=goatkit-builder /usr/local/bin/gk /usr/local/bin/
 
-# Copy main goats binary from backend for consistency
-COPY --from=backend /app/goats /usr/local/bin/goats
+# Copy main goats binary from artifacts for consistency
+COPY --from=artifacts /artifacts/goats /usr/local/bin/goats
 
 # Create config directories with proper ownership
 RUN mkdir -p /app/config /app/routes /app/dashboards /app/.versions && \
     chown -R goat:goat /app
 
 # Create the GoatKit wrapper with ASCII art
-RUN cat > /usr/local/bin/goatkit << 'EOF'
+RUN cat <<'EOF' >/usr/local/bin/goatkit
 #!/bin/bash
 
 # GoatKit - YAML Configuration Management for GOTRS

@@ -66,12 +66,13 @@ case "$1" in
 
         # Build to check for syntax errors
         echo "Building server..."
-        if go build ./cmd/server; then
+        if go build -o /tmp/gotrs-server-build ./cmd/server; then
             echo "✓ Server builds successfully"
         else
             echo "✗ Build failed - check debug modifications"
             exit 1
         fi
+        rm -f /tmp/gotrs-server-build
 
         echo ""
         echo "Starting debug session..."

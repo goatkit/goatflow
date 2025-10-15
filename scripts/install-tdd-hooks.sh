@@ -97,11 +97,12 @@ fi
 
 # Run basic compilation check
 echo "Checking Go compilation..."
-if ! go build ./cmd/server >/dev/null 2>&1; then
+if ! go build -o /tmp/gotrs-server-build ./cmd/server >/dev/null 2>&1; then
     echo -e "${RED}❌ Go compilation failed${NC}"
     echo "Fix compilation errors before committing."
     exit 1
 fi
+rm -f /tmp/gotrs-server-build
 
 # Run go fmt check
 echo "Checking Go formatting..."
@@ -178,10 +179,11 @@ fi
 echo "Running quick compilation and basic tests..."
 
 # Compile check
-if ! go build ./cmd/server >/dev/null 2>&1; then
+if ! go build -o /tmp/gotrs-server-build ./cmd/server >/dev/null 2>&1; then
     echo -e "${RED}❌ Compilation failed${NC}"
     exit 1
 fi
+rm -f /tmp/gotrs-server-build
 
 # Run a subset of fast tests
 if ! go test -short -timeout 30s ./... >/dev/null 2>&1; then

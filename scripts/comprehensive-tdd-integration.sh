@@ -350,12 +350,14 @@ run_quick_verification() {
     
     # Quick compilation check
     cd "$PROJECT_ROOT"
-    if timeout 60 go build ./cmd/server > "$LOG_DIR/quick_compile.log" 2>&1; then
+    local quick_bin="/tmp/gotrs-server-build-$$"
+    if timeout 60 go build -o "$quick_bin" ./cmd/server > "$LOG_DIR/quick_compile.log" 2>&1; then
         quick_results+=("Compilation: ✅")
     else
         quick_results+=("Compilation: ❌")
         quick_success=false
     fi
+    rm -f "$quick_bin"
     
     # Quick test run (short tests only)
     if timeout 180 go test -short ./... > "$LOG_DIR/quick_tests.log" 2>&1; then

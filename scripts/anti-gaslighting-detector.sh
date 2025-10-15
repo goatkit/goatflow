@@ -285,7 +285,8 @@ check_compilation_honesty() {
     cd "$PROJECT_ROOT"
     
     # Try to compile and check for errors
-    if ! timeout 120 go build ./cmd/goats > "$LOG_DIR/compile_check.log" 2>&1; then
+    local build_artifact="/tmp/goats-build-$$"
+    if ! timeout 120 go build -o "$build_artifact" ./cmd/goats > "$LOG_DIR/compile_check.log" 2>&1; then
         local compile_errors=$(cat "$LOG_DIR/compile_check.log" | wc -l)
         gaslighting_detected "Code does not compile ($compile_errors error lines) but success might be claimed"
         # Show first few compilation errors
@@ -294,6 +295,7 @@ check_compilation_honesty() {
         done
         ((violations++))
     fi
+    rm -f "$build_artifact"
     
     return $violations
 }

@@ -1,8 +1,8 @@
 # GOTRS Toolbox - All-in-one container for development tasks
 # syntax=docker/dockerfile:1
 
-# Use the optimized backend build as base to reuse compiled binaries
-FROM localhost/gotrs-backend:latest AS backend
+# Reuse compiled binaries from dedicated artifacts image
+FROM gotrs-artifacts:latest AS artifacts
 
 # Build additional toolbox utilities
 FROM docker.io/golang:1.24.6-alpine AS toolbox-builder
@@ -68,9 +68,9 @@ WORKDIR /workspace
 RUN mkdir -p /workspace/.cache /tmp/.cache/go-build /tmp/.cache/go-mod /home/appuser/.cache/ms-playwright-go /tmp/npm-cache /home/appuser/.cache && \
     chown -R appuser:appgroup /workspace/.cache /tmp/.cache /tmp/npm-cache /workspace /home/appuser/.cache
 
-# Copy binaries from backend image
-COPY --from=backend --chown=appuser:appgroup /app/goats /usr/local/bin/goats
-COPY --from=backend --chown=appuser:appgroup /app/migrate /usr/local/bin/migrate
+# Copy binaries from artifacts image
+COPY --from=artifacts --chown=appuser:appgroup /artifacts/goats /usr/local/bin/goats
+COPY --from=artifacts --chown=appuser:appgroup /artifacts/migrate /usr/local/bin/migrate
 
 # Copy additional tools from builder
 COPY --from=toolbox-builder /usr/local/bin/gotrs* /usr/local/bin/
