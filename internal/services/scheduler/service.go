@@ -11,6 +11,7 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
@@ -21,6 +22,7 @@ const (
 
 type ticketAutoCloser interface {
 	AutoClosePendingTickets(ctx context.Context, now time.Time, transitions map[string]string, systemUserID int) (*repository.AutoCloseResult, error)
+	FindDuePendingReminders(ctx context.Context, now time.Time, limit int) ([]*models.PendingReminder, error)
 }
 
 type emailAccountLister interface {
@@ -32,20 +34,21 @@ type Handler func(context.Context, *models.ScheduledJob) error
 
 // Service coordinates scheduled job execution.
 type Service struct {
-	ticketRepo ticketAutoCloser
-	emailRepo  emailAccountLister
-	cron       *cron.Cron
-	parser     cron.Parser
-	handlers   map[string]Handler
-	entries    map[string]cron.EntryID
-	jobs       map[string]*models.ScheduledJob
-	mu         sync.RWMutex
-	handlerMu  sync.RWMutex
-	rootCtx    context.Context
-	logger     *log.Logger
-	startOnce  sync.Once
-	stopOnce   sync.Once
-	location   *time.Location
+	ticketRepo  ticketAutoCloser
+	emailRepo   emailAccountLister
+	cron        *cron.Cron
+	parser      cron.Parser
+	handlers    map[string]Handler
+	entries     map[string]cron.EntryID
+	jobs        map[string]*models.ScheduledJob
+	mu          sync.RWMutex
+	handlerMu   sync.RWMutex
+	rootCtx     context.Context
+	logger      *log.Logger
+	startOnce   sync.Once
+	stopOnce    sync.Once
+	location    *time.Location
+	reminderHub notifications.Hub
 }
 
 // NewService wires a scheduler around the shared database connection.
@@ -94,16 +97,22 @@ func NewService(db *sql.DB, opts ...Option) *Service {
 		jobs[job.Slug] = job.Clone()
 	}
 
+	hub := options.ReminderHub
+	if hub == nil {
+		hub = notifications.GetHub()
+	}
+
 	s := &Service{
-		ticketRepo: ticketRepo,
-		emailRepo:  emailRepo,
-		cron:       cronEngine,
-		parser:     parser,
-		handlers:   make(map[string]Handler),
-		entries:    make(map[string]cron.EntryID),
-		jobs:       jobs,
-		logger:     options.Logger,
-		location:   location,
+		ticketRepo:  ticketRepo,
+		emailRepo:   emailRepo,
+		cron:        cronEngine,
+		parser:      parser,
+		handlers:    make(map[string]Handler),
+		entries:     make(map[string]cron.EntryID),
+		jobs:        jobs,
+		logger:      options.Logger,
+		location:    location,
+		reminderHub: hub,
 	}
 
 	s.registerBuiltinHandlers()

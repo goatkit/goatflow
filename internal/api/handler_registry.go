@@ -55,14 +55,15 @@ func ListHandlers() []string {
 func ensureCoreHandlers() {
 	// Minimal duplication: only names used in YAML currently.
 	pairs := map[string]gin.HandlerFunc{
-		"handleLoginPage":      handleLoginPage,
-		"handleDashboard":      handleDashboard,
-		"handleTickets":        handleTickets,
-		"handleTicketDetail":   handleTicketDetail,
-		"HandleQueueDetail":    handleQueueDetail,
-		"handleNewTicket":      handleNewTicket,
-		"handleNewEmailTicket": handleNewEmailTicket,
-		"handleNewPhoneTicket": handleNewPhoneTicket,
+		"handleLoginPage":           handleLoginPage,
+		"handleDashboard":           handleDashboard,
+		"handleTickets":             handleTickets,
+		"handleTicketDetail":        handleTicketDetail,
+		"HandleQueueDetail":         handleQueueDetail,
+		"handleNewTicket":           handleNewTicket,
+		"handleNewEmailTicket":      handleNewEmailTicket,
+		"handleNewPhoneTicket":      handleNewPhoneTicket,
+		"handlePendingReminderFeed": handlePendingReminderFeed,
 		// Agent ticket creation flow (YAML expects names without db param)
 		"HandleAgentCreateTicket": func(c *gin.Context) {
 			// Use enhanced multipart-aware path

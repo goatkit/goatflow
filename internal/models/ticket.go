@@ -85,6 +85,18 @@ type Ticket struct {
 	ResponsibleUser *User          `json:"responsible_user,omitempty"`
 }
 
+type PendingReminder struct {
+	TicketID          int       `json:"ticket_id"`
+	TicketNumber      string    `json:"ticket_number"`
+	Title             string    `json:"title"`
+	QueueID           int       `json:"queue_id"`
+	QueueName         string    `json:"queue_name"`
+	PendingUntil      time.Time `json:"pending_until"`
+	ResponsibleUserID *int      `json:"responsible_user_id,omitempty"`
+	OwnerUserID       *int      `json:"owner_user_id,omitempty"`
+	StateName         string    `json:"state_name"`
+}
+
 // Article represents a message/comment within a ticket
 type Article struct {
 	ID                    int         `json:"id" db:"id"`

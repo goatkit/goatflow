@@ -7,16 +7,18 @@ import (
 	"github.com/robfig/cron/v3"
 
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 )
 
 type options struct {
-	Logger     *log.Logger
-	TicketRepo ticketAutoCloser
-	EmailRepo  emailAccountLister
-	Cron       *cron.Cron
-	Parser     cron.Parser
-	Jobs       []*models.ScheduledJob
-	Location   *time.Location
+	Logger      *log.Logger
+	TicketRepo  ticketAutoCloser
+	EmailRepo   emailAccountLister
+	Cron        *cron.Cron
+	Parser      cron.Parser
+	Jobs        []*models.ScheduledJob
+	Location    *time.Location
+	ReminderHub notifications.Hub
 }
 
 // Option applies configuration to the scheduler service.
@@ -72,5 +74,12 @@ func WithJobs(jobs []*models.ScheduledJob) Option {
 func WithLocation(loc *time.Location) Option {
 	return func(o *options) {
 		o.Location = loc
+	}
+}
+
+// WithReminderHub injects a custom reminder hub for dispatching pending reminders.
+func WithReminderHub(h notifications.Hub) Option {
+	return func(o *options) {
+		o.ReminderHub = h
 	}
 }

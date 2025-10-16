@@ -6,10 +6,12 @@ import (
 	"strings"
 
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 )
 
 func (s *Service) registerBuiltinHandlers() {
 	s.RegisterHandler("ticket.autoClose", s.handleAutoClose)
+	s.RegisterHandler("ticket.pendingReminder", s.handlePendingReminder)
 	s.RegisterHandler("email.poll", s.handleEmailPoll)
 	s.RegisterHandler("scheduler.housekeeping", s.handleHousekeeping)
 }
@@ -71,6 +73,16 @@ func (s *Service) handleHousekeeping(ctx context.Context, job *models.ScheduledJ
 func defaultJobs() []*models.ScheduledJob {
 	return []*models.ScheduledJob{
 		{
+			Name:           "Pending Reminder Notifications",
+			Slug:           "pending-reminder",
+			Handler:        "ticket.pendingReminder",
+			Schedule:       "*/1 * * * *",
+			TimeoutSeconds: 60,
+			Config: map[string]any{
+				"limit": 100,
+			},
+		},
+		{
 			Name:           "Auto-close Pending Tickets",
 			Slug:           "pending-auto-close",
 			Handler:        "ticket.autoClose",
@@ -104,6 +116,74 @@ func defaultJobs() []*models.ScheduledJob {
 				"retention_days": 30,
 			},
 		},
+	}
+}
+
+func (s *Service) handlePendingReminder(ctx context.Context, job *models.ScheduledJob) error {
+	if s.ticketRepo == nil {
+		s.logger.Printf("scheduler: ticket repository unavailable, skipping pendingReminder")
+		return nil
+	}
+	if s.reminderHub == nil {
+		s.logger.Printf("scheduler: reminder hub unavailable, skipping pendingReminder")
+		return nil
+	}
+
+	limit := intFromConfig(job.Config, "limit", 50)
+	reminders, err := s.ticketRepo.FindDuePendingReminders(ctx, s.now(), limit)
+	if err != nil {
+		return err
+	}
+	if len(reminders) == 0 {
+		return nil
+	}
+
+	dispatched := 0
+	for _, reminder := range reminders {
+		recipients := recipientsForReminder(reminder)
+		if len(recipients) == 0 {
+			continue
+		}
+		payload := convertReminder(reminder)
+		if err := s.reminderHub.Dispatch(ctx, recipients, payload); err != nil {
+			s.logger.Printf("scheduler: failed to dispatch pending reminder for ticket %s: %v", reminder.TicketNumber, err)
+			continue
+		}
+		dispatched++
+	}
+
+	if dispatched > 0 {
+		s.logger.Printf("scheduler: pending reminder dispatched %d ticket(s)", dispatched)
+	}
+	return nil
+}
+
+func recipientsForReminder(reminder *models.PendingReminder) []int {
+	if reminder == nil {
+		return nil
+	}
+	var out []int
+	if reminder.ResponsibleUserID != nil && *reminder.ResponsibleUserID > 0 {
+		out = append(out, *reminder.ResponsibleUserID)
+	}
+	if len(out) == 0 && reminder.OwnerUserID != nil && *reminder.OwnerUserID > 0 {
+		out = append(out, *reminder.OwnerUserID)
+	}
+	return out
+}
+
+func convertReminder(reminder *models.PendingReminder) notifications.PendingReminder {
+	if reminder == nil {
+		return notifications.PendingReminder{}
+	}
+	return notifications.PendingReminder{
+		TicketID:     reminder.TicketID,
+		TicketNumber: reminder.TicketNumber,
+		Title:        reminder.Title,
+		QueueID:      reminder.QueueID,
+		QueueName:    reminder.QueueName,
+		PendingUntil: reminder.PendingUntil,
+		StateName:    reminder.StateName,
 	}
 }
 

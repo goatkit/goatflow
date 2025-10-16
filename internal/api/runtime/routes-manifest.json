@@ -1,0 +1,800 @@
+{
+  "generatedAt": "2025-10-16T21:35:04.322763098Z",
+  "routes": [
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin",
+      "handler": "handleAdminDashboard",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/users",
+      "handler": "handleAdminUsers",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/users/:id",
+      "handler": "handleAdminUserGet",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/users/:id/edit",
+      "handler": "handleAdminUserEdit",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "PUT",
+      "path": "/admin/users/:id",
+      "handler": "handleAdminUserUpdate",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "DELETE",
+      "path": "/admin/users/:id",
+      "handler": "handleAdminUserDelete",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/password-policy",
+      "handler": "handleAdminPasswordPolicy",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/users/list",
+      "handler": "HandleAdminUsersList",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/groups",
+      "handler": "handleAdminGroups",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/groups/new",
+      "handler": "handleCreateGroup",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "POST",
+      "path": "/admin/groups",
+      "handler": "handleCreateGroup",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/groups/:id",
+      "handler": "handleGetGroup",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/groups/:id/edit",
+      "handler": "handleGetGroup",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "PUT",
+      "path": "/admin/groups/:id",
+      "handler": "handleUpdateGroup",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "DELETE",
+      "path": "/admin/groups/:id",
+      "handler": "handleDeleteGroup",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/groups/:id/members",
+      "handler": "handleGroupMembers",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "POST",
+      "path": "/admin/groups/:id/members",
+      "handler": "handleAddUserToGroup",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "DELETE",
+      "path": "/admin/groups/:id/members/:userId",
+      "handler": "handleRemoveUserFromGroup",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/groups/:id/users",
+      "handler": "HandleAdminGroupsUsers",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "POST",
+      "path": "/admin/groups/:id/users",
+      "handler": "HandleAdminGroupsAddUser",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "DELETE",
+      "path": "/admin/groups/:id/users/:userId",
+      "handler": "HandleAdminGroupsRemoveUser",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/queues",
+      "handler": "handleAdminQueues",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/priorities",
+      "handler": "handleAdminPriorities",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/permissions",
+      "handler": "handleAdminPermissions",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/permissions/user/:userId",
+      "handler": "handleGetUserPermissionMatrix",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "PUT",
+      "path": "/admin/permissions/user/:userId",
+      "handler": "handleUpdateUserPermissions",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/states",
+      "handler": "handleAdminStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/types",
+      "handler": "handleAdminTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/services",
+      "handler": "handleAdminServices",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/sla",
+      "handler": "handleAdminSLA",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/lookups",
+      "handler": "handleAdminLookups",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "GET",
+      "path": "/agent/tickets",
+      "handler": "handleAgentTickets",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "POST",
+      "path": "/agent/tickets/:id/reply",
+      "handler": "handleAgentTicketReply",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "POST",
+      "path": "/agent/tickets/:id/note",
+      "handler": "handleAgentTicketNote",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "POST",
+      "path": "/agent/tickets/:id/phone",
+      "handler": "handleAgentTicketPhone",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "POST",
+      "path": "/agent/tickets/:id/status",
+      "handler": "handleAgentTicketStatus",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "POST",
+      "path": "/agent/tickets/:id/assign",
+      "handler": "handleAgentTicketAssign",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "POST",
+      "path": "/agent/tickets/:id/priority",
+      "handler": "handleAgentTicketPriority",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "POST",
+      "path": "/agent/tickets/:id/queue",
+      "handler": "handleAgentTicketQueue",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "POST",
+      "path": "/agent/tickets/:id/merge",
+      "handler": "handleAgentTicketMerge",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "POST",
+      "path": "/agent/tickets/:id/split",
+      "handler": "handleAgentTicketNote",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "POST",
+      "path": "/agent/tickets/:id/draft",
+      "handler": "handleAgentTicketDraft",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "GET",
+      "path": "/agent/queues",
+      "handler": "handleAgentQueues",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "agent",
+      "method": "GET",
+      "path": "/agent/dashboard",
+      "handler": "handleAgentDashboard",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "api-aliases-protected",
+      "method": "POST",
+      "path": "/api/tickets/:id/time",
+      "handler": "handleAddTicketTime",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "api-attachments",
+      "method": "GET",
+      "path": "/api/tickets/:id/attachments",
+      "handler": "HandleGetAttachments",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "api-attachments",
+      "method": "POST",
+      "path": "/api/tickets/:id/attachments",
+      "handler": "HandleUploadAttachment",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "api-attachments",
+      "method": "GET",
+      "path": "/api/tickets/:id/attachments/:attachment_id",
+      "handler": "HandleDownloadAttachment",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "api-attachments",
+      "method": "DELETE",
+      "path": "/api/tickets/:id/attachments/:attachment_id",
+      "handler": "HandleDeleteAttachment",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "api-attachments",
+      "method": "GET",
+      "path": "/api/tickets/:id/attachments/:attachment_id/thumbnail",
+      "handler": "HandleGetThumbnail",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "api-attachments",
+      "method": "GET",
+      "path": "/api/tickets/:id/attachments/:attachment_id/view",
+      "handler": "HandleViewAttachment",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "api-notifications",
+      "method": "GET",
+      "path": "/api/notifications/pending",
+      "handler": "handlePendingReminderFeed",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "auth",
+      "method": "GET",
+      "path": "/login",
+      "handler": "handleLoginPage"
+    },
+    {
+      "group": "auth",
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "handler": "handleLogout",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "auth",
+      "method": "GET",
+      "path": "/logout",
+      "handler": "handleLogoutRedirect"
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/",
+      "handler": "handleRoot"
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/health",
+      "handler": "handleHealthCheck"
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/health/detailed",
+      "handler": "handleDetailedHealthCheck"
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/metrics",
+      "handler": "handleMetrics"
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/queues",
+      "handler": "handleQueuesRedirect",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/queues/:id",
+      "handler": "HandleQueueDetail",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/ticket/:id",
+      "handler": "handleTicketDetail",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/ticket/new",
+      "handler": "handleNewTicket",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/ticket/new/email",
+      "handler": "handleNewEmailTicket",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/ticket/new/phone",
+      "handler": "handleNewPhoneTicket",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/healthz",
+      "handler": "handleHealthCheck"
+    },
+    {
+      "group": "chat",
+      "method": "GET",
+      "path": "/ws/chat",
+      "handler": "HandleWebSocketChat",
+      "websocket": true,
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "chat",
+      "method": "GET",
+      "path": "/claude-chat-demo",
+      "handler": "handleClaudeChatDemo",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "dashboard",
+      "method": "GET",
+      "path": "/dashboard",
+      "handler": "handleDashboard",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "profile",
+      "method": "GET",
+      "path": "/profile",
+      "handler": "handleProfile",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "settings",
+      "method": "GET",
+      "path": "/settings",
+      "handler": "handleSettings",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "settings",
+      "method": "GET",
+      "path": "/api/preferences/session-timeout",
+      "handler": "HandleGetSessionTimeout",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "settings",
+      "method": "POST",
+      "path": "/api/preferences/session-timeout",
+      "handler": "HandleSetSessionTimeout",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "static",
+      "method": "GET",
+      "path": "/static/css/:filepath",
+      "handler": "handleStaticFiles"
+    },
+    {
+      "group": "static",
+      "method": "GET",
+      "path": "/static/js/:filepath",
+      "handler": "handleStaticFiles"
+    },
+    {
+      "group": "static",
+      "method": "GET",
+      "path": "/static/images/:filepath",
+      "handler": "handleStaticFiles"
+    },
+    {
+      "group": "static",
+      "method": "GET",
+      "path": "/favicon.ico",
+      "handler": "handleStaticFiles"
+    },
+    {
+      "group": "static",
+      "method": "GET",
+      "path": "/favicon.svg",
+      "handler": "handleStaticFiles"
+    },
+    {
+      "group": "static",
+      "method": "GET",
+      "path": "/static/:filepath",
+      "handler": "handleStaticFiles"
+    },
+    {
+      "group": "tickets",
+      "method": "GET",
+      "path": "/tickets",
+      "handler": "handleAgentTickets",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "tickets",
+      "method": "GET",
+      "path": "/tickets/new",
+      "handler": "HandleAgentNewTicket",
+      "middleware": [
+        "auth",
+        "auth"
+      ]
+    },
+    {
+      "group": "tickets",
+      "method": "POST",
+      "path": "/tickets",
+      "handler": "HandleAgentCreateTicket",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "tickets",
+      "method": "PUT",
+      "path": "/tickets/:id/status",
+      "handler": "handleAgentTicketStatus",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "tickets",
+      "method": "POST",
+      "path": "/tickets/:id/comments",
+      "handler": "handleAgentTicketNote",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "tickets",
+      "method": "POST",
+      "path": "/tickets/:id/attachments",
+      "handler": "handleAgentTicketReply",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "tickets",
+      "method": "GET",
+      "path": "/tickets/api/search",
+      "handler": "handleAgentSearch",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "tickets",
+      "method": "PUT",
+      "path": "/tickets/:id/priority",
+      "handler": "handleAgentTicketPriority",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "tickets",
+      "method": "PUT",
+      "path": "/tickets/:id/assign",
+      "handler": "handleAgentTicketAssign",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "tickets",
+      "method": "GET",
+      "path": "/tickets/customer-info/:login",
+      "handler": "HandleCustomerInfoPanel",
+      "middleware": [
+        "auth"
+      ]
+    }
+  ]
+}

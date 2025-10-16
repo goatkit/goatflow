@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -26,6 +27,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/ldap"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 
 	"github.com/gotrs-io/gotrs-ce/internal/service"
@@ -43,6 +45,9 @@ type TicketDisplay struct {
 	OwnerName    string
 	CustomerName string
 }
+
+const pendingAutoStateTypeID = 5
+const autoCloseNoTimeLabel = "No auto-close time scheduled"
 
 var pongo2Renderer *Pongo2Renderer
 
@@ -128,6 +133,45 @@ func selectedAttr(current, expected string) string {
 		return " selected"
 	}
 	return ""
+}
+
+func isPendingAutoState(stateName string, stateTypeID int) bool {
+	if stateTypeID == pendingAutoStateTypeID {
+		return true
+	}
+	normalized := strings.ReplaceAll(strings.ToLower(stateName), "-", " ")
+	return strings.Contains(normalized, "pending auto")
+}
+
+type autoCloseMeta struct {
+	pending  bool
+	at       string
+	relative string
+	overdue  bool
+}
+
+func computeAutoCloseMeta(ticket *models.Ticket, stateName string, stateTypeID int, now time.Time) autoCloseMeta {
+	meta := autoCloseMeta{}
+	meta.pending = isPendingAutoState(stateName, stateTypeID)
+	if ticket == nil {
+		return meta
+	}
+	if ticket.UntilTime > 0 {
+		autoCloseAt := time.Unix(int64(ticket.UntilTime), 0).UTC()
+		diff := autoCloseAt.Sub(now)
+		meta.overdue = diff < 0
+		if meta.overdue {
+			meta.relative = humanizeDuration(-diff)
+		} else {
+			meta.relative = humanizeDuration(diff)
+		}
+		meta.at = autoCloseAt.Format("2006-01-02 15:04:05 UTC")
+		return meta
+	}
+	if meta.pending {
+		meta.at = autoCloseNoTimeLabel
+	}
+	return meta
 }
 
 func hashPasswordSHA256(password string) string {
@@ -3045,29 +3089,14 @@ func handleTicketDetail(c *gin.Context) {
 			"login": responsibleLogin,
 		}
 	}
-	autoClosePending := strings.Contains(strings.ToLower(stateName), "pending auto close")
-	var autoCloseAtDisplay string
-	var autoCloseRelative string
-	autoCloseOverdue := false
-
-	if ticket.UntilTime > 0 {
-		autoCloseAt := time.Unix(int64(ticket.UntilTime), 0).UTC()
-		now := time.Now().UTC()
-		diff := autoCloseAt.Sub(now)
-		autoCloseOverdue = diff < 0
-		autoCloseRelative = humanizeDuration(diff)
-		if autoCloseOverdue {
-			autoCloseRelative = humanizeDuration(-diff)
-		}
-		autoCloseAtDisplay = autoCloseAt.Format("2006-01-02 15:04:05 UTC")
-	}
+	autoCloseMeta := computeAutoCloseMeta(ticket, stateName, stateTypeID, time.Now().UTC())
 	ticketData := gin.H{
 		"id":                 ticket.ID,
 		"tn":                 ticket.TicketNumber,
 		"subject":            ticket.Title,
 		"status":             stateName,
 		"state_type":         strings.ToLower(strings.Fields(stateName)[0]), // First word of state for badge colors
-		"auto_close_pending": autoClosePending,
+		"auto_close_pending": autoCloseMeta.pending,
 		"is_closed":          isClosed,
 		"priority":           priorityName,
 		"priority_id":        ticket.TicketPriorityID,
@@ -3111,10 +3140,10 @@ func handleTicketDetail(c *gin.Context) {
 		"status_id":                          ticket.TicketStateID,
 	}
 
-	if autoCloseAtDisplay != "" {
-		ticketData["auto_close_at"] = autoCloseAtDisplay
-		ticketData["auto_close_overdue"] = autoCloseOverdue
-		ticketData["auto_close_relative"] = autoCloseRelative
+	if autoCloseMeta.at != "" {
+		ticketData["auto_close_at"] = autoCloseMeta.at
+		ticketData["auto_close_overdue"] = autoCloseMeta.overdue
+		ticketData["auto_close_relative"] = autoCloseMeta.relative
 	}
 
 	// Customer panel (DRY: same details as ticket creation selection panel)
@@ -3659,6 +3688,80 @@ func handleNotifications(c *gin.Context) {
 	// For now, return empty list
 	notifications := []gin.H{}
 	c.JSON(http.StatusOK, gin.H{"notifications": notifications})
+}
+
+func handlePendingReminderFeed(c *gin.Context) {
+	userVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "unauthorized"})
+		return
+	}
+
+	userID := normalizeUserID(userVal)
+	if userID <= 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "unauthorized"})
+		return
+	}
+
+	hub := notifications.GetHub()
+	items := hub.Consume(userID)
+	reminders := make([]gin.H, 0, len(items))
+	for _, reminder := range items {
+		reminders = append(reminders, gin.H{
+			"ticket_id":          reminder.TicketID,
+			"ticket_number":      reminder.TicketNumber,
+			"title":              reminder.Title,
+			"queue_id":           reminder.QueueID,
+			"queue_name":         reminder.QueueName,
+			"pending_until":      reminder.PendingUntil.UTC().Format(time.RFC3339),
+			"pending_until_unix": reminder.PendingUntil.Unix(),
+			"state_name":         reminder.StateName,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"reminders": reminders,
+		},
+	})
+}
+
+func normalizeUserID(value interface{}) int {
+	switch v := value.(type) {
+	case uint:
+		return int(v)
+	case uint32:
+		return int(v)
+	case uint64:
+		if v > uint64(math.MaxInt) {
+			return 0
+		}
+		return int(v)
+	case int:
+		return v
+	case int32:
+		return int(v)
+	case int64:
+		if v > int64(math.MaxInt) || v < int64(math.MinInt) {
+			return 0
+		}
+		return int(v)
+	case float64:
+		if v > float64(math.MaxInt) || v < float64(math.MinInt) {
+			return 0
+		}
+		return int(v)
+	case string:
+		if id, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
+			return id
+		}
+	case fmt.Stringer:
+		if id, err := strconv.Atoi(strings.TrimSpace(v.String())); err == nil {
+			return id
+		}
+	}
+	return 0
 }
 
 // handleQuickActions returns quick action items
@@ -4769,55 +4872,96 @@ func handleUpdateTicketStatus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "status is required"})
 		return
 	}
-	// Accept either numeric state_id or known names
-	var stateID int
-	if v, err := strconv.Atoi(status); err == nil {
-		stateID = v
-	} else {
-		// Basic mapping (could extend to DB lookup):
-		switch strings.ToLower(status) {
-		case "new":
-			stateID = 1
-		case "open":
-			stateID = 2
-		case "closed", "closed_successful":
-			stateID = 3
-		case "closed_unsuccessful":
-			stateID = 4
-		case "pending", "pending_reminder":
-			stateID = 5
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "unknown status"})
-			return
-		}
-	}
-
 	db, err := database.GetDB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
 		return
 	}
+	if db == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
 	repo := repository.NewTicketRepository(db)
-	tid, _ := strconv.Atoi(ticketID)
 
-	if err := repo.UpdateStatus(uint(tid), uint(stateID), 1); err != nil {
+	resolvedStateID := 0
+	var resolvedState *models.TicketState
+	if id, st, rerr := resolveTicketState(repo, status, 0); rerr != nil {
+		log.Printf("handleUpdateTicketStatus: state resolution error: %v", rerr)
+		if id > 0 {
+			resolvedStateID = id
+			resolvedState = st
+		}
+	} else if id > 0 {
+		resolvedStateID = id
+		resolvedState = st
+	}
+	if resolvedStateID <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unknown status"})
+		return
+	}
+	if resolvedState == nil {
+		st, lerr := loadTicketState(repo, resolvedStateID)
+		if lerr != nil {
+			log.Printf("handleUpdateTicketStatus: load state %d failed: %v", resolvedStateID, lerr)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load state"})
+			return
+		}
+		if st == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "unknown status"})
+			return
+		}
+		resolvedState = st
+	}
+
+	pendingUnix := 0
+	if pendingUntil != "" {
+		pendingUnix = parsePendingUntil(pendingUntil)
+		if pendingUnix <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pending time format"})
+			return
+		}
+	}
+	if isPendingState(resolvedState) {
+		if pendingUnix <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "pending_until is required for pending states"})
+			return
+		}
+	} else {
+		pendingUnix = 0
+	}
+
+	tid, err := strconv.Atoi(ticketID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ticket id"})
+		return
+	}
+	userID := c.GetUint("user_id")
+	if userID == 0 {
+		userID = 1
+	}
+
+	query := database.ConvertPlaceholders(`
+		UPDATE ticket
+		SET ticket_state_id = $1,
+			until_time = $2,
+			change_time = CURRENT_TIMESTAMP,
+			change_by = $3
+		WHERE id = $4`)
+	if _, err := db.Exec(query, resolvedStateID, pendingUnix, int(userID), tid); err != nil {
+		log.Printf("handleUpdateTicketStatus: failed to update ticket %d: %v", tid, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update status"})
 		return
 	}
 
-	// If pending, set UntilTime accordingly via Update (simple path; full service could be used)
-	if stateID == 5 && pendingUntil != "" {
-		if ts, perr := time.Parse("2006-01-02T15:04", pendingUntil); perr == nil {
-			// Load ticket and update UntilTime
-			t, gerr := repo.GetByID(uint(tid))
-			if gerr == nil {
-				t.UntilTime = int(ts.Unix())
-				_ = repo.Update(t)
-			}
-		}
+	response := gin.H{
+		"message": fmt.Sprintf("Ticket %s status updated", ticketID),
+		"status":  resolvedStateID,
+	}
+	if pendingUnix > 0 {
+		response["pending_until"] = pendingUntil
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Ticket %s status updated", ticketID), "status": stateID, "pending_until": pendingUntil})
+	c.JSON(http.StatusOK, response)
 }
 
 // handleCloseTicket closes a ticket
