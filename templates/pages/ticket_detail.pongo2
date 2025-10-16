@@ -111,6 +111,27 @@ div[id^="note-content-"] table tbody tr {
     <!-- Add hidden queue ID, priority ID, and status ID for JavaScript -->
     <div data-queue-id="{{ Ticket.queue_id }}" data-priority-id="{{ Ticket.priority_id }}" data-status-id="{{ Ticket.status_id }}" style="display: none;"></div>
 
+    {% if Ticket.pending_reminder_at %}
+    <div class="mb-6">
+        <div class="rounded-md border p-4 text-sm {% if Ticket.pending_reminder_overdue %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-900 dark:text-red-100{% else %}border-blue-200 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100{% endif %}">
+            <div class="font-medium">
+                {% if Ticket.pending_reminder_overdue %}
+                    Reminder overdue
+                {% else %}
+                    Reminder scheduled
+                {% endif %}
+            </div>
+            <p class="mt-1">
+                {% if Ticket.pending_reminder_overdue %}
+                    Reminder was scheduled for <span class="font-semibold">{{ Ticket.pending_reminder_at }}</span>{% if Ticket.pending_reminder_relative %} ({{ Ticket.pending_reminder_relative }} ago){% endif %}.
+                {% else %}
+                    Ticket will re-open at <span class="font-semibold">{{ Ticket.pending_reminder_at }}</span>{% if Ticket.pending_reminder_relative %} (in {{ Ticket.pending_reminder_relative }}){% endif %}.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    {% endif %}
+
     {% if Ticket.auto_close_at %}
     <div class="mb-6">
         <div class="rounded-md border p-4 text-sm {% if Ticket.auto_close_overdue %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-900 dark:text-red-100{% else %}border-amber-200 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100{% endif %}">

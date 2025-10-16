@@ -48,6 +48,8 @@ type TicketDisplay struct {
 
 const pendingAutoStateTypeID = 5
 const autoCloseNoTimeLabel = "No auto-close time scheduled"
+const pendingReminderStateTypeID = 4
+const pendingReminderNoTimeLabel = "No reminder time scheduled"
 
 var pongo2Renderer *Pongo2Renderer
 
@@ -143,6 +145,14 @@ func isPendingAutoState(stateName string, stateTypeID int) bool {
 	return strings.Contains(normalized, "pending auto")
 }
 
+func isPendingReminderState(stateName string, stateTypeID int) bool {
+	if stateTypeID == pendingReminderStateTypeID {
+		return true
+	}
+	normalized := strings.ReplaceAll(strings.ToLower(stateName), "-", " ")
+	return strings.Contains(normalized, "pending reminder")
+}
+
 type autoCloseMeta struct {
 	pending  bool
 	at       string
@@ -170,6 +180,37 @@ func computeAutoCloseMeta(ticket *models.Ticket, stateName string, stateTypeID i
 	}
 	if meta.pending {
 		meta.at = autoCloseNoTimeLabel
+	}
+	return meta
+}
+
+type pendingReminderMeta struct {
+	pending  bool
+	at       string
+	relative string
+	overdue  bool
+}
+
+func computePendingReminderMeta(ticket *models.Ticket, stateName string, stateTypeID int, now time.Time) pendingReminderMeta {
+	meta := pendingReminderMeta{}
+	if ticket == nil {
+		return meta
+	}
+	meta.pending = isPendingReminderState(stateName, stateTypeID)
+	if ticket.UntilTime > 0 {
+		pendingAt := time.Unix(int64(ticket.UntilTime), 0).UTC()
+		diff := pendingAt.Sub(now)
+		meta.overdue = diff < 0
+		if meta.overdue {
+			meta.relative = humanizeDuration(-diff)
+		} else {
+			meta.relative = humanizeDuration(diff)
+		}
+		meta.at = pendingAt.Format("2006-01-02 15:04:05 UTC")
+		return meta
+	}
+	if meta.pending {
+		meta.at = pendingReminderNoTimeLabel
 	}
 	return meta
 }
@@ -3090,6 +3131,7 @@ func handleTicketDetail(c *gin.Context) {
 		}
 	}
 	autoCloseMeta := computeAutoCloseMeta(ticket, stateName, stateTypeID, time.Now().UTC())
+	pendingReminderMeta := computePendingReminderMeta(ticket, stateName, stateTypeID, time.Now().UTC())
 	ticketData := gin.H{
 		"id":                 ticket.ID,
 		"tn":                 ticket.TicketNumber,
@@ -3097,6 +3139,7 @@ func handleTicketDetail(c *gin.Context) {
 		"status":             stateName,
 		"state_type":         strings.ToLower(strings.Fields(stateName)[0]), // First word of state for badge colors
 		"auto_close_pending": autoCloseMeta.pending,
+		"pending_reminder":   pendingReminderMeta.pending,
 		"is_closed":          isClosed,
 		"priority":           priorityName,
 		"priority_id":        ticket.TicketPriorityID,
@@ -3140,10 +3183,17 @@ func handleTicketDetail(c *gin.Context) {
 		"status_id":                          ticket.TicketStateID,
 	}
 
-	if autoCloseMeta.at != "" {
+	if autoCloseMeta.at != "" && autoCloseMeta.pending {
 		ticketData["auto_close_at"] = autoCloseMeta.at
 		ticketData["auto_close_overdue"] = autoCloseMeta.overdue
 		ticketData["auto_close_relative"] = autoCloseMeta.relative
+	}
+	if pendingReminderMeta.at != "" && pendingReminderMeta.pending {
+		ticketData["pending_reminder_at"] = pendingReminderMeta.at
+		ticketData["pending_reminder_overdue"] = pendingReminderMeta.overdue
+		if pendingReminderMeta.relative != "" {
+			ticketData["pending_reminder_relative"] = pendingReminderMeta.relative
+		}
 	}
 
 	// Customer panel (DRY: same details as ticket creation selection panel)
