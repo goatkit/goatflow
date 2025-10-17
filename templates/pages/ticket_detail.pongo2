@@ -113,7 +113,7 @@ div[id^="note-content-"] table tbody tr {
 
     {% if Ticket.pending_reminder_at %}
     <div class="mb-6">
-        <div class="rounded-md border p-4 text-sm {% if Ticket.pending_reminder_overdue %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-900 dark:text-red-100{% else %}border-blue-200 bg-blue-50 dark:border-blue-600 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100{% endif %}">
+    <div class="rounded-md border p-4 text-sm {% if Ticket.pending_reminder_overdue %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-900 dark:text-red-100{% else %}border-blue-200 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/60 text-blue-900 dark:text-blue-50{% endif %}">
             <div class="font-medium">
                 {% if Ticket.pending_reminder_overdue %}
                     Reminder overdue
