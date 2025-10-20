@@ -284,8 +284,8 @@ gotrs-migrate --source postgres://user:pass@host/db \
 | 0.1.0 | Aug 17, 2025 | Claimed | Database schema exists |
 | 0.2.0 | Aug 24, 2025 | Claimed | Some admin UIs load |
 | 0.3.0 | Aug 27, 2025 | Claimed | Schema migrations work |
-| - | Aug 28, 2025 | **Current** | **Still no tickets!** |
-| **0.4.0** | **Sep 30, 2025** | **MVP Target** | **Basic working tickets** |
+| - | Aug 28, 2025 | Historical | Early stabilization tracking |
+| 0.4.0 | Oct 20, 2025 | Released | Preferred queue automation, coverage harness |
 
 ## 🔮 Post-MVP Roadmap (Aspirational)
 

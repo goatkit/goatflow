@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog and this project (currently) does not yet use semantic versioning; versions will be tagged once the ticket vertical slice lands.
 
 ## [Unreleased]
+
+### Added
+- _Nothing yet._
+
+### Changed
+- _Nothing yet._
+
+### Fixed
+- _Nothing yet._
+
+### Removed
+- _Nothing yet._
+
+### Breaking Changes
+- _None._
+
+### Internal / Developer Notes
+- _TBD._
+
+---
+
+## [0.4.0] - 2025-10-20
 ### Added
 - Generic GoatKit Typeahead enhancement (`goatkit-typeahead.js`): Enter/Tab auto-selects first suggestion, prevents accidental form submission, advances focus.
 - GoatKit Autocomplete module (`goatkit-autocomplete.js`): declarative data-attribute driven autocomplete (seed JSON + future remote source), ARIA roles (combobox/listbox/option), keyboard navigation, first-item auto-highlight.
@@ -146,7 +168,8 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ### Internal
 - Early refactors improving security posture and documentation consolidation.
 
-[Unreleased]: https://github.com/gotrs-io/gotrs-ce/compare/0.3.0...HEAD
+[Unreleased]: https://github.com/gotrs-io/gotrs-ce/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/gotrs-io/gotrs-ce/releases/tag/0.4.0
 [0.3.0]: https://github.com/gotrs-io/gotrs-ce/releases/tag/0.3.0
 [0.2.0]: https://github.com/gotrs-io/gotrs-ce/releases/tag/0.2.0
 [0.1.0]: https://github.com/gotrs-io/gotrs-ce/releases/tag/0.1.0
