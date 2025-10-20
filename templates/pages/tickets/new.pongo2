@@ -70,8 +70,8 @@
                         <div class="mt-2">
                             <select name="interaction_type" id="interaction_type" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
                                 <option value="email">{{ t("tickets_form.interaction.email") }} ({{ t("tickets_form.customer_visible") }})</option>
-                                <option value="phone">{{ t("tickets_form.interaction.phone") }} ({{ t("tickets_form.customer_visible") }})</option>
-                                <option value="internal_note" selected>{{ t("tickets_form.interaction.internal_note") }} ({{ t("tickets_form.private") }})</option>
+                                <option value="phone" selected>{{ t("tickets_form.interaction.phone") }} ({{ t("tickets_form.customer_visible") }})</option>
+                                <option value="internal_note">{{ t("tickets_form.interaction.internal_note") }} ({{ t("tickets_form.private") }})</option>
                                 <option value="external_note">{{ t("tickets_form.interaction.external_note") }} ({{ t("tickets_form.customer_visible") }})</option>
                             </select>
                         </div>
@@ -153,7 +153,8 @@
         "firstName": "{{ customerUser.FirstName }}",
         "lastName": "{{ customerUser.LastName }}",
         "customerId": "{{ customerUser.CustomerID|default:customerUser.CustomerId|default:"" }}",
-        "preferredQueueId": "{{ customerUser.PreferredQueueID|default:customerUser.PreferredQueueId|default:"" }}"
+        "preferredQueueId": "{{ customerUser.PreferredQueueID|default:customerUser.PreferredQueueId|default:"" }}",
+        "preferredQueueName": "{{ customerUser.PreferredQueueName|default:customerUser.PreferredQueueName|default:"" }}"
     }{% if not loop.last %},{% endif %}{% endfor %}
 ]</script>
 <!-- Handle form response and file uploads -->
@@ -280,64 +281,135 @@
     
     // Initialize Tiptap editor for body
     document.addEventListener('DOMContentLoaded', function() {
-        if (typeof window.TiptapEditor === 'undefined') {
-            console.error('TiptapEditor not loaded');
-            return;
+        if (typeof window.TiptapEditor !== 'undefined') {
+            TiptapEditor.init('bodyEditor', {
+                placeholder: `{{ t("tickets_form.body_placeholder") }}`,
+                editorMode: 'richtext', // Default to rich text, users can toggle to markdown
+                onUpdate: (content) => {
+                    document.getElementById('body').value = content;
+                }
+            });
+        } else {
+            console.warn('TiptapEditor not loaded; skipping rich text editor setup');
         }
-        
-        TiptapEditor.init('bodyEditor', {
-            placeholder: `{{ t("tickets_form.body_placeholder") }}`,
-            editorMode: 'richtext', // Default to rich text, users can toggle to markdown
-            onUpdate: (content) => {
-                document.getElementById('body').value = content;
-            }
-        });
 
         // Map customer users from seed for auto-fill behaviors
-        try {
-            var seedEl = document.querySelector('script[data-gk-seed="customer-user"]');
-            var customerSeed = JSON.parse(seedEl.textContent || '[]');
-            var customerIndex = Object.create(null);
-            customerSeed.forEach(u => { if (u && u.login) customerIndex[u.login] = u; });
-
-            // When autocomplete sets hidden target (#customer_user_id), we auto-populate customer_id and preferred queue
-            var hiddenUserInput = document.getElementById('customer_user_id');
-            var queueSelect = document.getElementById('queue_id');
-            var infoPanel = document.getElementById('customer-info-panel');
-            var userVisibleInput = document.getElementById('customer_user_input');
-            function updateCustomerBindings() {
-                var login = hiddenUserInput.value || '';
-                if (!login) { return; }
-                var u = customerIndex[login];
-                if (!u) { return; }
-                var cid = (u.customerId || '').trim();
-                if (cid) {
-                    var cidEl = document.getElementById('customer_id');
-                    if (cidEl) cidEl.value = cid;
-                }
-                // Prefer queue if provided
-                if (queueSelect && u.preferredQueueId) {
-                    var opt = Array.from(queueSelect.options).find(o => o.value === String(u.preferredQueueId));
-                    if (opt) {
-                        queueSelect.value = String(u.preferredQueueId);
+        (function setupCustomerUserGlue(){
+            try {
+                var seedEl = document.querySelector('script[data-gk-seed="customer-user"]');
+                function parseSeed(raw) {
+                    if (!raw) { return []; }
+                    var sanitized = raw.replace(/,(\s*[\]}])/g, '$1');
+                    try {
+                        return JSON.parse(sanitized);
+                    } catch (parseErr) {
+                        console.warn('Customer seed parse failed', parseErr);
+                        return [];
                     }
                 }
-                // Show compact info panel
-                if (infoPanel) {
-                    infoPanel.classList.remove('hidden');
-                    infoPanel.innerHTML = `<div class="text-sm">
-                        <div><strong>User:</strong> ${u.firstName||''} ${u.lastName||''} &lt;${u.email||''}&gt;</div>
-                        ${cid ? `<div><strong>Customer ID:</strong> ${cid}</div>` : ''}
-                        ${u.preferredQueueId ? `<div><strong>Preferred Queue:</strong> ${u.preferredQueueId}</div>` : ''}
-                    </div>`;
+
+                var customerSeed = [];
+                if (window.GoatKitSeeds && Array.isArray(window.GoatKitSeeds['customer-user'])) {
+                    customerSeed = window.GoatKitSeeds['customer-user'];
+                } else if (seedEl) {
+                    customerSeed = parseSeed(seedEl.textContent || '');
+                    if (!window.GoatKitSeeds) {
+                        window.GoatKitSeeds = {};
+                    }
+                    if (!window.GoatKitSeeds['customer-user'] && customerSeed.length) {
+                        window.GoatKitSeeds['customer-user'] = customerSeed;
+                    }
                 }
+
+                if (!customerSeed || !customerSeed.length) {
+                    return;
+                }
+
+                var customerIndex = Object.create(null);
+                customerSeed.forEach(function(u){ if (u && u.login) { customerIndex[u.login] = u; } });
+
+                var hiddenUserInput = document.getElementById('customer_user_id');
+                var queueSelect = document.getElementById('queue_id');
+                var infoPanel = document.getElementById('customer-info-panel');
+                var userVisibleInput = document.getElementById('customer_user_input');
+
+                if (!hiddenUserInput || !userVisibleInput) {
+                    return;
+                }
+
+                function applyPreferredQueue(u) {
+                    if (!u) { return; }
+                    var cid = (u.customerId || '').trim();
+                    if (cid) {
+                        var cidEl = document.getElementById('customer_id');
+                        if (cidEl) {
+                            cidEl.value = cid;
+                        }
+                    }
+                    if (queueSelect && u.preferredQueueId) {
+                        var targetValue = String(u.preferredQueueId);
+                        var option = Array.from(queueSelect.options).find(function(o){ return o.value === targetValue; });
+                        if (option) {
+                            queueSelect.value = targetValue;
+                            queueSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }
+                    if (infoPanel) {
+                        if (!u.firstName && !u.email) {
+                            infoPanel.classList.add('hidden');
+                            infoPanel.innerHTML = '';
+                            return;
+                        }
+                        infoPanel.classList.remove('hidden');
+                        infoPanel.innerHTML = '<div class="text-sm">'
+                            + '<div><strong>User:</strong> ' + (u.firstName || '') + ' ' + (u.lastName || '') + ' &lt;' + (u.email || '') + '&gt;</div>'
+                            + (cid ? '<div><strong>Customer ID:</strong> ' + cid + '</div>' : '')
+                            + (u.preferredQueueId ? '<div><strong>Preferred Queue:</strong> ' + (u.preferredQueueName ? (u.preferredQueueName + ' (#' + u.preferredQueueId + ')') : u.preferredQueueId) + '</div>' : '')
+                            + '</div>';
+                    }
+                }
+
+                function lookupAndApply(login) {
+                    if (!login) { return; }
+                    var cached = customerIndex[login];
+                    if (cached) {
+                        applyPreferredQueue(cached);
+                        return;
+                    }
+                    var discovered = customerSeed.find(function(entry){ return entry && entry.login === login; });
+                    if (discovered) {
+                        customerIndex[login] = discovered;
+                        applyPreferredQueue(discovered);
+                    }
+                }
+
+                hiddenUserInput.addEventListener('change', function(){
+                    lookupAndApply(hiddenUserInput.value);
+                });
+
+                userVisibleInput.addEventListener('change', function(){
+                    setTimeout(function(){ lookupAndApply(hiddenUserInput.value); }, 0);
+                });
+
+                userVisibleInput.addEventListener('gk:autocomplete:select', function(evt){
+                    var detail = evt && evt.detail && evt.detail.data;
+                    if (detail && detail.login) {
+                        customerIndex[detail.login] = detail;
+                    }
+                    if (detail) {
+                        applyPreferredQueue(detail);
+                    } else {
+                        lookupAndApply(hiddenUserInput.value);
+                    }
+                });
+
+                if (hiddenUserInput.value) {
+                    lookupAndApply(hiddenUserInput.value);
+                }
+            } catch (e) {
+                console.warn('Customer seed setup failed', e);
             }
-            // Autocomplete likely updates hidden target; listen for changes on hidden and visible inputs
-            hiddenUserInput.addEventListener('change', updateCustomerBindings);
-            userVisibleInput.addEventListener('change', function(){ setTimeout(updateCustomerBindings, 0); });
-        } catch (e) {
-            console.warn('Customer seed parse failed', e);
-        }
+        })();
 
         // Handle next state metadata (pending visibility + numeric ID binding)
         var nextStateSel = document.getElementById('next_state');

@@ -1,9 +1,17 @@
 // Playwright Configuration for Dynamic Module Testing
 import { defineConfig, devices } from "@playwright/test";
+import path from "path";
+import { BASE_URL } from "./tests/acceptance/base-url.js";
+
+const resultsDir = process.env.PLAYWRIGHT_RESULTS_DIR || "test-results";
+const outputDir = process.env.PLAYWRIGHT_OUTPUT_DIR || path.join(resultsDir, "artifacts");
+const htmlReportDir = process.env.PLAYWRIGHT_HTML_REPORT_DIR || "playwright-report";
 
 /**
  * @see https://playwright.dev/docs/test-configuration
  */
+const skipWebServer = !!process.env.PLAYWRIGHT_SKIP_WEBSERVER;
+
 export default defineConfig({
   testDir: "./tests/acceptance",
   /* Run tests in files in parallel */
@@ -16,14 +24,14 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
-    ["html"],
-    ["junit", { outputFile: "test-results/junit.xml" }],
-    ["json", { outputFile: "test-results/results.json" }],
+    ["html", { outputFolder: htmlReportDir }],
+    ["junit", { outputFile: path.join(resultsDir, "junit.xml") }],
+    ["json", { outputFile: path.join(resultsDir, "results.json") }],
   ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.BASE_URL || "http://localhost:8080",
+    baseURL: BASE_URL,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
@@ -77,14 +85,16 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: [
-    {
-      command: "make restart",
-      port: 8080,
-      reuseExistingServer: !process.env.CI,
-      timeout: 30000,
-    },
-  ],
+  webServer: skipWebServer
+    ? undefined
+    : [
+        {
+          command: "make restart",
+          port: 8080,
+          reuseExistingServer: !process.env.CI,
+          timeout: 30000,
+        },
+      ],
 
   /* Global test timeout */
   timeout: 30000,
@@ -95,7 +105,7 @@ export default defineConfig({
   },
 
   /* Output directories */
-  outputDir: "test-results/artifacts",
+  outputDir,
 
   /* Test metadata */
   metadata: {

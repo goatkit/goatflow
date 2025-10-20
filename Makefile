@@ -1905,6 +1905,23 @@ test-e2e-playwright-go:
 		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
 		 gotrs-playwright-go:latest bash -lc "go test -v ./tests/e2e/playwright $${ARGS}"
 
+PLAYWRIGHT_RESULTS_DIR ?= /tmp/playwright-results
+PLAYWRIGHT_OUTPUT_DIR ?= /tmp/playwright-artifacts
+PLAYWRIGHT_HTML_REPORT_DIR ?= /tmp/playwright-report
+
+.PHONY: test-acceptance-playwright
+test-acceptance-playwright: css-deps-stable playwright-build
+	@printf "Running Playwright acceptance tests...\n"
+	@$(COMPOSE_CMD) -f docker-compose.playwright.yml run --rm \
+		-e HEADLESS=$${HEADLESS:-true} \
+		-e BASE_URL=$${BASE_URL:-http://backend:8080} \
+		-e PLAYWRIGHT_SKIP_WEBSERVER=1 \
+		-e PWTEST_HTML_REPORT_OPEN=$${PWTEST_HTML_REPORT_OPEN:-never} \
+		-e PLAYWRIGHT_RESULTS_DIR=$(PLAYWRIGHT_RESULTS_DIR) \
+		-e PLAYWRIGHT_OUTPUT_DIR=$(PLAYWRIGHT_OUTPUT_DIR) \
+		-e PLAYWRIGHT_HTML_REPORT_DIR=$(PLAYWRIGHT_HTML_REPORT_DIR) \
+		playwright bash -lc "mkdir -p \"$${PLAYWRIGHT_RESULTS_DIR}\" \"$${PLAYWRIGHT_OUTPUT_DIR}\" \"$${PLAYWRIGHT_HTML_REPORT_DIR}\" && npx playwright test $$([ -n "$(TEST)" ] && printf %s "$(TEST)" || printf %s "tests/acceptance/ticket-new-queue.spec.js") --project=$${PLAYWRIGHT_PROJECT:-chromium} --reporter=list"
+
 # Run E2E tests
 test-e2e-playwright: playwright-build
 	@printf "Running E2E tests with Playwright...\n"

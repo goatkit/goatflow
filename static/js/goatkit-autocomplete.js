@@ -92,7 +92,21 @@
 		},120);
 	});
 	document.addEventListener('click',(e)=>{ if(!input.contains(e.target) && !list.contains(e.target)) closeList(list); }); }
-	function commitSelection(input,list,item){ if(!item) return; const hiddenId=input.dataset.hiddenTarget; const val=item[valueField(input)]||item.login||item.id; const display=compileTemplate(displayTemplate(input),item); input.value=display; if(hiddenId){ const hidden=document.getElementById(hiddenId); if(hidden){ hidden.value=val; hidden.dispatchEvent(new Event('change',{bubbles:true})); } } dispatch(list,'select',{value:val, display, data:item}); }
+	function commitSelection(input,list,item){
+		if(!item) return;
+		const hiddenId=input.dataset.hiddenTarget;
+		const val=item[valueField(input)]||item.login||item.id;
+		const display=compileTemplate(displayTemplate(input),item);
+		input.value=display;
+		if(hiddenId){
+			const hidden=document.getElementById(hiddenId);
+			if(hidden){
+				hidden.value=val;
+				hidden.dispatchEvent(new Event('change',{bubbles:true}));
+			}
+		}
+		dispatch(list,'select',{value:val, display, data:item});
+	}
 	async function refresh(input,state,src,localSeed){ const q=input.value.trim(); const list=ensureList(input); if(!list) return; if(q.length<minChars(input)){ closeList(list); return; } let base=[]; if(src){ base=await fetchRemote(src,q); } else if(localSeed){ base=localSeed; } else { if(DBG()) console.log('[GK-AUTO] abort refresh: no data source'); closeList(list); return; }
 	const lower=q.toLowerCase();
 	const filtered=base.filter(obj=> Object.values(obj).some(v=> typeof v==='string' && v.toLowerCase().includes(lower)) ).slice(0,maxResults(input));

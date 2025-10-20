@@ -2,6 +2,19 @@
 // Based on Tiptap Simple Editor Template - MIT Licensed
 
 let editors = {};
+let tiptapLastKeyboardNavigation = false;
+
+document.addEventListener('keydown', (evt) => {
+    if (evt.key === 'Tab') {
+        tiptapLastKeyboardNavigation = true;
+    }
+});
+
+['mousedown', 'pointerdown', 'touchstart'].forEach((type) => {
+    document.addEventListener(type, () => {
+        tiptapLastKeyboardNavigation = false;
+    }, { capture: true });
+});
 
 // Wait for DOM and Tiptap to be ready
 document.addEventListener('DOMContentLoaded', function() {
@@ -167,6 +180,11 @@ function initTiptapEditor(elementId, options = {}) {
     `;
 
     container.innerHTML = editorHtml;
+    const toolbar = container.querySelector('.tiptap-toolbar');
+    const contentElement = container.querySelector('.tiptap-content');
+    if (contentElement) {
+        contentElement.setAttribute('tabindex', '0');
+    }
 
     // Initialize Tiptap editor (using bundled Tiptap)
     if (typeof window.Tiptap === 'undefined') {
@@ -349,7 +367,38 @@ function initTiptapEditor(elementId, options = {}) {
 
     // Attach toolbar actions for edit mode
     if (config.mode === 'edit') {
-        const toolbar = container.querySelector('.tiptap-toolbar');
+        const focusEditorContent = () => {
+            if (currentMode === 'markdown' && markdownTextarea) {
+                markdownTextarea.focus();
+                return;
+            }
+            if (editor) {
+                editor.chain().focus().run();
+                const dom = editor.view && editor.view.dom;
+                if (dom && typeof dom.focus === 'function') {
+                    dom.focus();
+                }
+            } else if (contentElement) {
+                contentElement.focus();
+            }
+        };
+
+        if (toolbar && config.mode === 'edit') {
+            container.addEventListener('focusin', (evt) => {
+                if (!tiptapLastKeyboardNavigation) {
+                    return;
+                }
+                if (!toolbar.contains(evt.target)) {
+                    return;
+                }
+                if (evt.relatedTarget && container.contains(evt.relatedTarget)) {
+                    return;
+                }
+                tiptapLastKeyboardNavigation = false;
+                focusEditorContent();
+            });
+        }
+
         toolbar.addEventListener('click', (e) => {
             const btn = e.target.closest('[data-action]');
             if (!btn) return;
@@ -361,6 +410,11 @@ function initTiptapEditor(elementId, options = {}) {
                 // Mode toggle
                 case 'toggleMode':
                     toggleMode();
+                    if (currentMode === 'markdown' && markdownTextarea) {
+                        markdownTextarea.focus();
+                    } else {
+                        focusEditorContent();
+                    }
                     break;
 
                 // Text formatting - only work in rich text mode
