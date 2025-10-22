@@ -527,14 +527,20 @@ div[id^="note-content-"] table tbody tr {
     </div>
 
     <div id="tab-history" class="tab-panel hidden">
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 text-sm text-gray-600 dark:text-gray-300">
-            {{ t("tickets.history_placeholder")|default:"History view coming soon." }}
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 text-sm text-gray-600 dark:text-gray-300"
+             hx-get="/agent/tickets/{{ Ticket.id }}/history"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="text-gray-500 dark:text-gray-400">Loading history...</div>
         </div>
     </div>
 
     <div id="tab-links" class="tab-panel hidden">
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 text-sm text-gray-600 dark:text-gray-300">
-            {{ t("tickets.links_placeholder")|default:"Links view coming soon." }}
+        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 text-sm text-gray-600 dark:text-gray-300"
+             hx-get="/agent/tickets/{{ Ticket.id }}/links"
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="text-gray-500 dark:text-gray-400">Loading links...</div>
         </div>
     </div>
 </div>

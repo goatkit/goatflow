@@ -147,6 +147,13 @@ DB_PASSWORD ?= gotrs_password
 VALKEY_HOST ?= localhost
 VALKEY_PORT ?= 6388
 
+TEST_DB_DRIVER ?= postgres
+TEST_DB_HOST ?= postgres-test
+TEST_DB_PORT ?= 5433
+TEST_DB_NAME ?= gotrs_test
+TEST_DB_USER ?= gotrs_user
+TEST_DB_PASSWORD ?= gotrs_password
+
 # Macro to wrap Go commands inside toolbox container (ensures container-first dev)
 TOOLBOX_GO=$(MAKE) toolbox-exec ARGS=
 
@@ -880,8 +887,9 @@ toolbox-test-api: toolbox-build
 	@# Enforce static route policy during tests
 	@$(MAKE) generate-route-map validate-routes
 	@$(call ensure_caches)
-	@printf "📡 Starting dependencies (mariadb, valkey)...\n"
-	@$(COMPOSE_CMD) up -d mariadb valkey >/dev/null 2>&1 || true
+	@printf "📡 Starting dependencies (postgres-test, valkey)...\n"
+	@$(MAKE) test-db-up >/dev/null 2>&1 || true
+	@$(COMPOSE_CMD) up -d valkey >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
@@ -892,11 +900,15 @@ toolbox-test-api: toolbox-build
 		-e GOCACHE=/workspace/.cache/go-build \
 		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e APP_ENV=test \
+		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
-		-e DB_HOST=$(DB_HOST) -e DB_PORT=3306 \
-        -e DB_DRIVER=mariadb \
-        -e DB_NAME=otrs -e DB_USER=otrs -e DB_PASSWORD=LetClaude.1n \
+		-e DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e DB_HOST=$(TEST_DB_HOST) \
+		-e DB_PORT=$(TEST_DB_PORT) \
+		-e DB_NAME=$(TEST_DB_NAME) \
+		-e DB_USER=$(TEST_DB_USER) \
+		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\)'
 
@@ -908,8 +920,9 @@ toolbox-test:
 	@$(MAKE) generate-route-map validate-routes
 	@$(call ensure_caches)
 	@$(call cache_guard)
-	@printf "📡 Starting dependencies (mariadb, valkey)...\n"
-	@$(COMPOSE_CMD) up -d mariadb valkey >/dev/null 2>&1 || true
+	@printf "📡 Starting dependencies (postgres-test, valkey)...\n"
+	@$(MAKE) test-db-up >/dev/null 2>&1 || true
+	@$(COMPOSE_CMD) up -d valkey >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
@@ -920,11 +933,15 @@ toolbox-test:
 		-e GOCACHE=/workspace/.cache/go-build \
 		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e APP_ENV=test \
+		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
-		-e DB_HOST=$(DB_HOST) -e DB_PORT=3306 \
-        -e DB_DRIVER=mariadb \
-        -e DB_NAME=otrs -e DB_USER=otrs -e DB_PASSWORD=LetClaude.1n \
+		-e DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e DB_HOST=$(TEST_DB_HOST) \
+		-e DB_PORT=$(TEST_DB_PORT) \
+		-e DB_NAME=$(TEST_DB_NAME) \
+		-e DB_USER=$(TEST_DB_USER) \
+		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \

@@ -1,12 +1,16 @@
 package api
 
 import (
+	"context"
 	"database/sql"
+	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/history"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
@@ -24,7 +28,22 @@ func saveTimeEntry(db *sql.DB, ticketID int, articleID *int, minutes int, userID
 		CreateBy:  userID,
 		ChangeBy:  userID,
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	ticketRepo := repository.NewTicketRepository(db)
+	recorder := history.NewRecorder(ticketRepo)
+	unit := "minutes"
+	if minutes == 1 {
+		unit = "minute"
+	}
+	message := fmt.Sprintf("Logged %d %s", minutes, unit)
+	if recErr := recorder.RecordByTicketID(context.Background(), nil, ticketID, articleID, history.TypeTimeAccounting, message, userID); recErr != nil {
+		log.Printf("time accounting history insert failed: %v", recErr)
+	}
+
+	return nil
 }
 
 // isTimeUnitsRequired checks configuration (sysconfig or static config) for mandatory time entry on notes.

@@ -128,8 +128,10 @@ func main() {
 		},
 
 		// Ticket handlers
-		"handleTicketDetail": api.HandleTicketDetail,
-		"HandleQueueDetail":  api.HandleQueueDetail,
+		"handleTicketDetail":          api.HandleTicketDetail,
+		"handleTicketHistoryFragment": api.HandleTicketHistoryFragment,
+		"handleTicketLinksFragment":   api.HandleTicketLinksFragment,
+		"HandleQueueDetail":           api.HandleQueueDetail,
 		// "handleTicketCustomerUsers": api.HandleTicketCustomerUsers,
 		"handleAgentTicketDraft": api.AgentHandlerExports.HandleAgentTicketDraft,
 		// "handleArticleAttachmentDownload": api.HandleArticleAttachmentDownload,

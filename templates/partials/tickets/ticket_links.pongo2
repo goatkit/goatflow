@@ -1,0 +1,19 @@
+<div id="ticket-links-fragment">
+    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Links</h3>
+    </div>
+    <div class="p-6 text-sm text-gray-700 dark:text-gray-300">
+        {% if links %}
+            <ul class="space-y-2">
+                {% for l in links %}
+                    <li>
+                        <a href="{{ l.href }}" class="text-blue-600 hover:text-blue-700" target="_blank">{{ l.title }}</a>
+                        <div class="text-xs text-gray-500">{{ l.type }} • {{ l.note }}</div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="text-gray-500 dark:text-gray-400">No links recorded for this ticket.</div>
+        {% endif %}
+    </div>
+</div>

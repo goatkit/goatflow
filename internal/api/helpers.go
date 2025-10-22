@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	
+
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
@@ -33,6 +33,7 @@ func formatFileSize(size int64) string {
 // getUserIDFromContext gets the user ID from the gin context
 // getUserIDFromContext returns user ID from context. Kept for future admin pages.
 // Deprecated: prefer extracting from JWT middleware claims.
+//
 //nolint:unused
 func getUserIDFromContext(c *gin.Context) int {
 	// Try to get user from context
@@ -40,17 +41,17 @@ func getUserIDFromContext(c *gin.Context) int {
 	if !exists {
 		return 1 // Default to admin user
 	}
-	
+
 	// Try to cast to *models.User
 	if user, ok := userInterface.(*models.User); ok && user != nil {
 		return int(user.ID)
 	}
-	
+
 	// Try to cast to models.User
 	if user, ok := userInterface.(models.User); ok {
 		return int(user.ID)
 	}
-	
+
 	return 1 // Default to admin user
 }
 
@@ -62,14 +63,14 @@ func getUserFromContext(c *gin.Context) *models.User {
 		userID, _ := c.Get("user_id")
 		userEmail, _ := c.Get("user_email")
 		userRole, _ := c.Get("user_role")
-		
+
 		user := &models.User{
 			ID:    1,
 			Login: "admin",
 			Email: "admin@localhost",
 			Role:  "Admin", // Default role
 		}
-		
+
 		// Set values from context if available
 		if id, ok := userID.(int); ok {
 			user.ID = uint(id)
@@ -83,10 +84,10 @@ func getUserFromContext(c *gin.Context) *models.User {
 		if role, ok := userRole.(string); ok {
 			user.Role = role
 		}
-		
+
 		return user
 	}
-	
+
 	// Try to cast to *models.User
 	if user, ok := userInterface.(*models.User); ok {
 		// Also check for role in context
@@ -97,7 +98,7 @@ func getUserFromContext(c *gin.Context) *models.User {
 		}
 		return user
 	}
-	
+
 	// Try to cast to models.User
 	if user, ok := userInterface.(models.User); ok {
 		// Also check for role in context
@@ -108,14 +109,14 @@ func getUserFromContext(c *gin.Context) *models.User {
 		}
 		return &user
 	}
-	
+
 	// Return default user with role from context
 	userRole, _ := c.Get("user_role")
 	role := "Admin"
 	if r, ok := userRole.(string); ok {
 		role = r
 	}
-	
+
 	return &models.User{
 		ID:    1,
 		Login: "admin",
@@ -130,12 +131,12 @@ func sendGuruMeditation(c *gin.Context, err error, message string) {
 	if err != nil {
 		fmt.Printf("Guru Meditation: %s - Error: %v\n", message, err)
 	}
-	
+
 	// Send a user-friendly error response
 	c.JSON(http.StatusInternalServerError, gin.H{
-		"error": message,
+		"error":   message,
 		"details": err.Error(),
-		"status": "error",
+		"status":  "error",
 	})
 }
 
@@ -182,22 +183,34 @@ func loadTemplate(files ...string) (*template.Template, error) {
 		return nil, fmt.Errorf("no template files provided")
 	}
 
-    // Provide minimal functions expected by templates during tests
-    funcMap := template.FuncMap{
-        "firstLetter": func(s string) string {
-            if len(s) == 0 {
-                return ""
-            }
-            return s[:1]
-        },
-    }
+	// Provide minimal functions expected by templates during tests
+	funcMap := template.FuncMap{
+		"firstLetter": func(s string) string {
+			if len(s) == 0 {
+				return ""
+			}
+			return s[:1]
+		},
+		"L": func(key string, args ...any) string {
+			if len(args) == 0 {
+				return key
+			}
+			return fmt.Sprintf(key, args...)
+		},
+		"H": func(key string, args ...any) string {
+			if len(args) == 0 {
+				return key
+			}
+			return fmt.Sprintf(key, args...)
+		},
+	}
 
-    // Parse with func map to avoid "function not defined" errors in tests
-    tmpl := template.New("base").Funcs(funcMap)
-    var err error
-    tmpl, err = tmpl.ParseFiles(files...)
-    if err != nil {
-        return nil, err
-    }
-    return tmpl, nil
+	// Parse with func map to avoid "function not defined" errors in tests
+	tmpl := template.New("base").Funcs(funcMap)
+	var err error
+	tmpl, err = tmpl.ParseFiles(files...)
+	if err != nil {
+		return nil, err
+	}
+	return tmpl, nil
 }

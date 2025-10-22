@@ -7,13 +7,14 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
-- _Nothing yet._
+- Agent Ticket Zoom tabs now render ticket history and linked tickets via Pongo2 HTMX fragments, providing empty-state messaging until data exists.
 
 ### Changed
 - _Nothing yet._
 
 ### Fixed
-- _Nothing yet._
+- Ticket history HTMX fragment now resolves article subjects via `article_data_mime`, eliminating 500 errors on MariaDB installs.
+- Ticket links fragment works on both PostgreSQL and MySQL after duplicating the ticket ID parameter when `database.ConvertQuery` expands `$1` placeholders.
 
 ### Removed
 - _Nothing yet._

@@ -40,6 +40,8 @@
 
 **New Achievement (October 19, 2025)**: Reminder toasts are actionable end-to-end. The legacy `/api/notifications/pending` endpoint now resolves to the HTMX handler, and a matching `/api/tickets/:id/status` alias keeps snooze posts working without the `/agent` prefix. Routes manifest and regression tests cover the flow.
 
+**New Achievement (October 22, 2025)**: Ticket Zoom history and links fragments render consistently across PostgreSQL and MariaDB. History pulls article subjects from `article_data_mime`, and the links repository now duplicates placeholder parameters when `database.ConvertQuery` expands `$1` to multiple `?` tokens, preventing MariaDB-specific 500s.
+
 ### Test Stabilization Progress (Internal/API)
 - ✅ Queue API/HTMX suites pass (DB-less fallbacks for CI without DB)
 - ✅ Priority API suites pass
@@ -353,7 +355,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
-*Last updated: September 23, 2025 - Queue detail enhancement completed: added real-time statistics and enhanced ticket display with navigation. One admin module (Queues) now has verified working functionality.*
+*Last updated: October 22, 2025 - Ticket Zoom history and links fragments now render on MariaDB thanks to subject joins and placeholder duplication fixes.*
 
 ---
 

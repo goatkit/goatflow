@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
@@ -19,6 +20,14 @@ type TicketRepository struct {
 	db        *sql.DB
 	generator ticketnumber.Generator
 	store     ticketnumber.CounterStore
+
+	historyTypeCache map[string]int
+	historyMu        sync.RWMutex
+}
+
+// ExecContext represents the subset of database operations needed to insert history entries.
+type ExecContext interface {
+	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 }
 
 var defaultTicketNumberGen ticketnumber.Generator
@@ -40,7 +49,12 @@ func TicketNumberGeneratorInfo() (string, bool) {
 
 // NewTicketRepository creates a new ticket repository
 func NewTicketRepository(db *sql.DB) *TicketRepository {
-	return &TicketRepository{db: db, generator: defaultTicketNumberGen, store: defaultTicketNumberStore}
+	return &TicketRepository{
+		db:               db,
+		generator:        defaultTicketNumberGen,
+		store:            defaultTicketNumberStore,
+		historyTypeCache: make(map[string]int),
+	}
 }
 
 // QueueExists checks whether a queue with the given ID exists.
@@ -1080,4 +1094,294 @@ func (r *TicketRepository) CountClosedToday() (int, error) {
 	query = database.ConvertPlaceholders(query)
 	err := r.db.QueryRow(query).Scan(&count)
 	return count, err
+}
+
+// AddTicketHistoryEntry persists a ticket_history row for the provided ticket snapshot.
+func (r *TicketRepository) AddTicketHistoryEntry(ctx context.Context, exec ExecContext, entry models.TicketHistoryInsert) error {
+	if r == nil || r.db == nil {
+		return errors.New("ticket repository not initialized")
+	}
+	if entry.TicketID <= 0 {
+		return errors.New("ticket id required")
+	}
+	entry.HistoryType = strings.TrimSpace(entry.HistoryType)
+	if entry.HistoryType == "" {
+		return errors.New("history type required")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	historyTypeID, err := r.getHistoryTypeID(ctx, entry.HistoryType)
+	if err != nil {
+		return err
+	}
+
+	executor := exec
+	if executor == nil {
+		executor = r.db
+	}
+
+	now := entry.CreatedAt
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+
+	typeID := entry.TypeID
+	if typeID < 0 {
+		typeID = 0
+	}
+
+	var article interface{}
+	if entry.ArticleID != nil && *entry.ArticleID > 0 {
+		article = *entry.ArticleID
+	} else {
+		article = nil
+	}
+
+	query := fmt.Sprintf(`
+		INSERT INTO ticket_history (
+			name, history_type_id, ticket_id, article_id, %s, queue_id, owner_id,
+			priority_id, state_id, create_time, create_by, change_time, change_by
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+	`, database.TicketTypeColumn())
+
+	_, err = executor.ExecContext(ctx, database.ConvertPlaceholders(query),
+		entry.Name,
+		historyTypeID,
+		entry.TicketID,
+		article,
+		typeID,
+		entry.QueueID,
+		entry.OwnerID,
+		entry.PriorityID,
+		entry.StateID,
+		now,
+		entry.CreatedBy,
+		now,
+		entry.CreatedBy,
+	)
+	return err
+}
+
+func (r *TicketRepository) getHistoryTypeID(ctx context.Context, name string) (int, error) {
+	if r == nil || r.db == nil {
+		return 0, errors.New("ticket repository not initialized")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return 0, errors.New("history type name required")
+	}
+
+	r.historyMu.RLock()
+	if id, ok := r.historyTypeCache[trimmed]; ok {
+		r.historyMu.RUnlock()
+		return id, nil
+	}
+	r.historyMu.RUnlock()
+
+	query := database.ConvertPlaceholders(`SELECT id FROM ticket_history_type WHERE name = $1`)
+	var id int
+	if err := r.db.QueryRowContext(ctx, query, trimmed).Scan(&id); err != nil {
+		return 0, err
+	}
+
+	r.historyMu.Lock()
+	if r.historyTypeCache == nil {
+		r.historyTypeCache = make(map[string]int)
+	}
+	r.historyTypeCache[trimmed] = id
+	r.historyMu.Unlock()
+
+	return id, nil
+}
+
+// GetTicketHistoryEntries returns recent history entries for a ticket.
+func (r *TicketRepository) GetTicketHistoryEntries(ticketID uint, limit int) ([]models.TicketHistoryEntry, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+
+	query := `
+		SELECT
+			th.id,
+			COALESCE(tht.name, ''),
+			COALESCE(th.name, ''),
+			th.create_time,
+			COALESCE(u.login, ''),
+			COALESCE(u.first_name, ''),
+			COALESCE(u.last_name, ''),
+			COALESCE(adm.a_subject, ''),
+			COALESCE(q.name, ''),
+			COALESCE(ts.name, ''),
+			COALESCE(tp.name, '')
+		FROM ticket_history th
+		LEFT JOIN ticket_history_type tht ON tht.id = th.history_type_id
+		LEFT JOIN users u ON u.id = th.create_by
+		LEFT JOIN article a ON a.id = th.article_id
+		LEFT JOIN article_data_mime adm ON adm.article_id = a.id
+		LEFT JOIN queue q ON q.id = th.queue_id
+		LEFT JOIN ticket_state ts ON ts.id = th.state_id
+		LEFT JOIN ticket_priority tp ON tp.id = th.priority_id
+		WHERE th.ticket_id = $1
+		ORDER BY th.create_time DESC
+		LIMIT $2
+	`
+
+	rows, err := r.db.Query(database.ConvertQuery(query), ticketID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	entries := make([]models.TicketHistoryEntry, 0)
+	for rows.Next() {
+		var (
+			id       int64
+			typeName string
+			name     string
+			created  time.Time
+			login    string
+			first    string
+			last     string
+			subject  string
+			queue    string
+			state    string
+			priority string
+		)
+
+		if err := rows.Scan(&id, &typeName, &name, &created, &login, &first, &last, &subject, &queue, &state, &priority); err != nil {
+			return nil, err
+		}
+
+		entry := models.TicketHistoryEntry{
+			ID:              uint(id),
+			HistoryType:     typeName,
+			Name:            name,
+			CreatorLogin:    login,
+			CreatorFullName: strings.TrimSpace(fmt.Sprintf("%s %s", first, last)),
+			CreatedAt:       created,
+			ArticleSubject:  subject,
+			QueueName:       queue,
+			StateName:       state,
+			PriorityName:    priority,
+		}
+		entries = append(entries, entry)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return entries, nil
+}
+
+// GetTicketLinks returns linked tickets for a ticket.
+func (r *TicketRepository) GetTicketLinks(ticketID uint, limit int) ([]models.TicketLink, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	ticketKey := fmt.Sprintf("%d", ticketID)
+
+	query := `
+		SELECT
+			lr.source_key,
+			lr.target_key,
+			COALESCE(lt.name, ''),
+			COALESCE(ls.name, ''),
+			lr.create_time,
+			COALESCE(u.login, ''),
+			COALESCE(u.first_name, ''),
+			COALESCE(u.last_name, ''),
+			src.id,
+			COALESCE(src.tn, ''),
+			COALESCE(src.title, ''),
+			dst.id,
+			COALESCE(dst.tn, ''),
+			COALESCE(dst.title, '')
+		FROM link_relation lr
+		JOIN link_object src_obj ON src_obj.id = lr.source_object_id
+		JOIN link_object dst_obj ON dst_obj.id = lr.target_object_id
+		LEFT JOIN link_type lt ON lt.id = lr.type_id
+		LEFT JOIN link_state ls ON ls.id = lr.state_id
+		LEFT JOIN users u ON u.id = lr.create_by
+		LEFT JOIN ticket src ON src.id = NULLIF(lr.source_key, '')::integer
+		LEFT JOIN ticket dst ON dst.id = NULLIF(lr.target_key, '')::integer
+		WHERE (src_obj.name = 'Ticket' AND lr.source_key = $1)
+		   OR (dst_obj.name = 'Ticket' AND lr.target_key = $1)
+		ORDER BY lr.create_time DESC
+		LIMIT $2
+	`
+
+	args := []interface{}{ticketKey, limit}
+	if database.IsMySQL() {
+		args = []interface{}{ticketKey, ticketKey, limit}
+	}
+
+	rows, err := r.db.Query(database.ConvertQuery(query), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	links := make([]models.TicketLink, 0)
+	for rows.Next() {
+		var (
+			sourceKey string
+			targetKey string
+			typeName  string
+			stateName string
+			created   time.Time
+			login     string
+			first     string
+			last      string
+			srcID     sql.NullInt64
+			srcTN     string
+			srcTitle  string
+			dstID     sql.NullInt64
+			dstTN     string
+			dstTitle  string
+		)
+
+		if err := rows.Scan(&sourceKey, &targetKey, &typeName, &stateName, &created, &login, &first, &last, &srcID, &srcTN, &srcTitle, &dstID, &dstTN, &dstTitle); err != nil {
+			return nil, err
+		}
+
+		direction := "outbound"
+		relatedID := dstID
+		relatedTN := dstTN
+		relatedTitle := dstTitle
+		if sourceKey != ticketKey {
+			direction = "inbound"
+			relatedID = srcID
+			relatedTN = srcTN
+			relatedTitle = srcTitle
+		}
+
+		if !relatedID.Valid || relatedID.Int64 <= 0 {
+			continue
+		}
+
+		link := models.TicketLink{
+			RelatedTicketID:    uint(relatedID.Int64),
+			RelatedTicketTN:    relatedTN,
+			RelatedTicketTitle: relatedTitle,
+			LinkType:           typeName,
+			LinkState:          stateName,
+			Direction:          direction,
+			CreatorLogin:       login,
+			CreatorFullName:    strings.TrimSpace(fmt.Sprintf("%s %s", first, last)),
+			CreatedAt:          created,
+		}
+		links = append(links, link)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return links, nil
 }

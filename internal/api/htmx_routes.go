@@ -23,6 +23,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/history"
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/ldap"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
@@ -2906,13 +2907,14 @@ func handleTicketDetail(c *gin.Context) {
 
 	// Get database connection
 	db, err := database.GetDB()
+	var ticketRepo *repository.TicketRepository
 	if err != nil {
 		sendErrorResponse(c, http.StatusInternalServerError, "Database connection failed")
 		return
 	}
 
 	// Get ticket from repository
-	ticketRepo := repository.NewTicketRepository(db)
+	ticketRepo = repository.NewTicketRepository(db)
 	// Try ticket number first (works even if TN is numeric), then fall back to numeric ID
 	var (
 		ticket *models.Ticket
@@ -4482,6 +4484,15 @@ func handleCreateTicket(c *gin.Context) {
 		_ = saveTimeEntry(db, result.ID, nil, req.TimeUnits, createBy)
 	}
 
+	recorder := history.NewRecorder(repo)
+	msg := "Ticket created"
+	if title := strings.TrimSpace(result.Title); title != "" {
+		msg = fmt.Sprintf("Created ticket \"%s\"", title)
+	}
+	if err := recorder.Record(c.Request.Context(), nil, result, nil, history.TypeNewTicket, msg, createBy); err != nil {
+		log.Printf("history record (create) failed: %v", err)
+	}
+
 	// Return success with the actual ticket number
 	if c.GetHeader("HX-Request") == "true" {
 		// For HTMX requests, set redirect header and return success HTML
@@ -4665,7 +4676,6 @@ func handleAddTicketNote(c *gin.Context) {
 		}
 		ticketIDInt = ticket.ID
 	}
-
 	// Get current user
 	userID := 1 // Default system user
 	if userCtx, ok := c.Get("user"); ok {
@@ -4699,9 +4709,29 @@ func handleAddTicketNote(c *gin.Context) {
 		return
 	}
 
+	articleID := int(article.ID)
+	if ticket, terr := ticketRepo.GetByID(uint(ticketIDInt)); terr == nil {
+		recorder := history.NewRecorder(ticketRepo)
+		label := "Note added"
+		if noteData.Internal {
+			label = "Internal note added"
+		} else if article.IsVisibleForCustomer == 1 {
+			label = "Customer note added"
+		}
+		excerpt := history.Excerpt(noteData.Content, 140)
+		message := label
+		if excerpt != "" {
+			message = fmt.Sprintf("%s — %s", label, excerpt)
+		}
+		if err := recorder.Record(c.Request.Context(), nil, ticket, &articleID, history.TypeAddNote, message, userID); err != nil {
+			log.Printf("history record (note) failed: %v", err)
+		}
+	} else if terr != nil {
+		log.Printf("history snapshot (note) failed: %v", terr)
+	}
+
 	// Persist time accounting if provided (associate with created article)
 	if noteData.TimeUnits > 0 {
-		articleID := int(article.ID)
 		if err := saveTimeEntry(db, ticketIDInt, &articleID, noteData.TimeUnits, userID); err != nil {
 			c.Header("X-Guru-Error", "Failed to save time entry (note)")
 		}
@@ -4932,6 +4962,8 @@ func handleAssignTicket(c *gin.Context) {
 	// Get database connection
 	db, err := database.GetDB()
 
+	var repoPtr *repository.TicketRepository
+
 	// Get current user for change_by
 	changeByUserID := 1 // Default system user
 	if userCtx, ok := c.Get("user"); ok {
@@ -4941,14 +4973,20 @@ func handleAssignTicket(c *gin.Context) {
 	}
 
 	// If DB unavailable in tests, bypass DB write and return success
+	var updateErr error
 	if db != nil {
+		repoPtr = repository.NewTicketRepository(db)
+		ticketRepo = repoPtr
 		// Update the ticket's responsible_user_id
-		_, err = db.Exec(database.ConvertPlaceholders(`
-            UPDATE ticket
-            SET responsible_user_id = $1, change_time = NOW(), change_by = $2
-            WHERE id = $3
-        `), agentID, changeByUserID, ticketIDInt)
-		if err != nil {
+		_, updateErr = db.Exec(database.ConvertPlaceholders(`
+	            UPDATE ticket
+	            SET user_id = $1,
+	                responsible_user_id = $2,
+	                change_time = NOW(),
+	                change_by = $3
+	            WHERE id = $4
+	        `), agentID, agentID, changeByUserID, ticketIDInt)
+		if updateErr != nil {
 			// In tests, still return success to satisfy handler contract
 			if os.Getenv("APP_ENV") != "test" {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign ticket"})
@@ -4960,16 +4998,28 @@ func handleAssignTicket(c *gin.Context) {
 	// Get the agent's name for the response
 	var agentName string
 	if db != nil {
-		err = db.QueryRow(database.ConvertPlaceholders(`
+		nameErr := db.QueryRow(database.ConvertPlaceholders(`
             SELECT first_name || ' ' || last_name
             FROM users
             WHERE id = $1
-        `), agentID).Scan(&agentName)
-		if err != nil {
+	        `), agentID).Scan(&agentName)
+		if nameErr != nil {
 			agentName = fmt.Sprintf("Agent %d", agentID)
 		}
 	} else {
 		agentName = fmt.Sprintf("Agent %d", agentID)
+	}
+
+	if db != nil && updateErr == nil && repoPtr != nil {
+		if ticket, terr := repoPtr.GetByID(uint(ticketIDInt)); terr == nil {
+			recorder := history.NewRecorder(repoPtr)
+			msg := fmt.Sprintf("Assigned to %s", agentName)
+			if err := recorder.Record(c.Request.Context(), nil, ticket, nil, history.TypeOwnerUpdate, msg, changeByUserID); err != nil {
+				log.Printf("history record (assign) failed: %v", err)
+			}
+		} else if terr != nil {
+			log.Printf("history snapshot (assign) failed: %v", terr)
+		}
 	}
 
 	// HTMX trigger header expected by tests (include showMessage and success)
@@ -5055,6 +5105,18 @@ func handleUpdateTicketPriority(c *gin.Context) {
 		return
 	}
 
+	userID := c.GetUint("user_id")
+	if userID == 0 {
+		if userCtx, ok := c.Get("user"); ok {
+			if user, ok := userCtx.(*models.User); ok && user != nil {
+				userID = uint(user.ID)
+			}
+		}
+	}
+	if userID == 0 {
+		userID = 1
+	}
+
 	if htmxHandlerSkipDB() {
 		c.JSON(http.StatusOK, gin.H{
 			"message":     fmt.Sprintf("Ticket %s priority updated", ticketID),
@@ -5080,7 +5142,7 @@ func handleUpdateTicketPriority(c *gin.Context) {
 
 	repo := repository.NewTicketRepository(db)
 	tid, _ := strconv.Atoi(ticketID)
-	if err := repo.UpdatePriority(uint(tid), uint(pid), 1); err != nil {
+	if err := repo.UpdatePriority(uint(tid), uint(pid), userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update priority"})
 		return
 	}
@@ -5088,6 +5150,16 @@ func handleUpdateTicketPriority(c *gin.Context) {
 	resultPriority := priorityInput
 	if len(priorityFields) == 1 {
 		resultPriority = strconv.Itoa(pid)
+	}
+
+	if ticket, terr := repo.GetByID(uint(tid)); terr == nil {
+		recorder := history.NewRecorder(repo)
+		msg := fmt.Sprintf("Priority set to %s", strings.TrimSpace(resultPriority))
+		if err := recorder.Record(c.Request.Context(), nil, ticket, nil, history.TypePriorityUpdate, msg, int(userID)); err != nil {
+			log.Printf("history record (priority) failed: %v", err)
+		}
+	} else if terr != nil {
+		log.Printf("history snapshot (priority) failed: %v", terr)
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message":     fmt.Sprintf("Ticket %s priority updated", ticketID),
@@ -5111,6 +5183,18 @@ func handleUpdateTicketQueue(c *gin.Context) {
 		return
 	}
 
+	userID := c.GetUint("user_id")
+	if userID == 0 {
+		if userCtx, ok := c.Get("user"); ok {
+			if user, ok := userCtx.(*models.User); ok && user != nil {
+				userID = uint(user.ID)
+			}
+		}
+	}
+	if userID == 0 {
+		userID = 1
+	}
+
 	if htmxHandlerSkipDB() {
 		c.JSON(http.StatusOK, gin.H{
 			"message":  fmt.Sprintf("Ticket %s moved to queue %d", ticketID, qid),
@@ -5134,10 +5218,21 @@ func handleUpdateTicketQueue(c *gin.Context) {
 
 	repo := repository.NewTicketRepository(db)
 	tid, _ := strconv.Atoi(ticketID)
-	if err := repo.UpdateQueue(uint(tid), uint(qid), 1); err != nil {
+	if err := repo.UpdateQueue(uint(tid), uint(qid), userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to move queue"})
 		return
 	}
+
+	if ticket, terr := repo.GetByID(uint(tid)); terr == nil {
+		recorder := history.NewRecorder(repo)
+		msg := fmt.Sprintf("Moved to queue %d", qid)
+		if err := recorder.Record(c.Request.Context(), nil, ticket, nil, history.TypeQueueMove, msg, int(userID)); err != nil {
+			log.Printf("history record (queue move) failed: %v", err)
+		}
+	} else if terr != nil {
+		log.Printf("history snapshot (queue move) failed: %v", terr)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Ticket %s moved to queue %d", ticketID, qid), "queue_id": qid})
 }
 
@@ -5218,6 +5313,13 @@ func handleUpdateTicketStatus(c *gin.Context) {
 		userID = 1
 	}
 
+	var previousTicket *models.Ticket
+	if prev, perr := repo.GetByID(uint(tid)); perr == nil {
+		previousTicket = prev
+	} else if perr != nil {
+		log.Printf("history snapshot (status before) failed: %v", perr)
+	}
+
 	query := database.ConvertPlaceholders(`
 		UPDATE ticket
 		SET ticket_state_id = $1,
@@ -5237,6 +5339,43 @@ func handleUpdateTicketStatus(c *gin.Context) {
 	}
 	if pendingUnix > 0 {
 		response["pending_until"] = pendingUntil
+	}
+
+	if updatedTicket, terr := repo.GetByID(uint(tid)); terr == nil {
+		recorder := history.NewRecorder(repo)
+		prevStateName := ""
+		if previousTicket != nil {
+			if st, serr := loadTicketState(repo, previousTicket.TicketStateID); serr == nil && st != nil {
+				prevStateName = st.Name
+			} else if serr != nil {
+				log.Printf("history status previous state lookup failed: %v", serr)
+			} else {
+				prevStateName = fmt.Sprintf("state %d", previousTicket.TicketStateID)
+			}
+		}
+		newStateName := resolvedState.Name
+		stateMsg := history.ChangeMessage("State", prevStateName, newStateName)
+		if strings.TrimSpace(stateMsg) == "" {
+			stateMsg = fmt.Sprintf("State set to %s", newStateName)
+		}
+		if err := recorder.Record(c.Request.Context(), nil, updatedTicket, nil, history.TypeStateUpdate, stateMsg, int(userID)); err != nil {
+			log.Printf("history record (state update) failed: %v", err)
+		}
+
+		pendingMsg := ""
+		if pendingUnix > 0 {
+			pendingTime := time.Unix(int64(pendingUnix), 0).In(time.Local).Format("02 Jan 2006 15:04")
+			pendingMsg = fmt.Sprintf("Pending until %s", pendingTime)
+		} else if previousTicket != nil && previousTicket.UntilTime > 0 {
+			pendingMsg = "Pending time cleared"
+		}
+		if strings.TrimSpace(pendingMsg) != "" {
+			if err := recorder.Record(c.Request.Context(), nil, updatedTicket, nil, history.TypeSetPendingTime, pendingMsg, int(userID)); err != nil {
+				log.Printf("history record (pending time) failed: %v", err)
+			}
+		}
+	} else if terr != nil {
+		log.Printf("history snapshot (status after) failed: %v", terr)
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -5284,6 +5423,11 @@ func handleCloseTicket(c *gin.Context) {
 		ticketIDInt = ticket.ID
 	}
 
+	prevTicket, prevErr := ticketRepo.GetByID(uint(ticketIDInt))
+	if prevErr != nil {
+		log.Printf("history snapshot (close before) failed: %v", prevErr)
+	}
+
 	// Get current user
 	userID := 1 // Default system user
 	if userCtx, ok := c.Get("user"); ok {
@@ -5325,6 +5469,35 @@ func handleCloseTicket(c *gin.Context) {
 	if err = tx.Commit(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 		return
+	}
+
+	if updatedTicket, terr := ticketRepo.GetByID(uint(ticketIDInt)); terr == nil {
+		recorder := history.NewRecorder(ticketRepo)
+		prevStateName := ""
+		if prevTicket != nil {
+			if st, serr := loadTicketState(ticketRepo, prevTicket.TicketStateID); serr == nil && st != nil {
+				prevStateName = st.Name
+			} else if serr != nil {
+				log.Printf("history close previous state lookup failed: %v", serr)
+			} else {
+				prevStateName = fmt.Sprintf("state %d", prevTicket.TicketStateID)
+			}
+		}
+		newStateName := fmt.Sprintf("state %d", closeData.StateID)
+		if st, serr := loadTicketState(ticketRepo, closeData.StateID); serr == nil && st != nil {
+			newStateName = st.Name
+		} else if serr != nil {
+			log.Printf("history close new state lookup failed: %v", serr)
+		}
+		stateMsg := history.ChangeMessage("State", prevStateName, newStateName)
+		if strings.TrimSpace(stateMsg) == "" {
+			stateMsg = fmt.Sprintf("State set to %s", newStateName)
+		}
+		if err := recorder.Record(c.Request.Context(), nil, updatedTicket, nil, history.TypeStateUpdate, stateMsg, userID); err != nil {
+			log.Printf("history record (close state) failed: %v", err)
+		}
+	} else if terr != nil {
+		log.Printf("history snapshot (close after) failed: %v", terr)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -5372,10 +5545,22 @@ func handleReopenTicket(c *gin.Context) {
 		ticketIDInt = ticket.ID
 	}
 
+	prevTicket, prevErr := ticketRepo.GetByID(uint(ticketIDInt))
+	if prevErr != nil {
+		log.Printf("history snapshot (reopen before) failed: %v", prevErr)
+	}
+
 	// Default to state 2 (open) if not specified or invalid
 	targetStateID := reopenData.StateID
 	if targetStateID != 1 && targetStateID != 2 {
 		targetStateID = 2 // Default to open
+	}
+
+	userID := 1
+	if userCtx, ok := c.Get("user"); ok {
+		if user, ok := userCtx.(*models.User); ok && user.ID > 0 {
+			userID = int(user.ID)
+		}
 	}
 
 	// Update ticket state
@@ -5383,7 +5568,7 @@ func handleReopenTicket(c *gin.Context) {
 		UPDATE ticket
 		SET ticket_state_id = $1, change_time = NOW(), change_by = $2
 		WHERE id = $3
-	`), targetStateID, 1, ticketIDInt) // Using system user (1) for now
+	`), targetStateID, userID, ticketIDInt)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reopen ticket"})
@@ -5401,11 +5586,48 @@ func handleReopenTicket(c *gin.Context) {
 		INSERT INTO article (ticket_id, article_type_id, subject, body, created_time, created_by, change_time, change_by)
 		VALUES ($1, 1, $2, $3, NOW(), $4, NOW(), $4)
 	`),
-		ticketIDInt, "Ticket Reopened", reopenNote, 1) // Using system user (1) for now
+		ticketIDInt, "Ticket Reopened", reopenNote, userID)
 
 	if err != nil {
 		// Log the error but don't fail the reopen operation
 		fmt.Printf("Warning: Failed to add reopen note: %v\n", err)
+	}
+
+	if updatedTicket, terr := ticketRepo.GetByID(uint(ticketIDInt)); terr == nil {
+		recorder := history.NewRecorder(ticketRepo)
+		prevStateName := ""
+		if prevTicket != nil {
+			if st, serr := loadTicketState(ticketRepo, prevTicket.TicketStateID); serr == nil && st != nil {
+				prevStateName = st.Name
+			} else if serr != nil {
+				log.Printf("history reopen previous state lookup failed: %v", serr)
+			} else {
+				prevStateName = fmt.Sprintf("state %d", prevTicket.TicketStateID)
+			}
+		}
+		newStateName := fmt.Sprintf("state %d", targetStateID)
+		if st, serr := loadTicketState(ticketRepo, targetStateID); serr == nil && st != nil {
+			newStateName = st.Name
+		} else if serr != nil {
+			log.Printf("history reopen new state lookup failed: %v", serr)
+		}
+		stateMsg := history.ChangeMessage("State", prevStateName, newStateName)
+		if strings.TrimSpace(stateMsg) == "" {
+			stateMsg = fmt.Sprintf("State set to %s", newStateName)
+		}
+		if err := recorder.Record(c.Request.Context(), nil, updatedTicket, nil, history.TypeStateUpdate, stateMsg, userID); err != nil {
+			log.Printf("history record (reopen state) failed: %v", err)
+		}
+
+		noteExcerpt := history.Excerpt(reopenNote, 160)
+		if noteExcerpt != "" {
+			msg := fmt.Sprintf("Reopen note — %s", noteExcerpt)
+			if err := recorder.Record(c.Request.Context(), nil, updatedTicket, nil, history.TypeAddNote, msg, userID); err != nil {
+				log.Printf("history record (reopen note) failed: %v", err)
+			}
+		}
+	} else if terr != nil {
+		log.Printf("history snapshot (reopen after) failed: %v", terr)
 	}
 
 	// TODO: Implement customer notification if reopenData.NotifyCustomer is true

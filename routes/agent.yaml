@@ -83,6 +83,17 @@ spec:
       handler: handleTicketCustomerUsers
       description: "Get customer users associated with ticket"
 
+    # Ticket zoom fragments (HTMX)
+    - path: /tickets/:id/history
+      method: GET
+      handler: handleTicketHistoryFragment
+      description: "HTMX fragment: ticket history"
+
+    - path: /tickets/:id/links
+      method: GET
+      handler: handleTicketLinksFragment
+      description: "HTMX fragment: ticket links"
+
     # Save draft for ticket
     - path: /tickets/:id/draft
       method: POST

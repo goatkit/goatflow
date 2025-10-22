@@ -124,6 +124,48 @@
     <!-- Add hidden queue ID for JavaScript -->
     <div data-queue-id="{{ ticket.queue_id }}" style="display: none;"></div>
 
+    <!-- Tabs: Conversation | History | Links -->
+    <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700">
+            <nav class="flex space-x-4" aria-label="Ticket tabs">
+                <button id="tab-conversation" onclick="showTab('conversation')" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded">Conversation</button>
+                <button id="tab-history" hx-get="/agent/tickets/{{ ticket.id }}/history" hx-target="#tab-panel" hx-swap="innerHTML" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 rounded">History</button>
+                <button id="tab-links" hx-get="/agent/tickets/{{ ticket.id }}/links" hx-target="#tab-panel" hx-swap="innerHTML" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 rounded">Links</button>
+            </nav>
+        </div>
+        <div id="tab-panel">
+            <!-- Default: Conversation content remains (articles) -->
+            <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                {% for article in articles %}
+                <div class="p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ article.from_name|first|upper }}</span>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-medium text-gray-900 dark:text-white">{{ article.from_name }}</h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ article.create_time }}</p>
+                            </div>
+                            <div class="mt-2 max-w-none article-content">
+                                {% if '<p' in article.body or '<div' in article.body or '<table' in article.body or '<br' in article.body or '<ul' in article.body or '<ol' in article.body or '<h1' in article.body or '<h2' in article.body or '<h3' in article.body %}
+                                    <div data-article-body class="prose prose-sm dark:prose-invert text-sm text-gray-800 dark:text-gray-200">{{ article.body|safe }}</div>
+                                {% else %}
+                                    <div data-article-body class="whitespace-pre-wrap break-words font-mono text-sm text-gray-800 dark:text-gray-200">{{ article.body }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="p-6 text-center text-gray-500 dark:text-gray-400">No articles yet</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
     {% if ticket.pending_reminder_at %}
     <div class="mb-6">
     <div class="rounded-md border p-4 text-sm {% if ticket.pending_reminder_overdue %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-900 dark:text-red-100{% else %}border-blue-200 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/60 text-blue-900 dark:text-blue-50{% endif %}">
