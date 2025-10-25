@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-    "strconv"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -20,36 +20,36 @@ func TestGroupAssignmentNotPersisting(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	
+
 	// Setup route for user update
 	router.PUT("/admin/users/:id", HandleAdminUserUpdate)
-	
+
 	// Get database connection
-    if err := database.InitTestDB(); err != nil {
-        t.Skip("Database not available, skipping integration test")
-    }
-    db, _ := database.GetDB()
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available, skipping integration test")
+	}
+	db, _ := database.GetDB()
 
 	t.Run("FAILING: Group assignment should persist to database but doesn't", func(t *testing.T) {
-		// ARRANGE: Get Robbie's current groups to ensure test state
+		// ARRANGE: Get the seeded test agent's current groups to ensure test state
 		var currentGroups []string
 		groupQuery := `
 			SELECT g.name 
 			FROM groups g 
 			JOIN group_user gu ON g.id = gu.group_id 
 			WHERE gu.user_id = 15 AND g.valid_id = 1`
-		
+
 		rows, err := db.Query(groupQuery)
 		require.NoError(t, err)
 		defer rows.Close()
-		
+
 		for rows.Next() {
 			var groupName string
 			err := rows.Scan(&groupName)
 			require.NoError(t, err)
 			currentGroups = append(currentGroups, groupName)
 		}
-		
+
 		// ARRANGE: Prepare update request with testgroup group added (if not already present)
 		targetGroups := append(currentGroups, "testgroup")
 		// Remove duplicates
@@ -61,50 +61,50 @@ func TestGroupAssignmentNotPersisting(t *testing.T) {
 				seen[group] = true
 			}
 		}
-		
+
 		updateRequest := map[string]interface{}{
 			"login":      "testuser",
-			"first_name": "Robbie", 
-			"last_name":  "Nadden",
+			"first_name": "Test",
+			"last_name":  "Agent",
 			"valid_id":   1,
 			"groups":     uniqueGroups,
 		}
-		
+
 		jsonData, err := json.Marshal(updateRequest)
 		require.NoError(t, err)
-		
+
 		// ACT: Send update request
 		req, _ := http.NewRequest("PUT", "/admin/users/15", bytes.NewBuffer(jsonData))
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		
+
 		// ASSERT: Request should succeed
 		assert.Equal(t, http.StatusOK, w.Code, "Update request should succeed")
-		
+
 		var response map[string]interface{}
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
-		
+
 		assert.True(t, response["success"].(bool), "Response should indicate success")
-		
+
 		// ASSERT: Groups should actually be persisted in database
 		var actualGroups []string
 		rows2, err := db.Query(groupQuery)
 		require.NoError(t, err)
 		defer rows2.Close()
-		
+
 		for rows2.Next() {
 			var groupName string
 			err := rows2.Scan(&groupName)
 			require.NoError(t, err)
 			actualGroups = append(actualGroups, groupName)
 		}
-		
+
 		// THIS IS WHERE THE BUG MANIFESTS: Groups are not actually saved
 		assert.Contains(t, actualGroups, "testgroup", "FAILING: testgroup group should be persisted in database but isn't")
-		
+
 		// Additional verification: All requested groups should be present
 		for _, expectedGroup := range uniqueGroups {
 			assert.Contains(t, actualGroups, expectedGroup, "Group %s should be persisted", expectedGroup)
@@ -116,78 +116,78 @@ func TestGroupAssignmentNotPersisting(t *testing.T) {
 func TestXlatsNotWorking(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	
+
 	// Setup route for getting user details (which should include translated fields)
 	router.GET("/admin/users/:id", HandleAdminUserGet)
 
 	t.Run("FAILING: User data should include translated xlats but doesn't", func(t *testing.T) {
-		// ACT: Get user data 
+		// ACT: Get user data
 		req, _ := http.NewRequest("GET", "/admin/users/15", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		
+
 		// ASSERT: Response should include xlat information
 		assert.Equal(t, http.StatusOK, w.Code)
-		
+
 		var response map[string]interface{}
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
-		
+
 		assert.True(t, response["success"].(bool))
-		
+
 		data, ok := response["data"].(map[string]interface{})
 		require.True(t, ok, "Response should contain data object")
-		
+
 		// THIS SHOULD FAIL: No xlat/translation support in current implementation
 		_, hasXlats := data["xlats"]
 		assert.True(t, hasXlats, "FAILING: User data should include xlat translations")
-		
+
 		// Check for specific xlat fields that should be translated
 		_, hasValidIDXlat := data["valid_id_xlat"]
 		assert.True(t, hasValidIDXlat, "FAILING: Should have translated valid_id status")
 	})
 }
 
-// TestNoWayToRemoveUserFromAllGroups tests Bug #3: Missing functionality to remove user from all groups  
+// TestNoWayToRemoveUserFromAllGroups tests Bug #3: Missing functionality to remove user from all groups
 func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	
+
 	router.PUT("/admin/users/:id", HandleAdminUserUpdate)
-	
-    // Get database connection
-    if err := database.InitTestDB(); err != nil {
-        t.Skip("Database not available, skipping integration test")
-    }
-    db, _ := database.GetDB()
-    if db == nil {
-        t.Skip("Database not available, skipping integration test")
-    }
+
+	// Get database connection
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available, skipping integration test")
+	}
+	db, _ := database.GetDB()
+	if db == nil {
+		t.Skip("Database not available, skipping integration test")
+	}
 
 	t.Run("FAILING: Should support removing user from all groups but doesn't", func(t *testing.T) {
-        // ARRANGE: Ensure a test user and Support group exist
-        // Create or find Support group
-        _, _ = db.Exec(database.ConvertPlaceholders(`
+		// ARRANGE: Ensure a test user and Support group exist
+		// Create or find Support group
+		_, _ = db.Exec(database.ConvertPlaceholders(`
             INSERT INTO groups (name, comments, valid_id, create_by, change_by)
             SELECT 'Support', 'Support group', 1, 1, 1
             WHERE NOT EXISTS (SELECT 1 FROM groups WHERE name = 'Support')`))
 
-        // Create test user
-        login := "bugtest_remove_all_groups@example.com"
-        _, _ = db.Exec(database.ConvertPlaceholders(`
+		// Create test user
+		login := "bugtest_remove_all_groups@example.com"
+		_, _ = db.Exec(database.ConvertPlaceholders(`
             INSERT INTO users (login, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
             SELECT $1, 'Bug', 'User', 1, NOW(), 1, NOW(), 1
             WHERE NOT EXISTS (SELECT 1 FROM users WHERE login = $1)`), login)
 
-        var testUserID int
-        err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM users WHERE login = $1"), login).Scan(&testUserID)
-        if err != nil {
-            t.Skipf("Database not seeded or users table missing; skipping integration test: %v", err)
-        }
+		var testUserID int
+		err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM users WHERE login = $1"), login).Scan(&testUserID)
+		if err != nil {
+			t.Skipf("Database not seeded or users table missing; skipping integration test: %v", err)
+		}
 
-        // Ensure user has at least one group assignment
-        // Cross-DB compatible upsert: insert only if not exists
-        _, err = db.Exec(database.ConvertPlaceholders(`
+		// Ensure user has at least one group assignment
+		// Cross-DB compatible upsert: insert only if not exists
+		_, err = db.Exec(database.ConvertPlaceholders(`
             INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
             SELECT $1, g.id, 'rw', NOW(), 1, NOW(), 1
             FROM groups g 
@@ -196,94 +196,94 @@ func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
                 SELECT 1 FROM group_user gu 
                 WHERE gu.user_id = $1 AND gu.group_id = g.id AND gu.permission_key = 'rw'
               )`), testUserID)
-        if err != nil {
-            t.Skipf("Support group missing; skipping integration test: %v", err)
-        }
-        
-        // Verify user has groups
-        var groupCount int
-        err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM group_user WHERE user_id = $1"), testUserID).Scan(&groupCount)
-        if err != nil {
-            t.Skipf("Database not seeded; skipping integration test (count query failed): %v", err)
-        }
+		if err != nil {
+			t.Skipf("Support group missing; skipping integration test: %v", err)
+		}
+
+		// Verify user has groups
+		var groupCount int
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM group_user WHERE user_id = $1"), testUserID).Scan(&groupCount)
+		if err != nil {
+			t.Skipf("Database not seeded; skipping integration test (count query failed): %v", err)
+		}
 		require.Greater(t, groupCount, 0, "User should have at least one group for this test")
-		
+
 		// ACT: Send update with empty groups array to remove all groups
 		updateRequest := map[string]interface{}{
 			"login":      "testuser",
-			"first_name": "Robbie",
-			"last_name":  "Nadden", 
+			"first_name": "Test",
+			"last_name":  "Agent",
 			"valid_id":   1,
 			"groups":     []string{}, // Empty array should remove all groups
 		}
-		
+
 		jsonData, err := json.Marshal(updateRequest)
 		require.NoError(t, err)
-		
-        req, _ := http.NewRequest("PUT", "/admin/users/"+strconv.Itoa(testUserID), bytes.NewBuffer(jsonData))
+
+		req, _ := http.NewRequest("PUT", "/admin/users/"+strconv.Itoa(testUserID), bytes.NewBuffer(jsonData))
 		req.Header.Set("Content-Type", "application/json")
-		
+
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		
+
 		// ASSERT: Request should succeed
 		assert.Equal(t, http.StatusOK, w.Code, "Update request should succeed")
-		
+
 		var response map[string]interface{}
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 		assert.True(t, response["success"].(bool), "Response should indicate success")
-		
+
 		// ASSERT: User should have no groups after update
-        var finalGroupCount int
-        err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM group_user WHERE user_id = $1"), testUserID).Scan(&finalGroupCount)
+		var finalGroupCount int
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM group_user WHERE user_id = $1"), testUserID).Scan(&finalGroupCount)
 		require.NoError(t, err)
-		
+
 		assert.Equal(t, 0, finalGroupCount, "FAILING: User should have 0 groups after sending empty groups array")
 	})
 }
 
 // TestUserWorkflowEndToEnd tests the complete user edit workflow that the user reported failing
 func TestUserWorkflowEndToEnd(t *testing.T) {
-	gin.SetMode(gin.TestMode) 
+	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	
+
 	// Setup both GET and PUT routes
 	router.GET("/admin/users/:id", HandleAdminUserGet)
 	router.PUT("/admin/users/:id", HandleAdminUserUpdate)
-	
-    // Get database connection
-    if err := database.InitTestDB(); err != nil {
-        t.Skip("Database not available, skipping integration test")
-    }
-    db, _ := database.GetDB()
-    if db == nil {
-        t.Skip("Database not available, skipping integration test")
-    }
+
+	// Get database connection
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available, skipping integration test")
+	}
+	db, _ := database.GetDB()
+	if db == nil {
+		t.Skip("Database not available, skipping integration test")
+	}
 
 	t.Run("FAILING: Complete edit workflow should persist group changes", func(t *testing.T) {
-        // ARRANGE: Get initial user state (simulates loading edit dialog)
-        req1, _ := http.NewRequest("GET", "/admin/users/15", nil)
-        w1 := httptest.NewRecorder()
-        router.ServeHTTP(w1, req1)
-        
-        if w1.Code != http.StatusOK {
-            t.Skipf("Database not seeded with user 15; skipping workflow test (status %d)", w1.Code)
-        }
-		
+		// ARRANGE: Get initial user state (simulates loading edit dialog)
+		req1, _ := http.NewRequest("GET", "/admin/users/15", nil)
+		w1 := httptest.NewRecorder()
+		router.ServeHTTP(w1, req1)
+
+		if w1.Code != http.StatusOK {
+			t.Skipf("Database not seeded with user 15; skipping workflow test (status %d)", w1.Code)
+		}
+
 		var getUserResponse map[string]interface{}
 		err := json.Unmarshal(w1.Body.Bytes(), &getUserResponse)
 		require.NoError(t, err)
-		
+
 		userData := getUserResponse["data"].(map[string]interface{})
 		currentGroups := userData["groups"].([]interface{})
-		
+
 		// Convert to string slice for easier manipulation
 		currentGroupNames := make([]string, len(currentGroups))
 		for i, group := range currentGroups {
 			currentGroupNames[i] = group.(string)
 		}
-		
+
 		// ARRANGE: Add testgroup to groups if not already present (simulates user clicking testgroup checkbox)
 		updatedGroups := append(currentGroupNames, "testgroup")
 		uniqueGroups := make([]string, 0)
@@ -294,7 +294,7 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 				seen[group] = true
 			}
 		}
-		
+
 		// ACT: Submit the form update (simulates user clicking save)
 		updateRequest := map[string]interface{}{
 			"login":      userData["login"],
@@ -303,19 +303,19 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 			"valid_id":   userData["valid_id"],
 			"groups":     uniqueGroups,
 		}
-		
+
 		jsonData, err := json.Marshal(updateRequest)
 		require.NoError(t, err)
-		
+
 		req2, _ := http.NewRequest("PUT", "/admin/users/15", bytes.NewBuffer(jsonData))
 		req2.Header.Set("Content-Type", "application/json")
-		
+
 		w2 := httptest.NewRecorder()
 		router.ServeHTTP(w2, req2)
-		
+
 		// ASSERT: Update should succeed
 		assert.Equal(t, http.StatusOK, w2.Code, "Update request should succeed")
-		
+
 		// ASSERT: Verify changes are actually persisted by querying database directly
 		var dbGroups []string
 		groupQuery := `
@@ -324,21 +324,21 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 			JOIN group_user gu ON g.id = gu.group_id 
 			WHERE gu.user_id = 15 AND g.valid_id = 1
 			ORDER BY g.name`
-		
+
 		rows, err := db.Query(groupQuery)
 		require.NoError(t, err)
 		defer rows.Close()
-		
+
 		for rows.Next() {
 			var groupName string
 			err := rows.Scan(&groupName)
 			require.NoError(t, err)
 			dbGroups = append(dbGroups, groupName)
 		}
-		
+
 		// THIS IS THE MAIN BUG: User clicked testgroup and saved, but it's not in database
 		assert.Contains(t, dbGroups, "testgroup", "FAILING: testgroup group should be saved to database after user workflow")
-		
+
 		// ARRANGE: Now test removing the group (simulates unchecking checkbox)
 		finalGroups := make([]string, 0)
 		for _, group := range uniqueGroups {
@@ -346,7 +346,7 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 				finalGroups = append(finalGroups, group)
 			}
 		}
-		
+
 		removeRequest := map[string]interface{}{
 			"login":      userData["login"],
 			"first_name": userData["first_name"],
@@ -354,31 +354,31 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 			"valid_id":   userData["valid_id"],
 			"groups":     finalGroups,
 		}
-		
+
 		jsonData2, err := json.Marshal(removeRequest)
 		require.NoError(t, err)
-		
+
 		req3, _ := http.NewRequest("PUT", "/admin/users/15", bytes.NewBuffer(jsonData2))
 		req3.Header.Set("Content-Type", "application/json")
-		
+
 		w3 := httptest.NewRecorder()
 		router.ServeHTTP(w3, req3)
-		
+
 		assert.Equal(t, http.StatusOK, w3.Code)
-		
+
 		// ASSERT: testgroup group should now be removed
 		var dbGroupsAfterRemoval []string
 		rows2, err := db.Query(groupQuery)
 		require.NoError(t, err)
 		defer rows2.Close()
-		
+
 		for rows2.Next() {
 			var groupName string
 			err := rows2.Scan(&groupName)
 			require.NoError(t, err)
 			dbGroupsAfterRemoval = append(dbGroupsAfterRemoval, groupName)
 		}
-		
+
 		assert.NotContains(t, dbGroupsAfterRemoval, "testgroup", "testgroup group should be removed when unchecked")
 	})
 }
@@ -387,26 +387,26 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 func TestFormDataBindingIssues(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	
+
 	router.PUT("/admin/users/:id", HandleAdminUserUpdate)
 
 	t.Run("Should handle form-encoded group data", func(t *testing.T) {
 		// Test with form data (how HTMX might send it)
-		formData := "login=testuser&first_name=Robbie&last_name=Nadden&valid_id=1&groups=admin&groups=testgroup"
-		
+		formData := "login=testuser&first_name=Test&last_name=Agent&valid_id=1&groups=admin&groups=testgroup"
+
 		req, _ := http.NewRequest("PUT", "/admin/users/15", strings.NewReader(formData))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		
+
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		
+
 		assert.Equal(t, http.StatusOK, w.Code)
-		
+
 		// Check if groups were processed correctly
 		var response map[string]interface{}
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
-		
+
 		assert.True(t, response["success"].(bool), "Form data should be processed successfully")
 	})
 }

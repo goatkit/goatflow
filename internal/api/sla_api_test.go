@@ -7,26 +7,26 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
-    "time"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSLAAPI(t *testing.T) {
-    // Initialize test database; skip if unavailable
-    if err := database.InitTestDB(); err != nil {
-        t.Skip("Database not available, skipping SLA API tests")
-    }
-    defer database.CloseTestDB()
+	// Initialize test database; skip if unavailable
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available, skipping SLA API tests")
+	}
+	defer database.CloseTestDB()
 
 	// Create test JWT manager
-    jwtManager := auth.NewJWTManager("test-secret", time.Hour)
+	jwtManager := auth.NewJWTManager("test-secret", time.Hour)
 
 	// Create test token
-    token, _ := jwtManager.GenerateToken(1, "testuser@example.com", "Agent", 0)
+	token, _ := jwtManager.GenerateToken(1, "testuser@example.com", "Agent", 0)
 
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
@@ -40,17 +40,17 @@ func TestSLAAPI(t *testing.T) {
 		router.GET("/api/v1/slas", HandleListSLAsAPI)
 
 		// Create test SLAs
-        db, err := database.GetDB()
-        if err != nil || db == nil {
-            t.Skip("Database not available, skipping integration test")
-        }
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			t.Skip("Database not available, skipping integration test")
+		}
 		slaQuery := database.ConvertPlaceholders(`
-			INSERT INTO sla (name, calendar_id, first_response_time, first_response_notify,
+			INSERT INTO sla (name, calendar_name, first_response_time, first_response_notify,
 				update_time, update_notify, solution_time, solution_notify,
 				valid_id, create_time, create_by, change_time, change_by)
 			VALUES 
-				($1, 1, 60, 50, 120, 100, 480, 400, 1, NOW(), 1, NOW(), 1),
-				($2, 1, 30, 25, 60, 50, 240, 200, 1, NOW(), 1, NOW(), 1)
+				($1, NULL, 60, 50, 120, 100, 480, 400, 1, NOW(), 1, NOW(), 1),
+				($2, NULL, 30, 25, 60, 50, 240, 200, 1, NOW(), 1, NOW(), 1)
 		`)
 		db.Exec(slaQuery, "Premium SLA", "Standard SLA")
 
@@ -65,12 +65,12 @@ func TestSLAAPI(t *testing.T) {
 
 		var response struct {
 			SLAs []struct {
-				ID                 int    `json:"id"`
-				Name               string `json:"name"`
-				FirstResponseTime  int    `json:"first_response_time"`
-				UpdateTime         int    `json:"update_time"`
-				SolutionTime       int    `json:"solution_time"`
-				ValidID            int    `json:"valid_id"`
+				ID                int    `json:"id"`
+				Name              string `json:"name"`
+				FirstResponseTime int    `json:"first_response_time"`
+				UpdateTime        int    `json:"update_time"`
+				SolutionTime      int    `json:"solution_time"`
+				ValidID           int    `json:"valid_id"`
 			} `json:"slas"`
 			Total int `json:"total"`
 		}
@@ -101,16 +101,16 @@ func TestSLAAPI(t *testing.T) {
 		router.GET("/api/v1/slas/:id", HandleGetSLAAPI)
 
 		// Create a test SLA first
-        db, err := database.GetDB()
-        if err != nil || db == nil {
-            t.Skip("Database not available, skipping integration test")
-        }
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			t.Skip("Database not available, skipping integration test")
+		}
 		var slaID int
 		query := database.ConvertPlaceholders(`
-			INSERT INTO sla (name, calendar_id, first_response_time, first_response_notify,
+			INSERT INTO sla (name, calendar_name, first_response_time, first_response_notify,
 				update_time, update_notify, solution_time, solution_notify,
 				valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, 120, 100, 240, 200, 960, 800, 1, NOW(), 1, NOW(), 1)
+			VALUES ($1, NULL, 120, 100, 240, 200, 960, 800, 1, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
 		db.QueryRow(query, "Test SLA").Scan(&slaID)
@@ -159,7 +159,7 @@ func TestSLAAPI(t *testing.T) {
 		// Test creating SLA
 		payload := map[string]interface{}{
 			"name":                  "New SLA",
-			"calendar_id":           1,
+			"calendar_name":         "Default",
 			"first_response_time":   90,
 			"first_response_notify": 75,
 			"update_time":           180,
@@ -212,25 +212,25 @@ func TestSLAAPI(t *testing.T) {
 		router.PUT("/api/v1/slas/:id", HandleUpdateSLAAPI)
 
 		// Create a test SLA
-        db, err := database.GetDB()
-        if err != nil || db == nil {
-            t.Skip("Database not available, skipping integration test")
-        }
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			t.Skip("Database not available, skipping integration test")
+		}
 		var slaID int
 		query := database.ConvertPlaceholders(`
-			INSERT INTO sla (name, calendar_id, first_response_time, first_response_notify,
+			INSERT INTO sla (name, calendar_name, first_response_time, first_response_notify,
 				update_time, update_notify, solution_time, solution_notify,
 				valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, 60, 50, 120, 100, 480, 400, 1, NOW(), 1, NOW(), 1)
+			VALUES ($1, NULL, 60, 50, 120, 100, 480, 400, 1, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
 		db.QueryRow(query, "Update Test SLA").Scan(&slaID)
 
 		// Test updating SLA
 		payload := map[string]interface{}{
-			"name":               "Updated SLA Name",
+			"name":                "Updated SLA Name",
 			"first_response_time": 45,
-			"solution_time":      360,
+			"solution_time":       360,
 		}
 		body, _ := json.Marshal(payload)
 
@@ -275,16 +275,16 @@ func TestSLAAPI(t *testing.T) {
 		router.DELETE("/api/v1/slas/:id", HandleDeleteSLAAPI)
 
 		// Create a test SLA
-        db, err := database.GetDB()
-        if err != nil || db == nil {
-            t.Skip("Database not available, skipping integration test")
-        }
+		db, err := database.GetDB()
+		if err != nil || db == nil {
+			t.Skip("Database not available, skipping integration test")
+		}
 		var slaID int
 		query := database.ConvertPlaceholders(`
-			INSERT INTO sla (name, calendar_id, first_response_time, first_response_notify,
+			INSERT INTO sla (name, calendar_name, first_response_time, first_response_notify,
 				update_time, update_notify, solution_time, solution_notify,
 				valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, 60, 50, 120, 100, 480, 400, 1, NOW(), 1, NOW(), 1)
+			VALUES ($1, NULL, 60, 50, 120, 100, 480, 400, 1, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
 		db.QueryRow(query, "Delete Test SLA").Scan(&slaID)
@@ -328,10 +328,10 @@ func TestSLAAPI(t *testing.T) {
 		db, _ := database.GetDB()
 		var slaID int
 		query := database.ConvertPlaceholders(`
-			INSERT INTO sla (name, calendar_id, first_response_time, first_response_notify,
+			INSERT INTO sla (name, calendar_name, first_response_time, first_response_notify,
 				update_time, update_notify, solution_time, solution_notify,
 				valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, 60, 50, 120, 100, 480, 400, 1, NOW(), 1, NOW(), 1)
+			VALUES ($1, NULL, 60, 50, 120, 100, 480, 400, 1, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
 		db.QueryRow(query, "Metrics Test SLA").Scan(&slaID)

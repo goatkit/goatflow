@@ -58,10 +58,10 @@ func allowPriorityFixture() bool {
 
 func priorityFixture() []gin.H {
 	return []gin.H{
-		{"id": 1, "name": "1 very low", "color": "#ffffcc", "valid_id": 1},
-		{"id": 2, "name": "2 low", "color": "#ffcccc", "valid_id": 1},
-		{"id": 3, "name": "3 normal", "color": "#dfdfdf", "valid_id": 1},
+		{"id": 1, "name": "1 very low", "color": "#03c4f0", "valid_id": 1},
+		{"id": 2, "name": "2 low", "color": "#83bfc8", "valid_id": 1},
+		{"id": 3, "name": "3 normal", "color": "#cdcdcd", "valid_id": 1},
 		{"id": 4, "name": "4 high", "color": "#ffaaaa", "valid_id": 1},
-		{"id": 5, "name": "5 very high", "color": "#ff0000", "valid_id": 1},
+		{"id": 5, "name": "5 very high", "color": "#ff505e", "valid_id": 1},
 	}
 }

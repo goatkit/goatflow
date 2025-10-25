@@ -336,7 +336,7 @@ func GetDirectDB() *sql.DB {
 	host := getEnvOrDefault("DB_HOST", "localhost")
 	port := getEnvAsIntOrDefault("DB_PORT", 3306)
 	user := getEnvOrDefault("DB_USER", "otrs")
-	password := getEnvOrDefault("DB_PASSWORD", "LetClaude.1n")
+	password := getEnvOrDefault("DB_PASSWORD", "CHANGEME")
 	database := getEnvOrDefault("DB_NAME", "otrs")
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&multiStatements=true",

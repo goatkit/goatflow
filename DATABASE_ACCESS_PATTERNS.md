@@ -121,7 +121,7 @@ func IsMySQL() bool {
 DB_DRIVER=mysql
 DB_HOST=mysql
 DB_USER=otrs
-DB_PASSWORD=LetClaude.1n
+DB_PASSWORD=CHANGEME
 DB_NAME=otrs
 DB_PORT=3306
 

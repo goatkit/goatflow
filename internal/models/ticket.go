@@ -23,6 +23,7 @@ type TicketPriority struct {
 	ID         uint      `json:"id" db:"id"`
 	Name       string    `json:"name" db:"name"`
 	ValidID    int       `json:"valid_id" db:"valid_id"`
+	Color      string    `json:"color" db:"color"`
 	CreateTime time.Time `json:"create_time" db:"create_time"`
 	CreateBy   uint      `json:"create_by" db:"create_by"`
 	ChangeTime time.Time `json:"change_time" db:"change_time"`

@@ -7,26 +7,26 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
-    "time"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPriorityAPI(t *testing.T) {
 	// Initialize test database
-    if err := database.InitTestDB(); err != nil {
-        t.Skip("Database not available; skipping priority API test")
-    }
-    defer database.CloseTestDB()
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available; skipping priority API test")
+	}
+	defer database.CloseTestDB()
 
 	// Create test JWT manager
-    jwtManager := auth.NewJWTManager("test-secret", time.Hour)
+	jwtManager := auth.NewJWTManager("test-secret", time.Hour)
 
 	// Create test token
-    token, _ := jwtManager.GenerateToken(1, "testuser@example.com", "Agent", 0)
+	token, _ := jwtManager.GenerateToken(1, "testuser@example.com", "Agent", 0)
 
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
@@ -47,18 +47,27 @@ func TestPriorityAPI(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
+		var deleteResp struct {
+			Success bool   `json:"success"`
+			Message string `json:"message"`
+		}
+		json.Unmarshal(w.Body.Bytes(), &deleteResp)
+		assert.True(t, deleteResp.Success)
+		assert.Equal(t, "Priority deleted successfully", deleteResp.Message)
 
 		var response struct {
-			Priorities []struct {
+			Success bool `json:"success"`
+			Data    []struct {
 				ID      int    `json:"id"`
 				Name    string `json:"name"`
+				Color   string `json:"color"`
 				ValidID int    `json:"valid_id"`
-			} `json:"priorities"`
-			Total int `json:"total"`
+			} `json:"data"`
+			Error string `json:"error"`
 		}
 		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.NotEmpty(t, response.Priorities)
-		assert.Greater(t, response.Total, 0)
+		assert.True(t, response.Success)
+		assert.NotEmpty(t, response.Data)
 
 		// Test with valid filter
 		req = httptest.NewRequest("GET", "/api/v1/priorities?valid=true", nil)
@@ -69,7 +78,7 @@ func TestPriorityAPI(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		json.Unmarshal(w.Body.Bytes(), &response)
-		for _, priority := range response.Priorities {
+		for _, priority := range response.Data {
 			assert.Equal(t, 1, priority.ValidID)
 		}
 	})
@@ -86,11 +95,11 @@ func TestPriorityAPI(t *testing.T) {
 		db, _ := database.GetDB()
 		var priorityID int
 		query := database.ConvertPlaceholders(`
-			INSERT INTO ticket_priority (name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, NOW(), 1, NOW(), 1)
+			INSERT INTO ticket_priority (name, valid_id, color, create_time, create_by, change_time, change_by)
+			VALUES ($1, 1, $2, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
-		db.QueryRow(query, "Test Priority").Scan(&priorityID)
+		db.QueryRow(query, "Test Priority", "#123456").Scan(&priorityID)
 
 		// Test getting the priority
 		req := httptest.NewRequest("GET", "/api/v1/priorities/"+strconv.Itoa(priorityID), nil)
@@ -104,11 +113,13 @@ func TestPriorityAPI(t *testing.T) {
 		var priority struct {
 			ID      int    `json:"id"`
 			Name    string `json:"name"`
+			Color   string `json:"color"`
 			ValidID int    `json:"valid_id"`
 		}
 		json.Unmarshal(w.Body.Bytes(), &priority)
 		assert.Equal(t, priorityID, priority.ID)
 		assert.Equal(t, "Test Priority", priority.Name)
+		assert.Equal(t, "#123456", priority.Color)
 
 		// Test non-existent priority
 		req = httptest.NewRequest("GET", "/api/v1/priorities/99999", nil)
@@ -144,14 +155,21 @@ func TestPriorityAPI(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, w.Code)
 
 		var response struct {
-			ID      int    `json:"id"`
-			Name    string `json:"name"`
-			ValidID int    `json:"valid_id"`
+			Success bool `json:"success"`
+			Data    struct {
+				ID      int    `json:"id"`
+				Name    string `json:"name"`
+				Color   string `json:"color"`
+				ValidID int    `json:"valid_id"`
+			} `json:"data"`
+			Error string `json:"error"`
 		}
 		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.NotZero(t, response.ID)
-		assert.Equal(t, "New Priority", response.Name)
-		assert.Equal(t, 1, response.ValidID)
+		assert.True(t, response.Success)
+		assert.NotZero(t, response.Data.ID)
+		assert.Equal(t, "New Priority", response.Data.Name)
+		assert.Equal(t, "#cdcdcd", response.Data.Color)
+		assert.Equal(t, 1, response.Data.ValidID)
 
 		// Test duplicate name
 		req = httptest.NewRequest("POST", "/api/v1/priorities", bytes.NewBuffer(body))
@@ -176,15 +194,16 @@ func TestPriorityAPI(t *testing.T) {
 		db, _ := database.GetDB()
 		var priorityID int
 		query := database.ConvertPlaceholders(`
-			INSERT INTO ticket_priority (name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, NOW(), 1, NOW(), 1)
+			INSERT INTO ticket_priority (name, valid_id, color, create_time, create_by, change_time, change_by)
+			VALUES ($1, 1, $2, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
-		db.QueryRow(query, "Update Test Priority").Scan(&priorityID)
+		db.QueryRow(query, "Update Test Priority", "#abcdef").Scan(&priorityID)
 
 		// Test updating priority
 		payload := map[string]interface{}{
-			"name": "Updated Priority Name",
+			"name":  "Updated Priority Name",
+			"color": "#83bfc8",
 		}
 		body, _ := json.Marshal(payload)
 
@@ -198,13 +217,20 @@ func TestPriorityAPI(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		var response struct {
-			ID      int    `json:"id"`
-			Name    string `json:"name"`
-			ValidID int    `json:"valid_id"`
+			Success bool `json:"success"`
+			Data    struct {
+				ID      int    `json:"id"`
+				Name    string `json:"name"`
+				Color   string `json:"color"`
+				ValidID int    `json:"valid_id"`
+			} `json:"data"`
+			Error string `json:"error"`
 		}
 		json.Unmarshal(w.Body.Bytes(), &response)
-		assert.Equal(t, priorityID, response.ID)
-		assert.Equal(t, "Updated Priority Name", response.Name)
+		assert.True(t, response.Success)
+		assert.Equal(t, priorityID, response.Data.ID)
+		assert.Equal(t, "Updated Priority Name", response.Data.Name)
+		assert.Equal(t, "#83bfc8", response.Data.Color)
 
 		// Test updating non-existent priority
 		req = httptest.NewRequest("PUT", "/api/v1/priorities/99999", bytes.NewBuffer(body))
@@ -229,11 +255,11 @@ func TestPriorityAPI(t *testing.T) {
 		db, _ := database.GetDB()
 		var priorityID int
 		query := database.ConvertPlaceholders(`
-			INSERT INTO ticket_priority (name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, NOW(), 1, NOW(), 1)
+			INSERT INTO ticket_priority (name, valid_id, color, create_time, create_by, change_time, change_by)
+			VALUES ($1, 1, $2, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
-		db.QueryRow(query, "Delete Test Priority").Scan(&priorityID)
+		db.QueryRow(query, "Delete Test Priority", "#654321").Scan(&priorityID)
 
 		// Test soft deleting priority
 		req := httptest.NewRequest("DELETE", "/api/v1/priorities/"+strconv.Itoa(priorityID), nil)

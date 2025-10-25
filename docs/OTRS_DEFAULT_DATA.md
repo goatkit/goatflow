@@ -85,7 +85,7 @@ This document lists all default data that is included in GoTRS migrations to mat
 - admin, stats, users (plus queue-specific groups)
 
 **Default Admin User**
-- root@localhost (password should be changed immediately)
+- root@localhost (created disabled; set a password via `make reset-password` or `make synthesize`)
 
 ### Templates & Configuration (000022)
 

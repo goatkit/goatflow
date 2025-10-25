@@ -3,10 +3,11 @@
 
 BEGIN;
 
--- Admin user (password: admin)
--- Password hash for 'admin': SHA256 hash
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Admin user placeholder (disabled until password reset). Generate a random hash to avoid static secrets in source.
 INSERT INTO users (id, login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by) VALUES
-(1, 'admin@localhost', '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', 'System', 'Administrator', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+(1, 'root@localhost', encode(digest(gen_random_bytes(32), 'sha256'), 'hex'), 'System', 'Administrator', 2, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 ON CONFLICT (id) DO NOTHING;
 
 -- Grant admin permissions

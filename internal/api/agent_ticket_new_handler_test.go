@@ -27,8 +27,8 @@ func TestGetCustomerUsersForAgentReturnsPreferredQueue(t *testing.T) {
     `)
 	mock.ExpectQuery(regexp.QuoteMeta(userQuery)).
 		WillReturnRows(sqlmock.NewRows([]string{"login", "email", "first_name", "last_name", "customer_id"}).
-			AddRow("john.customer", "john@example.com", "John", "Customer", "COMP1").
-			AddRow("jane.customer", "jane@example.com", "Jane", "Customer", "COMP2"))
+			AddRow("john.customer", "john.customer@example.test", "Test", "Customer Alpha", "COMP1").
+			AddRow("jane.customer", "jane.customer@example.test", "Test", "Customer Beta", "COMP2"))
 
 	queueQuery := fmt.Sprintf(`
         SELECT gc.customer_id, q.id, q.name, gc.permission_key

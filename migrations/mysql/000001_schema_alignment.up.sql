@@ -882,6 +882,10 @@ CREATE TABLE `groups` (
   KEY `FK_groups_change_by_id` (`change_by`),
   KEY `FK_groups_valid_id_id` (`valid_id`),
   CONSTRAINT `FK_groups_change_by_id` FOREIGN KEY (`change_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `FK_groups_create_by_id` FOREIGN KEY (`create_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `FK_groups_valid_id_id` FOREIGN KEY (`valid_id`) REFERENCES `valid` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
+
 CREATE TABLE `permission_groups` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(200) NOT NULL,
@@ -892,12 +896,14 @@ CREATE TABLE `permission_groups` (
   `change_time` datetime NOT NULL,
   `change_by` int(11) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `groups_name` (`name`)
+  UNIQUE KEY `permission_groups_name` (`name`),
+  KEY `FK_permission_groups_create_by_id` (`create_by`),
+  KEY `FK_permission_groups_change_by_id` (`change_by`),
+  KEY `FK_permission_groups_valid_id_id` (`valid_id`),
+  CONSTRAINT `FK_permission_groups_change_by_id` FOREIGN KEY (`change_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `FK_permission_groups_create_by_id` FOREIGN KEY (`create_by`) REFERENCES `users` (`id`),
+  CONSTRAINT `FK_permission_groups_valid_id_id` FOREIGN KEY (`valid_id`) REFERENCES `valid` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
-  CONSTRAINT `FK_groups_create_by_id` FOREIGN KEY (`create_by`) REFERENCES `users` (`id`),
-  CONSTRAINT `FK_groups_valid_id_id` FOREIGN KEY (`valid_id`) REFERENCES `valid` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8;
 
 CREATE TABLE `link_object` (
   `id` smallint(6) NOT NULL AUTO_INCREMENT,
@@ -2000,6 +2006,7 @@ CREATE TABLE `ticket_priority` (
   `id` smallint(6) NOT NULL AUTO_INCREMENT,
   `name` varchar(200) NOT NULL,
   `valid_id` smallint(6) NOT NULL,
+  `color` varchar(25) NOT NULL,
   `create_time` datetime NOT NULL,
   `create_by` int(11) NOT NULL,
   `change_time` datetime NOT NULL,

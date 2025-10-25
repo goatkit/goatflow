@@ -37,12 +37,12 @@ func init() {
 
 func ensureTestEnvironment() {
 	setDefaultEnv("APP_ENV", "test")
-	setDefaultEnv("DB_DRIVER", "postgres")
-	setDefaultEnv("DB_HOST", "postgres-test")
-	setDefaultEnv("DB_PORT", "5432")
-	setDefaultEnv("DB_NAME", "gotrs_test")
-	setDefaultEnv("DB_USER", "gotrs_user")
-	setDefaultEnv("DB_PASSWORD", "gotrs_password")
+	setDefaultEnv("DB_DRIVER", "mysql")
+	setDefaultEnv("DB_HOST", "127.0.0.1")
+	setDefaultEnv("DB_PORT", "3308")
+	setDefaultEnv("DB_NAME", "otrs_test")
+	setDefaultEnv("DB_USER", "otrs")
+	setDefaultEnv("DB_PASSWORD", "CHANGEME")
 }
 
 func waitForTestDatabase(timeout time.Duration) error {
@@ -193,7 +193,7 @@ func resolveHost(host string) string {
 	}
 
 	switch strings.ToLower(host) {
-	case "mariadb", "mysql", "postgres", "postgres-test", "valkey", "redis", "mailhog":
+	case "mariadb", "mysql", "mariadb-test", "postgres", "postgres-test", "valkey", "redis", "mailhog":
 		return "127.0.0.1"
 	case "host.docker.internal", "host.containers.internal":
 		return "127.0.0.1"

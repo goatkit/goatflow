@@ -21,8 +21,37 @@ services:
       - ./migrations/postgres:/docker-entrypoint-initdb.d/migrations:ro,Z
       - ./schema/baseline/required_lookups.sql:/docker-entrypoint-initdb.d/30-required-lookups.sql:ro,Z
       - ./schema/seed/minimal.sql:/docker-entrypoint-initdb.d/40-minimal-seed.sql:ro,Z
+      - ./schema/seed/test_integration.sql:/docker-entrypoint-initdb.d/50-test-integration.sql:ro,Z
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-gotrs} -d ${TEST_DB_NAME:-${DB_NAME:-gotrs}_test}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - gotrs-network
+
+  mariadb-test:
+    image: docker.io/mariadb:11
+    container_name: gotrs-mariadb-test
+    user: "999:999"
+    environment:
+      MARIADB_DATABASE: ${TEST_DB_NAME:-${DB_NAME:-otrs_test}}
+      MARIADB_USER: ${TEST_DB_USER:-${DB_USER:-otrs}}
+      MARIADB_PASSWORD: ${TEST_DB_PASSWORD:-${DB_PASSWORD:-CHANGEME}}
+      MARIADB_ROOT_PASSWORD: ${TEST_DB_ROOT_PASSWORD:-LetClaudeRoot.1n}
+      MARIADB_HOST: localhost
+    expose:
+      - "3306"
+    ports:
+      - "${TEST_DB_MYSQL_PORT:-3308}:3306"
+    tmpfs:
+      - /var/lib/mysql:rw,size=512m,uid=999,gid=999
+    volumes:
+      - ./docker/mariadb/testdb/10-apply-migrations.sh:/docker-entrypoint-initdb.d/10-apply-migrations.sh:ro,Z
+      - ./migrations/mysql:/docker-entrypoint-initdb.d/migrations:ro,Z
+      - ./schema/seed/test_integration_mysql.sql:/docker-entrypoint-initdb.d/50-test-integration.sql:ro,Z
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin --ssl=0 ping -h 127.0.0.1 -u ${TEST_DB_USER:-${DB_USER:-otrs}} -p${TEST_DB_PASSWORD:-${DB_PASSWORD:-CHANGEME}}" ]
       interval: 5s
       timeout: 5s
       retries: 10

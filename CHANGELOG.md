@@ -8,6 +8,7 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 
 ### Added
 - Agent Ticket Zoom tabs now render ticket history and linked tickets via Pongo2 HTMX fragments, providing empty-state messaging until data exists.
+- MySQL test container now applies the same integration fixtures as PostgreSQL, so API suites run identically across drivers.
 
 ### Changed
 - _Nothing yet._

@@ -91,11 +91,11 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 				   ts.name as state,
 				   tp.name as priority,
 				   CASE 
-				       WHEN tp.name LIKE '%very low%' THEN '#0066cc'
-				       WHEN tp.name LIKE '%low%' THEN '#0099ff'
-				       WHEN tp.name LIKE '%normal%' THEN '#00cc00'
-				       WHEN tp.name LIKE '%high%' THEN '#ff9900'
-				       WHEN tp.name LIKE '%very high%' THEN '#ff0000'
+				       WHEN tp.name LIKE '%very low%' THEN '#03c4f0'
+				       WHEN tp.name LIKE '%low%' THEN '#83bfc8'
+				       WHEN tp.name LIKE '%normal%' THEN '#cdcdcd'
+				       WHEN tp.name LIKE '%high%' THEN '#ffaaaa'
+				       WHEN tp.name LIKE '%very high%' THEN '#ff505e'
 				       ELSE '#666666'
 				   END as priority_color,
 				   t.create_time,
@@ -191,11 +191,11 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 				   ts.name as state,
 				   tp.name as priority,
 				   CASE 
-				       WHEN tp.name LIKE '%very low%' THEN '#0066cc'
-				       WHEN tp.name LIKE '%low%' THEN '#0099ff'
-				       WHEN tp.name LIKE '%normal%' THEN '#00cc00'
-				       WHEN tp.name LIKE '%high%' THEN '#ff9900'
-				       WHEN tp.name LIKE '%very high%' THEN '#ff0000'
+				       WHEN tp.name LIKE '%very low%' THEN '#03c4f0'
+				       WHEN tp.name LIKE '%low%' THEN '#83bfc8'
+				       WHEN tp.name LIKE '%normal%' THEN '#cdcdcd'
+				       WHEN tp.name LIKE '%high%' THEN '#ffaaaa'
+				       WHEN tp.name LIKE '%very high%' THEN '#ff505e'
 				       ELSE '#666666'
 				   END as priority_color,
 				   s.name as service,
@@ -460,14 +460,14 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			SELECT t.id, t.tn, t.title,
 			       ts.name as state, ts.id as state_id,
 			       tp.name as priority, 
-			       CASE 
-			           WHEN tp.name LIKE '%very low%' THEN '#0066cc'
-			           WHEN tp.name LIKE '%low%' THEN '#0099ff'
-			           WHEN tp.name LIKE '%normal%' THEN '#00cc00'
-			           WHEN tp.name LIKE '%high%' THEN '#ff9900'
-			           WHEN tp.name LIKE '%very high%' THEN '#ff0000'
-			           ELSE '#666666'
-			       END as priority_color,
+				   CASE 
+				       WHEN tp.name LIKE '%very low%' THEN '#03c4f0'
+				       WHEN tp.name LIKE '%low%' THEN '#83bfc8'
+				       WHEN tp.name LIKE '%normal%' THEN '#cdcdcd'
+				       WHEN tp.name LIKE '%high%' THEN '#ffaaaa'
+				       WHEN tp.name LIKE '%very high%' THEN '#ff505e'
+				       ELSE '#666666'
+				   END as priority_color,
 			       s.name as service,
 			       q.name as queue,
 			       ou.login as owner,

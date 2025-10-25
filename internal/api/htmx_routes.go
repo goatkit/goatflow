@@ -1826,7 +1826,7 @@ func buildTicketStatusOptions(db *sql.DB) ([]gin.H, bool) {
 		SELECT ts.id, ts.name, tst.id AS type_id, tst.name AS type_name
 		FROM ticket_state ts
 		JOIN ticket_state_type tst ON ts.type_id = tst.id
-		WHERE ts.valid_id = 1 AND tst.valid_id = 1
+		WHERE ts.valid_id = 1
 		ORDER BY ts.name
 	`
 	rows, err := db.Query(database.ConvertPlaceholders(query))

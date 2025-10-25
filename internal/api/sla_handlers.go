@@ -1,8 +1,10 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
@@ -18,16 +20,16 @@ func HandleListSLAsAPI(c *gin.Context) {
 	}
 	_ = userID
 
-    db, err := database.GetDB()
-    if err != nil || db == nil {
-        // DB-less fallback: return empty list
-        c.JSON(http.StatusOK, gin.H{"slas": []gin.H{}, "total": 0})
-        return
-    }
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		// DB-less fallback: return empty list
+		c.JSON(http.StatusOK, gin.H{"slas": []gin.H{}, "total": 0})
+		return
+	}
 
 	// Build query
 	query := database.ConvertPlaceholders(`
-		SELECT id, name, calendar_id, 
+		SELECT id, name, calendar_name,
 			first_response_time, first_response_notify,
 			update_time, update_notify,
 			solution_time, solution_notify,
@@ -57,20 +59,20 @@ func HandleListSLAsAPI(c *gin.Context) {
 	slas := []gin.H{}
 	for rows.Next() {
 		var sla struct {
-			ID                   int
-			Name                 string
-			CalendarID           int
-			FirstResponseTime    int
-			FirstResponseNotify  int
-			UpdateTime           int
-			UpdateNotify         int
-			SolutionTime         int
-			SolutionNotify       int
-			ValidID              int
+			ID                  int
+			Name                string
+			CalendarName        sql.NullString
+			FirstResponseTime   int
+			FirstResponseNotify int
+			UpdateTime          int
+			UpdateNotify        int
+			SolutionTime        int
+			SolutionNotify      int
+			ValidID             int
 		}
-		
+
 		err := rows.Scan(
-			&sla.ID, &sla.Name, &sla.CalendarID,
+			&sla.ID, &sla.Name, &sla.CalendarName,
 			&sla.FirstResponseTime, &sla.FirstResponseNotify,
 			&sla.UpdateTime, &sla.UpdateNotify,
 			&sla.SolutionTime, &sla.SolutionNotify,
@@ -79,11 +81,16 @@ func HandleListSLAsAPI(c *gin.Context) {
 		if err != nil {
 			continue
 		}
-		
+
+		calendarName := ""
+		if sla.CalendarName.Valid {
+			calendarName = sla.CalendarName.String
+		}
+
 		slas = append(slas, gin.H{
 			"id":                    sla.ID,
 			"name":                  sla.Name,
-			"calendar_id":           sla.CalendarID,
+			"calendar_name":         calendarName,
 			"first_response_time":   sla.FirstResponseTime,
 			"first_response_notify": sla.FirstResponseNotify,
 			"update_time":           sla.UpdateTime,
@@ -117,27 +124,27 @@ func HandleGetSLAAPI(c *gin.Context) {
 		return
 	}
 
-    db, err := database.GetDB()
-    if err != nil || db == nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "SLA not found"})
-        return
-    }
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "SLA not found"})
+		return
+	}
 
 	var sla struct {
-		ID                   int    `json:"id"`
-		Name                 string `json:"name"`
-		CalendarID           int    `json:"calendar_id"`
-		FirstResponseTime    int    `json:"first_response_time"`
-		FirstResponseNotify  int    `json:"first_response_notify"`
-		UpdateTime           int    `json:"update_time"`
-		UpdateNotify         int    `json:"update_notify"`
-		SolutionTime         int    `json:"solution_time"`
-		SolutionNotify       int    `json:"solution_notify"`
-		ValidID              int    `json:"valid_id"`
+		ID                  int
+		Name                string
+		CalendarName        sql.NullString
+		FirstResponseTime   int
+		FirstResponseNotify int
+		UpdateTime          int
+		UpdateNotify        int
+		SolutionTime        int
+		SolutionNotify      int
+		ValidID             int
 	}
 
 	query := database.ConvertPlaceholders(`
-		SELECT id, name, calendar_id,
+		SELECT id, name, calendar_name,
 			first_response_time, first_response_notify,
 			update_time, update_notify,
 			solution_time, solution_notify,
@@ -147,7 +154,7 @@ func HandleGetSLAAPI(c *gin.Context) {
 	`)
 
 	err = db.QueryRow(query, slaID).Scan(
-		&sla.ID, &sla.Name, &sla.CalendarID,
+		&sla.ID, &sla.Name, &sla.CalendarName,
 		&sla.FirstResponseTime, &sla.FirstResponseNotify,
 		&sla.UpdateTime, &sla.UpdateNotify,
 		&sla.SolutionTime, &sla.SolutionNotify,
@@ -158,7 +165,23 @@ func HandleGetSLAAPI(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, sla)
+	calendarName := ""
+	if sla.CalendarName.Valid {
+		calendarName = sla.CalendarName.String
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":                    sla.ID,
+		"name":                  sla.Name,
+		"calendar_name":         calendarName,
+		"first_response_time":   sla.FirstResponseTime,
+		"first_response_notify": sla.FirstResponseNotify,
+		"update_time":           sla.UpdateTime,
+		"update_notify":         sla.UpdateNotify,
+		"solution_time":         sla.SolutionTime,
+		"solution_notify":       sla.SolutionNotify,
+		"valid_id":              sla.ValidID,
+	})
 }
 
 // HandleCreateSLAAPI handles POST /api/v1/slas
@@ -171,14 +194,14 @@ func HandleCreateSLAAPI(c *gin.Context) {
 	}
 
 	var req struct {
-		Name                 string `json:"name" binding:"required"`
-		CalendarID           int    `json:"calendar_id"`
-		FirstResponseTime    int    `json:"first_response_time" binding:"required"`
-		FirstResponseNotify  int    `json:"first_response_notify"`
-		UpdateTime           int    `json:"update_time"`
-		UpdateNotify         int    `json:"update_notify"`
-		SolutionTime         int    `json:"solution_time" binding:"required"`
-		SolutionNotify       int    `json:"solution_notify"`
+		Name                string `json:"name" binding:"required"`
+		CalendarName        string `json:"calendar_name"`
+		FirstResponseTime   int    `json:"first_response_time" binding:"required"`
+		FirstResponseNotify int    `json:"first_response_notify"`
+		UpdateTime          int    `json:"update_time"`
+		UpdateNotify        int    `json:"update_notify"`
+		SolutionTime        int    `json:"solution_time" binding:"required"`
+		SolutionNotify      int    `json:"solution_notify"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -186,28 +209,23 @@ func HandleCreateSLAAPI(c *gin.Context) {
 		return
 	}
 
-	// Default calendar ID if not provided
-	if req.CalendarID == 0 {
-		req.CalendarID = 1
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		// DB-less fallback: pretend create
+		c.JSON(http.StatusCreated, gin.H{
+			"id":                    1,
+			"name":                  req.Name,
+			"calendar_name":         strings.TrimSpace(req.CalendarName),
+			"first_response_time":   req.FirstResponseTime,
+			"first_response_notify": req.FirstResponseNotify,
+			"update_time":           req.UpdateTime,
+			"update_notify":         req.UpdateNotify,
+			"solution_time":         req.SolutionTime,
+			"solution_notify":       req.SolutionNotify,
+			"valid_id":              1,
+		})
+		return
 	}
-
-    db, err := database.GetDB()
-    if err != nil || db == nil {
-        // DB-less fallback: pretend create
-        c.JSON(http.StatusCreated, gin.H{
-            "id":                    1,
-            "name":                  req.Name,
-            "calendar_id":           req.CalendarID,
-            "first_response_time":   req.FirstResponseTime,
-            "first_response_notify": req.FirstResponseNotify,
-            "update_time":           req.UpdateTime,
-            "update_notify":         req.UpdateNotify,
-            "solution_time":         req.SolutionTime,
-            "solution_notify":       req.SolutionNotify,
-            "valid_id":              1,
-        })
-        return
-    }
 
 	// Check if SLA with this name already exists
 	var count int
@@ -221,11 +239,17 @@ func HandleCreateSLAAPI(c *gin.Context) {
 		return
 	}
 
+	calendarName := sql.NullString{}
+	if trimmed := strings.TrimSpace(req.CalendarName); trimmed != "" {
+		calendarName.String = trimmed
+		calendarName.Valid = true
+	}
+
 	// Create SLA
 	var slaID int
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO sla (
-			name, calendar_id,
+			name, calendar_name,
 			first_response_time, first_response_notify,
 			update_time, update_notify,
 			solution_time, solution_notify,
@@ -235,16 +259,16 @@ func HandleCreateSLAAPI(c *gin.Context) {
 			1, NOW(), $9, NOW(), $9
 		) RETURNING id
 	`)
-	
+
 	err = db.QueryRow(
 		insertQuery,
-		req.Name, req.CalendarID,
+		req.Name, calendarName,
 		req.FirstResponseTime, req.FirstResponseNotify,
 		req.UpdateTime, req.UpdateNotify,
 		req.SolutionTime, req.SolutionNotify,
 		userID,
 	).Scan(&slaID)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create SLA"})
 		return
@@ -253,7 +277,7 @@ func HandleCreateSLAAPI(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"id":                    slaID,
 		"name":                  req.Name,
-		"calendar_id":           req.CalendarID,
+		"calendar_name":         calendarName.String,
 		"first_response_time":   req.FirstResponseTime,
 		"first_response_notify": req.FirstResponseNotify,
 		"update_time":           req.UpdateTime,
@@ -282,7 +306,7 @@ func HandleUpdateSLAAPI(c *gin.Context) {
 
 	var req struct {
 		Name                string `json:"name"`
-		CalendarID          int    `json:"calendar_id"`
+		CalendarName        string `json:"calendar_name"`
 		FirstResponseTime   int    `json:"first_response_time"`
 		FirstResponseNotify int    `json:"first_response_notify"`
 		UpdateTime          int    `json:"update_time"`
@@ -296,11 +320,11 @@ func HandleUpdateSLAAPI(c *gin.Context) {
 		return
 	}
 
-    db, err := database.GetDB()
-    if err != nil || db == nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "SLA not found"})
-        return
-    }
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "SLA not found"})
+		return
+	}
 
 	// Check if SLA exists
 	var count int
@@ -315,9 +339,15 @@ func HandleUpdateSLAAPI(c *gin.Context) {
 	}
 
 	// Update SLA
+	calendarName := sql.NullString{}
+	if trimmed := strings.TrimSpace(req.CalendarName); trimmed != "" {
+		calendarName.String = trimmed
+		calendarName.Valid = true
+	}
+
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE sla 
-		SET name = $1, calendar_id = $2,
+		SET name = $1, calendar_name = $2,
 			first_response_time = $3, first_response_notify = $4,
 			update_time = $5, update_notify = $6,
 			solution_time = $7, solution_notify = $8,
@@ -327,7 +357,7 @@ func HandleUpdateSLAAPI(c *gin.Context) {
 
 	result, err := db.Exec(
 		updateQuery,
-		req.Name, req.CalendarID,
+		req.Name, calendarName,
 		req.FirstResponseTime, req.FirstResponseNotify,
 		req.UpdateTime, req.UpdateNotify,
 		req.SolutionTime, req.SolutionNotify,
@@ -347,7 +377,7 @@ func HandleUpdateSLAAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"id":                    slaID,
 		"name":                  req.Name,
-		"calendar_id":           req.CalendarID,
+		"calendar_name":         calendarName.String,
 		"first_response_time":   req.FirstResponseTime,
 		"first_response_notify": req.FirstResponseNotify,
 		"update_time":           req.UpdateTime,
@@ -373,11 +403,11 @@ func HandleDeleteSLAAPI(c *gin.Context) {
 		return
 	}
 
-    db, err := database.GetDB()
-    if err != nil || db == nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": "SLA not found"})
-        return
-    }
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "SLA not found"})
+		return
+	}
 
 	// Check if SLA exists
 	var count int
@@ -413,7 +443,7 @@ func HandleDeleteSLAAPI(c *gin.Context) {
 		SET valid_id = 2, change_time = NOW(), change_by = $1
 		WHERE id = $2
 	`)
-	
+
 	result, err := db.Exec(deleteQuery, userID, slaID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete SLA"})

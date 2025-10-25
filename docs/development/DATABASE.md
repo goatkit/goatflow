@@ -8,6 +8,18 @@ GOTRS uses a **100% OTRS-compatible database schema** to ensure seamless migrati
 
 All SQL must use the mandatory `database.ConvertPlaceholders` wrapper to support both PostgreSQL and MySQL. See `../../DATABASE_ACCESS_PATTERNS.md`.
 
+## Password Reset Utilities
+
+Use the provided make targets instead of connecting directly to the databases:
+
+```bash
+make reset-password             # Primary scope (defaults to DB_DRIVER)
+make test-pg-reset-password     # PostgreSQL test scope
+make test-mysql-reset-password  # MariaDB test scope
+```
+
+The targets route through `scripts/reset-user-password.sh`, which dispatches to `scripts/db/postgres/reset-user-password.sh` or `scripts/db/mysql/reset-user-password.sh` based on `DB_CONN_DRIVER`. Both helpers invoke the toolbox CLI inside the compose network, so no direct `mysql`/`psql` usage is required and `.env` credentials stay in sync.
+
 ## Schema Management Approach
 
 ### Baseline Schema (Current)
@@ -216,6 +228,7 @@ CREATE TABLE ticket_priority (
     id SMALLSERIAL PRIMARY KEY,
     name varchar(200) NOT NULL,
     valid_id SMALLINT NOT NULL,
+    color varchar(25) NOT NULL,
     create_time TIMESTAMP NOT NULL,
     create_by INTEGER NOT NULL,
     change_time TIMESTAMP NOT NULL,
@@ -286,6 +299,8 @@ WHERE table_schema = 'public';
 
 ## Test Data Generation
 
+The minimal seed only creates a disabled `root@localhost` placeholder (no password, `valid_id=2`). Run `make synthesize` or `make reset-password` to provision credentials before attempting to sign in.
+
 The system uses dynamic test data generation to avoid hardcoded passwords:
 
 ```bash
@@ -296,10 +311,29 @@ make synthesize
 make show-dev-creds
 
 # Output format:
-# root@localhost / X2xSOca5gGy3-1Lq!1
+# root@localhost / <generated via make synthesize>
 # agent.smith / TRCzvGXJyGZJUf9s!1
 # john.customer / Yq2PuMbRjW4JLQQK!1
 ```
+
+## Test Database Containers
+
+Both database engines can be brought up for integration testing via the container-first targets:
+
+```bash
+# Default (MariaDB) test stack
+make test-db-up
+
+# Force PostgreSQL
+TEST_DB_DRIVER=postgres make test-db-up
+```
+
+The compose file (`docker-compose.testdb.yml`) mounts the same OTRS-aligned fixtures into both services:
+
+- `schema/seed/test_integration.sql` for PostgreSQL (`postgres-test`)
+- `schema/seed/test_integration_mysql.sql` for MariaDB (`mariadb-test`)
+
+Each container runs its respective init script (`docker/postgres/testdb/10-apply-migrations.sh` or `docker/mariadb/testdb/10-apply-migrations.sh`) which applies `000001_schema_alignment.up.sql`, the minimal lookup data, and the integration fixtures. This keeps the API and HTMX suites database-agnostic—if it passes against one driver, it should pass against the other.
 
 ## Performance Considerations
 

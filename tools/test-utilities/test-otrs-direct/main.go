@@ -17,7 +17,7 @@ func main() {
 	host := "localhost"
 	port := "3306"
 	user := "otrs"
-	password := "LetClaude.1n"  // From the .env file
+	password := "CHANGEME"  // From the .env file
 	database := "otrs"
 	
 	// Build MySQL DSN

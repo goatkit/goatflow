@@ -1505,6 +1505,7 @@ CREATE TABLE ticket_priority (
   id SMALLSERIAL PRIMARY KEY,
   name varchar(200) NOT NULL,
   valid_id SMALLINT NOT NULL,
+  color varchar(25) NOT NULL,
   create_time TIMESTAMP NOT NULL,
   create_by INTEGER NOT NULL,
   change_time TIMESTAMP NOT NULL,

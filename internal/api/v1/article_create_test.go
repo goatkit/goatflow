@@ -9,23 +9,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	. "github.com/gotrs-io/gotrs-ce/internal/api"
-	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAddArticle_BasicArticle(t *testing.T) {
-	// Skip if no database connection
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
-
-	// Initialize database service registry for tests
-	_, err := adapter.InitializeServiceRegistry()
-	require.NoError(t, err)
-
-	err = adapter.AutoConfigureDatabase()
-	require.NoError(t, err)
+	requireDatabase(t)
 
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -131,6 +120,7 @@ func TestAddArticle_BasicArticle(t *testing.T) {
 }
 
 func TestAddArticle_ArticleTypes(t *testing.T) {
+	requireDatabase(t)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
@@ -252,6 +242,7 @@ func TestAddArticle_ArticleTypes(t *testing.T) {
 }
 
 func TestAddArticle_Validation(t *testing.T) {
+	requireDatabase(t)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
@@ -356,6 +347,7 @@ func TestAddArticle_Validation(t *testing.T) {
 }
 
 func TestAddArticle_Permissions(t *testing.T) {
+	requireDatabase(t)
 	gin.SetMode(gin.TestMode)
 
 	tests := []struct {
@@ -442,6 +434,7 @@ func TestAddArticle_Permissions(t *testing.T) {
 }
 
 func TestAddArticle_EmailHeaders(t *testing.T) {
+	requireDatabase(t)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
@@ -487,6 +480,7 @@ func TestAddArticle_EmailHeaders(t *testing.T) {
 }
 
 func TestAddArticle_UpdatesTicketChangeTime(t *testing.T) {
+	requireDatabase(t)
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 

@@ -24,7 +24,7 @@
 **Major Milestone: Code Quality & Queue Enhancement Complete**
 - ✅ Database schema exists (OTRS-compatible)
 - ✅ Admin UI modules display (functionality varies)
-- ✅ Authentication works (root@localhost:admin123)
+- ✅ Authentication works (root@localhost after running `make synthesize`)
 - ✅ **FULL MYSQL COMPATIBILITY** - Fixed all placeholder conversion issues
 - ✅ **TEMPLATE SYSTEM ROBUSTNESS** - Enhanced validation and error handling
 - ✅ **HTML FALLBACK CLEANUP** - Replaced embedded HTML with JSON error responses

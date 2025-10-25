@@ -144,15 +144,23 @@ DB_PORT ?= 5432
 DB_NAME ?= gotrs
 DB_USER ?= gotrs_user
 DB_PASSWORD ?= gotrs_password
+DB_SCOPE ?= primary
 VALKEY_HOST ?= localhost
 VALKEY_PORT ?= 6388
 
-TEST_DB_DRIVER ?= postgres
-TEST_DB_HOST ?= postgres-test
+TEST_DB_DRIVER ?= mysql
+TEST_DB_HOST ?= 127.0.0.1
+TEST_DB_PORT ?= 3308
+TEST_DB_NAME ?= otrs_test
+TEST_DB_USER ?= otrs
+TEST_DB_PASSWORD ?= CHANGEME
+
+ifeq ($(filter $(TEST_DB_DRIVER),mysql mariadb),)
 TEST_DB_PORT ?= 5433
 TEST_DB_NAME ?= gotrs_test
 TEST_DB_USER ?= gotrs_user
 TEST_DB_PASSWORD ?= gotrs_password
+endif
 
 # Macro to wrap Go commands inside toolbox container (ensures container-first dev)
 TOOLBOX_GO=$(MAKE) toolbox-exec ARGS=
@@ -499,6 +507,8 @@ help:
 	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
 	@printf "\n"
 	@printf "  \033[0;32mmake reset-password\033[0m\t\t\t🔓 Reset user password\n"
+	@printf "  \033[0;32mmake test-pg-reset-password\033[0m\t🔓 Reset password in postgres test DB\n"
+	@printf "  \033[0;32mmake test-mysql-reset-password\033[0m\t🔓 Reset password in mysql test DB\n"
 	@printf "\n"
 	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
 	@printf "\n"
@@ -643,14 +653,19 @@ db-apply-test-data:
 	else \
 		printf "📡 Starting dependencies (mariadb)...\n"; \
 		$(COMPOSE_CMD) up -d mariadb >/dev/null 2>&1 || true; \
-		printf "👤 Ensuring root user exists (MariaDB)...\n"; \
-		$(CONTAINER_CMD) run --rm \
-			--network gotrs-ce_gotrs-network \
-			-e DB_DRIVER=$(DB_DRIVER) -e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
-			-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) -e DB_PASSWORD=$(DB_PASSWORD) \
-			gotrs-toolbox:latest \
-			gotrs reset-user --username="root@localhost" --password="Admin123!1" --enable; \
-		printf "✅ Root user ready. Use 'make reset-password' to change.\n"; \
+		if [ -n "$(ADMIN_PASSWORD)" ]; then \
+			printf "🔐 Applying admin password from environment (MariaDB)...\n"; \
+			$(CONTAINER_CMD) run --rm \
+				--network gotrs-ce_gotrs-network \
+				-e DB_DRIVER=$(DB_DRIVER) -e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
+				-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) -e DB_PASSWORD=$(DB_PASSWORD) \
+				-e ADMIN_PASSWORD=$(ADMIN_PASSWORD) -e ADMIN_USER=$(ADMIN_USER) \
+				gotrs-toolbox:latest \
+				sh -c 'gotrs reset-user --username="$${ADMIN_USER:-root@localhost}" --password="$$ADMIN_PASSWORD" --enable'; \
+			printf "✅ Root user enabled with configured credentials.\n"; \
+		else \
+			printf "⚠️  root@localhost remains disabled. Run 'make reset-password' after choosing a password.\n"; \
+		fi; \
 	fi
 
 # Clean up storage directory (orphaned files after DB reset)
@@ -887,7 +902,7 @@ toolbox-test-api: toolbox-build
 	@# Enforce static route policy during tests
 	@$(MAKE) generate-route-map validate-routes
 	@$(call ensure_caches)
-	@printf "📡 Starting dependencies (postgres-test, valkey)...\n"
+	@printf "📡 Starting dependencies (test database, valkey)...\n"
 	@$(MAKE) test-db-up >/dev/null 2>&1 || true
 	@$(COMPOSE_CMD) up -d valkey >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
@@ -920,7 +935,7 @@ toolbox-test:
 	@$(MAKE) generate-route-map validate-routes
 	@$(call ensure_caches)
 	@$(call cache_guard)
-	@printf "📡 Starting dependencies (postgres-test, valkey)...\n"
+	@printf "📡 Starting dependencies (test database, valkey)...\n"
 	@$(MAKE) test-db-up >/dev/null 2>&1 || true
 	@$(COMPOSE_CMD) up -d valkey >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
@@ -1003,7 +1018,7 @@ toolbox-test-all:
 		-e TEMPLATES_DIR=/workspace/templates \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=3306 \
 		-e DB_DRIVER=mariadb \
-		-e DB_NAME=otrs -e DB_USER=otrs -e DB_PASSWORD=LetClaude.1n \
+		-e DB_NAME=otrs -e DB_USER=otrs -e DB_PASSWORD=CHANGEME \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
 		echo Running curated set: cmd/goats internal/api internal/service generated/tdd-comprehensive; \
@@ -1391,7 +1406,7 @@ DB_HOST   ?= mariadb
 DB_PORT   ?= 3306
 DB_NAME   ?= otrs
 DB_USER   ?= otrs
-DB_PASSWORD ?= LetClaude.1n
+DB_PASSWORD ?= CHANGEME
 
 # Database operations
 # Set this from the environment or override on the command line
@@ -1413,7 +1428,7 @@ db-shell:
 db-fix-sequences:
 	@if [ "$(DB_DRIVER)" = "postgres" ]; then \
 		printf "🔧 Fixing database sequences...\n"; \
-		$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox psql -h $(DB_HOST) -U $(DB_USER) -d $(DB_NAME) -v ON_ERROR_STOP=1 -f /workspace/scripts/sql/fix_sequences.sql; \
+		$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox psql -h $(DB_HOST) -U $(DB_USER) -d $(DB_NAME) -v ON_ERROR_STOP=1 -f /workspace/scripts/db/postgres/fix_sequences.sql; \
 		printf "✅ Sequences fixed - duplicate key errors should be resolved\n"; \
 	else \
 		printf "ℹ️  Sequence fixing is only needed for PostgreSQL databases\n"; \
@@ -1710,25 +1725,98 @@ import-test-data:
 # Reset user password and enable account (using toolbox)
 reset-password:
 	@$(MAKE) toolbox-build
-	@echo -n "Username: "; \
+	@mkdir -p tmp
+	@tmp_env=$$(mktemp tmp/db-scope.XXXXXX); \
+	trap 'rm -f "$$tmp_env"' EXIT; \
+	DB_SCOPE=$${DB_SCOPE:-primary} ./scripts/db-scope-env.sh describe; \
+	DB_SCOPE=$${DB_SCOPE:-primary} ./scripts/db-scope-env.sh print > "$$tmp_env"; \
+	. "$$tmp_env"; \
+	rm -f "$$tmp_env"; \
+	trap - EXIT; \
+	if [ "$$DB_CONN_SCOPE" = "pg-test" ]; then \
+		APP_ENV=test \
+		TEST_DB_NAME="$$DB_CONN_NAME" \
+		TEST_DB_USER="$$DB_CONN_USER" \
+		TEST_DB_PASSWORD="$$DB_CONN_PASSWORD" \
+		TEST_DB_PORT="$$DB_CONN_HOST_PORT" \
+		$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml up -d postgres-test >/dev/null 2>&1 || true; \
+		echo "⏳ Waiting for postgres-test to accept connections..."; \
+		for attempt in $$(seq 1 60); do \
+			if TEST_DB_USER="$$DB_CONN_USER" TEST_DB_PASSWORD="$$DB_CONN_PASSWORD" $(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec -T postgres-test env PGPASSWORD="$$DB_CONN_PASSWORD" pg_isready -h localhost -p 5432 -U "$$DB_CONN_USER" >/dev/null 2>&1; then \
+				echo "✅ postgres-test is ready"; \
+				break; \
+			fi; \
+			sleep 1; \
+			if [ $$attempt -eq 60 ]; then \
+				echo "❌ postgres-test did not become ready in time"; \
+				exit 1; \
+			fi; \
+		done; \
+	elif [ "$$DB_CONN_SCOPE" = "mysql-test" ]; then \
+		APP_ENV=test \
+		TEST_DB_MYSQL_NAME="$$DB_CONN_NAME" \
+		TEST_DB_MYSQL_USER="$$DB_CONN_USER" \
+		TEST_DB_MYSQL_PASSWORD="$$DB_CONN_PASSWORD" \
+		TEST_DB_MYSQL_PORT="$$DB_CONN_HOST_PORT" \
+		$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml up -d mariadb-test >/dev/null 2>&1 || true; \
+		echo "⏳ Waiting for mariadb-test to accept connections..."; \
+		for attempt in $$(seq 1 60); do \
+			if $(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec -T mariadb-test mariadb-admin --ssl=0 ping -h 127.0.0.1 -P 3306 -u "$$DB_CONN_USER" -p"$$DB_CONN_PASSWORD" >/dev/null 2>&1; then \
+				echo "✅ mariadb-test is ready"; \
+				break; \
+			fi; \
+			sleep 1; \
+			if [ $$attempt -eq 60 ]; then \
+				echo "❌ mariadb-test did not become ready in time"; \
+				exit 1; \
+			fi; \
+		done; \
+	fi; \
+	echo -n "Username: "; \
 	read username; \
 	echo -n "New password: "; \
 	stty -echo; read password; stty echo; \
 	echo ""; \
 	echo "🔑 Resetting password for user: $$username"; \
-	$(CONTAINER_CMD) run --rm \
-		-v "$$(pwd):/workspace" \
-		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
-		--network gotrs-ce_gotrs-network \
-		-e DB_DRIVER=$${DB_DRIVER:-mariadb} \
-		-e DB_HOST=$${DB_HOST:-mariadb} \
-		-e DB_PORT=$${DB_PORT:-3306} \
-		-e DB_NAME=$${DB_NAME:-otrs} \
-		-e DB_USER=$${DB_USER:-otrs} \
-		-e DB_PASSWORD=$${DB_PASSWORD:-LetClaude.1n} \
-		gotrs-toolbox:latest \
-		gotrs reset-user --username="$$username" --password="$$password" --enable
+	DB_DRIVER="$$DB_CONN_DRIVER" \
+	DB_CONN_DRIVER="$$DB_CONN_DRIVER" \
+	DB_HOST="$$DB_CONN_HOST" \
+	DB_PORT="$$DB_CONN_PORT" \
+	DB_NAME="$$DB_CONN_NAME" \
+	DB_USER="$$DB_CONN_USER" \
+	DB_PASSWORD="$$DB_CONN_PASSWORD" \
+	DB_CONN_HOST="$$DB_CONN_HOST" \
+	DB_CONN_PORT="$$DB_CONN_PORT" \
+	DB_CONN_NAME="$$DB_CONN_NAME" \
+	DB_CONN_USER="$$DB_CONN_USER" \
+	DB_CONN_PASSWORD="$$DB_CONN_PASSWORD" \
+	DB_CONTAINER_NETWORK="gotrs-ce_gotrs-network" \
+	TOOLBOX_IMAGE="gotrs-toolbox:latest" \
+	./scripts/reset-user-password.sh "$$username" "$$password"; \
+	status=$$?; \
+	if [ $$status -ne 0 ]; then \
+		echo "❌ Password reset failed (scope $$DB_CONN_SCOPE)"; \
+		exit $$status; \
+	fi; \
+	if [ -n "$$DB_CONN_ADMIN_PASSWORD_VAR" ] && [ "$$username" = "$$DB_CONN_ADMIN_USER" ]; then \
+		./scripts/env-set.sh "$$DB_CONN_ADMIN_PASSWORD_VAR" "$$password"; \
+		echo "📝 Updated .env ($$DB_CONN_ADMIN_PASSWORD_VAR)"; \
+		if [ "$$DB_CONN_SCOPE" = "pg-test" ] && [ "$$username" = "$$TEST_PG_ADMIN_USER" ]; then \
+			./scripts/env-set.sh TEST_PASSWORD "$$password"; \
+			echo "📝 Updated .env (TEST_PASSWORD)"; \
+		fi; \
+		if [ "$$DB_CONN_SCOPE" = "mysql-test" ] && [ "$$username" = "$$TEST_MYSQL_ADMIN_USER" ]; then \
+			./scripts/env-set.sh TEST_PASSWORD "$$password"; \
+			echo "📝 Updated .env (TEST_PASSWORD)"; \
+		fi; \
+	fi
+
+.PHONY: test-pg-reset-password test-mysql-reset-password
+test-pg-reset-password:
+	@$(MAKE) DB_SCOPE=pg-test reset-password
+
+test-mysql-reset-password:
+	@$(MAKE) DB_SCOPE=mysql-test reset-password
 
 
 # Valkey CLI
@@ -1872,20 +1960,32 @@ test-check:
 
 test-db-up:
 	@if [ -f ./scripts/test-db-safe.sh ]; then \
-		SKIP_BACKEND_CHECK=1 APP_ENV=test DB_DRIVER=postgres DB_HOST=postgres-test DB_PORT=5432 DB_NAME=$${DB_NAME:-gotrs} DB_USER=$${DB_USER:-gotrs} DB_PASSWORD=$${DB_PASSWORD:-gotrs_password} bash ./scripts/test-db-safe.sh up; \
+		SKIP_BACKEND_CHECK=1 DB_SAFE_ASSUME_YES=1 APP_ENV=test DB_DRIVER=$(TEST_DB_DRIVER) bash ./scripts/test-db-safe.sh up; \
 	else \
-		echo "test-db-safe.sh not found, starting postgres-test via compose"; \
-		APP_ENV=test DB_NAME=$${DB_NAME:-gotrs}_test DB_USER=$${DB_USER:-gotrs} DB_PASSWORD=$${DB_PASSWORD:-gotrs_password} \
-		$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml up -d postgres-test; \
+		driver=$(TEST_DB_DRIVER); \
+		if [ "$$driver" = "postgres" ]; then \
+			echo "test-db-safe.sh not found, starting postgres-test via compose"; \
+			APP_ENV=test $(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml up -d postgres-test; \
+		else \
+			echo "test-db-safe.sh not found, starting mariadb-test via compose"; \
+			APP_ENV=test $(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml up -d mariadb-test; \
+		fi; \
 	fi
 
 test-db-down:
 	@if [ -f ./scripts/test-db-safe.sh ]; then \
-		SKIP_BACKEND_CHECK=1 APP_ENV=test DB_DRIVER=postgres DB_HOST=postgres-test DB_PORT=5432 DB_NAME=$${DB_NAME:-gotrs} DB_USER=$${DB_USER:-gotrs} DB_PASSWORD=$${DB_PASSWORD:-gotrs_password} bash ./scripts/test-db-safe.sh down; \
+		SKIP_BACKEND_CHECK=1 DB_SAFE_ASSUME_YES=1 APP_ENV=test DB_DRIVER=$(TEST_DB_DRIVER) bash ./scripts/test-db-safe.sh down; \
 	else \
-		echo "test-db-safe.sh not found, stopping postgres-test via compose"; \
-		$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml stop postgres-test >/dev/null 2>&1 || true; \
-		$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml rm -f postgres-test >/dev/null 2>&1 || true; \
+		driver=$(TEST_DB_DRIVER); \
+		if [ "$$driver" = "postgres" ]; then \
+			echo "test-db-safe.sh not found, stopping postgres-test via compose"; \
+			$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml stop postgres-test >/dev/null 2>&1 || true; \
+			$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml rm -f postgres-test >/dev/null 2>&1 || true; \
+		else \
+			echo "test-db-safe.sh not found, stopping mariadb-test via compose"; \
+			$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml stop mariadb-test >/dev/null 2>&1 || true; \
+			$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml rm -f mariadb-test >/dev/null 2>&1 || true; \
+		fi; \
 	fi
 
 test-coverage-html: toolbox-build

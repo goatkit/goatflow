@@ -20,12 +20,12 @@ INSERT IGNORE INTO ticket_state_type (id, name, comments, create_time, create_by
 (4, 'pending auto', 'All pending auto state types', NOW(), 1, NOW(), 1),
 (5, 'closed', 'All closed state types', NOW(), 1, NOW(), 1);
 
-INSERT IGNORE INTO ticket_priority (id, name, valid_id, create_time, create_by, change_time, change_by) VALUES
-(1, '1 very low', 1, NOW(), 1, NOW(), 1),
-(2, '2 low', 1, NOW(), 1, NOW(), 1),
-(3, '3 normal', 1, NOW(), 1, NOW(), 1),
-(4, '4 high', 1, NOW(), 1, NOW(), 1),
-(5, '5 very high', 1, NOW(), 1, NOW(), 1);
+INSERT IGNORE INTO ticket_priority (id, name, valid_id, color, create_time, create_by, change_time, change_by) VALUES
+(1, '1 very low', 1, '#03c4f0', NOW(), 1, NOW(), 1),
+(2, '2 low', 1, '#83bfc8', NOW(), 1, NOW(), 1),
+(3, '3 normal', 1, '#cdcdcd', NOW(), 1, NOW(), 1),
+(4, '4 high', 1, '#ffaaaa', NOW(), 1, NOW(), 1),
+(5, '5 very high', 1, '#ff505e', NOW(), 1, NOW(), 1);
 
 INSERT IGNORE INTO ticket_type (id, name, valid_id, create_time, create_by, change_time, change_by) VALUES
 (1, 'Unclassified', 1, NOW(), 1, NOW(), 1),
@@ -89,5 +89,13 @@ INSERT IGNORE INTO queue (
 (2, 'Raw', 1, 1, 1, 1, 0, 1, 0, 'Queue for unprocessed emails', 1, NOW(), 1, NOW(), 1),
 (3, 'Junk', 1, 1, 1, 1, 0, 2, 0, 'Queue for junk/spam', 1, NOW(), 1, NOW(), 1),
 (4, 'Misc', 1, 1, 1, 1, 0, 1, 0, 'Miscellaneous queue', 1, NOW(), 1, NOW(), 1);
+
+INSERT IGNORE INTO users (id, login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by) VALUES
+(1, 'root@localhost', SHA2(UUID(), 256), 'System', 'Administrator', 2, NOW(), 1, NOW(), 1);
+
+INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) VALUES
+(1, 1, 'rw', NOW(), 1, NOW(), 1),
+(1, 2, 'rw', NOW(), 1, NOW(), 1),
+(1, 3, 'rw', NOW(), 1, NOW(), 1);
 
 COMMIT;

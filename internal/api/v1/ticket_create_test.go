@@ -8,26 +8,23 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	. "github.com/gotrs-io/gotrs-ce/internal/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	. "github.com/gotrs-io/gotrs-ce/internal/api"
 )
 
 func TestCreateTicket_Integration(t *testing.T) {
-	// Skip if no database connection
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+	requireDatabase(t)
+	ensureTicketFixtures(t)
 
-	// Setup
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	
+
 	// Mock authentication setup (no longer needed for direct API handler calls)
-	
+
 	// Setup routes
 	v1 := router.Group("/api/v1")
-	
+
 	// Add mock authentication middleware
 	v1.Use(func(c *gin.Context) {
 		// Set mock user context
@@ -37,7 +34,7 @@ func TestCreateTicket_Integration(t *testing.T) {
 		c.Set("is_authenticated", true)
 		c.Next()
 	})
-	
+
 	tickets := v1.Group("/tickets")
 	tickets.POST("", HandleCreateTicketAPI)
 
@@ -66,15 +63,15 @@ func TestCreateTicket_Integration(t *testing.T) {
 		{
 			name: "valid ticket with article",
 			payload: map[string]interface{}{
-				"title":          "Test Ticket with Article",
-				"queue_id":       1,
-				"type_id":        1,
-				"state_id":       1,
-				"priority_id":    3,
+				"title":            "Test Ticket with Article",
+				"queue_id":         1,
+				"type_id":          1,
+				"state_id":         1,
+				"priority_id":      3,
 				"customer_user_id": "customer@example.com",
 				"article": map[string]interface{}{
-					"subject": "Initial message",
-					"body":    "This is the ticket description",
+					"subject":      "Initial message",
+					"body":         "This is the ticket description",
 					"content_type": "text/plain",
 				},
 			},
@@ -87,7 +84,7 @@ func TestCreateTicket_Integration(t *testing.T) {
 			},
 		},
 		{
-			name:       "missing required title",
+			name: "missing required title",
 			payload: map[string]interface{}{
 				"queue_id": 1,
 			},
@@ -95,7 +92,7 @@ func TestCreateTicket_Integration(t *testing.T) {
 			wantError:  true,
 		},
 		{
-			name:       "missing required queue_id",
+			name: "missing required queue_id",
 			payload: map[string]interface{}{
 				"title": "Test Ticket",
 			},
@@ -118,22 +115,22 @@ func TestCreateTicket_Integration(t *testing.T) {
 			// Prepare request
 			jsonData, err := json.Marshal(tt.payload)
 			require.NoError(t, err)
-			
+
 			req := httptest.NewRequest("POST", "/api/v1/tickets", bytes.NewBuffer(jsonData))
 			req.Header.Set("Content-Type", "application/json")
-			
+
 			// Record response
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
-			
+
 			// Check status
 			assert.Equal(t, tt.wantStatus, w.Code)
-			
+
 			// Parse response
 			var response map[string]interface{}
 			err = json.Unmarshal(w.Body.Bytes(), &response)
 			require.NoError(t, err)
-			
+
 			// Check response
 			if tt.wantError {
 				assert.False(t, response["success"].(bool))
@@ -148,12 +145,14 @@ func TestCreateTicket_Integration(t *testing.T) {
 }
 
 func TestCreateTicket_Validation(t *testing.T) {
+	requireDatabase(t)
+	ensureTicketFixtures(t)
 	gin.SetMode(gin.TestMode)
-	
+
 	tests := []struct {
-		name       string
-		payload    interface{}
-		wantError  string
+		name      string
+		payload   interface{}
+		wantError string
 	}{
 		{
 			name:      "invalid JSON",
@@ -174,37 +173,37 @@ func TestCreateTicket_Validation(t *testing.T) {
 			wantError: "Title too long",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.New()
-			
+
 			router.POST("/api/v1/tickets", func(c *gin.Context) {
 				c.Set("user_id", 1)
 				c.Set("is_authenticated", true)
 				HandleCreateTicketAPI(c)
 			})
-			
+
 			var jsonData []byte
 			var err error
-			
+
 			if str, ok := tt.payload.(string); ok {
 				jsonData = []byte(str)
 			} else {
 				jsonData, err = json.Marshal(tt.payload)
 				require.NoError(t, err)
 			}
-			
+
 			req := httptest.NewRequest("POST", "/api/v1/tickets", bytes.NewBuffer(jsonData))
 			req.Header.Set("Content-Type", "application/json")
-			
+
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
-			
+
 			var response map[string]interface{}
 			err = json.Unmarshal(w.Body.Bytes(), &response)
 			require.NoError(t, err)
-			
+
 			assert.False(t, response["success"].(bool))
 			assert.Contains(t, response["error"].(string), tt.wantError)
 		})

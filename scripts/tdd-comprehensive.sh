@@ -637,14 +637,14 @@ run_comprehensive_database_tests() {
     if [ "${DB_DRIVER:-mariadb}" = "mariadb" ] || [ "${DB_DRIVER:-mariadb}" = "mysql" ] || $COMPOSE_CMD ps --services 2>/dev/null | grep -q "^mariadb$"; then
         # Try compose exec if available
         if $COMPOSE_CMD ps --services 2>/dev/null | grep -q "^mariadb$" && \
-           $COMPOSE_CMD exec -T mariadb sh -lc "mysql -h\"${DB_HOST:-mariadb}\" -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-LetClaude.1n}\" -D\"${DB_NAME:-otrs}\" -e 'SELECT 1;'" > "$LOG_DIR/db_connectivity.log" 2>&1; then
+           $COMPOSE_CMD exec -T mariadb sh -lc "mysql -h\"${DB_HOST:-mariadb}\" -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-CHANGEME}\" -D\"${DB_NAME:-otrs}\" -e 'SELECT 1;'" > "$LOG_DIR/db_connectivity.log" 2>&1; then
             success "Database connectivity (MariaDB): PASS"
             jq '.evidence.database_tests.status = "PASS" | .evidence.database_tests.driver = "mariadb"' \
                 "$evidence_file" > "$evidence_file.tmp" 2>/dev/null && mv "$evidence_file.tmp" "$evidence_file" || true
             return 0
         fi
         # Fallback via temporary MariaDB image on host network
-        if $CONTAINER_CMD run --rm --network host mariadb:11 sh -lc "mysql -h\"${DB_HOST:-127.0.0.1}\" -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-LetClaude.1n}\" -D\"${DB_NAME:-otrs}\" -e 'SELECT 1;'" >> "$LOG_DIR/db_connectivity.log" 2>&1; then
+        if $CONTAINER_CMD run --rm --network host mariadb:11 sh -lc "mysql -h\"${DB_HOST:-127.0.0.1}\" -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-CHANGEME}\" -D\"${DB_NAME:-otrs}\" -e 'SELECT 1;'" >> "$LOG_DIR/db_connectivity.log" 2>&1; then
             success "Database connectivity (MariaDB via mariadb:11): PASS"
             jq '.evidence.database_tests.status = "PASS" | .evidence.database_tests.driver = "mariadb"' \
                 "$evidence_file" > "$evidence_file.tmp" 2>/dev/null && mv "$evidence_file.tmp" "$evidence_file" || true
@@ -1120,7 +1120,7 @@ run_comprehensive_regression_tests() {
     else
         # Prefer direct container ps when possible
         if [ -n "$CONTAINER_CMD" ] && $CONTAINER_CMD ps --format "{{.Names}}" | grep -q "^gotrs-mariadb$"; then
-            if $CONTAINER_CMD exec gotrs-mariadb sh -lc "/usr/bin/mariadb -h127.0.0.1 -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-LetClaude.1n}\" -e 'SELECT 1;'" >/dev/null 2>&1; then
+            if $CONTAINER_CMD exec gotrs-mariadb sh -lc "/usr/bin/mariadb -h127.0.0.1 -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-CHANGEME}\" -e 'SELECT 1;'" >/dev/null 2>&1; then
                 db_ok=1
             fi
         elif [ -n "$CONTAINER_CMD" ] && $CONTAINER_CMD ps --format "{{.Names}}" | grep -q "^gotrs-postgres$"; then
@@ -1129,7 +1129,7 @@ run_comprehensive_regression_tests() {
             fi
         elif [ -n "$COMPOSE_CMD" ]; then
             if $COMPOSE_CMD ps --services 2>/dev/null | grep -q "^mariadb$"; then
-                if $COMPOSE_CMD exec -T mariadb sh -lc "/usr/bin/mariadb -h\"${DB_HOST:-mariadb}\" -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-LetClaude.1n}\" -e 'SELECT 1;'" >/dev/null 2>&1; then
+                if $COMPOSE_CMD exec -T mariadb sh -lc "/usr/bin/mariadb -h\"${DB_HOST:-mariadb}\" -P\"${DB_PORT:-3306}\" -u\"${DB_USER:-otrs}\" -p\"${DB_PASSWORD:-CHANGEME}\" -e 'SELECT 1;'" >/dev/null 2>&1; then
                     db_ok=1
                 fi
             elif $COMPOSE_CMD ps --services 2>/dev/null | grep -q "^postgres$"; then

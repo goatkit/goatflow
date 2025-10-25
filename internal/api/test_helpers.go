@@ -22,20 +22,20 @@ func GetTestConfig() TestConfig {
 	config := TestConfig{
 		UserLogin:     getEnvOrDefault("TEST_USER_LOGIN", "testuser"),
 		UserFirstName: getEnvOrDefault("TEST_USER_FIRSTNAME", "Test"),
-		UserLastName:  getEnvOrDefault("TEST_USER_LASTNAME", "User"),
-		UserEmail:     getEnvOrDefault("TEST_USER_EMAIL", "test@example.com"),
+		UserLastName:  getEnvOrDefault("TEST_USER_LASTNAME", "Agent"),
+		UserEmail:     getEnvOrDefault("TEST_USER_EMAIL", "testuser@example.test"),
 		QueueName:     getEnvOrDefault("TEST_QUEUE_NAME", "Postmaster"),
 		GroupName:     getEnvOrDefault("TEST_GROUP_NAME", "users"),
-		CompanyName:   getEnvOrDefault("TEST_COMPANY_NAME", "Test Company"),
+		CompanyName:   getEnvOrDefault("TEST_COMPANY_NAME", "Test Company Alpha"),
 	}
-	
+
 	// Parse groups from comma-separated list
 	groupsStr := getEnvOrDefault("TEST_USER_GROUPS", "users,admin")
 	config.UserGroups = strings.Split(groupsStr, ",")
 	for i := range config.UserGroups {
 		config.UserGroups[i] = strings.TrimSpace(config.UserGroups[i])
 	}
-	
+
 	return config
 }
 

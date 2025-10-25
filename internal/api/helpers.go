@@ -67,7 +67,7 @@ func getUserFromContext(c *gin.Context) *models.User {
 		user := &models.User{
 			ID:    1,
 			Login: "admin",
-			Email: "admin@localhost",
+			Email: "root@localhost",
 			Role:  "Admin", // Default role
 		}
 
@@ -120,7 +120,7 @@ func getUserFromContext(c *gin.Context) *models.User {
 	return &models.User{
 		ID:    1,
 		Login: "admin",
-		Email: "admin@localhost",
+		Email: "root@localhost",
 		Role:  role,
 	}
 }

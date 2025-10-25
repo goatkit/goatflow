@@ -29,9 +29,6 @@ func IsPostgreSQL() bool {
 
 // TicketTypeColumn returns the ticket type column name for the active driver.
 func TicketTypeColumn() string {
-	if IsPostgreSQL() {
-		return "ticket_type_id"
-	}
 	return "type_id"
 }
 

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -98,6 +99,7 @@ WHERE id = $1`)).
 
 func TestHandleUpdateTicketStatus_PendingSetsUntil(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	t.Setenv("DB_DRIVER", "postgres")
 
 	mockDB, mock, err := sqlmock.New()
 	if err != nil {
@@ -117,6 +119,21 @@ WHERE id = $1`)).
 		WithArgs(7).
 		WillReturnRows(stateRows)
 
+	ticketSnapshotQuery := fmt.Sprintf(`SELECT
+		t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, %s AS type_id,
+		t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
+		t.customer_id, t.customer_user_id, t.ticket_state_id,
+		t.ticket_priority_id, t.until_time, t.escalation_time,
+		t.escalation_update_time, t.escalation_response_time,
+		t.escalation_solution_time, t.archive_flag,
+		t.create_time, t.create_by, t.change_time, t.change_by
+	FROM ticket t
+	WHERE t.id = $1`, database.QualifiedTicketTypeColumn("t"))
+
+	mock.ExpectQuery(regexp.QuoteMeta(ticketSnapshotQuery)).
+		WithArgs(uint(123)).
+		WillReturnError(fmt.Errorf("mock pre-snapshot failure"))
+
 	pendingUntil := "2025-10-18T15:30"
 	pendingUnix := parsePendingUntil(pendingUntil)
 
@@ -128,6 +145,10 @@ SET ticket_state_id = $1,
 WHERE id = $4`)).
 		WithArgs(7, pendingUnix, 42, 123).
 		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	mock.ExpectQuery(regexp.QuoteMeta(ticketSnapshotQuery)).
+		WithArgs(uint(123)).
+		WillReturnError(fmt.Errorf("mock post-snapshot failure"))
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)

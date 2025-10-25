@@ -35,16 +35,17 @@ func HandleGetPriorityAPI(c *gin.Context) {
 	var priority struct {
 		ID      int    `json:"id"`
 		Name    string `json:"name"`
+		Color   string `json:"color"`
 		ValidID int    `json:"valid_id"`
 	}
 
 	query := database.ConvertPlaceholders(`
-		SELECT id, name, valid_id
+		SELECT id, name, color, valid_id
 		FROM ticket_priority
 		WHERE id = $1
 	`)
 
-	err = db.QueryRow(query, priorityID).Scan(&priority.ID, &priority.Name, &priority.ValidID)
+	err = db.QueryRow(query, priorityID).Scan(&priority.ID, &priority.Name, &priority.Color, &priority.ValidID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Priority not found"})
 		return

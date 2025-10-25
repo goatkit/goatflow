@@ -6,13 +6,13 @@ CREATE DATABASE IF NOT EXISTS otrs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode
 
 -- Create user if it doesn't exist (compatible with both MySQL and MariaDB)
 -- Using IF NOT EXISTS syntax for MariaDB 10.1.3+
-CREATE USER IF NOT EXISTS 'otrs'@'%' IDENTIFIED BY 'LetClaude.1n';
+CREATE USER IF NOT EXISTS 'otrs'@'%' IDENTIFIED BY 'CHANGEME';
 
 -- Grant all privileges on the database
 GRANT ALL PRIVILEGES ON otrs.* TO 'otrs'@'%';
 
 -- Also create from localhost for compatibility
-CREATE USER IF NOT EXISTS 'otrs'@'localhost' IDENTIFIED BY 'LetClaude.1n';
+CREATE USER IF NOT EXISTS 'otrs'@'localhost' IDENTIFIED BY 'CHANGEME';
 GRANT ALL PRIVILEGES ON otrs.* TO 'otrs'@'localhost';
 
 -- Flush privileges to ensure they take effect

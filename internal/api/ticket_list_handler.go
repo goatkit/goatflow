@@ -12,10 +12,10 @@ import (
 
 // TicketListResponse represents the response for ticket list API
 type TicketListResponse struct {
-	Success    bool                   `json:"success"`
+	Success    bool                     `json:"success"`
 	Data       []map[string]interface{} `json:"data"`
-	Pagination PaginationInfo         `json:"pagination"`
-	Error      string                 `json:"error,omitempty"`
+	Pagination PaginationInfo           `json:"pagination"`
+	Error      string                   `json:"error,omitempty"`
 }
 
 // PaginationInfo contains pagination metadata
@@ -48,13 +48,13 @@ func HandleListTicketsAPI(c *gin.Context) {
 	// Parse pagination parameters
 	page := 1
 	perPage := 20
-	
+
 	if pageStr := c.Query("page"); pageStr != "" {
 		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
 			page = p
 		}
 	}
-	
+
 	if perPageStr := c.Query("per_page"); perPageStr != "" {
 		if pp, err := strconv.Atoi(perPageStr); err == nil && pp > 0 {
 			perPage = pp
@@ -67,7 +67,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 
 	// Parse filter parameters
 	filters := make(map[string]interface{})
-	
+
 	if status := c.Query("status"); status != "" {
 		// Map status names to IDs
 		switch status {
@@ -81,23 +81,23 @@ func HandleListTicketsAPI(c *gin.Context) {
 			filters["state_name"] = status
 		}
 	}
-	
+
 	if queueID := c.Query("queue_id"); queueID != "" {
 		if qid, err := strconv.Atoi(queueID); err == nil {
 			filters["queue_id"] = qid
 		}
 	}
-	
+
 	if priorityID := c.Query("priority_id"); priorityID != "" {
 		if pid, err := strconv.Atoi(priorityID); err == nil {
 			filters["priority_id"] = pid
 		}
 	}
-	
+
 	if customerUserID := c.Query("customer_user_id"); customerUserID != "" {
 		filters["customer_user_id"] = customerUserID
 	}
-	
+
 	if assignedUserID := c.Query("assigned_user_id"); assignedUserID != "" {
 		if auid, err := strconv.Atoi(assignedUserID); err == nil {
 			filters["responsible_user_id"] = auid
@@ -110,7 +110,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 	// Parse sorting parameters
 	sortField := c.DefaultQuery("sort", "created")
 	sortOrder := c.DefaultQuery("order", "desc")
-	
+
 	// Map sort field names to database columns
 	sortColumn := "t.create_time"
 	switch sortField {
@@ -125,7 +125,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 	case "title":
 		sortColumn = "t.title"
 	}
-	
+
 	// Validate sort order
 	if sortOrder != "asc" && sortOrder != "desc" {
 		sortOrder = "desc"
@@ -144,7 +144,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 	includes := strings.Split(c.Query("include"), ",")
 	includeLastArticle := false
 	includeArticleCount := false
-	
+
 	for _, inc := range includes {
 		switch strings.TrimSpace(inc) {
 		case "last_article":
@@ -155,52 +155,52 @@ func HandleListTicketsAPI(c *gin.Context) {
 	}
 
 	// Get database connection
-    db, err := database.GetDB()
-    if err != nil || db == nil {
-        // Fallback for test environment when DB is unavailable: return mock data
-        items := []map[string]interface{}{}
-        total := 0
-        // If asked for minimal listing in tests, synthesize a few rows
-        if c.GetHeader("Authorization") != "" {
-            total = 3
-            for i := 1; i <= total; i++ {
-                items = append(items, map[string]interface{}{
-                    "id":            i,
-                    "ticket_number": fmt.Sprintf("20250101%02d0001", i),
-                    "tn":            fmt.Sprintf("20250101%02d0001", i),
-                    "title":         fmt.Sprintf("Sample Ticket %d", i),
-                    "queue_id":      1,
-                    "state_id":      1,
-                    "create_time":   "2025-01-01T10:00:00Z",
-                })
-            }
-        }
-        // Acceptance test expects flat fields for pagination
-        // Provide both flat fields and nested pagination for different tests
-        c.JSON(http.StatusOK, gin.H{
-            "success": true,
-            "data": items,
-            "page": page,
-            "per_page": perPage,
-            "total": total,
-            "total_pages": 1,
-            "has_next": false,
-            "has_prev": page > 1,
-            "pagination": gin.H{
-                "page": page,
-                "per_page": perPage,
-                "total": total,
-                "total_pages": 1,
-                "has_next": false,
-                "has_prev": page > 1,
-            },
-        })
-        return
-    }
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		// Fallback for test environment when DB is unavailable: return mock data
+		items := []map[string]interface{}{}
+		total := 0
+		// If asked for minimal listing in tests, synthesize a few rows
+		if c.GetHeader("Authorization") != "" {
+			total = 3
+			for i := 1; i <= total; i++ {
+				items = append(items, map[string]interface{}{
+					"id":            i,
+					"ticket_number": fmt.Sprintf("20250101%02d0001", i),
+					"tn":            fmt.Sprintf("20250101%02d0001", i),
+					"title":         fmt.Sprintf("Sample Ticket %d", i),
+					"queue_id":      1,
+					"state_id":      1,
+					"create_time":   "2025-01-01T10:00:00Z",
+				})
+			}
+		}
+		// Acceptance test expects flat fields for pagination
+		// Provide both flat fields and nested pagination for different tests
+		c.JSON(http.StatusOK, gin.H{
+			"success":     true,
+			"data":        items,
+			"page":        page,
+			"per_page":    perPage,
+			"total":       total,
+			"total_pages": 1,
+			"has_next":    false,
+			"has_prev":    page > 1,
+			"pagination": gin.H{
+				"page":        page,
+				"per_page":    perPage,
+				"total":       total,
+				"total_pages": 1,
+				"has_next":    false,
+				"has_prev":    page > 1,
+			},
+		})
+		return
+	}
 
 	// Build the query
 	offset := (page - 1) * perPage
-	
+
 	// Base query
 	query := `
 		SELECT 
@@ -224,7 +224,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 		LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
 		WHERE 1=1`
-	
+
 	args := []interface{}{}
 	argIndex := 1
 
@@ -238,25 +238,25 @@ func HandleListTicketsAPI(c *gin.Context) {
 		}
 		query += fmt.Sprintf(" AND t.ticket_state_id IN (%s)", strings.Join(placeholders, ","))
 	}
-	
+
 	if queueID, ok := filters["queue_id"].(int); ok {
 		query += fmt.Sprintf(" AND t.queue_id = $%d", argIndex)
 		args = append(args, queueID)
 		argIndex++
 	}
-	
+
 	if priorityID, ok := filters["priority_id"].(int); ok {
 		query += fmt.Sprintf(" AND t.ticket_priority_id = $%d", argIndex)
 		args = append(args, priorityID)
 		argIndex++
 	}
-	
+
 	if customerUserID, ok := filters["customer_user_id"].(string); ok && customerUserID != "" {
 		query += fmt.Sprintf(" AND t.customer_user_id = $%d", argIndex)
 		args = append(args, customerUserID)
 		argIndex++
 	}
-	
+
 	if responsibleUserID, ok := filters["responsible_user_id"].(int); ok {
 		query += fmt.Sprintf(" AND t.responsible_user_id = $%d", argIndex)
 		args = append(args, responsibleUserID)
@@ -302,23 +302,23 @@ func HandleListTicketsAPI(c *gin.Context) {
 	tickets := []map[string]interface{}{}
 	for rows.Next() {
 		var ticket struct {
-			ID                 int64   `json:"id"`
-			TN                 string  `json:"tn"`
-			Title              string  `json:"title"`
-			QueueID            int     `json:"queue_id"`
-			QueueName          string  `json:"queue_name"`
-			StateID            int     `json:"state_id"`
-			StateName          string  `json:"state_name"`
-			PriorityID         int     `json:"priority_id"`
-			PriorityName       string  `json:"priority_name"`
-			CustomerUserID     *string `json:"customer_user_id"`
-			CustomerID         *string `json:"customer_id"`
-			UserID             int     `json:"user_id"`
-			ResponsibleUserID  *int    `json:"responsible_user_id"`
-			CreatedAt          string  `json:"created_at"`
-			UpdatedAt          string  `json:"updated_at"`
+			ID                int64   `json:"id"`
+			TN                string  `json:"tn"`
+			Title             string  `json:"title"`
+			QueueID           int     `json:"queue_id"`
+			QueueName         string  `json:"queue_name"`
+			StateID           int     `json:"state_id"`
+			StateName         string  `json:"state_name"`
+			PriorityID        int     `json:"priority_id"`
+			PriorityName      string  `json:"priority_name"`
+			CustomerUserID    *string `json:"customer_user_id"`
+			CustomerID        *string `json:"customer_id"`
+			UserID            int     `json:"user_id"`
+			ResponsibleUserID *int    `json:"responsible_user_id"`
+			CreatedAt         string  `json:"created_at"`
+			UpdatedAt         string  `json:"updated_at"`
 		}
-		
+
 		err := rows.Scan(
 			&ticket.ID,
 			&ticket.TN,
@@ -344,6 +344,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 		ticketMap := map[string]interface{}{
 			"id":            ticket.ID,
 			"tn":            ticket.TN,
+			"ticket_number": ticket.TN,
 			"title":         ticket.Title,
 			"queue_id":      ticket.QueueID,
 			"queue_name":    ticket.QueueName,
@@ -353,23 +354,25 @@ func HandleListTicketsAPI(c *gin.Context) {
 			"priority_name": ticket.PriorityName,
 			"created_at":    ticket.CreatedAt,
 			"updated_at":    ticket.UpdatedAt,
+			"create_time":   ticket.CreatedAt,
+			"update_time":   ticket.UpdatedAt,
 		}
-		
+
 		// Add optional fields
 		if ticket.CustomerUserID != nil {
 			ticketMap["customer_user_id"] = *ticket.CustomerUserID
 		} else {
 			ticketMap["customer_user_id"] = ""
 		}
-		
+
 		if ticket.CustomerID != nil {
 			ticketMap["customer_id"] = *ticket.CustomerID
 		} else {
 			ticketMap["customer_id"] = ""
 		}
-		
+
 		ticketMap["user_id"] = ticket.UserID
-		
+
 		if ticket.ResponsibleUserID != nil {
 			ticketMap["responsible_user_id"] = *ticket.ResponsibleUserID
 		} else {
@@ -388,7 +391,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 				ticketMap["article_count"] = 0
 			}
 		}
-		
+
 		if includeLastArticle {
 			// Get last article for this ticket
 			var lastArticle struct {
@@ -403,7 +406,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 				ORDER BY a.create_time DESC
 				LIMIT 1
 			`), ticket.ID).Scan(&lastArticle.Subject, &lastArticle.CreatedAt)
-			
+
 			if articleErr == nil {
 				subject := ""
 				if lastArticle.Subject != nil {

@@ -558,22 +558,23 @@ func importOtherTables(scanner *bufio.Scanner, db *sql.DB, idMap *IDMapping, ver
 				
 				for _, valueSet := range valueSets {
 					values := parseValues(valueSet)
-					if len(values) < 7 {
+					if len(values) < 8 {
 						continue
 					}
 					
 					if !dryRun {
-						// ticket_priority structure: id, name, valid_id, create_time, create_by, change_time, change_by
+						// ticket_priority structure: id, name, valid_id, color, create_time, create_by, change_time, change_by
 						_, err := db.Exec(database.ConvertPlaceholders(`
 							INSERT INTO ticket_priority (
-								id, name, valid_id, create_time, create_by, change_time, change_by
-							) VALUES ($1, $2, $3, $4, $5, $6, $7)
+								id, name, valid_id, color, create_time, create_by, change_time, change_by
+							) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 							ON CONFLICT (id) DO UPDATE SET
 								name = EXCLUDED.name,
-								valid_id = EXCLUDED.valid_id
-						`), parseIntOrNull(values[0]), values[1], parseIntOrNull(values[2]),
-						   parseTimestamp(values[3]), parseIntOrNull(values[4]),
-						   parseTimestamp(values[5]), parseIntOrNull(values[6]))
+								valid_id = EXCLUDED.valid_id,
+								color = EXCLUDED.color
+						`), parseIntOrNull(values[0]), values[1], parseIntOrNull(values[2]), values[3],
+						   parseTimestamp(values[4]), parseIntOrNull(values[5]),
+						   parseTimestamp(values[6]), parseIntOrNull(values[7]))
 						
 						if err != nil {
 							if verbose {
