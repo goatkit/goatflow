@@ -7,11 +7,15 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
+- Completed ticket creation vertical slice: `/api/tickets` service handler, HTMX agent form, attachment/time accounting support, and history recorder coverage.
+- Ticket zoom (`pages/ticket_detail.pongo2`) now renders live articles, history, and customer context for newly created tickets.
+- Status transitions, agent assignment, and queue transfer endpoints wired for both HTMX and JSON flows with history logging.
 - Agent Ticket Zoom tabs now render ticket history and linked tickets via Pongo2 HTMX fragments, providing empty-state messaging until data exists.
 - MySQL test container now applies the same integration fixtures as PostgreSQL, so API suites run identically across drivers.
 
 ### Changed
-- _Nothing yet._
+- Agent ticket creation path issues `HX-Redirect` to the canonical zoom view and shares queue/state validation with the API handler.
+- API test harness now defaults to Postgres to align history assertions with integration coverage.
 
 ### Fixed
 - Ticket history HTMX fragment now resolves article subjects via `article_data_mime`, eliminating 500 errors on MariaDB installs.
@@ -25,7 +29,7 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - _None._
 
 ### Internal / Developer Notes
-- _TBD._
+- Track follow-up work for status/assignment transitions and SMTP mail-sink container integration.
 
 ---
 

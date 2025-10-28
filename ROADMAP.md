@@ -204,17 +204,17 @@ gotrs-migrate --source postgres://user:pass@host/db \
 
 ### Week 1: Core Ticket System (Aug 29 - Sep 4, 2025)
 **Must Have - Without this, nothing else matters:**
-- [ ] Implement ticket creation API (remove TODO stubs)
-- [ ] Create ticket submission form UI
+- [x] Implement ticket creation API (remove TODO stubs)
+- [x] Create ticket submission form UI
 - [x] Display ticket list (agent view) — minimal fallback for tests
-- [x] Basic ticket detail view (Ticket Zoom test-mode fallback, handler wiring)
+- [x] Full ticket detail view (ticket zoom now renders live data)
 - [x] Generate proper ticket numbers
 
 ### Week 2: Ticket Management (Sep 5-11, 2025)
-- [ ] Article/comment system (add replies to tickets)
-- [ ] Ticket status updates
-- [ ] Agent assignment functionality
-- [ ] Queue transfer capability
+- [x] Article/comment system (add replies to tickets)
+- [x] Ticket status updates
+- [x] Agent assignment functionality
+- [x] Queue transfer capability
 - [x] Basic search functionality — UI/API search with pagination (tests passing)
 
 ### Week 3: Customer Features (Sep 12-18, 2025)
@@ -249,7 +249,7 @@ gotrs-migrate --source postgres://user:pass@host/db \
 7. **Search** - Can't find tickets
 8. **Reports** - No metrics or statistics
 
-**Current Reality**: Core config and scaffolding exist; ticket list/detail (test-mode) and API scaffolds in place; creation/update flows next.
+**Current Reality**: Agent/API ticket creation, attachments, real ticket zoom, and status/assignment workflows are live; customer access and outbound email remain open.
 
 ## 📊 Honest Current Metrics (September 3, 2025)
 
@@ -364,34 +364,21 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 No additional core ticketing capabilities have been implemented since the September 23 update. All previously marked ✅ items remain valid. Work now shifts from infrastructural cleanup to delivering the first true ticket vertical slice while aggressively preventing further regressions.
 
 ### 🎯 Immediate MVP Focus (Strict Priority Order)
-1. Ticket Creation Vertical Slice (API + HTMX form + persistence)  
-   - Implement create handler (remove stubs)  
-   - Validation (queue, priority, title length, customer optional)  
-   - Persist ticket + initial article (even if blank body)  
-   - Return canonical ticket number & redirect to zoom  
-2. Deterministic Ticket Number Generator  
-   - Monotonic, collision-safe (DB sequence or allocation table)  
-   - Property test + concurrency test (race detector)  
-3. Real Ticket Zoom (replace test-mode fallback)  
-   - Load ticket + articles (empty state friendly)  
-   - Consistent JSON test fixture + HTML template snapshot  
-4. Articles / Comments System  
-   - Add public reply + internal note differentiation  
-   - Basic article list rendering (reverse chronological)  
-5. Status Transitions & Assignment  
-   - Minimal workflow (new → open → closed)  
-   - Assign/transfer: agent + queue change endpoints  
-6. Minimal Customer Portal  
-   - Login (reuse auth)  
-   - Submit ticket (subset of agent form)  
-   - View own tickets + add reply  
-7. Outbound Email Notification (One-Way)  
-   - Pluggable mail sender interface (no inbound yet)  
-   - Fire on ticket create + public article add  
-8. Hardening / Regression Pass (stabilization freeze)  
-   - Only bug fixes + test debt clearance before tagging 0.4.0
+1. ✅ Ticket creation vertical slice (API handler, HTMX form, persistence, history, attachments) – landed October 28, 2025.  
+   - Agent and API paths now share validation, repository-backed TNs, article bootstrap, and history recording.  
+   - HTMX responses redirect to the canonical `/tickets/<id>` view and surface attachment results.
+2. ✅ Deterministic ticket number generator – in production since October 4, 2025 with property/race coverage.
+3. ✅ Real ticket zoom (Pongo2) replaces the test-mode fallback with live articles, time entries, and customer context.
+4. ✅ Articles/comments system – public and internal replies wired through REST + HTMX fragments with visibility handling.
+5. ✅ Status transitions & assignment workflow (new → open → closed, agent & queue transfer endpoints) – delivered October 28, 2025.
+6. Minimal customer portal (login, submit ticket, view/respond to own tickets).
+7. Outbound email notification (one-way) via pluggable SMTP adapter + mail-sink container (fire on create + public reply) – **next active item**.
+8. Hardening / regression pass (stabilization freeze) before tagging 0.4.0.
 
 ### ✅ Already Done / Do NOT Rework Now
+- Ticket creation vertical slice (API handler, HTMX form, attachments, history)
+- Real ticket zoom rendering with live articles & time accounting
+- Status transitions & assignment workflow (state changes, agent + queue transfer)
 - Queue detail statistics + ticket list
 - Search API/UI basic pagination
 - Type CRUD & fallback test harness
@@ -527,6 +514,15 @@ Impact:
 - Repository list queries honor `ExcludeClosedStates`, joining `ticket_state_type` to avoid over-fetching closed tickets
 - `tickets.not_closed` translation delivered for EN/DE/ES/AR/TLH so the new option localizes correctly
 - Cleaned temporary debug logging from the agent ticket list handler to keep production logs focused on actionable errors
+
+### ✅ Update: October 28, 2025 – Ticket Creation Vertical Slice Complete
+
+- `/api/tickets` now runs through the repository-backed service: queue/state validation, generator-issued ticket numbers, initial article bootstrap, and history recording.
+- Agent HTMX ticket creation persists attachments, optional time accounting, and issues `HX-Redirect` to the canonical ticket zoom.
+- Ticket zoom (`pages/ticket_detail.pongo2`) renders newly created tickets with live articles, history feed, time accounting, and customer context.
+- Status transitions, agent assignment, and queue transfer endpoints are wired into both HTMX flows and JSON APIs with matching history entries.
+- API + HTMX suites updated with Postgres defaults and history assertions; `make test` stays green inside toolbox runtimes.
+- **Next focus**: status & assignment transitions, then SMTP mailer integration backed by a mail-sink container for local acceptance tests.
 
 ---
 
