@@ -3,9 +3,9 @@ package api
 import (
 	"context"
 	"net/http"
-	"time"
-	"strings"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
@@ -20,19 +20,34 @@ var HandleAuthLogin = func(c *gin.Context) {
 	contentType := c.GetHeader("Content-Type")
 	var username, password string
 	if strings.Contains(contentType, "application/json") {
-		var payload struct { Login string `json:"login"`; Username string `json:"username"`; Email string `json:"email"`; Password string `json:"password"` }
+		var payload struct {
+			Login    string `json:"login"`
+			Username string `json:"username"`
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
 		if err := c.ShouldBindJSON(&payload); err == nil {
 			username = payload.Login
-			if username == "" { username = payload.Username }
-			if username == "" { username = payload.Email }
+			if username == "" {
+				username = payload.Username
+			}
+			if username == "" {
+				username = payload.Email
+			}
 			password = payload.Password
 		}
 	} else {
 		username = c.PostForm("username")
 		password = c.PostForm("password")
-		if username == "" { username = c.PostForm("login") }
-		if username == "" { username = c.PostForm("email") }
-		if username == "" { username = c.PostForm("user") }
+		if username == "" {
+			username = c.PostForm("login")
+		}
+		if username == "" {
+			username = c.PostForm("email")
+		}
+		if username == "" {
+			username = c.PostForm("user")
+		}
 	}
 	provider := c.PostForm("provider")
 	if provider == "" {
@@ -48,8 +63,6 @@ var HandleAuthLogin = func(c *gin.Context) {
 		}
 		return
 	}
-
-	
 
 	// Get auth service
 	authService := GetAuthService()
@@ -87,7 +100,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 					c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "token generation failed"})
 					return
 				}
-				c.JSON(http.StatusOK, gin.H{"success": true, "access_token": tok, "token_type": "Bearer", "user": gin.H{"id":1, "login": username, "role":"Admin"}})
+				c.JSON(http.StatusOK, gin.H{"success": true, "access_token": tok, "token_type": "Bearer", "user": gin.H{"id": 1, "login": username, "role": "Admin"}})
 				return
 			}
 		}
@@ -104,12 +117,15 @@ var HandleAuthLogin = func(c *gin.Context) {
 	}
 
 	// Get user's preferred session timeout
-	sessionTimeout := constants.DefaultSessionTimeout // Default 24 hours
+	sessionTimeout := shared.GetSystemSessionMaxTime()
 	if db, err := database.GetDB(); err == nil && db != nil {
 		prefService := service.NewUserPreferencesService(db)
 		if userTimeout := prefService.GetSessionTimeout(int(user.ID)); userTimeout > 0 {
-			sessionTimeout = userTimeout
+			sessionTimeout = shared.ResolveSessionTimeout(userTimeout)
 		}
+	}
+	if sessionTimeout <= 0 {
+		sessionTimeout = constants.DefaultSessionTimeout
 	}
 
 	// Set cookies for tokens - set both names for compatibility across middlewares
@@ -147,7 +163,9 @@ var HandleAuthLogin = func(c *gin.Context) {
 	// Store user in session (use "user_id" to match middleware)
 	c.Set("user", user)
 	c.Set("user_id", user.ID)
-	if provider != "" { c.Set("auth_provider", provider) }
+	if provider != "" {
+		c.Set("auth_provider", provider)
+	}
 
 	if strings.Contains(contentType, "application/json") {
 		c.JSON(http.StatusOK, gin.H{"success": true, "access_token": accessToken, "refresh_token": refreshToken, "token_type": "Bearer"})
@@ -188,9 +206,11 @@ var HandleAuthCheck = func(c *gin.Context) {
 	})
 }
 
-	// getEnvDefault returns environment variable value or fallback default
-	func getEnvDefault(key, def string) string {
-	    v := os.Getenv(key)
-	    if v == "" { return def }
-	    return v
+// getEnvDefault returns environment variable value or fallback default
+func getEnvDefault(key, def string) string {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
 	}
+	return v
+}

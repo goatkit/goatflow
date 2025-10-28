@@ -64,7 +64,7 @@
                 <label for="status-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("tickets.status") }}</label>
                 <select id="status-filter" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
                     <option value="all" {% if FilterStatus == "all" %}selected{% endif %}>{{ t("tickets.all_statuses") }}</option>
-                    <option value="not_closed" {% if FilterStatus == "not_closed" or not FilterStatus %}selected{% endif %}>{{ t("tickets.not_closed") }}</option>
+                    <option value="not_closed" {% if FilterStatus == "not_closed" or not FilterStatus %}selected{% endif %}>{{ t("common.not_closed") }}</option>
                     {% for status in Statuses %}
                     <option value="{{ status.Value }}" {% if FilterStatus == status.Value %}selected{% endif %}>{{ status.Label }}</option>
                     {% endfor %}

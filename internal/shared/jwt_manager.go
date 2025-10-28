@@ -4,48 +4,76 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/gotrs-io/gotrs-ce/internal/config"
 )
 
 var (
 	globalJWTManager *auth.JWTManager
-	jwtOnce         sync.Once
+	jwtOnce          sync.Once
 )
 
 // GetJWTManager returns the singleton JWT manager instance
 // This ensures auth service and middleware use the same JWT configuration
 func GetJWTManager() *auth.JWTManager {
 	jwtOnce.Do(func() {
-		// Get JWT secret from environment or use default for development
+		cfg := config.Get()
+		env := strings.ToLower(os.Getenv("APP_ENV"))
+		if cfg != nil && cfg.App.Env != "" {
+			env = strings.ToLower(cfg.App.Env)
+		}
+
 		jwtSecret := os.Getenv("JWT_SECRET")
-		if jwtSecret == "" {
-			// For non-production, generate ephemeral secret to avoid weak default
-			if os.Getenv("APP_ENV") != "production" {
-				b := make([]byte, 32)
-				if _, err := rand.Read(b); err == nil {
-					jwtSecret = hex.EncodeToString(b)
-				}
+		if jwtSecret == "" && cfg != nil {
+			jwtSecret = cfg.Auth.JWT.Secret
+		}
+		if jwtSecret == "" && env != "production" {
+			b := make([]byte, 32)
+			if _, err := rand.Read(b); err == nil {
+				jwtSecret = hex.EncodeToString(b)
 			}
 		}
-		// Enforce minimum length (32 bytes hex = 64 chars) to satisfy security gate
-		if len(jwtSecret) < 32 {
-			// Fallback: extend with random padding if still short (non-production only)
-			if os.Getenv("APP_ENV") != "production" {
-				pad := make([]byte, 16)
-				rand.Read(pad)
-				jwtSecret += hex.EncodeToString(pad)
+		if len(jwtSecret) < 32 && env != "production" {
+			pad := make([]byte, 16)
+			rand.Read(pad)
+			jwtSecret += hex.EncodeToString(pad)
+		}
+
+		systemMax := GetSystemSessionMaxTime()
+		systemIdle := GetSystemSessionIdleTime()
+		tokenDuration := time.Duration(systemMax) * time.Second
+		if tokenDuration <= 0 {
+			tokenDuration = 15 * time.Minute
+		}
+
+		if cfg != nil && cfg.Auth.JWT.AccessTokenTTL > 0 {
+			tokenDuration = cfg.Auth.JWT.AccessTokenTTL
+		}
+
+		if systemMax > 0 {
+			maxDuration := time.Duration(systemMax) * time.Second
+			if tokenDuration <= 0 || maxDuration < tokenDuration {
+				tokenDuration = maxDuration
 			}
 		}
-		
-		// Token duration (15 minutes to match auth API)
-		tokenDuration := 15 * time.Minute
-		
-		// Create the shared JWT manager using the proper constructor
+
+		if systemIdle > 0 {
+			idleDuration := time.Duration(systemIdle) * time.Second
+			if idleDuration < tokenDuration || tokenDuration <= 0 {
+				tokenDuration = idleDuration
+			}
+		}
+
+		if tokenDuration <= 0 {
+			tokenDuration = 15 * time.Minute
+		}
+
 		globalJWTManager = auth.NewJWTManager(jwtSecret, tokenDuration)
 	})
-	
+
 	return globalJWTManager
 }

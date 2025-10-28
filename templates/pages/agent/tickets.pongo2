@@ -33,7 +33,7 @@
                 <div>
                     <select name="status" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
                         <option value="all" {% if CurrentFilters.status == "all" %}selected{% endif %}>{{ t("tickets.all_statuses") }}</option>
-                        <option value="not_closed" {% if CurrentFilters.status == "not_closed" %}selected{% endif %}>{{ t("tickets.not_closed") }}</option>
+                        <option value="not_closed" {% if CurrentFilters.status == "not_closed" %}selected{% endif %}>{{ t("common.not_closed") }}</option>
                         <option value="open" {% if CurrentFilters.status == "open" %}selected{% endif %}>{{ t("status.open") }}</option>
                         <option value="pending" {% if CurrentFilters.status == "pending" %}selected{% endif %}>{{ t("status.pending") }}</option>
                         <option value="closed" {% if CurrentFilters.status == "closed" %}selected{% endif %}>{{ t("status.closed") }}</option>

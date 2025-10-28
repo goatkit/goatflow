@@ -16,7 +16,7 @@ func TestConfigStructs(t *testing.T) {
 	t.Run("Config struct has all expected fields", func(t *testing.T) {
 		cfg := &Config{}
 		assert.NotNil(t, cfg)
-		
+
 		// Verify main config sections exist
 		assert.NotNil(t, &cfg.App)
 		assert.NotNil(t, &cfg.Server)
@@ -250,13 +250,17 @@ func TestAuthConfig(t *testing.T) {
 		authConfig.Session.Secure = true
 		authConfig.Session.HTTPOnly = true
 		authConfig.Session.SameSite = "strict"
-		authConfig.Session.MaxAge = 86400
+		authConfig.Session.MaxAge = 57600
+		authConfig.Session.SessionMaxTime = 57600
+		authConfig.Session.SessionMaxIdleTime = 7200
 
 		assert.Equal(t, "gotrs_session", authConfig.Session.CookieName)
 		assert.True(t, authConfig.Session.Secure)
 		assert.True(t, authConfig.Session.HTTPOnly)
 		assert.Equal(t, "strict", authConfig.Session.SameSite)
-		assert.Equal(t, 86400, authConfig.Session.MaxAge)
+		assert.Equal(t, 57600, authConfig.Session.MaxAge)
+		assert.Equal(t, 57600, authConfig.Session.SessionMaxTime)
+		assert.Equal(t, 7200, authConfig.Session.SessionMaxIdleTime)
 	})
 
 	t.Run("Password policy configuration", func(t *testing.T) {
@@ -403,14 +407,14 @@ func TestFeaturesConfig(t *testing.T) {
 	t.Run("Feature flags", func(t *testing.T) {
 		features := FeaturesConfig{
 			Registration:            true,
-			SocialLogin:            false,
-			TwoFactorAuth:          true,
-			APIKeys:                true,
-			Webhooks:               true,
-			LDAP:                   false,
-			SAML:                   false,
-			KnowledgeBase:          true,
-			CustomerPortal:         true,
+			SocialLogin:             false,
+			TwoFactorAuth:           true,
+			APIKeys:                 true,
+			Webhooks:                true,
+			LDAP:                    false,
+			SAML:                    false,
+			KnowledgeBase:           true,
+			CustomerPortal:          true,
 			AgentCollisionDetection: true,
 		}
 
@@ -486,7 +490,7 @@ func TestLoadFromFile(t *testing.T) {
 		// Create a temporary config file
 		tmpDir := t.TempDir()
 		configFile := filepath.Join(tmpDir, "test-config.yaml")
-		
+
 		configContent := `
 app:
   name: GOTRS Test
@@ -540,7 +544,7 @@ database:
 	t.Run("Error on invalid YAML", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		configFile := filepath.Join(tmpDir, "invalid-config.yaml")
-		
+
 		invalidContent := `
 app:
   name: [this is invalid
@@ -587,12 +591,12 @@ func TestGet(t *testing.T) {
 		// Run concurrent reads
 		var wg sync.WaitGroup
 		errors := make([]error, 100)
-		
+
 		for i := 0; i < 100; i++ {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
-				
+
 				retrieved := Get()
 				if retrieved == nil {
 					errors[idx] = fmt.Errorf("config was nil")
@@ -601,9 +605,9 @@ func TestGet(t *testing.T) {
 				}
 			}(i)
 		}
-		
+
 		wg.Wait()
-		
+
 		// Check for errors
 		for _, err := range errors {
 			assert.NoError(t, err)
@@ -647,7 +651,7 @@ func TestConcurrentConfigAccess(t *testing.T) {
 
 	// Run concurrent operations
 	var wg sync.WaitGroup
-	
+
 	// Readers
 	for i := 0; i < 50; i++ {
 		wg.Add(1)
@@ -660,7 +664,7 @@ func TestConcurrentConfigAccess(t *testing.T) {
 			}
 		}()
 	}
-	
+
 	// Writers (simulating config updates)
 	for i := 0; i < 5; i++ {
 		wg.Add(1)
@@ -679,9 +683,9 @@ func TestConcurrentConfigAccess(t *testing.T) {
 			}
 		}(i)
 	}
-	
+
 	wg.Wait()
-	
+
 	// Verify final state is consistent
 	finalCfg := Get()
 	assert.NotNil(t, finalCfg)

@@ -18,8 +18,8 @@ import (
 type SimpleTicketService struct {
 	ticketRepo repository.ITicketRepository
 	messages   map[uint][]*SimpleTicketMessage // In-memory message storage by ticket ID
-	messagesMu sync.RWMutex                   // Mutex for thread-safe access to messages
-	nextMsgID  uint                          // Auto-incrementing message ID
+	messagesMu sync.RWMutex                    // Mutex for thread-safe access to messages
+	nextMsgID  uint                            // Auto-incrementing message ID
 }
 
 // NewSimpleTicketService creates a new simple ticket service
@@ -36,27 +36,27 @@ func (s *SimpleTicketService) CreateTicket(ticket *models.Ticket) error {
 	if ticket == nil {
 		return fmt.Errorf("ticket cannot be nil")
 	}
-	
+
 	// Validate required fields
 	if ticket.Title == "" {
 		return fmt.Errorf("ticket title is required")
 	}
-	
+
 	// Create the ticket
 	return s.ticketRepo.Create(ticket)
 }
 
 // GetTicket retrieves a ticket by ID
 func (s *SimpleTicketService) GetTicket(ticketID uint) (*models.Ticket, error) {
-    if s.ticketRepo == nil {
-        // DB-less mode in tests: only ticket 1 exists
-        if ticketID == 1 {
-            now := time.Now()
-            return &models.Ticket{ID: int(ticketID), TicketNumber: "T-TEST-1", Title: "Test Ticket", QueueID: 1, TicketStateID: 2, TicketPriorityID: 2, CreateTime: now, ChangeTime: now}, nil
-        }
-        return nil, fmt.Errorf("ticket not found")
-    }
-    return s.ticketRepo.GetByID(ticketID)
+	if s.ticketRepo == nil {
+		// DB-less mode in tests: only ticket 1 exists
+		if ticketID == 1 {
+			now := time.Now()
+			return &models.Ticket{ID: int(ticketID), TicketNumber: "T-TEST-1", Title: "Test Ticket", QueueID: 1, TicketStateID: 2, TicketPriorityID: 2, CreateTime: now, ChangeTime: now}, nil
+		}
+		return nil, fmt.Errorf("ticket not found")
+	}
+	return s.ticketRepo.GetByID(ticketID)
 }
 
 // UpdateTicket updates an existing ticket
@@ -64,7 +64,7 @@ func (s *SimpleTicketService) UpdateTicket(ticket *models.Ticket) error {
 	if ticket == nil {
 		return fmt.Errorf("ticket cannot be nil")
 	}
-	
+
 	return s.ticketRepo.Update(ticket)
 }
 
@@ -81,24 +81,24 @@ func (s *SimpleTicketService) ListTickets(req *models.TicketListRequest) (*model
 			PerPage: 20,
 		}
 	}
-	
+
 	return s.ticketRepo.List(req)
 }
 
 // SimpleTicketMessage is a simplified message model
 type SimpleTicketMessage struct {
-	ID          uint                    `json:"id"`
-	TicketID    uint                    `json:"ticket_id"`
-	Body        string                  `json:"body"`
-	Subject     string                  `json:"subject"`
-	CreatedBy   uint                    `json:"created_by"`
-	AuthorName  string                  `json:"author_name"`
-	AuthorEmail string                  `json:"author_email"`
-	AuthorType  string                  `json:"author_type"` // "Customer", "Agent", "System"
-	IsPublic    bool                    `json:"is_public"`
-	IsInternal  bool                    `json:"is_internal"`
-	CreatedAt   time.Time               `json:"created_at"`
-	Attachments []*SimpleAttachment     `json:"attachments,omitempty"`
+	ID          uint                `json:"id"`
+	TicketID    uint                `json:"ticket_id"`
+	Body        string              `json:"body"`
+	Subject     string              `json:"subject"`
+	CreatedBy   uint                `json:"created_by"`
+	AuthorName  string              `json:"author_name"`
+	AuthorEmail string              `json:"author_email"`
+	AuthorType  string              `json:"author_type"` // "Customer", "Agent", "System"
+	IsPublic    bool                `json:"is_public"`
+	IsInternal  bool                `json:"is_internal"`
+	CreatedAt   time.Time           `json:"created_at"`
+	Attachments []*SimpleAttachment `json:"attachments,omitempty"`
 }
 
 // SimpleAttachment is a simplified attachment model
@@ -114,37 +114,37 @@ type SimpleAttachment struct {
 
 // AddMessage adds a message to a ticket
 func (s *SimpleTicketService) AddMessage(ticketID uint, message *SimpleTicketMessage) error {
-    // Validate the ticket exists
-    var err error
-    if s.ticketRepo != nil {
-        _, err = s.ticketRepo.GetByID(ticketID)
-    } else {
-        if ticketID != 1 {
-            err = fmt.Errorf("ticket not found")
-        }
-    }
+	// Validate the ticket exists
+	var err error
+	if s.ticketRepo != nil {
+		_, err = s.ticketRepo.GetByID(ticketID)
+	} else {
+		if ticketID != 1 {
+			err = fmt.Errorf("ticket not found")
+		}
+	}
 	if err != nil {
 		return fmt.Errorf("ticket not found: %w", err)
 	}
-	
+
 	if message == nil {
 		return fmt.Errorf("message cannot be nil")
 	}
-	
+
 	if message.Body == "" {
 		return fmt.Errorf("message body is required")
 	}
-	
+
 	// Lock for thread-safe access
 	s.messagesMu.Lock()
 	defer s.messagesMu.Unlock()
-	
+
 	// Set message metadata
 	message.ID = s.nextMsgID
 	message.TicketID = ticketID
 	message.CreatedAt = time.Now()
 	s.nextMsgID++
-	
+
 	// Set default author info if not provided
 	if message.AuthorName == "" {
 		if message.AuthorType == "Customer" {
@@ -153,32 +153,32 @@ func (s *SimpleTicketService) AddMessage(ticketID uint, message *SimpleTicketMes
 			message.AuthorName = "System User"
 		}
 	}
-	
+
 	if message.AuthorType == "" {
 		message.AuthorType = "System"
 	}
-	
+
 	// Store the message
 	if s.messages[ticketID] == nil {
 		s.messages[ticketID] = make([]*SimpleTicketMessage, 0)
 	}
 	s.messages[ticketID] = append(s.messages[ticketID], message)
-	
+
 	return nil
 }
 
 // GetMessages retrieves all messages for a ticket
 func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage, error) {
-    // Validate the ticket exists
-    var err error
-    if s.ticketRepo != nil {
-        _, err = s.ticketRepo.GetByID(ticketID)
-    } else {
-        // DB-less mode: only ticket 1 exists
-        if ticketID != 1 {
-            err = fmt.Errorf("ticket not found")
-        }
-    }
+	// Validate the ticket exists
+	var err error
+	if s.ticketRepo != nil {
+		_, err = s.ticketRepo.GetByID(ticketID)
+	} else {
+		// DB-less mode: only ticket 1 exists
+		if ticketID != 1 {
+			err = fmt.Errorf("ticket not found")
+		}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("ticket not found: %w", err)
 	}
@@ -189,8 +189,8 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 	s.messagesMu.RUnlock()
 
 	// Also retrieve messages from the database (articles)
-    db, err := database.GetDB()
-    if err != nil || db == nil {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
 		// If database is not available, return in-memory messages only
 		if inMemoryMessages == nil {
 			return make([]*SimpleTicketMessage, 0), nil
@@ -202,9 +202,9 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 
 	// Query articles from database - join with article_data_mime for content
 	rows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT a.id, 
+		SELECT a.id,
 		       COALESCE(adm.a_subject, ''),
-		       COALESCE(CONVERT_FROM(adm.a_body, 'UTF8'), ''),
+		       COALESCE(adm.a_body, ''),
 		       a.create_time, a.create_by,
 		       COALESCE(adm.a_from, ''), COALESCE(adm.a_to, ''),
 		       a.article_sender_type_id, a.is_visible_for_customer
@@ -288,30 +288,30 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 			WHERE att.article_id = ANY($1)
 			ORDER BY att.id
 		`), pq.Array(articleIDs))
-		
+
 		if err == nil {
 			defer attachRows.Close()
-			
+
 			// Create a map for quick message lookup
 			messageMap := make(map[uint]*SimpleTicketMessage)
 			for _, msg := range dbMessages {
 				messageMap[msg.ID] = msg
 			}
-			
+
 			for attachRows.Next() {
 				var attID, articleID int
 				var filename, contentType, contentSize string
 				var content []byte
-				
-				err := attachRows.Scan(&attID, &articleID, &filename, 
+
+				err := attachRows.Scan(&attID, &articleID, &filename,
 					&contentType, &contentSize, &content)
 				if err != nil {
 					continue
 				}
-				
+
 				// Parse size
 				size, _ := strconv.ParseInt(contentSize, 10, 64)
-				
+
 				// Add attachment to the corresponding message
 				if msg, ok := messageMap[uint(articleID)]; ok {
 					attachment := &SimpleAttachment{

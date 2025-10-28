@@ -35,7 +35,7 @@ func (s *ticketService) Create(ctx context.Context, in CreateTicketInput) (*mode
 		return nil, errors.New("title required")
 	}
 	if len(in.Title) > 255 {
-		return nil, errors.New("title too long")
+		return nil, errors.New("Title too long")
 	}
 	if in.QueueID <= 0 {
 		return nil, errors.New("invalid queue")

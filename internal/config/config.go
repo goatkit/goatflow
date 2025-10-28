@@ -102,11 +102,13 @@ type AuthConfig struct {
 		RefreshTokenTTL time.Duration `mapstructure:"refresh_token_ttl"`
 	} `mapstructure:"jwt"`
 	Session struct {
-		CookieName string `mapstructure:"cookie_name"`
-		Secure     bool   `mapstructure:"secure"`
-		HTTPOnly   bool   `mapstructure:"http_only"`
-		SameSite   string `mapstructure:"same_site"`
-		MaxAge     int    `mapstructure:"max_age"`
+		CookieName         string `mapstructure:"cookie_name"`
+		Secure             bool   `mapstructure:"secure"`
+		HTTPOnly           bool   `mapstructure:"http_only"`
+		SameSite           string `mapstructure:"same_site"`
+		MaxAge             int    `mapstructure:"max_age"`
+		SessionMaxTime     int    `mapstructure:"SessionMaxTime"`
+		SessionMaxIdleTime int    `mapstructure:"SessionMaxIdleTime"`
 	} `mapstructure:"session"`
 	Password struct {
 		MinLength        int  `mapstructure:"min_length"`

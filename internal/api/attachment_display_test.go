@@ -2,6 +2,8 @@ package api
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -9,13 +11,37 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type attachmentTicketNumberGenerator struct {
+	mu  sync.Mutex
+	seq int64
+}
+
+func (g *attachmentTicketNumberGenerator) Name() string      { return "Random" }
+func (g *attachmentTicketNumberGenerator) IsDateBased() bool { return true }
+
+func (g *attachmentTicketNumberGenerator) Next(ctx context.Context, store ticketnumber.CounterStore) (string, error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.seq++
+	return fmt.Sprintf("990000990%04d", g.seq), nil
+}
+
+type attachmentCounterStore struct{}
+
+func (attachmentCounterStore) Add(ctx context.Context, dateScoped bool, offset int64) (int64, error) {
+	return offset, nil
+}
 
 func TestAttachmentDisplayInTicketDetail(t *testing.T) {
 	// Get database connection
@@ -23,10 +49,14 @@ func TestAttachmentDisplayInTicketDetail(t *testing.T) {
 	if err != nil || db == nil {
 		t.Skip("Database not available, skipping integration test")
 	}
+	repository.SetTicketNumberGenerator(&attachmentTicketNumberGenerator{}, attachmentCounterStore{})
+	t.Cleanup(func() { repository.SetTicketNumberGenerator(nil, nil) })
 
 	// Set up Gin in test mode
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
+	t.Setenv("APP_ENV", "integration")
+	t.Setenv("HTMX_HANDLER_TEST_MODE", "0")
 	SetupHTMXRoutes(router)
 
 	// Test creating a ticket with attachment
@@ -66,10 +96,24 @@ func TestAttachmentDisplayInTicketDetail(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		// Check that ticket was created successfully
-		assert.Equal(t, http.StatusCreated, w.Code)
+		if !assert.Equal(t, http.StatusCreated, w.Code) {
+			t.Logf("ticket create response: %s", w.Body.String())
+		}
+
+		var created struct {
+			ID           int    `json:"id"`
+			TicketNumber string `json:"ticket_number"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &created); err != nil {
+			require.NoError(t, err, "create response should be JSON")
+		}
+		if created.ID == 0 {
+			require.FailNow(t, "ticket id missing in create response")
+		}
 
 		// Now fetch the ticket messages to verify attachment is included
-		req2 := httptest.NewRequest("GET", "/api/tickets/1/messages", nil)
+		messagesURL := fmt.Sprintf("/api/tickets/%d/messages", created.ID)
+		req2 := httptest.NewRequest("GET", messagesURL, nil)
 		req2.Header.Set("Cookie", "token=test-token")
 		req2.Header.Set("HX-Request", "true") // Request as HTMX
 

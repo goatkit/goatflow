@@ -20,7 +20,7 @@ func TestYAMLRoutesBasicAvailability(t *testing.T) {
         "/api/tickets",
         "/api/lookups/queues",
         "/api/canned-responses",
-        "/api/tickets/:id/assign", // fallback in test mode
+    "/api/tickets/:id/assign", // fallback stub in test mode
     }
     for _, p := range expected {
         if _, ok := have[p]; !ok {

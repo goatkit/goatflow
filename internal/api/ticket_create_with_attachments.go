@@ -177,6 +177,9 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 		CreateBy:         int(createdBy),
 		ChangeBy:         int(createdBy),
 	}
+	ownerID := int(createdBy)
+	ticket.UserID = &ownerID
+	ticket.ResponsibleUserID = &ownerID
 	if pendingUnix > 0 && isPendingState(resolvedState) {
 		ticket.UntilTime = pendingUnix
 	}

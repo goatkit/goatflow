@@ -1290,16 +1290,9 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		// Minimal endpoints required by unit tests (DB-less friendly)
 		// NOTE: Do not register /auth/login here as it's already defined earlier
 		// via api.POST("/auth/login", handleLogin(jwtManager)). Registering it
-		// twice causes a Gin panic in tests.
-		// Do not duplicate protected API POST /tickets which is already
-		// registered on protectedAPI above. Only provide a lightweight
-		// fallback when running in test mode and no DB is available.
-		if os.Getenv("APP_ENV") == "test" {
-			apiGroup.POST("/tickets", func(c *gin.Context) {
-				// Delegate to main handler which contains comprehensive test-mode logic
-				handleCreateTicket(c)
-			})
-		}
+		// twice causes a Gin panic in tests. Likewise, the canonical POST /tickets
+		// handler already lives on protectedAPI above; keep it single-sourced to
+		// avoid duplicate route panics when tests wrap SetupHTMXRoutes.
 		// Fallback assign route only if not already registered (when protectedAPI assign skipped in test mode)
 		if os.Getenv("APP_ENV") == "test" {
 			apiGroup.POST("/tickets/:id/assign", func(c *gin.Context) {
@@ -2476,7 +2469,7 @@ func LoadTicketStatesForForm(db *sql.DB) ([]gin.H, map[string]gin.H, error) {
 			FROM ticket_state
 			WHERE valid_id = 1
 			ORDER BY name
-		`))
+	`))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -4320,218 +4313,7 @@ func handleCreateTicket(c *gin.Context) {
 		return
 	}
 
-	// Parse the request into CreateTicketInput semantics
-	var req struct {
-		Subject       string `json:"subject"`
-		Body          string `json:"body"`
-		Priority      string `json:"priority"`
-		QueueID       int    `json:"queue_id"`
-		TypeID        int    `json:"type_id"`
-		CustomerEmail string `json:"customer_email"`
-		CustomerName  string `json:"customer_name"`
-		NextState     string `json:"next_state"`
-		NextStateID   int    `json:"next_state_id"`
-		PendingUntil  string `json:"pending_until"`
-		TimeUnits     int    `json:"time_units"`
-	}
-
-	contentType := c.GetHeader("Content-Type")
-	if strings.Contains(contentType, "application/json") {
-		// Handle JSON request
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   err.Error(),
-			})
-			return
-		}
-	} else {
-		// Handle form data
-		req.Subject = c.PostForm("subject")
-		req.Body = c.PostForm("description")
-		if req.Body == "" {
-			req.Body = c.PostForm("body")
-		}
-		req.Priority = c.PostForm("priority")
-		req.NextState = c.PostForm("next_state")
-		req.PendingUntil = c.PostForm("pending_until")
-		if v := strings.TrimSpace(c.PostForm("next_state_id")); v != "" {
-			if parsed, err := strconv.Atoi(v); err == nil {
-				req.NextStateID = parsed
-			}
-		}
-
-		// Parse queue ID (support both queue_id and legacy queue)
-		if queueStr := c.PostForm("queue_id"); queueStr != "" {
-			if queueID, err := strconv.Atoi(queueStr); err == nil {
-				req.QueueID = queueID
-			}
-		} else if queueStr := c.PostForm("queue"); queueStr != "" {
-			if queueID, err := strconv.Atoi(queueStr); err == nil {
-				req.QueueID = queueID
-			}
-		}
-
-		// Parse type ID (support both type_id and legacy type)
-		if typeStr := c.PostForm("type_id"); typeStr != "" {
-			if typeID, err := strconv.Atoi(typeStr); err == nil {
-				req.TypeID = typeID
-			}
-		} else if typeStr := c.PostForm("type"); typeStr != "" {
-			if typeID, err := strconv.Atoi(typeStr); err == nil {
-				req.TypeID = typeID
-			}
-		}
-
-		// Parse time units if provided
-		if tu := strings.TrimSpace(c.PostForm("time_units")); tu != "" {
-			if v, err := strconv.Atoi(tu); err == nil && v >= 0 {
-				req.TimeUnits = v
-			}
-		}
-
-		// Handle customer data
-		if customerEmail := c.PostForm("customer_email"); customerEmail != "" {
-			req.CustomerEmail = customerEmail
-			req.CustomerName = c.PostForm("customer_name")
-		} else {
-			// Try new customer fields
-			req.CustomerEmail = c.PostForm("new_customer_email")
-			req.CustomerName = c.PostForm("new_customer_name")
-		}
-
-		// Validate required fields
-		if req.Subject == "" || req.Body == "" {
-			if c.GetHeader("HX-Request") == "true" {
-				c.HTML(http.StatusBadRequest, "error_message.html", gin.H{
-					"error": "Subject and description are required",
-				})
-			} else {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"success": false,
-					"error":   "Subject and description are required",
-				})
-			}
-			return
-		}
-
-		if req.CustomerEmail == "" {
-			if c.GetHeader("HX-Request") == "true" {
-				c.HTML(http.StatusBadRequest, "error_message.html", gin.H{
-					"error": "Customer email is required",
-				})
-			} else {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"success": false,
-					"error":   "Customer email is required",
-				})
-			}
-			return
-		}
-	}
-
-	// Get current user ID (use 1 for demo/test)
-	createBy := 1
-	if userCtx, ok := c.Get("user"); ok {
-		if user, ok := userCtx.(*models.User); ok && user.ID > 0 {
-			createBy = int(user.ID)
-		}
-	}
-
-	// Create the ticket using the service (ensure db is defined)
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
-		return
-	}
-	repo := repository.NewTicketRepository(db)
-	ticketService := service.NewTicketService(repo)
-
-	stateID := req.NextStateID
-	if resolvedID, _, err := resolveTicketState(repo, req.NextState, req.NextStateID); err != nil {
-		log.Printf("create ticket: state resolution failed: %v", err)
-		if resolvedID > 0 {
-			stateID = resolvedID
-		}
-	} else if resolvedID > 0 {
-		stateID = resolvedID
-	}
-
-	pendingUnix := parsePendingUntil(req.PendingUntil)
-
-	createInput := service.CreateTicketInput{
-		Title:        req.Subject,
-		QueueID:      req.QueueID,
-		UserID:       createBy,
-		Body:         req.Body,
-		StateID:      stateID,
-		PendingUntil: pendingUnix,
-		TypeID:       req.TypeID,
-	}
-	result, err := ticketService.Create(c, createInput)
-	if err != nil {
-		log.Printf("Error creating ticket: %v", err)
-		// Provide more specific error messages
-		errorMsg := "Failed to create ticket"
-		if strings.Contains(err.Error(), "queue") {
-			errorMsg = "Invalid queue selected. Please select a valid queue."
-		} else if strings.Contains(err.Error(), "customer") {
-			errorMsg = "Customer validation failed. Please check customer details."
-		} else if strings.Contains(err.Error(), "database") {
-			errorMsg = "Database error. Please try again later."
-		} else if strings.Contains(err.Error(), "duplicate") {
-			errorMsg = "A similar ticket already exists."
-		} else {
-			// Include the actual error for debugging
-			errorMsg = fmt.Sprintf("Failed to create ticket: %v", err)
-		}
-
-		if c.GetHeader("HX-Request") == "true" {
-			c.HTML(http.StatusInternalServerError, "error_message.html", gin.H{
-				"error": errorMsg,
-			})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   errorMsg,
-				"details": err.Error(), // Include full error for debugging
-			})
-		}
-		return
-	}
-
-	// If time units were provided, persist to time_accounting table
-	if req.TimeUnits > 0 && db != nil {
-		_ = saveTimeEntry(db, result.ID, nil, req.TimeUnits, createBy)
-	}
-
-	recorder := history.NewRecorder(repo)
-	msg := "Ticket created"
-	if title := strings.TrimSpace(result.Title); title != "" {
-		msg = fmt.Sprintf("Created ticket \"%s\"", title)
-	}
-	if err := recorder.Record(c.Request.Context(), nil, result, nil, history.TypeNewTicket, msg, createBy); err != nil {
-		log.Printf("history record (create) failed: %v", err)
-	}
-
-	// Return success with the actual ticket number
-	if c.GetHeader("HX-Request") == "true" {
-		// For HTMX requests, set redirect header and return success HTML
-		c.Header("HX-Redirect", fmt.Sprintf("/tickets/%d", result.ID))
-		c.HTML(http.StatusCreated, "ticket_create_success.html", gin.H{
-			"ticket_number": result.TicketNumber,
-			"ticket_id":     result.ID,
-		})
-	} else {
-		// For API requests, return JSON
-		c.JSON(http.StatusCreated, gin.H{
-			"success":       true,
-			"ticket_id":     result.TicketNumber,
-			"ticket_number": result.TicketNumber,
-			"id":            result.ID,
-			"message":       "Ticket created successfully",
-		})
-	}
+	handleCreateTicketWithAttachments(c)
 }
 
 // handleGetTicket returns a specific ticket

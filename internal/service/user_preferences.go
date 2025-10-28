@@ -26,7 +26,7 @@ func (s *UserPreferencesService) GetPreference(userID int, key string) (string, 
 		FROM user_preferences 
 		WHERE user_id = $1 AND preferences_key = $2
 	`
-	
+
 	err := s.db.QueryRow(query, userID, key).Scan(&value)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -34,7 +34,7 @@ func (s *UserPreferencesService) GetPreference(userID int, key string) (string, 
 		}
 		return "", fmt.Errorf("failed to get preference: %w", err)
 	}
-	
+
 	return string(value), nil
 }
 
@@ -46,43 +46,43 @@ func (s *UserPreferencesService) SetPreference(userID int, key string, value str
 		SET preferences_value = $3
 		WHERE user_id = $1 AND preferences_key = $2
 	`
-	
+
 	result, err := s.db.Exec(updateQuery, userID, key, []byte(value))
 	if err != nil {
 		return fmt.Errorf("failed to update preference: %w", err)
 	}
-	
+
 	// Check if any rows were updated
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to check rows affected: %w", err)
 	}
-	
+
 	// If no rows were updated, insert new preference
 	if rowsAffected == 0 {
 		insertQuery := `
 			INSERT INTO user_preferences (user_id, preferences_key, preferences_value)
 			VALUES ($1, $2, $3)
 		`
-		
+
 		_, err = s.db.Exec(insertQuery, userID, key, []byte(value))
 		if err != nil {
 			return fmt.Errorf("failed to insert preference: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
 // DeletePreference removes a user preference
 func (s *UserPreferencesService) DeletePreference(userID int, key string) error {
 	query := `DELETE FROM user_preferences WHERE user_id = $1 AND preferences_key = $2`
-	
+
 	_, err := s.db.Exec(query, userID, key)
 	if err != nil {
 		return fmt.Errorf("failed to delete preference: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -91,23 +91,24 @@ func (s *UserPreferencesService) DeletePreference(userID int, key string) error 
 func (s *UserPreferencesService) GetSessionTimeout(userID int) int {
 	value, err := s.GetPreference(userID, "SessionTimeout")
 	if err != nil || value == "" {
-		// Check for system config (would come from sysconfig)
-		// For now, return the default
-		return constants.DefaultSessionTimeout
+		return 0
 	}
-	
+
 	timeout, err := strconv.Atoi(value)
 	if err != nil {
-		return constants.DefaultSessionTimeout
+		return 0
 	}
-	
+	if timeout == 0 {
+		return 0
+	}
+
 	// Enforce limits
 	if timeout < constants.MinSessionTimeout {
 		timeout = constants.MinSessionTimeout
 	} else if timeout > constants.MaxSessionTimeout {
 		timeout = constants.MaxSessionTimeout
 	}
-	
+
 	return timeout
 }
 
@@ -121,7 +122,7 @@ func (s *UserPreferencesService) SetSessionTimeout(userID int, timeout int) erro
 			timeout = constants.MaxSessionTimeout
 		}
 	}
-	
+
 	return s.SetPreference(userID, "SessionTimeout", strconv.Itoa(timeout))
 }
 
@@ -132,24 +133,24 @@ func (s *UserPreferencesService) GetAllPreferences(userID int) (map[string]strin
 		FROM user_preferences 
 		WHERE user_id = $1
 	`
-	
+
 	rows, err := s.db.Query(query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get all preferences: %w", err)
 	}
 	defer rows.Close()
-	
+
 	prefs := make(map[string]string)
 	for rows.Next() {
 		var key string
 		var value []byte
-		
+
 		if err := rows.Scan(&key, &value); err != nil {
 			return nil, fmt.Errorf("failed to scan preference: %w", err)
 		}
-		
+
 		prefs[key] = string(value)
 	}
-	
+
 	return prefs, nil
 }
