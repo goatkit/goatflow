@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -13,8 +15,11 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
+	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
+	"github.com/gotrs-io/gotrs-ce/internal/runner"
+	"github.com/gotrs-io/gotrs-ce/internal/runner/tasks"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 	"github.com/gotrs-io/gotrs-ce/internal/services/k8s"
@@ -24,6 +29,10 @@ import (
 )
 
 func main() {
+	// Parse command line flags
+	var mode = flag.String("mode", "server", "Run mode: server (default) or runner")
+	flag.Parse()
+
 	// Initialize service registry early
 	log.Println("Initializing service registry...")
 	registry, err := adapter.InitializeServiceRegistry()
@@ -50,6 +59,31 @@ func main() {
 				log.Printf("Error during registry shutdown: %v", err)
 			}
 		}()
+	}
+
+	// Load configuration
+	configDir := os.Getenv("CONFIG_DIR")
+	if configDir == "" {
+		configDir = "/app/config"
+	}
+	if err := config.Load(configDir); err != nil {
+		log.Printf("Warning: Failed to load config: %v", err)
+		// Continue with defaults
+	}
+
+	// Get database connection
+	db, dbErr := database.GetDB()
+	if dbErr != nil {
+		log.Printf("Failed to get database connection: %v", dbErr)
+		if *mode == "runner" {
+			log.Fatal("Database connection required for runner mode")
+		}
+	}
+
+	// Handle runner mode
+	if *mode == "runner" {
+		runRunner(db)
+		return
 	}
 
 	// Set Gin mode
@@ -249,6 +283,10 @@ func main() {
 		"HandleAdminGroupsAddUser":    api.HandleAdminGroupsAddUser,
 		"HandleAdminGroupsRemoveUser": api.HandleAdminGroupsRemoveUser,
 		"handleAdminQueues":           api.HandleAdminQueues,
+		"handleAdminEmailQueue":       api.HandleAdminEmailQueue,
+		"handleAdminEmailQueueRetry":  api.HandleAdminEmailQueueRetry,
+		"handleAdminEmailQueueDelete": api.HandleAdminEmailQueueDelete,
+		"handleAdminEmailQueueRetryAll": api.HandleAdminEmailQueueRetryAll,
 		"handleAdminPriorities":       api.HandleAdminPriorities,
 		// Queue API handlers
 		"HandleAPIQueueGet":             api.HandleAPIQueueGet,
@@ -379,13 +417,22 @@ func main() {
 	routing.RegisterAPIHandlers(handlerRegistry, apiHandlers)
 
 	// Load configuration
-	configDir := os.Getenv("CONFIG_DIR")
+	configDir = os.Getenv("CONFIG_DIR")
 	if configDir == "" {
 		configDir = "/app/config"
 	}
 	if err := config.Load(configDir); err != nil {
 		log.Printf("Warning: Failed to load config: %v", err)
 		// Continue with defaults
+	}
+
+	// Initialize email provider
+	if cfg := config.Get(); cfg != nil && cfg.Email.Enabled && cfg.Email.SMTP.Host != "" {
+		smtpProvider := notifications.NewSMTPProvider(&cfg.Email)
+		notifications.SetEmailProvider(smtpProvider)
+		log.Println("📧 Email provider initialized (SMTP)")
+	} else {
+		log.Println("⚠️  Email provider not configured - notifications disabled")
 	}
 
 	// Ticket number generator wiring (prep refactor)
@@ -555,5 +602,34 @@ func main() {
 	}
 	if schedulerCancel != nil {
 		schedulerCancel()
+	}
+}
+
+// runRunner starts the background task runner
+func runRunner(db *sql.DB) {
+	log.Println("Starting GOTRS background task runner...")
+
+	// Create task registry
+	registry := runner.NewTaskRegistry()
+
+	// Get email configuration
+	emailCfg := config.Get()
+	if emailCfg == nil {
+		log.Fatal("Configuration not available")
+	}
+
+	// Register email queue task
+	emailTask := tasks.NewEmailQueueTask(db, &emailCfg.Email)
+	registry.Register(emailTask)
+
+	log.Printf("Registered %d background tasks", len(registry.All()))
+
+	// Create and start runner
+	taskRunner := runner.NewRunner(registry)
+
+	// Start the runner
+	ctx := context.Background()
+	if err := taskRunner.Start(ctx); err != nil {
+		log.Fatalf("Runner failed: %v", err)
 	}
 }

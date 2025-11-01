@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/core"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
@@ -188,16 +190,22 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 		if customerUserID != "" {
 			// Get customer info from the selected customer user
 			var foundCustomerID sql.NullString
+			var foundEmail sql.NullString
 			err := db.QueryRow(database.ConvertPlaceholders(`
-				SELECT customer_id
+				SELECT customer_id, email
 				FROM customer_user
 				WHERE login = $1 AND valid_id = 1
-			`), customerUserID).Scan(&foundCustomerID)
+			`), customerUserID).Scan(&foundCustomerID, &foundEmail)
 
 			if err == nil {
 				customerUserIDValue = sql.NullString{String: customerUserID, Valid: true}
 				if foundCustomerID.Valid {
 					customerIDValue = foundCustomerID
+				}
+				// Use the email from the customer user record for notifications
+				if foundEmail.Valid && foundEmail.String != "" {
+					customerEmail = foundEmail.String
+					log.Printf("HandleAgentCreateTicket: found customer email '%s' for user '%s'", customerEmail, customerUserID)
 				}
 			} else {
 				log.Printf("Error finding customer user %s: %v", customerUserID, err)
@@ -423,6 +431,41 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 
 		// Redirect to ticket view using repository-assigned ticket number
 		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/tickets/%s", ticketModel.TicketNumber))
+
+		// Queue email notification if customer email is available
+		if customerEmail != "" {
+			log.Printf("DEBUG: Agent ticket created, queuing email to customerEmail='%s', ticketNumber='%s'", customerEmail, ticketModel.TicketNumber)
+			go func() {
+				subject := fmt.Sprintf("Ticket Created: %s", ticketModel.TicketNumber)
+				body := fmt.Sprintf("Your ticket has been created successfully.\n\nTicket Number: %s\nTitle: %s\n\nMessage:\n%s\n\nYou can view your ticket at: /tickets/%s\n\nBest regards,\nGOTRS Support Team",
+					ticketModel.TicketNumber, ticketModel.Title, message, ticketModel.TicketNumber)
+
+				// Queue the email for processing by EmailQueueTask
+				db, dbErr := database.GetDB()
+				if dbErr == nil {
+					queueRepo := mailqueue.NewMailQueueRepository(db)
+					senderEmail := "GOTRS Support Team"
+					if cfg := config.Get(); cfg != nil {
+						senderEmail = cfg.Email.From
+					}
+					queueItem := &mailqueue.MailQueueItem{
+						Sender:       &senderEmail,
+						Recipient:    customerEmail,
+						RawMessage:   mailqueue.BuildEmailMessage(senderEmail, customerEmail, subject, body),
+						Attempts:     0,
+						CreateTime:   time.Now(),
+					}
+					
+					if queueErr := queueRepo.Insert(context.Background(), queueItem); queueErr != nil {
+						log.Printf("Failed to queue email for %s: %v", customerEmail, queueErr)
+					} else {
+						log.Printf("Queued email for %s (ticket %s) for processing", customerEmail, ticketModel.TicketNumber)
+					}
+				} else {
+					log.Printf("Failed to get database connection for queuing email: %v", dbErr)
+				}
+			}()
+		}
 	}
 }
 

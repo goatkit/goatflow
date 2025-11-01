@@ -1,10 +1,15 @@
 package notifications
 
-import "sync"
+import (
+	"context"
+	"fmt"
+	"sync"
+)
 
 var (
-	globalMu  sync.RWMutex
-	globalHub Hub = NewMemoryHub()
+	globalMu           sync.RWMutex
+	globalHub          Hub = NewMemoryHub()
+	globalEmailProvider EmailProvider
 )
 
 // SetHub replaces the shared hub instance and returns the previous hub.
@@ -26,4 +31,36 @@ func GetHub() Hub {
 	h := globalHub
 	globalMu.RUnlock()
 	return h
+}
+
+// SetEmailProvider sets the global email provider.
+func SetEmailProvider(p EmailProvider) {
+	globalMu.Lock()
+	defer globalMu.Unlock()
+	globalEmailProvider = p
+}
+
+// GetEmailProvider returns the global email provider.
+func GetEmailProvider() EmailProvider {
+	globalMu.RLock()
+	p := globalEmailProvider
+	globalMu.RUnlock()
+	return p
+}
+
+// SendEmail is a convenience function for sending simple text emails.
+func SendEmail(to, subject, body string) error {
+	provider := GetEmailProvider()
+	if provider == nil {
+		return fmt.Errorf("no email provider configured")
+	}
+
+	msg := EmailMessage{
+		To:      []string{to},
+		Subject: subject,
+		Body:    body,
+		HTML:    false,
+	}
+
+	return provider.Send(context.Background(), msg)
 }

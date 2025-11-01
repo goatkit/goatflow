@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
@@ -13,8 +14,10 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/history"
+	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
@@ -958,6 +961,95 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 				if err := recorder.Record(c.Request.Context(), nil, updatedTicket, &aID, history.TypeSetPendingTime, "Pending time cleared", actorID); err != nil {
 					log.Printf("history record (agent note pending clear) failed: %v", err)
 				}
+			}
+		}
+
+		// Queue email notification for customer-visible notes
+		if isVisibleForCustomer == 1 {
+			// Get the full ticket to access customer info
+			ticket, err := ticketRepo.GetByID(uint(tid))
+			if err != nil {
+				log.Printf("Failed to get ticket for email notification: %v", err)
+			} else if ticket.CustomerUserID != nil && *ticket.CustomerUserID != "" {
+				go func() {
+					// Look up customer's email address
+					var customerEmail string
+					err := db.QueryRow(database.ConvertPlaceholders(`
+						SELECT cu.email
+						FROM customer_user cu
+						WHERE cu.login = $1
+					`), *ticket.CustomerUserID).Scan(&customerEmail)
+					
+					if err != nil || customerEmail == "" {
+						log.Printf("Failed to find email for customer user %s: %v", *ticket.CustomerUserID, err)
+						return
+					}
+
+					emailSubject := fmt.Sprintf("Update on Ticket %s", ticket.TicketNumber)
+					var emailBody string
+					if subject != "" && subject != "Internal Note" && subject != "Email Note" && subject != "Phone Note" && subject != "Chat Note" {
+						emailBody = fmt.Sprintf("A new update has been added to your ticket.\n\nSubject: %s\n\n%s\n\nBest regards,\nGOTRS Support Team", subject, body)
+					} else {
+						emailBody = fmt.Sprintf("A new update has been added to your ticket.\n\n%s\n\nBest regards,\nGOTRS Support Team", body)
+					}
+
+					// Get threading headers from latest customer article
+					articleRepo := repository.NewArticleRepository(db)
+					latestCustomerArticle, err := articleRepo.GetLatestCustomerArticleForTicket(uint(tid))
+					inReplyTo := ""
+					references := ""
+					if err == nil && latestCustomerArticle != nil && latestCustomerArticle.MessageID != "" {
+						inReplyTo = latestCustomerArticle.MessageID
+						references = latestCustomerArticle.MessageID
+						// If the customer article has references, append to them
+						if latestCustomerArticle.References != "" {
+							references = latestCustomerArticle.References + " " + latestCustomerArticle.MessageID
+						}
+					}
+
+					// Queue the email for processing by EmailQueueTask
+					queueRepo := mailqueue.NewMailQueueRepository(db)
+					senderEmail := "GOTRS Support Team"
+					if cfg := config.Get(); cfg != nil {
+						senderEmail = cfg.Email.From
+					}
+					
+					// Extract domain from sender email for Message-ID generation
+					domain := "gotrs.local" // default
+					if strings.Contains(senderEmail, "@") {
+						parts := strings.Split(senderEmail, "@")
+						if len(parts) == 2 {
+							domain = parts[1]
+						}
+					}
+					
+					queueItem := &mailqueue.MailQueueItem{
+						Sender:       &senderEmail,
+						Recipient:    customerEmail,
+						RawMessage:   mailqueue.BuildEmailMessageWithThreading(senderEmail, customerEmail, emailSubject, emailBody, domain, inReplyTo, references),
+						Attempts:     0,
+						CreateTime:   time.Now(),
+					}
+					
+					if err := queueRepo.Insert(context.Background(), queueItem); err != nil {
+						log.Printf("Failed to queue note notification email for %s: %v", customerEmail, err)
+					} else {
+						log.Printf("Queued note notification email for %s", customerEmail)
+						// Store the Message-ID from the queued email back in the article for future threading
+						messageID := mailqueue.ExtractMessageIDFromRawMessage(queueItem.RawMessage)
+						if messageID != "" {
+							_, err := db.Exec(database.ConvertPlaceholders(`
+								UPDATE article_data_mime 
+								SET a_message_id = $1, a_in_reply_to = $2, a_references = $3,
+									change_time = CURRENT_TIMESTAMP, change_by = $4
+								WHERE article_id = $5
+							`), messageID, inReplyTo, references, userID, articleID)
+							if err != nil {
+								log.Printf("Failed to store threading headers for article %d: %v", articleID, err)
+							}
+						}
+					}
+				}()
 			}
 		}
 

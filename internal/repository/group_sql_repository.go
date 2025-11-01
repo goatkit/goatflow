@@ -119,7 +119,7 @@ func (r *GroupSQLRepository) GetByID(id uint) (*models.Group, error) {
 func (r *GroupSQLRepository) AddUserToGroup(userID uint, groupID uint) error {
 	// Check if the relationship already exists
 	var exists bool
-	checkQuery := `SELECT EXISTS(SELECT 1 FROM group_user WHERE user_id = $1 AND group_id = $2 AND permission_key = 'rw')`
+	checkQuery := database.ConvertPlaceholders(`SELECT EXISTS(SELECT 1 FROM group_user WHERE user_id = $1 AND group_id = $2 AND permission_key = 'rw')`)
 	err := r.db.QueryRow(checkQuery, userID, groupID).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check user-group relationship: %w", err)
@@ -143,7 +143,7 @@ func (r *GroupSQLRepository) AddUserToGroup(userID uint, groupID uint) error {
 
 // RemoveUserFromGroup removes a user from a group
 func (r *GroupSQLRepository) RemoveUserFromGroup(userID uint, groupID uint) error {
-	query := `DELETE FROM group_user WHERE user_id = $1 AND group_id = $2`
+	query := database.ConvertPlaceholders(`DELETE FROM group_user WHERE user_id = $1 AND group_id = $2`)
 	result, err := r.db.Exec(query, userID, groupID)
 	if err != nil {
 		return fmt.Errorf("failed to remove user from group: %w", err)
@@ -155,7 +155,7 @@ func (r *GroupSQLRepository) RemoveUserFromGroup(userID uint, groupID uint) erro
 	}
 	
 	if rowsAffected == 0 {
-		return fmt.Errorf("user not in group")
+		return fmt.Errorf("user-group relationship not found")
 	}
 	
 	return nil

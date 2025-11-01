@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
@@ -22,11 +23,13 @@ import (
 	"github.com/gin-gonic/gin"
 	// "github.com/gotrs-io/gotrs-ce/internal/api/v1"
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/history"
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/ldap"
+	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
@@ -2947,6 +2950,7 @@ func handleTicketDetail(c *gin.Context) {
 
 	// Get articles (notes/messages) for the ticket - include all articles for S/MIME support
 	articleRepo := repository.NewArticleRepository(db)
+	userRepo := repository.NewUserRepository(db)
 	articles, err := articleRepo.GetByTicketID(uint(ticket.ID), true)
 	if err != nil {
 		log.Printf("Error fetching articles: %v", err)
@@ -2989,7 +2993,7 @@ func handleTicketDetail(c *gin.Context) {
 				// debug removed: rendering HTML article
 				// For HTML content, use it directly (assuming it's from a trusted editor like Tiptap)
 				bodyContent = bodyStr
-			} else if contentType == "text/markdown" || isMarkdownContent(bodyStr) {
+			} else if strings.Contains(contentType, "text/markdown") || isMarkdownContent(bodyStr) {
 				// debug removed: rendering markdown article
 				bodyContent = RenderMarkdown(bodyStr)
 			} else {
@@ -3006,7 +3010,7 @@ func handleTicketDetail(c *gin.Context) {
 				contentType := article.MimeType
 				return strings.Contains(contentType, "text/html") ||
 					(strings.Contains(bodyStr, "<") && strings.Contains(bodyStr, ">")) ||
-					contentType == "text/markdown" ||
+					strings.Contains(contentType, "text/markdown") ||
 					isMarkdownContent(bodyStr)
 			}
 			return false
@@ -3021,9 +3025,23 @@ func handleTicketDetail(c *gin.Context) {
 		}
 		noteBodiesJSON = append(noteBodiesJSON, bodyJSON)
 
+		// Get the author name from the user repository
+		authorName := fmt.Sprintf("User %d", article.CreateBy)
+		if user, err := userRepo.GetByID(uint(article.CreateBy)); err == nil {
+			if user.FirstName != "" && user.LastName != "" {
+				authorName = fmt.Sprintf("%s %s", user.FirstName, user.LastName)
+			} else if user.FirstName != "" {
+				authorName = user.FirstName
+			} else if user.LastName != "" {
+				authorName = user.LastName
+			} else if user.Login != "" {
+				authorName = user.Login
+			}
+		}
+
 		notes = append(notes, gin.H{
 			"id":                      article.ID,
-			"author":                  fmt.Sprintf("User %d", article.CreateBy),
+			"author":                  authorName,
 			"time":                    article.CreateTime.Format("2006-01-02 15:04"),
 			"body":                    bodyContent,
 			"sender_type":             senderType,
@@ -3207,7 +3225,7 @@ func handleTicketDetail(c *gin.Context) {
 					// debug removed: rendering HTML description
 					// For HTML content, use it directly (assuming it's from a trusted editor like Tiptap)
 					description = body
-				} else if contentType == "text/markdown" || isMarkdownContent(body) || ticketID == "20250924194013" {
+				} else if strings.Contains(contentType, "text/markdown") || isMarkdownContent(body) || ticketID == "20250924194013" {
 					// debug removed: rendering markdown description
 					description = RenderMarkdown(body)
 				} else {
@@ -4537,6 +4555,53 @@ func handleAddTicketNote(c *gin.Context) {
 	if noteData.TimeUnits > 0 {
 		if err := saveTimeEntry(db, ticketIDInt, &articleID, noteData.TimeUnits, userID); err != nil {
 			c.Header("X-Guru-Error", "Failed to save time entry (note)")
+		}
+	}
+
+	// Queue email notification for customer-visible notes
+	if !noteData.Internal {
+		// Get the full ticket to access customer info
+		ticket, err := ticketRepo.GetByID(uint(ticketIDInt))
+		if err != nil {
+			log.Printf("Failed to get ticket for email notification: %v", err)
+		} else if ticket.CustomerUserID != nil && *ticket.CustomerUserID != "" {
+			go func() {
+				// Look up customer's email address
+				var customerEmail string
+				err := db.QueryRow(database.ConvertPlaceholders(`
+					SELECT cu.email
+					FROM customer_user cu
+					WHERE cu.login = $1
+				`), *ticket.CustomerUserID).Scan(&customerEmail)
+				
+				if err != nil || customerEmail == "" {
+					log.Printf("Failed to find email for customer user %s: %v", *ticket.CustomerUserID, err)
+					return
+				}
+
+				subject := fmt.Sprintf("Update on Ticket %s", ticket.TicketNumber)
+				body := fmt.Sprintf("A new update has been added to your ticket.\n\n%s\n\nBest regards,\nGOTRS Support Team", noteData.Content)
+
+				// Queue the email for processing by EmailQueueTask
+				queueRepo := mailqueue.NewMailQueueRepository(db)
+				senderEmail := "GOTRS Support Team"
+				if cfg := config.Get(); cfg != nil {
+					senderEmail = cfg.Email.From
+				}
+				queueItem := &mailqueue.MailQueueItem{
+					Sender:       &senderEmail,
+					Recipient:    customerEmail,
+					RawMessage:   mailqueue.BuildEmailMessage(senderEmail, customerEmail, subject, body),
+					Attempts:     0,
+					CreateTime:   time.Now(),
+				}
+				
+				if err := queueRepo.Insert(context.Background(), queueItem); err != nil {
+					log.Printf("Failed to queue note notification email for %s: %v", customerEmail, err)
+				} else {
+					log.Printf("Queued note notification email for %s", customerEmail)
+				}
+			}()
 		}
 	}
 
@@ -6656,6 +6721,188 @@ func handleAdminPermissions(c *gin.Context) {
 		"PermissionMatrix": permissionMatrix,
 		"User":             getUserMapForTemplate(c),
 		"ActivePage":       "admin",
+	})
+}
+
+// handleAdminEmailQueue shows the admin email queue management page
+func handleAdminEmailQueue(c *gin.Context) {
+	db, err := database.GetDB()
+	if err != nil {
+		sendErrorResponse(c, http.StatusInternalServerError, "Database connection failed")
+		return
+	}
+
+	// Get email queue items from database
+	rows, err := db.Query(`
+		SELECT id, insert_fingerprint, article_id, attempts, sender, recipient,
+			   due_time, last_smtp_code, last_smtp_message, create_time
+		FROM mail_queue
+		ORDER BY create_time DESC
+		LIMIT 100
+	`)
+	if err != nil {
+		sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch email queue")
+		return
+	}
+	defer rows.Close()
+
+	var emails []gin.H
+	for rows.Next() {
+		var email gin.H
+		var id int64
+		var insertFingerprint, sender, recipient sql.NullString
+		var articleID sql.NullInt64
+		var attempts int
+		var dueTime sql.NullTime
+		var lastSMTPCode sql.NullInt32
+		var lastSMTPMessage sql.NullString
+		var createTime time.Time
+
+		err := rows.Scan(&id, &insertFingerprint, &articleID, &attempts, &sender, &recipient,
+			&dueTime, &lastSMTPCode, &lastSMTPMessage, &createTime)
+		if err != nil {
+			continue
+		}
+
+		email = gin.H{
+			"ID":                id,
+			"Attempts":          attempts,
+			"Recipient":         recipient.String,
+			"CreateTime":        createTime,
+			"Status":            "pending",
+		}
+
+		if insertFingerprint.Valid {
+			email["InsertFingerprint"] = insertFingerprint.String
+		}
+		if articleID.Valid {
+			email["ArticleID"] = articleID.Int64
+		}
+		if sender.Valid {
+			email["Sender"] = sender.String
+		}
+		if dueTime.Valid {
+			email["DueTime"] = dueTime.Time
+		}
+		if lastSMTPCode.Valid {
+			email["LastSMTPCode"] = lastSMTPCode.Int32
+			if lastSMTPCode.Int32 == 0 {
+				email["Status"] = "sent"
+			} else {
+				email["Status"] = "failed"
+			}
+		}
+		if lastSMTPMessage.Valid {
+			email["LastSMTPMessage"] = lastSMTPMessage.String
+		}
+
+		emails = append(emails, email)
+	}
+
+	// Get queue statistics
+	var totalEmails, pendingEmails, failedEmails int
+	db.QueryRow("SELECT COUNT(*) FROM mail_queue").Scan(&totalEmails)
+	db.QueryRow("SELECT COUNT(*) FROM mail_queue WHERE (due_time IS NULL OR due_time <= NOW())").Scan(&pendingEmails)
+	db.QueryRow("SELECT COUNT(*) FROM mail_queue WHERE last_smtp_code IS NOT NULL AND last_smtp_code != 0").Scan(&failedEmails)
+
+	processedEmails := totalEmails - pendingEmails
+
+	pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/email_queue.pongo2", pongo2.Context{
+		"Emails":          emails,
+		"TotalEmails":     totalEmails,
+		"PendingEmails":   pendingEmails,
+		"FailedEmails":    failedEmails,
+		"ProcessedEmails": processedEmails,
+		"User":            getUserMapForTemplate(c),
+		"ActivePage":      "admin",
+	})
+}
+
+// handleAdminEmailQueueRetry retries sending a specific email from the queue
+func handleAdminEmailQueueRetry(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid email ID"})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
+		return
+	}
+
+	// Reset the email for retry by clearing due_time and last_smtp_code/message
+	_, err = db.Exec(`
+		UPDATE mail_queue
+		SET due_time = NULL, last_smtp_code = NULL, last_smtp_message = NULL
+		WHERE id = ?
+	`, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to retry email"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Email queued for retry"})
+}
+
+// handleAdminEmailQueueDelete deletes a specific email from the queue
+func handleAdminEmailQueueDelete(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid email ID"})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
+		return
+	}
+
+	// Delete the email from the queue
+	result, err := db.Exec(`DELETE FROM mail_queue WHERE id = ?`, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete email"})
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Email not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Email deleted from queue"})
+}
+
+// handleAdminEmailQueueRetryAll retries all failed emails in the queue
+func handleAdminEmailQueueRetryAll(c *gin.Context) {
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
+		return
+	}
+
+	// Reset all failed emails for retry (emails with SMTP errors, attempts > 0, or error messages)
+	result, err := db.Exec(`
+		UPDATE mail_queue
+		SET due_time = NULL, last_smtp_code = NULL, last_smtp_message = NULL
+		WHERE last_smtp_code IS NOT NULL AND last_smtp_code != 0
+		   OR attempts > 0
+		   OR last_smtp_message IS NOT NULL
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to retry all emails"})
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": fmt.Sprintf("%d emails queued for retry", rowsAffected),
 	})
 }
 

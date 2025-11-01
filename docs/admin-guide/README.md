@@ -40,7 +40,7 @@ Comprehensive documentation for GOTRS system administrators.
 
 ### Email Integration
 - SMTP/IMAP configuration
-- Email fetching
+- Email fetching with RFC-compliant threading (Message-ID, In-Reply-To, References)
 - Auto-responses
 - Email templates
 - Routing rules

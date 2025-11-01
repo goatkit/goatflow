@@ -107,7 +107,7 @@ func (r *Recorder) Record(ctx context.Context, exec repository.ExecContext, tick
 	entry := models.TicketHistoryInsert{
 		TicketID:    ticket.ID,
 		ArticleID:   articleID,
-		TypeID:      valueFromPtr(ticket.TypeID),
+		TypeID:      valueFromPtrOrDefault(ticket.TypeID, 1), // Default to Unclassified (1) if NULL
 		QueueID:     ticket.QueueID,
 		OwnerID:     valueFromPtr(ticket.UserID),
 		PriorityID:  ticket.TicketPriorityID,
@@ -154,6 +154,13 @@ func truncate(input string, max int) string {
 func valueFromPtr(ptr *int) int {
 	if ptr == nil {
 		return 0
+	}
+	return *ptr
+}
+
+func valueFromPtrOrDefault(ptr *int, defaultValue int) int {
+	if ptr == nil {
+		return defaultValue
 	}
 	return *ptr
 }

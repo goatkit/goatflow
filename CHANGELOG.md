@@ -7,6 +7,11 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
+- **Email Threading Support**: RFC-compliant Message-ID, In-Reply-To, and References headers for conversation tracking in customer notifications.
+- `BuildEmailMessageWithThreading()` function in mailqueue repository for generating threaded email messages.
+- `GenerateMessageID()` function for creating unique RFC-compliant message identifiers.
+- Database schema support for storing email threading headers in article records.
+- Integration with agent ticket routes to include threading headers in customer notifications.
 - Completed ticket creation vertical slice: `/api/tickets` service handler, HTMX agent form, attachment/time accounting support, and history recorder coverage.
 - Ticket zoom (`pages/ticket_detail.pongo2`) now renders live articles, history, and customer context for newly created tickets.
 - Status transitions, agent assignment, and queue transfer endpoints wired for both HTMX and JSON flows with history logging.
@@ -18,9 +23,13 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - API test harness now defaults to Postgres to align history assertions with integration coverage.
 
 ### Fixed
-- Ticket history HTMX fragment now resolves article subjects via `article_data_mime`, eliminating 500 errors on MariaDB installs.
-- Ticket links fragment works on both PostgreSQL and MySQL after duplicating the ticket ID parameter when `database.ConvertQuery` expands `$1` placeholders.
-- Agent ticket search for MariaDB uses distinct placeholders per column, preventing the "expected 3 arguments, got 1" SQL error.
+- SQL placeholder conversion issues for MySQL compatibility in user and group repositories.
+- User title field length validation to prevent varchar(50) constraint violations.
+- Database connectivity issues in test environments with proper network configuration for test containers.
+
+### Changed
+- User repository Create and Update methods now include title length validation and proper SQL placeholder conversion.
+- Group repository queries now use database.ConvertPlaceholders for cross-database compatibility.
 
 ### Removed
 - _Nothing yet._

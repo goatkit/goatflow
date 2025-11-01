@@ -37,7 +37,7 @@ Complete guide for support agents using GOTRS.
 - Replying to customers
 - Using templates
 - Canned responses
-- Email handling
+- Email handling with conversation threading
 - CC/BCC management
 - Attachments
 - Rich text formatting

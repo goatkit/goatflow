@@ -1,15 +1,21 @@
 package api
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
@@ -26,11 +32,12 @@ func HandleCreateTicketAPI(c *gin.Context) {
 		}
 	}
 	var ticketRequest struct {
-		Title      string `json:"title" form:"title"`
-		QueueID    int    `json:"queue_id" form:"queue_id"`
-		PriorityID int    `json:"priority_id" form:"priority_id"`
-		StateID    int    `json:"state_id" form:"state_id"`
-		Body       string `json:"body" form:"body"`
+		Title         string `json:"title" form:"title"`
+		QueueID       int    `json:"queue_id" form:"queue_id"`
+		PriorityID    int    `json:"priority_id" form:"priority_id"`
+		StateID       int    `json:"state_id" form:"state_id"`
+		Body          string `json:"body" form:"body"`
+		CustomerEmail string `json:"customer_email" form:"customer_email"`
 	}
 
 	ctype := strings.ToLower(c.GetHeader("Content-Type"))
@@ -107,10 +114,49 @@ func HandleCreateTicketAPI(c *gin.Context) {
 
 	repo := repository.NewTicketRepository(db)
 	svc := service.NewTicketService(repo)
-	created, err := svc.Create(c, service.CreateTicketInput{Title: ticketRequest.Title, QueueID: ticketRequest.QueueID, PriorityID: ticketRequest.PriorityID, StateID: ticketRequest.StateID, UserID: userID, Body: ticketRequest.Body})
+	created, err := svc.Create(c, service.CreateTicketInput{Title: ticketRequest.Title, QueueID: ticketRequest.QueueID, PriorityID: ticketRequest.PriorityID, StateID: ticketRequest.StateID, UserID: userID, Body: ticketRequest.Body, TypeID: 1})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return
 	}
+
+	// DEBUG: Check for email sending in API handler
+	log.Printf("DEBUG: API ticket created - ID=%d, TN=%s, no email sending in this handler", created.ID, created.TicketNumber)
+
+	// Queue email notification if customer email is provided
+	if ticketRequest.CustomerEmail != "" {
+		log.Printf("DEBUG: API ticket created, queuing email to customerEmail='%s', ticketNumber='%s'", ticketRequest.CustomerEmail, created.TicketNumber)
+		go func() {
+			subject := fmt.Sprintf("Ticket Created: %s", created.TicketNumber)
+			body := fmt.Sprintf("Your ticket has been created successfully.\n\nTicket Number: %s\nTitle: %s\n\nYou can view your ticket at: /tickets/%d\n\nBest regards,\nGOTRS Support Team",
+				created.TicketNumber, created.Title, created.ID)
+
+			// Queue the email for processing by EmailQueueTask
+			db, dbErr := database.GetDB()
+			if dbErr == nil {
+				queueRepo := mailqueue.NewMailQueueRepository(db)
+				senderEmail := "GOTRS Support Team"
+				if cfg := config.Get(); cfg != nil {
+					senderEmail = cfg.Email.From
+				}
+				queueItem := &mailqueue.MailQueueItem{
+					Sender:       &senderEmail,
+					Recipient:    ticketRequest.CustomerEmail,
+					RawMessage:   mailqueue.BuildEmailMessage(senderEmail, ticketRequest.CustomerEmail, subject, body),
+					Attempts:     0,
+					CreateTime:   time.Now(),
+				}
+				
+				if queueErr := queueRepo.Insert(context.Background(), queueItem); queueErr != nil {
+					log.Printf("Failed to queue email for %s: %v", ticketRequest.CustomerEmail, queueErr)
+				} else {
+					log.Printf("Queued email for %s (ticket %s) for processing", ticketRequest.CustomerEmail, created.TicketNumber)
+				}
+			} else {
+				log.Printf("Failed to get database connection for queuing email: %v", dbErr)
+			}
+		}()
+	}
+
 	c.JSON(http.StatusCreated, gin.H{"success": true, "data": gin.H{"id": created.ID, "tn": created.TicketNumber, "title": created.Title, "queue_id": created.QueueID, "ticket_state_id": created.TicketStateID, "ticket_priority_id": created.TicketPriorityID}})
 }

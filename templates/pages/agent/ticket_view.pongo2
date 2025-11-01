@@ -136,7 +136,7 @@
         <div id="tab-panel">
             <!-- Default: Conversation content remains (articles) -->
             <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                {% for article in articles %}
+                {% for article in notes %}
                 <div class="p-6">
                     <div class="flex items-start space-x-4">
                         <div class="flex-shrink-0">
@@ -225,7 +225,7 @@
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Conversation</h2>
                 </div>
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for article in articles %}
+                    {% for article in notes %}
                     <div class="p-6">
                         <div class="flex items-start space-x-4">
                             <div class="flex-shrink-0">

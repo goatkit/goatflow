@@ -203,7 +203,7 @@ BACKEND_PORT=8081
 - Frontend changes auto-reload via Vite
 - Backend changes auto-reload via Air
 - Database persists between container restarts
-- Use Mailhog to test email functionality
+- Use Mailhog to test email functionality and threading (Message-ID, In-Reply-To, References headers)
 
 ## API Reference
 

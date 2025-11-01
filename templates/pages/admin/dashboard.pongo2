@@ -513,6 +513,23 @@
             </a>
         </div>
 
+        <!-- Email Queue Management -->
+        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow">
+            <a href="/admin/email-queue" class="block p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-8 w-8 text-gotrs-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <div class="ml-5">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Email Queue</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage failed emails and retry delivery</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
         <!-- Development Roadmap -->
         <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg hover:shadow-lg transition-shadow">
             <a href="/admin/roadmap" class="block p-6">

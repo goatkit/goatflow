@@ -9,6 +9,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
 // RegisterCustomerRoutes registers all customer portal routes
@@ -410,21 +411,61 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		// Detect content type - check for HTML first, then markdown patterns
+		contentType := "text/plain"
+		if utils.IsHTML(message) {
+			sanitizer := utils.NewHTMLSanitizer()
+			message = sanitizer.Sanitize(message)
+			contentType = "text/html"
+		} else if utils.IsMarkdown(message) {
+			// Convert markdown back to HTML for rich text preservation
+			message = utils.MarkdownToHTML(message)
+			sanitizer := utils.NewHTMLSanitizer()
+			message = sanitizer.Sanitize(message)
+			contentType = "text/html"
+		}
+
+		// Start transaction for article creation
+		tx, err := db.Begin()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+			return
+		}
+		defer tx.Rollback()
+
 		// Create first article
-		_, err = db.Exec(database.ConvertPlaceholders(`
+		var articleID int64
+		err = tx.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO article (
 				ticket_id, article_sender_type_id, communication_channel_id,
-				is_visible_for_customer, subject, body,
+				is_visible_for_customer, subject,
 				create_time, create_by, change_time, change_by
 			) VALUES (
 				$1, 3, 1,
-				1, $2, $3,
-				NOW(), $4, NOW(), $4
-			)
-		`), ticketID, title, message, userID)
+				1, $2,
+				NOW(), $3, NOW(), $3
+			) RETURNING id
+		`), ticketID, title, userID).Scan(&articleID)
 
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create article"})
+			return
+		}
+
+		// Insert article data in mime table
+		_, err = tx.Exec(database.ConvertPlaceholders(`
+			INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body, a_content_type, incoming_time, create_time, create_by, change_time, change_by)
+			VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, $7, CURRENT_TIMESTAMP, $7)
+		`), articleID, username, title, message, contentType, time.Now().Unix(), userID)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create article data"})
+			return
+		}
+
+		// Commit transaction
+		if err = tx.Commit(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 			return
 		}
 
@@ -500,12 +541,13 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 
 		// Get articles for this ticket (only customer-visible ones)
 		rows, _ := db.Query(database.ConvertPlaceholders(`
-			SELECT a.id, a.subject, a.body,
+			SELECT a.id, adm.a_subject, adm.a_body,
 			       ast.name as sender_type,
 			       u.login as author,
 			       cu.login as customer_author,
 			       a.create_time
 			FROM article a
+			LEFT JOIN article_data_mime adm ON a.id = adm.article_id
 			LEFT JOIN article_sender_type ast ON a.article_sender_type_id = ast.id
 			LEFT JOIN users u ON a.create_by = u.id
 			LEFT JOIN customer_user cu ON a.create_by = cu.id AND ast.id = 3

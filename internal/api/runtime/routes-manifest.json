@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-10-28T22:06:59.988740526Z",
+  "generatedAt": "2025-11-01T05:04:12.518369281Z",
   "routes": [
     {
       "group": "admin",
@@ -216,6 +216,46 @@
       "method": "GET",
       "path": "/admin/queues",
       "handler": "handleAdminQueues",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/email-queue",
+      "handler": "handleAdminEmailQueue",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "POST",
+      "path": "/admin/email-queue/retry/:id",
+      "handler": "handleAdminEmailQueueRetry",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "POST",
+      "path": "/admin/email-queue/delete/:id",
+      "handler": "handleAdminEmailQueueDelete",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "POST",
+      "path": "/admin/email-queue/retry-all",
+      "handler": "handleAdminEmailQueueRetryAll",
       "middleware": [
         "auth",
         "admin"

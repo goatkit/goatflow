@@ -78,7 +78,7 @@ auth:
     issuer: gotrs
     audience: gotrs-api
     access_token_ttl: 15m
-    refresh_token_ttl: 7d
+    refresh_token_ttl: 168h
   session:
     cookie_name: gotrs_session
     secure: false  # Set to true in production with HTTPS

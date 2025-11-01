@@ -25,7 +25,6 @@ func NewArticleRepository(db *sql.DB) *ArticleRepository {
 // Create creates a new article in the database (OTRS schema compatible)
 func (r *ArticleRepository) Create(article *models.Article) error {
 	now := time.Now()
-	fmt.Printf("DEBUG: Creating article for ticket ID %d\n", article.TicketID)
 
 	// Set defaults
 	if article.ArticleTypeID == 0 {
@@ -357,13 +356,12 @@ func (r *ArticleRepository) GetHTMLBodyContent(articleID uint) (string, error) {
 
 // GetByTicketID retrieves all articles for a specific ticket
 func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) ([]models.Article, error) {
-	fmt.Printf("DEBUG: GetByTicketID called with ticketID=%d, includeInternal=%v\n", ticketID, includeInternal)
-
 	query := database.ConvertPlaceholders(`
 		SELECT 
 			a.id, a.ticket_id, a.article_sender_type_id,
 			a.communication_channel_id, a.is_visible_for_customer,
 			adm.a_subject, adm.a_body, adm.a_content_type,
+			adm.a_message_id, adm.a_in_reply_to, adm.a_references,
 			a.create_time, a.create_by, a.change_time, a.change_by
 		FROM article a
 		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
@@ -375,7 +373,6 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 
 	query += " ORDER BY a.create_time ASC, a.id ASC"
 
-	fmt.Printf("DEBUG: Executing query: %s with ticketID=%d\n", query, ticketID)
 	rows, err := r.db.Query(query, ticketID)
 	if err != nil {
 		return nil, err
@@ -385,7 +382,7 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 	var articles []models.Article
 	for rows.Next() {
 		var article models.Article
-		var subject, contentType sql.NullString
+		var subject, contentType, messageID, inReplyTo, references sql.NullString
 		var bodyBytes []byte
 
 		err := rows.Scan(
@@ -397,6 +394,9 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 			&subject,
 			&bodyBytes,
 			&contentType,
+			&messageID,
+			&inReplyTo,
+			&references,
 			&article.CreateTime,
 			&article.CreateBy,
 			&article.ChangeTime,
@@ -412,18 +412,23 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 		}
 		if bodyBytes != nil {
 			article.Body = string(bodyBytes)
-			fmt.Printf("DEBUG: Article ID %d has body: %q\n", article.ID, article.Body)
-		} else {
-			fmt.Printf("DEBUG: Article ID %d has nil bodyBytes\n", article.ID)
 		}
 		if contentType.Valid {
 			article.MimeType = contentType.String
+		}
+		if messageID.Valid {
+			article.MessageID = messageID.String
+		}
+		if inReplyTo.Valid {
+			article.InReplyTo = inReplyTo.String
+		}
+		if references.Valid {
+			article.References = references.String
 		}
 
 		articles = append(articles, article)
 	}
 
-	fmt.Printf("DEBUG: Found %d articles for ticket %d\n", len(articles), ticketID)
 	return articles, nil
 }
 
@@ -580,6 +585,68 @@ func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Ar
 	}
 
 	return &article, err
+}
+
+// GetLatestCustomerArticleForTicket gets the most recent customer article for a ticket
+func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*models.Article, error) {
+	query := database.ConvertPlaceholders(`
+		SELECT 
+			id, ticket_id, article_type_id, article_sender_type_id,
+			communication_channel_id, is_visible_for_customer,
+			subject, body, body_type, charset, mime_type,
+			content_path, a_message_id, a_in_reply_to, a_references, valid_id,
+			create_time, create_by, change_time, change_by
+		FROM article
+		WHERE ticket_id = $1 AND valid_id = 1 AND article_sender_type_id = 3
+		ORDER BY create_time DESC
+		LIMIT 1`)
+
+	var article models.Article
+	var subject, messageID, inReplyTo, references sql.NullString
+	err := r.db.QueryRow(query, ticketID).Scan(
+		&article.ID,
+		&article.TicketID,
+		&article.ArticleTypeID,
+		&article.SenderTypeID,
+		&article.CommunicationChannelID,
+		&article.IsVisibleForCustomer,
+		&subject,
+		&article.Body,
+		&article.BodyType,
+		&article.Charset,
+		&article.MimeType,
+		&article.ContentPath,
+		&messageID,
+		&inReplyTo,
+		&references,
+		&article.ValidID,
+		&article.CreateTime,
+		&article.CreateBy,
+		&article.ChangeTime,
+		&article.ChangeBy,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil // No customer articles yet
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if subject.Valid {
+		article.Subject = subject.String
+	}
+	if messageID.Valid {
+		article.MessageID = messageID.String
+	}
+	if inReplyTo.Valid {
+		article.InReplyTo = inReplyTo.String
+	}
+	if references.Valid {
+		article.References = references.String
+	}
+
+	return &article, nil
 }
 
 // CountArticlesForTicket counts the number of articles for a ticket

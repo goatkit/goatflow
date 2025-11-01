@@ -34,13 +34,15 @@
 - ❌ Ticket functionality limited (filtering issues but database layer works)
 - ❌ No ticket creation UI, viewing, or management UIs
 - ❌ No customer portal
-- ❌ No email integration
+- ⚠️ **Basic Email Threading** - RFC-compliant Message-ID, In-Reply-To, and References headers implemented
 
 **Recent Success**: Completed comprehensive code quality improvements including template system robustness, HTML fallback cleanup, and code deduplication. System now has proper error handling and cleaner architecture. **Latest Achievement**: Queue detail pages now display real-time statistics and enhanced ticket listings with navigation.
 
 **New Achievement (October 19, 2025)**: Reminder toasts are actionable end-to-end. The legacy `/api/notifications/pending` endpoint now resolves to the HTMX handler, and a matching `/api/tickets/:id/status` alias keeps snooze posts working without the `/agent` prefix. Routes manifest and regression tests cover the flow.
 
 **New Achievement (October 22, 2025)**: Ticket Zoom history and links fragments render consistently across PostgreSQL and MariaDB. History pulls article subjects from `article_data_mime`, and the links repository now duplicates placeholder parameters when `database.ConvertQuery` expands `$1` to multiple `?` tokens, preventing MariaDB-specific 500s.
+
+**New Achievement (November 1, 2025)**: Email threading support implemented with RFC-compliant Message-ID, In-Reply-To, and References headers for conversation tracking in customer notifications. Database schema updated to store threading metadata, and agent routes now include threading headers when sending customer emails.
 
 ### Test Stabilization Progress (Internal/API)
 - ✅ Queue API/HTMX suites pass (DB-less fallbacks for CI without DB)
@@ -245,7 +247,7 @@ gotrs-migrate --source postgres://user:pass@host/db \
 3. **Ticket Updates** - Can't change status, assign, or modify tickets
 4. **Comments/Articles** - Can't add replies or internal notes
 5. **Customer Access** - No way for customers to submit tickets
-6. **Email Integration** - No email-to-ticket or notifications
+6. **Email Integration** - Basic email threading implemented, full email-to-ticket and notifications pending
 7. **Search** - Can't find tickets
 8. **Reports** - No metrics or statistics
 
@@ -260,7 +262,7 @@ gotrs-migrate --source postgres://user:pass@host/db \
 | Tickets in Database | **0** | 100+ |
 | API Endpoints Complete | ~35% | 80% |
 | Customer Portal | **0%** | Basic |
-| Email Integration | **0%** | Basic |
+| Email Integration | **25%** | Basic |
 | Production Readiness | **0%** | 70% |
 | Test Coverage | Improving (core suites green) | 50% |
 | Days Until MVP Target | **28 days** | - |
@@ -371,8 +373,9 @@ No additional core ticketing capabilities have been implemented since the Septem
 3. ✅ Real ticket zoom (Pongo2) replaces the test-mode fallback with live articles, time entries, and customer context.
 4. ✅ Articles/comments system – public and internal replies wired through REST + HTMX fragments with visibility handling.
 5. ✅ Status transitions & assignment workflow (new → open → closed, agent & queue transfer endpoints) – delivered October 28, 2025.
-6. Minimal customer portal (login, submit ticket, view/respond to own tickets).
-7. Outbound email notification (one-way) via pluggable SMTP adapter + mail-sink container (fire on create + public reply) – **next active item**.
+6. ✅ **Email Threading Support** - RFC-compliant Message-ID, In-Reply-To, and References headers implemented for conversation tracking – delivered November 1, 2025.
+7. Minimal customer portal (login, submit ticket, view/respond to own tickets).
+8. Outbound email notification (one-way) via pluggable SMTP adapter + mail-sink container (fire on create + public reply) – **next active item**.
 8. Hardening / regression pass (stabilization freeze) before tagging 0.4.0.
 
 ### ✅ Already Done / Do NOT Rework Now

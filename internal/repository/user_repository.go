@@ -159,13 +159,18 @@ func (r *UserRepository) GetByLogin(login string) (*models.User, error) {
 
 // Create creates a new user
 func (r *UserRepository) Create(user *models.User) error {
-	query := `
+	// Truncate title to fit varchar(50) limit
+	if len(user.Title) > 50 {
+		user.Title = user.Title[:50]
+	}
+
+	query := database.ConvertPlaceholders(`
 		INSERT INTO users (
 			login, pw, title, first_name, last_name,
 			valid_id, create_time, create_by, change_time, change_by
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-		) RETURNING id`
+		) RETURNING id`)
 
 	err := r.db.QueryRow(
 		query,
@@ -186,6 +191,11 @@ func (r *UserRepository) Create(user *models.User) error {
 
 // Update updates a user
 func (r *UserRepository) Update(user *models.User) error {
+	// Truncate title to fit varchar(50) limit
+	if len(user.Title) > 50 {
+		user.Title = user.Title[:50]
+	}
+
 	query := database.ConvertPlaceholders(`
 		UPDATE users SET
 			login = $2,

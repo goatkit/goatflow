@@ -136,6 +136,29 @@ spec:
       template: pages/admin/queues.pongo2
       description: "Display queue management page"
 
+    # Email queue management
+    - path: /email-queue
+      method: GET
+      handler: handleAdminEmailQueue
+      template: pages/admin/email_queue.pongo2
+      description: "Display email queue management page"
+
+    # Email queue actions
+    - path: /email-queue/retry/:id
+      method: POST
+      handler: handleAdminEmailQueueRetry
+      description: "Retry sending a specific email from the queue"
+
+    - path: /email-queue/delete/:id
+      method: POST
+      handler: handleAdminEmailQueueDelete
+      description: "Delete a specific email from the queue"
+
+    - path: /email-queue/retry-all
+      method: POST
+      handler: handleAdminEmailQueueRetryAll
+      description: "Retry all failed emails in the queue"
+
     # Priority management
     - path: /priorities
       method: GET

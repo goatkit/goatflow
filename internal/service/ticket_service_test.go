@@ -90,7 +90,7 @@ func TestTicketService_CreateRecordsHistory(t *testing.T) {
 			30,
 			88,
 			nil,
-			0,
+			1,
 			1,
 			1,
 			3,

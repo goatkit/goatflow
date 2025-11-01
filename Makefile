@@ -312,8 +312,8 @@ help:
 	@printf "  \033[1;33m🚀 Core Commands\033[0m\n"
 	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
 	@printf "\n"
-	@printf "  \033[0;32mmake up\033[0m                           ▶️ Start all services\n"
-	@printf "  \033[0;32mmake up-d\033[0m                         ▶️ Start all services in daemon mode\n"
+	@printf "  \033[0;32mmake up\033[0m                           ▶️ Start core services interactively (backend, db, cache)\n"
+	@printf "  \033[0;32mmake up-d\033[0m                         ▶️ Start core services in daemon mode (backend, db, cache, runner)\n"
 	@printf "  \033[0;32mmake down\033[0m                         🛑 Stop all services\n"
 	@printf "  \033[0;32mmake logs\033[0m                         📋 View a portion of the most recent logs\n"
 	@printf "  \033[0;32mmake logs-follow\033[0m                  📋 View and endlessly follow logs\n"
@@ -478,6 +478,11 @@ help:
 	@printf "\n"
 	@printf "  \033[0;32mmake backend-logs\033[0m\t\t\t📋 View backend logs\n"
 	@printf "  \033[0;32mmake backend-logs-follow\033[0m\t\t📺 Follow backend logs\n"
+	@printf "  \033[0;32mmake runner-logs\033[0m\t\t\t📋 View runner logs\n"
+	@printf "  \033[0;32mmake runner-logs-follow\033[0m\t\t📺 Follow runner logs\n"
+	@printf "  \033[0;32mmake runner-up\033[0m\t\t\t▶️  Start runner service\n"
+	@printf "  \033[0;32mmake runner-down\033[0m\t\t\t⏹️  Stop runner service\n"
+	@printf "  \033[0;32mmake runner-restart\033[0m\t\t🔄 Restart runner service\n"
 	@printf "  \033[0;32mmake valkey-cli\033[0m\t\t\t🔑 Valkey CLI\n"
 	@printf "\n"
 	@printf "  \033[1;35m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
@@ -1322,7 +1327,7 @@ clean-host-binaries:
 	@rm -f goats gotrs gotrs-* generator migrate server 2>/dev/null || true
 	@printf "✅ Host binaries cleaned - containers have the only copies\n"
 
-# Start all services (and clean host binaries after build)
+# Start core services interactively (and clean host binaries after build)
 up:
 	$(call check_compose)
 	@if [ "$(DB_DRIVER)" = "postgres" ]; then \
@@ -1334,9 +1339,9 @@ up:
 # Start in background (and clean host binaries after build)
 up-d:
 	@if [ "$(DB_DRIVER)" = "postgres" ]; then \
-		$(COMPOSE_CMD) up -d --build postgres valkey backend; \
+		$(COMPOSE_CMD) up -d --build postgres valkey backend runner; \
 	else \
-		$(COMPOSE_CMD) up -d --build mariadb valkey backend; \
+		$(COMPOSE_CMD) up -d --build mariadb valkey backend runner; \
 	fi
 	@$(MAKE) clean-host-binaries
 # Stop all services
@@ -1370,6 +1375,20 @@ backend-logs:
 
 backend-logs-follow:
 	$(COMPOSE_CMD) logs -f backend
+
+runner-logs:
+	$(COMPOSE_CMD) logs runner
+
+runner-logs-follow:
+	$(COMPOSE_CMD) logs -f runner
+
+runner-up:
+	$(COMPOSE_CMD) up -d runner
+
+runner-down:
+	$(COMPOSE_CMD) down runner
+
+runner-restart: runner-down runner-up
 
 frontend-logs:
 	$(COMPOSE_CMD) logs frontend

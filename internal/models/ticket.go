@@ -113,6 +113,9 @@ type Article struct {
 	Charset                string      `json:"charset" db:"charset"`
 	MimeType               string      `json:"mime_type" db:"mime_type"`
 	ContentPath            *string     `json:"content_path,omitempty" db:"content_path"`
+	MessageID              string      `json:"message_id" db:"message_id"`             // Email Message-ID header
+	InReplyTo              string      `json:"in_reply_to" db:"in_reply_to"`           // Email In-Reply-To header
+	References             string      `json:"references" db:"references"`             // Email References header
 	ValidID                int         `json:"valid_id" db:"valid_id"`
 	CreateTime             time.Time   `json:"create_time" db:"create_time"`
 	CreateBy               int         `json:"create_by" db:"create_by"`

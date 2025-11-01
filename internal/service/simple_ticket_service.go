@@ -91,6 +91,7 @@ type SimpleTicketMessage struct {
 	TicketID    uint                `json:"ticket_id"`
 	Body        string              `json:"body"`
 	Subject     string              `json:"subject"`
+	ContentType string              `json:"content_type"`
 	CreatedBy   uint                `json:"created_by"`
 	AuthorName  string              `json:"author_name"`
 	AuthorEmail string              `json:"author_email"`
@@ -205,6 +206,7 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 		SELECT a.id,
 		       COALESCE(adm.a_subject, ''),
 		       COALESCE(adm.a_body, ''),
+		       COALESCE(adm.a_content_type, ''),
 		       a.create_time, a.create_by,
 		       COALESCE(adm.a_from, ''), COALESCE(adm.a_to, ''),
 		       a.article_sender_type_id, a.is_visible_for_customer
@@ -229,11 +231,11 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 
 	for rows.Next() {
 		var articleID int
-		var subject, body, fromAddr, toAddr string
+		var subject, body, contentType, fromAddr, toAddr string
 		var createTime time.Time
 		var createBy, senderTypeID, isVisible int
 
-		err := rows.Scan(&articleID, &subject, &body, &createTime, &createBy,
+		err := rows.Scan(&articleID, &subject, &body, &contentType, &createTime, &createBy,
 			&fromAddr, &toAddr, &senderTypeID, &isVisible)
 		if err != nil {
 			continue
@@ -263,6 +265,7 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 			TicketID:    ticketID,
 			Body:        body,
 			Subject:     subject,
+			ContentType: contentType,
 			CreatedBy:   uint(createBy),
 			AuthorName:  authorName,
 			AuthorEmail: fromAddr,

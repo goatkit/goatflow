@@ -249,4 +249,24 @@
     div[id^="note-content-"] [style*="text-indent" i] {
         text-indent: 0 !important;
     }
+
+    /* Prevent underlines from appearing on whitespace-only text in Tiptap editor */
+    .tiptap-content u:only-child:empty,
+    .tiptap-content u:only-child::before,
+    .tiptap-content u:only-child::after {
+        text-decoration: none !important;
+    }
+
+    /* Hide underlines on spaces and whitespace-only elements */
+    .tiptap-content u {
+        text-decoration-skip-ink: none;
+        text-decoration-skip: spaces;
+    }
+
+    /* Hide underline on whitespace-only spans */
+    .tiptap-content u:empty,
+    .tiptap-content u::before,
+    .tiptap-content u::after {
+        text-decoration: none !important;
+    }
 }

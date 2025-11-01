@@ -70,8 +70,55 @@ function initTiptapEditor(elementId, options = {}) {
 
                 <!-- Colors and Highlights -->
                 <div class="flex gap-1 border-r border-gray-200 dark:border-gray-700 pr-2">
-                    <input type="color" data-action="textColor" class="toolbar-btn w-8 h-8 p-0 border rounded" title="Text Color">
-                    <input type="color" data-action="highlight" class="toolbar-btn w-8 h-8 p-0 border rounded" title="Highlight Color" value="#ffff00">
+                    <!-- Text Color Dropdown -->
+                    <div class="relative">
+                        <button type="button" data-action="textColorMenu" class="toolbar-btn flex items-center gap-1" title="Text Color">
+                            <i class="fas fa-palette"></i>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg p-2 hidden z-10" data-color-menu="text">
+                            <div class="grid grid-cols-6 gap-1 mb-2">
+                                <button type="button" data-color="#000000" class="w-6 h-6 rounded border border-gray-300" style="background-color: #000000;" title="Black"></button>
+                                <button type="button" data-color="#374151" class="w-6 h-6 rounded border border-gray-300" style="background-color: #374151;" title="Gray"></button>
+                                <button type="button" data-color="#DC2626" class="w-6 h-6 rounded border border-gray-300" style="background-color: #DC2626;" title="Red"></button>
+                                <button type="button" data-color="#EA580C" class="w-6 h-6 rounded border border-gray-300" style="background-color: #EA580C;" title="Orange"></button>
+                                <button type="button" data-color="#CA8A04" class="w-6 h-6 rounded border border-gray-300" style="background-color: #CA8A04;" title="Amber"></button>
+                                <button type="button" data-color="#16A34A" class="w-6 h-6 rounded border border-gray-300" style="background-color: #16A34A;" title="Green"></button>
+                                <button type="button" data-color="#0891B2" class="w-6 h-6 rounded border border-gray-300" style="background-color: #0891B2;" title="Cyan"></button>
+                                <button type="button" data-color="#2563EB" class="w-6 h-6 rounded border border-gray-300" style="background-color: #2563EB;" title="Blue"></button>
+                                <button type="button" data-color="#7C3AED" class="w-6 h-6 rounded border border-gray-300" style="background-color: #7C3AED;" title="Violet"></button>
+                                <button type="button" data-color="#C026D3" class="w-6 h-6 rounded border border-gray-300" style="background-color: #C026D3;" title="Magenta"></button>
+                                <button type="button" data-color="#BE185D" class="w-6 h-6 rounded border border-gray-300" style="background-color: #BE185D;" title="Pink"></button>
+                                <button type="button" data-color="#FFFFFF" class="w-6 h-6 rounded border border-gray-300" style="background-color: #FFFFFF;" title="White"></button>
+                            </div>
+                            <input type="color" data-action="customTextColor" class="w-full h-8 border border-gray-300 rounded" title="Custom Color">
+                        </div>
+                    </div>
+
+                    <!-- Highlight Color Dropdown -->
+                    <div class="relative">
+                        <button type="button" data-action="highlightMenu" class="toolbar-btn flex items-center gap-1" title="Highlight Color">
+                            <i class="fas fa-highlighter"></i>
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </button>
+                        <div class="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg p-2 hidden z-10" data-color-menu="highlight">
+                            <div class="grid grid-cols-6 gap-1 mb-2">
+                                <button type="button" data-color="#FEF3C7" class="w-6 h-6 rounded border border-gray-300" style="background-color: #FEF3C7;" title="Yellow"></button>
+                                <button type="button" data-color="#DBEAFE" class="w-6 h-6 rounded border border-gray-300" style="background-color: #DBEAFE;" title="Blue"></button>
+                                <button type="button" data-color="#D1FAE5" class="w-6 h-6 rounded border border-gray-300" style="background-color: #D1FAE5;" title="Green"></button>
+                                <button type="button" data-color="#FEE2E2" class="w-6 h-6 rounded border border-gray-300" style="background-color: #FEE2E2;" title="Red"></button>
+                                <button type="button" data-color="#F3E8FF" class="w-6 h-6 rounded border border-gray-300" style="background-color: #F3E8FF;" title="Purple"></button>
+                                <button type="button" data-color="#FEF7ED" class="w-6 h-6 rounded border border-gray-300" style="background-color: #FEF7ED;" title="Orange"></button>
+                                <button type="button" data-color="#F0FDF4" class="w-6 h-6 rounded border border-gray-300" style="background-color: #F0FDF4;" title="Mint"></button>
+                                <button type="button" data-color="#ECFDF5" class="w-6 h-6 rounded border border-gray-300" style="background-color: #ECFDF5;" title="Light Green"></button>
+                                <button type="button" data-color="#FEFCE8" class="w-6 h-6 rounded border border-gray-300" style="background-color: #FEFCE8;" title="Light Yellow"></button>
+                                <button type="button" data-color="#F0F9FF" class="w-6 h-6 rounded border border-gray-300" style="background-color: #F0F9FF;" title="Light Blue"></button>
+                                <button type="button" data-color="#FDF4FF" class="w-6 h-6 rounded border border-gray-300" style="background-color: #FDF4FF;" title="Light Purple"></button>
+                                <button type="button" data-color="#FAFAFA" class="w-6 h-6 rounded border border-gray-300" style="background-color: #FAFAFA;" title="Gray"></button>
+                            </div>
+                            <input type="color" data-action="customHighlightColor" class="w-full h-8 border border-gray-300 rounded" title="Custom Color">
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Headings -->
@@ -298,8 +345,9 @@ function initTiptapEditor(elementId, options = {}) {
             onUpdate: ({ editor: updatedEditor }) => {
                 console.log('Rich text editor content updated');
                 if (config.onUpdate) {
-                    const markdown = window.Tiptap.htmlToMarkdown ? window.Tiptap.htmlToMarkdown(updatedEditor.getHTML()) : updatedEditor.getHTML();
-                    config.onUpdate(markdown);
+                    // Preserve HTML content instead of converting to Markdown
+                    const html = updatedEditor.getHTML();
+                    config.onUpdate(html);
                 }
             }
         });
@@ -430,7 +478,26 @@ function initTiptapEditor(elementId, options = {}) {
                     break;
                 case 'underline':
                     if (currentMode === 'richtext' && editor) {
-                        editor.chain().focus().toggleMark('underline').run();
+                        // Trim trailing spaces from selection before applying underline
+                        const { from, to } = editor.state.selection;
+                        const doc = editor.state.doc;
+                        let newTo = to;
+
+                        // Check if selection ends with spaces and adjust
+                        for (let i = to - 1; i >= from; i--) {
+                            const char = doc.textBetween(i, i + 1);
+                            if (char !== ' ' && char !== '\t' && char !== '\n') {
+                                break;
+                            }
+                            newTo = i;
+                        }
+
+                        // Only adjust selection if we found trailing spaces
+                        if (newTo !== to) {
+                            editor.chain().focus().setTextSelection({ from, to: newTo }).toggleMark('underline').run();
+                        } else {
+                            editor.chain().focus().toggleMark('underline').run();
+                        }
                     }
                     break;
                 case 'strike':
@@ -440,13 +507,37 @@ function initTiptapEditor(elementId, options = {}) {
                     break;
 
                 // Colors
-                case 'textColor':
+                case 'textColorMenu':
+                    e.preventDefault();
+                    const textColorMenu = container.querySelector('[data-color-menu="text"]');
+                    if (textColorMenu) {
+                        textColorMenu.classList.toggle('hidden');
+                        // Close highlight menu if open
+                        const highlightMenu = container.querySelector('[data-color-menu="highlight"]');
+                        if (highlightMenu && !highlightMenu.classList.contains('hidden')) {
+                            highlightMenu.classList.add('hidden');
+                        }
+                    }
+                    break;
+                case 'highlightMenu':
+                    e.preventDefault();
+                    const highlightMenu = container.querySelector('[data-color-menu="highlight"]');
+                    if (highlightMenu) {
+                        highlightMenu.classList.toggle('hidden');
+                        // Close text color menu if open
+                        const textColorMenu = container.querySelector('[data-color-menu="text"]');
+                        if (textColorMenu && !textColorMenu.classList.contains('hidden')) {
+                            textColorMenu.classList.add('hidden');
+                        }
+                    }
+                    break;
+                case 'customTextColor':
                     if (currentMode === 'richtext' && editor) {
                         const textColor = e.target.value;
                         editor.chain().focus().setColor(textColor).run();
                     }
                     break;
-                case 'highlight':
+                case 'customHighlightColor':
                     if (currentMode === 'richtext' && editor) {
                         const highlightColor = e.target.value;
                         editor.chain().focus().toggleHighlight({ color: highlightColor }).run();
@@ -596,6 +687,38 @@ function initTiptapEditor(elementId, options = {}) {
             updateToolbarState(currentMode === 'richtext' ? editor : null, toolbar);
         });
 
+        // Handle color palette button clicks
+        toolbar.addEventListener('click', (e) => {
+            const colorBtn = e.target.closest('[data-color]');
+            if (!colorBtn) return;
+
+            e.preventDefault();
+            const color = colorBtn.dataset.color;
+            const menu = colorBtn.closest('[data-color-menu]');
+            
+            if (menu && menu.dataset.colorMenu === 'text') {
+                if (currentMode === 'richtext' && editor) {
+                    editor.chain().focus().setColor(color).run();
+                }
+            } else if (menu && menu.dataset.colorMenu === 'highlight') {
+                if (currentMode === 'richtext' && editor) {
+                    editor.chain().focus().toggleHighlight({ color: color }).run();
+                }
+            }
+            
+            // Close the menu after selection
+            menu.classList.add('hidden');
+        });
+
+        // Close color menus when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!container.contains(e.target)) {
+                container.querySelectorAll('[data-color-menu]').forEach(menu => {
+                    menu.classList.add('hidden');
+                });
+            }
+        });
+
         // Update toolbar button states
         if (currentMode === 'richtext' && editor) {
             editor.on('selectionUpdate', () => {
@@ -610,7 +733,7 @@ function initTiptapEditor(elementId, options = {}) {
     editors[elementId] = {
         getHTML: () => {
             if (currentMode === 'richtext' && editor) {
-                return window.Tiptap.htmlToMarkdown ? window.Tiptap.htmlToMarkdown(editor.getHTML()) : editor.getHTML();
+                return editor.getHTML();
             } else if (currentMode === 'markdown' && markdownTextarea) {
                 return markdownTextarea.value;
             }

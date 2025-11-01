@@ -362,6 +362,19 @@ func renderSimpleMessageHTML(msg *service.SimpleTicketMessage) string {
 		attachmentsHTML += `</div></div>`
 	}
 	
+	// Process message body based on content type
+	processedBody := msg.Body
+	if strings.Contains(msg.ContentType, "text/html") || (strings.Contains(msg.Body, "<") && strings.Contains(msg.Body, ">")) {
+		// For HTML content, use it directly (assuming it's from a trusted editor)
+		processedBody = msg.Body
+	} else if strings.Contains(msg.ContentType, "text/markdown") || isMarkdownContent(msg.Body) {
+		// Render markdown content to HTML
+		processedBody = RenderMarkdown(msg.Body)
+	} else {
+		// Plain text - escape HTML entities
+		processedBody = strings.ReplaceAll(msg.Body, "\n", "<br>")
+	}
+	
 	return fmt.Sprintf(`
 	<div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
 		<div class="flex items-start justify-between">
@@ -395,7 +408,7 @@ func renderSimpleMessageHTML(msg *service.SimpleTicketMessage) string {
 		internalBadge,
 		formattedTime,
 		msg.Subject,
-		msg.Body,
+		processedBody,
 		attachmentsHTML)
 }
 

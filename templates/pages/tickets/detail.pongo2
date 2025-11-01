@@ -98,14 +98,12 @@
                         {{ t("tickets.add_comment") }}
                     </label>
                     <div class="mt-1">
-                        <textarea id="comment" 
-                                  name="body" 
-                                  rows="4" 
-                                  class="shadow-sm focus:ring-gotrs-500 focus:border-gotrs-500 block w-full sm:text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                                  placeholder="{{ t('tickets.comment_placeholder') }}"></textarea>
+                        <input type="hidden" name="body" id="commentBody" required>
+                        <input type="hidden" name="is_visible_for_customer" value="1">
+                        <div id="commentEditor" class="min-h-[120px]"></div>
                     </div>
                     <div class="mt-3 flex justify-end">
-                        <button type="submit" 
+                        <button type="submit"
                                 class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
                             {{ t("common.submit") }}
                         </button>
@@ -481,6 +479,35 @@ function escapeHtml(text) {
         "'": '&#039;'
     };
     return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Initialize TipTap editor for comment form
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeCommentEditor);
+} else {
+    initializeCommentEditor();
+}
+
+function initializeCommentEditor() {
+    const commentEditor = document.getElementById('commentEditor');
+    if (commentEditor && window.TiptapEditor) {
+        window.commentEditorInstance = TiptapEditor.init('commentEditor', {
+            placeholder: '{{ t("tickets.comment_placeholder") }}',
+            onUpdate: (content) => {
+                document.getElementById('commentBody').value = content;
+            }
+        });
+    }
+}
+
+// Update form submission to ensure editor content is included
+const commentForm = document.querySelector('form[hx-post*="/agent/tickets/"]');
+if (commentForm) {
+    commentForm.addEventListener('htmx:beforeRequest', (e) => {
+        if (window.commentEditorInstance) {
+            document.getElementById('commentBody').value = TiptapEditor.getContent('commentEditor');
+        }
+    });
 }
 </script>
 {% endblock %}

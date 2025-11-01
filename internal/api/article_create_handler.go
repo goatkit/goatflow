@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -10,9 +12,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/core"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
 )
 
 // HandleCreateArticleAPI handles POST /api/v1/tickets/:ticket_id/articles
@@ -500,6 +504,47 @@ func HandleCreateArticleAPI(c *gin.Context) {
 			"error":   "Failed to commit transaction",
 		})
 		return
+	}
+
+	// Queue email notification for new article if visible to customer
+	if isVisibleForCustomer == 1 && customerUserID.Valid && customerUserID.String != "" {
+		go func() {
+			// Look up customer's email address
+			var customerEmail string
+			err := db.QueryRow(database.ConvertPlaceholders(`
+				SELECT cu.email
+				FROM customer_user cu
+				WHERE cu.login = $1
+			`), customerUserID.String).Scan(&customerEmail)
+			
+			if err != nil || customerEmail == "" {
+				log.Printf("Failed to find email for customer user %s: %v", customerUserID.String, err)
+				return
+			}
+
+			subject := fmt.Sprintf("Update on Ticket %s", "TBD") // Would need to get ticket number
+			body := fmt.Sprintf("A new update has been added to your ticket.\n\n%s\n\nBest regards,\nGOTRS Support Team", req.Body)
+
+			// Queue the email for processing by EmailQueueTask
+			queueRepo := mailqueue.NewMailQueueRepository(db)
+			senderEmail := "GOTRS Support Team"
+			if cfg := config.Get(); cfg != nil {
+				senderEmail = cfg.Email.From
+			}
+			queueItem := &mailqueue.MailQueueItem{
+				Sender:       &senderEmail,
+				Recipient:    customerEmail,
+				RawMessage:   mailqueue.BuildEmailMessage(senderEmail, customerEmail, subject, body),
+				Attempts:     0,
+				CreateTime:   time.Now(),
+			}
+			
+			if err := queueRepo.Insert(context.Background(), queueItem); err != nil {
+				log.Printf("Failed to queue article notification email for %s: %v", customerEmail, err)
+			} else {
+				log.Printf("Queued article notification email for %s", customerEmail)
+			}
+		}()
 	}
 
 	// Fetch the created article for response (join mime data)

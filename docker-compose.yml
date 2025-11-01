@@ -131,6 +131,36 @@ services:
     # Production binary runs automatically from Dockerfile CMD
     # For development hot reload, volume mount handles code changes
 
+  # GOTRS Runner - Background task processor
+  runner:
+    image: localhost/gotrs-backend:latest
+    container_name: gotrs-runner
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    command: ["./goats", "-mode", "runner"]
+    environment:
+      DB_DRIVER: ${DB_DRIVER:-mariadb}
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DATABASE_URL: ${DATABASE_URL}
+      # Email configuration for queue processing
+      GOTRS_EMAIL_SMTP_HOST: ${SMTP_HOST:-mailhog}
+      GOTRS_EMAIL_SMTP_PORT: ${SMTP_PORT:-1025}
+      GOTRS_EMAIL_SMTP_USER: ${SMTP_USER}
+      GOTRS_EMAIL_SMTP_PASSWORD: ${SMTP_PASSWORD}
+      GOTRS_EMAIL_SMTP_TLS: ${SMTP_TLS:-false}
+      GOTRS_EMAIL_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-true}
+      GOTRS_EMAIL_FROM: ${EMAIL_FROM:-noreply@gotrs.local}
+      GOTRS_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - gotrs-network
+    restart: unless-stopped
+
   # Nginx Reverse Proxy (serves static assets and proxies to backend)
   # nginx:
   #   image: nginx:alpine
@@ -153,14 +183,14 @@ services:
   #     - gotrs-network
 
   # Mailhog for Email Testing
-  #mailhog:
-  #  image: mailhog/mailhog:latest
-  #  container_name: gotrs-mailhog
-  #  ports:
-  #    - "${MAILHOG_SMTP_PORT:-1025}:1025" # SMTP
-  #    - "${MAILHOG_UI_PORT:-8025}:8025" # Web UI
-  #  networks:
-  #    - gotrs-network
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: gotrs-mailhog
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1025}:1025" # SMTP
+      - "${MAILHOG_UI_PORT:-8025}:8025" # Web UI
+    networks:
+      - gotrs-network
 
   # Temporal Workflow Engine - COMMENTED OUT until code is implemented
   # temporal:

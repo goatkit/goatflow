@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
     "strconv"
+    "time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
@@ -216,8 +217,13 @@ func TestUserDeletion(t *testing.T) {
 
 		testUser := users[len(users)-1] // Use last user to avoid system users
 		
+		// Debug: log the current title
+		t.Logf("User %s (ID: %d) has title: '%s' (length: %d)", testUser.Login, testUser.ID, testUser.Title, len(testUser.Title))
+		
 		// Soft delete by setting valid_id = 2
 		testUser.ValidID = 2
+		testUser.ChangeTime = time.Now()
+		testUser.ChangeBy = 1 // Set a valid change_by
 		err = userRepo.Update(testUser)
 		
 		if err != nil {

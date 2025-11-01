@@ -59,3 +59,9 @@ services:
       - gotrs-network
 
 
+
+networks:
+  gotrs-network:
+    driver: bridge
+
+

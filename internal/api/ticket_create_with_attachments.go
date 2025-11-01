@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"log"
@@ -15,6 +16,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/history"
+	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
@@ -54,15 +56,29 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 		return
 	}
 
-	// Fallback: if customer_email missing but customer_user_id present (autocomplete sets this), treat it as email login
+	// Fallback: if customer_email missing but customer_user_id present, try to look it up or treat as email
 	if strings.TrimSpace(req.CustomerEmail) == "" {
 		candidate := strings.TrimSpace(req.CustomerUserID)
 		if candidate == "" {
 			candidate = strings.TrimSpace(c.PostForm("customer_user_id"))
 		}
-		if candidate != "" && strings.Contains(candidate, "@") {
-			req.CustomerEmail = candidate
-			log.Printf("CreateTicketWithAttachments: filled CustomerEmail from customer_user_id='%s'", candidate)
+		if candidate != "" {
+			if strings.Contains(candidate, "@") {
+				// If it contains @, treat it as an email address
+				req.CustomerEmail = candidate
+				log.Printf("CreateTicketWithAttachments: filled CustomerEmail from customer_user_id='%s'", candidate)
+			} else {
+				// Try to look up email from customer_user table
+				db, err := database.GetDB()
+				if err == nil {
+					var foundEmail sql.NullString
+					err := db.QueryRow(`SELECT email FROM customer_user WHERE login = ? AND valid_id = 1`, candidate).Scan(&foundEmail)
+					if err == nil && foundEmail.Valid && foundEmail.String != "" {
+						req.CustomerEmail = foundEmail.String
+						log.Printf("CreateTicketWithAttachments: found customer email '%s' for user '%s'", req.CustomerEmail, candidate)
+					}
+				}
+			}
 		}
 	}
 
@@ -437,6 +453,36 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 			}
 		}
 	}
+
+	// Queue email notification for ticket creation
+	log.Printf("DEBUG: Queuing email for customerEmail='%s', ticketNumber='%s'", customerEmail, ticket.TicketNumber)
+	go func() {
+		subject := fmt.Sprintf("Ticket Created: %s", ticket.TicketNumber)
+		body := fmt.Sprintf("Your ticket has been created successfully.\n\nTicket Number: %s\nTitle: %s\n\nMessage:\n%s\n\nYou can view your ticket at: /tickets/%d\n\nBest regards,\nGOTRS Support Team",
+			ticket.TicketNumber, ticket.Title, req.Body, ticket.ID)
+
+		// Queue the email for processing by EmailQueueTask
+		queueRepo := mailqueue.NewMailQueueRepository(db)
+		senderEmail := "GOTRS Support Team"
+		if cfg := config.Get(); cfg != nil {
+			senderEmail = cfg.Email.From
+		}
+		articleID64 := int64(article.ID)
+		queueItem := &mailqueue.MailQueueItem{
+			ArticleID:    &articleID64,
+			Sender:       &senderEmail,
+			Recipient:    customerEmail,
+			RawMessage:   mailqueue.BuildEmailMessage(senderEmail, customerEmail, subject, body),
+			Attempts:     0,
+			CreateTime:   time.Now(),
+		}
+		
+		if err := queueRepo.Insert(context.Background(), queueItem); err != nil {
+			log.Printf("Failed to queue email for %s: %v", customerEmail, err)
+		} else {
+			log.Printf("Queued email for %s (ticket %s) for processing", customerEmail, ticket.TicketNumber)
+		}
+	}()
 
 	// For HTMX, set the redirect header to the ticket detail page
 	c.Header("HX-Redirect", fmt.Sprintf("/tickets/%d", ticket.ID))

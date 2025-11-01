@@ -360,6 +360,11 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                                             </div>
                                             <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{{ note.time }}</p>
                                         </div>
+                                        {% if note.subject %}
+                                        <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                                            <p class="font-medium">{{ note.subject }}</p>
+                                        </div>
+                                        {% endif %}
                                         <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
                                             <div class="rounded-lg p-4 shadow-sm {{ card_classes }}">
                                                 <div class="flex flex-wrap items-center gap-2 justify-between mb-3">

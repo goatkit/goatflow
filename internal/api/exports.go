@@ -43,6 +43,10 @@ var (
 	HandleAdminPermissions        = handleAdminPermissions // Renamed from roles
 	HandleGetUserPermissionMatrix = handleGetUserPermissionMatrix
 	HandleUpdateUserPermissions   = handleUpdateUserPermissions
+	HandleAdminEmailQueue         = handleAdminEmailQueue
+	HandleAdminEmailQueueRetry    = handleAdminEmailQueueRetry
+	HandleAdminEmailQueueDelete   = handleAdminEmailQueueDelete
+	HandleAdminEmailQueueRetryAll = handleAdminEmailQueueRetryAll
 	HandleAdminStates             = handleAdminStates
 	HandleAdminTypes              = handleAdminTypes
 	HandleAdminServices           = handleAdminServices

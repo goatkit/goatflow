@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	"github.com/microcosm-cc/bluemonday"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/renderer/html"
 )
 
 // HTMLSanitizer provides HTML sanitization for user input
@@ -55,6 +57,9 @@ func NewHTMLSanitizer() *HTMLSanitizer {
 		"h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "code", "pre", "img",
 	)
 	
+	// Allow style attributes for color and background-color (TipTap rich text editor)
+	p.AllowAttrs("style").OnElements("span", "mark")
+	
 	return &HTMLSanitizer{
 		policy: p,
 	}
@@ -78,6 +83,40 @@ func IsHTML(content string) bool {
 	}
 	
 	return false
+}
+
+// IsMarkdown checks if the content appears to be markdown (common patterns from Tiptap conversion)
+func IsMarkdown(content string) bool {
+	// Check for common markdown patterns that indicate rich text formatting
+	markdownPatterns := []string{"**", "*", "_", "`", "# ", "## ", "### ", "- ", "* ", "+ ", "1. ", "[", "](", "![", "](", "\n"}
+	
+	// Count markdown elements
+	markdownCount := 0
+	for _, pattern := range markdownPatterns {
+		if strings.Contains(content, pattern) {
+			markdownCount++
+		}
+	}
+	
+	// If we have multiple markdown patterns, it's likely rich text
+	return markdownCount >= 2
+}
+
+// MarkdownToHTML converts markdown content to HTML
+func MarkdownToHTML(markdown string) string {
+	md := goldmark.New(
+		goldmark.WithRendererOptions(
+			html.WithUnsafe(), // Allow raw HTML in markdown
+		),
+	)
+	
+	var buf strings.Builder
+	if err := md.Convert([]byte(markdown), &buf); err != nil {
+		// If conversion fails, return original content
+		return markdown
+	}
+	
+	return buf.String()
 }
 
 // StripHTML removes all HTML tags and returns plain text
