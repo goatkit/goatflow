@@ -6133,8 +6133,8 @@ func handleSchemaMonitoring(c *gin.Context) {
 
 // handleAdminGroups shows the admin groups page
 func handleAdminGroups(c *gin.Context) {
-	if os.Getenv("APP_ENV") == "test" {
-		// JSON response for tests
+	if os.Getenv("APP_ENV") == "test" && strings.Contains(strings.ToLower(c.GetHeader("Accept")), "application/json") {
+		// JSON response for API tests
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "Group management available",
