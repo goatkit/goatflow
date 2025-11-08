@@ -6587,16 +6587,7 @@ func handleAdminGroups(c *gin.Context) {
 		members, _ := groupRepo.GetGroupMembers(groupIDUint)
 		memberCount := len(members)
 
-		groupList = append(groupList, gin.H{
-			"ID":          group.ID,
-			"Name":        group.Name,
-			"Description": group.Comments,
-			"MemberCount": memberCount,
-			"ValidID":     group.ValidID,
-			"IsActive":    group.ValidID == 1,
-			"IsSystem":    group.Name == "admin" || group.Name == "users" || group.Name == "stats",
-			"CreateTime":  group.CreateTime,
-		})
+		groupList = append(groupList, makeAdminGroupEntry(group, memberCount))
 	}
 
 	if pongo2Renderer == nil || pongo2Renderer.templateSet == nil {
@@ -6615,12 +6606,29 @@ func handleAdminGroups(c *gin.Context) {
 	})
 }
 
+func makeAdminGroupEntry(group *models.Group, memberCount int) gin.H {
+	isSystem := group.Name == "admin" || group.Name == "users" || group.Name == "stats"
+	isActive := group.ValidID == 1
+	return gin.H{
+		"ID":          group.ID,
+		"Name":        group.Name,
+		"Description": group.Comments,
+		"Comments":    group.Comments,
+		"MemberCount": memberCount,
+		"ValidID":     group.ValidID,
+		"IsActive":    isActive,
+		"IsSystem":    isSystem,
+		"CreateTime":  group.CreateTime,
+	}
+}
+
 func renderAdminGroupsTestFallback(c *gin.Context, groups []gin.H, searchTerm, statusTerm string) {
 	defaultGroups := []gin.H{
 		{
 			"ID":          1,
 			"Name":        "admin",
 			"Description": "System administrators",
+			"Comments":    "System administrators",
 			"MemberCount": 3,
 			"IsActive":    true,
 			"IsSystem":    true,
@@ -6630,6 +6638,7 @@ func renderAdminGroupsTestFallback(c *gin.Context, groups []gin.H, searchTerm, s
 			"ID":          2,
 			"Name":        "users",
 			"Description": "All registered users",
+			"Comments":    "All registered users",
 			"MemberCount": 12,
 			"IsActive":    true,
 			"IsSystem":    true,
@@ -6639,6 +6648,7 @@ func renderAdminGroupsTestFallback(c *gin.Context, groups []gin.H, searchTerm, s
 			"ID":          3,
 			"Name":        "support",
 			"Description": "Frontline support team",
+			"Comments":    "Frontline support team",
 			"MemberCount": 6,
 			"IsActive":    true,
 			"IsSystem":    false,
@@ -6648,6 +6658,7 @@ func renderAdminGroupsTestFallback(c *gin.Context, groups []gin.H, searchTerm, s
 			"ID":          4,
 			"Name":        "legacy",
 			"Description": "Inactive legacy queue",
+			"Comments":    "Inactive legacy queue",
 			"MemberCount": 0,
 			"IsActive":    false,
 			"IsSystem":    false,
@@ -6716,7 +6727,11 @@ func renderAdminGroupsTestFallback(c *gin.Context, groups []gin.H, searchTerm, s
 		for _, group := range data {
 			id := template.HTMLEscapeString(fmt.Sprint(group["ID"]))
 			name := template.HTMLEscapeString(fmt.Sprint(group["Name"]))
-			description := template.HTMLEscapeString(fmt.Sprint(group["Description"]))
+			rawDescription := group["Comments"]
+			if rawDescription == nil || fmt.Sprint(rawDescription) == "" {
+				rawDescription = group["Description"]
+			}
+			description := template.HTMLEscapeString(fmt.Sprint(rawDescription))
 			members := template.HTMLEscapeString(fmt.Sprint(group["MemberCount"]))
 			isSystem := fmt.Sprint(group["IsSystem"]) == "true"
 			status := "active"
