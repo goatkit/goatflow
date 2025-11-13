@@ -32,16 +32,15 @@
 - ✅ **CODE CLEANUP** - Removed 200+ lines of duplicate commented code
 - ✅ **QUEUE DETAIL FUNCTIONALITY** - Real-time statistics and enhanced ticket display with filtered list view
 - ✅ Agent/tickets endpoint working without database errors
-- ❌ Ticket functionality limited (filtering issues but database layer works)
-- ❌ No ticket creation UI, viewing, or management UIs
+- ✅ Agent ticket functionality, creation UI, viewing and ticket management UIs
+- ✅ **Basic Email Threading** - RFC-compliant Message-ID, In-Reply-To, and References headers implemented
 - ❌ No customer portal
-- ⚠️ **Basic Email Threading** - RFC-compliant Message-ID, In-Reply-To, and References headers implemented
 
 **Recent Success**: Completed comprehensive code quality improvements including template system robustness, HTML fallback cleanup, and code deduplication. System now has proper error handling and cleaner architecture. **Latest Achievement**: Queue detail pages now display real-time statistics and enhanced ticket listings with navigation.
 
 **New Achievement (October 19, 2025)**: Reminder toasts are actionable end-to-end. The legacy `/api/notifications/pending` endpoint now resolves to the HTMX handler, and a matching `/api/tickets/:id/status` alias keeps snooze posts working without the `/agent` prefix. Routes manifest and regression tests cover the flow.
 
-**New Achievement (October 22, 2025)**: Ticket Zoom history and links fragments render consistently across PostgreSQL and MariaDB. History pulls article subjects from `article_data_mime`, and the links repository now duplicates placeholder parameters when `database.ConvertQuery` expands `$1` to multiple `?` tokens, preventing MariaDB-specific 500s.
+**New Achievement (October 22, 2025)**: Ticket Zoom history and links fragments render consistently across PostgreSQL and MariaDB. History pulls article subjects from `article_data_mime`, and the links repository now duplicates placeholder parameters when `database.ConvertQuery` expands `$1` to multiple `?` tokens, preventing MariaDB-specific 500s. Ticket history parity achieved across agent/admin flows. The shared recorder now maps OTRS/Znuny history types, persists `ticket_history` entries for each action, and the History tab renders real timelines with repository and service test coverage.
 
 **New Achievement (November 1, 2025)**: Email threading support implemented with RFC-compliant Message-ID, In-Reply-To, and References headers for conversation tracking in customer notifications. Database schema updated to store threading metadata, and agent routes now include threading headers when sending customer emails.
 
@@ -358,7 +357,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
-*Last updated: October 22, 2025 - Ticket Zoom history and links fragments now render on MariaDB thanks to subject joins and placeholder duplication fixes.*
+*Last updated: November 13, 2025 - Ticket history parity recorded; History tab now reflects persisted actions across agent and admin flows.*
 
 ---
 
