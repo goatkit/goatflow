@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/smtp"
 	"strconv"
+	"strings"
 
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 )
@@ -29,99 +30,133 @@ func NewSMTPProvider(cfg *config.EmailConfig) EmailProvider {
 	return &SMTPProvider{cfg: cfg}
 }
 
-func (s *SMTPProvider) Send(ctx context.Context, msg EmailMessage) error {
-	if !s.cfg.Enabled {
-		return nil // Silently skip if email is disabled
+func (s *SMTPProvider) Send(_ context.Context, msg EmailMessage) error {
+	if s.cfg == nil || !s.cfg.Enabled {
+		return nil
 	}
-
 	if len(msg.To) == 0 {
 		return fmt.Errorf("no recipients specified")
 	}
 
-	// Build the message
-	var message string
-	if msg.HTML {
-		message = fmt.Sprintf("To: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
-			msg.To[0], msg.Subject, msg.Body)
-	} else {
-		message = fmt.Sprintf("To: %s\r\nSubject: %s\r\n\r\n%s", msg.To[0], msg.Subject, msg.Body)
+	recipientsHeader := strings.Join(msg.To, ", ")
+	fromHeader := s.cfg.From
+	if fromHeader == "" {
+		fromHeader = s.cfg.SMTP.User
 	}
 
-	// Set up authentication
-	var auth smtp.Auth
-	if s.cfg.SMTP.User != "" && s.cfg.SMTP.Password != "" {
-		switch s.cfg.SMTP.AuthType {
-		case "plain":
-			auth = smtp.PlainAuth("", s.cfg.SMTP.User, s.cfg.SMTP.Password, s.cfg.SMTP.Host)
-		case "login":
-			auth = &loginAuth{username: s.cfg.SMTP.User, password: s.cfg.SMTP.Password}
-		default:
-			auth = smtp.PlainAuth("", s.cfg.SMTP.User, s.cfg.SMTP.Password, s.cfg.SMTP.Host)
+	var headers []string
+	headers = append(headers, fmt.Sprintf("From: %s", fromHeader))
+	headers = append(headers, fmt.Sprintf("To: %s", recipientsHeader))
+	headers = append(headers, fmt.Sprintf("Subject: %s", msg.Subject))
+
+	if msg.HTML {
+		headers = append(headers, "MIME-Version: 1.0")
+		headers = append(headers, "Content-Type: text/html; charset=UTF-8")
+	} else {
+		headers = append(headers, "Content-Type: text/plain; charset=UTF-8")
+	}
+
+	message := strings.Join(headers, "\r\n") + "\r\n\r\n" + msg.Body
+
+	client, err := s.dialSMTPClient()
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	if err := s.authenticate(client); err != nil {
+		return err
+	}
+
+	sender := fromHeader
+	if sender == "" {
+		sender = "noreply@localhost"
+	}
+	if err := client.Mail(sender); err != nil {
+		return fmt.Errorf("failed to set sender: %w", err)
+	}
+
+	for _, to := range msg.To {
+		if err := client.Rcpt(to); err != nil {
+			return fmt.Errorf("failed to set recipient %s: %w", to, err)
 		}
 	}
 
-	// Set up TLS config
+	w, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("failed to initiate data transfer: %w", err)
+	}
+	if _, err := w.Write([]byte(message)); err != nil {
+		return fmt.Errorf("failed to write message: %w", err)
+	}
+	if err := w.Close(); err != nil {
+		return fmt.Errorf("failed to close data transfer: %w", err)
+	}
+
+	if err := client.Quit(); err != nil {
+		return fmt.Errorf("failed to quit SMTP session: %w", err)
+	}
+
+	return nil
+}
+
+func (s *SMTPProvider) dialSMTPClient() (*smtp.Client, error) {
+	mode := s.cfg.EffectiveTLSMode()
+	addr := s.cfg.SMTP.Host + ":" + strconv.Itoa(s.cfg.SMTP.Port)
 	tlsConfig := &tls.Config{
 		ServerName:         s.cfg.SMTP.Host,
 		InsecureSkipVerify: s.cfg.SMTP.SkipVerify,
 	}
 
-	// Create SMTP client
-	addr := s.cfg.SMTP.Host + ":" + strconv.Itoa(s.cfg.SMTP.Port)
-	client, err := smtp.Dial(addr)
-	if err != nil {
-		return fmt.Errorf("failed to connect to SMTP server: %w", err)
-	}
-	defer client.Close()
-
-	// Start TLS if required
-	if s.cfg.SMTP.TLS {
-		if err = client.StartTLS(tlsConfig); err != nil {
-			return fmt.Errorf("failed to start TLS: %w", err)
+	switch mode {
+	case "smtps":
+		conn, err := tls.Dial("tcp", addr, tlsConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect via SMTPS: %w", err)
 		}
-	}
-
-	// Authenticate if auth is set
-	if auth != nil {
-		if err = client.Auth(auth); err != nil {
-			return fmt.Errorf("SMTP authentication failed: %w", err)
+		client, err := smtp.NewClient(conn, s.cfg.SMTP.Host)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create SMTP client: %w", err)
 		}
-	}
-
-	// Set the sender
-	if err = client.Mail(s.cfg.From); err != nil {
-		return fmt.Errorf("failed to set sender: %w", err)
-	}
-
-	// Set recipients
-	for _, to := range msg.To {
-		if err = client.Rcpt(to); err != nil {
-			return fmt.Errorf("failed to set recipient %s: %w", to, err)
+		return client, nil
+	default:
+		client, err := smtp.Dial(addr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to SMTP server: %w", err)
 		}
+		if mode == "starttls" {
+			if err := client.StartTLS(tlsConfig); err != nil {
+				client.Close()
+				return nil, fmt.Errorf("failed to start TLS: %w", err)
+			}
+		}
+		return client, nil
+	}
+}
+
+func (s *SMTPProvider) authenticate(client *smtp.Client) error {
+	if s.cfg.SMTP.User == "" || s.cfg.SMTP.Password == "" {
+		return nil
 	}
 
-	// Send the email
-	w, err := client.Data()
-	if err != nil {
-		return fmt.Errorf("failed to initiate data transfer: %w", err)
+	authType := strings.ToLower(strings.TrimSpace(s.cfg.SMTP.AuthType))
+	var auth smtp.Auth
+	switch authType {
+	case "", "plain":
+		auth = smtp.PlainAuth("", s.cfg.SMTP.User, s.cfg.SMTP.Password, s.cfg.SMTP.Host)
+	case "login":
+		auth = &loginAuth{username: s.cfg.SMTP.User, password: s.cfg.SMTP.Password}
+	default:
+		auth = smtp.PlainAuth("", s.cfg.SMTP.User, s.cfg.SMTP.Password, s.cfg.SMTP.Host)
 	}
 
-	_, err = w.Write([]byte(message))
-	if err != nil {
-		return fmt.Errorf("failed to write message: %w", err)
+	if auth == nil {
+		return nil
 	}
 
-	err = w.Close()
-	if err != nil {
-		return fmt.Errorf("failed to close data transfer: %w", err)
+	if err := client.Auth(auth); err != nil {
+		return fmt.Errorf("SMTP authentication failed: %w", err)
 	}
-
-	// Send QUIT
-	err = client.Quit()
-	if err != nil {
-		return fmt.Errorf("failed to quit SMTP session: %w", err)
-	}
-
 	return nil
 }
 
@@ -130,7 +165,7 @@ type loginAuth struct {
 	username, password string
 }
 
-func (a *loginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+func (a *loginAuth) Start(_ *smtp.ServerInfo) (string, []byte, error) {
 	return "LOGIN", []byte{}, nil
 }
 

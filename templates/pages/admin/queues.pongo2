@@ -654,6 +654,14 @@ async function viewQueueDetails(id) {
                             <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Tickets</p>
                             <p class="mt-1 text-sm text-gray-900 dark:text-white">${queue.ticket_count || 0}</p>
                         </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">System Address</p>
+                            <p class="mt-1 text-sm text-gray-900 dark:text-white">
+                                ${queue.system_address_email
+                                    ? `${queue.system_address_display ? `${queue.system_address_display}<br>` : ''}<span class="font-mono">${queue.system_address_email}</span>`
+                                    : 'Not set'}
+                            </p>
+                        </div>
                     </div>
                     
                     ${queue.comments ? `

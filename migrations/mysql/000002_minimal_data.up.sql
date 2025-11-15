@@ -60,7 +60,10 @@ INSERT IGNORE INTO groups (id, name, comments, valid_id, create_time, create_by,
 (3, 'stats', 'Stats access group', 1, NOW(), 1, NOW(), 1);
 
 INSERT IGNORE INTO system_address (id, value0, value1, comments, valid_id, queue_id, create_time, create_by, change_time, change_by) VALUES
-(1, 'noreply@localhost', 'System', 'Default system address', 1, 1, NOW(), 1, NOW(), 1);
+(1, 'postmaster@gotrs.local', 'GOTRS Postmaster', 'System address for the Postmaster queue', 1, 1, NOW(), 1, NOW(), 1),
+(2, 'intake@gotrs.local', 'GOTRS Intake', 'Raw/unprocessed queue system address', 1, 2, NOW(), 1, NOW(), 1),
+(3, 'junk@gotrs.local', 'GOTRS Junk Monitor', 'Spam quarantine queue address', 1, 3, NOW(), 1, NOW(), 1),
+(4, 'misc@gotrs.local', 'GOTRS Misc', 'Miscellaneous work queue address', 1, 4, NOW(), 1, NOW(), 1);
 
 INSERT IGNORE INTO salutation (id, name, text, content_type, comments, valid_id, create_time, create_by, change_time, change_by) VALUES
 (1, 'Default', 'Dear Customer,', 'text/plain', 'Default salutation', 1, NOW(), 1, NOW(), 1);
@@ -86,9 +89,9 @@ INSERT IGNORE INTO queue (
     change_by
 ) VALUES
 (1, 'Postmaster', 1, 1, 1, 1, 0, 1, 0, 'Default queue for incoming emails', 1, NOW(), 1, NOW(), 1),
-(2, 'Raw', 1, 1, 1, 1, 0, 1, 0, 'Queue for unprocessed emails', 1, NOW(), 1, NOW(), 1),
-(3, 'Junk', 1, 1, 1, 1, 0, 2, 0, 'Queue for junk/spam', 1, NOW(), 1, NOW(), 1),
-(4, 'Misc', 1, 1, 1, 1, 0, 1, 0, 'Miscellaneous queue', 1, NOW(), 1, NOW(), 1);
+(2, 'Raw', 1, 2, 1, 1, 0, 1, 0, 'Queue for unprocessed emails', 1, NOW(), 1, NOW(), 1),
+(3, 'Junk', 1, 3, 1, 1, 0, 2, 0, 'Queue for junk/spam', 1, NOW(), 1, NOW(), 1),
+(4, 'Misc', 1, 4, 1, 1, 0, 1, 0, 'Miscellaneous queue', 1, NOW(), 1, NOW(), 1);
 
 INSERT IGNORE INTO users (id, login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by) VALUES
 (1, 'root@localhost', SHA2(UUID(), 256), 'System', 'Administrator', 2, NOW(), 1, NOW(), 1);

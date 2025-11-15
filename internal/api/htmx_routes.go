@@ -7261,9 +7261,32 @@ func handleAdminQueues(c *gin.Context) {
 		}
 	}
 
-	// For now, we'll use empty arrays for these as they may not exist in OTRS schema
-	// These would typically come from system_address, salutation, and signature tables
+	// Populate dropdown data from OTRS-compatible tables
 	systemAddresses := []gin.H{}
+	addrRows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT id, value0, value1
+		FROM system_address
+		WHERE valid_id = 1
+		ORDER BY id
+	`))
+	if err == nil {
+		defer addrRows.Close()
+		for addrRows.Next() {
+			var (
+				id          int
+				email       string
+				displayName sql.NullString
+			)
+			if scanErr := addrRows.Scan(&id, &email, &displayName); scanErr == nil {
+				systemAddresses = append(systemAddresses, gin.H{
+					"ID":          id,
+					"Email":       email,
+					"DisplayName": displayName.String,
+				})
+			}
+		}
+	}
+
 	salutations := []gin.H{}
 	signatures := []gin.H{}
 

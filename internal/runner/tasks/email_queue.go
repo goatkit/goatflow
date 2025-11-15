@@ -126,7 +126,13 @@ func (t *EmailQueueTask) processEmail(ctx context.Context, email *mailqueue.Mail
 
 // sendEmail sends an email using SMTP
 func (t *EmailQueueTask) sendEmail(ctx context.Context, email *mailqueue.MailQueueItem) (*int, *string, error) {
-	// Set up authentication
+	client, err := dialSMTPClient(t.cfg)
+	if err != nil {
+		return nil, stringPtr(fmt.Sprintf("Failed to connect to SMTP server: %v", err)), err
+	}
+	defer client.Close()
+
+	// Authenticate if auth is set
 	var auth smtp.Auth
 	if t.cfg.SMTP.User != "" && t.cfg.SMTP.Password != "" {
 		switch t.cfg.SMTP.AuthType {
@@ -138,29 +144,6 @@ func (t *EmailQueueTask) sendEmail(ctx context.Context, email *mailqueue.MailQue
 			auth = smtp.PlainAuth("", t.cfg.SMTP.User, t.cfg.SMTP.Password, t.cfg.SMTP.Host)
 		}
 	}
-
-	// Set up TLS config
-	tlsConfig := &tls.Config{
-		ServerName:         t.cfg.SMTP.Host,
-		InsecureSkipVerify: t.cfg.SMTP.SkipVerify,
-	}
-
-	// Create SMTP client
-	addr := t.cfg.SMTP.Host + ":" + strconv.Itoa(t.cfg.SMTP.Port)
-	client, err := smtp.Dial(addr)
-	if err != nil {
-		return nil, stringPtr(fmt.Sprintf("Failed to connect to SMTP server: %v", err)), err
-	}
-	defer client.Close()
-
-	// Start TLS if required
-	if t.cfg.SMTP.TLS {
-		if err = client.StartTLS(tlsConfig); err != nil {
-			return nil, stringPtr(fmt.Sprintf("Failed to start TLS: %v", err)), err
-		}
-	}
-
-	// Authenticate if auth is set
 	if auth != nil {
 		if err = client.Auth(auth); err != nil {
 			return nil, stringPtr(fmt.Sprintf("SMTP authentication failed: %v", err)), err
@@ -251,6 +234,40 @@ func (t *EmailQueueTask) cleanupFailedEmails(ctx context.Context) error {
 // stringPtr returns a pointer to a string
 func stringPtr(s string) *string {
 	return &s
+}
+
+func dialSMTPClient(cfg *config.EmailConfig) (*smtp.Client, error) {
+	mode := cfg.EffectiveTLSMode()
+	addr := cfg.SMTP.Host + ":" + strconv.Itoa(cfg.SMTP.Port)
+	tlsConfig := &tls.Config{
+		ServerName:         cfg.SMTP.Host,
+		InsecureSkipVerify: cfg.SMTP.SkipVerify,
+	}
+
+	switch mode {
+	case "smtps":
+		conn, err := tls.Dial("tcp", addr, tlsConfig)
+		if err != nil {
+			return nil, err
+		}
+		client, err := smtp.NewClient(conn, cfg.SMTP.Host)
+		if err != nil {
+			return nil, err
+		}
+		return client, nil
+	default:
+		client, err := smtp.Dial(addr)
+		if err != nil {
+			return nil, err
+		}
+		if mode == "starttls" {
+			if err := client.StartTLS(tlsConfig); err != nil {
+				client.Close()
+				return nil, err
+			}
+		}
+		return client, nil
+	}
 }
 
 // loginAuth implements SMTP LOGIN authentication

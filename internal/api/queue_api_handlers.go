@@ -104,38 +104,71 @@ func HandleAPIQueueDetails(c *gin.Context) {
 		return
 	}
 
-	// Get queue details with group name
+	// Get queue details with group + system address metadata
 	var queue struct {
-		ID              int    `json:"id"`
-		Name            string `json:"name"`
-		GroupID         int    `json:"group_id"`
-		GroupName       string `json:"group_name"`
-		SystemAddressID *int   `json:"system_address_id"`
-		Comments        string `json:"comments"`
-		UnlockTimeout   int    `json:"unlock_timeout"`
-		FollowUpLock    int    `json:"follow_up_lock"`
-		ValidID         int    `json:"valid_id"`
-		TicketCount     int    `json:"ticket_count"`
+		ID                   int            `json:"id"`
+		Name                 string         `json:"name"`
+		GroupID              int            `json:"group_id"`
+		GroupName            sql.NullString `json:"group_name"`
+		SystemAddressID      *int           `json:"system_address_id"`
+		SystemAddressEmail   sql.NullString `json:"system_address_email"`
+		SystemAddressDisplay sql.NullString `json:"system_address_display"`
+		Comments             sql.NullString `json:"comments"`
+		UnlockTimeout        sql.NullInt32  `json:"unlock_timeout"`
+		FollowUpLock         sql.NullInt32  `json:"follow_up_lock"`
+		ValidID              int            `json:"valid_id"`
+		TicketCount          int            `json:"ticket_count"`
 	}
 
 	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT q.id, q.name, q.group_id, g.name as group_name,
-		       q.system_address_id, q.comments, 
-		       q.unlock_timeout, q.follow_up_lock, q.valid_id,
+		       q.system_address_id, sa.value0 AS system_address_email,
+		       sa.value1 AS system_address_display,
+		       q.comments, q.unlock_timeout, q.follow_up_lock, q.valid_id,
 		       (SELECT COUNT(*) FROM ticket WHERE queue_id = q.id) as ticket_count
 		FROM queue q
 		LEFT JOIN groups g ON q.group_id = g.id
+		LEFT JOIN system_address sa ON q.system_address_id = sa.id
 		WHERE q.id = $1
 	`), id).Scan(&queue.ID, &queue.Name, &queue.GroupID, &queue.GroupName,
-		&queue.SystemAddressID, &queue.Comments, &queue.UnlockTimeout,
-		&queue.FollowUpLock, &queue.ValidID, &queue.TicketCount)
+		&queue.SystemAddressID, &queue.SystemAddressEmail, &queue.SystemAddressDisplay,
+		&queue.Comments, &queue.UnlockTimeout, &queue.FollowUpLock, &queue.ValidID, &queue.TicketCount)
 
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Queue not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true, "data": queue})
+	response := gin.H{
+		"id":           queue.ID,
+		"name":         queue.Name,
+		"group_id":     queue.GroupID,
+		"valid_id":     queue.ValidID,
+		"ticket_count": queue.TicketCount,
+	}
+	if queue.GroupName.Valid {
+		response["group_name"] = queue.GroupName.String
+	}
+	if queue.SystemAddressID != nil {
+		response["system_address_id"] = *queue.SystemAddressID
+	}
+	if queue.SystemAddressEmail.Valid {
+		response["system_address_email"] = queue.SystemAddressEmail.String
+	}
+	if queue.SystemAddressDisplay.Valid {
+		response["system_address_display"] = queue.SystemAddressDisplay.String
+	}
+	if queue.Comments.Valid {
+		response["comments"] = queue.Comments.String
+	}
+	if queue.UnlockTimeout.Valid {
+		response["unlock_timeout"] = queue.UnlockTimeout.Int32
+	}
+	if queue.FollowUpLock.Valid {
+		response["follow_up_lock"] = queue.FollowUpLock.Int32
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": response})
 }
 
 // HandleAPIQueueStatus handles PUT /api/queues/:id/status

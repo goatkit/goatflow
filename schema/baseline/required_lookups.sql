@@ -81,9 +81,11 @@ INSERT INTO groups (id, name, comments, valid_id, create_time, create_by, change
 (3, 'stats', 'Stats access group', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 ON CONFLICT (id) DO NOTHING;
 
--- System addresses
 INSERT INTO system_address (id, value0, value1, comments, valid_id, queue_id, create_time, create_by, change_time, change_by) VALUES
-(1, 'noreply@localhost', 'System', 'Default system address', 1, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+(1, 'postmaster@gotrs.local', 'GOTRS Postmaster', 'System address for the Postmaster queue', 1, 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
+(2, 'intake@gotrs.local', 'GOTRS Intake', 'Raw/unprocessed queue system address', 1, 2, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
+(3, 'junk@gotrs.local', 'GOTRS Junk Monitor', 'Spam and quarantine queue address', 1, 3, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
+(4, 'misc@gotrs.local', 'GOTRS Misc', 'Miscellaneous work queue address', 1, 4, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 ON CONFLICT (id) DO NOTHING;
 
 -- Salutations
@@ -115,9 +117,9 @@ INSERT INTO queue (
 	change_by
 ) VALUES
 (1, 'Postmaster', 1, 1, 1, 1, 0, 1, 0, 'Default queue for incoming emails', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
-(2, 'Raw', 1, 1, 1, 1, 0, 1, 0, 'Queue for unprocessed emails', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
-(3, 'Junk', 1, 1, 1, 1, 0, 2, 0, 'Queue for junk/spam', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
-(4, 'Misc', 1, 1, 1, 1, 0, 1, 0, 'Miscellaneous queue', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+(2, 'Raw', 1, 2, 1, 1, 0, 1, 0, 'Queue for unprocessed emails', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
+(3, 'Junk', 1, 3, 1, 1, 0, 2, 0, 'Queue for junk/spam', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
+(4, 'Misc', 1, 4, 1, 1, 0, 1, 0, 'Miscellaneous queue', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 ON CONFLICT (id) DO NOTHING;
 
 COMMIT;

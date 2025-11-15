@@ -131,6 +131,7 @@ type EmailConfig struct {
 		Password   string `mapstructure:"password"`
 		AuthType   string `mapstructure:"auth_type"`
 		TLS        bool   `mapstructure:"tls"`
+		TLSMode    string `mapstructure:"tls_mode"`
 		SkipVerify bool   `mapstructure:"skip_verify"`
 	} `mapstructure:"smtp"`
 	Templates struct {
