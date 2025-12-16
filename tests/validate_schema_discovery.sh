@@ -19,6 +19,8 @@ BOLD='\033[1m'
 
 BASE_URL="http://localhost:8080"
 AUTH="Cookie: access_token=demo_session_admin"
+MODULE_BASE_URL="$BASE_URL/admin/modules"
+SCHEMA_API="$MODULE_BASE_URL/_schema"
 
 # Test counters
 TOTAL_TESTS=0
@@ -61,7 +63,7 @@ run_test "Backend Service Health" \
     "200"
 
 run_test "Schema Discovery API Available" \
-    "curl -s -o /dev/null -w '%{http_code}' -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/_schema?action=tables'" \
+    "curl -s -o /dev/null -w '%{http_code}' -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$SCHEMA_API?action=tables'" \
     "200"
 
 run_test "Schema Discovery UI Available" \
@@ -89,7 +91,7 @@ else
         # Test module accessibility
         MODULE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-            "$BASE_URL/admin/dynamic/$MODULE")
+            "$MODULE_BASE/$MODULE")
         
         if [ "$MODULE_STATUS" = "200" ]; then
             echo -e "    Access: ${GREEN}✓${NC}"
@@ -107,11 +109,11 @@ else
                 -H "Content-Type: application/x-www-form-urlencoded" \
                 -H "X-Requested-With: XMLHttpRequest" \
                 --data "$CREATE_DATA" \
-                "$BASE_URL/admin/dynamic/$MODULE" 2>/dev/null | grep -c '"success":true')
+                "$MODULE_BASE/$MODULE" 2>/dev/null | grep -c '"success":true')
             
             # READ test
             READ_RESULT=$(curl -s -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-                "$BASE_URL/admin/dynamic/$MODULE" 2>/dev/null | grep -c '"success":true')
+                "$MODULE_BASE/$MODULE" 2>/dev/null | grep -c '"success":true')
             
             if [ "$CREATE_RESULT" = "1" ] && [ "$READ_RESULT" = "1" ]; then
                 echo -e "${GREEN}✓ Full CRUD${NC}"
@@ -127,7 +129,7 @@ else
             if [ "$HAS_AUDIT" -gt 0 ]; then
                 echo -n "    Audit fields: "
                 AUDIT_TEST=$(curl -s -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-                    "$BASE_URL/admin/dynamic/$MODULE" | jq -r '.data[0] | .create_by // empty' 2>/dev/null)
+                    "$MODULE_BASE/$MODULE" | jq -r '.data[0] | .create_by // empty' 2>/dev/null)
                 if [ -n "$AUDIT_TEST" ]; then
                     echo -e "${GREEN}✓ Populated${NC}"
                 else
@@ -154,7 +156,7 @@ for TABLE in ticket article users queue; do
     START_TIME=$(date +%s%N)
     
     RESULT=$(curl -s -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-        "$BASE_URL/admin/dynamic/_schema?action=generate&table=$TABLE" | jq -r '.success' 2>/dev/null)
+        "$SCHEMA_API?action=generate&table=$TABLE" | jq -r '.success' 2>/dev/null)
     
     END_TIME=$(date +%s%N)
     RESPONSE_TIME=$(( (END_TIME - START_TIME) / 1000000 ))
@@ -186,7 +188,7 @@ test_field_type() {
     local expected_type="$3"
     
     DETECTED_TYPE=$(curl -s -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-        "$BASE_URL/admin/dynamic/_schema?action=generate&table=$table" | \
+        "$SCHEMA_API?action=generate&table=$table" | \
         jq -r ".config.Fields[] | select(.Name == \"$field\") | .Type" 2>/dev/null)
     
     echo -n "  $table.$field → $expected_type: "
@@ -222,12 +224,12 @@ CREATE_RESPONSE=$(curl -s -X POST \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -H "X-Requested-With: XMLHttpRequest" \
     --data "name=$TEST_NAME&text=Test&content_type=text/plain" \
-    "$BASE_URL/admin/dynamic/salutation")
+    "$MODULE_BASE/salutation")
 
 if echo "$CREATE_RESPONSE" | grep -q '"success":true'; then
     # Fetch the created record
     RECORD=$(curl -s -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-        "$BASE_URL/admin/dynamic/salutation" | \
+        "$MODULE_BASE/salutation" | \
         jq ".data[] | select(.name == \"$TEST_NAME\")" 2>/dev/null)
     
     # Check audit fields
@@ -245,7 +247,7 @@ if echo "$CREATE_RESPONSE" | grep -q '"success":true'; then
     RECORD_ID=$(echo "$RECORD" | jq -r '.id' 2>/dev/null)
     if [ -n "$RECORD_ID" ] && [ "$RECORD_ID" != "null" ]; then
         curl -s -X DELETE -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-            "$BASE_URL/admin/dynamic/salutation/$RECORD_ID" > /dev/null 2>&1
+            "$MODULE_BASE/salutation/$RECORD_ID" > /dev/null 2>&1
     fi
 else
     echo -e "  ${RED}Failed to create test record${NC}"
@@ -262,7 +264,7 @@ echo -e "${CYAN}═════════════════════�
 MODULE_COUNT=$(ls modules/*.yaml 2>/dev/null | wc -l)
 FIELD_COUNT=$(grep -h "^  - name:" modules/*.yaml 2>/dev/null | wc -l)
 TABLE_COUNT=$(curl -s -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-    "$BASE_URL/admin/dynamic/_schema?action=tables" | jq '.data | length' 2>/dev/null)
+    "$SCHEMA_API?action=tables" | jq '.data | length' 2>/dev/null)
 
 # Calculate average generation time
 TOTAL_TIME=0
@@ -270,7 +272,7 @@ SAMPLES=0
 for i in {1..5}; do
     START=$(date +%s%N)
     curl -s -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-        "$BASE_URL/admin/dynamic/_schema?action=generate&table=ticket" > /dev/null 2>&1
+        "$SCHEMA_API?action=generate&table=ticket" > /dev/null 2>&1
     END=$(date +%s%N)
     TIME=$(( (END - START) / 1000000 ))
     TOTAL_TIME=$((TOTAL_TIME + TIME))

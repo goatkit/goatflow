@@ -132,3 +132,10 @@ func (b *BrowserHelper) WaitForHTMX() error {
 		State: playwright.LoadStateNetworkidle,
 	})
 }
+
+// WaitForLoad waits for the main page load event.
+func (b *BrowserHelper) WaitForLoad() error {
+	return b.Page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
+		State: playwright.LoadStateLoad,
+	})
+}

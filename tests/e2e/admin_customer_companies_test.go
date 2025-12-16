@@ -37,7 +37,7 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		require.NoError(t, err)
 
 		// Wait for page to load
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Verify page title and main elements
 		title, err := browser.Page.Title()
@@ -59,14 +59,14 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		if searchInput.Count() > 0 {
 			searchInput.Fill("test")
 			searchInput.Type("company")
-			browser.Page.WaitForLoad()
+			browser.WaitForLoad()
 		}
 
 		// Test status filter
 		statusSelect := browser.Page.Locator("select[name='status'], select:has-text('Status')")
 		if statusSelect.Count() > 0 {
 			statusSelect.SelectOption("valid")
-			browser.Page.WaitForLoad()
+			browser.WaitForLoad()
 		}
 	})
 
@@ -75,7 +75,7 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/new")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Verify form elements
 		heading := browser.Page.Locator("h1, h2:has-text('Create New Customer Company')")
@@ -111,7 +111,7 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 
 		// Click submit and wait for response
 		submitButton.Click()
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Verify success or validation errors
 		// Should either redirect to list or show success message
@@ -125,7 +125,7 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/TEST001/edit")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Verify form is populated
 		heading := browser.Page.Locator("h1, h2:has-text('Edit Customer Company')")
@@ -152,7 +152,7 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 			submitButton := browser.Page.Locator("button[type='submit']")
 			if submitButton.Count() > 0 {
 				submitButton.Click()
-				browser.Page.WaitForLoad()
+				browser.WaitForLoad()
 			}
 		}
 	})
@@ -162,7 +162,7 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Test action buttons if they exist
 		// Look for edit, delete, activate buttons
@@ -200,13 +200,13 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/TEST001/edit")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Look for portal settings tab
 		portalTab := browser.Page.Locator("text=Portal Settings")
 		if portalTab.Count() > 0 {
 			portalTab.Click()
-			browser.Page.WaitForLoad()
+			browser.WaitForLoad()
 
 			// Verify portal settings form elements
 			loginHint := browser.Page.Locator("input[name='login_hint'], textarea[name='login_hint']")
@@ -224,13 +224,13 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/TEST001/edit")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Look for services tab
 		servicesTab := browser.Page.Locator("text=Services")
 		if servicesTab.Count() > 0 {
 			servicesTab.Click()
-			browser.Page.WaitForLoad()
+			browser.WaitForLoad()
 
 			// Verify services assignment interface
 			checkboxes := browser.Page.Locator("input[type='checkbox']")
@@ -245,13 +245,13 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Look for users button/modal trigger
 		usersButton := browser.Page.Locator("text=Users")
 		if usersButton.Count() > 0 {
 			usersButton.Click()
-			browser.Page.WaitForLoad()
+			browser.WaitForLoad()
 
 			// Verify modal or new page with users list
 			table := browser.Page.Locator("table")
@@ -266,13 +266,13 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Look for tickets button/modal trigger
 		ticketsButton := browser.Page.Locator("text=Tickets")
 		if ticketsButton.Count() > 0 {
 			ticketsButton.Click()
-			browser.Page.WaitForLoad()
+			browser.WaitForLoad()
 
 			// Verify modal or new page with tickets list
 			table := browser.Page.Locator("table")
@@ -326,7 +326,7 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err = browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Verify mobile navigation works
 		nav := browser.Page.Locator("nav, .mobile-menu, .navbar")
@@ -340,7 +340,7 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err = browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Reset to desktop
 		_, err = browser.Page.SetViewportSize(1920, 1080)
@@ -352,7 +352,7 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/NONEXISTENT/edit")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Should show 404 or error message
 		pageText, err := browser.Page.TextContent("body")
@@ -367,13 +367,13 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/new")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Try to submit empty form
 		submitButton := browser.FindByType("submit")
 		if submitButton.Exists() {
 			submitButton.Click()
-			browser.Page.WaitForLoad()
+			browser.WaitForLoad()
 
 			// Should show validation errors
 			pageText, err := browser.Page.TextContent("body")
@@ -388,7 +388,7 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		if emailField.Exists() {
 			emailField.Fill("invalid-email")
 			submitButton.Click()
-			browser.Page.WaitForLoad()
+			browser.WaitForLoad()
 
 			// Should show email validation error
 			pageText, err := browser.Page.TextContent("body")
@@ -402,7 +402,7 @@ func TestAdminCustomerCompaniesE2E(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		browser.Page.WaitForLoad()
+		browser.WaitForLoad()
 
 		// Check for proper heading hierarchy
 		headings := browser.Page.Locator("h1, h2, h3, h4, h5, h6")

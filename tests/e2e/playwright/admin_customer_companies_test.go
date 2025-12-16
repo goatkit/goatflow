@@ -36,7 +36,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		require.NoError(t, err)
 
 		// Wait for page to load
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Verify page title
@@ -59,7 +59,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		if searchInput.Count() > 0 {
 			searchInput.Fill("test")
 			searchInput.Type("company")
-			err = browser.Page.WaitForLoad()
+			err = browser.WaitForLoad()
 			require.NoError(t, err)
 		}
 
@@ -67,7 +67,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		statusSelect := browser.Page.Locator("select[name='status'], select:has-text('Status')")
 		if statusSelect.Count() > 0 {
 			statusSelect.SelectOption("valid")
-			err = browser.Page.WaitForLoad()
+			err = browser.WaitForLoad()
 			require.NoError(t, err)
 		}
 
@@ -84,7 +84,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/new")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Verify form elements
@@ -123,7 +123,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 
 		// Click submit and wait for response
 		submitButton.Click()
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Verify redirect or success
@@ -137,7 +137,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/TEST001/edit")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Verify form is populated
@@ -158,7 +158,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 			submitButton := browser.Page.Locator("button[type='submit']")
 			if submitButton.Count() > 0 {
 				submitButton.Click()
-				err = browser.Page.WaitForLoad()
+				err = browser.WaitForLoad()
 				require.NoError(t, err)
 			}
 		}
@@ -169,14 +169,14 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/TEST001/edit")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Look for portal settings tab
 		portalTab := browser.Page.Locator("text=Portal Settings")
 		if portalTab.Count() > 0 {
 			portalTab.Click()
-			err = browser.Page.WaitForLoad()
+			err = browser.WaitForLoad()
 			require.NoError(t, err)
 
 			// Verify portal settings elements
@@ -194,14 +194,14 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/TEST001/edit")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Look for services tab
 		servicesTab := browser.Page.Locator("text=Services")
 		if servicesTab.Count() > 0 {
 			servicesTab.Click()
-			err = browser.Page.WaitForLoad()
+			err = browser.WaitForLoad()
 			require.NoError(t, err)
 
 			// Verify services assignment interface
@@ -217,7 +217,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Test dark mode toggle
@@ -255,7 +255,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err = browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Verify mobile navigation
@@ -270,7 +270,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err = browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Reset to desktop
@@ -283,7 +283,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/NONEXISTENT/edit")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Should show 404 or error message
@@ -299,14 +299,14 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/new")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Try to submit empty form
 		submitButton := browser.Page.Locator("button[type='submit']")
 		if submitButton.Count() > 0 {
 			submitButton.Click()
-			err = browser.Page.WaitForLoad()
+			err = browser.WaitForLoad()
 			require.NoError(t, err)
 
 			// Should show validation errors
@@ -322,7 +322,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Check for proper heading hierarchy
@@ -381,7 +381,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Verify some requests were made
@@ -411,7 +411,7 @@ func TestAdminCustomerCompaniesPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Log console messages for debugging
@@ -463,7 +463,7 @@ func TestAdminCustomerCompaniesAPIPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Verify API calls were made
@@ -494,7 +494,7 @@ func TestAdminCustomerCompaniesAPIPlaywright(t *testing.T) {
 		err := browser.NavigateTo("/admin/customer/companies/new")
 		require.NoError(t, err)
 
-		err = browser.Page.WaitForLoad()
+		err = browser.WaitForLoad()
 		require.NoError(t, err)
 
 		// Fill and submit form
@@ -513,7 +513,7 @@ func TestAdminCustomerCompaniesAPIPlaywright(t *testing.T) {
 		submitButton := browser.Page.Locator("button[type='submit']")
 		if submitButton.Count() > 0 {
 			submitButton.Click()
-			err = browser.Page.WaitForLoad()
+			err = browser.WaitForLoad()
 			require.NoError(t, err)
 		}
 

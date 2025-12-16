@@ -6,6 +6,8 @@ import { test, expect } from '@playwright/test';
 // Configuration
 const BASE_URL = process.env.BASE_URL || 'http://localhost:8080';
 const DEMO_COOKIE = 'access_token=demo_session_admin';
+const MODULES_BASE = `${BASE_URL}/admin/modules`;
+const SCHEMA_API = `${MODULES_BASE}/_schema`;
 
 test.describe('Schema Discovery - Database Introspection', () => {
   
@@ -22,7 +24,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
   test.describe('API Endpoints', () => {
     
     test('Can list all database tables', async ({ page }) => {
-      const response = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=tables`, {
+      const response = await page.request.get(`${SCHEMA_API}?action=tables`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -53,7 +55,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
     });
 
     test('Can get columns for a specific table', async ({ page }) => {
-      const response = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=columns&table=users`, {
+      const response = await page.request.get(`${SCHEMA_API}?action=columns&table=users`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -86,7 +88,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
     });
 
     test('Returns error when table parameter missing for columns', async ({ page }) => {
-      const response = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=columns`, {
+      const response = await page.request.get(`${SCHEMA_API}?action=columns`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -101,7 +103,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
     });
 
     test('Can generate module config for a table', async ({ page }) => {
-      const response = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=generate&table=ticket`, {
+      const response = await page.request.get(`${SCHEMA_API}?action=generate&table=ticket`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -142,7 +144,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
     });
 
     test('Can generate YAML format module config', async ({ page }) => {
-      const response = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=generate&table=queue&format=yaml`, {
+      const response = await page.request.get(`${SCHEMA_API}?action=generate&table=queue&format=yaml`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -164,7 +166,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
       // Use a test table name to avoid overwriting existing configs
       const testTable = 'article'; // Using an existing table that likely doesn't have a config yet
       
-      const response = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=save&table=${testTable}`, {
+      const response = await page.request.get(`${SCHEMA_API}?action=save&table=${testTable}`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -182,7 +184,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
       // Verify the module is now available
       await page.waitForTimeout(1000); // Wait for file watcher to pick up the new file
       
-      const modulesResponse = await page.request.get(`${BASE_URL}/admin/dynamic/${testTable}`, {
+      const modulesResponse = await page.request.get(`${BASE_URL}/admin/modules/${testTable}`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -195,7 +197,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
     });
 
     test('Returns error for invalid action', async ({ page }) => {
-      const response = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=invalid`, {
+      const response = await page.request.get(`${SCHEMA_API}?action=invalid`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -213,7 +215,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
   test.describe('Field Type Inference', () => {
     
     test('Correctly infers field types from column names and data types', async ({ page }) => {
-      const response = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=generate&table=users`, {
+      const response = await page.request.get(`${SCHEMA_API}?action=generate&table=users`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -248,7 +250,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
     });
 
     test('Sets appropriate display settings for different field types', async ({ page }) => {
-      const response = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=generate&table=ticket`, {
+      const response = await page.request.get(`${SCHEMA_API}?action=generate&table=ticket`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -287,7 +289,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
       const testTable = 'service'; // Using a table that might not have a module yet
       
       // Save the generated config
-      const saveResponse = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=save&table=${testTable}`, {
+      const saveResponse = await page.request.get(`${SCHEMA_API}?action=save&table=${testTable}`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -301,7 +303,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
       await page.waitForTimeout(2000);
       
       // Try to access the module
-      const moduleResponse = await page.request.get(`${BASE_URL}/admin/dynamic/${testTable}`, {
+      const moduleResponse = await page.request.get(`${BASE_URL}/admin/modules/${testTable}`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -320,7 +322,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
 
     test('Schema discovery respects existing module configurations', async ({ page }) => {
       // Get list of existing modules
-      const existingResponse = await page.request.get(`${BASE_URL}/admin/dynamic/users`, {
+      const existingResponse = await page.request.get(`${BASE_URL}/admin/modules/users`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -331,7 +333,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
       expect(existingResponse.status()).toBe(200);
       
       // Generate config for the same table
-      const generateResponse = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=generate&table=users`, {
+      const generateResponse = await page.request.get(`${SCHEMA_API}?action=generate&table=users`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -351,7 +353,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
   test.describe('Error Handling', () => {
     
     test('Handles non-existent table gracefully', async ({ page }) => {
-      const response = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=columns&table=nonexistent_table`, {
+      const response = await page.request.get(`${SCHEMA_API}?action=columns&table=nonexistent_table`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',
@@ -367,7 +369,7 @@ test.describe('Schema Discovery - Database Introspection', () => {
     });
 
     test('Handles missing parameters correctly', async ({ page }) => {
-      const response = await page.request.get(`${BASE_URL}/admin/dynamic/_schema?action=generate`, {
+      const response = await page.request.get(`${SCHEMA_API}?action=generate`, {
         headers: {
           'Cookie': DEMO_COOKIE,
           'X-Requested-With': 'XMLHttpRequest',

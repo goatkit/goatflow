@@ -18,6 +18,8 @@ BOLD='\033[1m'
 
 BASE_URL="http://localhost:8080"
 AUTH="Cookie: access_token=demo_session_admin"
+MODULE_BASE_URL="$BASE_URL/admin/modules"
+SCHEMA_API="$MODULE_BASE_URL/_schema"
 
 # Test counters
 TOTAL_TESTS=0
@@ -55,15 +57,15 @@ run_test "API Health Check" \
     "200"
 
 run_test "Schema Tables Endpoint" \
-    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/_schema?action=tables' | jq -r '.success'" \
+    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$SCHEMA_API?action=tables' | jq -r '.success'" \
     "true"
 
 run_test "Schema Columns Endpoint" \
-    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/_schema?action=columns&table=users' | jq -r '.success'" \
+    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$SCHEMA_API?action=columns&table=users' | jq -r '.success'" \
     "true"
 
 run_test "Schema Generate Endpoint" \
-    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/_schema?action=generate&table=users' | jq -r '.success'" \
+    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$SCHEMA_API?action=generate&table=users' | jq -r '.success'" \
     "true"
 
 echo ""
@@ -92,7 +94,7 @@ echo -e "${CYAN}═════════════════════�
 TEST_TABLE="valid"
 
 run_test "Generate Test Module" \
-    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/_schema?action=save&table=$TEST_TABLE' | jq -r '.success'" \
+    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$SCHEMA_API?action=save&table=$TEST_TABLE' | jq -r '.success'" \
     "true"
 
 sleep 2  # Wait for file watcher
@@ -102,7 +104,7 @@ run_test "Module File Created" \
     "1"
 
 run_test "Module Accessible" \
-    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/$TEST_TABLE' | jq -r '.success'" \
+    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$MODULE_BASE/$TEST_TABLE' | jq -r '.success'" \
     "true"
 
 echo ""
@@ -112,24 +114,24 @@ echo -e "${CYAN}═════════════════════�
 
 # Test on salutation module (already created)
 run_test "CREATE Operation" \
-    "curl -s -X POST -H '$AUTH' -H 'Content-Type: application/x-www-form-urlencoded' -H 'X-Requested-With: XMLHttpRequest' --data 'name=Dr.&text=Dear Dr.&content_type=text/plain&comments=Doctor title' '$BASE_URL/admin/dynamic/salutation' | jq -r '.success'" \
+    "curl -s -X POST -H '$AUTH' -H 'Content-Type: application/x-www-form-urlencoded' -H 'X-Requested-With: XMLHttpRequest' --data 'name=Dr.&text=Dear Dr.&content_type=text/plain&comments=Doctor title' '$MODULE_BASE/salutation' | jq -r '.success'" \
     "true"
 
 run_test "READ Operation" \
-    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/salutation' | jq '.data | length' | grep -E '[0-9]+'" \
+    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$MODULE_BASE/salutation' | jq '.data | length' | grep -E '[0-9]+'" \
     "[0-9]"
 
 # Get last ID for update/delete tests
 LAST_ID=$(curl -s -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-    "$BASE_URL/admin/dynamic/salutation" | jq -r '.data[-1].id')
+    "$MODULE_BASE/salutation" | jq -r '.data[-1].id')
 
 if [ -n "$LAST_ID" ] && [ "$LAST_ID" != "null" ]; then
     run_test "UPDATE Operation" \
-        "curl -s -X PUT -H '$AUTH' -H 'Content-Type: application/x-www-form-urlencoded' -H 'X-Requested-With: XMLHttpRequest' --data 'name=Prof.&text=Dear Professor&content_type=text/plain&comments=Professor title' '$BASE_URL/admin/dynamic/salutation/$LAST_ID' | jq -r '.success'" \
+        "curl -s -X PUT -H '$AUTH' -H 'Content-Type: application/x-www-form-urlencoded' -H 'X-Requested-With: XMLHttpRequest' --data 'name=Prof.&text=Dear Professor&content_type=text/plain&comments=Professor title' '$MODULE_BASE/salutation/$LAST_ID' | jq -r '.success'" \
         "true"
     
     run_test "DELETE Operation" \
-        "curl -s -X DELETE -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/salutation/$LAST_ID' | jq -r '.success'" \
+        "curl -s -X DELETE -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$MODULE_BASE/salutation/$LAST_ID' | jq -r '.success'" \
         "true"
 else
     echo "  Skipping UPDATE/DELETE tests (no records found)"
@@ -141,15 +143,15 @@ echo -e "${BOLD}5. FIELD TYPE INFERENCE TESTS${NC}"
 echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
 
 run_test "Password Field Detection" \
-    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/_schema?action=generate&table=users' | jq -r '.config.Fields[] | select(.Name == \"pw\") | .Type'" \
+    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$SCHEMA_API?action=generate&table=users' | jq -r '.config.Fields[] | select(.Name == \"pw\") | .Type'" \
     "password"
 
 run_test "DateTime Field Detection" \
-    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/_schema?action=generate&table=users' | jq -r '.config.Fields[] | select(.Name == \"create_time\") | .Type'" \
+    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$SCHEMA_API?action=generate&table=users' | jq -r '.config.Fields[] | select(.Name == \"create_time\") | .Type'" \
     "datetime"
 
 run_test "Integer Field Detection" \
-    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/_schema?action=generate&table=users' | jq -r '.config.Fields[] | select(.Name == \"id\") | .Type'" \
+    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$SCHEMA_API?action=generate&table=users' | jq -r '.config.Fields[] | select(.Name == \"id\") | .Type'" \
     "integer"
 
 echo ""
@@ -162,12 +164,12 @@ CREATE_RESULT=$(curl -s -X POST -H "$AUTH" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -H "X-Requested-With: XMLHttpRequest" \
     --data "name=Test_$(date +%s)&text=Test&content_type=text/plain" \
-    "$BASE_URL/admin/dynamic/salutation")
+    "$MODULE_BASE/salutation")
 
 if echo "$CREATE_RESULT" | grep -q '"success":true'; then
     # Get the created record
     AUDIT_TEST=$(curl -s -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-        "$BASE_URL/admin/dynamic/salutation" | jq -r '.data[-1]')
+        "$MODULE_BASE/salutation" | jq -r '.data[-1]')
     
     run_test "Audit Field - create_by" \
         "echo '$AUDIT_TEST' | jq -r '.create_by'" \
@@ -189,7 +191,7 @@ echo -e "${CYAN}═════════════════════�
 
 START_TIME=$(date +%s%N)
 curl -s -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-    "$BASE_URL/admin/dynamic/_schema?action=generate&table=ticket" > /dev/null
+    "$SCHEMA_API?action=generate&table=ticket" > /dev/null
 END_TIME=$(date +%s%N)
 RESPONSE_TIME=$(( (END_TIME - START_TIME) / 1000000 ))
 
@@ -205,11 +207,11 @@ echo -e "${BOLD}8. ERROR HANDLING TESTS${NC}"
 echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
 
 run_test "Invalid Action Error" \
-    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/_schema?action=invalid' | jq -r '.error' | grep -c 'Invalid'" \
+    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$SCHEMA_API?action=invalid' | jq -r '.error' | grep -c 'Invalid'" \
     "1"
 
 run_test "Missing Table Parameter" \
-    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$BASE_URL/admin/dynamic/_schema?action=columns' | grep -c 'table parameter required'" \
+    "curl -s -H '$AUTH' -H 'X-Requested-With: XMLHttpRequest' '$SCHEMA_API?action=columns' | grep -c 'table parameter required'" \
     "1"
 
 echo ""
@@ -220,7 +222,7 @@ echo -e "${CYAN}═════════════════════�
 MODULE_COUNT=$(ls modules/*.yaml 2>/dev/null | wc -l)
 FIELD_COUNT=$(grep -h "^  - name:" modules/*.yaml 2>/dev/null | wc -l)
 TABLE_COUNT=$(curl -s -H "$AUTH" -H "X-Requested-With: XMLHttpRequest" \
-    "$BASE_URL/admin/dynamic/_schema?action=tables" | jq '.data | length')
+    "$SCHEMA_API?action=tables" | jq '.data | length')
 
 echo "  Generated Modules: $MODULE_COUNT"
 echo "  Total Fields: $FIELD_COUNT"

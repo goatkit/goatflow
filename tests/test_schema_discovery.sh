@@ -12,11 +12,13 @@ NC='\033[0m' # No Color
 # Base URL and auth
 BASE_URL="http://localhost:8080"
 AUTH_HEADER="Cookie: access_token=demo_session_admin"
+MODULE_BASE_URL="$BASE_URL/admin/modules"
+SCHEMA_API="$MODULE_BASE_URL/_schema"
 
 # Test 1: List all tables
 echo -n "1. Testing table listing... "
 TABLES=$(curl -s -H "$AUTH_HEADER" -H "X-Requested-With: XMLHttpRequest" \
-    "$BASE_URL/admin/dynamic/_schema?action=tables")
+    "$SCHEMA_API?action=tables")
 
 if echo "$TABLES" | grep -q '"success":true' && echo "$TABLES" | grep -q '"Name":"ticket"'; then
     echo -e "${GREEN}✓ Found tables${NC}"
@@ -29,7 +31,7 @@ fi
 # Test 2: Get columns for a table
 echo -n "2. Testing column retrieval for 'salutation' table... "
 COLUMNS=$(curl -s -H "$AUTH_HEADER" -H "X-Requested-With: XMLHttpRequest" \
-    "$BASE_URL/admin/dynamic/_schema?action=columns&table=salutation")
+    "$SCHEMA_API?action=columns&table=salutation")
 
 if echo "$COLUMNS" | grep -q '"success":true' && echo "$COLUMNS" | grep -q '"Name":"id"'; then
     echo -e "${GREEN}✓ Retrieved columns${NC}"
@@ -42,7 +44,7 @@ fi
 # Test 3: Generate module configuration
 echo -n "3. Testing module generation for 'salutation' table... "
 CONFIG=$(curl -s -H "$AUTH_HEADER" -H "X-Requested-With: XMLHttpRequest" \
-    "$BASE_URL/admin/dynamic/_schema?action=generate&table=salutation")
+    "$SCHEMA_API?action=generate&table=salutation")
 
 if echo "$CONFIG" | grep -q '"success":true' && echo "$CONFIG" | grep -q '"Name":"salutation"'; then
     echo -e "${GREEN}✓ Generated module config${NC}"
@@ -55,7 +57,7 @@ fi
 # Test 4: Generate YAML format
 echo -n "4. Testing YAML generation... "
 YAML=$(curl -s -H "$AUTH_HEADER" -H "Accept: text/yaml" \
-    "$BASE_URL/admin/dynamic/_schema?action=generate&table=salutation&format=yaml")
+    "$SCHEMA_API?action=generate&table=salutation&format=yaml")
 
 if echo "$YAML" | grep -q "module:" && echo "$YAML" | grep -q "name: salutation"; then
     echo -e "${GREEN}✓ Generated YAML config${NC}"
@@ -72,7 +74,7 @@ fi
 echo ""
 echo -n "5. Testing module save for 'salutation' table... "
 SAVE_RESULT=$(curl -s -H "$AUTH_HEADER" -H "X-Requested-With: XMLHttpRequest" \
-    "$BASE_URL/admin/dynamic/_schema?action=save&table=salutation")
+    "$SCHEMA_API?action=save&table=salutation")
 
 if echo "$SAVE_RESULT" | grep -q '"success":true' && echo "$SAVE_RESULT" | grep -q "salutation.yaml"; then
     echo -e "${GREEN}✓ Saved module configuration${NC}"
@@ -87,7 +89,7 @@ echo -n "6. Testing if saved module is accessible... "
 sleep 2  # Wait for file watcher to pick up the new file
 
 MODULE_LIST=$(curl -s -H "$AUTH_HEADER" -H "X-Requested-With: XMLHttpRequest" \
-    "$BASE_URL/admin/dynamic/salutation")
+    "$MODULE_BASE/salutation")
 
 if echo "$MODULE_LIST" | grep -q '"success":true' || echo "$MODULE_LIST" | grep -q "Salutation"; then
     echo -e "${GREEN}✓ Module is accessible${NC}"
@@ -109,7 +111,7 @@ fi
 # Test 8: Test error handling
 echo -n "8. Testing error handling for non-existent table... "
 ERROR_RESULT=$(curl -s -H "$AUTH_HEADER" -H "X-Requested-With: XMLHttpRequest" \
-    "$BASE_URL/admin/dynamic/_schema?action=columns&table=non_existent_table_xyz")
+    "$SCHEMA_API?action=columns&table=non_existent_table_xyz")
 
 if echo "$ERROR_RESULT" | grep -q "error"; then
     echo -e "${GREEN}✓ Error handling works${NC}"
