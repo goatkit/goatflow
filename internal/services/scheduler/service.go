@@ -10,6 +10,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
+	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
@@ -34,21 +35,31 @@ type Handler func(context.Context, *models.ScheduledJob) error
 
 // Service coordinates scheduled job execution.
 type Service struct {
-	ticketRepo  ticketAutoCloser
-	emailRepo   emailAccountLister
-	cron        *cron.Cron
-	parser      cron.Parser
-	handlers    map[string]Handler
-	entries     map[string]cron.EntryID
-	jobs        map[string]*models.ScheduledJob
-	mu          sync.RWMutex
-	handlerMu   sync.RWMutex
-	rootCtx     context.Context
-	logger      *log.Logger
-	startOnce   sync.Once
-	stopOnce    sync.Once
-	location    *time.Location
-	reminderHub notifications.Hub
+	ticketRepo       ticketAutoCloser
+	emailRepo        emailAccountLister
+	connectorFactory connector.Factory
+	emailHandler     connector.Handler
+	cron             *cron.Cron
+	parser           cron.Parser
+	handlers         map[string]Handler
+	entries          map[string]cron.EntryID
+	jobs             map[string]*models.ScheduledJob
+	mu               sync.RWMutex
+	handlerMu        sync.RWMutex
+	rootCtx          context.Context
+	logger           *log.Logger
+	startOnce        sync.Once
+	stopOnce         sync.Once
+	location         *time.Location
+	reminderHub      notifications.Hub
+	emailPollState   emailPollState
+	metrics          *emailPollMetrics
+}
+
+type emailPollState struct {
+	mu       sync.Mutex
+	nextIdx  int
+	lastPoll map[int]time.Time
 }
 
 // NewService wires a scheduler around the shared database connection.
@@ -74,6 +85,10 @@ func NewService(db *sql.DB, opts ...Option) *Service {
 	emailRepo := options.EmailRepo
 	if emailRepo == nil && db != nil {
 		emailRepo = repository.NewEmailAccountRepository(db)
+	}
+	connectorFactory := options.Factory
+	if connectorFactory == nil {
+		connectorFactory = connector.DefaultFactory()
 	}
 	cronEngine := options.Cron
 	if cronEngine == nil {
@@ -103,16 +118,19 @@ func NewService(db *sql.DB, opts ...Option) *Service {
 	}
 
 	s := &Service{
-		ticketRepo:  ticketRepo,
-		emailRepo:   emailRepo,
-		cron:        cronEngine,
-		parser:      parser,
-		handlers:    make(map[string]Handler),
-		entries:     make(map[string]cron.EntryID),
-		jobs:        jobs,
-		logger:      options.Logger,
-		location:    location,
-		reminderHub: hub,
+		ticketRepo:       ticketRepo,
+		emailRepo:        emailRepo,
+		connectorFactory: connectorFactory,
+		emailHandler:     options.EmailHandler,
+		cron:             cronEngine,
+		parser:           parser,
+		handlers:         make(map[string]Handler),
+		entries:          make(map[string]cron.EntryID),
+		jobs:             jobs,
+		logger:           options.Logger,
+		location:         location,
+		reminderHub:      hub,
+		metrics:          globalEmailPollMetrics(),
 	}
 
 	s.registerBuiltinHandlers()

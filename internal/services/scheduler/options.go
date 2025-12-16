@@ -6,19 +6,22 @@ import (
 
 	"github.com/robfig/cron/v3"
 
+	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 )
 
 type options struct {
-	Logger      *log.Logger
-	TicketRepo  ticketAutoCloser
-	EmailRepo   emailAccountLister
-	Cron        *cron.Cron
-	Parser      cron.Parser
-	Jobs        []*models.ScheduledJob
-	Location    *time.Location
-	ReminderHub notifications.Hub
+	Logger       *log.Logger
+	TicketRepo   ticketAutoCloser
+	EmailRepo    emailAccountLister
+	Factory      connector.Factory
+	EmailHandler connector.Handler
+	Cron         *cron.Cron
+	Parser       cron.Parser
+	Jobs         []*models.ScheduledJob
+	Location     *time.Location
+	ReminderHub  notifications.Hub
 }
 
 // Option applies configuration to the scheduler service.
@@ -46,6 +49,20 @@ func WithTicketAutoCloser(repo ticketAutoCloser) Option {
 func WithEmailAccountLister(repo emailAccountLister) Option {
 	return func(o *options) {
 		o.EmailRepo = repo
+	}
+}
+
+// WithConnectorFactory overrides the inbound connector factory.
+func WithConnectorFactory(factory connector.Factory) Option {
+	return func(o *options) {
+		o.Factory = factory
+	}
+}
+
+// WithEmailHandler injects the connector.Handler used to process inbound messages.
+func WithEmailHandler(handler connector.Handler) Option {
+	return func(o *options) {
+		o.EmailHandler = handler
 	}
 }
 
