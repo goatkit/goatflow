@@ -33,6 +33,7 @@ func TestAllLinksReturn200(t *testing.T) {
 			"/dashboard":      {http.StatusUnauthorized: {}},
 			"/tickets":        {http.StatusUnauthorized: {}},
 			"/admin":          {http.StatusInternalServerError: {}},
+			"/admin/mail-accounts": {http.StatusServiceUnavailable: {}},
 			"/queues":         {http.StatusInternalServerError: {}, http.StatusBadRequest: {}},
 			"/queues/new":     {http.StatusBadRequest: {}},
 			"/register":       {http.StatusNotFound: {}},

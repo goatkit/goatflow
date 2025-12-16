@@ -368,7 +368,7 @@
         <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
             <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
                 <div class="flex items-start justify-between mb-4">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="queueDetailsTitle">
                         Queue Details
                     </h3>
                     <button onclick="closeQueueDetailsModal()" class="text-gray-400 hover:text-gray-500">
@@ -693,84 +693,50 @@ async function saveQueue(event) {
 }
 
 async function viewQueueDetails(id) {
+    const contentEl = document.getElementById('queueDetailsContent');
+    if (contentEl) {
+        contentEl.innerHTML = '<div class="py-8 text-center text-gray-500 dark:text-gray-400">Loading queue details...</div>';
+    }
     try {
-        const response = await fetch(`/api/queues/${id}/details`, {
-            headers: { 'Content-Type': 'application/json' }
+        const response = await fetch(`/queues/${id}/meta`, {
+            headers: {
+                'Accept': 'text/html',
+                'HX-Request': 'true',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
-        
-        if (response.ok) {
-            const data = await response.json();
-            const queue = data.data;
-            
-            // Generate details HTML
-            const detailsHTML = `
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Name</p>
-                            <p class="mt-1 text-sm text-gray-900 dark:text-white">${queue.name}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Group</p>
-                            <p class="mt-1 text-sm text-gray-900 dark:text-white">${queue.group_name || 'N/A'}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Status</p>
-                            <p class="mt-1 text-sm text-gray-900 dark:text-white">${queue.valid_id === 1 ? 'Active' : 'Inactive'}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Tickets</p>
-                            <p class="mt-1 text-sm text-gray-900 dark:text-white">${queue.ticket_count || 0}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">System Address</p>
-                            <p class="mt-1 text-sm text-gray-900 dark:text-white">
-                                ${queue.system_address_email
-                                    ? `${queue.system_address_display ? `${queue.system_address_display}<br>` : ''}<span class="font-mono">${queue.system_address_email}</span>`
-                                    : 'Not set'}
-                            </p>
-                        </div>
-                    </div>
-                    
-                    ${queue.comments ? `
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Comments</p>
-                        <p class="mt-1 text-sm text-gray-900 dark:text-white">${queue.comments}</p>
-                    </div>
-                    ` : ''}
-                    
-                    <div class="border-t dark:border-gray-700 pt-4">
-                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-2">Statistics</h4>
-                        <div class="grid grid-cols-3 gap-4">
-                            <div>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Open Tickets</p>
-                                <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">${queue.open_tickets || 0}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Avg Response Time</p>
-                                <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">${queue.avg_response_time || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Agents</p>
-                                <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">${queue.agent_count || 0}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('queueDetailsContent').innerHTML = detailsHTML;
-            document.getElementById('queueDetailsModal').classList.remove('hidden');
-        } else {
-            showToast('Failed to load queue details', 'error');
+        if (!response.ok) {
+            throw new Error('Failed to load queue details');
         }
+        const queueName = response.headers.get('X-Queue-Name');
+        const html = await response.text();
+        const titleEl = document.getElementById('queueDetailsTitle');
+        if (titleEl) {
+            titleEl.textContent = queueName || 'Queue Details';
+        }
+        if (contentEl) {
+            contentEl.innerHTML = html;
+        }
+        document.getElementById('queueDetailsModal').classList.remove('hidden');
     } catch (error) {
-        showToast('Network error: ' + error.message, 'error');
+        console.error('Error loading queue details:', error);
+        showToast('Failed to load queue details', 'error');
     }
 }
 
 function closeQueueDetailsModal() {
-    document.getElementById('queueDetailsModal').classList.add('hidden');
+    const modal = document.getElementById('queueDetailsModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    const contentEl = document.getElementById('queueDetailsContent');
+    if (contentEl) {
+        contentEl.innerHTML = '';
+    }
+    const titleEl = document.getElementById('queueDetailsTitle');
+    if (titleEl) {
+        titleEl.textContent = 'Queue Details';
+    }
 }
 
 async function toggleQueueStatus(id, currentStatus) {

@@ -111,6 +111,7 @@ COPY --from=artifacts --chown=appuser:appgroup /artifacts/migrate ./migrate
 COPY --chown=appuser:appgroup templates ./templates/
 COPY --chown=appuser:appgroup static ./static/
 COPY --chown=appuser:appgroup routes ./routes/
+COPY --chown=appuser:appgroup modules ./modules/
 COPY --chown=appuser:appgroup migrations ./migrations/
 COPY --chown=appuser:appgroup config ./config/
 
@@ -127,6 +128,7 @@ COPY --from=artifacts --chown=appuser:appgroup /artifacts/migrate ./migrate
 COPY --chown=appuser:appgroup templates ./templates/
 COPY --chown=appuser:appgroup static ./static/
 COPY --chown=appuser:appgroup routes ./routes/
+COPY --chown=appuser:appgroup modules ./modules/
 COPY --chown=appuser:appgroup migrations ./migrations/
 COPY --chown=appuser:appgroup config ./config/
 

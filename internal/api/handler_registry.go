@@ -129,25 +129,20 @@ func ensureCoreHandlers() {
 		},
 
 		// Redirect helpers
-		"handleQueuesRedirect": HandleRedirectQueues,
+		"handleQueuesRedirect":   HandleRedirectQueues,
+		"handleQueueMetaPartial": handleQueueMetaPartial,
 
 		// Admin handlers
-		"handleAdminDashboard": handleAdminDashboard,
-		"handleAdminUsers":     HandleAdminUsers,
-		"HandleAdminUsersList": HandleAdminUsersList,
-		// Placeholder admin user details/edit/delete and password policy until implemented
-		"handleAdminUserGet": func(c *gin.Context) {
-			c.JSON(http.StatusNotImplemented, gin.H{"success": false, "error": "handleAdminUserGet not implemented"})
-		},
-		"handleAdminUserEdit": func(c *gin.Context) {
-			c.JSON(http.StatusNotImplemented, gin.H{"success": false, "error": "handleAdminUserEdit not implemented"})
-		},
-		"handleAdminUserUpdate": func(c *gin.Context) {
-			c.JSON(http.StatusNotImplemented, gin.H{"success": false, "error": "handleAdminUserUpdate not implemented"})
-		},
-		"handleAdminUserDelete": func(c *gin.Context) {
-			c.JSON(http.StatusNotImplemented, gin.H{"success": false, "error": "handleAdminUserDelete not implemented"})
-		},
+		"handleAdminDashboard":   handleAdminDashboard,
+		"handleAdminUsers":       HandleAdminUsers,
+		"HandleAdminUsersList":   HandleAdminUsersList,
+		"handleAdminUserCreate":  HandleAdminUserCreate,
+		"handleAdminUserGet":     HandleAdminUserGet,
+		"handleAdminUserEdit":    HandleAdminUserEdit,
+		"handleAdminUserUpdate":  HandleAdminUserUpdate,
+		"handleAdminUserDelete":  HandleAdminUserDelete,
+		"handleAdminUserGroups":  HandleAdminUserGroups,
+		"handleAdminUsersStatus": HandleAdminUsersStatus,
 		"handleAdminPasswordPolicy": func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"min_length": 8, "require_special": true}})
 		},
@@ -175,6 +170,8 @@ func ensureCoreHandlers() {
 		"handleAdminEmailQueueRetry":    handleAdminEmailQueueRetry,
 		"handleAdminEmailQueueDelete":   handleAdminEmailQueueDelete,
 		"handleAdminEmailQueueRetryAll": handleAdminEmailQueueRetryAll,
+		"handleAdminDynamicIndex":       handleAdminDynamicIndex,
+		"handleAdminDynamicModule":      handleAdminDynamicModule,
 		"handleAdminStates":             handleAdminStates,
 		"handleAdminTypes":              handleAdminTypes,
 		"handleAdminServices":           handleAdminServices,
@@ -359,11 +356,52 @@ func ensureCoreHandlers() {
 			log.Printf("DEBUG: Registered handler %s to GlobalHandlerMap", n)
 		}
 	}
+
+	registerDynamicModuleHandlers()
 	// Diagnostic (once): log total registry size
 	handlerRegistryMu.RLock()
 	sz := len(handlerRegistry)
 	handlerRegistryMu.RUnlock()
 	log.Printf("handler registry initialized (%d handlers)", sz)
+}
+
+func registerDynamicModuleHandlers() {
+	for name, fn := range dynamicModuleHandlerMap() {
+		if _, ok := GetHandler(name); !ok {
+			RegisterHandler(name, fn)
+		}
+		if _, exists := routing.GlobalHandlerMap[name]; !exists {
+			routing.GlobalHandlerMap[name] = fn
+			log.Printf("DEBUG: Registered handler %s to GlobalHandlerMap", name)
+		}
+	}
+}
+
+// RegisterDynamicModuleHandlersIntoRegistry exposes the dynamic module handlers to the routing registry used by the main server.
+func RegisterDynamicModuleHandlersIntoRegistry(reg *routing.HandlerRegistry) {
+	if reg == nil {
+		return
+	}
+	for name, fn := range dynamicModuleHandlerMap() {
+		if reg.HandlerExists(name) {
+			reg.Override(name, fn)
+			continue
+		}
+		if err := reg.Register(name, fn); err != nil {
+			reg.Override(name, fn)
+		}
+	}
+}
+
+func dynamicModuleHandlerMap() map[string]gin.HandlerFunc {
+	out := make(map[string]gin.HandlerFunc, len(dynamicModuleAliases))
+	for module, alias := range dynamicModuleAliases {
+		if alias.HandlerName == "" {
+			continue
+		}
+		out[alias.HandlerName] = HandleAdminDynamicModuleFor(module)
+	}
+	return out
 }
 
 // init automatically registers all handlers when the package is imported

@@ -1,14 +1,101 @@
 package notifications
 
 import (
+	"bufio"
 	"context"
+	"net"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 )
 
+func startFakeSMTPServer(t *testing.T) (string, int) {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to start fake SMTP server: %v", err)
+	}
+
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go handleFakeSMTPConnection(conn)
+		}
+	}()
+
+	host, portStr, err := net.SplitHostPort(ln.Addr().String())
+	if err != nil {
+		_ = ln.Close()
+		t.Fatalf("failed to parse fake SMTP address: %v", err)
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		_ = ln.Close()
+		t.Fatalf("failed to parse fake SMTP port: %v", err)
+	}
+
+	t.Cleanup(func() {
+		_ = ln.Close()
+	})
+
+	return host, port
+}
+
+func handleFakeSMTPConnection(conn net.Conn) {
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+	writer := bufio.NewWriter(conn)
+	write := func(msg string) {
+		_, _ = writer.WriteString(msg)
+		_ = writer.Flush()
+	}
+
+	write("220 localhost ESMTP\r\n")
+
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return
+		}
+		cmd := strings.ToUpper(strings.TrimSpace(line))
+
+		switch {
+		case strings.HasPrefix(cmd, "EHLO"), strings.HasPrefix(cmd, "HELO"):
+			write("250-localhost\r\n250 OK\r\n")
+		case strings.HasPrefix(cmd, "MAIL FROM"):
+			write("250 OK\r\n")
+		case strings.HasPrefix(cmd, "RCPT TO"):
+			write("250 OK\r\n")
+		case strings.HasPrefix(cmd, "DATA"):
+			write("354 End data with <CR><LF>.<CR><LF>\r\n")
+			for {
+				dataLine, err := reader.ReadString('\n')
+				if err != nil {
+					return
+				}
+				if dataLine == ".\r\n" {
+					break
+				}
+			}
+			write("250 OK\r\n")
+		case strings.HasPrefix(cmd, "QUIT"):
+			write("221 Bye\r\n")
+			return
+		default:
+			write("250 OK\r\n")
+		}
+	}
+}
+
 func TestSMTPProvider_Send(t *testing.T) {
-	// Test configuration for mail-sink
+	host, port := startFakeSMTPServer(t)
+
 	cfg := &config.EmailConfig{
 		Enabled: true,
 		SMTP: struct {
@@ -21,8 +108,8 @@ func TestSMTPProvider_Send(t *testing.T) {
 			TLSMode    string `mapstructure:"tls_mode"`
 			SkipVerify bool   `mapstructure:"skip_verify"`
 		}{
-			Host:    "localhost",
-			Port:    1025, // Mailhog SMTP port
+			Host:    host,
+			Port:    port,
 			TLSMode: "",
 		},
 		From: "test@example.com",
@@ -43,7 +130,7 @@ func TestSMTPProvider_Send(t *testing.T) {
 				Body:    "Test Body",
 				HTML:    false,
 			},
-			wantErr: true, // Will fail due to no SMTP server, but validates input
+			wantErr: false, // Accept success when local mail sink is available
 		},
 		{
 			name: "empty recipient",
@@ -63,7 +150,7 @@ func TestSMTPProvider_Send(t *testing.T) {
 				Body:    "Test Body",
 				HTML:    false,
 			},
-			wantErr: true, // Will fail due to no SMTP server, but validates input
+			wantErr: false, // Accept success; subject validation occurs upstream
 		},
 	}
 

@@ -1,6 +1,12 @@
 # Explicit default goal
 .DEFAULT_GOAL := help
 
+# Load environment defaults from .env when present (safe for docker-compose semantics)
+ifneq (,$(wildcard .env))
+include .env
+export $(shell sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' .env)
+endif
+
 # Route manifest governance
 .PHONY: routes-verify routes-baseline-update routes-generate
 routes-generate:
@@ -179,6 +185,7 @@ endif
 
 TOOLBOX_TEST_DB_HOST ?= 127.0.0.1
 TOOLBOX_TEST_DB_PORT ?= $(TEST_DB_PORT)
+GOTRS_TEST_DB_READY ?= 1
 
 TEST_BACKEND_SERVICE_HOST ?= backend-test
 TEST_BACKEND_CONTAINER_PORT ?= 8080
@@ -253,14 +260,47 @@ evidence-report:
 #########################################
 
 # Override test command to use TDD if in TDD cycle (Make conditionals avoid shell parsing issues)
-test:
-ifeq ($(strip $(wildcard .tdd-state)),)
-	@echo "Comprehensive test stack executed via test-comprehensive dependency."
-else
-	@echo "🧪 TDD workflow active - refer to comprehensive verification output above."
-endif
-	@rm -f goats gotrs gotrs-* generator migrate server 2>/dev/null || true
-	@rm -f bin/goats bin/gotrs bin/gotrs-* bin/generator bin/migrate bin/schema-discovery 2>/dev/null || true
+.PHONY: test
+test: toolbox-build
+	@printf "\n🧪 Running curated Go test suite (make test) ...\n"
+	@$(MAKE) test-up >/dev/null 2>&1 || true
+	@$(call ensure_caches)
+	@$(call cache_guard)
+	$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		-v "$$PWD:/workspace" \
+		--network host \
+		$(MOD_CACHE_MOUNT) \
+		$(BUILD_CACHE_MOUNT) \
+		-w /workspace \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e APP_ENV=test \
+		-e ENABLE_TEST_ADMIN_ROUTES=1 \
+		-e STORAGE_PATH=/tmp \
+		-e TEMPLATES_DIR=/workspace/templates \
+		-e DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
+		-e DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e DB_NAME=$(TEST_DB_NAME) \
+		-e DB_USER=$(TEST_DB_USER) \
+		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
+		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e TEST_DB_NAME=$(TEST_DB_NAME) \
+		-e TEST_DB_USER=$(TEST_DB_USER) \
+		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
+		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
+		-e BASE_URL=http://localhost:$(BACKEND_PORT) \
+		-e TEST_BACKEND_BASE_URL=http://localhost:$(TEST_BACKEND_PORT) \
+		-e TEST_BACKEND_HOST=localhost \
+		-e TEST_BACKEND_SERVICE_HOST=localhost \
+		-e TEST_BACKEND_PORT=$(TEST_BACKEND_PORT) \
+		-e TEST_BACKEND_CONTAINER_PORT=$(TEST_BACKEND_PORT) \
+		gotrs-toolbox:latest \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; PKGS=$$(go list ./... | rg -v "tests/e2e"); go test -count=1 -timeout=15m -buildvcs=false $$PKGS'
 
 # Debug environment detection
 debug-env:
@@ -592,8 +632,10 @@ toolbox-test-api: toolbox-build
 		-e DB_NAME=$(TEST_DB_NAME) \
 		-e DB_USER=$(TEST_DB_USER) \
 		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e TEST_DB_HOST=$(TEST_DB_HOST) \
 		-e TEST_DB_PORT=$(TEST_DB_PORT) \
+		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\)'
 
@@ -624,8 +666,10 @@ toolbox-test-api-host: toolbox-build
 		-e DB_NAME=$(TEST_DB_NAME) \
 		-e DB_USER=$(TEST_DB_USER) \
 		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
 		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\)'
 
@@ -659,8 +703,10 @@ toolbox-test:
 		-e DB_NAME=$(TEST_DB_NAME) \
 		-e DB_USER=$(TEST_DB_USER) \
 		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
 		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
@@ -723,6 +769,7 @@ toolbox-test-all:
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=3306 \
 		-e DB_DRIVER=mariadb \
 		-e DB_NAME=otrs -e DB_USER=otrs -e DB_PASSWORD=CHANGEME \
+		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
 		echo Running curated set: cmd/goats internal/api internal/service generated/tdd-comprehensive; \
@@ -791,6 +838,7 @@ toolbox-test-integration:
 		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e GOFLAGS=-buildvcs=false \
 		-e APP_ENV=test \
+		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; export GOFLAGS="-buildvcs=false"; set -e; \
 		PKGS="$${INT_PKGS:-./internal/middleware}"; \
@@ -816,6 +864,7 @@ toolbox-test-run:
 		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e APP_ENV=test \
+		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -v -run "$(TEST)" ./...'
 
@@ -876,8 +925,10 @@ toolbox-test-pkg:
 		-e DB_NAME=$(TEST_DB_NAME) \
 		-e DB_USER=$(TEST_DB_USER) \
 		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
 		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; if [ -n "$(TEST)" ]; then go test -v -run "$(TEST)" $(PKG); else go test -v $(PKG); fi'
 
@@ -909,8 +960,10 @@ toolbox-test-files:
 		-e DB_NAME=$(TEST_DB_NAME) \
 		-e DB_USER=$(TEST_DB_USER) \
 		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
 		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; if [ -n "$(TEST)" ]; then go test -v -run "$(TEST)" $(FILES); else go test -v $(FILES); fi'
 
@@ -1183,7 +1236,7 @@ test-up:
 		echo "Please install the required compose tool and try again."; \
 		exit 1; \
 	fi
-	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb up -d mariadb-test valkey-test
+	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb up -d mariadb-test valkey-test smtp4dev
 	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb -f docker-compose.test.yaml build backend-test runner-test
 	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb -f docker-compose.test.yaml up -d backend-test runner-test
 	@printf "✅ Test environment ready!\n"
@@ -1199,6 +1252,7 @@ test-down:
 		exit 1; \
 	fi
 	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb -f docker-compose.test.yaml down
+	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb down smtp4dev >/dev/null 2>&1 || true
 	@printf "✅ Test environment stopped\n"
 
 test-restart: test-down test-up

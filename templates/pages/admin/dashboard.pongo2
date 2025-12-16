@@ -84,6 +84,17 @@
                     </div>
                 </div>
             </a>
+            <a href="/admin/mail-accounts" class="block bg-white dark:bg-gray-800 shadow rounded-lg p-5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gotrs-500">
+                <div class="flex items-start">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-md bg-gotrs-50 text-gotrs-600 dark:bg-gotrs-900 dark:text-gotrs-300">
+                        <i class="fa-solid fa-envelope-circle-check text-xl" aria-hidden="true"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Inbound Mail Accounts</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure POP/IMAP polling and dispatch rules</p>
+                    </div>
+                </div>
+            </a>
             <a href="/admin/settings" class="block bg-white dark:bg-gray-800 shadow rounded-lg p-5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gotrs-500">
                 <div class="flex items-start">
                     <div class="flex h-12 w-12 items-center justify-center rounded-md bg-gotrs-50 text-gotrs-600 dark:bg-gotrs-900 dark:text-gotrs-300">

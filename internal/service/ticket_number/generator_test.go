@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -319,12 +320,29 @@ func TestDateChecksumGenerator(t *testing.T) {
 
 		// Tamper with the number
 		parts := strings.Split(ticketNum, "-")
-		tamperedCounter := "999999"
-		if parts[1] == tamperedCounter {
-			tamperedCounter = "888888"
+		originalCounter, err := strconv.Atoi(parts[1])
+		require.NoError(t, err)
+
+		var tamperedCounter string
+		maxCounter := 1
+		for i := 0; i < generator.config.CounterDigits; i++ {
+			maxCounter *= 10
 		}
-		tampered := strings.Replace(ticketNum, parts[1], tamperedCounter, 1)
-		require.NotEqual(t, generator.calculateChecksum(parts[0]+tamperedCounter), parts[2])
+		for offset := 1; offset < maxCounter; offset++ {
+			next := (originalCounter + offset) % maxCounter
+			candidate := fmt.Sprintf("%0*d", generator.config.CounterDigits, next)
+			if generator.calculateChecksum(parts[0]+candidate) != parts[2] {
+				tamperedCounter = candidate
+				break
+			}
+		}
+		require.NotEmpty(t, tamperedCounter, "expected checksum to detect tampering candidate")
+
+		tampered := strings.Join([]string{
+			parts[0],
+			tamperedCounter,
+			parts[2],
+		}, generator.config.Separator)
 		assert.False(t, generator.Validate(tampered))
 	})
 }

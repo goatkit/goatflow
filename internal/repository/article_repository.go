@@ -1,8 +1,10 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"mime"
 	"strings"
 	"time"
 
@@ -15,6 +17,60 @@ type ArticleRepository struct {
 	db                        *sql.DB
 	hasArticleTypeID          *bool
 	hasCommunicationChannelID *bool
+	articleColumnCache        map[string]bool
+}
+
+func (r *ArticleRepository) articleColumnExpressions() (string, string, error) {
+	articleTypeExpr := "article_type_id"
+	commChannelExpr := "communication_channel_id"
+
+	hasType, err := r.ensureArticleTypeColumn()
+	if err != nil {
+		return "", "", err
+	}
+	if !hasType {
+		articleTypeExpr = "0"
+	}
+
+	hasComm, err := r.ensureCommunicationChannelColumn()
+	if err != nil {
+		return "", "", err
+	}
+	if !hasComm {
+		commChannelExpr = "0"
+	}
+
+	return articleTypeExpr, commChannelExpr, nil
+}
+
+func (r *ArticleRepository) hasArticleColumn(column string) (bool, error) {
+	if r.articleColumnCache == nil {
+		r.articleColumnCache = make(map[string]bool)
+	}
+
+	if val, ok := r.articleColumnCache[column]; ok {
+		return val, nil
+	}
+
+	var cnt int
+	if database.IsMySQL() {
+		row := r.db.QueryRow(`SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = ?`, column)
+		if err := row.Scan(&cnt); err != nil {
+			return false, err
+		}
+	} else {
+		query := database.ConvertPlaceholders(`
+			SELECT COUNT(*) FROM information_schema.columns
+			WHERE table_name = 'article' AND column_name = $1`)
+		row := r.db.QueryRow(query, column)
+		if err := row.Scan(&cnt); err != nil {
+			return false, err
+		}
+	}
+
+	has := cnt > 0
+	r.articleColumnCache[column] = has
+	return has, nil
 }
 
 // NewArticleRepository creates a new article repository
@@ -210,23 +266,9 @@ func (r *ArticleRepository) ensureArticleTypeColumn() (bool, error) {
 	if r.hasArticleTypeID != nil {
 		return *r.hasArticleTypeID, nil
 	}
-	// Default false
-	has := false
-	// MySQL/MariaDB needs TABLE_SCHEMA = DATABASE()
-	if database.IsMySQL() {
-		row := r.db.QueryRow(`SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = 'article_type_id'`)
-		var cnt int
-		if err := row.Scan(&cnt); err != nil {
-			return false, err
-		}
-		has = cnt > 0
-	} else {
-		row := r.db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'article' AND column_name = 'article_type_id'`)
-		var cnt int
-		if err := row.Scan(&cnt); err != nil {
-			return false, err
-		}
-		has = cnt > 0
+	has, err := r.hasArticleColumn("article_type_id")
+	if err != nil {
+		return false, err
 	}
 	r.hasArticleTypeID = &has
 	return has, nil
@@ -237,24 +279,41 @@ func (r *ArticleRepository) ensureCommunicationChannelColumn() (bool, error) {
 	if r.hasCommunicationChannelID != nil {
 		return *r.hasCommunicationChannelID, nil
 	}
-	has := false
-	if database.IsMySQL() {
-		row := r.db.QueryRow(`SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = 'communication_channel_id'`)
-		var cnt int
-		if err := row.Scan(&cnt); err != nil {
-			return false, err
-		}
-		has = cnt > 0
-	} else {
-		row := r.db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'article' AND column_name = 'communication_channel_id'`)
-		var cnt int
-		if err := row.Scan(&cnt); err != nil {
-			return false, err
-		}
-		has = cnt > 0
+	has, err := r.hasArticleColumn("communication_channel_id")
+	if err != nil {
+		return false, err
 	}
 	r.hasCommunicationChannelID = &has
 	return has, nil
+}
+
+func (r *ArticleRepository) articleValidExpressions(alias string) (string, string, error) {
+	hasValid, err := r.hasArticleColumn("valid_id")
+	if err != nil {
+		return "", "", err
+	}
+	if hasValid {
+		return fmt.Sprintf("COALESCE(%s.valid_id, 1)", alias), fmt.Sprintf("%s.valid_id = 1", alias), nil
+	}
+	return "1", "", nil
+}
+
+func deriveBodyMeta(contentType string) (string, string) {
+	bodyType := "text/plain"
+	charset := "utf-8"
+	if contentType == "" {
+		return bodyType, charset
+	}
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err == nil && mediaType != "" {
+		bodyType = mediaType
+	}
+	if params != nil {
+		if v, ok := params["charset"]; ok && v != "" {
+			charset = v
+		}
+	}
+	return bodyType, charset
 }
 
 // GetByID retrieves an article by its ID (joins MIME content)
@@ -547,32 +606,50 @@ func (r *ArticleRepository) GetVisibleArticlesForCustomer(ticketID uint) ([]mode
 
 // GetLatestArticleForTicket retrieves the most recent article for a ticket
 func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Article, error) {
-	query := database.ConvertPlaceholders(`
+	articleTypeExpr, commChannelExpr, err := r.articleColumnExpressions()
+	if err != nil {
+		return nil, err
+	}
+	validSelect, validPredicate, err := r.articleValidExpressions("a")
+	if err != nil {
+		return nil, err
+	}
+	selectValid := fmt.Sprintf("%s AS valid_id", validSelect)
+	whereParts := []string{"a.ticket_id = $1"}
+	if validPredicate != "" {
+		whereParts = append(whereParts, validPredicate)
+	}
+	query := fmt.Sprintf(`
 		SELECT 
-			id, ticket_id, article_type_id, article_sender_type_id,
-			communication_channel_id, is_visible_for_customer,
-			subject, body, body_type, charset, mime_type,
-			content_path, valid_id,
-			create_time, create_by, change_time, change_by
-		FROM article
-		WHERE ticket_id = $1 AND valid_id = 1
-		ORDER BY create_time DESC
-		LIMIT 1`)
+			a.id, a.ticket_id, %s AS article_type_id, a.article_sender_type_id,
+			%s AS communication_channel_id, a.is_visible_for_customer,
+			COALESCE(adm.a_subject, '') AS subject,
+			COALESCE(adm.a_body, '') AS body,
+			COALESCE(adm.a_content_type, '') AS content_type,
+			adm.content_path,
+			%s,
+			a.create_time, a.create_by, a.change_time, a.change_by
+		FROM article a
+		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
+		WHERE %s
+		ORDER BY a.create_time DESC, a.id DESC
+		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND "))
+	query = database.ConvertPlaceholders(query)
 
 	var article models.Article
-	err := r.db.QueryRow(query, ticketID).Scan(
+	var subject, body, contentType sql.NullString
+	var contentPath sql.NullString
+	err = r.db.QueryRow(query, ticketID).Scan(
 		&article.ID,
 		&article.TicketID,
 		&article.ArticleTypeID,
 		&article.SenderTypeID,
 		&article.CommunicationChannelID,
 		&article.IsVisibleForCustomer,
-		&article.Subject,
-		&article.Body,
-		&article.BodyType,
-		&article.Charset,
-		&article.MimeType,
-		&article.ContentPath,
+		&subject,
+		&body,
+		&contentType,
+		&contentPath,
 		&article.ValidID,
 		&article.CreateTime,
 		&article.CreateBy,
@@ -583,27 +660,68 @@ func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Ar
 	if err == sql.ErrNoRows {
 		return nil, nil // No articles yet
 	}
+	if err != nil {
+		return nil, err
+	}
 
-	return &article, err
+	if subject.Valid {
+		article.Subject = subject.String
+	}
+	if body.Valid {
+		article.Body = body.String
+	}
+	if contentType.Valid {
+		article.MimeType = contentType.String
+	}
+	if contentPath.Valid {
+		cp := contentPath.String
+		article.ContentPath = &cp
+	}
+	bodyType, charset := deriveBodyMeta(article.MimeType)
+	article.BodyType = bodyType
+	article.Charset = charset
+	return &article, nil
 }
 
 // GetLatestCustomerArticleForTicket gets the most recent customer article for a ticket
 func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*models.Article, error) {
-	query := database.ConvertPlaceholders(`
+	articleTypeExpr, commChannelExpr, err := r.articleColumnExpressions()
+	if err != nil {
+		return nil, err
+	}
+	validSelect, validPredicate, err := r.articleValidExpressions("a")
+	if err != nil {
+		return nil, err
+	}
+	selectValid := fmt.Sprintf("%s AS valid_id", validSelect)
+	whereParts := []string{"a.ticket_id = $1", "a.article_sender_type_id = 3"}
+	if validPredicate != "" {
+		whereParts = append(whereParts, validPredicate)
+	}
+	query := fmt.Sprintf(`
 		SELECT 
-			id, ticket_id, article_type_id, article_sender_type_id,
-			communication_channel_id, is_visible_for_customer,
-			subject, body, body_type, charset, mime_type,
-			content_path, a_message_id, a_in_reply_to, a_references, valid_id,
-			create_time, create_by, change_time, change_by
-		FROM article
-		WHERE ticket_id = $1 AND valid_id = 1 AND article_sender_type_id = 3
-		ORDER BY create_time DESC
-		LIMIT 1`)
+			a.id, a.ticket_id, %s AS article_type_id, a.article_sender_type_id,
+			%s AS communication_channel_id, a.is_visible_for_customer,
+			COALESCE(adm.a_subject, '') AS subject,
+			COALESCE(adm.a_body, '') AS body,
+			COALESCE(adm.a_content_type, '') AS content_type,
+			adm.content_path,
+			adm.a_message_id,
+			adm.a_in_reply_to,
+			adm.a_references,
+			%s,
+			a.create_time, a.create_by, a.change_time, a.change_by
+		FROM article a
+		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
+		WHERE %s
+		ORDER BY a.create_time DESC, a.id DESC
+		LIMIT 1`, articleTypeExpr, commChannelExpr, selectValid, strings.Join(whereParts, " AND "))
+	query = database.ConvertPlaceholders(query)
 
 	var article models.Article
-	var subject, messageID, inReplyTo, references sql.NullString
-	err := r.db.QueryRow(query, ticketID).Scan(
+	var subject, body, contentType sql.NullString
+	var contentPath, messageID, inReplyTo, references sql.NullString
+	err = r.db.QueryRow(query, ticketID).Scan(
 		&article.ID,
 		&article.TicketID,
 		&article.ArticleTypeID,
@@ -611,11 +729,9 @@ func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*m
 		&article.CommunicationChannelID,
 		&article.IsVisibleForCustomer,
 		&subject,
-		&article.Body,
-		&article.BodyType,
-		&article.Charset,
-		&article.MimeType,
-		&article.ContentPath,
+		&body,
+		&contentType,
+		&contentPath,
 		&messageID,
 		&inReplyTo,
 		&references,
@@ -636,6 +752,16 @@ func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*m
 	if subject.Valid {
 		article.Subject = subject.String
 	}
+	if body.Valid {
+		article.Body = body.String
+	}
+	if contentType.Valid {
+		article.MimeType = contentType.String
+	}
+	if contentPath.Valid {
+		cp := contentPath.String
+		article.ContentPath = &cp
+	}
 	if messageID.Valid {
 		article.MessageID = messageID.String
 	}
@@ -645,8 +771,43 @@ func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*m
 	if references.Valid {
 		article.References = references.String
 	}
+	bodyType, charset := deriveBodyMeta(article.MimeType)
+	article.BodyType = bodyType
+	article.Charset = charset
 
 	return &article, nil
+}
+
+// FindTicketByMessageID resolves the ticket owning the provided Message-ID header.
+func (r *ArticleRepository) FindTicketByMessageID(ctx context.Context, messageID string) (*models.Ticket, error) {
+	messageID = strings.TrimSpace(messageID)
+	if messageID == "" {
+		return nil, nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	query := database.ConvertPlaceholders(`
+		SELECT t.id, t.tn, t.queue_id
+		FROM article_data_mime adm
+		INNER JOIN article a ON a.id = adm.article_id
+		INNER JOIN ticket t ON t.id = a.ticket_id
+		WHERE adm.a_message_id = $1
+		ORDER BY a.create_time DESC, a.id DESC
+		LIMIT 1`)
+	var (
+		id           int
+		ticketNumber string
+		queueID      int
+	)
+	err := r.db.QueryRowContext(ctx, query, messageID).Scan(&id, &ticketNumber, &queueID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &models.Ticket{ID: id, TicketNumber: ticketNumber, QueueID: queueID}, nil
 }
 
 // CountArticlesForTicket counts the number of articles for a ticket

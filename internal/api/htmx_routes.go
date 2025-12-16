@@ -1071,6 +1071,39 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 		RegisterDevRoutes(devRoutes)
 	}
 
+	// Minimal admin helpers for tests when legacy admin routes are skipped
+	if os.Getenv("APP_ENV") == "test" {
+		protected.PUT("/admin/users/:id/status", func(c *gin.Context) {
+			id, err := strconv.Atoi(c.Param("id"))
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+				return
+			}
+
+			var payload struct {
+				ValidID int `json:"valid_id"`
+			}
+			if err := c.ShouldBindJSON(&payload); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+				return
+			}
+
+			db, err := database.GetDB()
+			if err != nil || db == nil {
+				c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database unavailable"})
+				return
+			}
+
+			repo := repository.NewUserRepository(db)
+			if err := repo.SetValidID(uint(id), payload.ValidID, uint(1), time.Now()); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update status"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"success": true, "valid_id": payload.ValidID})
+		})
+	}
+
 	// Admin routes group - require admin privileges
 	// In test mode, we skip legacy hardcoded admin route registrations to allow YAML-only routing
 	if os.Getenv("APP_ENV") != "test" {
@@ -1325,14 +1358,32 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 			// Dynamic Module System for side-by-side testing
 			if os.Getenv("APP_ENV") == "test" {
 				log.Printf("WARNING: Skipping dynamic modules in test without DB")
-			} else if db, err := database.GetDB(); err == nil && db != nil {
-				if err := SetupDynamicModules(adminRoutes, db); err != nil {
-					log.Printf("WARNING: Failed to setup dynamic modules: %v", err)
-				} else {
-					log.Println("✅ Dynamic Module System integrated successfully")
-				}
 			} else {
-				log.Printf("WARNING: Cannot setup dynamic modules without database: %v", err)
+				var (
+					dbConn *sql.DB
+					dbErr  error
+				)
+				const (
+					maxDynamicDBAttempts = 20
+					dynamicDBRetryDelay  = 500 * time.Millisecond
+				)
+				for attempt := 1; attempt <= maxDynamicDBAttempts; attempt++ {
+					dbConn, dbErr = database.GetDB()
+					if dbErr == nil && dbConn != nil {
+						break
+					}
+					log.Printf("Dynamic modules waiting for database (attempt %d/%d): %v", attempt, maxDynamicDBAttempts, dbErr)
+					time.Sleep(dynamicDBRetryDelay)
+				}
+				if dbErr == nil && dbConn != nil {
+					if err := SetupDynamicModules(dbConn); err != nil {
+						log.Printf("WARNING: Failed to setup dynamic modules: %v", err)
+					} else {
+						log.Println("✅ Dynamic Module System integrated successfully")
+					}
+				} else {
+					log.Printf("WARNING: Cannot setup dynamic modules without database after retries: %v", dbErr)
+				}
 			}
 		}
 	} else {
@@ -2782,6 +2833,7 @@ func renderTicketsTestFallback(c *gin.Context) {
 // handleQueueDetail shows individual queue details
 func handleQueueDetail(c *gin.Context) {
 	queueID := c.Param("id")
+	hxRequest := strings.EqualFold(c.GetHeader("HX-Request"), "true")
 
 	// Parse ID early for both normal and fallback paths
 	idUint, err := strconv.ParseUint(queueID, 10, 32)
@@ -2873,6 +2925,7 @@ func handleQueueDetail(c *gin.Context) {
 
 	// Convert tickets to template format
 	tickets := make([]gin.H, 0, len(result.Tickets))
+	queueTickets := make([]gin.H, 0, len(result.Tickets))
 	for _, t := range result.Tickets {
 		// Get state name from database
 		stateName := "unknown"
@@ -2915,6 +2968,13 @@ func handleQueueDetail(c *gin.Context) {
 			"created": t.CreateTime.Format("2006-01-02 15:04"),
 			"updated": t.ChangeTime.Format("2006-01-02 15:04"),
 		})
+
+		queueTickets = append(queueTickets, gin.H{
+			"id":     t.ID,
+			"number": t.TicketNumber,
+			"title":  t.Title,
+			"status": stateName,
+		})
 	}
 
 	priorities := []gin.H{
@@ -2935,6 +2995,62 @@ func handleQueueDetail(c *gin.Context) {
 		})
 	}
 
+	queueMeta, metaErr := loadQueueMetaContext(db, queue.ID)
+	if metaErr != nil || queueMeta == nil {
+		log.Printf("handleQueueDetail: failed to load queue meta for queue %d: %v", queue.ID, metaErr)
+		queueMeta = gin.H{
+			"ID":          queue.ID,
+			"Name":        queue.Name,
+			"ValidID":     queue.ValidID,
+			"TicketCount": result.Total,
+		}
+		if queue.GroupID > 0 {
+			queueMeta["GroupID"] = queue.GroupID
+		}
+		if queue.SystemAddressID > 0 {
+			queueMeta["SystemAddressID"] = queue.SystemAddressID
+		}
+		if queue.Comment != "" {
+			queueMeta["Comment"] = queue.Comment
+		}
+	}
+	if _, ok := queueMeta["TicketCount"]; !ok {
+		queueMeta["TicketCount"] = result.Total
+	}
+
+	if pongo2Renderer == nil || pongo2Renderer.templateSet == nil {
+		if hxRequest {
+			c.String(http.StatusOK, fmt.Sprintf("%s queue detail", queue.Name))
+		} else {
+			html := fmt.Sprintf("<html><head><title>%s Queue</title></head><body><h1>%s</h1><p>%d tickets</p></body></html>", queue.Name, queue.Name, result.Total)
+			c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
+		}
+		return
+	}
+
+	queueStatus := "inactive"
+	if queue.ValidID == 1 {
+		queueStatus = "active"
+	}
+
+	if hxRequest {
+		queueDetail := pongo2.Context{
+			"id":           queue.ID,
+			"name":         queue.Name,
+			"comment":      strings.TrimSpace(queue.Comment),
+			"status":       queueStatus,
+			"ticket_count": result.Total,
+			"tickets":      queueTickets,
+		}
+		if queueMeta != nil {
+			queueDetail["meta"] = queueMeta
+		}
+		pongo2Renderer.HTML(c, http.StatusOK, "components/queue_detail.pongo2", pongo2.Context{
+			"Queue": queueDetail,
+		})
+		return
+	}
+
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/tickets.pongo2", pongo2.Context{
 		"Tickets":          tickets,
 		"User":             getUserMapForTemplate(c),
@@ -2953,6 +3069,118 @@ func handleQueueDetail(c *gin.Context) {
 		"QueueName":        queue.Name, // Add queue name for display
 		"QueueID":          queueID,
 		"HasActiveFilters": hasActiveFilters,
+		"QueueMeta":        queueMeta,
+	})
+}
+
+func loadQueueMetaContext(db *sql.DB, queueID uint) (gin.H, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database connection unavailable")
+	}
+
+	var row struct {
+		ID                   int64
+		Name                 string
+		Comment              sql.NullString
+		ValidID              int
+		GroupID              sql.NullInt64
+		GroupName            sql.NullString
+		SystemAddressID      sql.NullInt64
+		SystemAddressEmail   sql.NullString
+		SystemAddressDisplay sql.NullString
+		TicketCount          int
+	}
+
+	query := `
+		SELECT q.id, q.name, q.comments AS comment, q.valid_id,
+		       q.group_id, g.name,
+		       q.system_address_id, sa.value0, sa.value1,
+		       (SELECT COUNT(*) FROM ticket WHERE queue_id = q.id) AS ticket_count
+		FROM queue q
+		LEFT JOIN groups g ON q.group_id = g.id
+		LEFT JOIN system_address sa ON q.system_address_id = sa.id
+		WHERE q.id = $1`
+	if err := db.QueryRow(database.ConvertPlaceholders(query), queueID).Scan(
+		&row.ID,
+		&row.Name,
+		&row.Comment,
+		&row.ValidID,
+		&row.GroupID,
+		&row.GroupName,
+		&row.SystemAddressID,
+		&row.SystemAddressEmail,
+		&row.SystemAddressDisplay,
+		&row.TicketCount,
+	); err != nil {
+		return nil, err
+	}
+
+	meta := gin.H{
+		"ID":          int(row.ID),
+		"Name":        row.Name,
+		"ValidID":     row.ValidID,
+		"TicketCount": row.TicketCount,
+	}
+	if row.Comment.Valid {
+		comment := strings.TrimSpace(row.Comment.String)
+		if comment != "" {
+			meta["Comment"] = comment
+		}
+	}
+	if row.GroupID.Valid {
+		meta["GroupID"] = int(row.GroupID.Int64)
+	}
+	if row.GroupName.Valid {
+		meta["GroupName"] = row.GroupName.String
+	}
+	if row.SystemAddressID.Valid {
+		meta["SystemAddressID"] = int(row.SystemAddressID.Int64)
+	}
+	if row.SystemAddressEmail.Valid {
+		meta["SystemAddressEmail"] = row.SystemAddressEmail.String
+	}
+	if row.SystemAddressDisplay.Valid {
+		meta["SystemAddressDisplay"] = row.SystemAddressDisplay.String
+	}
+
+	return meta, nil
+}
+
+func handleQueueMetaPartial(c *gin.Context) {
+	queueID := c.Param("id")
+	idUint, err := strconv.ParseUint(queueID, 10, 32)
+	if err != nil {
+		sendErrorResponse(c, http.StatusBadRequest, "Invalid queue ID")
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		sendErrorResponse(c, http.StatusInternalServerError, "Database connection unavailable")
+		return
+	}
+
+	queueMeta, metaErr := loadQueueMetaContext(db, uint(idUint))
+	if metaErr != nil {
+		sendErrorResponse(c, http.StatusNotFound, "Queue not found")
+		return
+	}
+
+	if wantsJSONResponse(c) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data":    queueMeta,
+		})
+		return
+	}
+
+	if name, ok := queueMeta["Name"].(string); ok && name != "" {
+		c.Header("X-Queue-Name", name)
+	}
+
+	pongo2Renderer.HTML(c, http.StatusOK, "components/queue_meta.pongo2", pongo2.Context{
+		"QueueMeta":          queueMeta,
+		"QueueMetaShowTitle": true,
 	})
 }
 
@@ -6733,9 +6961,7 @@ func handleActivityStream(c *gin.Context) {
 
 // handleAdminDashboard shows the admin dashboard
 func handleAdminDashboard(c *gin.Context) {
-	// If renderer/templates or DB are unavailable, return JSON error
-	db, _ := database.GetDB()
-	if pongo2Renderer == nil || pongo2Renderer.templateSet == nil || db == nil {
+	if pongo2Renderer == nil || pongo2Renderer.templateSet == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error":   "System unavailable",
@@ -6743,17 +6969,17 @@ func handleAdminDashboard(c *gin.Context) {
 		return
 	}
 
-	// Get some stats from the database (real path)
 	userCount := 0
 	groupCount := 0
 	activeTickets := 0
 	queueCount := 0
 
-	db.QueryRow("SELECT COUNT(*) FROM users WHERE valid_id = 1").Scan(&userCount)
-	db.QueryRow("SELECT COUNT(*) FROM groups WHERE valid_id = 1").Scan(&groupCount)
-	db.QueryRow("SELECT COUNT(*) FROM queue WHERE valid_id = 1").Scan(&queueCount)
-	// Note: ticket table might not exist yet
-	db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id IN (1,2,3,4)").Scan(&activeTickets)
+	if db, _ := database.GetDB(); db != nil {
+		_ = db.QueryRow("SELECT COUNT(*) FROM users WHERE valid_id = 1").Scan(&userCount)
+		_ = db.QueryRow("SELECT COUNT(*) FROM groups WHERE valid_id = 1").Scan(&groupCount)
+		_ = db.QueryRow("SELECT COUNT(*) FROM queue WHERE valid_id = 1").Scan(&queueCount)
+		_ = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id IN (1,2,3,4)").Scan(&activeTickets)
+	}
 
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/admin/dashboard.pongo2", pongo2.Context{
 		"UserCount":     userCount,

@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +17,9 @@ import (
 	_ "github.com/gotrs-io/gotrs-ce/internal/api" // Import for handler_registry.go init()
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
+	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/filters"
+	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/postmaster"
 	"github.com/gotrs-io/gotrs-ce/internal/lookups"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
@@ -104,6 +109,7 @@ func main() {
 
 	// Register middleware from routing package
 	routing.RegisterExistingHandlers(handlerRegistry)
+	api.RegisterDynamicModuleHandlersIntoRegistry(handlerRegistry)
 
 	// Register actual API handlers to override placeholders
 	apiHandlers := map[string]gin.HandlerFunc{
@@ -280,10 +286,13 @@ func main() {
 		// Admin handlers
 		// Users handled by dynamic module system and specific admin user handlers
 		"handleAdminUsers":              api.HandleAdminUsers,
+		"handleAdminUserCreate":         api.HandleAdminUserCreate,
 		"handleAdminUserGet":            api.HandleAdminUserGet,
 		"handleAdminUserEdit":           api.HandleAdminUserEdit,
 		"handleAdminUserUpdate":         api.HandleAdminUserUpdate,
 		"handleAdminUserDelete":         api.HandleAdminUserDelete,
+		"handleAdminUserGroups":         api.HandleAdminUserGroups,
+		"handleAdminUsersStatus":        api.HandleAdminUsersStatus,
 		"handleAdminPasswordPolicy":     api.HandleAdminPasswordPolicy,
 		"HandleAdminUsersList":          api.HandleAdminUsersList,
 		"handleAdminGroups":             api.HandleAdminGroups,
@@ -441,6 +450,85 @@ func main() {
 	ticketNumGen := setup.Generator
 	systemID := setup.SystemID
 
+	var emailHandler connector.Handler
+	if db != nil {
+		ticketRepo := repository.NewTicketRepository(db)
+		articleRepo := repository.NewArticleRepository(db)
+		ticketSvc := service.NewTicketService(ticketRepo, service.WithArticleRepository(articleRepo))
+		queueRepo := repository.NewQueueRepository(db)
+		var storageSvc service.StorageService
+		if cfg := config.Get(); cfg != nil && strings.EqualFold(cfg.Storage.Type, "db") {
+			if svc, err := service.NewDatabaseStorageService(); err == nil {
+				storageSvc = svc
+			} else {
+				log.Printf("postmaster: database storage init failed: %v", err)
+			}
+		} else {
+			storagePath := os.Getenv("STORAGE_PATH")
+			if storagePath == "" {
+				if cfg := config.Get(); cfg != nil && cfg.Storage.Local.Path != "" {
+					storagePath = cfg.Storage.Local.Path
+				} else {
+					storagePath = filepath.Join(configDir, "storage")
+				}
+			}
+			if svc, err := service.NewLocalStorageService(storagePath); err == nil {
+				storageSvc = svc
+			} else {
+				log.Printf("postmaster: local storage init failed: %v", err)
+			}
+		}
+		dispatchRulesPath := filepath.Join(configDir, "email_dispatch.yaml")
+		dispatchProvider, err := filters.NewFileDispatchRuleProvider(dispatchRulesPath)
+		if err != nil {
+			log.Printf("postmaster: failed to load dispatch rules: %v", err)
+		}
+		externalRules, err := filters.LoadExternalTicketRules(filepath.Join(configDir, "external_ticket_rules.yaml"))
+		if err != nil {
+			log.Printf("postmaster: failed to load external ticket rules: %v", err)
+		}
+		processor := postmaster.NewTicketProcessor(
+			ticketSvc,
+			postmaster.WithTicketProcessorQueueLookup(func(ctx context.Context, name string) (int, error) {
+				queue, err := queueRepo.GetByName(name)
+				if err != nil {
+					return 0, err
+				}
+				return int(queue.ID), nil
+			}),
+			postmaster.WithTicketProcessorStorage(storageSvc),
+			postmaster.WithTicketProcessorArticleLookup(articleRepo),
+			postmaster.WithTicketProcessorTicketFinder(ticketRepo),
+			postmaster.WithTicketProcessorQueueFinder(queueRepo),
+			postmaster.WithTicketProcessorArticleStore(articleRepo),
+			postmaster.WithTicketProcessorMessageLookup(articleRepo),
+			postmaster.WithTicketProcessorDatabase(db),
+		)
+		var filterList []filters.Filter
+		filterList = append(filterList,
+			filters.NewHeaderTokenFilter(log.Default()),
+			filters.NewSubjectTokenFilter(log.Default()),
+			filters.NewBodyTokenFilter(log.Default()),
+			filters.NewAttachmentTokenFilter(log.Default()),
+		)
+		if externalFilter := filters.NewExternalTicketNumberFilter(externalRules, log.Default()); externalFilter != nil {
+			filterList = append(filterList, externalFilter)
+		}
+		if dispatchProvider != nil {
+			filterList = append(filterList, filters.NewDispatchFromMapFilter(dispatchProvider, log.Default()))
+		}
+		var trustedHeaders []string
+		if cfg := config.Get(); cfg != nil {
+			trustedHeaders = cfg.Email.Inbound.TrustedHeaders
+		}
+		filterList = append(filterList, filters.NewTrustedHeadersFilter(log.Default(), trustedHeaders...))
+		chain := filters.NewChain(filterList...)
+		emailHandler = &postmaster.Service{
+			FilterChain: chain,
+			Handler:     processor,
+		}
+	}
+
 	// Create router for YAML routes
 	r := gin.New()
 
@@ -491,6 +579,16 @@ func main() {
 	}
 
 	log.Println("✅ YAML routes loaded successfully")
+
+	if dbErr == nil && db != nil {
+		if err := api.SetupDynamicModules(db); err != nil {
+			log.Printf("⚠️  Dynamic modules unavailable: %v", err)
+		} else {
+			log.Println("✅ Dynamic module system initialized")
+		}
+	} else {
+		log.Printf("⚠️  Skipping dynamic modules (db unavailable: %v)", dbErr)
+	}
 
 	// Runtime audit: verify critical API endpoints were registered (multi-doc safety)
 	func() {
@@ -557,18 +655,27 @@ func main() {
 	log.Println("✅ Backend initialized successfully")
 
 	var schedulerCancel context.CancelFunc
-	if db, dbErr := database.GetDB(); dbErr != nil || db == nil {
+	if dbErr != nil || db == nil {
 		log.Printf("scheduler: disabled (database unavailable: %v)", dbErr)
 	} else {
 		loc := time.UTC
-		if cfg := config.Get(); cfg != nil && cfg.App.Timezone != "" {
+		cfg := config.Get()
+		if cfg != nil && cfg.App.Timezone != "" {
 			if tz, err := time.LoadLocation(cfg.App.Timezone); err != nil {
 				log.Printf("scheduler: invalid timezone %q, falling back to UTC: %v", cfg.App.Timezone, err)
 			} else {
 				loc = tz
 			}
 		}
-		sched := scheduler.NewService(db, scheduler.WithLocation(loc))
+		options := []scheduler.Option{scheduler.WithLocation(loc)}
+		if emailHandler != nil {
+			options = append(options, scheduler.WithEmailHandler(emailHandler))
+		}
+		jobs := buildSchedulerJobsFromConfig(cfg)
+		if len(jobs) > 0 {
+			options = append(options, scheduler.WithJobs(jobs))
+		}
+		sched := scheduler.NewService(db, options...)
 		ctx, cancel := context.WithCancel(context.Background())
 		schedulerCancel = cancel
 		go func() {

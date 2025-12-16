@@ -293,6 +293,12 @@ gotrs-migrate --source postgres://user:pass@host/db \
 
 ## 🔮 Post-MVP Roadmap (Aspirational)
 
+### Epic: Secrets & Configuration Hardening
+- **Current posture (all editions)**: keep runtime secrets in `.env` files or orchestrator-provided environment variables. This matches our Docker/Podman Compose workflow and keeps developer onboarding frictionless. `.env.example` already warns operators to rotate every value before production and to store the file outside version control.
+- **Kubernetes fit (community)**: the same contract maps cleanly onto `Secret` manifests. Operators can mount an env file via projected secrets or rely on `envFrom`, so we can document “copy `.env` contents into a Kubernetes Secret” without touching code. This becomes part of the Phase 2 deployment docs.
+- **Future enhancements (enterprise)**: optional vault-backed secret adapters (HashiCorp Vault Agent, AWS Secrets Manager, etc.) delivered as enterprise add-ons. These would refresh credentials automatically, publish audit events, and remove `.env` handling entirely for regulated tenants. We explicitly defer implementation until after inbound email/connectors stabilize.
+- **Guardrails**: keep `.env` ignored in git (already true), document file-permission expectations, and add CI lint to flag obvious demo secrets in committed YAML. No schema or runtime changes are required for this epic’s initial community scope.
+
 **Phase 1: Stabilization (Q4 2025)**
 - Complete all admin modules to production quality
 - Comprehensive test coverage (80%+)
