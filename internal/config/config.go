@@ -143,6 +143,15 @@ type EmailConfig struct {
 		RetryAttempts int           `mapstructure:"retry_attempts"`
 		RetryDelay    time.Duration `mapstructure:"retry_delay"`
 	} `mapstructure:"queue"`
+	Inbound EmailInboundConfig `mapstructure:"inbound"`
+}
+
+type EmailInboundConfig struct {
+	Enabled        bool          `mapstructure:"enabled"`
+	PollInterval   time.Duration `mapstructure:"poll_interval"`
+	WorkerCount    int           `mapstructure:"worker_count"`
+	MaxAccounts    int           `mapstructure:"max_accounts"`
+	TrustedHeaders []string      `mapstructure:"trusted_headers"`
 }
 
 type StorageConfig struct {

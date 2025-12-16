@@ -114,6 +114,14 @@ email:
     buffer_size: 100
     retry_attempts: 3
     retry_delay: 5s
+  inbound:
+    enabled: true
+    poll_interval: 2m
+    worker_count: 2
+    max_accounts: 5
+    trusted_headers:
+      - X-GOTRS-TicketNumber
+      - X-OTRS-TicketNumber
 
 storage:
   type: local  # local, s3

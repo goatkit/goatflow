@@ -1,0 +1,553 @@
+# Admin Dynamic Module Friendly Routes
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: admin-dynamic-aliases
+  description: "Friendly URLs for dynamic admin modules"
+  namespace: default
+  enabled: true
+spec:
+  prefix: /admin
+  middleware:
+    - auth
+    - admin
+  routes:
+    # Mail accounts module
+    - path: /mail-accounts
+      method: GET
+      handler: handleAdminModuleMailAccounts
+      description: "List mail accounts"
+    - path: /mail-accounts/export
+      method: GET
+      handler: handleAdminModuleMailAccounts
+      description: "Export mail accounts"
+    - path: /mail-accounts/new
+      method: GET
+      handler: handleAdminModuleMailAccounts
+      description: "Render mail account creation form"
+    - path: /mail-accounts/:id
+      method: GET
+      handler: handleAdminModuleMailAccounts
+      description: "Show mail account details"
+    - path: /mail-accounts/:id/edit
+      method: GET
+      handler: handleAdminModuleMailAccounts
+      description: "Render mail account edit form"
+    - path: /mail-accounts
+      method: POST
+      handler: handleAdminModuleMailAccounts
+      description: "Create a mail account"
+    - path: /mail-accounts/:id
+      method: PUT
+      handler: handleAdminModuleMailAccounts
+      description: "Update a mail account"
+    - path: /mail-accounts/:id
+      method: POST
+      handler: handleAdminModuleMailAccounts
+      description: "Update a mail account via form submission"
+    - path: /mail-accounts/:id
+      method: DELETE
+      handler: handleAdminModuleMailAccounts
+      description: "Delete a mail account"
+    - path: /mail-accounts/:id/status
+      method: PUT
+      handler: handleAdminModuleMailAccounts
+      description: "Toggle mail account status"
+    - path: /mail-accounts/:id/status
+      method: POST
+      handler: handleAdminModuleMailAccounts
+      description: "Toggle mail account status via form submission"
+    - path: /mail-accounts/:id/:action
+      method: GET
+      handler: handleAdminModuleMailAccounts
+      description: "Execute custom mail account action"
+    - path: /mail-accounts/:id/:action
+      method: POST
+      handler: handleAdminModuleMailAccounts
+      description: "Execute custom mail account action"
+
+    # Notification events module
+    - path: /notification-events
+      method: GET
+      handler: handleAdminModuleNotificationEvents
+      description: "List notification events"
+    - path: /notification-events/export
+      method: GET
+      handler: handleAdminModuleNotificationEvents
+      description: "Export notification events"
+    - path: /notification-events/new
+      method: GET
+      handler: handleAdminModuleNotificationEvents
+      description: "Render notification event creation form"
+    - path: /notification-events/:id
+      method: GET
+      handler: handleAdminModuleNotificationEvents
+      description: "Show notification event details"
+    - path: /notification-events/:id/edit
+      method: GET
+      handler: handleAdminModuleNotificationEvents
+      description: "Render notification event edit form"
+    - path: /notification-events
+      method: POST
+      handler: handleAdminModuleNotificationEvents
+      description: "Create a notification event"
+    - path: /notification-events/:id
+      method: PUT
+      handler: handleAdminModuleNotificationEvents
+      description: "Update a notification event"
+    - path: /notification-events/:id
+      method: POST
+      handler: handleAdminModuleNotificationEvents
+      description: "Update a notification event via form submission"
+    - path: /notification-events/:id
+      method: DELETE
+      handler: handleAdminModuleNotificationEvents
+      description: "Delete a notification event"
+    - path: /notification-events/:id/status
+      method: PUT
+      handler: handleAdminModuleNotificationEvents
+      description: "Toggle notification event status"
+    - path: /notification-events/:id/status
+      method: POST
+      handler: handleAdminModuleNotificationEvents
+      description: "Toggle notification event status via form submission"
+    - path: /notification-events/:id/:action
+      method: GET
+      handler: handleAdminModuleNotificationEvents
+      description: "Execute custom notification event action"
+    - path: /notification-events/:id/:action
+      method: POST
+      handler: handleAdminModuleNotificationEvents
+      description: "Execute custom notification event action"
+
+    # Communication channels module
+    - path: /communication-channels
+      method: GET
+      handler: handleAdminModuleCommunication
+      description: "List communication channels"
+    - path: /communication-channels/export
+      method: GET
+      handler: handleAdminModuleCommunication
+      description: "Export communication channels"
+    - path: /communication-channels/new
+      method: GET
+      handler: handleAdminModuleCommunication
+      description: "Render communication channel creation form"
+    - path: /communication-channels/:id
+      method: GET
+      handler: handleAdminModuleCommunication
+      description: "Show communication channel details"
+    - path: /communication-channels/:id/edit
+      method: GET
+      handler: handleAdminModuleCommunication
+      description: "Render communication channel edit form"
+    - path: /communication-channels
+      method: POST
+      handler: handleAdminModuleCommunication
+      description: "Create a communication channel"
+    - path: /communication-channels/:id
+      method: PUT
+      handler: handleAdminModuleCommunication
+      description: "Update a communication channel"
+    - path: /communication-channels/:id
+      method: POST
+      handler: handleAdminModuleCommunication
+      description: "Update a communication channel via form submission"
+    - path: /communication-channels/:id
+      method: DELETE
+      handler: handleAdminModuleCommunication
+      description: "Delete a communication channel"
+    - path: /communication-channels/:id/status
+      method: PUT
+      handler: handleAdminModuleCommunication
+      description: "Toggle communication channel status"
+    - path: /communication-channels/:id/status
+      method: POST
+      handler: handleAdminModuleCommunication
+      description: "Toggle communication channel status via form submission"
+    - path: /communication-channels/:id/:action
+      method: GET
+      handler: handleAdminModuleCommunication
+      description: "Execute custom communication channel action"
+    - path: /communication-channels/:id/:action
+      method: POST
+      handler: handleAdminModuleCommunication
+      description: "Execute custom communication channel action"
+
+    # Package repositories module
+    - path: /package-repositories
+      method: GET
+      handler: handleAdminModulePackageRepos
+      description: "List package repositories"
+    - path: /package-repositories/export
+      method: GET
+      handler: handleAdminModulePackageRepos
+      description: "Export package repositories"
+    - path: /package-repositories/new
+      method: GET
+      handler: handleAdminModulePackageRepos
+      description: "Render package repository creation form"
+    - path: /package-repositories/:id
+      method: GET
+      handler: handleAdminModulePackageRepos
+      description: "Show package repository details"
+    - path: /package-repositories/:id/edit
+      method: GET
+      handler: handleAdminModulePackageRepos
+      description: "Render package repository edit form"
+    - path: /package-repositories
+      method: POST
+      handler: handleAdminModulePackageRepos
+      description: "Create a package repository"
+    - path: /package-repositories/:id
+      method: PUT
+      handler: handleAdminModulePackageRepos
+      description: "Update a package repository"
+    - path: /package-repositories/:id
+      method: POST
+      handler: handleAdminModulePackageRepos
+      description: "Update a package repository via form submission"
+    - path: /package-repositories/:id
+      method: DELETE
+      handler: handleAdminModulePackageRepos
+      description: "Delete a package repository"
+    - path: /package-repositories/:id/status
+      method: PUT
+      handler: handleAdminModulePackageRepos
+      description: "Toggle package repository status"
+    - path: /package-repositories/:id/status
+      method: POST
+      handler: handleAdminModulePackageRepos
+      description: "Toggle package repository status via form submission"
+    - path: /package-repositories/:id/:action
+      method: GET
+      handler: handleAdminModulePackageRepos
+      description: "Execute custom package repository action"
+    - path: /package-repositories/:id/:action
+      method: POST
+      handler: handleAdminModulePackageRepos
+      description: "Execute custom package repository action"
+
+    # Auto responses module
+    - path: /auto-responses
+      method: GET
+      handler: handleAdminModuleAutoResponses
+      description: "List auto responses"
+    - path: /auto-responses/export
+      method: GET
+      handler: handleAdminModuleAutoResponses
+      description: "Export auto responses"
+    - path: /auto-responses/new
+      method: GET
+      handler: handleAdminModuleAutoResponses
+      description: "Render auto response creation form"
+    - path: /auto-responses/:id
+      method: GET
+      handler: handleAdminModuleAutoResponses
+      description: "Show auto response details"
+    - path: /auto-responses/:id/edit
+      method: GET
+      handler: handleAdminModuleAutoResponses
+      description: "Render auto response edit form"
+    - path: /auto-responses
+      method: POST
+      handler: handleAdminModuleAutoResponses
+      description: "Create an auto response"
+    - path: /auto-responses/:id
+      method: PUT
+      handler: handleAdminModuleAutoResponses
+      description: "Update an auto response"
+    - path: /auto-responses/:id
+      method: POST
+      handler: handleAdminModuleAutoResponses
+      description: "Update an auto response via form submission"
+    - path: /auto-responses/:id
+      method: DELETE
+      handler: handleAdminModuleAutoResponses
+      description: "Delete an auto response"
+    - path: /auto-responses/:id/status
+      method: PUT
+      handler: handleAdminModuleAutoResponses
+      description: "Toggle auto response status"
+    - path: /auto-responses/:id/status
+      method: POST
+      handler: handleAdminModuleAutoResponses
+      description: "Toggle auto response status via form submission"
+    - path: /auto-responses/:id/:action
+      method: GET
+      handler: handleAdminModuleAutoResponses
+      description: "Execute custom auto response action"
+    - path: /auto-responses/:id/:action
+      method: POST
+      handler: handleAdminModuleAutoResponses
+      description: "Execute custom auto response action"
+
+    # Auto response types module
+    - path: /auto-response-types
+      method: GET
+      handler: handleAdminModuleAutoResponseTypes
+      description: "List auto response types"
+    - path: /auto-response-types/export
+      method: GET
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Export auto response types"
+    - path: /auto-response-types/new
+      method: GET
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Render auto response type creation form"
+    - path: /auto-response-types/:id
+      method: GET
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Show auto response type details"
+    - path: /auto-response-types/:id/edit
+      method: GET
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Render auto response type edit form"
+    - path: /auto-response-types
+      method: POST
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Create an auto response type"
+    - path: /auto-response-types/:id
+      method: PUT
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Update an auto response type"
+    - path: /auto-response-types/:id
+      method: POST
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Update an auto response type via form submission"
+    - path: /auto-response-types/:id
+      method: DELETE
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Delete an auto response type"
+    - path: /auto-response-types/:id/status
+      method: PUT
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Toggle auto response type status"
+    - path: /auto-response-types/:id/status
+      method: POST
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Toggle auto response type status via form submission"
+    - path: /auto-response-types/:id/:action
+      method: GET
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Execute custom auto response type action"
+    - path: /auto-response-types/:id/:action
+      method: POST
+      handler: handleAdminModuleAutoResponseTypes
+      description: "Execute custom auto response type action"
+
+    # Follow up options module
+    - path: /follow-up-options
+      method: GET
+      handler: handleAdminModuleFollowUps
+      description: "List follow up options"
+    - path: /follow-up-options/export
+      method: GET
+      handler: handleAdminModuleFollowUps
+      description: "Export follow up options"
+    - path: /follow-up-options/new
+      method: GET
+      handler: handleAdminModuleFollowUps
+      description: "Render follow up option creation form"
+    - path: /follow-up-options/:id
+      method: GET
+      handler: handleAdminModuleFollowUps
+      description: "Show follow up option details"
+    - path: /follow-up-options/:id/edit
+      method: GET
+      handler: handleAdminModuleFollowUps
+      description: "Render follow up option edit form"
+    - path: /follow-up-options
+      method: POST
+      handler: handleAdminModuleFollowUps
+      description: "Create a follow up option"
+    - path: /follow-up-options/:id
+      method: PUT
+      handler: handleAdminModuleFollowUps
+      description: "Update a follow up option"
+    - path: /follow-up-options/:id
+      method: POST
+      handler: handleAdminModuleFollowUps
+      description: "Update a follow up option via form submission"
+    - path: /follow-up-options/:id
+      method: DELETE
+      handler: handleAdminModuleFollowUps
+      description: "Delete a follow up option"
+    - path: /follow-up-options/:id/status
+      method: PUT
+      handler: handleAdminModuleFollowUps
+      description: "Toggle follow up option status"
+    - path: /follow-up-options/:id/status
+      method: POST
+      handler: handleAdminModuleFollowUps
+      description: "Toggle follow up option status via form submission"
+    - path: /follow-up-options/:id/:action
+      method: GET
+      handler: handleAdminModuleFollowUps
+      description: "Execute custom follow up option action"
+    - path: /follow-up-options/:id/:action
+      method: POST
+      handler: handleAdminModuleFollowUps
+      description: "Execute custom follow up option action"
+
+    # Link states module
+    - path: /link-states
+      method: GET
+      handler: handleAdminModuleLinkStates
+      description: "List link states"
+    - path: /link-states/export
+      method: GET
+      handler: handleAdminModuleLinkStates
+      description: "Export link states"
+    - path: /link-states/new
+      method: GET
+      handler: handleAdminModuleLinkStates
+      description: "Render link state creation form"
+    - path: /link-states/:id
+      method: GET
+      handler: handleAdminModuleLinkStates
+      description: "Show link state details"
+    - path: /link-states/:id/edit
+      method: GET
+      handler: handleAdminModuleLinkStates
+      description: "Render link state edit form"
+    - path: /link-states
+      method: POST
+      handler: handleAdminModuleLinkStates
+      description: "Create a link state"
+    - path: /link-states/:id
+      method: PUT
+      handler: handleAdminModuleLinkStates
+      description: "Update a link state"
+    - path: /link-states/:id
+      method: POST
+      handler: handleAdminModuleLinkStates
+      description: "Update a link state via form submission"
+    - path: /link-states/:id
+      method: DELETE
+      handler: handleAdminModuleLinkStates
+      description: "Delete a link state"
+    - path: /link-states/:id/status
+      method: PUT
+      handler: handleAdminModuleLinkStates
+      description: "Toggle link state status"
+    - path: /link-states/:id/status
+      method: POST
+      handler: handleAdminModuleLinkStates
+      description: "Toggle link state status via form submission"
+    - path: /link-states/:id/:action
+      method: GET
+      handler: handleAdminModuleLinkStates
+      description: "Execute custom link state action"
+    - path: /link-states/:id/:action
+      method: POST
+      handler: handleAdminModuleLinkStates
+      description: "Execute custom link state action"
+
+    # Link types module
+    - path: /link-types
+      method: GET
+      handler: handleAdminModuleLinkTypes
+      description: "List link types"
+    - path: /link-types/export
+      method: GET
+      handler: handleAdminModuleLinkTypes
+      description: "Export link types"
+    - path: /link-types/new
+      method: GET
+      handler: handleAdminModuleLinkTypes
+      description: "Render link type creation form"
+    - path: /link-types/:id
+      method: GET
+      handler: handleAdminModuleLinkTypes
+      description: "Show link type details"
+    - path: /link-types/:id/edit
+      method: GET
+      handler: handleAdminModuleLinkTypes
+      description: "Render link type edit form"
+    - path: /link-types
+      method: POST
+      handler: handleAdminModuleLinkTypes
+      description: "Create a link type"
+    - path: /link-types/:id
+      method: PUT
+      handler: handleAdminModuleLinkTypes
+      description: "Update a link type"
+    - path: /link-types/:id
+      method: POST
+      handler: handleAdminModuleLinkTypes
+      description: "Update a link type via form submission"
+    - path: /link-types/:id
+      method: DELETE
+      handler: handleAdminModuleLinkTypes
+      description: "Delete a link type"
+    - path: /link-types/:id/status
+      method: PUT
+      handler: handleAdminModuleLinkTypes
+      description: "Toggle link type status"
+    - path: /link-types/:id/status
+      method: POST
+      handler: handleAdminModuleLinkTypes
+      description: "Toggle link type status via form submission"
+    - path: /link-types/:id/:action
+      method: GET
+      handler: handleAdminModuleLinkTypes
+      description: "Execute custom link type action"
+    - path: /link-types/:id/:action
+      method: POST
+      handler: handleAdminModuleLinkTypes
+      description: "Execute custom link type action"
+
+    # Queue auto responses module
+    - path: /queue-auto-responses
+      method: GET
+      handler: handleAdminModuleQueueAutoResponses
+      description: "List queue auto responses"
+    - path: /queue-auto-responses/export
+      method: GET
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Export queue auto responses"
+    - path: /queue-auto-responses/new
+      method: GET
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Render queue auto response creation form"
+    - path: /queue-auto-responses/:id
+      method: GET
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Show queue auto response details"
+    - path: /queue-auto-responses/:id/edit
+      method: GET
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Render queue auto response edit form"
+    - path: /queue-auto-responses
+      method: POST
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Create a queue auto response"
+    - path: /queue-auto-responses/:id
+      method: PUT
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Update a queue auto response"
+    - path: /queue-auto-responses/:id
+      method: POST
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Update a queue auto response via form submission"
+    - path: /queue-auto-responses/:id
+      method: DELETE
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Delete a queue auto response"
+    - path: /queue-auto-responses/:id/status
+      method: PUT
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Toggle queue auto response status"
+    - path: /queue-auto-responses/:id/status
+      method: POST
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Toggle queue auto response status via form submission"
+    - path: /queue-auto-responses/:id/:action
+      method: GET
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Execute custom queue auto response action"
+    - path: /queue-auto-responses/:id/:action
+      method: POST
+      handler: handleAdminModuleQueueAutoResponses
+      description: "Execute custom queue auto response action"

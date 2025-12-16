@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-11-17T17:10:14.26722843Z",
+  "generatedAt": "2025-12-16T07:25:33.379160869Z",
   "routes": [
     {
       "group": "admin",
@@ -56,6 +56,26 @@
       "method": "DELETE",
       "path": "/admin/users/:id",
       "handler": "handleAdminUserDelete",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "POST",
+      "path": "/admin/users",
+      "handler": "handleAdminUserCreate",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/users/:id/groups",
+      "handler": "handleAdminUserGroups",
       "middleware": [
         "auth",
         "admin"
@@ -404,6 +424,16 @@
     {
       "group": "admin",
       "method": "POST",
+      "path": "/admin/customer/companies/new",
+      "handler": "handleAdminCreateCustomerCompany",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "POST",
       "path": "/admin/customer/companies",
       "handler": "handleAdminCreateCustomerCompany",
       "middleware": [
@@ -706,6 +736,1316 @@
       "method": "GET",
       "path": "/admin/backup",
       "handler": "handleAdminBackup",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin",
+      "method": "GET",
+      "path": "/admin/modules",
+      "handler": "handleAdminDynamicIndex",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/mail-accounts",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/mail-accounts/export",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/mail-accounts/new",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/mail-accounts/:id",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/mail-accounts/:id/edit",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/mail-accounts",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/mail-accounts/:id",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/mail-accounts/:id",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "DELETE",
+      "path": "/admin/mail-accounts/:id",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/mail-accounts/:id/status",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/mail-accounts/:id/status",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/mail-accounts/:id/:action",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/mail-accounts/:id/:action",
+      "handler": "handleAdminModuleMailAccounts",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/notification-events",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/notification-events/export",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/notification-events/new",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/notification-events/:id",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/notification-events/:id/edit",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/notification-events",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/notification-events/:id",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/notification-events/:id",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "DELETE",
+      "path": "/admin/notification-events/:id",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/notification-events/:id/status",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/notification-events/:id/status",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/notification-events/:id/:action",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/notification-events/:id/:action",
+      "handler": "handleAdminModuleNotificationEvents",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/communication-channels",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/communication-channels/export",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/communication-channels/new",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/communication-channels/:id",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/communication-channels/:id/edit",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/communication-channels",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/communication-channels/:id",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/communication-channels/:id",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "DELETE",
+      "path": "/admin/communication-channels/:id",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/communication-channels/:id/status",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/communication-channels/:id/status",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/communication-channels/:id/:action",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/communication-channels/:id/:action",
+      "handler": "handleAdminModuleCommunication",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/package-repositories",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/package-repositories/export",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/package-repositories/new",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/package-repositories/:id",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/package-repositories/:id/edit",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/package-repositories",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/package-repositories/:id",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/package-repositories/:id",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "DELETE",
+      "path": "/admin/package-repositories/:id",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/package-repositories/:id/status",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/package-repositories/:id/status",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/package-repositories/:id/:action",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/package-repositories/:id/:action",
+      "handler": "handleAdminModulePackageRepos",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-responses",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-responses/export",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-responses/new",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-responses/:id",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-responses/:id/edit",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/auto-responses",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/auto-responses/:id",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/auto-responses/:id",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "DELETE",
+      "path": "/admin/auto-responses/:id",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/auto-responses/:id/status",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/auto-responses/:id/status",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-responses/:id/:action",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/auto-responses/:id/:action",
+      "handler": "handleAdminModuleAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-response-types",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-response-types/export",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-response-types/new",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-response-types/:id",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-response-types/:id/edit",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/auto-response-types",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/auto-response-types/:id",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/auto-response-types/:id",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "DELETE",
+      "path": "/admin/auto-response-types/:id",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/auto-response-types/:id/status",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/auto-response-types/:id/status",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/auto-response-types/:id/:action",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/auto-response-types/:id/:action",
+      "handler": "handleAdminModuleAutoResponseTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/follow-up-options",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/follow-up-options/export",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/follow-up-options/new",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/follow-up-options/:id",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/follow-up-options/:id/edit",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/follow-up-options",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/follow-up-options/:id",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/follow-up-options/:id",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "DELETE",
+      "path": "/admin/follow-up-options/:id",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/follow-up-options/:id/status",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/follow-up-options/:id/status",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/follow-up-options/:id/:action",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/follow-up-options/:id/:action",
+      "handler": "handleAdminModuleFollowUps",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-states",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-states/export",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-states/new",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-states/:id",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-states/:id/edit",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/link-states",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/link-states/:id",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/link-states/:id",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "DELETE",
+      "path": "/admin/link-states/:id",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/link-states/:id/status",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/link-states/:id/status",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-states/:id/:action",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/link-states/:id/:action",
+      "handler": "handleAdminModuleLinkStates",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-types",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-types/export",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-types/new",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-types/:id",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-types/:id/edit",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/link-types",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/link-types/:id",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/link-types/:id",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "DELETE",
+      "path": "/admin/link-types/:id",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/link-types/:id/status",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/link-types/:id/status",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/link-types/:id/:action",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/link-types/:id/:action",
+      "handler": "handleAdminModuleLinkTypes",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/queue-auto-responses",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/queue-auto-responses/export",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/queue-auto-responses/new",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/queue-auto-responses/:id",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/queue-auto-responses/:id/edit",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/queue-auto-responses",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/queue-auto-responses/:id",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/queue-auto-responses/:id",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "DELETE",
+      "path": "/admin/queue-auto-responses/:id",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "PUT",
+      "path": "/admin/queue-auto-responses/:id/status",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/queue-auto-responses/:id/status",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "GET",
+      "path": "/admin/queue-auto-responses/:id/:action",
+      "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-dynamic-aliases",
+      "method": "POST",
+      "path": "/admin/queue-auto-responses/:id/:action",
+      "handler": "handleAdminModuleQueueAutoResponses",
       "middleware": [
         "auth",
         "admin"
@@ -1421,6 +2761,15 @@
       "method": "GET",
       "path": "/queues/:id",
       "handler": "HandleQueueDetail",
+      "middleware": [
+        "auth"
+      ]
+    },
+    {
+      "group": "basic",
+      "method": "GET",
+      "path": "/queues/:id/meta",
+      "handler": "handleQueueMetaPartial",
       "middleware": [
         "auth"
       ]

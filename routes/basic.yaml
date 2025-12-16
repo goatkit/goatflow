@@ -51,6 +51,14 @@ spec:
         - auth
       description: "Display tickets filtered by specific queue"
 
+    # Queue metadata partial (used by HX requests)
+    - path: /queues/:id/meta
+      method: GET
+      handler: handleQueueMetaPartial
+      middleware:
+        - auth
+      description: "Render queue metadata panel or JSON payload"
+
     # Unified ticket detail view
     - path: /ticket/:id
       method: GET

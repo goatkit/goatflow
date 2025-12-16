@@ -34,3 +34,8 @@ email:
   smtp:
     host: localhost
     port: 1025
+  inbound:
+    enabled: true
+    poll_interval: 2m
+    worker_count: 2
+    max_accounts: 5
