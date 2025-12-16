@@ -213,6 +213,7 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies",
 			bytes.NewBufferString(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Accept", "application/json")
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -361,6 +362,7 @@ func TestAdminCustomerCompanyUpdate(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/customer/companies/%s/edit", customerID),
 			bytes.NewBufferString(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Accept", "application/json")
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -480,6 +482,7 @@ func TestAdminCustomerCompanyDelete(t *testing.T) {
 		router := NewSimpleRouterWithDB(db)
 
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/customer/companies/%s/delete", customerID), nil)
+		req.Header.Set("Accept", "application/json")
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -554,6 +557,7 @@ func TestAdminCustomerCompanyActivate(t *testing.T) {
 		router := NewSimpleRouterWithDB(db)
 
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/customer/companies/%s/activate", customerID), nil)
+		req.Header.Set("Accept", "application/json")
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -776,6 +780,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies",
 				bytes.NewBufferString(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Accept", "application/json")
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -827,6 +832,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/customer/companies/%s/edit", customerID),
 				bytes.NewBufferString(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Accept", "application/json")
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -852,6 +858,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 		// DELETE: Test deleting company
 		t.Run("delete company", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/customer/companies/%s/delete", customerID), nil)
+			req.Header.Set("Accept", "application/json")
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 

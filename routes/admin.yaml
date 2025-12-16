@@ -46,6 +46,22 @@ spec:
       handler: handleAdminUserDelete
       description: "Delete user"
 
+    - path: /users
+      method: POST
+      handler: handleAdminUserCreate
+      description: "Create new user"
+
+    - path: /users/:id/groups
+      method: GET
+      handler: handleAdminUserGroups
+      description: "List user groups"
+
+    - path: /users/:id/status
+      handlers:
+        PUT: handleAdminUsersStatus
+        POST: handleAdminUsersStatus
+      description: "Toggle user activation status"
+
     - path: /password-policy
       method: GET
       handler: handleAdminPasswordPolicy
@@ -248,6 +264,11 @@ spec:
       template: pages/admin/customer_company_form.pongo2
       description: "Display new customer company form"
 
+    - path: /customer/companies/new
+      method: POST
+      handler: handleAdminCreateCustomerCompany
+      description: "Create new customer company"
+
     - path: /customer/companies
       method: POST
       handler: handleAdminCreateCustomerCompany
@@ -415,3 +436,29 @@ spec:
       handler: handleAdminBackup
       template: pages/under_construction.pongo2
       description: "Display backup and restore placeholder"
+
+    # Dynamic module system routes
+    - path: /modules
+      method: GET
+      handler: handleAdminDynamicIndex
+      description: "List available dynamic modules"
+
+    - path: /modules/:module
+      handlers:
+        GET: handleAdminDynamicModule
+        POST: handleAdminDynamicModule
+      description: "Serve dynamic module pages and handle record creation"
+
+    - path: /modules/:module/:id
+      handlers:
+        GET: handleAdminDynamicModule
+        POST: handleAdminDynamicModule
+        PUT: handleAdminDynamicModule
+        DELETE: handleAdminDynamicModule
+      description: "Handle dynamic module record operations"
+
+    - path: /modules/:module/:id/:action
+      handlers:
+        GET: handleAdminDynamicModule
+        POST: handleAdminDynamicModule
+      description: "Execute dynamic module actions"
