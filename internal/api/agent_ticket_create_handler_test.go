@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"database/sql/driver"
-	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -75,11 +74,13 @@ func (e equalsString) Match(v driver.Value) bool {
 	}
 }
 
-func articleColumnCheckQuery(column string) string {
+func articleColumnCheckQuery() string {
 	if database.IsMySQL() {
-		return fmt.Sprintf("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = '%s'", column)
+		return "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'article' AND COLUMN_NAME = ?"
 	}
-	return fmt.Sprintf("SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'article' AND column_name = '%s'", column)
+	return database.ConvertPlaceholders(`
+		SELECT COUNT(*) FROM information_schema.columns
+		WHERE table_name = 'article' AND column_name = $1`)
 }
 
 func TestHandleAgentCreateTicket_UsesSelectedNextState(t *testing.T) {
@@ -152,10 +153,12 @@ func TestHandleAgentCreateTicket_UsesSelectedNextState(t *testing.T) {
 
 	mock.ExpectBegin()
 
-	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery("article_type_id"))).
+	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery())).
+		WithArgs("article_type_id").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery("communication_channel_id"))).
+	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery())).
+		WithArgs("communication_channel_id").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
 	articleArgs := []driver.Value{
@@ -382,10 +385,12 @@ func TestHandleAgentCreateTicket_PendingStateSetsPendingUntil(t *testing.T) {
 
 	mock.ExpectBegin()
 
-	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery("article_type_id"))).
+	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery())).
+		WithArgs("article_type_id").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery("communication_channel_id"))).
+	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery())).
+		WithArgs("communication_channel_id").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
 	articleArgs2 := []driver.Value{
@@ -542,10 +547,12 @@ func TestHandleAgentCreateTicket_ResolvesCustomerUser(t *testing.T) {
 
 	mock.ExpectBegin()
 
-	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery("article_type_id"))).
+	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery())).
+		WithArgs("article_type_id").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery("communication_channel_id"))).
+	mock.ExpectQuery(regexp.QuoteMeta(articleColumnCheckQuery())).
+		WithArgs("communication_channel_id").
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 
 	articleArgs := []driver.Value{

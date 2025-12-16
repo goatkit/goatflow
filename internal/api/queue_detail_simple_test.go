@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,6 +16,8 @@ func TestQueueDetailSimple(t *testing.T) {
 	if !dbAvailable() {
 		t.Skip("DB not available (GOTRS_TEST_DB_READY!=1) - skipping queue detail HTML tests")
 	}
+
+	queueName := getQueueNameForTest(t, 1)
 
 	router := gin.New()
 	router.GET("/api/queues/:id", handleQueueDetail)
@@ -53,6 +56,22 @@ func TestQueueDetailSimple(t *testing.T) {
 		assert.False(t, strings.Contains(body, "</html>"), "Fragment should not contain </html> tag")
 
 		// But should have the queue detail content
-		assert.Contains(t, body, "Raw", "Should contain queue name")
+		assert.Contains(t, body, queueName, "Should contain queue name")
 	})
+}
+
+func getQueueNameForTest(t *testing.T, id int) string {
+	db, err := database.GetDB()
+	if err != nil {
+		t.Fatalf("failed to get database connection: %v", err)
+	}
+	if db == nil {
+		t.Fatalf("database connection is nil")
+	}
+	var name string
+	query := database.ConvertPlaceholders("SELECT name FROM queue WHERE id = $1")
+	if err := db.QueryRow(query, id).Scan(&name); err != nil {
+		t.Fatalf("failed to fetch queue %d name: %v", id, err)
+	}
+	return name
 }

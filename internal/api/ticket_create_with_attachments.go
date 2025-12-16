@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/config"
+	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/history"
 	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
@@ -160,6 +162,8 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	}
 
 	ticketRepo := repository.NewTicketRepository(db)
+	articleRepo := repository.NewArticleRepository(db)
+	ticketSvc := service.NewTicketService(ticketRepo, service.WithArticleRepository(articleRepo))
 
 	nextStateID := 0
 	if v := strings.TrimSpace(req.NextStateID); v != "" {
@@ -195,58 +199,59 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	}
 
 	customerEmail := req.CustomerEmail
-	typeIDInt := int(typeID)
-	ticket := &models.Ticket{
-		Title:            ticketTitle,
-		QueueID:          int(queueID),
-		TypeID:           &typeIDInt,
-		TicketPriorityID: getPriorityID(req.Priority),
-		TicketStateID:    stateID,
-		TicketLockID:     1,
-		CustomerUserID:   &customerEmail,
-		CreateBy:         int(createdBy),
-		ChangeBy:         int(createdBy),
+	priorityID := getPriorityID(req.Priority)
+	visible := true
+	createInput := service.CreateTicketInput{
+		Title:                         ticketTitle,
+		QueueID:                       int(queueID),
+		PriorityID:                    priorityID,
+		StateID:                       stateID,
+		UserID:                        int(createdBy),
+		Body:                          req.Body,
+		ArticleSubject:                ticketTitle,
+		ArticleSenderTypeID:           constants.ArticleSenderCustomer,
+		ArticleTypeID:                 constants.ArticleTypeEmailExternal,
+		ArticleIsVisibleForCustomer:   &visible,
+		ArticleCommunicationChannelID: 1,
+		CustomerUserID:                customerEmail,
+		PendingUntil:                  pendingUnix,
 	}
-	ownerID := int(createdBy)
-	ticket.UserID = &ownerID
-	ticket.ResponsibleUserID = &ownerID
-	if pendingUnix > 0 && isPendingState(resolvedState) {
-		ticket.UntilTime = pendingUnix
+	if typeID > 0 {
+		createInput.TypeID = int(typeID)
 	}
 
-	if err := ticketRepo.Create(ticket); err != nil {
-		log.Printf("ERROR: Failed to create ticket: %v", err)
+	ticket, err := ticketSvc.Create(c.Request.Context(), createInput)
+	if err != nil {
+		log.Printf("ERROR: Failed to create ticket via service: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create ticket: " + err.Error()})
 		return
 	}
-
 	log.Printf("Successfully created ticket ID: %d (with attachment support)", ticket.ID)
 
-	// Create the first article (ticket body)
-	articleRepo := repository.NewArticleRepository(db)
-	article := &models.Article{
-		TicketID:               ticket.ID,
-		Subject:                ticketTitle,
-		Body:                   req.Body,
-		SenderTypeID:           3, // Customer
-		CommunicationChannelID: 1, // Email
-		IsVisibleForCustomer:   1,
-		ArticleTypeID:          models.ArticleTypeNoteExternal,
-		CreateBy:               int(createdBy),
-		ChangeBy:               int(createdBy),
-	}
-
-	if err := articleRepo.Create(article); err != nil {
-		log.Printf("ERROR: Failed to add initial article: %v", err)
-		// Without an article we cannot safely attach files; continue ticket creation
+	var article *models.Article
+	if !ticketSideEffectsDisabled() {
+		if fetched, ferr := articleRepo.GetLatestCustomerArticleForTicket(uint(ticket.ID)); ferr != nil {
+			log.Printf("WARNING: failed to load initial customer article for ticket %d: %v", ticket.ID, ferr)
+		} else {
+			article = fetched
+		}
+		if article == nil {
+			if fallback, ferr := articleRepo.GetLatestArticleForTicket(uint(ticket.ID)); ferr == nil {
+				article = fallback
+			} else if ferr != nil {
+				log.Printf("WARNING: fallback article lookup failed for ticket %d: %v", ticket.ID, ferr)
+			}
+		}
 	} else {
-		log.Printf("Successfully created article ID: %d for ticket %d", article.ID, ticket.ID)
+		log.Printf("DEBUG: skipping article lookup for ticket %d due to side effect flag", ticket.ID)
 	}
 
 	// Process file attachments if present
 	attachmentInfo := []map[string]interface{}{}
 
-	if c.Request.MultipartForm != nil && c.Request.MultipartForm.File != nil {
+	if ticketSideEffectsDisabled() {
+		log.Printf("DEBUG: skipping attachment persistence for ticket %d due to side effect flag", ticket.ID)
+	} else if c.Request.MultipartForm != nil && c.Request.MultipartForm.File != nil {
 		// Check both singular and plural field names for compatibility
 		files := c.Request.MultipartForm.File["attachments"]
 		if files == nil {
@@ -414,7 +419,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	}
 
 	// Persist time accounting entry if minutes were provided on creation
-	if minutes > 0 {
+	if minutes > 0 && !ticketSideEffectsDisabled() {
 		log.Printf("CreateTicketWithAttachments: attempting to save time entry ticket_id=%d minutes=%d", ticket.ID, minutes)
 		if err := saveTimeEntry(db, ticket.ID, nil, minutes, int(createdBy)); err != nil {
 			// Non-fatal: log and proceed with success response
@@ -425,7 +430,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	}
 
 	// Record ticket creation history entry
-	if ticketRepo != nil {
+	if ticketRepo != nil && !ticketSideEffectsDisabled() {
 		recorder := history.NewRecorder(ticketRepo)
 		actorID := int(createdBy)
 		if v, ok := c.Get("user_id"); ok {
@@ -468,48 +473,66 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	}
 
 	// Queue email notification for ticket creation
-	log.Printf("DEBUG: Queuing email for customerEmail='%s', ticketNumber='%s'", customerEmail, ticket.TicketNumber)
-	go func() {
-		subject := fmt.Sprintf("Ticket Created: %s", ticket.TicketNumber)
-		body := fmt.Sprintf("Your ticket has been created successfully.\n\nTicket Number: %s\nTitle: %s\n\nMessage:\n%s\n\nYou can view your ticket at: /tickets/%d\n\nBest regards,\nGOTRS Support Team",
-			ticket.TicketNumber, ticket.Title, req.Body, ticket.ID)
+	if ticketSideEffectsDisabled() {
+		log.Printf("DEBUG: skipping ticket notification queue for ticket %d due to side effect flag", ticket.ID)
+	} else {
+		log.Printf("DEBUG: Queuing email for customerEmail='%s', ticketNumber='%s'", customerEmail, ticket.TicketNumber)
+		go func() {
+			subject := fmt.Sprintf("Ticket Created: %s", ticket.TicketNumber)
+			body := fmt.Sprintf("Your ticket has been created successfully.\n\nTicket Number: %s\nTitle: %s\n\nMessage:\n%s\n\nYou can view your ticket at: /tickets/%d\n\nBest regards,\nGOTRS Support Team",
+				ticket.TicketNumber, ticket.Title, req.Body, ticket.ID)
 
-		// Queue the email for processing by EmailQueueTask
-		queueRepo := mailqueue.NewMailQueueRepository(db)
-		var emailCfg *config.EmailConfig
-		if cfg := config.Get(); cfg != nil {
-			emailCfg = &cfg.Email
-		}
-		branding, brandErr := notifications.PrepareQueueEmail(
-			context.Background(),
-			db,
-			ticket.QueueID,
-			body,
-			utils.IsHTML(body),
-			emailCfg,
-		)
-		if brandErr != nil {
-			log.Printf("Queue identity lookup failed for ticket %d: %v", ticket.ID, brandErr)
-		}
-		senderEmail := branding.EnvelopeFrom
-		articleID64 := int64(article.ID)
-		queueItem := &mailqueue.MailQueueItem{
-			ArticleID:  &articleID64,
-			Sender:     &senderEmail,
-			Recipient:  customerEmail,
-			RawMessage: mailqueue.BuildEmailMessage(branding.HeaderFrom, customerEmail, subject, branding.Body),
-			Attempts:   0,
-			CreateTime: time.Now(),
-		}
+			// Queue the email for processing by EmailQueueTask
+			queueRepo := mailqueue.NewMailQueueRepository(db)
+			var emailCfg *config.EmailConfig
+			if cfg := config.Get(); cfg != nil {
+				emailCfg = &cfg.Email
+			}
+			branding, brandErr := notifications.PrepareQueueEmail(
+				context.Background(),
+				db,
+				ticket.QueueID,
+				body,
+				utils.IsHTML(body),
+				emailCfg,
+			)
+			if brandErr != nil {
+				log.Printf("Queue identity lookup failed for ticket %d: %v", ticket.ID, brandErr)
+			}
+			senderEmail := branding.EnvelopeFrom
+			var articleID64 *int64
+			if article != nil && article.ID > 0 {
+				id := int64(article.ID)
+				articleID64 = &id
+			}
+			queueItem := &mailqueue.MailQueueItem{
+				ArticleID:  articleID64,
+				Sender:     &senderEmail,
+				Recipient:  customerEmail,
+				RawMessage: mailqueue.BuildEmailMessage(branding.HeaderFrom, customerEmail, subject, branding.Body),
+				Attempts:   0,
+				CreateTime: time.Now(),
+			}
 
-		if err := queueRepo.Insert(context.Background(), queueItem); err != nil {
-			log.Printf("Failed to queue email for %s: %v", customerEmail, err)
-		} else {
-			log.Printf("Queued email for %s (ticket %s) for processing", customerEmail, ticket.TicketNumber)
-		}
-	}()
+			if err := queueRepo.Insert(context.Background(), queueItem); err != nil {
+				log.Printf("Failed to queue email for %s: %v", customerEmail, err)
+			} else {
+				log.Printf("Queued email for %s (ticket %s) for processing", customerEmail, ticket.TicketNumber)
+			}
+		}()
+	}
 
 	// For HTMX, set the redirect header to the ticket detail page
 	c.Header("HX-Redirect", fmt.Sprintf("/tickets/%d", ticket.ID))
 	c.JSON(http.StatusCreated, response)
+}
+
+func ticketSideEffectsDisabled() bool {
+	val := strings.ToLower(strings.TrimSpace(os.Getenv("SKIP_TICKET_SIDE_EFFECTS")))
+	switch val {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }

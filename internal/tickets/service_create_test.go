@@ -43,7 +43,9 @@ type memStore struct{ tickets []Ticket }
 
 func newService(g interface {
 	Generate(context.Context) (string, error)
-}) *Service { return &Service{gen: g, store: &memStore{}} }
+}) *Service {
+	return &Service{gen: g, store: &memStore{}}
+}
 
 func (s *Service) Create(ctx context.Context, p CreateParams) (Ticket, error) {
 	if p.Title == "" {

@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/gotrs-io/gotrs-ce/internal/config"
+	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
@@ -131,17 +132,23 @@ func HandleCreateTicketAPI(c *gin.Context) {
 	}
 
 	repo := repository.NewTicketRepository(db)
-	svc := service.NewTicketService(repo)
+	articleRepo := repository.NewArticleRepository(db)
+	svc := service.NewTicketService(repo, service.WithArticleRepository(articleRepo))
+	visible := true
 	created, err := svc.Create(c, service.CreateTicketInput{
-		Title:          ticketRequest.Title,
-		QueueID:        ticketRequest.QueueID,
-		PriorityID:     ticketRequest.PriorityID,
-		StateID:        ticketRequest.StateID,
-		UserID:         userID,
-		Body:           ticketRequest.Body,
-		TypeID:         ticketRequest.TypeID,
-		CustomerID:     ticketRequest.CustomerID,
-		CustomerUserID: ticketRequest.CustomerUserID,
+		Title:                       ticketRequest.Title,
+		QueueID:                     ticketRequest.QueueID,
+		PriorityID:                  ticketRequest.PriorityID,
+		StateID:                     ticketRequest.StateID,
+		UserID:                      userID,
+		Body:                        ticketRequest.Body,
+		ArticleSubject:              ticketRequest.Title,
+		ArticleSenderTypeID:         constants.ArticleSenderAgent,
+		ArticleTypeID:               constants.ArticleTypeEmailExternal,
+		ArticleIsVisibleForCustomer: &visible,
+		TypeID:                      ticketRequest.TypeID,
+		CustomerID:                  ticketRequest.CustomerID,
+		CustomerUserID:              ticketRequest.CustomerUserID,
 	})
 	if err != nil {
 		if database.IsConnectionError(err) {

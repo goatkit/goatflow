@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/history"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
@@ -17,23 +18,54 @@ type TicketService interface {
 	Create(ctx context.Context, req CreateTicketInput) (*models.Ticket, error)
 }
 
-type ticketService struct{ repo *repository.TicketRepository }
+type ticketService struct {
+	repo     *repository.TicketRepository
+	articles articleCreator
+}
 
-func NewTicketService(repo *repository.TicketRepository) TicketService {
-	return &ticketService{repo: repo}
+type articleCreator interface {
+	Create(article *models.Article) error
+}
+
+type TicketServiceOption func(*ticketService)
+
+// WithArticleRepository wires the optional article repository used for the initial article.
+func WithArticleRepository(repo *repository.ArticleRepository) TicketServiceOption {
+	return func(ts *ticketService) {
+		if ts != nil && repo != nil {
+			ts.articles = repo
+		}
+	}
+}
+
+func NewTicketService(repo *repository.TicketRepository, opts ...TicketServiceOption) TicketService {
+	ts := &ticketService{repo: repo}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(ts)
+		}
+	}
+	return ts
 }
 
 type CreateTicketInput struct {
-	Title          string
-	QueueID        int
-	PriorityID     int
-	StateID        int
-	UserID         int
-	Body           string // reserved for future article create
-	PendingUntil   int    // unix seconds when pending should elapse; 0 = none
-	TypeID         int    // optional ticket type to set on create (0 = none)
-	CustomerID     string
-	CustomerUserID string
+	Title                         string
+	QueueID                       int
+	PriorityID                    int
+	StateID                       int
+	UserID                        int
+	Body                          string // optional initial article body
+	ArticleSubject                string
+	ArticleSenderTypeID           int
+	ArticleTypeID                 int
+	ArticleIsVisibleForCustomer   *bool
+	ArticleMimeType               string
+	ArticleCharset                string
+	ArticleCommunicationChannelID int
+	PendingUntil                  int // unix seconds when pending should elapse; 0 = none
+	TypeID                        int // optional ticket type to set on create (0 = none)
+	CustomerID                    string
+	CustomerUserID                string
 }
 
 func (s *ticketService) Create(ctx context.Context, in CreateTicketInput) (*models.Ticket, error) {
@@ -120,5 +152,65 @@ func (s *ticketService) Create(ctx context.Context, in CreateTicketInput) (*mode
 			log.Printf("ticket history record (create) failed: %v", err)
 		}
 	}
+	s.createInitialArticle(ticket, in)
 	return ticket, nil
+}
+
+func (s *ticketService) createInitialArticle(ticket *models.Ticket, in CreateTicketInput) {
+	if s == nil || s.articles == nil {
+		return
+	}
+	body := strings.TrimSpace(in.Body)
+	if body == "" || ticket == nil {
+		return
+	}
+	subject := strings.TrimSpace(in.ArticleSubject)
+	if subject == "" {
+		subject = ticket.Title
+	}
+	senderType := in.ArticleSenderTypeID
+	if senderType == 0 {
+		senderType = constants.ArticleSenderAgent
+	}
+	articleType := in.ArticleTypeID
+	if articleType == 0 {
+		articleType = constants.ArticleTypeEmailExternal
+	}
+	visible := 1
+	if in.ArticleIsVisibleForCustomer != nil {
+		if !*in.ArticleIsVisibleForCustomer {
+			visible = 0
+		}
+	}
+	channelID := in.ArticleCommunicationChannelID
+	if channelID <= 0 {
+		channelID = 1
+	}
+	charset := strings.TrimSpace(in.ArticleCharset)
+	if charset == "" {
+		charset = "utf-8"
+	}
+	mimeType := strings.TrimSpace(in.ArticleMimeType)
+	if mimeType == "" {
+		mimeType = "text/plain"
+	}
+	if !strings.Contains(strings.ToLower(mimeType), "charset=") {
+		mimeType = fmt.Sprintf("%s; charset=%s", mimeType, charset)
+	}
+	article := &models.Article{
+		TicketID:               ticket.ID,
+		Subject:                subject,
+		Body:                   body,
+		SenderTypeID:           senderType,
+		ArticleTypeID:          articleType,
+		CommunicationChannelID: channelID,
+		IsVisibleForCustomer:   visible,
+		Charset:                charset,
+		MimeType:               mimeType,
+		CreateBy:               in.UserID,
+		ChangeBy:               in.UserID,
+	}
+	if err := s.articles.Create(article); err != nil {
+		log.Printf("ticket article create failed for ticket %d: %v", ticket.ID, err)
+	}
 }

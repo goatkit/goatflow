@@ -38,16 +38,45 @@ func SendToastResponse(c *gin.Context, success bool, message, redirectPath strin
 			`, message)
 			c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(html))
 		}
-	} else {
-		// For regular form submissions, redirect back with success message
-		if success && redirectPath != "" {
-			suffix := "?success=1"
-			if strings.Contains(redirectPath, "?") {
-				suffix = "&success=1"
-			}
-			c.Redirect(http.StatusFound, redirectPath+suffix)
-		} else {
-			c.JSON(http.StatusOK, gin.H{"success": success, "message": message})
-		}
+		return
 	}
+
+	if acceptsJSONResponse(c) {
+		status := http.StatusOK
+		if !success {
+			status = http.StatusBadRequest
+		}
+
+		payload := gin.H{
+			"success": success,
+			"message": message,
+		}
+
+		if redirectPath != "" {
+			payload["redirect"] = redirectPath
+		}
+
+		c.JSON(status, payload)
+		return
+	}
+
+	// For regular form submissions, redirect back with success message
+	if success && redirectPath != "" {
+		suffix := "?success=1"
+		if strings.Contains(redirectPath, "?") {
+			suffix = "&success=1"
+		}
+		c.Redirect(http.StatusFound, redirectPath+suffix)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"success": success, "message": message})
+}
+
+func acceptsJSONResponse(c *gin.Context) bool {
+	accept := strings.ToLower(c.GetHeader("Accept"))
+	if accept == "" {
+		return false
+	}
+	return strings.Contains(accept, "application/json")
 }

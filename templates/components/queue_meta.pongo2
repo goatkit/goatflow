@@ -1,0 +1,49 @@
+{% if QueueMeta %}
+<div class="space-y-4">
+    {% if QueueMetaShowTitle %}
+    <div>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ QueueMeta.Name }}</h2>
+        {% if QueueMeta.GroupName %}
+        <p class="text-sm text-gray-500 dark:text-gray-400">Group: {{ QueueMeta.GroupName }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
+        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</p>
+            <p class="mt-1 text-base font-semibold text-gray-900 dark:text-white">
+                {% if QueueMeta.ValidID == 1 %}Active{% else %}Inactive{% endif %}
+            </p>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Tickets</p>
+            <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ QueueMeta.TicketCount|default:0 }}</p>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Group</p>
+            <p class="mt-1 text-base font-semibold text-gray-900 dark:text-white">{{ QueueMeta.GroupName|default:"Unassigned" }}</p>
+        </div>
+        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">System Address</p>
+            {% if QueueMeta.SystemAddressEmail %}
+            {% if QueueMeta.SystemAddressDisplay %}
+            <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ QueueMeta.SystemAddressDisplay }}</p>
+            {% endif %}
+            <p class="mt-1 font-mono text-sm text-gray-900 dark:text-gray-100">{{ QueueMeta.SystemAddressEmail }}</p>
+            {% else %}
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Not configured</p>
+            {% endif %}
+        </div>
+    </div>
+    {% if QueueMeta.Comment %}
+    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Description</p>
+        <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ QueueMeta.Comment }}</p>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="rounded-lg border border-dashed border-gray-200 bg-white p-4 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+    Queue information unavailable.
+</div>
+{% endif %}

@@ -31,6 +31,12 @@
         </div>
     </div>
 
+    {% if QueueMeta %}
+    <div class="mb-6">
+        {% include "components/queue_meta.pongo2" with QueueMeta=QueueMeta QueueMetaShowTitle=false %}
+    </div>
+    {% endif %}
+
     <form id="filter-form"
           method="get"
           action="/tickets{% if QueueID %}?queue={{ QueueID }}{% endif %}"
