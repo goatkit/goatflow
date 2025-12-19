@@ -1,5 +1,131 @@
 {
   "admin": {
+    "modules": {
+      "mail_account": {
+        "singular": "Mail Account",
+        "plural": "Inbound Mail Accounts",
+        "description": "Manage inbound mail accounts",
+        "fields": {
+          "login": "Login",
+          "pw": "Password",
+          "host": "Host",
+          "account_type": "Account Type",
+          "queue_id": "Queue",
+          "dispatching_mode": "Dispatching Mode",
+          "trusted": "Trusted",
+          "allow_trusted_headers": "Allow Trusted Headers",
+          "imap_folder": "IMAP Folder",
+          "comments": "Comments",
+          "poll_interval_seconds": "Poll Interval (seconds)",
+          "valid_id": "Validity",
+          "create_time": "Create Time",
+          "create_by": "Created By",
+          "change_time": "Change Time"
+        },
+        "help": {
+          "queue_id": "Assign inbound messages to this queue.",
+          "allow_trusted_headers": "Accept queue overrides from X-Znuny-Dest / X-GOTRS headers for this mailbox.",
+          "poll_interval_seconds": "Override the scheduler interval for this mailbox. Leave 0 to inherit the global cadence.",
+          "valid_id": "Choose whether this mailbox is active."
+        },
+        "placeholders": {
+          "login": "support@example.com",
+          "pw": "App password or OAuth token",
+          "host": "imap.mail.example",
+          "queue_id": "Start typing a queue name",
+          "imap_folder": "INBOX or INBOX/Support",
+          "comments": "Optional notes for other admins",
+          "poll_interval_seconds": "Defaults to 600 seconds"
+        },
+        "options": {
+          "account_type": {
+            "pop3": "POP3 (Standard)",
+            "pop3s": "POP3S (SSL/TLS)",
+            "imap": "IMAP (Standard)",
+            "imaps": "IMAPS (SSL/TLS)"
+          },
+          "dispatching_mode": {
+            "queue": "Route to assigned queue",
+            "from": "Route by From header"
+          }
+        },
+        "status": {
+          "status": "Status",
+          "last_poll": "Last poll",
+          "messages_fetched": "Messages fetched",
+          "next_poll": "Next poll",
+          "last_error": "Last error",
+          "ok": "OK",
+          "error": "Error",
+          "stale": "No recent poll",
+          "no_data": "No poll yet",
+          "unavailable": "Status unavailable"
+        }
+      },
+      "priority": {
+        "actions": {
+          "new": "New Priority"
+        },
+        "create_title": "New Priority",
+        "delete_confirm": "Are you sure you want to delete this priority? This action cannot be undone.",
+        "delete_title": "Delete Priority",
+        "edit_title": "Edit Priority"
+      },
+      "queue": {
+        "actions": {
+          "new": "New Queue"
+        },
+        "create_title": "New Queue",
+        "delete_confirm": "Are you sure you want to delete this queue? This action cannot be undone.",
+        "delete_title": "Delete Queue",
+        "edit_title": "Edit Queue"
+      },
+      "salutation": {
+        "actions": {
+          "new": "New Salutation"
+        },
+        "create_title": "New Salutation",
+        "delete_confirm": "Are you sure you want to delete this salutation? This action cannot be undone.",
+        "delete_title": "Delete Salutation",
+        "edit_title": "Edit Salutation"
+      },
+      "service": {
+        "actions": {
+          "new": "New Service"
+        },
+        "create_title": "New Service",
+        "delete_confirm": "Are you sure you want to delete this service? This action cannot be undone.",
+        "delete_title": "Delete Service",
+        "edit_title": "Edit Service"
+      },
+      "sla": {
+        "actions": {
+          "new": "New Sla"
+        },
+        "create_title": "New Sla",
+        "delete_confirm": "Are you sure you want to delete this sla? This action cannot be undone.",
+        "delete_title": "Delete Sla",
+        "edit_title": "Edit Sla"
+      },
+      "state": {
+        "actions": {
+          "new": "New State"
+        },
+        "create_title": "New State",
+        "delete_confirm": "Are you sure you want to delete this state? This action cannot be undone.",
+        "delete_title": "Delete State",
+        "edit_title": "Edit State"
+      },
+      "type": {
+        "actions": {
+          "new": "New Type"
+        },
+        "create_title": "New Type",
+        "delete_confirm": "Are you sure you want to delete this type? This action cannot be undone.",
+        "delete_title": "Delete Type",
+        "edit_title": "Edit Type"
+      }
+    },
     "dashboard": "Admin Dashboard",
     "dashboard_description": "Overview of system administration",
     "actions": "Actions",
@@ -174,71 +300,6 @@
     "filters": {
       "all_statuses": "All Statuses",
       "all_groups": "All Groups"
-    },
-    "modules": {
-      "priority": {
-        "actions": {
-          "new": "New Priority"
-        },
-        "create_title": "New Priority",
-        "delete_confirm": "Are you sure you want to delete this priority? This action cannot be undone.",
-        "delete_title": "Delete Priority",
-        "edit_title": "Edit Priority"
-      },
-      "queue": {
-        "actions": {
-          "new": "New Queue"
-        },
-        "create_title": "New Queue",
-        "delete_confirm": "Are you sure you want to delete this queue? This action cannot be undone.",
-        "delete_title": "Delete Queue",
-        "edit_title": "Edit Queue"
-      },
-      "salutation": {
-        "actions": {
-          "new": "New Salutation"
-        },
-        "create_title": "New Salutation",
-        "delete_confirm": "Are you sure you want to delete this salutation? This action cannot be undone.",
-        "delete_title": "Delete Salutation",
-        "edit_title": "Edit Salutation"
-      },
-      "service": {
-        "actions": {
-          "new": "New Service"
-        },
-        "create_title": "New Service",
-        "delete_confirm": "Are you sure you want to delete this service? This action cannot be undone.",
-        "delete_title": "Delete Service",
-        "edit_title": "Edit Service"
-      },
-      "sla": {
-        "actions": {
-          "new": "New Sla"
-        },
-        "create_title": "New Sla",
-        "delete_confirm": "Are you sure you want to delete this sla? This action cannot be undone.",
-        "delete_title": "Delete Sla",
-        "edit_title": "Edit Sla"
-      },
-      "state": {
-        "actions": {
-          "new": "New State"
-        },
-        "create_title": "New State",
-        "delete_confirm": "Are you sure you want to delete this state? This action cannot be undone.",
-        "delete_title": "Delete State",
-        "edit_title": "Edit State"
-      },
-      "type": {
-        "actions": {
-          "new": "New Type"
-        },
-        "create_title": "New Type",
-        "delete_confirm": "Are you sure you want to delete this type? This action cannot be undone.",
-        "delete_title": "Delete Type",
-        "edit_title": "Edit Type"
-      }
     },
     "statuses": {
       "invalid": "Invalid",

@@ -1,10 +1,10 @@
 module:
-    name: mail_account
-    singular: Mail_account
-    plural: Mail_accounts
-    table: mail_account
-    description: Manage Mail_accounts
-    route_prefix: /admin/dynamic/mail_account
+  name: mail_account
+  singular: "@admin.modules.mail_account.singular|Mail Account"
+  plural: "@admin.modules.mail_account.plural|Inbound Mail Accounts"
+  table: mail_account
+  description: "@admin.modules.mail_account.description|Manage inbound mail accounts"
+  route_prefix: /admin/dynamic/mail_account
 fields:
     - name: id
       type: integer
@@ -22,7 +22,7 @@ fields:
     - name: login
       type: string
       db_column: login
-      label: Login
+      label: "@admin.modules.mail_account.fields.login"
       required: true
       searchable: true
       sortable: true
@@ -32,11 +32,11 @@ fields:
       options: []
       validation: ""
       help: ""
-      placeholder: "support@example.com"
+      placeholder: "@admin.modules.mail_account.placeholders.login"
     - name: pw
       type: password
       db_column: pw
-      label: Pw
+      label: "@admin.modules.mail_account.fields.pw"
       required: true
       searchable: true
       sortable: true
@@ -46,11 +46,11 @@ fields:
       options: []
       validation: ""
       help: ""
-      placeholder: "App password or OAuth token"
+      placeholder: "@admin.modules.mail_account.placeholders.pw"
     - name: host
       type: string
       db_column: host
-      label: Host
+      label: "@admin.modules.mail_account.fields.host"
       required: true
       searchable: true
       sortable: true
@@ -60,11 +60,11 @@ fields:
       options: []
       validation: ""
       help: ""
-      placeholder: "imap.mail.example"
+      placeholder: "@admin.modules.mail_account.placeholders.host"
     - name: account_type
       type: select
       db_column: account_type
-      label: Account Type
+      label: "@admin.modules.mail_account.fields.account_type"
       required: true
       searchable: true
       sortable: true
@@ -74,22 +74,22 @@ fields:
       options:
         - group: POP3
           value: pop3
-          label: POP3 (Standard)
+          label: "@admin.modules.mail_account.options.account_type.pop3"
         - group: POP3
           value: pop3s
-          label: POP3S (SSL/TLS)
+          label: "@admin.modules.mail_account.options.account_type.pop3s"
         - group: IMAP
           value: imap
-          label: IMAP (Standard)
+          label: "@admin.modules.mail_account.options.account_type.imap"
         - group: IMAP
           value: imaps
-          label: IMAPS (SSL/TLS)
+          label: "@admin.modules.mail_account.options.account_type.imaps"
       validation: ""
       help: "Select the protocol that matches the mailbox configuration."
     - name: queue_id
       type: integer
       db_column: queue_id
-      label: Queue
+      label: "@admin.modules.mail_account.fields.queue_id"
       required: true
       searchable: false
       sortable: true
@@ -98,8 +98,8 @@ fields:
       default: null
       options: []
       validation: ""
-      help: "Assign inbound messages to this queue."
-      placeholder: "Start typing a queue name"
+      help: "@admin.modules.mail_account.help.queue_id"
+      placeholder: "@admin.modules.mail_account.placeholders.queue_id"
       lookup_table: queue
       lookup_key: id
       lookup_display: name
@@ -108,7 +108,7 @@ fields:
     - name: dispatching_mode
       type: select
       db_column: ""
-      label: Dispatching Mode
+      label: "@admin.modules.mail_account.fields.dispatching_mode"
       required: true
       searchable: false
       sortable: false
@@ -117,16 +117,16 @@ fields:
       default: queue
       options:
         - value: queue
-          label: Route to assigned queue
+          label: "@admin.modules.mail_account.options.dispatching_mode.queue"
         - value: from
-          label: Route by From header
+          label: "@admin.modules.mail_account.options.dispatching_mode.from"
       validation: ""
       help: "Queue routing honors the queue dropdown; From-based routing defers to dispatch rules."
       virtual: true
     - name: trusted
       type: integer
       db_column: trusted
-      label: Trusted
+      label: "@admin.modules.mail_account.fields.trusted"
       required: false
       searchable: false
       sortable: true
@@ -139,7 +139,7 @@ fields:
     - name: allow_trusted_headers
       type: boolean
       db_column: ""
-      label: Allow Trusted Headers
+      label: "@admin.modules.mail_account.fields.allow_trusted_headers"
       required: false
       searchable: false
       sortable: false
@@ -148,12 +148,12 @@ fields:
       default: false
       options: []
       validation: ""
-      help: "Accept queue overrides from X-Znuny-Dest / X-GOTRS headers for this mailbox."
+      help: "@admin.modules.mail_account.help.allow_trusted_headers"
       virtual: true
     - name: imap_folder
       type: string
       db_column: imap_folder
-      label: Imap Folder
+      label: "@admin.modules.mail_account.fields.imap_folder"
       required: false
       searchable: true
       sortable: true
@@ -163,11 +163,11 @@ fields:
       options: []
       validation: ""
       help: ""
-      placeholder: "INBOX or INBOX/Support"
+      placeholder: "@admin.modules.mail_account.placeholders.imap_folder"
     - name: comments
       type: string
       db_column: comments
-      label: Comments
+      label: "@admin.modules.mail_account.fields.comments"
       required: false
       searchable: true
       sortable: true
@@ -177,11 +177,11 @@ fields:
       options: []
       validation: ""
       help: ""
-      placeholder: "Optional notes for other admins"
+      placeholder: "@admin.modules.mail_account.placeholders.comments"
     - name: poll_interval_seconds
       type: integer
       db_column: ""
-      label: Poll Interval (seconds)
+      label: "@admin.modules.mail_account.fields.poll_interval_seconds"
       required: false
       searchable: false
       sortable: false
@@ -190,13 +190,13 @@ fields:
       default: 600
       options: []
       validation: ""
-      help: "Override the scheduler interval for this mailbox. Leave 0 to inherit the global cadence."
-      placeholder: "Defaults to 600 seconds"
+      help: "@admin.modules.mail_account.help.poll_interval_seconds"
+      placeholder: "@admin.modules.mail_account.placeholders.poll_interval_seconds"
       virtual: true
     - name: valid_id
       type: integer
       db_column: valid_id
-      label: Validity
+      label: "@admin.modules.mail_account.fields.valid_id"
       required: true
       searchable: false
       sortable: true
@@ -205,7 +205,7 @@ fields:
       default: 1
       options: []
       validation: ""
-      help: "Choose whether this mailbox is active."
+      help: "@admin.modules.mail_account.help.valid_id"
       lookup_table: valid
       lookup_key: id
       lookup_display: name
@@ -214,7 +214,7 @@ fields:
     - name: create_time
       type: datetime
       db_column: create_time
-      label: Create Time
+      label: "@admin.modules.mail_account.fields.create_time"
       required: false
       searchable: false
       sortable: true
@@ -227,7 +227,7 @@ fields:
     - name: create_by
       type: integer
       db_column: create_by
-      label: Create By
+      label: "@admin.modules.mail_account.fields.create_by"
       required: true
       searchable: false
       sortable: true
@@ -235,12 +235,17 @@ fields:
       show_in_form: false
       default: null
       options: []
+      lookup_table: users
+      lookup_key: id
+      lookup_display: login
+      lookup_condition: "1=1"
+      display_as: chip
       validation: ""
       help: ""
     - name: change_time
       type: datetime
       db_column: change_time
-      label: Change Time
+      label: "@admin.modules.mail_account.fields.change_time"
       required: false
       searchable: false
       sortable: true

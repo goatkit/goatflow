@@ -1,14 +1,18 @@
 package postmaster
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
 	"io"
+	"log"
 	"mime/multipart"
 	"strings"
 	"testing"
 	"time"
+
+	sqlmock "github.com/DATA-DOG/go-sqlmock"
 
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/core"
@@ -419,6 +423,176 @@ func TestTicketProcessorFollowUpViaReferences(t *testing.T) {
 	}
 	if resolver.calls[1] != "msg-2@example.com" {
 		t.Fatalf("expected references checked next, got %s", resolver.calls[1])
+	}
+}
+
+func TestTicketProcessorRequiresMessage(t *testing.T) {
+	processor := NewTicketProcessor(&recordingTicketService{})
+	if _, err := processor.Process(context.Background(), nil, nil); err == nil {
+		t.Fatalf("expected error for missing message")
+	}
+}
+
+func TestTicketProcessorMissingQueueRouting(t *testing.T) {
+	svc := &recordingTicketService{}
+	processor := NewTicketProcessor(svc)
+	processor.fallbackQueueID = 0
+	msg := &connector.FetchedMessage{Raw: []byte("Subject: Hi\r\n\r\nBody")}
+	msg.WithAccount(connector.Account{})
+	if _, err := processor.Process(context.Background(), msg, nil); err == nil {
+		t.Fatalf("expected error when routing unavailable")
+	}
+	if svc.calls != 0 {
+		t.Fatalf("expected ticket service not invoked")
+	}
+}
+
+func TestTicketProcessorQueueLookupErrorLogged(t *testing.T) {
+	var buf bytes.Buffer
+	svc := &recordingTicketService{}
+	processor := NewTicketProcessor(
+		svc,
+		WithTicketProcessorLogger(log.New(&buf, "", 0)),
+		WithTicketProcessorQueueLookup(func(ctx context.Context, name string) (int, error) {
+			return 0, errors.New("missing")
+		}),
+	)
+	msg := &connector.FetchedMessage{Raw: []byte("Subject: Hi\r\n\r\nBody")}
+	msg.WithAccount(connector.Account{QueueID: 3})
+	meta := &filters.MessageContext{Annotations: map[string]any{filters.AnnotationQueueNameOverride: "VIP"}}
+	if _, err := processor.Process(context.Background(), msg, meta); err != nil {
+		t.Fatalf("Process returned error: %v", err)
+	}
+	if !strings.Contains(buf.String(), "queue lookup failed") {
+		t.Fatalf("expected queue lookup failure logged, got %q", buf.String())
+	}
+	if svc.input.QueueID != 3 {
+		t.Fatalf("expected account queue fallback, got %d", svc.input.QueueID)
+	}
+}
+
+func TestTicketProcessorFollowUpLookupErrorFallsBackToNew(t *testing.T) {
+	svc := &recordingTicketService{}
+	articleStore := &recordingArticleStore{}
+	processor := NewTicketProcessor(
+		svc,
+		WithTicketProcessorTicketFinder(&stubTicketFinder{err: errors.New("boom")}),
+		WithTicketProcessorArticleStore(articleStore),
+		WithTicketProcessorLogger(log.New(io.Discard, "", 0)),
+	)
+	msg := &connector.FetchedMessage{Raw: []byte("Subject: Re: X\r\n\r\nBody")}
+	msg.WithAccount(connector.Account{QueueID: 2})
+	meta := &filters.MessageContext{Annotations: map[string]any{filters.AnnotationFollowUpTicketNumber: "X"}}
+	res, err := processor.Process(context.Background(), msg, meta)
+	if err != nil {
+		t.Fatalf("Process returned error: %v", err)
+	}
+	if res.Action != "new_ticket" {
+		t.Fatalf("expected new_ticket action, got %s", res.Action)
+	}
+	if svc.calls != 1 {
+		t.Fatalf("expected ticket creation attempted, got %d", svc.calls)
+	}
+	if articleStore.calls != 0 {
+		t.Fatalf("expected no follow-up article stored")
+	}
+}
+
+func TestTicketProcessorReferencesLookupErrorFallsBackToNew(t *testing.T) {
+	svc := &recordingTicketService{}
+	articleStore := &recordingArticleStore{}
+	processor := NewTicketProcessor(
+		svc,
+		WithTicketProcessorMessageLookup(&stubMessageResolver{err: errors.New("fail")}),
+		WithTicketProcessorArticleStore(articleStore),
+		WithTicketProcessorLogger(log.New(io.Discard, "", 0)),
+	)
+	raw := "Subject: Re: Update\r\nIn-Reply-To: <msg@example.com>\r\n\r\nBody"
+	msg := &connector.FetchedMessage{Raw: []byte(raw)}
+	msg.WithAccount(connector.Account{QueueID: 2})
+	res, err := processor.Process(context.Background(), msg, nil)
+	if err != nil {
+		t.Fatalf("Process returned error: %v", err)
+	}
+	if res.Action != "new_ticket" {
+		t.Fatalf("expected new_ticket action, got %s", res.Action)
+	}
+	if svc.calls != 1 {
+		t.Fatalf("expected ticket creation attempted, got %d", svc.calls)
+	}
+	if articleStore.calls != 0 {
+		t.Fatalf("expected no follow-up article stored")
+	}
+}
+
+func TestTicketProcessorFollowUpQueueLookupErrorStillAllows(t *testing.T) {
+	svc := &recordingTicketService{}
+	queueLookup := &stubQueueFinder{err: errors.New("db down")}
+	articleStore := &recordingArticleStore{}
+	processor := NewTicketProcessor(
+		svc,
+		WithTicketProcessorTicketFinder(&stubTicketFinder{ticket: &models.Ticket{ID: 50, QueueID: 7}}),
+		WithTicketProcessorQueueFinder(queueLookup),
+		WithTicketProcessorArticleStore(articleStore),
+	)
+	msg := &connector.FetchedMessage{Raw: []byte("Subject: Follow\r\n\r\nBody")}
+	msg.WithAccount(connector.Account{QueueID: 7})
+	meta := &filters.MessageContext{Annotations: map[string]any{filters.AnnotationFollowUpTicketNumber: "50"}}
+	res, err := processor.Process(context.Background(), msg, meta)
+	if err != nil {
+		t.Fatalf("Process returned error: %v", err)
+	}
+	if res.Action != "follow_up" {
+		t.Fatalf("expected follow_up action, got %s", res.Action)
+	}
+	if articleStore.calls != 1 {
+		t.Fatalf("expected follow-up article stored, got %d", articleStore.calls)
+	}
+	if svc.calls != 0 {
+		t.Fatalf("expected ticket creation skipped")
+	}
+}
+
+func TestStoreAttachmentsSkipsWhenStorageMissing(t *testing.T) {
+	processor := NewTicketProcessor(&recordingTicketService{})
+	attachments := []attachmentPart{{filename: "a.txt", data: []byte("x")}}
+	processor.storeAttachments(context.Background(), 1, 1, attachments)
+}
+
+func TestStoreAttachmentSkipsEmptyData(t *testing.T) {
+	storage := &recordingStorage{}
+	processor := NewTicketProcessor(&recordingTicketService{}, WithTicketProcessorStorage(storage))
+	processor.storeAttachment(context.Background(), 1, 1, attachmentPart{filename: "file.txt"})
+	if len(storage.files) != 0 {
+		t.Fatalf("expected no stored files, got %d", len(storage.files))
+	}
+}
+
+func TestStorageIsDBDetection(t *testing.T) {
+	processor := NewTicketProcessor(&recordingTicketService{})
+	processor.storage = &service.DatabaseStorageService{}
+	if !processor.storageIsDB() {
+		t.Fatalf("expected database storage detection")
+	}
+}
+
+func TestInsertAttachmentRecordUsesProvidedDB(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock setup failed: %v", err)
+	}
+	defer db.Close()
+	processor := NewTicketProcessor(&recordingTicketService{})
+	processor.db = db
+	att := attachmentPart{filename: "file.bin", data: []byte("abc")}
+	mock.ExpectExec("INSERT INTO article_data_mime_attachment").
+		WithArgs(100, "file.bin", "application/octet-stream", int64(len(att.data)), att.data, "attachment", sqlmock.AnyArg(), processor.systemUserID, sqlmock.AnyArg(), processor.systemUserID).
+		WillReturnResult(sqlmock.NewResult(1, 1))
+	if err := processor.insertAttachmentRecord(100, att); err != nil {
+		t.Fatalf("insertAttachmentRecord returned error: %v", err)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Fatalf("sqlmock expectations not met: %v", err)
 	}
 }
 

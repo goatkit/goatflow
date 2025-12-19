@@ -45,6 +45,9 @@ TEST_BACKEND_HOST="${TEST_BACKEND_HOST:-$TEST_BACKEND_SERVICE_HOST}"
 TEST_BACKEND_HOST_PORT="${TEST_BACKEND_HOST_PORT:-$HOST_BACKEND_PORT}"
 BASE_URL="${GOTRS_BACKEND_BASE_URL:-http://${HOST_BACKEND_HOST}:${HOST_BACKEND_PORT}}"
 
+# Default to Playwright container to avoid host installs
+PLAYWRIGHT_USE_CONTAINER="${PLAYWRIGHT_USE_CONTAINER:-1}"
+
 export BACKEND_HOST="$HOST_BACKEND_HOST"
 export BACKEND_PORT="$HOST_BACKEND_PORT"
 export TEST_BACKEND_BASE_URL
@@ -52,6 +55,7 @@ export TEST_BACKEND_SERVICE_HOST
 export TEST_BACKEND_CONTAINER_PORT
 export TEST_BACKEND_HOST
 export TEST_BACKEND_HOST_PORT
+export PLAYWRIGHT_USE_CONTAINER
 
 # Ensure compose includes test database definitions
 DEFAULT_COMPOSE_FILES="$PROJECT_ROOT/docker-compose.yml:$PROJECT_ROOT/docker-compose.testdb.yml"
@@ -1305,17 +1309,64 @@ runComprehensiveBrowserTests().catch(err => {
 });
 EOF
     
-    # Run browser tests if Node.js and Playwright are available
+    # Run browser tests via container when requested to avoid host installs
+    if [ "$PLAYWRIGHT_USE_CONTAINER" = "1" ]; then
+        log "Running Playwright browser tests in container..."
+        local container_log_dir="/workspace${LOG_DIR#$PROJECT_ROOT}"
+        local container_base_url="${TEST_BACKEND_BASE_URL:-http://backend-test:8080}"
+        if ! $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.playwright.yml" run --rm \
+            -e HEADLESS=true \
+            -e BASE_URL="$container_base_url" \
+            -w /workspace \
+            playwright bash -lc "node '$container_log_dir/browser_comprehensive_test.js' > '$container_log_dir/browser_results.json'" >> "$LOG_DIR/playwright_install.log" 2>&1; then
+            warning "Browser tests: SKIPPED (container execution failed)"
+            jq '.evidence.browser_tests.status = "SKIPPED" | .evidence.browser_tests.reason = "playwright_container_failed"' \
+                "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
+            return 0
+        fi
+        if [ -f "$LOG_DIR/browser_results.json" ]; then
+            local browser_results=$(cat "$LOG_DIR/browser_results.json")
+            local total_console_errors=$(echo "$browser_results" | jq '.totalConsoleErrors // 0')
+            local total_missing_elements=$(echo "$browser_results" | jq '.totalMissingElements // 0')
+            jq --argjson results "$browser_results" --arg console_errors "$total_console_errors" --arg missing_elements "$total_missing_elements" \
+                '.evidence.browser_tests.results = $results | .evidence.browser_tests.total_console_errors = ($console_errors | tonumber) | .evidence.browser_tests.total_missing_elements = ($missing_elements | tonumber) | .historical_failure_checks.javascript_console_errors.count = ($console_errors | tonumber) | .historical_failure_checks.missing_ui_elements.count = ($missing_elements | tonumber)' \
+                "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
+            if [ "$total_console_errors" -eq 0 ] && [ "$total_missing_elements" -eq 0 ]; then
+                success "Browser tests: PASS (container)"
+                jq '.evidence.browser_tests.status = "PASS" | .historical_failure_checks.javascript_console_errors.status = "PASS" | .historical_failure_checks.missing_ui_elements.status = "PASS"' \
+                    "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
+                return 0
+            else
+                fail "Browser tests: FAIL (container)"
+                jq '.evidence.browser_tests.status = "FAIL" | .historical_failure_checks.javascript_console_errors.status = "FAIL" | .historical_failure_checks.missing_ui_elements.status = "FAIL"' \
+                    "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
+                return 1
+            fi
+        fi
+        warning "Browser tests: SKIPPED (missing results from container)"
+        jq '.evidence.browser_tests.status = "SKIPPED" | .evidence.browser_tests.reason = "playwright_container_no_results"' \
+            "$evidence_file" > "$evidence_file.tmp" && mv "$evidence_file.tmp" "$evidence_file"
+        return 0
+    fi
+
+    # Run browser tests if Node.js and Playwright are available locally
     if command -v node >/dev/null 2>&1; then
-        # Try to install playwright if not available
+        # Local, writable Playwright install to avoid global permission failures
+        PW_DIR="$LOG_DIR/playwright_local"
+        PW_LOG="$LOG_DIR/playwright_install.log"
+        mkdir -p "$PW_DIR"
+        export PLAYWRIGHT_BROWSERS_PATH="$PW_DIR/browsers"
+        export NODE_PATH="$PW_DIR/node_modules${NODE_PATH:+:$NODE_PATH}"
+        export PATH="$PW_DIR/node_modules/.bin:$PATH"
+
         if ! node -e "require('playwright')" >/dev/null 2>&1; then
             log "Installing Playwright for browser tests..."
-            if npm install -g playwright > "$LOG_DIR/playwright_install.log" 2>&1; then
-                playwright install chromium >> "$LOG_DIR/playwright_install.log" 2>&1
+            if npm install --no-save --prefix "$PW_DIR" playwright > "$PW_LOG" 2>&1; then
+                npx --prefix "$PW_DIR" playwright install chromium >> "$PW_LOG" 2>&1
             fi
         fi
         
-        if node -e "require('playwright')" >/dev/null 2>&1; then
+        if NODE_PATH="$NODE_PATH" node -e "require('playwright')" >/dev/null 2>&1; then
             if HEADLESS=true node "$LOG_DIR/browser_comprehensive_test.js" > "$LOG_DIR/browser_results.json" 2>&1; then
                 local browser_results=$(cat "$LOG_DIR/browser_results.json")
                 local total_console_errors=$(echo "$browser_results" | jq '.totalConsoleErrors // 0')

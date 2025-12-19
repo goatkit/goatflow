@@ -7,12 +7,24 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
-// ApplyBranding stitches salutation and signature around the base body.
-func ApplyBranding(base string, baseIsHTML bool, identity *QueueIdentity) string {
+// RenderContext carries values used to interpolate legacy placeholders.
+type RenderContext struct {
+	CustomerFullName string
+	AgentFirstName   string
+	AgentLastName    string
+}
+
+// ApplyBranding stitches salutation and signature around the base body and expands placeholders.
+func ApplyBranding(base string, baseIsHTML bool, identity *QueueIdentity, ctx *RenderContext) string {
 	if identity == nil {
-		return strings.TrimSpace(base)
+		return strings.TrimSpace(applyPlaceholders(base, ctx))
 	}
-	return composeBody(base, baseIsHTML, identity.SalutationSnippet(), identity.SignatureSnippet())
+	return composeBody(
+		applyPlaceholders(base, ctx),
+		baseIsHTML,
+		snippetWithContext(identity.SalutationSnippet(), ctx),
+		snippetWithContext(identity.SignatureSnippet(), ctx),
+	)
 }
 
 func composeBody(base string, baseIsHTML bool, salutation, signature *Snippet) string {
@@ -69,11 +81,30 @@ func snippetAsHTML(snippet *Snippet) string {
 	return wrapPlainText(snippet.Text)
 }
 
+func snippetWithContext(snippet *Snippet, ctx *RenderContext) *Snippet {
+	if snippet == nil || ctx == nil {
+		return snippet
+	}
+	return &Snippet{Text: applyPlaceholders(snippet.Text, ctx), ContentType: snippet.ContentType}
+}
+
 func textAsHTML(content string, alreadyHTML bool) string {
 	if alreadyHTML {
 		return strings.TrimSpace(content)
 	}
 	return wrapPlainText(content)
+}
+
+func applyPlaceholders(value string, ctx *RenderContext) string {
+	if ctx == nil {
+		ctx = &RenderContext{}
+	}
+	replacer := strings.NewReplacer(
+		"<OTRS_CUSTOMER_REALNAME>", strings.TrimSpace(ctx.CustomerFullName),
+		"<OTRS_Agent_UserFirstname>", strings.TrimSpace(ctx.AgentFirstName),
+		"<OTRS_Agent_UserLastname>", strings.TrimSpace(ctx.AgentLastName),
+	)
+	return strings.TrimSpace(replacer.Replace(value))
 }
 
 func wrapPlainText(value string) string {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
+	"github.com/gotrs-io/gotrs-ce/internal/cache"
 	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
@@ -22,6 +23,7 @@ type options struct {
 	Jobs         []*models.ScheduledJob
 	Location     *time.Location
 	ReminderHub  notifications.Hub
+	Cache        *cache.RedisCache
 }
 
 // Option applies configuration to the scheduler service.
@@ -98,5 +100,12 @@ func WithLocation(loc *time.Location) Option {
 func WithReminderHub(h notifications.Hub) Option {
 	return func(o *options) {
 		o.ReminderHub = h
+	}
+}
+
+// WithCache injects the Redis/Valkey cache client used for status persistence.
+func WithCache(c *cache.RedisCache) Option {
+	return func(o *options) {
+		o.Cache = c
 	}
 }

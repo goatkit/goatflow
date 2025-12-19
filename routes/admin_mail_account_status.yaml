@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: RouteGroup
+metadata:
+  name: admin-mail-account-status
+  description: "Mail account poll status endpoints"
+  namespace: default
+  enabled: true
+spec:
+  prefix: /admin
+  middleware:
+    - auth
+    - admin
+  routes:
+    - path: /mail-accounts/:id/poll-status
+      method: GET
+      handler: HandleMailAccountPollStatus
+      description: "Fetch poll status for a mail account"
+    - path: /dynamic/mail_account/:id/poll-status
+      method: GET
+      handler: HandleMailAccountPollStatus
+      description: "Fetch poll status for a mail account (dynamic path)"

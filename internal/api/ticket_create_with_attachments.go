@@ -429,26 +429,27 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 		}
 	}
 
+	actorID := int(createdBy)
+	if v, ok := c.Get("user_id"); ok {
+		switch t := v.(type) {
+		case int:
+			actorID = t
+		case int64:
+			actorID = int(t)
+		case uint:
+			actorID = int(t)
+		case uint64:
+			actorID = int(t)
+		case string:
+			if n, err := strconv.Atoi(t); err == nil {
+				actorID = n
+			}
+		}
+	}
+
 	// Record ticket creation history entry
 	if ticketRepo != nil && !ticketSideEffectsDisabled() {
 		recorder := history.NewRecorder(ticketRepo)
-		actorID := int(createdBy)
-		if v, ok := c.Get("user_id"); ok {
-			switch t := v.(type) {
-			case int:
-				actorID = t
-			case int64:
-				actorID = int(t)
-			case uint:
-				actorID = int(t)
-			case uint64:
-				actorID = int(t)
-			case string:
-				if n, err := strconv.Atoi(t); err == nil {
-					actorID = n
-				}
-			}
-		}
 
 		var historyTicket *models.Ticket = ticket
 		if snapshot, err := ticketRepo.GetByID(uint(ticket.ID)); err == nil {
@@ -488,6 +489,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 			if cfg := config.Get(); cfg != nil {
 				emailCfg = &cfg.Email
 			}
+			renderCtx := notifications.BuildRenderContext(context.Background(), db, req.CustomerUserID, actorID)
 			branding, brandErr := notifications.PrepareQueueEmail(
 				context.Background(),
 				db,
@@ -495,6 +497,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 				body,
 				utils.IsHTML(body),
 				emailCfg,
+				renderCtx,
 			)
 			if brandErr != nil {
 				log.Printf("Queue identity lookup failed for ticket %d: %v", ticket.ID, brandErr)

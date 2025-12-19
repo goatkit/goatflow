@@ -543,6 +543,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 			if cfg := config.Get(); cfg != nil {
 				emailCfg = &cfg.Email
 			}
+			renderCtx := notifications.BuildRenderContext(context.Background(), db, customerUserID.String, int(userID))
 			branding, brandErr := notifications.PrepareQueueEmail(
 				context.Background(),
 				db,
@@ -550,6 +551,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 				body,
 				utils.IsHTML(body),
 				emailCfg,
+				renderCtx,
 			)
 			if brandErr != nil {
 				log.Printf("Queue identity lookup failed for ticket %d: %v", ticketID, brandErr)

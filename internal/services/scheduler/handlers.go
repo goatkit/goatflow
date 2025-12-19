@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -107,7 +108,7 @@ func (s *Service) handleEmailPoll(ctx context.Context, job *models.ScheduledJob)
 				errMu.Lock()
 				fetchErrs = append(fetchErrs, ferr)
 				errMu.Unlock()
-				s.recordEmailPollResult(account, false)
+				s.recordEmailPollResult(ctx, account, 0, false, ferr)
 				return
 			}
 			if err := fetcher.Fetch(ctx, account, s.emailHandler); err != nil {
@@ -115,10 +116,10 @@ func (s *Service) handleEmailPoll(ctx context.Context, job *models.ScheduledJob)
 				errMu.Lock()
 				fetchErrs = append(fetchErrs, err)
 				errMu.Unlock()
-				s.recordEmailPollResult(account, false)
+				s.recordEmailPollResult(ctx, account, 0, false, err)
 				return
 			}
-			s.recordEmailPollResult(account, true)
+			s.recordEmailPollResult(ctx, account, 0, true, nil)
 		}(model)
 	}
 
@@ -141,12 +142,48 @@ func (s *Service) startEmailPollRun(activeAccounts int) func() {
 	return s.metrics.recordRun(activeAccounts)
 }
 
-func (s *Service) recordEmailPollResult(account connector.Account, success bool) {
+func (s *Service) recordEmailPollResult(ctx context.Context, account connector.Account, processed int, success bool, err error) {
 	s.markAccountPolled(account.ID, s.now())
-	if s.metrics == nil {
+	if s.metrics != nil {
+		s.metrics.recordAccount(account, success)
+	}
+	// Persist lightweight status to Valkey so UI can surface poll health.
+	if s.valkey == nil {
 		return
 	}
-	s.metrics.recordAccount(account, success)
+	status := map[string]interface{}{
+		"account_id":       account.ID,
+		"last_poll_at":     s.now().UTC(),
+		"last_status":      boolToStatus(success),
+		"last_error":       "",
+		"messages_fetched": processed,
+		"next_poll_eta":    nextPollETA(account, s.now()),
+	}
+	if err != nil {
+		status["last_error"] = err.Error()
+	}
+	key := s.valkeyStatusKey(account.ID)
+	// best effort: ignore errors
+	_ = s.valkey.Set(ctx, key, status, 24*time.Hour)
+}
+
+func boolToStatus(ok bool) string {
+	if ok {
+		return "ok"
+	}
+	return "error"
+}
+
+func nextPollETA(account connector.Account, now time.Time) time.Time {
+	interval := account.PollInterval
+	if interval <= 0 {
+		return time.Time{}
+	}
+	return now.Add(interval).UTC()
+}
+
+func (s *Service) valkeyStatusKey(accountID int) string {
+	return fmt.Sprintf("mail_poll_status:%d", accountID)
 }
 
 func (s *Service) selectEmailPollAccounts(accounts []*models.EmailAccount, count int, now time.Time) []*models.EmailAccount {

@@ -50,6 +50,10 @@
         0%, 100% { background-color: transparent; }
         50% { background-color: rgba(239, 68, 68, 0.2); }
     }
+
+    .mail-row-selected {
+        background-color: rgba(59, 130, 246, 0.08);
+    }
 </style>
 {% endblock %}
 
@@ -112,7 +116,7 @@
     </div>
 
     <!-- Data Table -->
-    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
         {% if features.Search %}
         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
             <div class="flex flex-col sm:flex-row gap-4">
@@ -423,10 +427,11 @@
                 </thead>
                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {% for item in items %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" 
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {% if module.Name == 'mail_account' %}cursor-pointer{% endif %}" 
                         data-id="{{ item.id }}" 
                         data-valid_id="{{ item.valid_id|default:'1' }}"
-                        data-group_id="{{ item.group_id|default:'' }}">
+                        data-group_id="{{ item.group_id|default:'' }}"
+                        {% if module.Name == 'mail_account' %}onclick="handleMailAccountRowSelect('{{ item.id }}', this, event)"{% endif %}>
                         <td class="px-3 py-4">
                             <input type="checkbox" class="item-checkbox rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" 
                                    value="{{ item.id }}" onchange="updateBulkActions()">
@@ -635,7 +640,38 @@
                 </tbody>
             </table>
         </div>
-        
+
+        {% if module.Name == "mail_account" %}
+        {% set mailStatusStatusLabel = t("admin.modules.mail_account.status.status") %}
+        {% set mailStatusLastPollLabel = t("admin.modules.mail_account.status.last_poll") %}
+        {% set mailStatusMessagesLabel = t("admin.modules.mail_account.status.messages_fetched") %}
+        {% set mailStatusNextPollLabel = t("admin.modules.mail_account.status.next_poll") %}
+        <div id="mailStatusPane" class="hidden mt-4 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusStatusLabel == "admin.modules.mail_account.status.status" %}Status{% else %}{{ mailStatusStatusLabel }}{% endif %}</div>
+                    <div id="mailStatusPaneBadge" class="text-sm font-semibold text-gray-900 dark:text-gray-50">--</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusLastPollLabel == "admin.modules.mail_account.status.last_poll" %}Last poll{% else %}{{ mailStatusLastPollLabel }}{% endif %}</div>
+                    <div id="mailStatusPaneLastPoll" class="text-sm text-gray-900 dark:text-gray-50">--</div>
+                </div>
+            </div>
+            <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusMessagesLabel == "admin.modules.mail_account.status.messages_fetched" %}Messages fetched{% else %}{{ mailStatusMessagesLabel }}{% endif %}</div>
+                    <div id="mailStatusPaneMessages" class="text-gray-900 dark:text-gray-50">--</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusNextPollLabel == "admin.modules.mail_account.status.next_poll" %}Next poll{% else %}{{ mailStatusNextPollLabel }}{% endif %}</div>
+                    <div id="mailStatusPaneNextPoll" class="text-gray-900 dark:text-gray-50">--</div>
+                </div>
+            </div>
+            <div class="mt-2 text-xs text-red-600 dark:text-red-400" id="mailStatusPaneError"></div>
+            <div class="mt-1 text-xs text-amber-600 dark:text-amber-400" id="mailStatusPaneStale"></div>
+        </div>
+        {% endif %}
+
         <!-- Pagination -->
         {% if pagination and pagination.totalPages > 1 %}
         <div class="mt-4 flex items-center justify-between">
@@ -724,6 +760,32 @@
                     <h3 id="modalTitle" class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 mb-4">
                         New {{ module.Singular }}
                     </h3>
+                    {% if module.Name == "mail_account" %}
+                    <div id="mailStatusCard" class="hidden mb-4 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusStatusLabel == "admin.modules.mail_account.status.status" %}Status{% else %}{{ mailStatusStatusLabel }}{% endif %}</div>
+                                <div id="mailStatusBadge" class="text-sm font-semibold text-gray-900 dark:text-gray-50">--</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusLastPollLabel == "admin.modules.mail_account.status.last_poll" %}Last poll{% else %}{{ mailStatusLastPollLabel }}{% endif %}</div>
+                                <div id="mailStatusLastPoll" class="text-sm text-gray-900 dark:text-gray-50">--</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusMessagesLabel == "admin.modules.mail_account.status.messages_fetched" %}Messages fetched{% else %}{{ mailStatusMessagesLabel }}{% endif %}</div>
+                                <div id="mailStatusMessages" class="text-gray-900 dark:text-gray-50">--</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusNextPollLabel == "admin.modules.mail_account.status.next_poll" %}Next poll{% else %}{{ mailStatusNextPollLabel }}{% endif %}</div>
+                                <div id="mailStatusNextPoll" class="text-gray-900 dark:text-gray-50">--</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-xs text-red-600 dark:text-red-400" id="mailStatusError"></div>
+                        <div class="mt-1 text-xs text-amber-600 dark:text-amber-400" id="mailStatusStale"></div>
+                    </div>
+                    {% endif %}
                     <div class="mt-4 space-y-4">
                         {% for field in fields %}
                         {% if field.ShowInForm %}
@@ -953,7 +1015,56 @@ var moduleName = '{{ module.Name }}';
 // Support both /admin/users and /admin/dynamic/users paths
 var currentPath = window.location.pathname;
 var API_BASE = currentPath.includes('/dynamic/') ? '/admin/dynamic/' + moduleName : '/admin/' + moduleName;
+// Friendly alias for mail accounts uses a hyphenated path; align API_BASE so fetch hits the routed alias
+if (moduleName === 'mail_account' && currentPath.includes('/mail-accounts')) {
+    API_BASE = '/admin/mail-accounts';
+}
 var currentEditId = null;
+
+// Mail status labels with fallback to plain English when translation keys leak through
+const mailStatusLabels = {
+    ok: '{{ t("admin.modules.mail_account.status.ok") }}',
+    error: '{{ t("admin.modules.mail_account.status.error") }}',
+    no_data: '{{ t("admin.modules.mail_account.status.no_data") }}',
+    stale: '{{ t("admin.modules.mail_account.status.stale") }}',
+    unavailable: '{{ t("admin.modules.mail_account.status.unavailable") }}'
+};
+const mailStatusFallbacks = {
+    ok: 'OK',
+    error: 'Error',
+    no_data: 'No poll yet',
+    stale: 'No recent poll',
+    unavailable: 'Status unavailable'
+};
+function translateMailStatusLabel(key) {
+    const val = mailStatusLabels[key];
+    if (!val) return mailStatusFallbacks[key] || key;
+    if (val.indexOf('admin.modules.mail_account.status') === 0) {
+        return mailStatusFallbacks[key] || key;
+    }
+    return val;
+}
+
+function showGuruFromPayload(status, data, task) {
+    if (typeof showGuruMeditation !== 'function') {
+        return;
+    }
+    const code = `0000${('0000' + status).slice(-4)}.HTTPERR0`;
+    const details = { task: task || moduleName.toUpperCase(), location: currentPath };
+    if (data && data.guru_meditation) {
+        showGuruMeditation(
+            data.guru_meditation.code || code,
+            data.guru_meditation.message || data.error || data.message || `HTTP ${status} ERROR`,
+            {
+                task: data.guru_meditation.task || details.task,
+                location: data.guru_meditation.location || details.location
+            }
+        );
+        return;
+    }
+    const message = data && (data.error || data.message) ? data.error || data.message : `HTTP ${status} ERROR`;
+    showGuruMeditation(code, message, details);
+}
 
 // Debug logging
 console.log('Module Name:', moduleName);
@@ -965,9 +1076,16 @@ function openCreateModal() {
     document.getElementById('modalTitle').textContent = 'New {{ module.Singular }}';
     document.getElementById('moduleForm').reset();
     if (moduleName === 'mail_account') {
+        resetMailAccountStatus('modal');
+    }
+    if (moduleName === 'mail_account') {
         const accountSelect = document.getElementById('account_type');
         if (accountSelect && !accountSelect.value) {
             accountSelect.value = 'pop3';
+        }
+        const dispatchSelect = document.getElementById('dispatching_mode');
+        if (dispatchSelect) {
+            dispatchSelect.value = 'queue';
         }
         const pollInput = document.getElementById('poll_interval_seconds');
         if (pollInput) {
@@ -993,9 +1111,19 @@ function editItem(id) {
             'Accept': 'application/json'
         }
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+    .then(async response => {
+        let data = null;
+        try {
+            data = await response.json();
+        } catch (e) {}
+
+        if (!response.ok) {
+            showGuruFromPayload(response.status, data, `${moduleName.toUpperCase()}.GET`);
+            showToast((data && (data.error || data.message)) || 'Failed to load item', 'error');
+            return;
+        }
+
+        if (data && data.success) {
             // Populate form fields
             {% for field in fields %}
             {% if field.ShowInForm %}
@@ -1056,8 +1184,19 @@ function editItem(id) {
             openModal();
             if (moduleName === 'mail_account') {
                 updateMailAccountFieldVisibility();
+                loadMailAccountStatus(id, 'modal');
             }
+            return;
         }
+
+        if (data) {
+            showGuruFromPayload(response.status, data, `${moduleName.toUpperCase()}.GET`);
+        }
+        showToast((data && (data.error || data.message)) || 'Failed to load item', 'error');
+    })
+    .catch(err => {
+        showGuruFromPayload(500, { error: err.message }, `${moduleName.toUpperCase()}.GET`);
+        showToast('Failed to load item', 'error');
     });
 }
 
@@ -1099,15 +1238,33 @@ function saveItem(event) {
         },
         body: new URLSearchParams(formData)
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+    .then(async response => {
+        let data = null;
+        try {
+            data = await response.json();
+        } catch (e) {}
+
+        if (!response.ok) {
+            showGuruFromPayload(response.status, data, `${moduleName.toUpperCase()}.${method}`);
+            showToast((data && (data.error || data.message)) || 'An error occurred', 'error');
+            return;
+        }
+
+        if (data && data.success) {
             closeModal();
             showToast(data.message, 'success');
             setTimeout(() => location.reload(), 1000);
-        } else {
-            showToast(data.error || 'An error occurred', 'error');
+            return;
         }
+
+        if (data) {
+            showGuruFromPayload(response.status, data, `${moduleName.toUpperCase()}.${method}`);
+        }
+        showToast((data && (data.error || data.message)) || 'An error occurred', 'error');
+    })
+    .catch(err => {
+        showGuruFromPayload(500, { error: err.message }, `${moduleName.toUpperCase()}.${method}`);
+        showToast('An error occurred', 'error');
     });
 }
 
@@ -2448,6 +2605,143 @@ function handleInlineEditKey(event, inputElement) {
     }
 }
 
+function handleMailAccountRowSelect(id, row, event) {
+    if (event) {
+        const target = event.target;
+        if (target && (target.closest('input') || target.closest('button') || target.closest('a') || target.closest('svg'))) {
+            return;
+        }
+    }
+    selectedMailAccountId = id;
+    document.querySelectorAll('tbody tr[data-id]').forEach(r => r.classList.remove('mail-row-selected'));
+    if (row) {
+        row.classList.add('mail-row-selected');
+    }
+    loadMailAccountStatus(id, 'pane');
+}
+
+let selectedMailAccountId = null;
+
+function getMailStatusElements(scope) {
+    const cardId = scope === 'pane' ? 'mailStatusPane' : 'mailStatusCard';
+    const badgeId = scope === 'pane' ? 'mailStatusPaneBadge' : 'mailStatusBadge';
+    const lastPollId = scope === 'pane' ? 'mailStatusPaneLastPoll' : 'mailStatusLastPoll';
+    const messagesId = scope === 'pane' ? 'mailStatusPaneMessages' : 'mailStatusMessages';
+    const nextPollId = scope === 'pane' ? 'mailStatusPaneNextPoll' : 'mailStatusNextPoll';
+    const errId = scope === 'pane' ? 'mailStatusPaneError' : 'mailStatusError';
+    const staleId = scope === 'pane' ? 'mailStatusPaneStale' : 'mailStatusStale';
+    return {
+        card: document.getElementById(cardId),
+        badge: document.getElementById(badgeId),
+        lastPoll: document.getElementById(lastPollId),
+        messages: document.getElementById(messagesId),
+        nextPoll: document.getElementById(nextPollId),
+        errEl: document.getElementById(errId),
+        staleEl: document.getElementById(staleId)
+    };
+}
+
+function resetMailAccountStatus(scope = 'modal') {
+    const els = getMailStatusElements(scope);
+    if (!els.card) return;
+    els.card.classList.add('hidden');
+    if (els.badge) els.badge.textContent = '--';
+    if (els.lastPoll) els.lastPoll.textContent = '--';
+    if (els.messages) els.messages.textContent = '--';
+    if (els.nextPoll) els.nextPoll.textContent = '--';
+    if (els.errEl) els.errEl.textContent = '';
+    if (els.staleEl) els.staleEl.textContent = '';
+}
+
+function loadMailAccountStatus(accountId, scope = 'modal') {
+    const els = getMailStatusElements(scope);
+    if (!els.card || !accountId) return;
+    resetMailAccountStatus(scope);
+    fetch(`/admin/mail-accounts/${accountId}/poll-status`, {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(resp => resp.json().catch(() => ({})))
+    .then(payload => {
+        if (!payload || !payload.success) {
+            renderMailAccountStatus(null, true, scope);
+            return;
+        }
+        renderMailAccountStatus(payload.data || null, false, scope);
+    })
+    .catch(() => {
+        renderMailAccountStatus(null, true, scope);
+    });
+}
+
+function renderMailAccountStatus(status, errored, scope = 'modal') {
+    const els = getMailStatusElements(scope);
+    if (!els.card) return;
+    els.card.classList.remove('hidden');
+
+    if (errored) {
+        if (els.badge) {
+            els.badge.textContent = translateMailStatusLabel('unavailable');
+            els.badge.className = 'text-sm font-semibold text-amber-700 dark:text-amber-400';
+        }
+        if (els.errEl) {
+            els.errEl.textContent = translateMailStatusLabel('error');
+        }
+        return;
+    }
+
+    if (!status) {
+        if (els.badge) {
+            els.badge.textContent = translateMailStatusLabel('no_data');
+            els.badge.className = 'text-sm font-semibold text-gray-600 dark:text-gray-300';
+        }
+        if (els.lastPoll) els.lastPoll.textContent = '--';
+        if (els.messages) els.messages.textContent = '--';
+        if (els.nextPoll) els.nextPoll.textContent = '--';
+        return;
+    }
+
+    const ok = status.last_status === 'ok';
+    if (els.badge) {
+        els.badge.textContent = translateMailStatusLabel(ok ? 'ok' : 'error');
+        els.badge.className = ok ? 'text-sm font-semibold text-green-700 dark:text-green-400' : 'text-sm font-semibold text-red-700 dark:text-red-400';
+    }
+
+    if (els.lastPoll && status.last_poll_at) {
+        els.lastPoll.textContent = formatMailStatusTime(status.last_poll_at);
+    }
+    if (els.messages && status.messages_fetched !== undefined && status.messages_fetched !== null) {
+        els.messages.textContent = status.messages_fetched;
+    }
+    if (els.nextPoll && status.next_poll_eta) {
+        els.nextPoll.textContent = formatMailStatusTime(status.next_poll_eta);
+    }
+    if (els.errEl) {
+        els.errEl.textContent = status.last_error || '';
+    }
+
+    if (els.staleEl && status.last_poll_at) {
+        const last = new Date(status.last_poll_at).getTime();
+        const now = Date.now();
+        const staleCutoff = 45 * 60 * 1000; // 45 minutes
+        if (now - last > staleCutoff) {
+            els.staleEl.textContent = translateMailStatusLabel('stale');
+        }
+    }
+}
+
+function formatMailStatusTime(value) {
+    try {
+        const dt = new Date(value);
+        if (!isNaN(dt.getTime())) {
+            return dt.toLocaleString();
+        }
+    } catch (e) {}
+    return '--';
+}
+
 // Click outside to save inline edit
 document.addEventListener('click', function(e) {
     if (currentEditingElement) {
@@ -2464,6 +2758,9 @@ document.addEventListener('DOMContentLoaded', function() {
     initSavedFilters();
     initInlineEdit();
     initTypeaheadFields();
+    if (moduleName === 'mail_account') {
+        initMailAccountRowSelection();
+    }
 });
 
 function updateMailAccountFieldVisibility() {
@@ -2495,6 +2792,17 @@ if (moduleName === 'mail_account') {
         }
         updateMailAccountFieldVisibility();
     });
+}
+
+function initMailAccountRowSelection() {
+    const rows = document.querySelectorAll('tbody tr[data-id]');
+    if (!rows || rows.length === 0) {
+        return;
+    }
+    rows.forEach(row => {
+        row.addEventListener('click', (e) => handleMailAccountRowSelect(row.getAttribute('data-id'), row, e));
+    });
+    handleMailAccountRowSelect(rows[0].getAttribute('data-id'), rows[0]);
 }
 
 // ESC key to close modals and menus

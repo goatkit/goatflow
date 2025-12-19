@@ -17,7 +17,7 @@ type EmailBranding struct {
 }
 
 // PrepareQueueEmail injects queue identity details into the outgoing body and headers.
-func PrepareQueueEmail(ctx context.Context, db *sql.DB, queueID int, baseBody string, baseIsHTML bool, cfg *config.EmailConfig) (*EmailBranding, error) {
+func PrepareQueueEmail(ctx context.Context, db *sql.DB, queueID int, baseBody string, baseIsHTML bool, cfg *config.EmailConfig, renderCtx *RenderContext) (*EmailBranding, error) {
 	fallbackEnvelope, fallbackHeader := DefaultFallbacks(cfg)
 	var (
 		identity *QueueIdentity
@@ -27,9 +27,9 @@ func PrepareQueueEmail(ctx context.Context, db *sql.DB, queueID int, baseBody st
 		identity, err = ResolveQueueIdentity(ctx, db, queueID)
 	}
 
-	finalBody := strings.TrimSpace(baseBody)
+	finalBody := strings.TrimSpace(applyPlaceholders(baseBody, renderCtx))
 	if identity != nil {
-		finalBody = ApplyBranding(baseBody, baseIsHTML, identity)
+		finalBody = ApplyBranding(baseBody, baseIsHTML, identity, renderCtx)
 	}
 
 	envelope := EnvelopeAddress(identity, fallbackEnvelope)

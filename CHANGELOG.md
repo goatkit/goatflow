@@ -8,6 +8,11 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 
 ### Added
 - Inbound email pipeline: POP3 connector factory, postmaster processor, ticket token filters, external ticket rules example, and mail account metadata/tests.
+- Admin mail account poll status API/routes backed by Valkey cache.
+- SMTP4Dev integration suite covering POP/SMTP roundtrips (attachments, threading, TLS/STARTTLS/SMTPS, concurrency) with minimal smtp4dev test client.
+- POP3 fetcher resilience + mail queue task delivery/backoff cleanup coverage for SMTP sink flows.
+- Notifications render context helper to populate agent/customer names for templates.
+- Unit tests for filter chain, postmaster service, mail queue repository ordering, and email queue cleanup.
 - Scheduler jobs CLI (`cmd/goats/scheduler_jobs`) with metrics publishing.
 - Admin customer company create POST route at `/customer/companies/new`.
 - Queue meta partial for ticket list/queue UI and updated templates.

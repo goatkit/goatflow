@@ -1,61 +1,67 @@
 {
   "admin": {
-    "actions": "Aktionen",
-    "common": {
-      "actions": {
-        "cancel": "Abbrechen",
-        "create": "Erstellen",
-        "delete": "Löschen",
-        "delete_selected": "Ausgewählte löschen",
-        "edit": "Bearbeiten",
-        "export_csv": "CSV exportieren",
-        "export_selected": "Ausgewählte exportieren",
-        "import_csv": "CSV importieren",
-        "new": "Neu",
-        "save": "Speichern",
-        "toggle_status": "Status umschalten",
-        "update": "Aktualisieren"
-      },
-      "total": "Gesamt",
-      "refresh": "Aktualisieren",
-      "filters": {
-        "active": "Aktiv",
-        "active_queues": "Aktive Warteschlangen",
-        "active_users": "Aktive Benutzer",
-        "agents": "Agenten",
-        "clear_all": "Alle löschen",
-        "closed": "Geschlossen",
-        "email_queues": "E-Mail-Warteschlangen",
-        "inactive": "Inaktiv",
-        "inactive_users": "Inaktive Benutzer",
-        "name_required": "Bitte geben Sie einen Namen für das Filterset ein",
-        "open": "Offen",
-        "pending": "Ausstehend",
-        "saved_sets": "Gespeicherte Filtersets",
-        "set_name_placeholder": "Filtersetnamen eingeben..."
-      },
-      "pagination": {
-        "next": "Weiter",
-        "per_page": "pro Seite",
-        "previous": "Zurück",
-        "show": "Zeige"
-      },
-      "search": {
-        "placeholder": "Suchen..."
-      },
-      "selected": "ausgewählt",
-      "status": {
-        "active": "Aktiv",
-        "inactive": "Inaktiv",
-        "invalid": "Ungültig",
-        "valid": "Gültig"
-      }
-    },
-    "filters": {
-      "all_statuses": "Alle Status",
-      "all_groups": "Alle Gruppen"
-    },
     "modules": {
+      "mail_account": {
+        "singular": "Mailkonto",
+        "plural": "Eingehende Mailkonten",
+        "description": "E-Mail-Eingangskonten verwalten",
+        "fields": {
+          "login": "Login",
+          "pw": "Passwort",
+          "host": "Host",
+          "account_type": "Kontotyp",
+          "queue_id": "Warteschlange",
+          "dispatching_mode": "Zustellmodus",
+          "trusted": "Vertrauenswürdig",
+          "allow_trusted_headers": "Vertrauenswürdige Header erlauben",
+          "imap_folder": "IMAP-Ordner",
+          "comments": "Kommentare",
+          "poll_interval_seconds": "Abrufintervall (Sekunden)",
+          "valid_id": "Gültigkeit",
+          "create_time": "Erstellt am",
+          "create_by": "Erstellt von",
+          "change_time": "Geändert am"
+        },
+        "help": {
+          "queue_id": "Eingehende Nachrichten dieser Warteschlange zuweisen.",
+          "allow_trusted_headers": "Akzeptiert Warteschlangen-Overrides aus X-Znuny-Dest / X-GOTRS Headern für dieses Postfach.",
+          "poll_interval_seconds": "Abrufintervall für dieses Postfach überschreiben. 0 übernimmt das globale Intervall.",
+          "valid_id": "Bestimmt, ob dieses Postfach aktiv ist."
+        },
+        "placeholders": {
+          "login": "support@example.com",
+          "pw": "App-Passwort oder OAuth-Token",
+          "host": "imap.mail.example",
+          "queue_id": "Warteschlangen-Namen eingeben",
+          "imap_folder": "INBOX oder INBOX/Support",
+          "comments": "Optionale Notizen für Admins",
+          "poll_interval_seconds": "Standard 600 Sekunden"
+        },
+        "options": {
+          "account_type": {
+            "pop3": "POP3 (Standard)",
+            "pop3s": "POP3S (SSL/TLS)",
+            "imap": "IMAP (Standard)",
+            "imaps": "IMAPS (SSL/TLS)"
+          },
+          "dispatching_mode": {
+            "queue": "An zugewiesene Warteschlange zustellen",
+            "from": "Nach From-Header zustellen"
+          }
+        },
+        "status": {
+          "status": "Status",
+          "last_poll": "Letzte Abholung",
+          "messages_fetched": "Nachrichten abgeholt",
+          "next_poll": "Nächste Abholung",
+          "last_error": "Letzter Fehler",
+          "ok": "OK",
+          "error": "Fehler",
+          "stale": "Keine aktuelle Abholung",
+          "no_data": "Noch keine Abholung",
+          "unavailable": "Status nicht verfügbar"
+        }
+      },
       "priority": {
         "actions": {
           "new": "Neue Priorität"
@@ -119,6 +125,61 @@
         "delete_title": "Typ löschen",
         "edit_title": "Typ bearbeiten"
       }
+    },
+    "actions": "Aktionen",
+    "common": {
+      "actions": {
+        "cancel": "Abbrechen",
+        "create": "Erstellen",
+        "delete": "Löschen",
+        "delete_selected": "Ausgewählte löschen",
+        "edit": "Bearbeiten",
+        "export_csv": "CSV exportieren",
+        "export_selected": "Ausgewählte exportieren",
+        "import_csv": "CSV importieren",
+        "new": "Neu",
+        "save": "Speichern",
+        "toggle_status": "Status umschalten",
+        "update": "Aktualisieren"
+      },
+      "total": "Gesamt",
+      "refresh": "Aktualisieren",
+      "filters": {
+        "active": "Aktiv",
+        "active_queues": "Aktive Warteschlangen",
+        "active_users": "Aktive Benutzer",
+        "agents": "Agenten",
+        "clear_all": "Alle löschen",
+        "closed": "Geschlossen",
+        "email_queues": "E-Mail-Warteschlangen",
+        "inactive": "Inaktiv",
+        "inactive_users": "Inaktive Benutzer",
+        "name_required": "Bitte geben Sie einen Namen für das Filterset ein",
+        "open": "Offen",
+        "pending": "Ausstehend",
+        "saved_sets": "Gespeicherte Filtersets",
+        "set_name_placeholder": "Filtersetnamen eingeben..."
+      },
+      "pagination": {
+        "next": "Weiter",
+        "per_page": "pro Seite",
+        "previous": "Zurück",
+        "show": "Zeige"
+      },
+      "search": {
+        "placeholder": "Suchen..."
+      },
+      "selected": "ausgewählt",
+      "status": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv",
+        "invalid": "Ungültig",
+        "valid": "Gültig"
+      }
+    },
+    "filters": {
+      "all_statuses": "Alle Status",
+      "all_groups": "Alle Gruppen"
     },
     "statuses": {
       "invalid": "Ungültig",

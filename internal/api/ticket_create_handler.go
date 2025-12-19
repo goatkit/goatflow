@@ -188,6 +188,7 @@ func HandleCreateTicketAPI(c *gin.Context) {
 			if cfg := config.Get(); cfg != nil {
 				emailCfg = &cfg.Email
 			}
+			renderCtx := notifications.BuildRenderContext(context.Background(), db, ticketRequest.CustomerUserID, userID)
 			branding, brandErr := notifications.PrepareQueueEmail(
 				context.Background(),
 				db,
@@ -195,6 +196,7 @@ func HandleCreateTicketAPI(c *gin.Context) {
 				body,
 				utils.IsHTML(body),
 				emailCfg,
+				renderCtx,
 			)
 			if brandErr != nil {
 				log.Printf("Queue identity lookup failed for queue %d: %v", queueID, brandErr)

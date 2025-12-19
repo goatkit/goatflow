@@ -386,7 +386,7 @@ func TestRecordEmailPollResultThrottlesAccount(t *testing.T) {
 	svc := NewService(nil)
 	accounts := []*models.EmailAccount{{ID: 1, PollIntervalSeconds: 120}}
 
-	svc.recordEmailPollResult(connector.Account{ID: 1}, true)
+	svc.recordEmailPollResult(context.Background(), connector.Account{ID: 1}, 0, true, nil)
 
 	selected := svc.selectEmailPollAccounts(accounts, 1, time.Now())
 	if len(selected) != 0 {

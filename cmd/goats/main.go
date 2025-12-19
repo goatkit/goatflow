@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gotrs-io/gotrs-ce/internal/api"
 	_ "github.com/gotrs-io/gotrs-ce/internal/api" // Import for handler_registry.go init()
+	"github.com/gotrs-io/gotrs-ce/internal/cache"
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
@@ -35,6 +36,8 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
 	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 )
+
+var valkeyCache *cache.RedisCache
 
 func main() {
 	// Parse command line flags
@@ -82,6 +85,13 @@ func main() {
 		log.Printf("Warning: falling back to embedded country list: %v", err)
 	}
 
+	// Initialize Valkey cache for poll status and other lightweight state.
+	cfg := config.Get()
+	valkeyCache = initValkeyCache(cfg)
+	if valkeyCache != nil {
+		api.SetValkeyCache(valkeyCache)
+	}
+
 	// Get database connection
 	db, dbErr := database.GetDB()
 	if dbErr != nil {
@@ -120,6 +130,7 @@ func main() {
 		"dashboard_activity_stream": api.HandleActivityStream,
 		"handleUpdateTicketStatus":  api.HandleUpdateTicketStatus,
 		"handlePendingReminderFeed": api.HandlePendingReminderFeed,
+		"HandleMailAccountPollStatus": api.HandleMailAccountPollStatus,
 
 		// Agent handlers
 		"handleAgentTickets":         api.AgentHandlerExports.HandleAgentTickets,
@@ -671,6 +682,9 @@ func main() {
 		if emailHandler != nil {
 			options = append(options, scheduler.WithEmailHandler(emailHandler))
 		}
+		if valkeyCache != nil {
+			options = append(options, scheduler.WithCache(valkeyCache))
+		}
 		jobs := buildSchedulerJobsFromConfig(cfg)
 		if len(jobs) > 0 {
 			options = append(options, scheduler.WithJobs(jobs))
@@ -729,6 +743,41 @@ func main() {
 	if schedulerCancel != nil {
 		schedulerCancel()
 	}
+}
+
+func initValkeyCache(cfg *config.Config) *cache.RedisCache {
+	if cfg == nil {
+		return nil
+	}
+	vc := cfg.Valkey
+	if vc.Host == "" || vc.Port == 0 {
+		return nil
+	}
+	ttl := vc.Cache.TTL
+	if ttl == 0 {
+		ttl = time.Hour
+	}
+	redisCfg := &cache.CacheConfig{
+		RedisAddr:     []string{vc.GetValkeyAddr()},
+		RedisPassword: vc.Password,
+		RedisDB:       vc.DB,
+		ClusterMode:   false,
+		DefaultTTL:    ttl,
+		KeyPrefix:     vc.Cache.Prefix,
+		MaxRetries:    vc.MaxRetries,
+		PoolSize:      vc.PoolSize,
+		MinIdleConns:  vc.MinIdleConns,
+		DialTimeout:   5 * time.Second,
+		ReadTimeout:   5 * time.Second,
+		WriteTimeout:  5 * time.Second,
+	}
+
+	cacheClient, err := cache.NewRedisCache(redisCfg)
+	if err != nil {
+		log.Printf("valkey cache disabled: %v", err)
+		return nil
+	}
+	return cacheClient
 }
 
 // runRunner starts the background task runner

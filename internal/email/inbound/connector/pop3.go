@@ -17,8 +17,29 @@ type pop3Connection interface {
 	Auth(user, password string) error
 	Quit() error
 	Uidl(msgID int) ([]pop3.MessageID, error)
+	List(msgID int) ([]pop3.MessageID, error)
 	RetrRaw(msgID int) (*bytes.Buffer, error)
 	Dele(msgID ...int) error
+}
+
+// authNoopSkipper wraps a POP3 connection and ignores servers that don't support NOOP.
+type authNoopSkipper struct{ *pop3.Conn }
+
+func (c *authNoopSkipper) Auth(user, password string) error {
+	if err := c.Conn.User(user); err != nil {
+		return err
+	}
+	if err := c.Conn.Pass(password); err != nil {
+		return err
+	}
+	if err := c.Conn.Noop(); err != nil {
+		msg := strings.ToLower(err.Error())
+		if strings.Contains(msg, "unknown command") {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 type pop3ConnFactory func(Account) (pop3Connection, error)
@@ -118,8 +139,12 @@ func (f *POP3Fetcher) Fetch(ctx context.Context, account Account, handler Handle
 	}
 
 	msgs, err := conn.Uidl(0)
-	if err != nil {
-		return fmt.Errorf("pop3 uidl: %w", err)
+	if err != nil || len(msgs) == 0 {
+		fallback, listErr := conn.List(0)
+		if listErr != nil {
+			return fmt.Errorf("pop3 list: %w", listErr)
+		}
+		msgs = fallback
 	}
 	if len(msgs) == 0 {
 		return nil
@@ -132,6 +157,12 @@ func (f *POP3Fetcher) Fetch(ctx context.Context, account Account, handler Handle
 
 		payload, err := conn.RetrRaw(meta.ID)
 		if err != nil {
+			if isMissingPOP3Message(err) {
+				if f.logger != nil {
+					f.logger.Printf("pop3 retr skipped %d: %v", meta.ID, err)
+				}
+				continue
+			}
 			return fmt.Errorf("pop3 retr %d: %w", meta.ID, err)
 		}
 
@@ -166,7 +197,6 @@ func (f *POP3Fetcher) Fetch(ctx context.Context, account Account, handler Handle
 			}
 		}
 	}
-
 	return nil
 }
 
@@ -197,7 +227,11 @@ func (f *POP3Fetcher) defaultConnFactory(account Account) (pop3Connection, error
 		DialTimeout: f.dialTimeout,
 		TLSEnabled:  usePOP3TLS(account.Type),
 	})
-	return client.NewConn()
+	conn, err := client.NewConn()
+	if err != nil {
+		return nil, err
+	}
+	return &authNoopSkipper{Conn: conn}, nil
 }
 
 func validateAccount(account Account) error {
@@ -229,6 +263,14 @@ func usePOP3TLS(t string) bool {
 	default:
 		return false
 	}
+}
+
+func isMissingPOP3Message(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "no such message") || strings.Contains(msg, "message not found")
 }
 
 func buildRemoteID(account Account, uid string) string {

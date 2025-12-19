@@ -10,6 +10,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
+	"github.com/gotrs-io/gotrs-ce/internal/cache"
 	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
@@ -54,6 +55,7 @@ type Service struct {
 	reminderHub      notifications.Hub
 	emailPollState   emailPollState
 	metrics          *emailPollMetrics
+	valkey           *cache.RedisCache
 }
 
 type emailPollState struct {
@@ -131,8 +133,12 @@ func NewService(db *sql.DB, opts ...Option) *Service {
 		location:         location,
 		reminderHub:      hub,
 		metrics:          globalEmailPollMetrics(),
+		valkey:           options.Cache,
 	}
 
+	// The following line initializes emailPollState with nextIdx set to 0
+	// This line is unchanged but included for clarity.
+	s.emailPollState = emailPollState{nextIdx: 0}
 	s.registerBuiltinHandlers()
 	return s
 }

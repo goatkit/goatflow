@@ -845,6 +845,36 @@ toolbox-test-integration:
 		echo "Running integration-tagged tests for packages: $$PKGS"; \
 		go test -tags=integration -buildvcs=false -count=1 $$PKGS'
 
+# Run smtp4dev + POP/DB email integrations end-to-end
+toolbox-test-email-integration:
+	@$(MAKE) toolbox-build
+	@printf "\n📧 Running smtp4dev email integrations (requires DB + smtp4dev) in toolbox...\n"
+	@$(call ensure_caches)
+	@printf "📡 Starting dependencies (postgres, valkey, smtp4dev)...\n"
+	@$(COMPOSE_CMD) up -d postgres valkey smtp4dev >/dev/null 2>&1 || true
+	$(CONTAINER_CMD) run --rm \
+		--security-opt label=disable \
+		-v "$$PWD:/workspace" \
+		--network host \
+		-w /workspace \
+		-u "$$UID:$$GID" \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOFLAGS=-buildvcs=false \
+		-e APP_ENV=test \
+		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
+		-e SMTP4DEV_API_BASE \
+		-e SMTP4DEV_SMTP_ADDR \
+		-e SMTP4DEV_POP_HOST \
+		-e SMTP4DEV_POP_PORT \
+		-e SMTP4DEV_USER \
+		-e SMTP4DEV_PASS \
+		-e SMTP4DEV_FROM \
+		-e SMTP4DEV_SYSTEM_ADDRESS \
+		gotrs-toolbox:latest \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; export GOFLAGS="-buildvcs=false"; set -e; \
+		go test -tags=integration -buildvcs=false -count=1 ./internal/email/integration'
+
 # Run a specific test pattern across all packages
 toolbox-test-run:
 	@$(MAKE) toolbox-build

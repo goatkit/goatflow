@@ -302,10 +302,19 @@ func (h *DynamicModuleHandler) watchFiles() {
 // resolveTranslation resolves a translation key if it starts with @
 func (h *DynamicModuleHandler) resolveTranslation(value string, lang string) string {
 	if strings.HasPrefix(value, "@") {
-		key := strings.TrimPrefix(value, "@")
+		raw := strings.TrimPrefix(value, "@")
+		parts := strings.SplitN(raw, "|", 2)
+		key := parts[0]
+		fallback := ""
+		if len(parts) == 2 {
+			fallback = parts[1]
+		}
 		translated := h.i18n.T(lang, key)
 		// If translation not found (returns the key), use the original value as fallback
 		if translated == key && strings.Contains(value, ".") {
+			if fallback != "" {
+				return fallback
+			}
 			// Try to extract a reasonable fallback from the key
 			parts := strings.Split(key, ".")
 			if len(parts) > 0 {
@@ -344,6 +353,7 @@ func (h *DynamicModuleHandler) resolveConfigTranslations(config *ModuleConfig, l
 		resolved.Fields[i] = field
 		resolved.Fields[i].Label = h.resolveTranslation(field.Label, lang)
 		resolved.Fields[i].Help = h.resolveTranslation(field.Help, lang)
+		resolved.Fields[i].Placeholder = h.resolveTranslation(field.Placeholder, lang)
 
 		// Resolve options
 		if len(field.Options) > 0 {
@@ -952,7 +962,6 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 
 	data := h.parseFormData(c, config)
 	h.applyModuleWriteTransforms(config, data)
-	h.applyModuleWriteTransforms(config, data)
 
 	// Get current user ID for audit fields
 	userIDValue, exists := c.Get("user_id")
@@ -972,6 +981,7 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 	columns := []string{}
 	placeholders := []string{}
 	values := []interface{}{}
+	validIncluded := false
 
 	for _, field := range config.Fields {
 		if field.Virtual {
@@ -990,6 +1000,19 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 			columns = append(columns, field.DBColumn)
 			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
 			values = append(values, currentUserID)
+		} else if field.DBColumn == "create_time" {
+			columns = append(columns, field.DBColumn)
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			values = append(values, time.Now())
+		} else if field.DBColumn == "change_time" {
+			columns = append(columns, field.DBColumn)
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			values = append(values, time.Now())
+		} else if field.DBColumn == "valid_id" {
+			columns = append(columns, field.DBColumn)
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			values = append(values, field.Default)
+			validIncluded = true
 		} else if field.ShowInForm {
 			if value, exists := data[field.Name]; exists {
 				columns = append(columns, field.DBColumn)
@@ -1014,11 +1037,20 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 				placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
 				values = append(values, field.Default)
 			}
+		} else if value, exists := data[field.Name]; exists {
+			// Support hidden/virtual fields that populate real columns (e.g., mail_account.trusted)
+			columns = append(columns, field.DBColumn)
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			values = append(values, value)
+		} else if field.Default != nil {
+			columns = append(columns, field.DBColumn)
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			values = append(values, field.Default)
 		}
 	}
 
-	// Add valid_id if soft delete is enabled
-	if config.Features.SoftDelete {
+	// Add valid_id if soft delete is enabled and not already supplied
+	if config.Features.SoftDelete && !validIncluded {
 		columns = append(columns, "valid_id")
 		placeholders = append(placeholders, "1")
 	}
@@ -1088,6 +1120,7 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 	config = h.resolveConfigTranslations(config, lang)
 
 	data := h.parseFormData(c, config)
+	h.applyModuleWriteTransforms(config, data)
 
 	// Get current user ID for audit fields
 	userIDValue, exists := c.Get("user_id")
@@ -1139,6 +1172,10 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 					values = append(values, value)
 				}
 			}
+		} else if value, exists := data[field.Name]; exists {
+			// Allow hidden/non-form fields from transforms (e.g., trusted) to be persisted
+			sets = append(sets, fmt.Sprintf("%s = $%d", field.DBColumn, len(values)+1))
+			values = append(values, value)
 		}
 	}
 
@@ -1260,7 +1297,7 @@ func (h *DynamicModuleHandler) scanRows(rows *sql.Rows, config *ModuleConfig) []
 		item := make(map[string]interface{})
 		for i, field := range config.Fields {
 			if ptr, ok := scanners[i].(*interface{}); ok && *ptr != nil {
-				item[field.Name] = *ptr
+				item[field.Name] = normalizeScannedValue(*ptr)
 			}
 		}
 
@@ -1287,7 +1324,7 @@ func (h *DynamicModuleHandler) scanRow(row *sql.Row, config *ModuleConfig) map[s
 	item := make(map[string]interface{})
 	for i, field := range config.Fields {
 		if ptr, ok := scanners[i].(*interface{}); ok && *ptr != nil {
-			item[field.Name] = *ptr
+			item[field.Name] = normalizeScannedValue(*ptr)
 		}
 	}
 
@@ -1439,6 +1476,15 @@ func coerceString(value interface{}) string {
 		return ""
 	default:
 		return fmt.Sprintf("%v", v)
+	}
+}
+
+func normalizeScannedValue(value interface{}) interface{} {
+	switch v := value.(type) {
+	case []byte:
+		return string(v)
+	default:
+		return v
 	}
 }
 
@@ -1679,11 +1725,11 @@ func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, co
 
 		fmt.Printf("DEBUG: Processing lookup for field %s with table %s, display_as=%s\n", field.Name, field.LookupTable, field.DisplayAs)
 
-		// Collect unique IDs to lookup
-		idMap := make(map[interface{}]bool)
+		// Collect unique IDs to lookup (normalize to string for consistent matching across drivers)
+		idMap := make(map[string]bool)
 		for _, item := range items {
 			if val, exists := item[field.Name]; exists && val != nil {
-				idMap[val] = true
+				idMap[coerceString(val)] = true
 			}
 		}
 
@@ -1704,7 +1750,7 @@ func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, co
 		// Create ID list for IN clause
 		var ids []string
 		for id := range idMap {
-			ids = append(ids, fmt.Sprintf("%v", id))
+			ids = append(ids, fmt.Sprintf("'%s'", strings.ReplaceAll(id, "'", "''")))
 		}
 
 		query := fmt.Sprintf("SELECT %s, %s FROM %s WHERE %s IN (%s)",
@@ -1718,12 +1764,12 @@ func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, co
 		defer rows.Close()
 
 		// Build lookup map
-		lookupMap := make(map[interface{}]string)
+		lookupMap := make(map[string]string)
 		for rows.Next() {
 			var id interface{}
 			var displayValue string
 			if err := rows.Scan(&id, &displayValue); err == nil {
-				lookupMap[id] = displayValue
+				lookupMap[coerceString(id)] = displayValue
 			}
 		}
 
@@ -1731,7 +1777,8 @@ func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, co
 		lookupFieldName := field.Name + "_display"
 		for _, item := range items {
 			if val, exists := item[field.Name]; exists && val != nil {
-				if displayVal, found := lookupMap[val]; found {
+				key := coerceString(val)
+				if displayVal, found := lookupMap[key]; found {
 					item[lookupFieldName] = displayVal
 					// If display_as is chip, store the display configuration
 					if field.DisplayAs == "chip" {

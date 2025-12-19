@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2025-12-16T07:25:33.379160869Z",
+  "generatedAt": "2025-12-19T07:26:15.90487786Z",
   "routes": [
     {
       "group": "admin",
@@ -2046,6 +2046,26 @@
       "method": "POST",
       "path": "/admin/queue-auto-responses/:id/:action",
       "handler": "handleAdminModuleQueueAutoResponses",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-mail-account-status",
+      "method": "GET",
+      "path": "/admin/mail-accounts/:id/poll-status",
+      "handler": "HandleMailAccountPollStatus",
+      "middleware": [
+        "auth",
+        "admin"
+      ]
+    },
+    {
+      "group": "admin-mail-account-status",
+      "method": "GET",
+      "path": "/admin/dynamic/mail_account/:id/poll-status",
+      "handler": "HandleMailAccountPollStatus",
       "middleware": [
         "auth",
         "admin"

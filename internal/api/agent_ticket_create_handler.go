@@ -454,6 +454,7 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 				if cfg := config.Get(); cfg != nil {
 					emailCfg = &cfg.Email
 				}
+				renderCtx := notifications.BuildRenderContext(context.Background(), db, customerUserIDValue.String, int(userID))
 				branding, brandErr := notifications.PrepareQueueEmail(
 					context.Background(),
 					db,
@@ -461,6 +462,7 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 					body,
 					utils.IsHTML(body),
 					emailCfg,
+					renderCtx,
 				)
 				if brandErr != nil {
 					log.Printf("Queue identity lookup failed for ticket %d: %v", ticketModel.ID, brandErr)

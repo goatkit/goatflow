@@ -2,6 +2,7 @@
 
 ## Recent Achievements (December 2025)
 - Inbound email pipeline (POP3 connector factory, postmaster processor, external ticket rules example, mail account metadata/tests).
+- SMTP4Dev integration suite for POP/SMTP roundtrips (attachments, threading, TLS/starttls, concurrency), mail queue task cleanup/backoff coverage, and Valkey-backed admin mail account poll status API/routes.
 - Scheduler jobs CLI and metrics publishing.
 - Admin customer company create POST route restored; YAML manifests regenerated (including admin dynamic aliases).
 - Ticket creation validation tightened; queue meta partial added; dynamic module handler wiring fixed.

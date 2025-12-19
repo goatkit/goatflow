@@ -3,6 +3,7 @@ package adapter
 import (
 	"testing"
 
+	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
@@ -34,5 +35,20 @@ func TestAccountFromModelDefaults(t *testing.T) {
 	}
 	if acct.PollInterval.Seconds() != 30 {
 		t.Fatalf("expected poll interval 30s, got %v", acct.PollInterval)
+	}
+}
+
+func TestAccountFromModelNil(t *testing.T) {
+	acct := AccountFromModel(nil)
+	zero := connector.Account{}
+	if acct.ID != zero.ID || acct.Username != zero.Username || len(acct.Password) != 0 {
+		t.Fatalf("expected zero account, got %+v", acct)
+	}
+}
+
+func TestAccountFromModelFallsBackType(t *testing.T) {
+	acct := AccountFromModel(&models.EmailAccount{AccountType: "  "})
+	if acct.Type != "pop3" {
+		t.Fatalf("expected default type pop3, got %s", acct.Type)
 	}
 }

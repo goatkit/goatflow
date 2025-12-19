@@ -18,9 +18,18 @@
                     <div>TIME: <span id="guru-time" style="color: #ffaaaa;">--</span></div>
                 </div>
             </div>
-            <button onclick="dismissGuruMeditation()" class="amiga-font" style="margin-top: 20px; padding: 8px 20px; background: #ff0000; color: #000000; border: none; font-size: 14px; cursor: pointer; text-transform: uppercase;">
-                Left Mouse Button
-            </button>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button onclick="dismissGuruMeditation()" class="amiga-font" style="padding: 8px 20px; background: #ff0000; color: #000000; border: none; font-size: 14px; cursor: pointer; text-transform: uppercase;">
+                    Left Mouse Button
+                </button>
+                <button onclick="copyGuruMeditation()" class="amiga-font" style="padding: 8px 12px; background: #ff0000; color: #000000; border: none; font-size: 14px; cursor: pointer; text-transform: uppercase; display: inline-flex; align-items: center; gap: 6px;" title="Copy Guru details">
+                    <span style="font-size: 12px;">Copy</span>
+                    <svg aria-hidden="true" focusable="false" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -153,6 +162,35 @@ function dismissGuruMeditation() {
     const guru = document.getElementById('guru-meditation');
     if (guru) {
         guru.style.display = 'none';
+    }
+}
+
+function copyGuruMeditation() {
+    const code = (document.getElementById('guru-code') || {}).textContent || '';
+    const msg = (document.getElementById('guru-message') || {}).textContent || '';
+    const task = (document.getElementById('guru-task') || {}).textContent || '';
+    const loc = (document.getElementById('guru-location') || {}).textContent || '';
+    const time = (document.getElementById('guru-time') || {}).textContent || '';
+    const detailsBlock = document.getElementById('guru-details');
+    const parts = [
+        `Guru Meditation #${code}`.trim(),
+        msg.trim(),
+    ];
+    if (detailsBlock && detailsBlock.style.display !== 'none') {
+        if (task) parts.push(`TASK: ${task}`);
+        if (loc) parts.push(`LOCATION: ${loc}`);
+        if (time) parts.push(`TIME: ${time}`);
+    }
+    const text = parts.filter(Boolean).join('\n');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(function() {});
+    } else {
+        const area = document.createElement('textarea');
+        area.value = text;
+        document.body.appendChild(area);
+        area.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(area);
     }
 }
 

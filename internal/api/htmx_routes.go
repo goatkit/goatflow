@@ -5456,6 +5456,7 @@ func handleAddTicketNote(c *gin.Context) {
 				if cfg := config.Get(); cfg != nil {
 					emailCfg = &cfg.Email
 				}
+				renderCtx := notifications.BuildRenderContext(context.Background(), db, *ticket.CustomerUserID, int(userID))
 				branding, brandErr := notifications.PrepareQueueEmail(
 					context.Background(),
 					db,
@@ -5463,6 +5464,7 @@ func handleAddTicketNote(c *gin.Context) {
 					body,
 					utils.IsHTML(body),
 					emailCfg,
+					renderCtx,
 				)
 				if brandErr != nil {
 					log.Printf("Queue identity lookup failed for ticket %d: %v", ticket.ID, brandErr)
