@@ -55,6 +55,9 @@ var (
 	HandleAdminTypes              = handleAdminTypes
 	HandleAdminServices           = handleAdminServices
 	HandleAdminSLA                = handleAdminSLA
+	HandleAdminSLACreate          = handleAdminSLACreate
+	HandleAdminSLAUpdate          = handleAdminSLAUpdate
+	HandleAdminSLADelete          = handleAdminSLADelete
 	HandleAdminLookups            = handleAdminLookups
 	// Customer company handlers - wrapped to get database from adapter
 	HandleAdminCustomerCompanies = func(c *gin.Context) {

@@ -3,15 +3,26 @@
 {% block title %}SLA Management{% endblock %}
 
 {% block content %}
+<style>
+/* Fix number input spinner button sizing */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type="number"] {
+    -moz-appearance: textfield;
+}
+</style>
 <div class="container mx-auto px-4 py-8">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
         <!-- Header -->
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
             <div class="flex justify-between items-center">
                 <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">SLA Management</h1>
-                <button onclick="openSLAModal()" class="bg-gotrs-blue hover:bg-gotrs-blue-dark text-white px-4 py-2 rounded-lg flex items-center" title="Add new SLA">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                <button onclick="openSLAModal()" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600" title="Add new SLA">
+                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                     </svg>
                     Add SLA
                 </button>
@@ -192,39 +203,63 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Response Time (minutes)</label>
-                        <input type="number" id="slaFirstResponse" name="first_response_time" min="0"
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Response Time *</label>
+                        <div class="flex gap-2">
+                            <input type="number" id="slaFirstResponseValue" min="0" required
+                                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <select id="slaFirstResponseUnit" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                <option value="1">Minutes</option>
+                                <option value="60">Hours</option>
+                                <option value="1440">Days</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="slaFirstResponse" name="first_response_time">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notify Before (% of time)</label>
-                        <input type="number" id="slaFirstResponseNotify" name="first_response_notify" min="0" max="100"
+                        <input type="number" id="slaFirstResponseNotify" name="first_response_notify" min="0" max="100" placeholder="e.g. 20"
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Update Time (minutes)</label>
-                        <input type="number" id="slaUpdateTime" name="update_time" min="0"
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Update Time *</label>
+                        <div class="flex gap-2">
+                            <input type="number" id="slaUpdateTimeValue" min="0" required
+                                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <select id="slaUpdateTimeUnit" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                <option value="1">Minutes</option>
+                                <option value="60">Hours</option>
+                                <option value="1440">Days</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="slaUpdateTime" name="update_time">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notify Before (% of time)</label>
-                        <input type="number" id="slaUpdateNotify" name="update_notify" min="0" max="100"
+                        <input type="number" id="slaUpdateNotify" name="update_notify" min="0" max="100" placeholder="e.g. 20"
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Solution Time (minutes)</label>
-                        <input type="number" id="slaSolutionTime" name="solution_time" min="0"
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Solution Time *</label>
+                        <div class="flex gap-2">
+                            <input type="number" id="slaSolutionTimeValue" min="0" required
+                                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <select id="slaSolutionTimeUnit" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                                <option value="1">Minutes</option>
+                                <option value="60">Hours</option>
+                                <option value="1440">Days</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="slaSolutionTime" name="solution_time">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notify Before (% of time)</label>
-                        <input type="number" id="slaSolutionNotify" name="solution_notify" min="0" max="100"
+                        <input type="number" id="slaSolutionNotify" name="solution_notify" min="0" max="100" placeholder="e.g. 20"
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                     </div>
                 </div>
@@ -247,11 +282,11 @@
 
             <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
                 <button type="button" onclick="closeSLAModal()" 
-                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                     Cancel
                 </button>
                 <button type="submit" 
-                        class="px-4 py-2 bg-gotrs-blue hover:bg-gotrs-blue-dark text-white rounded-lg">
+                        class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:text-sm">
                     Save
                 </button>
             </div>
@@ -266,10 +301,22 @@ function openSLAModal() {
     document.getElementById('modalTitle').textContent = 'Add SLA';
     document.getElementById('slaForm').reset();
     document.getElementById('slaId').value = '';
+    // Reset unit dropdowns to minutes
+    document.getElementById('slaFirstResponseUnit').value = '1';
+    document.getElementById('slaUpdateTimeUnit').value = '1';
+    document.getElementById('slaSolutionTimeUnit').value = '1';
     const modal = document.getElementById('slaModal');
     if (modal) {
         modal.classList.remove('hidden');
     }
+}
+
+// Convert minutes to best unit (returns {value, unit})
+function minutesToUnit(minutes) {
+    if (!minutes || minutes === 0) return { value: 0, unit: '1' };
+    if (minutes % 1440 === 0) return { value: minutes / 1440, unit: '1440' }; // Days
+    if (minutes % 60 === 0) return { value: minutes / 60, unit: '60' }; // Hours
+    return { value: minutes, unit: '1' }; // Minutes
 }
 
 function editSLA(sla) {
@@ -277,12 +324,23 @@ function editSLA(sla) {
     document.getElementById('slaId').value = sla.id;
     document.getElementById('slaName').value = sla.name;
     document.getElementById('slaCalendar').value = sla.calendar_name || '';
-    document.getElementById('slaFirstResponse').value = sla.first_response_time || '';
+    
+    // Convert stored minutes to display value + unit
+    const firstResponse = minutesToUnit(sla.first_response_time);
+    document.getElementById('slaFirstResponseValue').value = firstResponse.value || '';
+    document.getElementById('slaFirstResponseUnit').value = firstResponse.unit;
     document.getElementById('slaFirstResponseNotify').value = sla.first_response_notify || '';
-    document.getElementById('slaUpdateTime').value = sla.update_time || '';
+    
+    const updateTime = minutesToUnit(sla.update_time);
+    document.getElementById('slaUpdateTimeValue').value = updateTime.value || '';
+    document.getElementById('slaUpdateTimeUnit').value = updateTime.unit;
     document.getElementById('slaUpdateNotify').value = sla.update_notify || '';
-    document.getElementById('slaSolutionTime').value = sla.solution_time || '';
+    
+    const solutionTime = minutesToUnit(sla.solution_time);
+    document.getElementById('slaSolutionTimeValue').value = solutionTime.value || '';
+    document.getElementById('slaSolutionTimeUnit').value = solutionTime.unit;
     document.getElementById('slaSolutionNotify').value = sla.solution_notify || '';
+    
     document.getElementById('slaComments').value = sla.comments || '';
     document.getElementById('slaValidId').value = sla.valid_id;
     
@@ -307,31 +365,41 @@ function saveSLA(event) {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Saving...';
     
+    // Convert value+unit pairs to minutes
+    const getMinutes = (valueId, unitId) => {
+        const value = parseInt(document.getElementById(valueId).value) || 0;
+        const unit = parseInt(document.getElementById(unitId).value) || 1;
+        return value * unit;
+    };
+    
+    // Update hidden fields with calculated minutes
+    document.getElementById('slaFirstResponse').value = getMinutes('slaFirstResponseValue', 'slaFirstResponseUnit');
+    document.getElementById('slaUpdateTime').value = getMinutes('slaUpdateTimeValue', 'slaUpdateTimeUnit');
+    document.getElementById('slaSolutionTime').value = getMinutes('slaSolutionTimeValue', 'slaSolutionTimeUnit');
+    
     const formData = new FormData(event.target);
     const id = formData.get('id');
     
-    // Convert form data to JSON - handle empty values properly
+    // Convert form data to JSON
     const data = {};
     formData.forEach((value, key) => {
         if (key !== 'id') {
-            // Convert numeric fields - keep empty as undefined to send null
+            // Convert numeric fields
             if (['first_response_time', 'first_response_notify', 'update_time', 'update_notify', 
                  'solution_time', 'solution_notify'].includes(key)) {
-                if (value && value.trim() !== '') {
-                    data[key] = parseInt(value);
-                }
-                // Don't set key at all if empty (backend will use NULL)
+                const trimmed = value ? value.toString().trim() : '';
+                data[key] = trimmed !== '' ? parseInt(trimmed) : 0;
             } else if (key === 'valid_id') {
-                // Always send valid_id (defaults to 1)
                 data[key] = parseInt(value) || 1;
             } else {
-                // For string fields, only set if not empty (except name which is required)
                 if (key === 'name' || (value && value.trim() !== '')) {
                     data[key] = value;
                 }
             }
         }
     });
+    
+    console.log('SLA save data:', JSON.stringify(data, null, 2));
     
     const url = id ? `/admin/sla/${id}/update` : '/admin/sla/create';
     const method = id ? 'PUT' : 'POST';
@@ -420,5 +488,22 @@ document.getElementById('slaForm').addEventListener('keypress', function(event) 
         this.dispatchEvent(new Event('submit'));
     }
 });
+
+// Toast notification
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
+        type === 'error' ? 'bg-red-600' : 
+        type === 'success' ? 'bg-green-600' : 
+        'bg-blue-600'
+    }`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
 </script>
 {% endblock %}

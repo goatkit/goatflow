@@ -261,9 +261,22 @@ func handleAdminSLACreate(c *gin.Context) {
 		return
 	}
 
-	// Insert the new SLA
-	var id int
-	err = db.QueryRow(database.ConvertPlaceholders(`
+	// Convert nil pointers to 0 for NOT NULL columns
+	firstResponseTime := 0
+	if input.FirstResponseTime != nil {
+		firstResponseTime = *input.FirstResponseTime
+	}
+	updateTime := 0
+	if input.UpdateTime != nil {
+		updateTime = *input.UpdateTime
+	}
+	solutionTime := 0
+	if input.SolutionTime != nil {
+		solutionTime = *input.SolutionTime
+	}
+
+	// Insert the new SLA using database adapter for MySQL/PostgreSQL compatibility
+	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO sla (
 			name, calendar_name, 
 			first_response_time, first_response_notify,
@@ -275,13 +288,27 @@ func handleAdminSLACreate(c *gin.Context) {
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
 			CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1
 		) RETURNING id
-	`), input.Name, input.CalendarName,
-		input.FirstResponseTime, input.FirstResponseNotify,
-		input.UpdateTime, input.UpdateNotify,
-		input.SolutionTime, input.SolutionNotify,
-		input.Comments, input.ValidID).Scan(&id)
+	`)
+
+	adapter := database.GetAdapter()
+	id64, err := adapter.InsertWithReturning(db, insertQuery,
+		input.Name, input.CalendarName,
+		firstResponseTime, input.FirstResponseNotify,
+		updateTime, input.UpdateNotify,
+		solutionTime, input.SolutionNotify,
+		input.Comments, input.ValidID)
+	id := int(id64)
 
 	if err != nil {
+		// Check for MySQL duplicate key error
+		errStr := err.Error()
+		if strings.Contains(errStr, "Duplicate entry") || strings.Contains(errStr, "duplicate key") {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "SLA with this name already exists",
+			})
+			return
+		}
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -291,7 +318,7 @@ func handleAdminSLACreate(c *gin.Context) {
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"error":   "Failed to create SLA",
+			"error":   "Failed to create SLA: " + err.Error(),
 		})
 		return
 	}
@@ -415,6 +442,7 @@ func handleAdminSLAUpdate(c *gin.Context) {
 
 	args = append(args, id)
 	query := fmt.Sprintf("UPDATE sla SET %s WHERE id = $%d", strings.Join(updates, ", "), argCount)
+	query = database.ConvertPlaceholders(query)
 
 	result, err := db.Exec(query, args...)
 	if err != nil {

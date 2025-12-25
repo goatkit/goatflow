@@ -244,6 +244,21 @@ spec:
       template: pages/admin/sla.pongo2
       description: "Display SLA management page"
 
+    - path: /sla/create
+      method: POST
+      handler: handleAdminSLACreate
+      description: "Create a new SLA"
+
+    - path: /sla/:id/update
+      method: PUT
+      handler: handleAdminSLAUpdate
+      description: "Update an existing SLA"
+
+    - path: /sla/:id/delete
+      method: DELETE
+      handler: handleAdminSLADelete
+      description: "Delete an SLA"
+
     # Lookup management
     - path: /lookups
       method: GET

@@ -7,6 +7,10 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
+- **Self-Registering Handler Architecture**: Handlers now register via `init()` calls to `routing.RegisterHandler()`, eliminating manual registration in main.go. Test validates all YAML handlers are registered.
+- **SLA Admin UX Improvements**: Time fields now use unit dropdowns (Minutes/Hours/Days) instead of raw minutes input, with automatic conversion.
+- YAML handler wiring test (`internal/routing/yaml_handler_wiring_test.go`) that verifies all YAML-referenced handlers are registered.
+- Handler registration init files (`internal/api/*_init.go`) for self-registering handlers.
 - **Customer Portal**: Full customer-facing ticket management with login, ticket creation, viewing, replies, and ticket closure.
 - **Customer Portal i18n**: Full internationalization for all 12 customer portal templates with English and German translations.
 - Customer portal rich text editor (Tiptap) for ticket creation and replies.
@@ -48,6 +52,8 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - Documentation updated for inbound email IMAP aliases, folder metadata, and integration coverage notes.
 
 ### Fixed
+- SLA admin update handler now converts PostgreSQL placeholders to MySQL (`ConvertPlaceholders`).
+- SLA admin create handler properly handles NOT NULL columns by converting nil to 0.
 - Admin customer company create now returns validation (400) instead of 404 for POST to `/customer/companies/new`.
 - Database connectivity issues in test environments with proper network configuration for test containers.
 - Auth middleware, YAML fallback guards, and legacy route middleware now respect `GOTRS_DISABLE_TEST_AUTH_BYPASS`, preventing unauthenticated access to admin surfaces during regression runs.
@@ -58,6 +64,8 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - Queue-centric group permissions view with HTML + JSON endpoints for `/admin/groups/:id/permissions`.
 
 ### Changed
+- Handler registration architecture: YAML routes now resolve handlers from `GlobalHandlerMap` populated via `init()` functions.
+- SLA admin routes added to `routes/admin.yaml` for YAML-driven routing consistency.
 - User repository Create and Update methods now include title length validation and proper SQL placeholder conversion.
 - Group repository queries now use database.ConvertPlaceholders for cross-database compatibility.
 
