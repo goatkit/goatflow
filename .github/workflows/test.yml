@@ -80,7 +80,6 @@ jobs:
           SOURCE migrations/mysql/000001_schema_alignment.up.sql;
           SOURCE migrations/mysql/000002_minimal_data.up.sql;
           SOURCE migrations/mysql/000003_customer_portal_sysconfig.up.sql;
-          SOURCE migrations/mysql/000004_dynamic_field_screen_config.up.sql;
           SET FOREIGN_KEY_CHECKS=1;
           EOF
 
@@ -279,7 +278,6 @@ jobs:
           SOURCE migrations/mysql/000001_schema_alignment.up.sql;
           SOURCE migrations/mysql/000002_minimal_data.up.sql;
           SOURCE migrations/mysql/000003_customer_portal_sysconfig.up.sql;
-          SOURCE migrations/mysql/000004_dynamic_field_screen_config.up.sql;
           SET FOREIGN_KEY_CHECKS=1;
           EOF
           mysql -h 127.0.0.1 -P 3308 -u root otrs_integration < migrations/mysql/000004_dynamic_field_screen_config.up.sql
