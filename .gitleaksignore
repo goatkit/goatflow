@@ -13,4 +13,8 @@
 7523fcf607a642be97d177335acd696212379696:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:804
 7523fcf607a642be97d177335acd696212379696:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:805
 
+# Test JWT tokens in auth.pact.test.ts - global ignore for test file
+web/src/contracts/auth.pact.test.ts:jwt
+web/pacts/gotrs-frontend-gotrs-backend.json:jwt
+
 # Documentation placeholder in API README
