@@ -21,16 +21,17 @@ jobs:
     runs-on: ubuntu-latest
     environment: Development
     services:
-      postgres:
-        image: postgres:15-alpine
+      mariadb:
+        image: mariadb:10.11
         env:
-          POSTGRES_DB: gotrs_test
-          POSTGRES_USER: gotrs_test
-          POSTGRES_PASSWORD: gotrs_test_password
+          MYSQL_ROOT_PASSWORD: ${{ secrets.TEST_DB_ROOT_PASSWORD }}
+          MYSQL_DATABASE: otrs_test
+          MYSQL_USER: otrs
+          MYSQL_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
         ports:
-          - 5432:5432
+          - 3308:3306
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -38,7 +39,7 @@ jobs:
       valkey:
         image: valkey/valkey:7-alpine
         ports:
-          - 6388:6379
+          - 6389:6379
         options: >-
           --health-cmd "valkey-cli ping"
           --health-interval 10s
@@ -60,22 +61,24 @@ jobs:
           go mod tidy
           go mod download
 
-      - name: Install PostgreSQL client tools
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install MySQL client tools
+        run: sudo apt-get update && sudo apt-get install -y mysql-client
 
       - name: Set up test database
         env:
-          PGPASSWORD: gotrs_test_password
+          MYSQL_PWD: ${{ secrets.TEST_DB_ROOT_PASSWORD }}
         run: |
-          # Wait for postgres to be ready
-          until pg_isready -h localhost -p 5432 -U gotrs_test; do
-            echo "Waiting for postgres..."
+          # Wait for MariaDB to be ready
+          until mysql -h 127.0.0.1 -P 3308 -u root -e "SELECT 1" > /dev/null 2>&1; do
+            echo "Waiting for MariaDB..."
             sleep 2
           done
           
           # Run migrations for tests
-          psql -h localhost -U gotrs_test -d gotrs_test < migrations/postgres/000001_schema_alignment.up.sql
-          psql -h localhost -U gotrs_test -d gotrs_test < schema/baseline/required_lookups.sql
+          mysql -h 127.0.0.1 -P 3308 -u root otrs_test < migrations/mysql/000001_schema_alignment.up.sql
+          mysql -h 127.0.0.1 -P 3308 -u root otrs_test < migrations/mysql/000002_minimal_data.up.sql
+          mysql -h 127.0.0.1 -P 3308 -u root otrs_test < migrations/mysql/000003_customer_portal_sysconfig.up.sql
+          mysql -h 127.0.0.1 -P 3308 -u root otrs_test < migrations/mysql/000004_dynamic_field_screen_config.up.sql
 
       - name: Generate secure test configuration
         run: |
@@ -84,19 +87,31 @@ jobs:
           
       - name: Run tests with coverage
         env:
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: gotrs_test
-          DB_USER: gotrs_test
-          DB_PASSWORD: gotrs_test_password
-          VALKEY_HOST: localhost
-          VALKEY_PORT: 6388
+          # Test database configuration (MariaDB)
+          TEST_DB_DRIVER: mysql
+          TEST_DB_MYSQL_HOST: 127.0.0.1
+          TEST_DB_MYSQL_PORT: 3308
+          TEST_DB_MYSQL_NAME: otrs_test
+          TEST_DB_MYSQL_USER: otrs
+          TEST_DB_MYSQL_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
+          # Legacy env vars some tests may use
+          DB_DRIVER: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3308
+          DB_NAME: otrs_test
+          DB_USER: otrs
+          DB_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
+          # Valkey/Redis
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6389
+          VALKEY_HOST: 127.0.0.1
+          VALKEY_PORT: 6389
+          TEST_REDIS_PORT: 6389
+          VALKEY_TEST_PORT: 6389
+          # App config
           APP_ENV: test
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
-          # Source the generated .env file for additional variables
-          if [ -f .env ]; then
-            export $(grep -v '^#' .env | xargs)
-          fi
           go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Run API contract tests
@@ -117,8 +132,8 @@ jobs:
           flags: backend
           name: backend-coverage
           fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+        # Token is optional if Codecov is configured for tokenless uploads
 
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
@@ -185,16 +200,17 @@ jobs:
     environment: Development
 
     services:
-      postgres:
-        image: postgres:15-alpine
+      mariadb:
+        image: mariadb:10.11
         env:
-          POSTGRES_DB: gotrs_integration
-          POSTGRES_USER: gotrs_integration
-          POSTGRES_PASSWORD: gotrs_integration_password
+          MYSQL_ROOT_PASSWORD: ${{ secrets.TEST_DB_ROOT_PASSWORD }}
+          MYSQL_DATABASE: otrs_integration
+          MYSQL_USER: otrs
+          MYSQL_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
         ports:
-          - 5432:5432
+          - 3308:3306
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -202,7 +218,7 @@ jobs:
       valkey:
         image: valkey/valkey:7-alpine
         ports:
-          - 6388:6379
+          - 6389:6379
         options: >-
           --health-cmd "valkey-cli ping"
           --health-interval 10s
@@ -241,33 +257,44 @@ jobs:
           cd web
           npm run build
 
-      - name: Install PostgreSQL client tools
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Install MySQL client tools
+        run: sudo apt-get update && sudo apt-get install -y mysql-client
 
       - name: Set up integration test database
         env:
-          PGPASSWORD: gotrs_integration_password
+          MYSQL_PWD: ${{ secrets.TEST_DB_ROOT_PASSWORD }}
         run: |
-          # Wait for postgres to be ready
-          until pg_isready -h localhost -p 5432 -U gotrs_integration; do
-            echo "Waiting for postgres..."
+          # Wait for MariaDB to be ready
+          until mysql -h 127.0.0.1 -P 3308 -u root -e "SELECT 1" > /dev/null 2>&1; do
+            echo "Waiting for MariaDB..."
             sleep 2
           done
           
           # Run migrations
-            psql -h localhost -U gotrs_integration -d gotrs_integration < migrations/postgres/000001_schema_alignment.up.sql
-            psql -h localhost -U gotrs_integration -d gotrs_integration < schema/baseline/required_lookups.sql
+          mysql -h 127.0.0.1 -P 3308 -u root otrs_integration < migrations/mysql/000001_schema_alignment.up.sql
+          mysql -h 127.0.0.1 -P 3308 -u root otrs_integration < migrations/mysql/000002_minimal_data.up.sql
+          mysql -h 127.0.0.1 -P 3308 -u root otrs_integration < migrations/mysql/000003_customer_portal_sysconfig.up.sql
+          mysql -h 127.0.0.1 -P 3308 -u root otrs_integration < migrations/mysql/000004_dynamic_field_screen_config.up.sql
 
       - name: Run integration tests
         env:
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: gotrs_integration
-          DB_USER: gotrs_integration
-          DB_PASSWORD: gotrs_integration_password
-          VALKEY_HOST: localhost
-          VALKEY_PORT: 6388
-          JWT_SECRET: integration-test-secret
+          TEST_DB_DRIVER: mysql
+          TEST_DB_MYSQL_HOST: 127.0.0.1
+          TEST_DB_MYSQL_PORT: 3308
+          TEST_DB_MYSQL_NAME: otrs_integration
+          TEST_DB_MYSQL_USER: otrs
+          TEST_DB_MYSQL_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
+          DB_DRIVER: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3308
+          DB_NAME: otrs_integration
+          DB_USER: otrs
+          DB_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6389
+          VALKEY_HOST: 127.0.0.1
+          VALKEY_PORT: 6389
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
           APP_ENV: integration
         run: |
           # Note: Add actual integration tests when implemented
