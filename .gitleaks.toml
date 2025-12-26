@@ -1,0 +1,30 @@
+# Gitleaks Configuration
+# https://github.com/gitleaks/gitleaks
+
+title = "GOTRS Gitleaks Configuration"
+
+# Extend the default configuration
+[extend]
+useDefault = true
+
+# Paths to exclude from scanning (test files with example tokens)
+[allowlist]
+paths = [
+    # Pact contract test files contain test JWT tokens
+    '''web/src/contracts/auth\.pact\.test\.ts''',
+    '''web/pacts/.*\.json''',
+    # Test data directories
+    '''testdata/''',
+    '''test-secrets/''',
+    # Generated files
+    '''web/src/types/api\.ts''',
+]
+
+# Stop words to prevent false positives
+stopwords = [
+    "test",
+    "example",
+    "mock",
+    "dummy",
+    "sample",
+]
