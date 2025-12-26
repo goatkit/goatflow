@@ -264,6 +264,22 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		assignee := c.DefaultQuery("assignee", "all")
 		search := c.Query("search")
 
+		// Pagination parameters
+		pageStr := c.DefaultQuery("page", "1")
+		perPageStr := c.DefaultQuery("per_page", "25")
+		page, _ := strconv.Atoi(pageStr)
+		perPage, _ := strconv.Atoi(perPageStr)
+		if page < 1 {
+			page = 1
+		}
+		if perPage < 1 || perPage > 100 {
+			perPage = 25
+		}
+		offset := (page - 1) * perPage
+
+		// Parse dynamic field filters from query params (df_FieldName=value)
+		dfFilters := ParseDynamicFieldFiltersFromQuery(c.Request.URL.Query())
+
 		// Build query
 		query := `
 			SELECT t.id, t.tn, t.title,
@@ -366,10 +382,76 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 			args = append(args, pattern, pattern, pattern)
 		}
 
-		// Add ordering
+		// Apply dynamic field filters
+		if len(dfFilters) > 0 {
+			dfSQL, dfArgs, err := BuildDynamicFieldFilterSQL(dfFilters, argCount+1)
+			if err == nil && dfSQL != "" {
+				query += dfSQL
+				args = append(args, dfArgs...)
+				argCount += len(dfArgs)
+			}
+		}
+
+		// Build count query for pagination (before adding ORDER BY and LIMIT)
+		// Use a simpler approach: just count tickets with same WHERE clause
+		countQuery := `SELECT COUNT(DISTINCT t.id) FROM ticket t
+			LEFT JOIN customer_user c ON t.customer_user_id = c.login
+			LEFT JOIN customer_company cc ON t.customer_id = cc.customer_id
+			LEFT JOIN queue q ON t.queue_id = q.id
+			LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
+			LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
+			LEFT JOIN users u ON t.responsible_user_id = u.id
+			WHERE 1=1`
+
+		// Find WHERE 1=1 in main query and append conditions after it
+		whereIdx := strings.Index(query, "WHERE 1=1")
+		if whereIdx > 0 {
+			// Get everything after "WHERE 1=1" (the conditions)
+			afterWhere := query[whereIdx+len("WHERE 1=1"):]
+			countQuery += afterWhere
+		}
+
+		var totalCount int
+		countErr := db.QueryRow(database.ConvertPlaceholders(countQuery), args...).Scan(&totalCount)
+		if countErr != nil {
+			log.Printf("Count query error: %v", countErr)
+			totalCount = 0
+		}
+
+		// Calculate pagination info
+		totalPages := (totalCount + perPage - 1) / perPage
+		if totalPages < 1 {
+			totalPages = 1
+		}
+
+		// Calculate page number range for pagination UI (show up to 10 pages)
+		pageNumbers := make([]int, 0)
+		startPage := page - 4
+		if startPage < 1 {
+			startPage = 1
+		}
+		endPage := startPage + 9
+		if endPage > totalPages {
+			endPage = totalPages
+			startPage = endPage - 9
+			if startPage < 1 {
+				startPage = 1
+			}
+		}
+		for i := startPage; i <= endPage; i++ {
+			pageNumbers = append(pageNumbers, i)
+		}
+
+		// Add ordering and pagination
 		sortBy := c.DefaultQuery("sort", "create_time")
 		sortOrder := c.DefaultQuery("order", "desc")
 		query += fmt.Sprintf(" ORDER BY t.%s %s", sanitizeSortColumn(sortBy), sortOrder)
+		argCount++
+		query += fmt.Sprintf(" LIMIT $%d", argCount)
+		args = append(args, perPage)
+		argCount++
+		query += fmt.Sprintf(" OFFSET $%d", argCount)
+		args = append(args, offset)
 
 		// Execute query
 		rows, err := db.Query(database.ConvertPlaceholders(query), args...)
@@ -468,13 +550,28 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		// Pass the isInAdminGroup flag to template
 		adminGroupFlag, _ := c.Get("isInAdminGroup")
 
+		// Get searchable dynamic fields for the filter UI
+		searchableDFs, _ := GetFieldsForSearch()
+
+		// Build current DF filter values for template
+		currentDFFilters := make(map[string]string)
+		for _, f := range dfFilters {
+			key := fmt.Sprintf("df_%s", f.FieldName)
+			if f.Operator != "" && f.Operator != "eq" {
+				key = fmt.Sprintf("df_%s_%s", f.FieldName, f.Operator)
+			}
+			currentDFFilters[key] = f.Value
+		}
+
 		pongo2Renderer.HTML(c, http.StatusOK, "pages/agent/tickets.pongo2", pongo2.Context{
-			"Title":           "Ticket Management",
-			"ActivePage":      "agent",
-			"User":            user,
-			"IsInAdminGroup":  adminGroupFlag,
-			"Tickets":         tickets,
-			"AvailableQueues": availableQueues,
+			"Title":                   "Ticket Management",
+			"ActivePage":              "agent",
+			"User":                    user,
+			"IsInAdminGroup":          adminGroupFlag,
+			"Tickets":                 tickets,
+			"AvailableQueues":         availableQueues,
+			"SearchableDynamicFields": searchableDFs,
+			"CurrentDFFilters":        currentDFFilters,
 			"CurrentFilters": map[string]string{
 				"status":   status,
 				"queue":    queue,
@@ -482,6 +579,17 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 				"search":   search,
 				"sort":     sortBy,
 				"order":    sortOrder,
+			},
+			"Pagination": map[string]interface{}{
+				"Page":        page,
+				"PerPage":     perPage,
+				"TotalCount":  totalCount,
+				"TotalPages":  totalPages,
+				"PrevPage":    page - 1,
+				"NextPage":    page + 1,
+				"PageNumbers": pageNumbers,
+				"HasFirst":    page > 1,
+				"HasLast":     page < totalPages,
 			},
 		})
 	}

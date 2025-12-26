@@ -126,6 +126,67 @@
         "edit_title": "Typ bearbeiten"
       }
     },
+    "dynamic_fields": {
+      "title": "Dynamische Felder",
+      "description": "Verwalten Sie benutzerdefinierte Felder für Tickets, Artikel und Kunden",
+      "add_field": "Dynamisches Feld hinzufügen",
+      "edit_field": "Dynamisches Feld bearbeiten",
+      "new_field": "Neues dynamisches Feld",
+      "delete_field": "Dynamisches Feld löschen",
+      "field_name": "Feldname",
+      "field_label": "Bezeichnung",
+      "field_type": "Feldtyp",
+      "object_type": "Objekttyp",
+      "field_order": "Reihenfolge",
+      "valid": "Gültig",
+      "invalid": "Ungültig",
+      "internal_field": "Internes Feld",
+      "additional_fields": "Zusätzliche Felder",
+      "select": "Auswählen...",
+      "no_fields": "Keine dynamischen Felder definiert",
+      "confirm_delete": "Möchten Sie dieses Feld wirklich löschen?",
+      "delete_warning": "Dies löscht auch alle gespeicherten Werte für dieses Feld.",
+      "name_exists": "Ein Feld mit diesem Namen existiert bereits",
+      "name_invalid": "Feldname muss alphanumerisch sein (Buchstaben, Zahlen, Unterstrich)",
+      "type_specific_settings": "Typspezifische Einstellungen",
+      "default_value": "Standardwert",
+      "max_length": "Maximale Länge",
+      "regex_pattern": "Validierungsmuster (Regex)",
+      "link_template": "Link-Vorlage",
+      "possible_values": "Mögliche Werte",
+      "add_value": "Wert hinzufügen",
+      "remove_value": "Entfernen",
+      "allow_empty": "Leere Auswahl erlauben",
+      "translatable_values": "Übersetzbare Werte",
+      "rows": "Zeilen",
+      "cols": "Spalten",
+      "years_in_past": "Jahre in der Vergangenheit",
+      "years_in_future": "Jahre in der Zukunft",
+      "date_restriction": "Datumseinschränkung",
+      "no_restriction": "Keine Einschränkung",
+      "no_past_dates": "Keine vergangenen Daten",
+      "no_future_dates": "Keine zukünftigen Daten",
+      "screen_config": "Bildschirmkonfiguration",
+      "screen_config_description": "Konfigurieren Sie, wo dynamische Felder angezeigt werden",
+      "enabled": "Aktiviert",
+      "required": "Erforderlich",
+      "disabled": "Deaktiviert",
+      "object_types": {
+        "Ticket": "Ticket",
+        "Article": "Artikel",
+        "CustomerUser": "Kundenbenutzer",
+        "CustomerCompany": "Kundenunternehmen"
+      },
+      "field_types": {
+        "Text": "Text",
+        "TextArea": "Textbereich",
+        "Checkbox": "Kontrollkästchen",
+        "Dropdown": "Auswahlliste",
+        "Multiselect": "Mehrfachauswahl",
+        "Date": "Datum",
+        "DateTime": "Datum/Uhrzeit"
+      }
+    },
     "actions": "Aktionen",
     "common": {
       "actions": {
@@ -438,6 +499,7 @@
     "results": "Ergebnisse",
     "save": "Speichern",
     "search": "Suchen",
+    "select": "Auswählen",
     "see_more": "Mehr anzeigen",
     "settings": "Einstellungen",
     "showing": "Zeige",
@@ -466,6 +528,7 @@
   },
   "forms": {
     "mandatory_note": "Alle mit einem Stern (*) markierten Felder sind Pflichtfelder.",
+    "select": "Auswählen",
     "customer_info": {
       "panel_title": "Kundeninformationen",
       "unregistered": "Nicht registrierte E-Mail",
@@ -499,6 +562,12 @@
     "title": "Übersicht",
     "welcome_back": "Willkommen zurück",
     "welcome_message": "Das passiert heute mit Ihren Tickets"
+  },
+  "dynamic_fields": {
+    "title": "Zusätzliche Felder",
+    "article_fields": "Artikel-Felder",
+    "additional_fields": "Zusätzliche Felder",
+    "select": "Auswählen..."
   },
   "errors": {
     "authentication": "Authentifizierung fehlgeschlagen",
@@ -823,6 +892,7 @@
   "tickets": {
     "actions": "Aktionen",
     "add_comment": "Kommentar hinzufügen",
+    "additional_fields": "Zusätzliche Felder",
     "articles": "Artikel",
     "assign": "Zuweisen",
     "assigned_to": "Zugewiesen an",

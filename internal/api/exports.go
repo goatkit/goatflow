@@ -244,12 +244,26 @@ var (
 		}
 		handleAdminDefaultServicesUpdate(dbService.GetDB())(c)
 	}
+
+	// Dynamic Fields management
+	HandleAdminDynamicFields                 = handleAdminDynamicFields
+	HandleAdminDynamicFieldNew               = handleAdminDynamicFieldNew
+	HandleAdminDynamicFieldEdit              = handleAdminDynamicFieldEdit
+	HandleAdminDynamicFieldScreenConfig      = handleAdminDynamicFieldScreenConfig
+	HandleCreateDynamicField                 = handleCreateDynamicField
+	HandleUpdateDynamicField                 = handleUpdateDynamicField
+	HandleDeleteDynamicField                 = handleDeleteDynamicField
+	HandleAdminDynamicFieldScreenConfigSave  = handleAdminDynamicFieldScreenConfigSave
+	HandleAdminDynamicFieldScreenConfigSingle = handleAdminDynamicFieldScreenConfigSingle
 )
 
 // Ticket handlers
 var (
-	HandleTicketDetail = handleTicketDetail
-	HandleQueueDetail  = handleQueueDetail
+	HandleTicketDetail   = handleTicketDetail
+	HandleQueueDetail    = handleQueueDetail
+	HandleNewTicket      = handleNewTicket
+	HandleNewEmailTicket = handleNewEmailTicket
+	HandleNewPhoneTicket = handleNewPhoneTicket
 )
 
 // Attachment handlers (exported for routing)

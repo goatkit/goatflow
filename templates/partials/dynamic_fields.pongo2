@@ -2,7 +2,7 @@
 {# Usage: {% include "partials/dynamic_fields.pongo2" with DynamicFields=fields %} #}
 
 {% if DynamicFields %}
-<div class="space-y-6 border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+<div class="space-y-6 border-t border-gray-200 dark:border-gray-700 pt-6 mt-6" x-data="dynamicFieldsValidation()">
     <h3 class="text-lg font-medium text-gray-900 dark:text-white">Additional Information</h3>
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {% for df in DynamicFields %}
@@ -18,8 +18,12 @@
                     id="DynamicField_{{ df.Field.Name }}"
                     value="{{ df.Field.Config.DefaultValue }}"
                     {% if df.ConfigValue == 2 %}required{% endif %}
+                    {% if df.Field.Config.MaxLength %}maxlength="{{ df.Field.Config.MaxLength }}"{% endif %}
+                    {% if df.Field.Config.RegexPattern %}data-pattern="{{ df.Field.Config.RegexPattern }}"{% endif %}
+                    @blur="validateField($event.target)"
                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
                 />
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
 
                 {% elif df.Field.FieldType == "TextArea" %}
                 <textarea
@@ -28,8 +32,10 @@
                     rows="{{ df.Field.Config.Rows|default:3 }}"
                     cols="{{ df.Field.Config.Cols|default:50 }}"
                     {% if df.ConfigValue == 2 %}required{% endif %}
+                    @blur="validateField($event.target)"
                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
                 >{{ df.Field.Config.DefaultValue }}</textarea>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
 
                 {% elif df.Field.FieldType == "Checkbox" %}
                 <div class="flex items-center">
@@ -48,6 +54,7 @@
                     name="DynamicField_{{ df.Field.Name }}"
                     id="DynamicField_{{ df.Field.Name }}"
                     {% if df.ConfigValue == 2 %}required{% endif %}
+                    @change="validateField($event.target)"
                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
                 >
                     <option value="">-- Select --</option>
@@ -55,6 +62,7 @@
                     <option value="{{ key }}" {% if df.Field.Config.DefaultValue == key %}selected{% endif %}>{{ value }}</option>
                     {% endfor %}
                 </select>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
 
                 {% elif df.Field.FieldType == "Multiselect" %}
                 <select
@@ -62,6 +70,7 @@
                     id="DynamicField_{{ df.Field.Name }}"
                     multiple
                     {% if df.ConfigValue == 2 %}required{% endif %}
+                    @change="validateField($event.target)"
                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
                 >
                     {% for key, value in df.Field.Config.PossibleValues %}
@@ -69,6 +78,7 @@
                     {% endfor %}
                 </select>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Hold Ctrl/Cmd to select multiple</p>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
 
                 {% elif df.Field.FieldType == "Date" %}
                 <input type="date"
@@ -76,8 +86,12 @@
                     id="DynamicField_{{ df.Field.Name }}"
                     value="{{ df.Field.Config.DefaultValue }}"
                     {% if df.ConfigValue == 2 %}required{% endif %}
+                    {% if df.Field.Config.DateRestriction == "DisablePastDates" %}min="{{ "now"|date:"2006-01-02" }}"{% endif %}
+                    {% if df.Field.Config.DateRestriction == "DisableFutureDates" %}max="{{ "now"|date:"2006-01-02" }}"{% endif %}
+                    @blur="validateField($event.target)"
                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
                 />
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
 
                 {% elif df.Field.FieldType == "DateTime" %}
                 <input type="datetime-local"
@@ -85,8 +99,10 @@
                     id="DynamicField_{{ df.Field.Name }}"
                     value="{{ df.Field.Config.DefaultValue }}"
                     {% if df.ConfigValue == 2 %}required{% endif %}
+                    @blur="validateField($event.target)"
                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
                 />
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
 
                 {% else %}
                 {# Fallback for unknown types #}
@@ -94,6 +110,7 @@
                     name="DynamicField_{{ df.Field.Name }}"
                     id="DynamicField_{{ df.Field.Name }}"
                     {% if df.ConfigValue == 2 %}required{% endif %}
+                    @blur="validateField($event.target)"
                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
                 />
                 {% endif %}
@@ -105,4 +122,62 @@
         {% endfor %}
     </div>
 </div>
+
+<script>
+function dynamicFieldsValidation() {
+    return {
+        errors: {},
+        validateField(field) {
+            const name = field.name.replace('[]', '');
+            this.errors[name] = '';
+            
+            // Required validation
+            if (field.hasAttribute('required')) {
+                if (field.type === 'select-multiple') {
+                    if (field.selectedOptions.length === 0) {
+                        this.errors[name] = 'This field is required';
+                        return false;
+                    }
+                } else if (!field.value.trim()) {
+                    this.errors[name] = 'This field is required';
+                    return false;
+                }
+            }
+            
+            // Pattern validation for text fields
+            const pattern = field.getAttribute('data-pattern');
+            if (pattern && field.value) {
+                try {
+                    const regex = new RegExp(pattern);
+                    if (!regex.test(field.value)) {
+                        this.errors[name] = 'Invalid format';
+                        return false;
+                    }
+                } catch (e) {
+                    console.warn('Invalid regex pattern:', pattern);
+                }
+            }
+            
+            // Maxlength visual feedback (browser handles actual limit)
+            const maxlength = field.getAttribute('maxlength');
+            if (maxlength && field.value.length > parseInt(maxlength)) {
+                this.errors[name] = `Maximum ${maxlength} characters allowed`;
+                return false;
+            }
+            
+            return true;
+        },
+        validateAll() {
+            let valid = true;
+            const fields = document.querySelectorAll('[name^="DynamicField_"]');
+            fields.forEach(field => {
+                if (!this.validateField(field)) {
+                    valid = false;
+                }
+            });
+            return valid;
+        }
+    }
+}
+</script>
 {% endif %}

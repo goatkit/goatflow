@@ -10,25 +10,7 @@ spec:
   prefix: ""
   middleware: []
   routes:
-    # Static CSS files
-    - path: /static/css/:filepath
-      method: GET
-      handler: handleStaticFiles
-      description: "Serve CSS files from static/css directory"
-
-    # Static JavaScript files
-    - path: /static/js/:filepath
-      method: GET
-      handler: handleStaticFiles
-      description: "Serve JavaScript files from static/js directory"
-
-    # Static images
-    - path: /static/images/:filepath
-      method: GET
-      handler: handleStaticFiles
-      description: "Serve image files from static/images directory"
-
-    # Favicon files
+    # Favicon files (must be before catch-all)
     - path: /favicon.ico
       method: GET
       handler: handleStaticFiles
@@ -39,8 +21,9 @@ spec:
       handler: handleStaticFiles
       description: "Serve favicon.svg file"
 
-    # Catch-all for other static files
-    - path: /static/:filepath
+    # Single catch-all for all static files (supports subdirectories)
+    - path: /static/*filepath
       method: GET
       handler: handleStaticFiles
-      description: "Serve any other static files from static directory"
+      description: "Serve all static files including css, js, images, webfonts"
+

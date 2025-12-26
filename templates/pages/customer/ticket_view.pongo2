@@ -191,6 +191,64 @@
                 <input type="hidden" name="message" id="replyBody" required>
             </div>
             
+            <!-- Article Dynamic Fields -->
+            {% if ReplyArticleDynamicFields %}
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
+                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ t("admin.dynamic_fields.additional_fields") }}</h3>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {% for dfc in ReplyArticleDynamicFields %}
+                    <div>
+                        <label for="ArticleDynamicField_{{ dfc.Field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {{ dfc.Field.Label }}
+                            {% if dfc.ConfigValue == 2 %}<span class="text-red-500">*</span>{% endif %}
+                        </label>
+                        {% if dfc.Field.FieldType == "Text" %}
+                        <input type="text" name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                               {% if dfc.ConfigValue == 2 %}required{% endif %}>
+                        {% elif dfc.Field.FieldType == "TextArea" %}
+                        <textarea name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}" rows="3"
+                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                                  {% if dfc.ConfigValue == 2 %}required{% endif %}></textarea>
+                        {% elif dfc.Field.FieldType == "Checkbox" %}
+                        <div class="mt-1">
+                            <input type="hidden" name="ArticleDynamicField_{{ dfc.Field.Name }}" value="0">
+                            <input type="checkbox" name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}" value="1"
+                                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
+                            <label for="ArticleDynamicField_{{ dfc.Field.Name }}" class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ dfc.Field.Label }}</label>
+                        </div>
+                        {% elif dfc.Field.FieldType == "Dropdown" %}
+                        <select name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                                {% if dfc.ConfigValue == 2 %}required{% endif %}>
+                            <option value="">- {{ t("admin.dynamic_fields.select") }} -</option>
+                            {% for key, val in dfc.Field.Config.PossibleValues %}
+                            <option value="{{ key }}">{{ val }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif dfc.Field.FieldType == "Multiselect" %}
+                        <select name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}" multiple
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                                {% if dfc.ConfigValue == 2 %}required{% endif %}>
+                            {% for key, val in dfc.Field.Config.PossibleValues %}
+                            <option value="{{ key }}">{{ val }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif dfc.Field.FieldType == "Date" %}
+                        <input type="date" name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                               {% if dfc.ConfigValue == 2 %}required{% endif %}>
+                        {% elif dfc.Field.FieldType == "DateTime" %}
+                        <input type="datetime-local" name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                               {% if dfc.ConfigValue == 2 %}required{% endif %}>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
             <div class="flex items-center justify-between">
                 <a href="/customer/tickets" class="text-sm text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
                     ← {{ t("customer.new_ticket.back_to_tickets") }}

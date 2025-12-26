@@ -29,6 +29,8 @@ MIGRATIONS_DIR="/docker-entrypoint-initdb.d/migrations"
 MIGRATION_FILES=(
     000001_schema_alignment.up.sql
     000002_minimal_data.up.sql
+    000003_queue_email_address.up.sql
+    000004_dynamic_field_screen_config.up.sql
 )
 
 for file in "${MIGRATION_FILES[@]}"; do

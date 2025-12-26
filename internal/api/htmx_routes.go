@@ -3359,6 +3359,16 @@ func handleNewTicket(c *gin.Context) {
 			}
 		}
 	}
+
+	// Get dynamic fields for agent ticket creation (AgentTicketPhone screen)
+	var createFormDynamicFields []FieldWithScreenConfig
+	dfFields, dfErr := GetFieldsForScreenWithConfig("AgentTicketPhone", DFObjectTicket)
+	if dfErr != nil {
+		log.Printf("Error getting ticket create dynamic fields: %v", dfErr)
+	} else {
+		createFormDynamicFields = dfFields
+	}
+
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", pongo2.Context{
 		"User":              getUserMapForTemplate(c),
 		"IsInAdminGroup":    isInAdminGroup,
@@ -3369,6 +3379,7 @@ func handleNewTicket(c *gin.Context) {
 		"TicketStates":      stateOptions,
 		"TicketStateLookup": stateLookup,
 		"CustomerUsers":     customerUsers,
+		"DynamicFields":     createFormDynamicFields,
 	})
 }
 
@@ -3458,6 +3469,15 @@ func handleNewEmailTicket(c *gin.Context) {
 		customerUsers = cu
 	}
 
+	// Get dynamic fields for email ticket creation (AgentTicketEmail screen)
+	var dynamicFields []FieldWithScreenConfig
+	dfFields, dfErr := GetFieldsForScreenWithConfig("AgentTicketEmail", DFObjectTicket)
+	if dfErr != nil {
+		log.Printf("Error getting email ticket dynamic fields: %v", dfErr)
+	} else {
+		dynamicFields = dfFields
+	}
+
 	// Render unified Pongo2 new ticket form
 	if pongo2Renderer != nil {
 		pongo2Renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", pongo2.Context{
@@ -3470,6 +3490,7 @@ func handleNewEmailTicket(c *gin.Context) {
 			"TicketStates":      stateOptions,
 			"TicketStateLookup": stateLookup,
 			"CustomerUsers":     customerUsers,
+			"DynamicFields":     dynamicFields,
 		})
 		return
 	}
@@ -3562,6 +3583,15 @@ func handleNewPhoneTicket(c *gin.Context) {
 		customerUsers = cu
 	}
 
+	// Get dynamic fields for phone ticket creation (AgentTicketPhone screen)
+	var dynamicFields []FieldWithScreenConfig
+	dfFields, dfErr := GetFieldsForScreenWithConfig("AgentTicketPhone", DFObjectTicket)
+	if dfErr != nil {
+		log.Printf("Error getting phone ticket dynamic fields: %v", dfErr)
+	} else {
+		dynamicFields = dfFields
+	}
+
 	// Render unified Pongo2 new ticket form
 	if pongo2Renderer != nil {
 		pongo2Renderer.HTML(c, http.StatusOK, "pages/tickets/new.pongo2", pongo2.Context{
@@ -3574,6 +3604,7 @@ func handleNewPhoneTicket(c *gin.Context) {
 			"TicketStates":      stateOptions,
 			"TicketStateLookup": stateLookup,
 			"CustomerUsers":     customerUsers,
+			"DynamicFields":     dynamicFields,
 		})
 		return
 	}
@@ -3772,6 +3803,12 @@ func handleTicketDetail(c *gin.Context) {
 			}
 		}
 
+		// Get Article dynamic fields for display
+		var articleDynamicFields []DynamicFieldDisplay
+		if articleDFs, dfErr := GetDynamicFieldValuesForDisplay(int(article.ID), DFObjectArticle, "AgentArticleZoom"); dfErr == nil {
+			articleDynamicFields = articleDFs
+		}
+
 		notes = append(notes, gin.H{
 			"id":                      article.ID,
 			"author":                  authorName,
@@ -3783,6 +3820,7 @@ func handleTicketDetail(c *gin.Context) {
 			"subject":                 article.Subject,
 			"has_html":                hasHTMLContent,
 			"attachments":             []gin.H{}, // Empty attachments for now
+			"dynamic_fields":          articleDynamicFields,
 		})
 	}
 
@@ -4187,7 +4225,7 @@ func handleTicketDetail(c *gin.Context) {
 		dynamicFieldsDisplay = dfDisplay
 	}
 
-	// Get dynamic fields for the note form (editable)
+	// Get dynamic fields for the note form (editable) - Ticket fields
 	var noteFormDynamicFields []FieldWithScreenConfig
 	noteFields, noteErr := GetFieldsForScreenWithConfig("AgentTicketNote", DFObjectTicket)
 	if noteErr != nil {
@@ -4196,7 +4234,16 @@ func handleTicketDetail(c *gin.Context) {
 		noteFormDynamicFields = noteFields
 	}
 
-	// Get dynamic fields for the close form (editable)
+	// Get Article dynamic fields for the note form
+	var noteArticleDynamicFields []FieldWithScreenConfig
+	noteArticleFields, noteArticleErr := GetFieldsForScreenWithConfig("AgentArticleNote", DFObjectArticle)
+	if noteArticleErr != nil {
+		log.Printf("Error getting note article dynamic fields: %v", noteArticleErr)
+	} else {
+		noteArticleDynamicFields = noteArticleFields
+	}
+
+	// Get dynamic fields for the close form (editable) - Ticket fields
 	var closeFormDynamicFields []FieldWithScreenConfig
 	closeFields, closeErr := GetFieldsForScreenWithConfig("AgentTicketClose", DFObjectTicket)
 	if closeErr != nil {
@@ -4205,19 +4252,30 @@ func handleTicketDetail(c *gin.Context) {
 		closeFormDynamicFields = closeFields
 	}
 
+	// Get Article dynamic fields for the close form
+	var closeArticleDynamicFields []FieldWithScreenConfig
+	closeArticleFields, closeArticleErr := GetFieldsForScreenWithConfig("AgentArticleClose", DFObjectArticle)
+	if closeArticleErr != nil {
+		log.Printf("Error getting close article dynamic fields: %v", closeArticleErr)
+	} else {
+		closeArticleDynamicFields = closeArticleFields
+	}
+
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/ticket_detail.pongo2", pongo2.Context{
 		"Ticket":                  ticketData,
 		"User":                    getUserMapForTemplate(c),
-		"ActivePage":              "tickets",
-		"CustomerPanelUser":       panelUser,
-		"CustomerPanelCompany":    panelCompany,
-		"CustomerPanelOpen":       panelOpen,
-		"RequireNoteTimeUnits":    requireTimeUnits,
-		"TicketStates":            ticketStates,
-		"PendingStateIDs":         pendingStateIDs,
-		"DynamicFields":           dynamicFieldsDisplay,
-		"NoteFormDynamicFields":   noteFormDynamicFields,
-		"CloseFormDynamicFields":  closeFormDynamicFields,
+		"ActivePage":                  "tickets",
+		"CustomerPanelUser":           panelUser,
+		"CustomerPanelCompany":        panelCompany,
+		"CustomerPanelOpen":           panelOpen,
+		"RequireNoteTimeUnits":        requireTimeUnits,
+		"TicketStates":                ticketStates,
+		"PendingStateIDs":             pendingStateIDs,
+		"DynamicFields":               dynamicFieldsDisplay,
+		"NoteFormDynamicFields":       noteFormDynamicFields,
+		"NoteArticleDynamicFields":    noteArticleDynamicFields,
+		"CloseFormDynamicFields":      closeFormDynamicFields,
+		"CloseArticleDynamicFields":   closeArticleDynamicFields,
 	})
 }
 
@@ -5514,6 +5572,10 @@ func handleAddTicketNote(c *gin.Context) {
 		if dfErr := ProcessDynamicFieldsFromForm(c.Request.PostForm, ticketIDInt, DFObjectTicket, "AgentTicketNote"); dfErr != nil {
 			log.Printf("WARNING: Failed to process dynamic fields for ticket %d from note: %v", ticketIDInt, dfErr)
 		}
+		// Process Article dynamic fields
+		if dfErr := ProcessArticleDynamicFieldsFromForm(c.Request.PostForm, articleID, "AgentArticleNote"); dfErr != nil {
+			log.Printf("WARNING: Failed to process article dynamic fields for article %d: %v", articleID, dfErr)
+		}
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -6166,12 +6228,13 @@ func handleCloseTicket(c *gin.Context) {
 
 	// Parse request body
 	var closeData struct {
-		StateID        int                    `json:"state_id"`
-		Resolution     string                 `json:"resolution"`
-		Notes          string                 `json:"notes" binding:"required"`
-		TimeUnits      int                    `json:"time_units"`
-		NotifyCustomer bool                   `json:"notify_customer"`
-		DynamicFields  map[string]interface{} `json:"dynamic_fields"`
+		StateID              int                    `json:"state_id"`
+		Resolution           string                 `json:"resolution"`
+		Notes                string                 `json:"notes" binding:"required"`
+		TimeUnits            int                    `json:"time_units"`
+		NotifyCustomer       bool                   `json:"notify_customer"`
+		DynamicFields        map[string]interface{} `json:"dynamic_fields"`
+		ArticleDynamicFields map[string]interface{} `json:"article_dynamic_fields"`
 	}
 
 	if err := c.ShouldBindJSON(&closeData); err != nil {
@@ -6236,13 +6299,37 @@ func handleCloseTicket(c *gin.Context) {
 		return
 	}
 
-	// Add close note as an article (skip for now - articleRepo doesn't support transactions yet)
-	// We'll just update the ticket state for now
-	// TODO: Add transaction support to article repository
+	// Create close article (outside transaction - article repo doesn't support tx)
+	var closeArticleID int
+	if strings.TrimSpace(closeData.Notes) != "" {
+		articleRepo := repository.NewArticleRepository(db)
+		closeArticle := &models.Article{
+			TicketID:               ticketIDInt,
+			Subject:                "Ticket Closed",
+			Body:                   closeData.Notes,
+			SenderTypeID:           1, // Agent
+			CommunicationChannelID: 7, // Note
+			IsVisibleForCustomer:   0, // Internal by default
+			CreateBy:               userID,
+			ChangeBy:               userID,
+		}
+		if closeData.NotifyCustomer {
+			closeArticle.IsVisibleForCustomer = 1
+		}
+		if aerr := articleRepo.Create(closeArticle); aerr != nil {
+			log.Printf("WARNING: Failed to create close article: %v", aerr)
+		} else {
+			closeArticleID = int(closeArticle.ID)
+		}
+	}
 
 	// Persist time accounting for close operation if provided
 	if closeData.TimeUnits > 0 {
-		_ = saveTimeEntry(db, ticketIDInt, nil, closeData.TimeUnits, userID)
+		articleIDPtr := &closeArticleID
+		if closeArticleID == 0 {
+			articleIDPtr = nil
+		}
+		_ = saveTimeEntry(db, ticketIDInt, articleIDPtr, closeData.TimeUnits, userID)
 	}
 
 	// Commit transaction
@@ -6273,6 +6360,30 @@ func handleCloseTicket(c *gin.Context) {
 		}
 		if dfErr := ProcessDynamicFieldsFromForm(formValues, ticketIDInt, DFObjectTicket, "AgentTicketClose"); dfErr != nil {
 			log.Printf("WARNING: Failed to process dynamic fields for ticket %d on close: %v", ticketIDInt, dfErr)
+		}
+	}
+
+	// Process Article dynamic fields for the close article
+	if closeArticleID > 0 && len(closeData.ArticleDynamicFields) > 0 {
+		articleFormValues := make(map[string][]string)
+		for k, v := range closeData.ArticleDynamicFields {
+			switch val := v.(type) {
+			case string:
+				articleFormValues[k] = []string{val}
+			case []interface{}:
+				strVals := make([]string, 0, len(val))
+				for _, item := range val {
+					if s, ok := item.(string); ok {
+						strVals = append(strVals, s)
+					}
+				}
+				articleFormValues[k] = strVals
+			case []string:
+				articleFormValues[k] = val
+			}
+		}
+		if dfErr := ProcessArticleDynamicFieldsFromForm(articleFormValues, closeArticleID, "AgentArticleClose"); dfErr != nil {
+			log.Printf("WARNING: Failed to process article dynamic fields for article %d on close: %v", closeArticleID, dfErr)
 		}
 	}
 

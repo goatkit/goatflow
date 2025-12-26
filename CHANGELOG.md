@@ -46,6 +46,7 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - **Service Filtering in Customer Portal**: Customer ticket creation form now filters services to only show those assigned to the logged-in customer user via `service_customer_user` table.
 - **Service Field in Agent Ticket Form**: Agents can now select a Service when creating tickets, with the service_id saved to the ticket record.
 - **Default Services for Customer Users**: Customer users can now have default services assigned that are automatically pre-selected when creating tickets via the customer portal.
+- **Dynamic Fields Admin Module**: Full CRUD for dynamic field definitions with 7 field types (Text, TextArea, Dropdown, Multiselect, Checkbox, Date, DateTime). Screen configuration UI for enabling fields on 8 ticket screens (AgentTicketZoom, AgentTicketCreate, etc.). OTRS-compatible YAML config storage. 52+ unit tests covering validation, DB operations, and API responses. Alpine.js client-side validation with i18n support (EN/DE).
 
 ### Changed
 - Routes manifest regenerated (including admin dynamic aliases) and config defaults refreshed.

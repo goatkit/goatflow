@@ -135,7 +135,7 @@
 
 <script>
 function updateScreenConfig(fieldId, screenKey, value) {
-    fetch(`/api/dynamic-fields/${fieldId}/screen`, {
+    fetch(`/admin/api/dynamic-fields/${fieldId}/screen`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

@@ -1,3 +1,5 @@
+//go:build e2e
+
 package e2e
 
 // This file ensures the .env loader in config runs before any tests access os.Getenv directly.

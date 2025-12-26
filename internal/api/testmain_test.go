@@ -1,3 +1,5 @@
+//go:build db
+
 package api
 
 import (
@@ -18,6 +20,9 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
+// skipTestsNoDBAvailable is set to true when tests should skip due to missing DB
+var skipTestsNoDBAvailable bool
+
 func TestMain(m *testing.M) {
 	ensureTestEnvironment()
 
@@ -29,27 +34,37 @@ func TestMain(m *testing.M) {
 
 	// Fail fast (3s) with clear error - don't waste time on 45s timeouts
 	if err := waitForTestDatabase(3 * time.Second); err != nil {
+		// When running as part of go test ./..., skip gracefully instead of failing
+		// Individual tests will skip with a descriptive message
+		skipTestsNoDBAvailable = true
 		fmt.Fprintln(os.Stderr, "")
 		fmt.Fprintln(os.Stderr, "╔══════════════════════════════════════════════════════════════════╗")
-		fmt.Fprintln(os.Stderr, "║  TEST DATABASE UNAVAILABLE                                       ║")
+		fmt.Fprintln(os.Stderr, "║  TEST DATABASE UNAVAILABLE - SKIPPING internal/api TESTS        ║")
 		fmt.Fprintln(os.Stderr, "╠══════════════════════════════════════════════════════════════════╣")
-		fmt.Fprintln(os.Stderr, "║  These tests require the test database to be running.            ║")
-		fmt.Fprintln(os.Stderr, "║                                                                  ║")
-		fmt.Fprintln(os.Stderr, "║  To start the test database:                                     ║")
-		fmt.Fprintln(os.Stderr, "║    make test-db-up                                               ║")
-		fmt.Fprintln(os.Stderr, "║                                                                  ║")
-		fmt.Fprintln(os.Stderr, "║  To run tests with DB:                                           ║")
-		fmt.Fprintln(os.Stderr, "║    make toolbox-exec ARGS=\"go test ./internal/api/...\"           ║")
-		fmt.Fprintln(os.Stderr, "║                                                                  ║")
-		fmt.Fprintf(os.Stderr,  "║  Error: %-55s ║\n", err.Error()[:min(55, len(err.Error()))])
+		fmt.Fprintln(os.Stderr, "║  These tests require the test database to be running.           ║")
+		fmt.Fprintln(os.Stderr, "║                                                                 ║")
+		fmt.Fprintln(os.Stderr, "║  To run these tests, start the database first:                  ║")
+		fmt.Fprintln(os.Stderr, "║    make test-db-up                                              ║")
+		fmt.Fprintln(os.Stderr, "║                                                                 ║")
+		fmt.Fprintln(os.Stderr, "║  Then run tests:                                                ║")
+		fmt.Fprintln(os.Stderr, "║    make toolbox-exec ARGS=\"go test ./internal/api/...\"          ║")
 		fmt.Fprintln(os.Stderr, "╚══════════════════════════════════════════════════════════════════╝")
 		fmt.Fprintln(os.Stderr, "")
-		os.Exit(1)
+		// Run anyway - tests will skip themselves
+		os.Exit(m.Run())
 	}
 
 	code := m.Run()
 	database.CloseTestDB()
 	os.Exit(code)
+}
+
+// skipIfNoDatabase skips the test if the database is not available
+func skipIfNoDatabase(t *testing.T) {
+	t.Helper()
+	if skipTestsNoDBAvailable {
+		t.Skip("Skipping: test database not available (run 'make test-db-up' first)")
+	}
 }
 
 func init() {

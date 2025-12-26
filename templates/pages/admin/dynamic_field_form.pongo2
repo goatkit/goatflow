@@ -33,16 +33,16 @@
         <form
             id="dynamicFieldForm"
             method="POST"
-            action="{% if IsNew %}/api/dynamic-fields{% else %}/api/dynamic-fields/{{ Field.ID }}{% endif %}"
-            hx-post="{% if IsNew %}/api/dynamic-fields{% else %}/api/dynamic-fields/{{ Field.ID }}{% endif %}"
+            action="{% if IsNew %}/admin/api/dynamic-fields{% else %}/admin/api/dynamic-fields/{{ Field.ID }}{% endif %}"
+            {% if IsNew %}
+            hx-post="/admin/api/dynamic-fields"
+            {% else %}
+            hx-put="/admin/api/dynamic-fields/{{ Field.ID }}"
+            {% endif %}
             hx-swap="none"
             x-data="dynamicFieldForm()"
             class="space-y-6 p-6"
         >
-            {% if not IsNew %}
-            <input type="hidden" name="_method" value="PUT">
-            {% endif %}
-
             <!-- Basic Information -->
             <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Basic Information</h3>
@@ -363,11 +363,13 @@ function dynamicFieldForm() {
 }
 
 document.getElementById('dynamicFieldForm').addEventListener('htmx:afterRequest', function(event) {
-    if (event.detail.successful) {
-        // Redirect handled by HX-Redirect header
-    } else {
+    const xhr = event.detail.xhr;
+    if (event.detail.successful || xhr.status === 200 || xhr.getResponseHeader('HX-Redirect')) {
+        return;
+    }
+    if (xhr.status >= 400) {
         try {
-            const response = JSON.parse(event.detail.xhr.responseText);
+            const response = JSON.parse(xhr.responseText);
             alert('Error: ' + (response.error || 'Failed to save field'));
         } catch (e) {
             alert('Error saving field');

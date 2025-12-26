@@ -303,10 +303,16 @@ test-legacy: toolbox-build
 		-e TEST_BACKEND_CONTAINER_PORT=$(TEST_BACKEND_PORT) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
-		CORE_PKGS=$$(go list ./... | rg -v "tests/e2e|tests/integration|internal/email/integration"); \
+		echo "Running template tests (fail-fast)"; go test -count=1 -timeout=1m -buildvcs=false ./internal/template/...; \
+		CORE_PKGS=$$(go list ./... | rg -v "tests/e2e|tests/integration|internal/email/integration|internal/template"); \
 		echo "Running core packages"; go test -count=1 -timeout=15m -buildvcs=false $$CORE_PKGS; \
 		echo "Running integration packages"; go test -tags=integration -count=1 -timeout=20m -buildvcs=false ./tests/integration ./internal/email/integration'
 	@$(MAKE) test-e2e-playwright-go
+
+# Run template tests only (fast fail-fast validation of HTMX attributes and paths)
+test-templates:
+	@printf "🎨 Running template tests (fail-fast)...\n"
+	@$(MAKE) toolbox-exec ARGS="go test -v -count=1 ./internal/template/..."
 
 # Debug environment detection
 debug-env:
@@ -824,13 +830,13 @@ test-e2e:
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; \
 		go test -count=1 -buildvcs=false -v ./tests/e2e -run "$(TEST)" | tee generated/test-results/e2e_$(shell echo $(TEST) | tr ' ' '_').log'
 
-# Run integration tests (requires running Postgres and proper creds)
+# Run integration tests (requires running test DB stack)
 toolbox-test-integration:
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running integration tests (requires DB) in toolbox...\n"
 	@$(call ensure_caches)
-	@printf "📡 Starting dependencies (postgres, valkey)...\n"
-	@$(COMPOSE_CMD) up -d postgres valkey >/dev/null 2>&1 || true
+	@printf "📡 Starting test stack (mariadb-test, valkey-test)...\n"
+	@$(MAKE) test-stack-up >/dev/null 2>&1 || true
 	$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD:/workspace" \
@@ -841,13 +847,29 @@ toolbox-test-integration:
 		-e GOMODCACHE=/workspace/.cache/go-mod \
 		-e GOFLAGS=-buildvcs=false \
 		-e APP_ENV=test \
+		-e ENABLE_TEST_ADMIN_ROUTES=1 \
+		-e STORAGE_PATH=/tmp \
+		-e TEMPLATES_DIR=/workspace/templates \
+		-e DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
+		-e DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e DB_NAME=$(TEST_DB_NAME) \
+		-e DB_USER=$(TEST_DB_USER) \
+		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
+		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e TEST_DB_NAME=$(TEST_DB_NAME) \
+		-e TEST_DB_USER=$(TEST_DB_USER) \
+		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
 		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
+		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
 		-e INT_PKGS \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; export GOFLAGS="-buildvcs=false"; set -e; \
 		PKGS="$${INT_PKGS:-./internal/middleware}"; \
 		echo "Running integration-tagged tests for packages: $$PKGS"; \
-		go test -tags=integration -buildvcs=false -count=1 $$PKGS'
+		go test -tags=integration -buildvcs=false -count=1 -v $$PKGS'
 
 # Run smtp4dev + POP/DB email integrations end-to-end
 toolbox-test-email-integration:

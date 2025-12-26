@@ -623,3 +623,78 @@ func ProcessDynamicFieldsFromForm(formValues map[string][]string, objectID int, 
 
 	return nil
 }
+
+// ProcessArticleDynamicFieldsFromForm extracts and saves Article dynamic field values
+// Similar to ProcessDynamicFieldsFromForm but uses "ArticleDynamicField_" prefix
+func ProcessArticleDynamicFieldsFromForm(formValues map[string][]string, articleID int, screenKey string) error {
+	db, err := database.GetDB()
+	if err != nil {
+		return err
+	}
+
+	fields, err := getFieldsForScreenWithConfigWithDB(db, screenKey, DFObjectArticle)
+	if err != nil {
+		return fmt.Errorf("failed to get screen fields: %w", err)
+	}
+
+	for _, fwc := range fields {
+		field := fwc.Field
+		formKey := "ArticleDynamicField_" + field.Name
+		values, ok := formValues[formKey]
+
+		if !ok {
+			formKey = "ArticleDynamicField_" + field.Name + "[]"
+			values, ok = formValues[formKey]
+		}
+
+		if !ok || len(values) == 0 {
+			continue
+		}
+
+		value := values[0]
+		if value == "" {
+			continue
+		}
+
+		dfValue := &DynamicFieldValue{
+			FieldID:  field.ID,
+			ObjectID: int64(articleID),
+		}
+
+		switch field.FieldType {
+		case DFTypeText, DFTypeTextArea, DFTypeDropdown:
+			dfValue.ValueText = &value
+		case DFTypeMultiselect:
+			joined := strings.Join(values, "||")
+			dfValue.ValueText = &joined
+		case DFTypeCheckbox:
+			var intVal int64 = 0
+			if value == "1" || value == "on" || value == "true" {
+				intVal = 1
+			}
+			dfValue.ValueInt = &intVal
+		case DFTypeDate:
+			if t, err := time.Parse("2006-01-02", value); err == nil {
+				dfValue.ValueDate = &t
+			} else {
+				dfValue.ValueText = &value
+			}
+		case DFTypeDateTime:
+			if t, err := time.Parse("2006-01-02T15:04", value); err == nil {
+				dfValue.ValueDate = &t
+			} else if t, err := time.Parse("2006-01-02 15:04:05", value); err == nil {
+				dfValue.ValueDate = &t
+			} else {
+				dfValue.ValueText = &value
+			}
+		default:
+			dfValue.ValueText = &value
+		}
+
+		if err := setDynamicFieldValueWithDB(db, dfValue); err != nil {
+			return fmt.Errorf("failed to set value for field %s: %w", field.Name, err)
+		}
+	}
+
+	return nil
+}

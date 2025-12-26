@@ -78,6 +78,14 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 			stateLookup = lookup
 		}
 
+		// Get dynamic fields for AgentTicketPhone screen
+		var dynamicFields []FieldWithScreenConfig
+		if dfFields, dfErr := GetFieldsForScreenWithConfig("AgentTicketPhone", DFObjectTicket); dfErr != nil {
+			log.Printf("Warning: failed to load dynamic fields for agent new ticket: %v", dfErr)
+		} else {
+			dynamicFields = dfFields
+		}
+
 		// Render the form with data
 		renderer := GetPongo2Renderer()
 		if renderer != nil {
@@ -98,6 +106,7 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 				"CustomerUsers":     customerUsers,
 				"TicketStates":      stateOptions,
 				"TicketStateLookup": stateLookup,
+				"DynamicFields":     dynamicFields,
 			})
 		} else {
 			renderTicketCreationFallback(c, "email")

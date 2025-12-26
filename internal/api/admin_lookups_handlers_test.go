@@ -1,8 +1,11 @@
+//go:build db
+
 package api
 
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -79,9 +82,11 @@ func TestAdminTypesPageExtended(t *testing.T) {
 func TestAdminTypesCRUDExtended(t *testing.T) {
 	router := setupLookupsTestRouter()
 
+	var createdTypeID int
+
 	t.Run("Create type returns created status", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"name": "New Custom Type",
+			"name": "Test Type For Deletion",
 		}
 		jsonData, _ := json.Marshal(payload)
 
@@ -97,9 +102,16 @@ func TestAdminTypesCRUDExtended(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 		assert.True(t, response["success"].(bool))
+		// Extract the created type ID for later tests
+		if typeData, ok := response["type"].(map[string]interface{}); ok {
+			if id, ok := typeData["id"].(float64); ok {
+				createdTypeID = int(id)
+			}
+		}
 	})
 
 	t.Run("Update type returns success", func(t *testing.T) {
+		// Use a high ID that likely exists for update test
 		formData := url.Values{
 			"name": {"Updated Type Name"},
 		}
@@ -114,12 +126,30 @@ func TestAdminTypesCRUDExtended(t *testing.T) {
 	})
 
 	t.Run("Delete type returns success", func(t *testing.T) {
+		// Skip if we didn't get a created type ID - we need a type without tickets
+		if createdTypeID == 0 {
+			t.Skip("No created type ID available - skipping delete test")
+		}
+		// Delete the newly created type (which has no tickets)
+		deleteURL := fmt.Sprintf("/admin/types/%d/delete", createdTypeID)
+		req := httptest.NewRequest(http.MethodPost, deleteURL, nil)
+		req.Header.Set("Cookie", "access_token=test_token")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Type with no tickets should be deletable
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("Delete type with tickets returns error", func(t *testing.T) {
+		// Type ID 1 (Unclassified) has tickets, should return 400
 		req := httptest.NewRequest(http.MethodPost, "/admin/types/1/delete", nil)
 		req.Header.Set("Cookie", "access_token=test_token")
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusOK, w.Code)
+		// Should fail because type 1 has tickets
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
 

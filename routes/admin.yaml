@@ -555,6 +555,53 @@ spec:
       template: pages/under_construction.pongo2
       description: "Display backup and restore placeholder"
 
+    # Dynamic Fields management
+    - path: /dynamic-fields
+      method: GET
+      handler: handleAdminDynamicFields
+      description: "List all dynamic fields"
+
+    - path: /dynamic-fields/new
+      method: GET
+      handler: handleAdminDynamicFieldNew
+      description: "Create new dynamic field form"
+
+    - path: /dynamic-fields/screens
+      method: GET
+      handler: handleAdminDynamicFieldScreenConfig
+      description: "Dynamic field screen configuration"
+
+    - path: /dynamic-fields/:id
+      method: GET
+      handler: handleAdminDynamicFieldEdit
+      description: "Edit dynamic field form"
+
+    # Dynamic Fields API routes (for form submissions)
+    - path: /api/dynamic-fields
+      method: POST
+      handler: handleCreateDynamicField
+      description: "Create new dynamic field"
+
+    - path: /api/dynamic-fields/:id
+      method: PUT
+      handler: handleUpdateDynamicField
+      description: "Update existing dynamic field"
+
+    - path: /api/dynamic-fields/:id
+      method: DELETE
+      handler: handleDeleteDynamicField
+      description: "Delete dynamic field"
+
+    - path: /api/dynamic-fields/:id/screens
+      method: PUT
+      handler: handleAdminDynamicFieldScreenConfigSave
+      description: "Save all screen configurations for a field"
+
+    - path: /api/dynamic-fields/:id/screen
+      method: POST
+      handler: handleAdminDynamicFieldScreenConfigSingle
+      description: "Toggle single screen configuration for a field"
+
     # Dynamic module system routes
     - path: /modules
       method: GET

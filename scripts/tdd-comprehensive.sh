@@ -715,7 +715,8 @@ run_comprehensive_unit_tests() {
         return 1
     fi
 
-    if GOTOOLCHAIN=auto run_go test -v -race -count=1 -timeout=30m "${unit_packages[@]}" > "$LOG_DIR/unit_tests.log" 2>&1; then
+    # Include -tags=db to run tests that require database connection (e.g., internal/api)
+    if GOTOOLCHAIN=auto run_go test -v -race -count=1 -timeout=30m -tags=db "${unit_packages[@]}" > "$LOG_DIR/unit_tests.log" 2>&1; then
         local test_count=$(grep -c "PASS:" "$LOG_DIR/unit_tests.log" || echo "0")
         success "Unit tests: PASS ($test_count tests)"
         jq --arg test_count "$test_count" \
@@ -767,7 +768,7 @@ run_comprehensive_integration_tests() {
         return 1
     fi
 
-    if GOTOOLCHAIN=auto run_go test -v -tags=integration -timeout=45m "${integration_packages[@]}" > "$LOG_DIR/integration_tests.log" 2>&1; then
+    if GOTOOLCHAIN=auto run_go test -v -tags=integration,db -timeout=45m "${integration_packages[@]}" > "$LOG_DIR/integration_tests.log" 2>&1; then
         local integration_count=$(grep -c "PASS:" "$LOG_DIR/integration_tests.log" || echo "0")
         success "Integration tests: PASS ($integration_count tests)"
         jq --arg test_count "$integration_count" \

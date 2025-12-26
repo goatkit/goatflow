@@ -770,6 +770,15 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			dynamicFieldsDisplay = dfDisplay
 		}
 
+		// Get article dynamic fields for customer reply form
+		var replyArticleDynamicFields []FieldWithScreenConfig
+		replyDFs, replyDFErr := GetFieldsForScreenWithConfig("CustomerArticleReply", DFObjectArticle)
+		if replyDFErr != nil {
+			log.Printf("Error getting article dynamic fields for customer reply: %v", replyDFErr)
+		} else {
+			replyArticleDynamicFields = replyDFs
+		}
+
 		pongo2Renderer.HTML(c, http.StatusOK, "pages/customer/ticket_view.pongo2", withPortalContext(pongo2.Context{
 			"Title":      fmt.Sprintf("%s - Ticket #%s", cfg.Title, ticket.TN),
 			"ActivePage": "customer",
@@ -791,8 +800,9 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 				"updated_at_iso": ticket.ChangeTime.UTC().Format(time.RFC3339),
 				"can_close":      canClose,
 			},
-			"Articles":      articles,
-			"DynamicFields": dynamicFieldsDisplay,
+			"Articles":                   articles,
+			"DynamicFields":              dynamicFieldsDisplay,
+			"ReplyArticleDynamicFields":  replyArticleDynamicFields,
 		}, cfg))
 	}
 }
@@ -875,6 +885,12 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add reply content"})
 			return
+		}
+
+		// Save article dynamic fields for customer reply
+		c.Request.ParseForm()
+		if dfErr := ProcessArticleDynamicFieldsFromForm(c.Request.PostForm, int(articleID), "CustomerArticleReply"); dfErr != nil {
+			log.Printf("Error saving article dynamic fields for customer reply: %v", dfErr)
 		}
 
 		// Update ticket state to open if it was pending

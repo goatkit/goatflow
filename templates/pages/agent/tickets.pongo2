@@ -71,6 +71,83 @@
                     </a>
                 </div>
             </form>
+
+            <!-- Dynamic Field Filters (Collapsible) -->
+            {% if SearchableDynamicFields|length > 0 %}
+            {% set hasActiveDF = CurrentDFFilters|length > 0 %}
+            <details class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700" {% if hasActiveDF %}open{% endif %}>
+                <summary class="flex items-center cursor-pointer text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white list-none">
+                    <svg class="w-4 h-4 mr-2 transition-transform details-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    Dynamic Field Filters
+                    {% if CurrentDFFilters|length > 0 %}
+                    <span class="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
+                        {{ CurrentDFFilters|length }} active
+                    </span>
+                    {% endif %}
+                </summary>
+                <div class="mt-4">
+                    <form method="get" action="/agent/tickets" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Preserve existing filters as hidden fields -->
+                        {% if CurrentFilters.search %}<input type="hidden" name="search" value="{{ CurrentFilters.search }}">{% endif %}
+                        {% if CurrentFilters.status %}<input type="hidden" name="status" value="{{ CurrentFilters.status }}">{% endif %}
+                        {% if CurrentFilters.queue %}<input type="hidden" name="queue" value="{{ CurrentFilters.queue }}">{% endif %}
+                        {% if CurrentFilters.assignee %}<input type="hidden" name="assignee" value="{{ CurrentFilters.assignee }}">{% endif %}
+                        {% if CurrentFilters.sort %}<input type="hidden" name="sort" value="{{ CurrentFilters.sort }}">{% endif %}
+                        {% if CurrentFilters.order %}<input type="hidden" name="order" value="{{ CurrentFilters.order }}">{% endif %}
+
+                        {% for field in SearchableDynamicFields %}
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                                {{ field.Label }}
+                            </label>
+                            {% if field.FieldType == "Dropdown" or field.FieldType == "Multiselect" %}
+                            <select name="df_{{ field.Name }}" 
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                <option value="">-- Any --</option>
+                                {% for option in field.Options %}
+                                <option value="{{ option.key }}" {% if CurrentDFFilters["df_" + field.Name] == option.key %}selected{% endif %}>
+                                    {{ option.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% elif field.FieldType == "Checkbox" %}
+                            <select name="df_{{ field.Name }}"
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                <option value="">-- Any --</option>
+                                <option value="1" {% if CurrentDFFilters["df_" + field.Name] == "1" %}selected{% endif %}>Yes</option>
+                                <option value="0" {% if CurrentDFFilters["df_" + field.Name] == "0" %}selected{% endif %}>No</option>
+                            </select>
+                            {% elif field.FieldType == "Date" or field.FieldType == "DateTime" %}
+                            <div class="flex space-x-2">
+                                <input type="date" name="df_{{ field.Name }}_gte" 
+                                       value="{{ CurrentDFFilters['df_' + field.Name + '_gte'] }}"
+                                       placeholder="From"
+                                       class="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                <input type="date" name="df_{{ field.Name }}_lte"
+                                       value="{{ CurrentDFFilters['df_' + field.Name + '_lte'] }}"
+                                       placeholder="To"
+                                       class="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            </div>
+                            {% else %}
+                            <input type="text" name="df_{{ field.Name }}_contains"
+                                   value="{{ CurrentDFFilters['df_' + field.Name + '_contains'] }}"
+                                   placeholder="Contains..."
+                                   class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+
+                        <div class="sm:col-span-2 lg:col-span-3 flex space-x-2">
+                            <button type="submit" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                Apply DF Filters
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </details>
+            {% endif %}
         </div>
     </div>
 
@@ -249,7 +326,75 @@
                     </button>
                 </div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">
-                    Showing {{ Tickets|length }} tickets
+                    Showing {{ Tickets|length }} of {{ Pagination.TotalCount }} tickets
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Pagination -->
+        {% if Pagination.TotalPages > 1 %}
+        <div class="px-6 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+            <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-700 dark:text-gray-300">
+                    Page {{ Pagination.Page }} of {{ Pagination.TotalPages }}
+                </div>
+                <div class="flex items-center space-x-1">
+                    <!-- First Page -->
+                    {% if Pagination.HasFirst %}
+                    <a href="?page=1&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
+                       class="px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200"
+                       title="First page">
+                        &laquo;
+                    </a>
+                    {% else %}
+                    <span class="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-gray-400 dark:text-gray-500 cursor-not-allowed">&laquo;</span>
+                    {% endif %}
+
+                    <!-- Previous Page -->
+                    {% if Pagination.Page > 1 %}
+                    <a href="?page={{ Pagination.PrevPage }}&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
+                       class="px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200"
+                       title="Previous page">
+                        &lsaquo;
+                    </a>
+                    {% else %}
+                    <span class="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-gray-400 dark:text-gray-500 cursor-not-allowed">&lsaquo;</span>
+                    {% endif %}
+
+                    <!-- Page Numbers -->
+                    {% for pageNum in Pagination.PageNumbers %}
+                        {% if pageNum == Pagination.Page %}
+                        <span class="px-3 py-1 text-sm bg-blue-600 text-white border border-blue-600 rounded font-medium">{{ pageNum }}</span>
+                        {% else %}
+                        <a href="?page={{ pageNum }}&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
+                           class="px-3 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200">
+                            {{ pageNum }}
+                        </a>
+                        {% endif %}
+                    {% endfor %}
+
+                    <!-- Next Page -->
+                    {% if Pagination.Page < Pagination.TotalPages %}
+                    <a href="?page={{ Pagination.NextPage }}&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
+                       class="px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200"
+                       title="Next page">
+                        &rsaquo;
+                    </a>
+                    {% else %}
+                    <span class="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-gray-400 dark:text-gray-500 cursor-not-allowed">&rsaquo;</span>
+                    {% endif %}
+
+                    <!-- Last Page -->
+                    {% if Pagination.HasLast %}
+                    <a href="?page={{ Pagination.TotalPages }}&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
+                       class="px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200"
+                       title="Last page">
+                        &raquo;
+                    </a>
+                    {% else %}
+                    <span class="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-gray-400 dark:text-gray-500 cursor-not-allowed">&raquo;</span>
+                    {% endif %}
                 </div>
             </div>
         </div>

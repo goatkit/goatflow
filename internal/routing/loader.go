@@ -547,3 +547,24 @@ func LoadYAMLRoutes(router *gin.Engine, routesPath string, registry *HandlerRegi
 
 	return loader.LoadRoutes()
 }
+
+// LoadYAMLRoutesFromGlobalMap loads YAML routes using the GlobalHandlerMap as the handler source.
+// This is the preferred method - handlers self-register via init() into GlobalHandlerMap,
+// eliminating the need for manual handler registration in main.go.
+func LoadYAMLRoutesFromGlobalMap(router *gin.Engine, routesPath string) error {
+	// Create a registry populated from GlobalHandlerMap
+	registry := NewHandlerRegistry()
+	for name, handler := range GlobalHandlerMap {
+		registry.Override(name, handler)
+	}
+
+	// Register standard middleware
+	RegisterExistingHandlers(registry)
+
+	loader, err := NewRouteLoader(routesPath, registry, router, WithHotReload(false))
+	if err != nil {
+		return fmt.Errorf("failed to create route loader: %w", err)
+	}
+
+	return loader.LoadRoutes()
+}

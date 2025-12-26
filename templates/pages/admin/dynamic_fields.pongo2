@@ -199,7 +199,7 @@
 <script>
 function deleteField(id, name) {
     if (confirm('Are you sure you want to delete the dynamic field "' + name + '"? This will also delete all stored values for this field.')) {
-        fetch('/api/dynamic-fields/' + id, {
+        fetch('/admin/api/dynamic-fields/' + id, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json'

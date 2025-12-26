@@ -228,6 +228,17 @@ func registerAdminHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	handlers["handleAdminLogs"] = wrapHandler(db, "handleAdminLogs")
 	handlers["handleAdminBackup"] = wrapHandler(db, "handleAdminBackup")
 
+	// Dynamic Fields management handlers
+	handlers["handleAdminDynamicFields"] = wrapHandler(db, "handleAdminDynamicFields")
+	handlers["handleAdminDynamicFieldNew"] = wrapHandler(db, "handleAdminDynamicFieldNew")
+	handlers["handleAdminDynamicFieldEdit"] = wrapHandler(db, "handleAdminDynamicFieldEdit")
+	handlers["handleAdminDynamicFieldScreenConfig"] = wrapHandler(db, "handleAdminDynamicFieldScreenConfig")
+	handlers["handleCreateDynamicField"] = wrapHandler(db, "handleCreateDynamicField")
+	handlers["handleUpdateDynamicField"] = wrapHandler(db, "handleUpdateDynamicField")
+	handlers["handleDeleteDynamicField"] = wrapHandler(db, "handleDeleteDynamicField")
+	handlers["handleAdminDynamicFieldScreenConfigSave"] = wrapHandler(db, "handleAdminDynamicFieldScreenConfigSave")
+	handlers["handleAdminDynamicFieldScreenConfigSingle"] = wrapHandler(db, "handleAdminDynamicFieldScreenConfigSingle")
+
 	// Add other admin handlers...
 }
 

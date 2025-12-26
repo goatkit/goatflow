@@ -21,17 +21,17 @@
     <!-- Tailwind CSS (production build) -->
     <link rel="stylesheet" href="/static/css/output.css">
     
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Font Awesome Icons (vendored for air-gapped environments) -->
+    <link rel="stylesheet" href="/static/css/fontawesome/all.min.css">
     
-    <!-- Alpine.js for interactivity -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Alpine.js for interactivity (vendored) -->
+    <script defer src="/static/js/alpine.min.js"></script>
     
-    <!-- HTMX for dynamic updates -->
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- HTMX for dynamic updates (vendored) -->
+    <script src="/static/js/htmx.min.js"></script>
     
-    <!-- HTMX extensions -->
-    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+    <!-- HTMX extensions (vendored) -->
+    <script src="/static/js/htmx-json-enc.js"></script>
     
     <!-- Common utilities -->
     <script src="/static/js/common.js"></script>
@@ -83,6 +83,16 @@
         
         .dark ::-webkit-scrollbar-thumb:hover {
             background: #64748b;
+        }
+        
+        /* Details/Summary arrow rotation */
+        details[open] .details-arrow {
+            transform: rotate(90deg);
+        }
+        
+        /* Hide default summary marker */
+        summary::-webkit-details-marker {
+            display: none;
         }
     </style>
     

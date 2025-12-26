@@ -141,6 +141,7 @@ type ScreenDefinition struct {
 // GetScreenDefinitions returns all screens that support dynamic fields
 func GetScreenDefinitions() []ScreenDefinition {
 	return []ScreenDefinition{
+		// Ticket screens
 		{Key: "AgentTicketPhone", Name: "New Phone Ticket", ObjectType: DFObjectTicket, SupportsRequired: true},
 		{Key: "AgentTicketEmail", Name: "New Email Ticket", ObjectType: DFObjectTicket, SupportsRequired: true},
 		{Key: "AgentTicketZoom", Name: "Ticket Zoom", ObjectType: DFObjectTicket, IsDisplayOnly: true},
@@ -151,6 +152,12 @@ func GetScreenDefinitions() []ScreenDefinition {
 		{Key: "AgentTicketPriority", Name: "Change Priority", ObjectType: DFObjectTicket, SupportsRequired: true},
 		{Key: "CustomerTicketMessage", Name: "Customer New Ticket", ObjectType: DFObjectTicket, SupportsRequired: true},
 		{Key: "CustomerTicketZoom", Name: "Customer Ticket View", ObjectType: DFObjectTicket, IsDisplayOnly: true},
+		// Article screens
+		{Key: "AgentArticleZoom", Name: "Article View", ObjectType: DFObjectArticle, IsDisplayOnly: true},
+		{Key: "AgentArticleNote", Name: "Agent Note Article", ObjectType: DFObjectArticle, SupportsRequired: true},
+		{Key: "AgentArticleClose", Name: "Close Note Article", ObjectType: DFObjectArticle, SupportsRequired: true},
+		{Key: "AgentArticleReply", Name: "Agent Reply Article", ObjectType: DFObjectArticle, SupportsRequired: true},
+		{Key: "CustomerArticleReply", Name: "Customer Reply Article", ObjectType: DFObjectArticle, SupportsRequired: true},
 	}
 }
 

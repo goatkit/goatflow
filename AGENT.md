@@ -298,6 +298,92 @@ Unit tests CANNOT catch:
 
 Only then report "feature complete".
 
+### Template Testing (MANDATORY for Forms)
+**Problem**: Templates with HTMX attributes (`hx-post`, `hx-put`) or form actions can have path mismatches that unit tests don't catch (e.g., using `/api/dynamic-fields` when route is `/admin/api/dynamic-fields`).
+
+**Solution**: Template tests in `internal/template/` validate HTMX attributes and form actions:
+
+```go
+// Test framework in internal/template/pongo2_test.go
+helper := NewTemplateTestHelper(t)
+html, err := helper.RenderTemplate("pages/admin/my_form.pongo2", ctx)
+asserter := NewHTMLAsserter(t, html)
+
+// For create forms
+asserter.HasHTMXPost("/admin/api/my-resource")
+asserter.HasNoHTMXPut()
+
+// For edit forms  
+asserter.HasHTMXPut("/admin/api/my-resource/42")
+asserter.HasNoHTMXPost()
+```
+
+**Test Files**:
+- `internal/template/pongo2_test.go` - Test helper and HTML asserter utilities
+- `internal/template/all_templates_test.go` - Comprehensive template tests + coverage scanner
+- `internal/template/dynamic_fields_template_test.go` - Example module-specific tests
+
+**Coverage Scanner**: `TestTemplateCoverage` in `all_templates_test.go` scans all templates and fails if any template with `hx-post`, `hx-put`, `hx-delete`, or `method="POST"` is not in the `testedTemplates` map.
+
+**When Adding New Templates with Forms**:
+1. Add template path to `testedTemplates` map in `all_templates_test.go`
+2. Create test function that renders template and asserts correct HTMX/action attributes
+3. Run `make test-templates` to verify
+
+**Test Execution Order**: Template tests run **first** in `make test` for fail-fast behavior:
+```
+1. Template tests (internal/template/...) - ~30ms
+2. Core packages
+3. Integration tests
+4. E2E Playwright tests
+```
+
+**Quick Validation**: `make test-templates` runs only template tests.
+
+
+## Dynamic Fields System
+
+### Architecture
+Dynamic fields allow administrators to add custom fields to tickets, articles, and customer records without schema changes.
+
+- **Field storage**: `dynamic_field` table with YAML config column
+- **Screen visibility**: `dynamic_field_screen_config` table controls which fields appear on which screens
+- **Cross-package wiring**: `DynamicFieldLoader` interface in `internal/routing/handlers.go` avoids import cycles; set in `internal/api/dynamic_field_init.go`
+
+### Screen Configuration (IMPORTANT)
+Fields **only appear on forms** if they have a screen config entry:
+- Query uses `INNER JOIN` on `dynamic_field_screen_config`
+- No config entry = field not displayed on that screen
+- Config values: `0`=disabled, `1`=enabled, `2`=required
+
+### Admin Workflow
+1. Create field: `/admin/dynamic-fields` → "New Dynamic Field"
+2. Enable for screens: `/admin/dynamic-fields/{id}/screens` → check boxes for target screens
+3. Field now appears on those screens
+
+### Screen Keys (OTRS Compatible)
+| Screen Key | Where It Appears |
+|------------|------------------|
+| `AgentTicketPhone` | `/tickets/new` (agent new ticket) |
+| `AgentTicketEmail` | Email ticket creation |
+| `AgentTicketZoom` | Ticket detail view |
+| `AgentTicketNote` | Add note form |
+| `AgentTicketClose` | Close ticket dialog |
+| `AgentTicketPending` | Set pending dialog |
+| `CustomerTicketMessage` | Customer reply form |
+
+### Template Integration
+Include the partial in ticket forms:
+```django
+{% include "partials/dynamic_fields.pongo2" with DynamicFields=DynamicFields %}
+```
+
+Handler must load fields via `GetFieldsForScreenWithConfig(screenKey, objectType)` or use the `dynamicFieldLoader` callback.
+
+### Troubleshooting
+- **Fields not appearing**: Check `/admin/dynamic-fields/{id}/screens` - field must be enabled for the target screen
+- **Field appears but no label**: Missing `Label` in dynamic_field record
+- **DB error**: Ensure migration 000004 has run (`dynamic_field_screen_config` table exists)
 
 ## Legal & Compliance
 - GOTRS-CE is an original implementation; maintain compatibility without copying upstream code
