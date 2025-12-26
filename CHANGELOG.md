@@ -7,6 +7,7 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
+- **Admin Roles Module**: Full CRUD functionality for role management with database abstraction layer support. Includes role listing, create, update, soft delete, user-role assignments (add/remove users), and group permissions management. All queries use `database.ConvertPlaceholders()` for MySQL/PostgreSQL compatibility and `database.GetAdapter().InsertWithReturning()` for cross-database INSERT operations.
 - **Self-Registering Handler Architecture**: Handlers now register via `init()` calls to `routing.RegisterHandler()`, eliminating manual registration in main.go. Test validates all YAML handlers are registered.
 - **SLA Admin UX Improvements**: Time fields now use unit dropdowns (Minutes/Hours/Days) instead of raw minutes input, with automatic conversion.
 - YAML handler wiring test (`internal/routing/yaml_handler_wiring_test.go`) that verifies all YAML-referenced handlers are registered.

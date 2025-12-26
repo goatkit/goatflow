@@ -146,13 +146,13 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 | Customer Users | ✅ Working | Full CRUD, 7 unit tests, 10 Playwright E2E, import/export, bulk actions |
 | Customer Companies | ✅ Working | Full CRUD, 66 unit tests, portal settings, services, default services |
 | Queues | ✅ Working | Full CRUD, 32 unit tests, detail pages with stats |
-| Lookups | ✅ Working | Combined page, 50 unit tests covering States/Types/Priorities/Statuses |
+| Lookups | ✅ Working | Full CRUD, 50 unit tests covering States/Types/Priorities/Statuses |
 | States | ✅ Working | Full CRUD, 14 unit tests |
 | Types | ✅ Working | Full CRUD, 14 unit tests |
-| Priorities | ✅ Working | Admin page, 14 unit tests, API endpoints |
+| Priorities | ✅ Working | Full CRUD, 14 unit tests, API endpoints |
 | SLA | ✅ Working | Full CRUD, 50 unit tests, unit dropdown UX (min/hr/day), self-registering handlers |
 | Services | ✅ Working | Full CRUD, 31 unit tests, hierarchy naming support |
-| Roles/Permissions | ❌ | Not implemented |
+| Roles | ✅ Working | Full CRUD, 36 unit tests + 2 contract tests, user-role assignments, group permissions, DB abstraction layer |
 | Dynamic Fields | ❌ | Not implemented |
 | Templates | ❌ | Not implemented |
 | Signatures | ❌ | Not implemented |

@@ -307,6 +307,25 @@
 <script>
 let currentRoleId = null;
 
+// Helper function to handle fetch responses - checks for auth redirects and non-JSON responses
+async function handleFetchResponse(response) {
+    // Check content type before parsing
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+        // Got HTML instead of JSON - likely missing Accept header or server error
+        const text = await response.text();
+        console.error('Expected JSON but got:', contentType, text.substring(0, 200));
+        throw new Error('Server returned HTML instead of JSON - check Accept header');
+    }
+    
+    if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || `Server returned ${response.status}`);
+    }
+    
+    return response.json();
+}
+
 // Show create role modal
 function showCreateRoleModal() {
     currentRoleId = null;
@@ -330,7 +349,7 @@ function editRole(roleId) {
             'Accept': 'application/json'
         }
     })
-        .then(response => response.json())
+        .then(handleFetchResponse)
         .then(data => {
             if (data.success) {
                 const role = data.role;
@@ -383,12 +402,12 @@ function saveRole(event) {
     
     const roleData = {
         name: formData.get('name'),
-        description: formData.get('description'),
+        comments: formData.get('description'),
         permissions: permissions,
-        is_active: formData.get('is_active') === 'on'
+        valid_id: formData.get('is_active') === 'on' ? 1 : 2
     };
     
-    const url = currentRoleId ? `/admin/roles/${currentRoleId}` : '/admin/roles/create';
+    const url = currentRoleId ? `/admin/roles/${currentRoleId}` : '/admin/roles';
     const method = currentRoleId ? 'PUT' : 'POST';
     
     fetch(url, {
@@ -399,7 +418,7 @@ function saveRole(event) {
         },
         body: JSON.stringify(roleData)
     })
-    .then(response => response.json())
+    .then(handleFetchResponse)
     .then(data => {
         if (data.success) {
             showToast('success', data.message);
@@ -429,7 +448,7 @@ function toggleRoleStatus(roleId, currentValidId) {
         },
         body: JSON.stringify({ valid_id: newValidId })
     })
-    .then(response => response.json())
+    .then(handleFetchResponse)
     .then(data => {
         if (data.success) {
             showToast('success', `Role ${action}d successfully`);
@@ -454,9 +473,14 @@ let currentManagedRoleId = null;
 function viewRoleUsers(roleId) {
     currentManagedRoleId = roleId;
     
-    // Fetch role users data
-    fetch(`/admin/roles/${roleId}/users`)
-        .then(response => response.json())
+    // Fetch role users data - must include Accept header to get JSON instead of HTML page
+    fetch(`/admin/roles/${roleId}/users`, {
+        headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+        .then(handleFetchResponse)
         .then(data => {
             if (data.success) {
                 // Update modal title
@@ -535,7 +559,7 @@ function addUserToRole(userId) {
         },
         body: JSON.stringify({ user_id: userId })
     })
-    .then(response => response.json())
+    .then(handleFetchResponse)
     .then(data => {
         if (data.success) {
             showToast('success', 'User added to role');
@@ -559,7 +583,7 @@ function removeUserFromRole(userId) {
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.json())
+    .then(handleFetchResponse)
     .then(data => {
         if (data.success) {
             showToast('success', 'User removed from role');

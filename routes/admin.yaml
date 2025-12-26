@@ -216,6 +216,60 @@ spec:
       handler: handleUpdateUserPermissions
       description: "Update user permissions"
 
+    # Role management
+    - path: /roles
+      method: GET
+      handler: handleAdminRoles
+      template: pages/admin/roles.pongo2
+      description: "Display role management page"
+
+    - path: /roles
+      method: POST
+      handler: handleAdminRoleCreate
+      description: "Create a new role"
+
+    - path: /roles/:id
+      method: GET
+      handler: handleAdminRoleGet
+      description: "Get role details"
+
+    - path: /roles/:id
+      method: PUT
+      handler: handleAdminRoleUpdate
+      description: "Update an existing role"
+
+    - path: /roles/:id
+      method: DELETE
+      handler: handleAdminRoleDelete
+      description: "Delete a role"
+
+    - path: /roles/:id/users
+      method: GET
+      handler: handleAdminRoleUsers
+      template: pages/admin/role_users.pongo2
+      description: "Display users assigned to a role"
+
+    - path: /roles/:id/users
+      method: POST
+      handler: handleAdminRoleUserAdd
+      description: "Add a user to a role"
+
+    - path: /roles/:id/users/:userId
+      method: DELETE
+      handler: handleAdminRoleUserRemove
+      description: "Remove a user from a role"
+
+    - path: /roles/:id/permissions
+      method: GET
+      handler: handleAdminRolePermissions
+      template: pages/admin/role_permissions.pongo2
+      description: "Display and manage role-group permissions"
+
+    - path: /roles/:id/permissions
+      method: POST
+      handler: handleAdminRolePermissionsUpdate
+      description: "Update role-group permissions"
+
     # State management
     - path: /states
       method: GET

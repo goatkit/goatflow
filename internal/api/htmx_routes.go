@@ -1272,17 +1272,9 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 			adminRoutes.POST("/groups/:id/users", handleAddUserToGroup)
 			adminRoutes.DELETE("/groups/:id/users/:userId", handleRemoveUserFromGroup)
 
-			// Role Management (Higher level than groups)
-			adminRoutes.GET("/roles", handleAdminRoles)
-			adminRoutes.GET("/roles/:id", handleAdminRoleGet)
-			adminRoutes.POST("/roles/create", handleAdminRoleCreate)
-			adminRoutes.PUT("/roles/:id", handleAdminRoleUpdate)
-			adminRoutes.DELETE("/roles/:id", handleAdminRoleDelete)
-			adminRoutes.GET("/roles/:id/users", handleAdminRoleUsers)
-			adminRoutes.POST("/roles/:id/users", handleAdminRoleUserAdd)
-			adminRoutes.DELETE("/roles/:id/users/:userId", handleAdminRoleUserRemove)
-			adminRoutes.GET("/roles/:id/permissions", handleAdminRolePermissions)
-			adminRoutes.PUT("/roles/:id/permissions", handleAdminRolePermissions)
+			// Role Management - uses canonical route definitions from test_router_registry.go
+			// to prevent test/production route divergence
+			RegisterAdminRoutes(adminRoutes, GetAdminRolesRoutes())
 
 			// Customer management routes
 			adminRoutes.GET("/customer-users", underConstruction("Customer Users"))

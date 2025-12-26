@@ -197,6 +197,107 @@ Do not manually delete these inside containers; prefer the Make targets to keep 
 - Do not rely on `chmod 777`; we now prefer `775` after normalization for least‑permissive collaborative access.
 - If a workflow needs to bypass the guard (e.g. diagnosing container image layers), set `CACHE_GUARD_DISABLE=1` when invoking the Make target (e.g. `CACHE_GUARD_DISABLE=1 make toolbox-test`).
 
+## Testing Controls (Prevent Recurring Issues)
+
+### Route Registry Pattern (MANDATORY for Admin Modules)
+**Problem**: Tests define their own routes that diverge from production, causing 404s in browser.
+
+**Solution**: Use centralized route definitions in `internal/api/test_router_registry.go`:
+
+```go
+// In test_router_registry.go:
+func GetAdminRolesRoutes() []AdminRouteDefinition {
+    return []AdminRouteDefinition{
+        {"GET", "/roles", handleAdminRoles},
+        {"POST", "/roles", handleAdminRoleCreate},
+        // ... all routes
+    }
+}
+
+// In test file:
+func setupRoleTestRouter() *gin.Engine {
+    return SetupTestRouterWithRoutes(GetAdminRolesRoutes())
+}
+
+// In htmx_routes.go:
+RegisterAdminRoutes(adminRoutes, GetAdminRolesRoutes())
+```
+
+**Enforcement**: Never manually register routes in test setup functions. Always use `SetupTestRouterWithRoutes()` with the module's `Get*Routes()` function.
+
+### JavaScript API Module Pattern (MANDATORY for JSON Endpoints)
+**Problem**: Handler checks `Accept: application/json` header to decide JSON vs HTML response. Go test sends header correctly, but inline JS fetch() in templates doesn't. Result: passes in Go test, fails in browser with "<!DOCTYPE... is not valid JSON".
+
+**Root Cause**: Go unit tests cannot verify JavaScript behavior. Inline JS in templates is untestable.
+
+**Solution**: Use the `adminApi` module in `web/src/api/adminApi.ts`:
+
+```typescript
+// adminApi.ts enforces required headers automatically
+import { rolesApi } from '@/api/adminApi';
+
+// BAD - inline fetch missing headers (untestable)
+const response = await fetch(`/admin/roles/${roleId}/users`);
+
+// GOOD - use API module (tested via make test-frontend)
+const result = await rolesApi.getUsers(roleId);
+```
+
+**JS Unit Tests** in `web/src/api/adminApi.test.ts`:
+- Verify all API calls include `Accept: application/json`
+- Verify POST/PUT include `Content-Type: application/json`  
+- Verify correct field names (`comments` not `description`, `valid_id` not `is_active`)
+- Run via: `make test-frontend`
+
+**Endpoint Contracts** in `test_router_registry.go` document expected headers per endpoint for reference.
+
+### JSON Field Contract (MANDATORY)
+**Problem**: JavaScript sends different field names than Go handler expects (e.g., `description` vs `comments`).
+
+**Solution**: Define a contract struct comment in the handler and reference it in templates:
+
+```go
+// handleAdminRoleCreate creates a new role
+// JSON Contract: { name: string (required), comments: string, valid_id: int }
+func handleAdminRoleCreate(c *gin.Context) {
+    var input struct {
+        Name     string `json:"name" binding:"required"`
+        Comments string `json:"comments"`
+        ValidID  int    `json:"valid_id"`
+    }
+```
+
+**Enforcement**: When creating/modifying JS fetch calls, verify field names match handler's JSON tags exactly.
+
+### Pre-Module Checklist
+Before starting any new admin module:
+
+1. [ ] Create `Get<Module>Routes()` function in handler file
+2. [ ] Create `Get<Module>Contracts()` function in test_router_registry.go
+3. [ ] Register routes in `htmx_routes.go` via `RegisterAdminRoutes()`
+4. [ ] Test setup uses `SetupTestRouterWithRoutes(Get<Module>Routes())`
+5. [ ] Contract tests pass: `go test -run TestContracts`
+6. [ ] Document JSON contract in handler comments
+7. [ ] Template JS field names match handler JSON tags
+8. [ ] Template JS fetch calls include headers per contract
+9. [ ] Run browser test after unit tests pass (not just "tests pass")
+
+### E2E Verification (Non-Negotiable)
+Unit tests CANNOT catch:
+- Route registration mismatches (404 in browser)
+- JS/Go field name mismatches (JSON parse errors)
+- Missing Accept headers (HTML returned instead of JSON)
+- Template rendering issues
+
+**After all unit tests pass**, you MUST:
+1. `make restart`
+2. Open the page in browser
+3. Exercise the full workflow (create/edit/delete)
+4. Check browser Console for errors
+5. Check Network tab for failed requests
+
+Only then report "feature complete".
+
 
 ## Legal & Compliance
 - GOTRS-CE is an original implementation; maintain compatibility without copying upstream code

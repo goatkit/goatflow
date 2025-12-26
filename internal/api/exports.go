@@ -62,6 +62,17 @@ var (
 	HandleAdminSLAUpdate          = handleAdminSLAUpdate
 	HandleAdminSLADelete          = handleAdminSLADelete
 	HandleAdminLookups            = handleAdminLookups
+	// Roles management
+	HandleAdminRoles                 = handleAdminRoles
+	HandleAdminRoleCreate            = handleAdminRoleCreate
+	HandleAdminRoleGet               = handleAdminRoleGet
+	HandleAdminRoleUpdate            = handleAdminRoleUpdate
+	HandleAdminRoleDelete            = handleAdminRoleDelete
+	HandleAdminRoleUsers             = handleAdminRoleUsers
+	HandleAdminRoleUserAdd           = handleAdminRoleUserAdd
+	HandleAdminRoleUserRemove        = handleAdminRoleUserRemove
+	HandleAdminRolePermissions       = handleAdminRolePermissions
+	HandleAdminRolePermissionsUpdate = handleAdminRolePermissionsUpdate
 	// Customer company handlers - wrapped to get database from adapter
 	HandleAdminCustomerCompanies = func(c *gin.Context) {
 		dbService, err := adapter.GetDatabase()
