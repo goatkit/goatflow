@@ -90,13 +90,13 @@ jobs:
           
       - name: Run tests with coverage
         env:
-          # Test database configuration (MariaDB)
+          # Test database configuration (MariaDB) - use TEST_DB_* which tests expect
           TEST_DB_DRIVER: mysql
-          TEST_DB_MYSQL_HOST: 127.0.0.1
-          TEST_DB_MYSQL_PORT: 3308
-          TEST_DB_MYSQL_NAME: otrs_test
-          TEST_DB_MYSQL_USER: otrs
-          TEST_DB_MYSQL_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
+          TEST_DB_HOST: 127.0.0.1
+          TEST_DB_PORT: 3308
+          TEST_DB_NAME: otrs_test
+          TEST_DB_USER: otrs
+          TEST_DB_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
           # Legacy env vars some tests may use
           DB_DRIVER: mysql
           DB_HOST: 127.0.0.1
@@ -285,11 +285,11 @@ jobs:
       - name: Run integration tests
         env:
           TEST_DB_DRIVER: mysql
-          TEST_DB_MYSQL_HOST: 127.0.0.1
-          TEST_DB_MYSQL_PORT: 3308
-          TEST_DB_MYSQL_NAME: otrs_integration
-          TEST_DB_MYSQL_USER: otrs
-          TEST_DB_MYSQL_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
+          TEST_DB_HOST: 127.0.0.1
+          TEST_DB_PORT: 3308
+          TEST_DB_NAME: otrs_integration
+          TEST_DB_USER: otrs
+          TEST_DB_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
           DB_DRIVER: mysql
           DB_HOST: 127.0.0.1
           DB_PORT: 3308
