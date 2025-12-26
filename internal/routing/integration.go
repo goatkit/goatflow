@@ -204,6 +204,12 @@ func registerAdminHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	handlers["handleAdminUpdateCustomerPortalSettings"] = wrapHandler(db, "handleAdminUpdateCustomerPortalSettings")
 	handlers["handleAdminUploadCustomerPortalLogo"] = wrapHandler(db, "handleAdminUploadCustomerPortalLogo")
 
+	// Service CRUD handlers
+	handlers["handleAdminServices"] = wrapHandler(db, "handleAdminServices")
+	handlers["handleAdminServiceCreate"] = wrapHandler(db, "handleAdminServiceCreate")
+	handlers["handleAdminServiceUpdate"] = wrapHandler(db, "handleAdminServiceUpdate")
+	handlers["handleAdminServiceDelete"] = wrapHandler(db, "handleAdminServiceDelete")
+
 	// Customer user handlers bridge YAML loader to real implementations
 	handlers["HandleAdminCustomerUsersList"] = wrapHandler(db, "HandleAdminCustomerUsersList")
 	handlers["HandleAdminCustomerUsersGet"] = wrapHandler(db, "HandleAdminCustomerUsersGet")

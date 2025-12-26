@@ -265,6 +265,9 @@ func ensureCoreHandlers() {
 		"handleAdminStates":             handleAdminStates,
 		"handleAdminTypes":              handleAdminTypes,
 		"handleAdminServices":           handleAdminServices,
+		"handleAdminServiceCreate":      handleAdminServiceCreate,
+		"handleAdminServiceUpdate":      handleAdminServiceUpdate,
+		"handleAdminServiceDelete":      handleAdminServiceDelete,
 		"handleAdminSLA":                handleAdminSLA,
 		"handleAdminSLACreate":          handleAdminSLACreate,
 		"handleAdminSLAUpdate":          handleAdminSLAUpdate,
@@ -446,7 +449,6 @@ func ensureCoreHandlers() {
 		// Also register to GlobalHandlerMap for YAML routing
 		if _, exists := routing.GlobalHandlerMap[n]; !exists {
 			routing.GlobalHandlerMap[n] = h
-			log.Printf("DEBUG: Registered handler %s to GlobalHandlerMap", n)
 		}
 	}
 
@@ -465,7 +467,6 @@ func registerDynamicModuleHandlers() {
 		}
 		if _, exists := routing.GlobalHandlerMap[name]; !exists {
 			routing.GlobalHandlerMap[name] = fn
-			log.Printf("DEBUG: Registered handler %s to GlobalHandlerMap", name)
 		}
 	}
 }

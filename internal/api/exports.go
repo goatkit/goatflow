@@ -54,6 +54,9 @@ var (
 	HandleAdminStates             = handleAdminStates
 	HandleAdminTypes              = handleAdminTypes
 	HandleAdminServices           = handleAdminServices
+	HandleAdminServiceCreate      = handleAdminServiceCreate
+	HandleAdminServiceUpdate      = handleAdminServiceUpdate
+	HandleAdminServiceDelete      = handleAdminServiceDelete
 	HandleAdminSLA                = handleAdminSLA
 	HandleAdminSLACreate          = handleAdminSLACreate
 	HandleAdminSLAUpdate          = handleAdminSLAUpdate

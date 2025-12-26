@@ -237,6 +237,21 @@ spec:
       template: pages/admin/services.pongo2
       description: "Display service management page"
 
+    - path: /services/create
+      method: POST
+      handler: handleAdminServiceCreate
+      description: "Create a new service"
+
+    - path: /services/:id/update
+      method: PUT
+      handler: handleAdminServiceUpdate
+      description: "Update an existing service"
+
+    - path: /services/:id/delete
+      method: DELETE
+      handler: handleAdminServiceDelete
+      description: "Delete a service"
+
     # SLA management
     - path: /sla
       method: GET

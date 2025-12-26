@@ -40,6 +40,7 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - Agent Ticket Zoom tabs now render ticket history and linked tickets via Pongo2 HTMX fragments, providing empty-state messaging until data exists.
 - MySQL test container now applies the same integration fixtures as PostgreSQL, so API suites run identically across drivers.
 - Regression coverage for `/admin/users` and YAML fallback routes when `GOTRS_DISABLE_TEST_AUTH_BYPASS` is disabled.
+- **Admin Services Module**: Full CRUD functionality with 31 unit tests covering page rendering, create (form+JSON), update, delete, validation, DB integration, JSON responses, HTMX responses, and content-type handling.
 
 ### Changed
 - Routes manifest regenerated (including admin dynamic aliases) and config defaults refreshed.
