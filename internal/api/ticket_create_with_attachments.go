@@ -228,6 +228,14 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	}
 	log.Printf("Successfully created ticket ID: %d (with attachment support)", ticket.ID)
 
+	// Process dynamic fields from form submission
+	if !ticketSideEffectsDisabled() && c.Request.PostForm != nil {
+		if dfErr := ProcessDynamicFieldsFromForm(c.Request.PostForm, ticket.ID, DFObjectTicket, "AgentTicketPhone"); dfErr != nil {
+			log.Printf("WARNING: Failed to process dynamic fields for ticket %d: %v", ticket.ID, dfErr)
+			// Non-fatal - continue with ticket creation
+		}
+	}
+
 	var article *models.Article
 	if !ticketSideEffectsDisabled() {
 		if fetched, ferr := articleRepo.GetLatestCustomerArticleForTicket(uint(ticket.ID)); ferr != nil {

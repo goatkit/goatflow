@@ -1,0 +1,108 @@
+{# Dynamic Fields Partial - renders dynamic fields for a screen #}
+{# Usage: {% include "partials/dynamic_fields.pongo2" with DynamicFields=fields %} #}
+
+{% if DynamicFields %}
+<div class="space-y-6 border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
+    <h3 class="text-lg font-medium text-gray-900 dark:text-white">Additional Information</h3>
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {% for df in DynamicFields %}
+        <div>
+            <label for="DynamicField_{{ df.Field.Name }}" class="block text-sm font-medium text-gray-900 dark:text-white">
+                {{ df.Field.Label }}
+                {% if df.ConfigValue == 2 %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            <div class="mt-2">
+                {% if df.Field.FieldType == "Text" %}
+                <input type="text"
+                    name="DynamicField_{{ df.Field.Name }}"
+                    id="DynamicField_{{ df.Field.Name }}"
+                    value="{{ df.Field.Config.DefaultValue }}"
+                    {% if df.ConfigValue == 2 %}required{% endif %}
+                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                />
+
+                {% elif df.Field.FieldType == "TextArea" %}
+                <textarea
+                    name="DynamicField_{{ df.Field.Name }}"
+                    id="DynamicField_{{ df.Field.Name }}"
+                    rows="{{ df.Field.Config.Rows|default:3 }}"
+                    cols="{{ df.Field.Config.Cols|default:50 }}"
+                    {% if df.ConfigValue == 2 %}required{% endif %}
+                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                >{{ df.Field.Config.DefaultValue }}</textarea>
+
+                {% elif df.Field.FieldType == "Checkbox" %}
+                <div class="flex items-center">
+                    <input type="checkbox"
+                        name="DynamicField_{{ df.Field.Name }}"
+                        id="DynamicField_{{ df.Field.Name }}"
+                        value="1"
+                        {% if df.Field.Config.DefaultValue == "1" %}checked{% endif %}
+                        class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-gotrs-600 focus:ring-gotrs-500"
+                    />
+                    <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">{{ df.Field.Label }}</span>
+                </div>
+
+                {% elif df.Field.FieldType == "Dropdown" %}
+                <select
+                    name="DynamicField_{{ df.Field.Name }}"
+                    id="DynamicField_{{ df.Field.Name }}"
+                    {% if df.ConfigValue == 2 %}required{% endif %}
+                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                >
+                    <option value="">-- Select --</option>
+                    {% for key, value in df.Field.Config.PossibleValues %}
+                    <option value="{{ key }}" {% if df.Field.Config.DefaultValue == key %}selected{% endif %}>{{ value }}</option>
+                    {% endfor %}
+                </select>
+
+                {% elif df.Field.FieldType == "Multiselect" %}
+                <select
+                    name="DynamicField_{{ df.Field.Name }}[]"
+                    id="DynamicField_{{ df.Field.Name }}"
+                    multiple
+                    {% if df.ConfigValue == 2 %}required{% endif %}
+                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                >
+                    {% for key, value in df.Field.Config.PossibleValues %}
+                    <option value="{{ key }}">{{ value }}</option>
+                    {% endfor %}
+                </select>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Hold Ctrl/Cmd to select multiple</p>
+
+                {% elif df.Field.FieldType == "Date" %}
+                <input type="date"
+                    name="DynamicField_{{ df.Field.Name }}"
+                    id="DynamicField_{{ df.Field.Name }}"
+                    value="{{ df.Field.Config.DefaultValue }}"
+                    {% if df.ConfigValue == 2 %}required{% endif %}
+                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                />
+
+                {% elif df.Field.FieldType == "DateTime" %}
+                <input type="datetime-local"
+                    name="DynamicField_{{ df.Field.Name }}"
+                    id="DynamicField_{{ df.Field.Name }}"
+                    value="{{ df.Field.Config.DefaultValue }}"
+                    {% if df.ConfigValue == 2 %}required{% endif %}
+                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                />
+
+                {% else %}
+                {# Fallback for unknown types #}
+                <input type="text"
+                    name="DynamicField_{{ df.Field.Name }}"
+                    id="DynamicField_{{ df.Field.Name }}"
+                    {% if df.ConfigValue == 2 %}required{% endif %}
+                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                />
+                {% endif %}
+            </div>
+            {% if df.Field.Config.Tooltip %}
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ df.Field.Config.Tooltip }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}

@@ -1276,6 +1276,9 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 			// to prevent test/production route divergence
 			RegisterAdminRoutes(adminRoutes, GetAdminRolesRoutes())
 
+			// Dynamic Fields Management - uses canonical route definitions
+			RegisterAdminRoutes(adminRoutes, GetAdminDynamicFieldsRoutes())
+
 			// Customer management routes
 			adminRoutes.GET("/customer-users", underConstruction("Customer Users"))
 			adminRoutes.GET("/customer-user-group", underConstruction("Customer User Groups"))
@@ -4175,16 +4178,46 @@ func handleTicketDetail(c *gin.Context) {
 
 	requireTimeUnits := isTimeUnitsRequired(db)
 
+	// Get dynamic field values for display on ticket zoom
+	var dynamicFieldsDisplay []DynamicFieldDisplay
+	dfDisplay, dfErr := GetDynamicFieldValuesForDisplay(int(ticket.ID), DFObjectTicket, "AgentTicketZoom")
+	if dfErr != nil {
+		log.Printf("Error getting dynamic field values for ticket %d: %v", ticket.ID, dfErr)
+	} else {
+		dynamicFieldsDisplay = dfDisplay
+	}
+
+	// Get dynamic fields for the note form (editable)
+	var noteFormDynamicFields []FieldWithScreenConfig
+	noteFields, noteErr := GetFieldsForScreenWithConfig("AgentTicketNote", DFObjectTicket)
+	if noteErr != nil {
+		log.Printf("Error getting note form dynamic fields: %v", noteErr)
+	} else {
+		noteFormDynamicFields = noteFields
+	}
+
+	// Get dynamic fields for the close form (editable)
+	var closeFormDynamicFields []FieldWithScreenConfig
+	closeFields, closeErr := GetFieldsForScreenWithConfig("AgentTicketClose", DFObjectTicket)
+	if closeErr != nil {
+		log.Printf("Error getting close form dynamic fields: %v", closeErr)
+	} else {
+		closeFormDynamicFields = closeFields
+	}
+
 	pongo2Renderer.HTML(c, http.StatusOK, "pages/ticket_detail.pongo2", pongo2.Context{
-		"Ticket":               ticketData,
-		"User":                 getUserMapForTemplate(c),
-		"ActivePage":           "tickets",
-		"CustomerPanelUser":    panelUser,
-		"CustomerPanelCompany": panelCompany,
-		"CustomerPanelOpen":    panelOpen,
-		"RequireNoteTimeUnits": requireTimeUnits,
-		"TicketStates":         ticketStates,
-		"PendingStateIDs":      pendingStateIDs,
+		"Ticket":                  ticketData,
+		"User":                    getUserMapForTemplate(c),
+		"ActivePage":              "tickets",
+		"CustomerPanelUser":       panelUser,
+		"CustomerPanelCompany":    panelCompany,
+		"CustomerPanelOpen":       panelOpen,
+		"RequireNoteTimeUnits":    requireTimeUnits,
+		"TicketStates":            ticketStates,
+		"PendingStateIDs":         pendingStateIDs,
+		"DynamicFields":           dynamicFieldsDisplay,
+		"NoteFormDynamicFields":   noteFormDynamicFields,
+		"CloseFormDynamicFields":  closeFormDynamicFields,
 	})
 }
 
@@ -5476,6 +5509,13 @@ func handleAddTicketNote(c *gin.Context) {
 		}
 	}
 
+	// Process dynamic fields from form submission (update ticket with values from note form)
+	if c.Request.PostForm != nil {
+		if dfErr := ProcessDynamicFieldsFromForm(c.Request.PostForm, ticketIDInt, DFObjectTicket, "AgentTicketNote"); dfErr != nil {
+			log.Printf("WARNING: Failed to process dynamic fields for ticket %d from note: %v", ticketIDInt, dfErr)
+		}
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
 		"success":  true,
 		"noteId":   article.ID,
@@ -6126,11 +6166,12 @@ func handleCloseTicket(c *gin.Context) {
 
 	// Parse request body
 	var closeData struct {
-		StateID        int    `json:"state_id"`
-		Resolution     string `json:"resolution"`
-		Notes          string `json:"notes" binding:"required"`
-		TimeUnits      int    `json:"time_units"`
-		NotifyCustomer bool   `json:"notify_customer"`
+		StateID        int                    `json:"state_id"`
+		Resolution     string                 `json:"resolution"`
+		Notes          string                 `json:"notes" binding:"required"`
+		TimeUnits      int                    `json:"time_units"`
+		NotifyCustomer bool                   `json:"notify_customer"`
+		DynamicFields  map[string]interface{} `json:"dynamic_fields"`
 	}
 
 	if err := c.ShouldBindJSON(&closeData); err != nil {
@@ -6208,6 +6249,31 @@ func handleCloseTicket(c *gin.Context) {
 	if err = tx.Commit(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 		return
+	}
+
+	// Process dynamic fields from close form (after successful commit)
+	if len(closeData.DynamicFields) > 0 {
+		// Convert map[string]interface{} to url.Values for ProcessDynamicFieldsFromForm
+		formValues := make(map[string][]string)
+		for k, v := range closeData.DynamicFields {
+			switch val := v.(type) {
+			case string:
+				formValues[k] = []string{val}
+			case []interface{}:
+				strVals := make([]string, 0, len(val))
+				for _, item := range val {
+					if s, ok := item.(string); ok {
+						strVals = append(strVals, s)
+					}
+				}
+				formValues[k] = strVals
+			case []string:
+				formValues[k] = val
+			}
+		}
+		if dfErr := ProcessDynamicFieldsFromForm(formValues, ticketIDInt, DFObjectTicket, "AgentTicketClose"); dfErr != nil {
+			log.Printf("WARNING: Failed to process dynamic fields for ticket %d on close: %v", ticketIDInt, dfErr)
+		}
 	}
 
 	if updatedTicket, terr := ticketRepo.GetByID(uint(ticketIDInt)); terr == nil {

@@ -16,6 +16,12 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
+// DynamicFieldLoader is a function type for loading dynamic fields to avoid import cycles
+type DynamicFieldLoader func(screenKey, objectType string) ([]interface{}, error)
+
+// dynamicFieldLoader is set externally by api package during init
+var dynamicFieldLoader DynamicFieldLoader
+
 // wantsHTMLResponse returns true if the request expects HTML response (browser-like)
 func wantsHTMLResponse(c *gin.Context) bool {
 	accept := strings.ToLower(c.GetHeader("Accept"))
@@ -23,6 +29,11 @@ func wantsHTMLResponse(c *gin.Context) bool {
 		return true
 	}
 	return strings.Contains(accept, "text/html") || strings.Contains(accept, "*/*")
+}
+
+// SetDynamicFieldLoader sets the function used to load dynamic fields (called by api package)
+func SetDynamicFieldLoader(loader DynamicFieldLoader) {
+	dynamicFieldLoader = loader
 }
 
 // buildUserContext produces a consistent User map and admin flags
@@ -498,6 +509,17 @@ func HandleAgentNewTicket(c *gin.Context) {
 	user["IsAdmin"] = isAdmin
 	user["IsInAdminGroup"] = isInAdminGroup
 	user["Role"] = map[bool]string{true: "Admin", false: "Agent"}[isAdmin]
+
+	// Dynamic fields for AgentTicketPhone screen
+	var dynamicFields []interface{}
+	if dynamicFieldLoader != nil {
+		var dfErr error
+		dynamicFields, dfErr = dynamicFieldLoader("AgentTicketPhone", "Ticket")
+		if dfErr != nil {
+			log.Printf("Warning: failed to load dynamic fields for ticket create: %v", dfErr)
+		}
+	}
+
 	shared.GetGlobalRenderer().HTML(c, http.StatusOK, "pages/tickets/new.pongo2", gin.H{
 		"User":              user,
 		"IsInAdminGroup":    isInAdminGroup,
@@ -508,6 +530,7 @@ func HandleAgentNewTicket(c *gin.Context) {
 		"CustomerUsers":     customerUsers,
 		"TicketStates":      ticketStates,
 		"TicketStateLookup": ticketStateLookup,
+		"DynamicFields":     dynamicFields,
 	})
 }
 

@@ -110,6 +110,60 @@
                     </p>
                 </div>
 
+                <!-- Dynamic Fields -->
+                {% if CustomerDynamicFields %}
+                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{{ t("tickets.additional_fields")|default:"Additional Information" }}</h3>
+                    {% for df in CustomerDynamicFields %}
+                    <div class="mb-4">
+                        <label for="DynamicField_{{ df.Field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {{ df.Field.Label }}{% if df.ConfigValue == 2 %} <span class="text-red-500">{{ t("customer.common.required") }}</span>{% endif %}
+                        </label>
+                        {% if df.Field.FieldType == "Text" %}
+                        <input type="text" id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% elif df.Field.FieldType == "TextArea" %}
+                        <textarea id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}" rows="3"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            {% if df.ConfigValue == 2 %}required{% endif %}></textarea>
+                        {% elif df.Field.FieldType == "Checkbox" %}
+                        <div class="flex items-center">
+                            <input type="checkbox" id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}" value="1"
+                                class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">{{ df.Field.Label }}</span>
+                        </div>
+                        {% elif df.Field.FieldType == "Dropdown" %}
+                        <select id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            {% if df.ConfigValue == 2 %}required{% endif %}>
+                            <option value="">-- {{ t("common.select")|default:"Select" }} --</option>
+                            {% for opt in df.Field.PossibleValues %}
+                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif df.Field.FieldType == "Multiselect" %}
+                        <select id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}[]" multiple
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            {% if df.ConfigValue == 2 %}required{% endif %}>
+                            {% for opt in df.Field.PossibleValues %}
+                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif df.Field.FieldType == "Date" %}
+                        <input type="date" id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% elif df.Field.FieldType == "DateTime" %}
+                        <input type="datetime-local" id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
                 <!-- Message -->
                 <div>
                     <label for="messageEditor" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

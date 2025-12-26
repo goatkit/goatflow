@@ -1,0 +1,378 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{% if IsNew %}New{% else %}Edit{% endif %} Dynamic Field - GOTRS Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Page header -->
+    <div class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                    {% if IsNew %}Create Dynamic Field{% else %}Edit Dynamic Field{% endif %}
+                </h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    {% if IsNew %}Define a new custom field for your data{% else %}Modify the dynamic field configuration{% endif %}
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <a href="/admin/dynamic-fields"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+        <form
+            id="dynamicFieldForm"
+            method="POST"
+            action="{% if IsNew %}/api/dynamic-fields{% else %}/api/dynamic-fields/{{ Field.ID }}{% endif %}"
+            hx-post="{% if IsNew %}/api/dynamic-fields{% else %}/api/dynamic-fields/{{ Field.ID }}{% endif %}"
+            hx-swap="none"
+            x-data="dynamicFieldForm()"
+            class="space-y-6 p-6"
+        >
+            {% if not IsNew %}
+            <input type="hidden" name="_method" value="PUT">
+            {% endif %}
+
+            <!-- Basic Information -->
+            <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Basic Information</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Name -->
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Name <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="name"
+                            id="name"
+                            value="{{ Field.Name }}"
+                            pattern="[A-Za-z0-9]+"
+                            required
+                            {% if not IsNew and Field.InternalField == 1 %}readonly{% endif %}
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            placeholder="MyCustomField"
+                        >
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Alphanumeric only, no spaces or special characters</p>
+                    </div>
+
+                    <!-- Label -->
+                    <div>
+                        <label for="label" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Label <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="label"
+                            id="label"
+                            value="{{ Field.Label }}"
+                            required
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            placeholder="My Custom Field"
+                        >
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Display label shown to users</p>
+                    </div>
+
+                    <!-- Object Type -->
+                    <div>
+                        <label for="object_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Object Type <span class="text-red-500">*</span>
+                        </label>
+                        <select
+                            name="object_type"
+                            id="object_type"
+                            required
+                            {% if not IsNew %}disabled{% endif %}
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                        >
+                            {% for ot in ObjectTypes %}
+                            <option value="{{ ot }}" {% if Field.ObjectType == ot %}selected{% endif %}>{{ ot }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if not IsNew %}
+                        <input type="hidden" name="object_type" value="{{ Field.ObjectType }}">
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Type of object this field applies to</p>
+                    </div>
+
+                    <!-- Field Type -->
+                    <div>
+                        <label for="field_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Field Type <span class="text-red-500">*</span>
+                        </label>
+                        <select
+                            name="field_type"
+                            id="field_type"
+                            x-model="fieldType"
+                            required
+                            {% if not IsNew %}disabled{% endif %}
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                        >
+                            {% for ft in FieldTypes %}
+                            <option value="{{ ft }}" {% if Field.FieldType == ft %}selected{% endif %}>{{ ft }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if not IsNew %}
+                        <input type="hidden" name="field_type" value="{{ Field.FieldType }}">
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Data type for this field</p>
+                    </div>
+
+                    <!-- Field Order -->
+                    <div>
+                        <label for="field_order" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Display Order
+                        </label>
+                        <input
+                            type="number"
+                            name="field_order"
+                            id="field_order"
+                            value="{{ Field.FieldOrder }}"
+                            min="1"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                        >
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Order in which field appears (lower = first)</p>
+                    </div>
+
+                    <!-- Status -->
+                    <div>
+                        <label for="valid_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Status
+                        </label>
+                        <select
+                            name="valid_id"
+                            id="valid_id"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                        >
+                            <option value="1" {% if Field.ValidID == 1 %}selected{% endif %}>Active</option>
+                            <option value="2" {% if Field.ValidID == 2 %}selected{% endif %}>Inactive</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Type-Specific Configuration -->
+            <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Field Configuration</h3>
+
+                <!-- Default Value (all types) -->
+                <div class="mb-6">
+                    <label for="default_value" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Default Value
+                    </label>
+                    <input
+                        type="text"
+                        name="default_value"
+                        id="default_value"
+                        value="{% if Field.Config %}{{ Field.Config.DefaultValue }}{% endif %}"
+                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                    >
+                </div>
+
+                <!-- Dropdown/Multiselect Options -->
+                <div x-show="fieldType === 'Dropdown' || fieldType === 'Multiselect'" class="space-y-4">
+                    <div>
+                        <label for="possible_values" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Possible Values <span class="text-red-500">*</span>
+                        </label>
+                        <textarea
+                            name="possible_values"
+                            id="possible_values"
+                            rows="6"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm font-mono"
+                            placeholder="Option1&#10;Option2&#10;key=Display Value"
+                        >{% if Field.Config and Field.Config.PossibleValues %}{% for key, value in Field.Config.PossibleValues %}{% if key == value %}{{ value }}{% else %}{{ key }}={{ value }}{% endif %}
+{% endfor %}{% endif %}</textarea>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">One option per line. Use key=value format for different display text.</p>
+                    </div>
+
+                    <div class="flex items-center space-x-6">
+                        <label class="flex items-center">
+                            <input
+                                type="checkbox"
+                                name="possible_none"
+                                value="1"
+                                {% if Field.Config and Field.Config.PossibleNone == 1 %}checked{% endif %}
+                                class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"
+                            >
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Allow empty selection</span>
+                        </label>
+
+                        <label class="flex items-center">
+                            <input
+                                type="checkbox"
+                                name="translatable_values"
+                                value="1"
+                                {% if Field.Config and Field.Config.TranslatableValues == 1 %}checked{% endif %}
+                                class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"
+                            >
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Values are translatable</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Text Field Options -->
+                <div x-show="fieldType === 'Text'" class="space-y-4">
+                    <div>
+                        <label for="regex_list" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Validation Pattern (RegEx)
+                        </label>
+                        <input
+                            type="text"
+                            name="regex_list"
+                            id="regex_list"
+                            value="{% if Field.Config and Field.Config.RegExList %}{{ Field.Config.RegExList.0.Value }}{% endif %}"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm font-mono"
+                            placeholder="^[A-Z]{2}[0-9]{6}$"
+                        >
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional regular expression for validation</p>
+                    </div>
+
+                    <div>
+                        <label for="link" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Link Template
+                        </label>
+                        <input
+                            type="text"
+                            name="link"
+                            id="link"
+                            value="{% if Field.Config %}{{ Field.Config.Link }}{% endif %}"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            placeholder="https://example.com/lookup?id=[% Data.Value | uri %]"
+                        >
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Template to create clickable links from field values</p>
+                    </div>
+                </div>
+
+                <!-- TextArea Options -->
+                <div x-show="fieldType === 'TextArea'" class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="rows" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Rows
+                        </label>
+                        <input
+                            type="number"
+                            name="rows"
+                            id="rows"
+                            value="{% if Field.Config and Field.Config.Rows %}{{ Field.Config.Rows }}{% else %}4{% endif %}"
+                            min="2"
+                            max="20"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="cols" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Columns
+                        </label>
+                        <input
+                            type="number"
+                            name="cols"
+                            id="cols"
+                            value="{% if Field.Config and Field.Config.Cols %}{{ Field.Config.Cols }}{% else %}60{% endif %}"
+                            min="20"
+                            max="200"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                        >
+                    </div>
+                </div>
+
+                <!-- Date/DateTime Options -->
+                <div x-show="fieldType === 'Date' || fieldType === 'DateTime'" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="years_in_past" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Years in Past
+                            </label>
+                            <input
+                                type="number"
+                                name="years_in_past"
+                                id="years_in_past"
+                                value="{% if Field.Config and Field.Config.YearsInPast %}{{ Field.Config.YearsInPast }}{% else %}5{% endif %}"
+                                min="0"
+                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="years_in_future" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Years in Future
+                            </label>
+                            <input
+                                type="number"
+                                name="years_in_future"
+                                id="years_in_future"
+                                value="{% if Field.Config and Field.Config.YearsInFuture %}{{ Field.Config.YearsInFuture }}{% else %}5{% endif %}"
+                                min="0"
+                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="date_restriction" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Date Restriction
+                        </label>
+                        <select
+                            name="date_restriction"
+                            id="date_restriction"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                        >
+                            <option value="" {% if not Field.Config or not Field.Config.DateRestriction %}selected{% endif %}>None</option>
+                            <option value="DisablePastDates" {% if Field.Config and Field.Config.DateRestriction == 'DisablePastDates' %}selected{% endif %}>Disable Past Dates</option>
+                            <option value="DisableFutureDates" {% if Field.Config and Field.Config.DateRestriction == 'DisableFutureDates' %}selected{% endif %}>Disable Future Dates</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex items-center justify-end space-x-4 pt-4">
+                <a href="/admin/dynamic-fields"
+                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                    Cancel
+                </a>
+                <button
+                    type="submit"
+                    class="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+                >
+                    {% if IsNew %}Create Field{% else %}Save Changes{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function dynamicFieldForm() {
+    return {
+        fieldType: '{{ Field.FieldType }}' || 'Text'
+    };
+}
+
+document.getElementById('dynamicFieldForm').addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.successful) {
+        // Redirect handled by HX-Redirect header
+    } else {
+        try {
+            const response = JSON.parse(event.detail.xhr.responseText);
+            alert('Error: ' + (response.error || 'Failed to save field'));
+        } catch (e) {
+            alert('Error saving field');
+        }
+    }
+});
+</script>
+{% endblock %}

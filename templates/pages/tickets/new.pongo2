@@ -98,6 +98,9 @@
                 <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ t("tickets_form.message_help") }}</p>
             </div>
 
+            {# Dynamic Fields #}
+            {% include "partials/dynamic_fields.pongo2" with DynamicFields=DynamicFields %}
+
             <div>
                 <label class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.attachments") }}</label>
                 <div class="mt-2">

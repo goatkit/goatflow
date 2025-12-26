@@ -269,6 +269,14 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
             <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.customer_id")|default:"CustomerID" }}</div>
             <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.customer_id|default:"-" }}</div>
         </div>
+        {% if DynamicFields %}
+        {% for df in DynamicFields %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
+            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ df.Field.Label }}</div>
+            <div class="text-sm text-gray-900 dark:text-white">{{ df.DisplayValue }}</div>
+        </div>
+        {% endfor %}
+        {% endif %}
     </div>
 
     <!-- Tabs like OTRS: Communication, Time Accounting, History, Links -->
@@ -468,6 +476,62 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                             {% endif %}
                         </p>
                     </div>
+                    {% if NoteFormDynamicFields %}
+                    <!-- Dynamic Fields Section -->
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ t("dynamic_fields.title")|default:"Additional Fields" }}</h3>
+                        <div class="grid gap-4 md:grid-cols-2">
+                            {% for fwc in NoteFormDynamicFields %}
+                            <div>
+                                <label for="DynamicField_{{ fwc.Field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {{ fwc.Field.Label }}{% if fwc.ConfigValue == 2 %}<span class="ml-1 text-red-500">*</span>{% endif %}
+                                </label>
+                                {% if fwc.Field.FieldType == "Text" %}
+                                <input type="text" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
+                                       {% if fwc.ConfigValue == 2 %}required{% endif %}
+                                       class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
+                                {% elif fwc.Field.FieldType == "TextArea" %}
+                                <textarea id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}" rows="3"
+                                          {% if fwc.ConfigValue == 2 %}required{% endif %}
+                                          class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm"></textarea>
+                                {% elif fwc.Field.FieldType == "Checkbox" %}
+                                <input type="checkbox" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}" value="1"
+                                       class="h-4 w-4 rounded border-gray-300 text-gotrs-600 focus:ring-gotrs-500" />
+                                {% elif fwc.Field.FieldType == "Date" %}
+                                <input type="date" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
+                                       {% if fwc.ConfigValue == 2 %}required{% endif %}
+                                       class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
+                                {% elif fwc.Field.FieldType == "DateTime" %}
+                                <input type="datetime-local" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
+                                       {% if fwc.ConfigValue == 2 %}required{% endif %}
+                                       class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
+                                {% elif fwc.Field.FieldType == "Dropdown" %}
+                                <select id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
+                                        {% if fwc.ConfigValue == 2 %}required{% endif %}
+                                        class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm">
+                                    <option value="">-- {{ t("forms.select")|default:"Select" }} --</option>
+                                    {% if fwc.Field.Config and fwc.Field.Config.PossibleValues %}
+                                    {% for key, val in fwc.Field.Config.PossibleValues %}
+                                    <option value="{{ key }}">{{ val }}</option>
+                                    {% endfor %}
+                                    {% endif %}
+                                </select>
+                                {% elif fwc.Field.FieldType == "Multiselect" %}
+                                <select id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}[]" multiple
+                                        {% if fwc.ConfigValue == 2 %}required{% endif %}
+                                        class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm">
+                                    {% if fwc.Field.Config and fwc.Field.Config.PossibleValues %}
+                                    {% for key, val in fwc.Field.Config.PossibleValues %}
+                                    <option value="{{ key }}">{{ val }}</option>
+                                    {% endfor %}
+                                    {% endif %}
+                                </select>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="flex justify-end">
                         <button type="submit"
                             class="rounded-md bg-gotrs-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
@@ -739,6 +803,57 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                         placeholder="{{ t('tickets.time_spent_placeholder')|default:'Time spent on resolution' }}"
                         class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
                 </div>
+
+                <!-- Dynamic Fields for Close Form -->
+                {% if CloseFormDynamicFields %}
+                <div class="mb-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ t("tickets.additional_fields")|default:"Additional Fields" }}</h4>
+                    {% for df in CloseFormDynamicFields %}
+                    <div class="mb-3">
+                        <label for="close_DynamicField_{{ df.Field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {{ df.Field.Label }}{% if df.ConfigValue == 2 %} <span class="text-red-500">*</span>{% endif %}
+                        </label>
+                        {% if df.Field.FieldType == "Text" %}
+                        <input type="text" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
+                            {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% elif df.Field.FieldType == "TextArea" %}
+                        <textarea id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}" rows="2"
+                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
+                            {% if df.ConfigValue == 2 %}required{% endif %}></textarea>
+                        {% elif df.Field.FieldType == "Checkbox" %}
+                        <input type="checkbox" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}" value="1"
+                            class="rounded border-gray-300 dark:border-gray-600 text-gotrs-600 focus:ring-gotrs-500">
+                        {% elif df.Field.FieldType == "Dropdown" %}
+                        <select id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
+                            {% if df.ConfigValue == 2 %}required{% endif %}>
+                            <option value="">-- Select --</option>
+                            {% for opt in df.Field.PossibleValues %}
+                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif df.Field.FieldType == "Multiselect" %}
+                        <select id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}[]" multiple
+                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
+                            {% if df.ConfigValue == 2 %}required{% endif %}>
+                            {% for opt in df.Field.PossibleValues %}
+                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif df.Field.FieldType == "Date" %}
+                        <input type="date" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
+                            {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% elif df.Field.FieldType == "DateTime" %}
+                        <input type="datetime-local" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
+                            {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
 
                 <!-- Notify Customer -->
                 <div class="mb-6">
@@ -1102,6 +1217,20 @@ document.getElementById('closeTicketForm').addEventListener('submit', function(e
         return;
     }
     
+    // Collect dynamic field values
+    const dynamicFields = {};
+    this.querySelectorAll('[name^="DynamicField_"]').forEach(input => {
+        const name = input.name.replace('[]', '');
+        if (input.type === 'checkbox') {
+            dynamicFields[name] = input.checked ? '1' : '0';
+        } else if (input.type === 'select-multiple') {
+            const values = Array.from(input.selectedOptions).map(opt => opt.value);
+            dynamicFields[name] = values;
+        } else {
+            dynamicFields[name] = input.value;
+        }
+    });
+    
     const submitBtn = this.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.textContent = 'Closing...';
@@ -1117,7 +1246,8 @@ document.getElementById('closeTicketForm').addEventListener('submit', function(e
             resolution: resolution,
             notes: closeNotes,
             time_units: timeUnits ? parseInt(timeUnits) : 0,
-            notify_customer: notifyCustomer
+            notify_customer: notifyCustomer,
+            dynamic_fields: dynamicFields
         })
     })
     .then(response => response.json())

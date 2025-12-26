@@ -449,11 +449,21 @@ func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 			})
 		}
 
+		// Get dynamic fields for customer ticket creation
+		var customerDynamicFields []FieldWithScreenConfig
+		dfFields, dfErr := GetFieldsForScreenWithConfig("CustomerTicketMessage", DFObjectTicket)
+		if dfErr != nil {
+			log.Printf("Error getting customer ticket dynamic fields: %v", dfErr)
+		} else {
+			customerDynamicFields = dfFields
+		}
+
 		pongo2Renderer.HTML(c, http.StatusOK, "pages/customer/new_ticket.pongo2", withPortalContext(pongo2.Context{
-			"Title":      fmt.Sprintf("%s - Create New Ticket", cfg.Title),
-			"ActivePage": "customer",
-			"Services":   services,
-			"Priorities": priorities,
+			"Title":               fmt.Sprintf("%s - Create New Ticket", cfg.Title),
+			"ActivePage":          "customer",
+			"Services":            services,
+			"Priorities":          priorities,
+			"CustomerDynamicFields": customerDynamicFields,
 		}, cfg))
 	}
 }
@@ -611,6 +621,13 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		// Process dynamic fields from customer create form
+		if c.Request.PostForm != nil {
+			if dfErr := ProcessDynamicFieldsFromForm(c.Request.PostForm, int(ticketID), DFObjectTicket, "CustomerTicketMessage"); dfErr != nil {
+				log.Printf("WARNING: Failed to process dynamic fields for customer ticket %d: %v", ticketID, dfErr)
+			}
+		}
+
 		// Redirect to ticket view
 		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/customer/tickets/%d", ticketID))
 	}
@@ -744,6 +761,15 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 		// Check if ticket can be closed by customer
 		canClose := ticket.StateID != 3 // Not already closed
 
+		// Get dynamic field values for display on customer ticket view
+		var dynamicFieldsDisplay []DynamicFieldDisplay
+		dfDisplay, dfErr := GetDynamicFieldValuesForDisplay(ticket.ID, DFObjectTicket, "CustomerTicketZoom")
+		if dfErr != nil {
+			log.Printf("Error getting dynamic field values for customer ticket %d: %v", ticket.ID, dfErr)
+		} else {
+			dynamicFieldsDisplay = dfDisplay
+		}
+
 		pongo2Renderer.HTML(c, http.StatusOK, "pages/customer/ticket_view.pongo2", withPortalContext(pongo2.Context{
 			"Title":      fmt.Sprintf("%s - Ticket #%s", cfg.Title, ticket.TN),
 			"ActivePage": "customer",
@@ -765,7 +791,8 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 				"updated_at_iso": ticket.ChangeTime.UTC().Format(time.RFC3339),
 				"can_close":      canClose,
 			},
-			"Articles": articles,
+			"Articles":      articles,
+			"DynamicFields": dynamicFieldsDisplay,
 		}, cfg))
 	}
 }

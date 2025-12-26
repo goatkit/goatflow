@@ -116,6 +116,22 @@ func GetAdminRolesRoutes() []AdminRouteDefinition {
 	}
 }
 
+// GetAdminDynamicFieldsRoutes returns the canonical route definitions for dynamic fields admin.
+// This MUST be used by both htmx_routes.go and test files to prevent route divergence.
+func GetAdminDynamicFieldsRoutes() []AdminRouteDefinition {
+	return []AdminRouteDefinition{
+		{"GET", "/dynamic-fields", handleAdminDynamicFields},
+		{"GET", "/dynamic-fields/new", handleAdminDynamicFieldNew},
+		{"GET", "/dynamic-fields/:id", handleAdminDynamicFieldEdit},
+		{"GET", "/dynamic-fields/screens", handleAdminDynamicFieldScreenConfig},
+		{"POST", "/dynamic-fields", handleCreateDynamicField},
+		{"PUT", "/dynamic-fields/:id", handleUpdateDynamicField},
+		{"DELETE", "/dynamic-fields/:id", handleDeleteDynamicField},
+		{"PUT", "/dynamic-fields/:id/screens", handleAdminDynamicFieldScreenConfigSave},
+		{"POST", "/dynamic-fields/:id/screen", handleAdminDynamicFieldScreenConfigSingle},
+	}
+}
+
 // RegisterAdminRoutes registers routes from definitions onto a router group
 func RegisterAdminRoutes(group *gin.RouterGroup, routes []AdminRouteDefinition) {
 	for _, r := range routes {
