@@ -74,8 +74,8 @@ jobs:
             sleep 2
           done
           
-          # Run migrations for tests
-          mysql -h 127.0.0.1 -P 3308 -u root otrs_test < migrations/mysql/000001_schema_alignment.up.sql
+          # Run migrations for tests (disable FK checks for initial schema load)
+          mysql -h 127.0.0.1 -P 3308 -u root otrs_test -e "SET FOREIGN_KEY_CHECKS=0; SOURCE migrations/mysql/000001_schema_alignment.up.sql; SET FOREIGN_KEY_CHECKS=1;"
           mysql -h 127.0.0.1 -P 3308 -u root otrs_test < migrations/mysql/000002_minimal_data.up.sql
           mysql -h 127.0.0.1 -P 3308 -u root otrs_test < migrations/mysql/000003_customer_portal_sysconfig.up.sql
           mysql -h 127.0.0.1 -P 3308 -u root otrs_test < migrations/mysql/000004_dynamic_field_screen_config.up.sql
@@ -270,8 +270,8 @@ jobs:
             sleep 2
           done
           
-          # Run migrations
-          mysql -h 127.0.0.1 -P 3308 -u root otrs_integration < migrations/mysql/000001_schema_alignment.up.sql
+          # Run migrations (disable FK checks for initial schema load)
+          mysql -h 127.0.0.1 -P 3308 -u root otrs_integration -e "SET FOREIGN_KEY_CHECKS=0; SOURCE migrations/mysql/000001_schema_alignment.up.sql; SET FOREIGN_KEY_CHECKS=1;"
           mysql -h 127.0.0.1 -P 3308 -u root otrs_integration < migrations/mysql/000002_minimal_data.up.sql
           mysql -h 127.0.0.1 -P 3308 -u root otrs_integration < migrations/mysql/000003_customer_portal_sysconfig.up.sql
           mysql -h 127.0.0.1 -P 3308 -u root otrs_integration < migrations/mysql/000004_dynamic_field_screen_config.up.sql
