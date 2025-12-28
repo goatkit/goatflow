@@ -1,0 +1,343 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{% if isNew %}{{ t("admin.modules.signature.form.create_title") }}{% else %}{{ t("admin.modules.signature.form.edit_title") }}{% endif %} - GOTRS Admin{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<script src="/static/js/tiptap.min.js"></script>
+<script src="/static/js/tiptap-editor.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Page header -->
+    <div class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                    {% if isNew %}{{ t("admin.modules.signature.form.create_title") }}{% else %}{{ t("admin.modules.signature.form.edit_title") }}{% endif %}
+                </h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    {% if isNew %}{{ t("admin.modules.signature.form.create_description") }}{% else %}{{ t("admin.modules.signature.form.edit_description") }}{% endif %}
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <a href="/admin/signatures"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ t("admin.modules.signature.actions.back_to_list") }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Form -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+                <form
+                    id="signatureForm"
+                    method="POST"
+                    action="{% if isNew %}/admin/api/signatures{% else %}/admin/api/signatures/{{ signature.ID }}{% endif %}"
+                    {% if isNew %}
+                    hx-post="/admin/api/signatures"
+                    {% else %}
+                    hx-put="/admin/api/signatures/{{ signature.ID }}"
+                    {% endif %}
+                    hx-swap="none"
+                    class="space-y-6 p-6"
+                >
+                    <!-- Basic Information -->
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.modules.signature.form.basic_info") }}</h3>
+                        
+                        <div class="grid grid-cols-1 gap-6">
+                            <!-- Name -->
+                            <div class="max-w-lg">
+                                <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.modules.signature.fields.name") }} <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    id="name"
+                                    value="{{ signature.Name }}"
+                                    required
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    placeholder="{{ t("admin.modules.signature.form.name_placeholder") }}"
+                                >
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.modules.signature.form.name_help") }}</p>
+                            </div>
+
+                            <!-- Content Type -->
+                            <div class="max-w-lg">
+                                <label for="content_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.modules.signature.fields.content_type") }}
+                                </label>
+                                <select
+                                    name="content_type"
+                                    id="content_type"
+                                    onchange="updateEditorMode()"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                >
+                                    <option value="text/plain" {% if signature.ContentType == "text/plain" or not signature.ContentType %}selected{% endif %}>{{ t("admin.modules.signature.content_types.plain_text") }}</option>
+                                    <option value="text/html" {% if signature.ContentType == "text/html" %}selected{% endif %}>{{ t("admin.modules.signature.content_types.html") }}</option>
+                                </select>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.modules.signature.form.content_type_help") }}</p>
+                            </div>
+
+                            <!-- Status -->
+                            <div class="max-w-lg">
+                                <label for="valid_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.modules.signature.filters.status") }}
+                                </label>
+                                <select
+                                    name="valid_id"
+                                    id="valid_id"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                >
+                                    {% for vs in validStatuses %}
+                                    <option value="{{ vs.ID }}" {% if signature.ValidID == vs.ID or (not signature and vs.ID == 1) %}selected{% endif %}>{{ vs.Name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Comments -->
+                            <div class="max-w-lg">
+                                <label for="comments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.modules.signature.fields.comments") }}
+                                </label>
+                                <input
+                                    type="text"
+                                    name="comments"
+                                    id="comments"
+                                    value="{{ signature.Comments }}"
+                                    maxlength="250"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    placeholder="{{ t("admin.modules.signature.form.comments_placeholder") }}"
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Signature Content -->
+                    <div class="pb-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.modules.signature.form.signature_content") }}</h3>
+                        
+                        <div>
+                            <label id="signatureEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                {{ t("admin.modules.signature.fields.text") }}
+                            </label>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{ t("admin.modules.signature.form.text_help") }}</p>
+                            
+                            <!-- TipTap Editor -->
+                            <div id="signatureEditor" class="tiptap-editor border border-gray-300 dark:border-gray-600 rounded-md min-h-[200px]" data-mode="{% if signature.ContentType == "text/html" %}richtext{% else %}markdown{% endif %}" aria-labelledby="signatureEditorLabel" role="textbox" aria-multiline="true"></div>
+                            <input type="hidden" name="text" id="text" value="{{ signature.Text }}">
+                        </div>
+                    </div>
+
+                    <!-- Submit Buttons -->
+                    <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <a href="/admin/signatures"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+                        >
+                            {{ t("admin.modules.signature.actions.cancel") }}
+                        </a>
+                        <button
+                            type="submit"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+                        >
+                            {% if isNew %}{{ t("admin.modules.signature.actions.create") }}{% else %}{{ t("admin.modules.signature.actions.save") }}{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sidebar - Variables Reference -->
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg p-6 sticky top-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.modules.signature.form.variables_title") }}</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">{{ t("admin.modules.signature.form.variables_help") }}</p>
+                <p class="text-xs text-blue-600 dark:text-blue-400 mb-4">Both <code>&lt;GOTRS_*&gt;</code> and <code>&lt;OTRS_*&gt;</code> prefixes are supported.</p>
+                
+                <div class="space-y-4">
+                    <!-- Agent Variables -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ t("admin.modules.signature.variables.current_agent") }}</h4>
+                        <div class="space-y-1">
+                            <button type="button" onclick="insertVariable('GOTRS', 'CURRENT_UserFirstname')" class="text-xs text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 block">
+                                &lt;GOTRS_CURRENT_UserFirstname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('OTRS', 'CURRENT_UserFirstname')" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 block">
+                                &lt;OTRS_CURRENT_UserFirstname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('GOTRS', 'CURRENT_UserLastname')" class="text-xs text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 block">
+                                &lt;GOTRS_CURRENT_UserLastname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('OTRS', 'CURRENT_UserLastname')" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 block">
+                                &lt;OTRS_CURRENT_UserLastname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('GOTRS', 'CURRENT_UserFullname')" class="text-xs text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 block">
+                                &lt;GOTRS_CURRENT_UserFullname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('OTRS', 'CURRENT_UserFullname')" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 block">
+                                &lt;OTRS_CURRENT_UserFullname&gt;
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Ticket Owner Variables -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ t("admin.modules.signature.variables.ticket_owner") }}</h4>
+                        <div class="space-y-1">
+                            <button type="button" onclick="insertVariable('GOTRS', 'OWNER_UserFirstname')" class="text-xs text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 block">
+                                &lt;GOTRS_OWNER_UserFirstname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('OTRS', 'OWNER_UserFirstname')" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 block">
+                                &lt;OTRS_OWNER_UserFirstname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('GOTRS', 'OWNER_UserLastname')" class="text-xs text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 block">
+                                &lt;GOTRS_OWNER_UserLastname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('OTRS', 'OWNER_UserLastname')" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 block">
+                                &lt;OTRS_OWNER_UserLastname&gt;
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Ticket Variables -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ t("admin.modules.signature.variables.ticket") }}</h4>
+                        <div class="space-y-1">
+                            <button type="button" onclick="insertVariable('GOTRS', 'TICKET_TicketNumber')" class="text-xs text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 block">
+                                &lt;GOTRS_TICKET_TicketNumber&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('OTRS', 'TICKET_TicketNumber')" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 block">
+                                &lt;OTRS_TICKET_TicketNumber&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('GOTRS', 'TICKET_Title')" class="text-xs text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 block">
+                                &lt;GOTRS_TICKET_Title&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('OTRS', 'TICKET_Title')" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 block">
+                                &lt;OTRS_TICKET_Title&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('GOTRS', 'TICKET_Queue')" class="text-xs text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 block">
+                                &lt;GOTRS_TICKET_Queue&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('OTRS', 'TICKET_Queue')" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 block">
+                                &lt;OTRS_TICKET_Queue&gt;
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Customer Variables -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ t("admin.modules.signature.variables.customer") }}</h4>
+                        <div class="space-y-1">
+                            <button type="button" onclick="insertVariable('GOTRS', 'CUSTOMER_UserFirstname')" class="text-xs text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 block">
+                                &lt;GOTRS_CUSTOMER_UserFirstname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('OTRS', 'CUSTOMER_UserFirstname')" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 block">
+                                &lt;OTRS_CUSTOMER_UserFirstname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('GOTRS', 'CUSTOMER_UserLastname')" class="text-xs text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 block">
+                                &lt;GOTRS_CUSTOMER_UserLastname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('OTRS', 'CUSTOMER_UserLastname')" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 block">
+                                &lt;OTRS_CUSTOMER_UserLastname&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('GOTRS', 'CUSTOMER_UserEmail')" class="text-xs text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 block">
+                                &lt;GOTRS_CUSTOMER_UserEmail&gt;
+                            </button>
+                            <button type="button" onclick="insertVariable('OTRS', 'CUSTOMER_UserEmail')" class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 block">
+                                &lt;OTRS_CUSTOMER_UserEmail&gt;
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {% if not isNew and queues %}
+                <!-- Queues using this signature -->
+                <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ t("admin.modules.signature.form.queues_using") }}</h4>
+                    {% if queues|length > 0 %}
+                    <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                        {% for q in queues %}
+                        <li class="flex items-center">
+                            <svg class="h-4 w-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            {{ q.Name }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("admin.modules.signature.form.no_queues") }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let editor = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize TipTap editor
+    const editorEl = document.getElementById('signatureEditor');
+    const textInput = document.getElementById('text');
+    const contentType = document.getElementById('content_type');
+    
+    const initialMode = contentType.value === 'text/html' ? 'richtext' : 'markdown';
+    
+    if (typeof TiptapEditor !== 'undefined') {
+        editor = new TiptapEditor(editorEl, {
+            mode: initialMode,
+            content: textInput.value,
+            onChange: function(content) {
+                textInput.value = content;
+            }
+        });
+    }
+
+    // Handle form submission
+    const form = document.getElementById('signatureForm');
+    form.addEventListener('htmx:beforeRequest', function(evt) {
+        // Update hidden input with editor content
+        if (editor) {
+            textInput.value = editor.getContent();
+        }
+    });
+});
+
+function updateEditorMode() {
+    const contentType = document.getElementById('content_type').value;
+    const newMode = contentType === 'text/html' ? 'richtext' : 'markdown';
+    
+    if (editor && typeof editor.setMode === 'function') {
+        editor.setMode(newMode);
+    }
+}
+
+function insertVariable(prefix, varName) {
+    const tag = '<' + prefix + '_' + varName + '>';
+    if (editor && typeof editor.insertText === 'function') {
+        editor.insertText(tag);
+    } else {
+        // Fallback: insert into textarea
+        const textInput = document.getElementById('text');
+        const start = textInput.selectionStart;
+        const end = textInput.selectionEnd;
+        textInput.value = textInput.value.substring(0, start) + tag + textInput.value.substring(end);
+        textInput.focus();
+        textInput.selectionStart = textInput.selectionEnd = start + tag.length;
+    }
+}
+</script>
+{% endblock %}

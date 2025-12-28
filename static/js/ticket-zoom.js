@@ -90,7 +90,71 @@ function replyToTicket() {
         
         // Load customer users for dropdown
         loadCustomerUsers();
+        
+        // Load queue signature and append to editor
+        loadQueueSignature();
     }
+}
+
+/**
+ * Load the queue's signature and append to the reply editor
+ */
+function loadQueueSignature() {
+    const queueId = getCurrentQueueId();
+    const ticketId = currentTicketId;
+    
+    if (!queueId) return;
+    
+    const url = `/agent/api/signatures/queue/${queueId}` + 
+                (ticketId ? `?ticket_id=${ticketId}` : '');
+    
+    apiFetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data && data.data.text) {
+                const signatureText = data.data.text;
+                const contentType = data.data.content_type || 'text/html';
+                const targetEditorId = 'replyEditorInner';
+                
+                // Use global TiptapEditor API to append signature
+                if (window.TiptapEditor && typeof window.TiptapEditor.getContent === 'function') {
+                    // Switch editor mode based on content type BEFORE setting content
+                    const targetMode = contentType === 'text/plain' ? 'markdown' : 'richtext';
+                    if (typeof window.TiptapEditor.setMode === 'function') {
+                        window.TiptapEditor.setMode(targetEditorId, targetMode);
+                    }
+                    
+                    const currentContent = window.TiptapEditor.getContent(targetEditorId) || '';
+                    
+                    // Append signature with separator
+                    const separator = contentType === 'text/plain' ? '\n\n-- \n' : '<br><br><hr>';
+                    
+                    if (currentContent.trim() && currentContent.trim() !== '<p></p>') {
+                        window.TiptapEditor.setContent(targetEditorId, currentContent + separator + signatureText);
+                    } else {
+                        // Start with empty content + signature
+                        window.TiptapEditor.setContent(targetEditorId, separator + signatureText);
+                    }
+                    console.log('Signature appended to editor');
+                } else {
+                    // Fallback to textarea
+                    const textarea = document.querySelector('#replyModal textarea[name="body"]');
+                    if (textarea) {
+                        const currentContent = textarea.value || '';
+                        const separator = '\n\n-- \n';
+                        if (currentContent.trim()) {
+                            textarea.value = currentContent + separator + signatureText;
+                        } else {
+                            textarea.value = separator + signatureText;
+                        }
+                        console.log('Signature appended to textarea');
+                    }
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Failed to load queue signature:', err);
+        });
 }
 
 /**

@@ -94,12 +94,12 @@
                       hx-target="#messages-container" 
                       hx-swap="beforeend"
                       hx-reset="true">
-                    <label for="comment" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <label id="commentEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                         {{ t("tickets.add_comment") }}
                     </label>
                     <div class="mt-1">
                         <input type="hidden" name="is_visible_for_customer" value="1">
-                        {% include "partials/rich_text_editor.pongo2" with EditorID="commentEditor" FieldName="body" Placeholder=t("tickets.comment_placeholder") MinHeight="120px" %}
+                        {% include "partials/rich_text_editor.pongo2" with EditorID="commentEditor" FieldName="body" Placeholder=t("tickets.comment_placeholder") MinHeight="120px" LabelID="commentEditorLabel" %}
                     </div>
                     <div class="mt-3 flex justify-end">
                         <button type="submit"

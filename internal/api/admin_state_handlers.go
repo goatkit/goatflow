@@ -303,15 +303,15 @@ func handleAdminStateCreate(c *gin.Context) {
 		input.ValidID = 1
 	}
 
-	// Create the state
-	var id int
-	query := `
+	// Create the state using the adapter for cross-database compatibility
+	query := database.ConvertPlaceholders(`
 		INSERT INTO ticket_state (name, type_id, comments, valid_id, create_by, change_by) 
 		VALUES ($1, $2, $3, $4, 1, 1) 
 		RETURNING id
-	`
+	`)
 
-	err = db.QueryRow(database.ConvertPlaceholders(query), input.Name, input.TypeID, input.Comments, input.ValidID).Scan(&id)
+	adapter := database.GetAdapter()
+	id64, err := adapter.InsertWithReturning(db, query, input.Name, input.TypeID, input.Comments, input.ValidID)
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			c.JSON(http.StatusConflict, gin.H{
@@ -327,6 +327,7 @@ func handleAdminStateCreate(c *gin.Context) {
 		return
 	}
 
+	id := int(id64)
 	typeID := input.TypeID
 	validID := input.ValidID
 	c.JSON(http.StatusCreated, gin.H{

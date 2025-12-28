@@ -58,11 +58,14 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/schema_discovery.pongo2":          true,
 	"pages/admin/schema_monitoring.pongo2":         true,
 	"pages/admin/services.pongo2":                  true,
+	"pages/admin/signature_form.pongo2":            true,
+	"pages/admin/signatures.pongo2":                true,
 	"pages/admin/sla.pongo2":                       true,
 	"pages/admin/state.pongo2":                     true,
 	"pages/admin/states.pongo2":                    true,
 	"pages/admin/template_attachments.pongo2":      true,
 	"pages/admin/template_form.pongo2":             true,
+	"pages/admin/template_import.pongo2":           true,
 	"pages/admin/template_queues.pongo2":           true,
 	"pages/admin/templates.pongo2":                 true,
 	"pages/admin/tickets.pongo2":                   true,
@@ -753,6 +756,37 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 			}(),
 		},
 		{
+			name:     "admin/signatures",
+			template: "pages/admin/signatures.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Signatures"] = []map[string]interface{}{
+					{"ID": 1, "Name": "Default Signature", "Text": "Best regards", "ValidID": 1},
+				}
+				ctx["Search"] = ""
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/signature_form",
+			template: "pages/admin/signature_form.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Signature"] = map[string]interface{}{
+					"ID":      0,
+					"Name":    "",
+					"Text":    "",
+					"ValidID": 1,
+				}
+				ctx["IsNew"] = true
+				ctx["ValidOptions"] = []map[string]interface{}{
+					{"ID": 1, "Name": "valid"},
+					{"ID": 2, "Name": "invalid"},
+				}
+				return ctx
+			}(),
+		},
+		{
 			name:     "admin/sla",
 			template: "pages/admin/sla.pongo2",
 			ctx: func() pongo2.Context {
@@ -829,6 +863,11 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 				}
 				return ctx
 			}(),
+		},
+		{
+			name:     "admin/template_import",
+			template: "pages/admin/template_import.pongo2",
+			ctx:      adminContext(),
 		},
 		{
 			name:     "admin/template_queues",

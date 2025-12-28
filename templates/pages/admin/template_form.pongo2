@@ -148,13 +148,14 @@
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.modules.template.form.template_content") }}</h3>
                 
                 <div>
-                    <label for="text" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label id="templateEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {{ t("admin.modules.template.fields.text") }}
                     </label>
                     
                     <!-- Available placeholders -->
                     <div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
                         <p class="mb-1">{{ t("admin.modules.template.form.available_placeholders") }}:</p>
+                        <p class="mb-2 text-blue-600 dark:text-blue-400">Both <code>&lt;GOTRS_*&gt;</code> and <code>&lt;OTRS_*&gt;</code> prefixes are supported.</p>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 font-mono text-xs">
                             <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_OWNER_Salutation&gt;')">&lt;GOTRS_OWNER_Salutation&gt;</span>
                             <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_OWNER_FirstName&gt;')">&lt;GOTRS_OWNER_FirstName&gt;</span>
@@ -168,7 +169,7 @@
                         <p class="mt-2 text-xs text-gray-400">{{ t("admin.modules.template.form.placeholder_click_hint") }}</p>
                     </div>
                     
-                    {% include "partials/rich_text_editor.pongo2" with EditorID="templateEditor" FieldName="text" InitialContent=Template.Text Placeholder="Enter your template content here..." MinHeight="300px" EditorMode="markdown" %}
+                    {% include "partials/rich_text_editor.pongo2" with EditorID="templateEditor" FieldName="text" InitialContent=Template.Text Placeholder="Enter your template content here..." MinHeight="300px" EditorMode="markdown" LabelID="templateEditorLabel" %}
                     
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         {{ t("admin.modules.template.form.template_text_help") }}

@@ -108,9 +108,11 @@ func TestTranslationCompleteness(t *testing.T) {
 			// Set minimum coverage requirements
 			minCoverage := map[string]float64{
 				"en": 100.0, // Base language
-				"de": 80.0,  // German should have good coverage
-				"es": 30.0,  // Spanish partial (work in progress)
-				"fr": 50.0,  // French partial
+				"de": 80.0,  // German
+				"es": 80.0,  // Spanish
+				"fr": 80.0,  // French
+				"ar": 80.0,  // Arabic
+				"tlh": 80.0,  // Klingon
 				// Other languages may have lower coverage initially
 			}
 

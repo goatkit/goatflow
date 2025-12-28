@@ -432,10 +432,10 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("tickets.visible_for_customer_help")|default:"Leave unchecked to keep this note internal." }}</p>
                     </div>
                     <div>
-                        <label for="note_content" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <label id="noteEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             {{ t("tickets.note_content")|default:"Note Content" }} <span class="ml-1 text-red-500">*</span>
                         </label>
-                        {% include "partials/rich_text_editor.pongo2" with EditorID="noteEditor" FieldName="body" Placeholder="Add your note or update..." MinHeight="120px" %}
+                        {% include "partials/rich_text_editor.pongo2" with EditorID="noteEditor" FieldName="body" Placeholder="Add your note or update..." MinHeight="120px" LabelID="noteEditorLabel" %}
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>

@@ -90,9 +90,9 @@
             </div>
 
             <div>
-                <label for="body" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.message") }} <span class="text-red-500">*</span></label>
+                <label id="bodyEditorLabel" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.message") }} <span class="text-red-500">*</span></label>
                 <div class="mt-2">
-                    {% include "partials/rich_text_editor.pongo2" with EditorID="bodyEditor" FieldName="body" Placeholder=t("tickets_form.body_placeholder") MinHeight="120px" %}
+                    {% include "partials/rich_text_editor.pongo2" with EditorID="bodyEditor" FieldName="body" Placeholder=t("tickets_form.body_placeholder") MinHeight="120px" LabelID="bodyEditorLabel" %}
                 </div>
                 <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ t("tickets_form.message_help") }}</p>
             </div>
@@ -183,6 +183,99 @@
             hidden.name = 'customer_id';
             hidden.id = 'customer_id';
             document.querySelector('form[action="/api/tickets"]').appendChild(hidden);
+        }
+    })();
+
+    // Signature loading for email interaction type (mirrors OTRS AgentTicketEmail behavior)
+    (function setupSignatureLoading(){
+        var queueSelect = document.getElementById('queue_id');
+        var interactionSelect = document.getElementById('interaction_type');
+        var customerUserInput = document.getElementById('customer_user_id');
+        var currentSignature = '';
+        var signatureLoaded = false;
+
+        function isEmailType() {
+            return interactionSelect && interactionSelect.value === 'email';
+        }
+
+        function getQueueId() {
+            return queueSelect ? queueSelect.value : '';
+        }
+
+        function getCustomerUserId() {
+            return customerUserInput ? customerUserInput.value : '';
+        }
+
+        function appendSignatureToEditor(signatureHtml) {
+            if (!signatureHtml || !window.tiptapEditors || !window.tiptapEditors['bodyEditor']) return;
+            var editor = window.tiptapEditors['bodyEditor'];
+            var currentContent = editor.getHTML();
+            // Remove old signature if present
+            if (currentSignature) {
+                currentContent = currentContent.replace(currentSignature, '');
+            }
+            // Append new signature with separator
+            var separator = '<p><br></p><p>--</p>';
+            editor.commands.setContent(currentContent + separator + signatureHtml);
+            currentSignature = separator + signatureHtml;
+        }
+
+        function removeSignatureFromEditor() {
+            if (!currentSignature || !window.tiptapEditors || !window.tiptapEditors['bodyEditor']) return;
+            var editor = window.tiptapEditors['bodyEditor'];
+            var currentContent = editor.getHTML();
+            editor.commands.setContent(currentContent.replace(currentSignature, ''));
+            currentSignature = '';
+        }
+
+        function loadSignature() {
+            var queueId = getQueueId();
+            if (!queueId || !isEmailType()) {
+                if (currentSignature) {
+                    removeSignatureFromEditor();
+                }
+                signatureLoaded = false;
+                return;
+            }
+
+            var url = '/agent/api/signatures/queue/' + queueId;
+            var customerUserId = getCustomerUserId();
+            if (customerUserId) {
+                url += '?customer_user_id=' + encodeURIComponent(customerUserId);
+            }
+
+            fetch(url)
+                .then(function(resp) { return resp.json(); })
+                .then(function(data) {
+                    if (data.success && data.data && data.data.text) {
+                        appendSignatureToEditor(data.data.text);
+                        signatureLoaded = true;
+                    } else {
+                        removeSignatureFromEditor();
+                        signatureLoaded = false;
+                    }
+                })
+                .catch(function(err) {
+                    console.warn('Failed to load signature:', err);
+                    signatureLoaded = false;
+                });
+        }
+
+        if (queueSelect) {
+            queueSelect.addEventListener('change', function() {
+                loadSignature();
+            });
+        }
+
+        if (interactionSelect) {
+            interactionSelect.addEventListener('change', function() {
+                if (isEmailType() && !signatureLoaded) {
+                    loadSignature();
+                } else if (!isEmailType() && signatureLoaded) {
+                    removeSignatureFromEditor();
+                    signatureLoaded = false;
+                }
+            });
         }
     })();
 

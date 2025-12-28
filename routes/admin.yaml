@@ -733,3 +733,51 @@ spec:
         GET: handleAdminDynamicModule
         POST: handleAdminDynamicModule
       description: "Execute dynamic module actions"
+
+    # Signatures management
+    - path: /signatures
+      method: GET
+      handler: handleAdminSignatures
+      template: pages/admin/signatures.pongo2
+      description: "Display email signatures management page"
+
+    - path: /signatures/new
+      method: GET
+      handler: handleAdminSignatureNew
+      description: "Display new signature form"
+
+    - path: /signatures/:id
+      method: GET
+      handler: handleAdminSignatureEdit
+      description: "Display edit signature form"
+
+    # Signatures API
+    - path: /api/signatures
+      method: POST
+      handler: handleCreateSignature
+      description: "Create a new signature"
+
+    - path: /api/signatures/:id
+      method: PUT
+      handler: handleUpdateSignature
+      description: "Update an existing signature"
+
+    - path: /api/signatures/:id
+      method: DELETE
+      handler: handleDeleteSignature
+      description: "Delete a signature"
+
+    - path: /signatures/export
+      method: GET
+      handler: handleExportSignatures
+      description: "Export all signatures as YAML"
+
+    - path: /signatures/:id/export
+      method: GET
+      handler: handleExportSignature
+      description: "Export single signature as YAML"
+
+    - path: /api/signatures/import
+      method: POST
+      handler: handleImportSignatures
+      description: "Import signatures from YAML file"

@@ -116,7 +116,7 @@ func HandleCreateUserAPI(c *gin.Context) {
 	}
 	defer tx.Rollback()
 
-	// Insert user
+	// Insert user using adapter for cross-database compatibility
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO users (
 			login, 
@@ -133,8 +133,9 @@ func HandleCreateUserAPI(c *gin.Context) {
 		RETURNING id
 	`)
 
-	var newUserID int
-	err = tx.QueryRow(
+	adapter := database.GetAdapter()
+	newUserID64, err := adapter.InsertWithReturningTx(
+		tx,
 		insertQuery,
 		req.Login,
 		string(hashedPassword),
@@ -146,7 +147,7 @@ func HandleCreateUserAPI(c *gin.Context) {
 		currentUserID,
 		time.Now(),
 		currentUserID,
-	).Scan(&newUserID)
+	)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -155,6 +156,8 @@ func HandleCreateUserAPI(c *gin.Context) {
 		})
 		return
 	}
+
+	newUserID := int(newUserID64)
 
 	// Add user to groups if specified
 	if len(req.Groups) > 0 {

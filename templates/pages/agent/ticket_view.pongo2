@@ -493,14 +493,14 @@
                     <!-- Message with Quote Option -->
                     <div>
                         <div class="flex justify-between items-center mb-2">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
+                            <label id="replyEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
                             <label class="flex items-center text-sm">
                                 <input type="checkbox" name="quote_original" class="mr-2 rounded border-gray-300 dark:border-gray-600">
                                 <span class="text-gray-700 dark:text-gray-300">Quote original message</span>
                             </label>
                         </div>
                         <div id="replyEditor" class="mt-1">
-                            {% include "partials/rich_text_editor.pongo2" with EditorID="replyEditorInner" FieldName="body" Placeholder="Write your reply here..." MinHeight="120px" %}
+                            {% include "partials/rich_text_editor.pongo2" with EditorID="replyEditorInner" FieldName="body" Placeholder="Write your reply here..." MinHeight="120px" LabelID="replyEditorLabel" %}
                         </div>
                     </div>
                     
@@ -577,9 +577,9 @@
                     <!-- Note Template Selection -->
                     {% include "partials/template_selector.pongo2" with QueueID=ticket.queue_id TicketID=ticket.id TemplateType="Note" TargetEditorID="noteEditorInner" SelectID="noteTemplateSelect" %}
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Note</label>
+                        <label id="noteEditorInnerLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Note</label>
                         <div id="noteEditor" class="mt-1">
-                            {% include "partials/rich_text_editor.pongo2" with EditorID="noteEditorInner" FieldName="body" Placeholder="Write your note here..." MinHeight="120px" %}
+                            {% include "partials/rich_text_editor.pongo2" with EditorID="noteEditorInner" FieldName="body" Placeholder="Write your note here..." MinHeight="120px" LabelID="noteEditorInnerLabel" %}
                         </div>
                     </div>
                     <div class="flex items-center">

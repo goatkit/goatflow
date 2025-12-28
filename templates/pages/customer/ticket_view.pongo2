@@ -184,10 +184,10 @@
         </div>
         <form method="post" action="/customer/tickets/{{ Ticket.id }}/reply" class="p-6">
             <div class="mb-4">
-                <label for="replyEditor" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label id="replyEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {{ t("customer.ticket_view.your_message") }} <span class="text-red-500">{{ t("customer.common.required") }}</span>
                 </label>
-                {% include "partials/rich_text_editor.pongo2" with EditorID="replyEditor" FieldName="message" Placeholder=t("customer.ticket_view.reply_placeholder") %}
+                {% include "partials/rich_text_editor.pongo2" with EditorID="replyEditor" FieldName="message" Placeholder=t("customer.ticket_view.reply_placeholder") LabelID="replyEditorLabel" %}
             </div>
             
             <!-- Article Dynamic Fields -->

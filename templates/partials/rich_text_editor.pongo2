@@ -5,12 +5,16 @@
 {# Placeholder: placeholder text (optional, default: "Enter content here...") #}
 {# MinHeight: minimum height CSS (optional, default: "200px") #}
 {# EditorMode: "richtext" or "markdown" (optional, default: "richtext") #}
+{# LabelID: ID of associated label element for aria-labelledby (optional) #}
 {# Usage: {% include "partials/rich_text_editor.pongo2" with EditorID="bodyEditor" FieldName="body" %} #}
 
 <!-- Tiptap editor container -->
 <div id="{{ EditorID }}" 
      class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus-within:ring-2 focus-within:ring-inset focus-within:ring-gotrs-600 dark:focus-within:ring-gotrs-500 sm:text-sm sm:leading-6 p-3"
-     style="min-height: {{ MinHeight|default:"200px" }}"></div>
+     style="min-height: {{ MinHeight|default:"200px" }}"
+     {% if LabelID %}aria-labelledby="{{ LabelID }}"{% endif %}
+     role="textbox"
+     aria-multiline="true"></div>
 
 <!-- Hidden textarea preserves newlines for form submission -->
 <textarea name="{{ FieldName }}" id="{{ FieldName }}" class="hidden">{{ InitialContent }}</textarea>

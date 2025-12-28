@@ -166,10 +166,10 @@
 
                 <!-- Message -->
                 <div>
-                    <label for="messageEditor" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label id="messageEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {{ t("customer.new_ticket.description") }} <span class="text-red-500">{{ t("customer.common.required") }}</span>
                     </label>
-                    {% include "partials/rich_text_editor.pongo2" with EditorID="messageEditor" FieldName="message" Placeholder=t("customer.new_ticket.description_placeholder") %}
+                    {% include "partials/rich_text_editor.pongo2" with EditorID="messageEditor" FieldName="message" Placeholder=t("customer.new_ticket.description_placeholder") LabelID="messageEditorLabel" %}
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         {{ t("customer.new_ticket.description_help") }}
                     </p>

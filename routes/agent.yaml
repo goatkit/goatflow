@@ -124,3 +124,9 @@ spec:
       method: GET
       handler: handleGetAgentTemplate
       description: "Get single template with variable substitution (query param: ticket_id)"
+
+    # Agent signatures API - for automatic signature loading
+    - path: /api/signatures/queue/:queue_id
+      method: GET
+      handler: handleGetQueueSignature
+      description: "Get signature for a queue with variable substitution (query param: ticket_id)"

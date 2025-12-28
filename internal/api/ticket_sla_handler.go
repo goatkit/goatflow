@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
 // SLA represents Service Level Agreement status
@@ -137,14 +138,7 @@ func handleGetTicketSLA(c *gin.Context) {
 		}
 
 		// Return HTML fragment for HTMX
-		tmpl, err := loadTemplate("templates/components/sla_status.html")
-		if err != nil {
-			c.String(http.StatusInternalServerError, "Template error")
-			return
-		}
-
-		c.Header("Content-Type", "text/html; charset=utf-8")
-		tmpl.ExecuteTemplate(c.Writer, "sla_status.html", gin.H{
+		shared.GetGlobalRenderer().HTML(c, http.StatusOK, "components/sla_status.pongo2", gin.H{
 			"sla_status": "not_applicable",
 		})
 		return
@@ -171,14 +165,7 @@ func handleGetTicketSLA(c *gin.Context) {
 	}
 
 	// Return HTML fragment for HTMX
-	tmpl, err := loadTemplate("templates/components/sla_status.html")
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Template error")
-		return
-	}
-
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	tmpl.ExecuteTemplate(c.Writer, "sla_status.html", gin.H{
+	shared.GetGlobalRenderer().HTML(c, http.StatusOK, "components/sla_status.pongo2", gin.H{
 		"sla_status":       sla.Status,
 		"sla_deadline":     sla.Deadline,
 		"sla_percent_used": sla.PercentUsed,

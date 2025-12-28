@@ -26,8 +26,8 @@
     <div class="mt-8 bg-white dark:bg-gray-800 shadow rounded-lg p-4">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("status.title") }}</label>
-                <select class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                <label for="filter_status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("status.title") }}</label>
+                <select id="filter_status" name="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
                     <option value="">{{ t("common.all") }}</option>
                     <option value="not_closed" {% if FilterStatus == "not_closed" %}selected{% endif %}>{{ t("common.not_closed") }}</option>
                     {% for status in Statuses %}
@@ -36,8 +36,8 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("priority.title") }}</label>
-                <select class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                <label for="filter_priority" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("priority.title") }}</label>
+                <select id="filter_priority" name="priority" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
                     <option value="">{{ t("common.all") }}</option>
                     {% for priority in Priorities %}
                     <option value="{{ priority.Value }}">{{ priority.Label }}</option>
@@ -45,8 +45,8 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("tickets.queue") }}</label>
-                <select class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                <label for="filter_queue" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("tickets.queue") }}</label>
+                <select id="filter_queue" name="queue_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
                     <option value="">{{ t("common.all") }}</option>
                     {% for queue in Queues %}
                     <option value="{{ queue.ID }}">{{ queue.Name }}</option>

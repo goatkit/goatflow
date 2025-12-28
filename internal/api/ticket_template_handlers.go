@@ -15,6 +15,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
+	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
 // Get or create singleton template repository and service
@@ -378,19 +379,10 @@ func handleTemplateSelectionModal(c *gin.Context) {
 		return
 	}
 
-	tmpl, err := loadTemplate("templates/components/template_selector.html")
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Template error: %v", err)
-		return
-	}
-
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	if err := tmpl.ExecuteTemplate(c.Writer, "template_selector.html", gin.H{
+	shared.GetGlobalRenderer().HTML(c, http.StatusOK, "partials/template_selector.pongo2", gin.H{
 		"Templates":  templates,
 		"Categories": categories,
-	}); err != nil {
-		c.String(http.StatusInternalServerError, "Render error: %v", err)
-	}
+	})
 }
 
 // HTMX: Load template into form

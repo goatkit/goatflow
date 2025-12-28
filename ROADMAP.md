@@ -77,7 +77,7 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 - View own tickets with filtering
 - Add replies to own tickets
 - Close ticket functionality
-- Full i18n support (English and German) for all 12 portal templates
+- Full i18n support (English, German, Spanish, French, Arabic, Klingon): Complete translations for dashboard, tickets list, new ticket creation, ticket view, authentication, navigation, company info pages, and all 8 placeholder pages—100+ keys per language verified
 
 ### Quality & Testing
 - Template validation at startup
@@ -155,11 +155,10 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 | Roles | ✅ Working | Full CRUD, 36 Go + 19 JS tests, user assignments, permissions, API contracts |
 | Dynamic Fields | ✅ Working | 7 field types, 8 screens, screen config admin, 52+ tests, OTRS-compatible YAML |
 | Templates | ✅ Working | Full CRUD, queue/attachment assignment, 18 unit tests, Playwright E2E, agent integration, import/export |
-| Signatures | ❌ | Not implemented |
+| Signatures | ✅ Working | Admin CRUD, queue integration, 17 unit tests, TipTap editor, variable substitution, import/export |
 
 ### Deferred Items
 - Multi-tenant theming (requires schema changes)
-- Customer portal i18n
 - Inbound email auto-ticket creation rules UI
 - SLA engine
 - Bulk ticket actions

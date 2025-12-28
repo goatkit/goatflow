@@ -438,7 +438,9 @@ var testedFormTemplates = map[string]bool{
 	"pages/admin/customer_portal_settings.pongo2": true,
 	"pages/admin/customer_company_form.pongo2":    true,
 	"pages/admin/email_queue.pongo2":              true,
+	"pages/admin/signature_form.pongo2":           true,
 	"pages/admin/template_form.pongo2":            true,
+	"pages/admin/template_import.pongo2":          true,
 	"pages/admin/template_queues.pongo2":          true,
 	"pages/admin/template_attachments.pongo2":     true,
 
