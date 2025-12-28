@@ -1074,7 +1074,7 @@
     "admin": "Administration",
     "assets": "Assets",
     "changes": "Änderungen",
-    "dashboard": "Dashboard",
+    "dashboard": "Übersicht",
     "help": "Hilfe",
     "incidents": "Vorfälle",
     "knowledge_base": "Wissensdatenbank",
@@ -1138,10 +1138,10 @@
     "title": "Probleme"
   },
   "queue_descriptions": {
-    "All new tickets are placed in this queue by default": "Alle neuen Tickets werden standardmäßig in dieser Queue platziert",
-    "General support requests": "Allgemeine Supportanfragen",
+    "All new tickets are placed in this queue by default": "Alle neuen Tickets werden standardmäßig in diese Queue eingeordnet",
+    "General support requests": "Allgemeine Support-Anfragen",
     "Miscellaneous tickets": "Verschiedene Tickets",
-    "Spam and junk emails": "Spam und Junk-E-Mails"
+    "Spam and junk emails": "Spam- und Junk-E-Mails"
   },
   "queues": {
     "auto_assignment": "Automatische Zuweisung",

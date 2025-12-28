@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -110,47 +111,43 @@ func setupTestRouter() *gin.Engine {
 
 func TestTemplateLoading(t *testing.T) {
 	// Skip template loading tests if templates directory doesn't exist
-	// These tests are more for development verification
 	if _, err := os.Stat("../../templates"); os.IsNotExist(err) {
 		t.Skip("Templates directory not found, skipping template loading tests")
 	}
 
+	// Test pongo2 template loading (the actual templating system used)
 	tests := []struct {
 		name        string
-		files       []string
+		file        string
 		expectError bool
 	}{
 		{
 			name:        "Load single template",
-			files:       []string{"../../templates/layouts/base.html"},
+			file:        "layouts/base.pongo2",
 			expectError: false,
 		},
 		{
 			name:        "Load multiple templates",
-			files:       []string{"../../templates/layouts/base.html", "../../templates/pages/dashboard.html"},
+			file:        "pages/dashboard.pongo2",
 			expectError: false,
 		},
 		{
 			name:        "Load non-existent template",
-			files:       []string{"../../templates/nonexistent.html"},
+			file:        "nonexistent.pongo2",
 			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Temporarily change working directory for test
 			originalWd, _ := os.Getwd()
 			defer os.Chdir(originalWd)
 			os.Chdir("../..")
 
-			// Adjust paths back to original
-			adjustedFiles := make([]string, len(tt.files))
-			for i, file := range tt.files {
-				adjustedFiles[i] = strings.Replace(file, "../../", "", 1)
-			}
+			loader := pongo2.MustNewLocalFileSystemLoader("templates")
+			set := pongo2.NewSet("test", loader)
+			tmpl, err := set.FromFile(tt.file)
 
-			tmpl, err := loadTemplate(adjustedFiles...)
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, tmpl)
