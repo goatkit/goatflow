@@ -458,6 +458,7 @@ k8s-secrets:
 # Build toolbox image
 toolbox-build: build-artifacts
 	@printf "\n🔧 Building GOTRS toolbox container...\n"
+	$(call ensure_caches)
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		echo "⚠️  compose not available; falling back to direct docker build"; \
 		command -v docker >/dev/null 2>&1 || (echo "docker not installed" && exit 1); \
@@ -689,7 +690,7 @@ toolbox-test-api-host: toolbox-build
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\|AdminCustomerCompan\)'
 
-# Run core tests (cmd/goats + internal/api + generated/tdd-comprehensive)
+# Run core tests (cmd/goats + internal/api + internal/service)
 toolbox-test:
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running core test suite in toolbox...\n"
@@ -730,19 +731,7 @@ toolbox-test:
 		echo Running: ./internal/api focused; go test -buildvcs=false -v ./internal/api -run ^Test\(AdminType\|Queue\|Article\|Search\|Priority\|User\|TicketZoom\|AdminService\|AdminStates\|AdminGroupManagement\|HandleGetQueues\|HandleGetPriorities\|DatabaseIntegrity\); \
 		echo Running: ./internal/service; go test -buildvcs=false -v ./internal/service'
 
-.PHONY: tdd-comprehensive-quick
-tdd-comprehensive-quick:
-	@printf "\n📋 Running comprehensive TDD gates...\n"
-	@if ! $(CONTAINER_CMD) image inspect gotrs-toolbox:latest >/dev/null 2>&1; then \
-		echo "🔧 Building missing toolbox image (gotrs-toolbox:latest)"; \
-		if [ -f Dockerfile.toolbox ]; then \
-			($(COMPOSE_CMD) build toolbox 2>/dev/null || $(CONTAINER_CMD) build -f Dockerfile.toolbox -t gotrs-toolbox:latest .) || { echo "❌ Failed to build toolbox image" >&2; exit 1; }; \
-		else \
-			echo "❌ Dockerfile.toolbox not found" >&2; exit 1; \
-		fi; \
-	fi
-	@mkdir -p generated/tdd-comprehensive generated/evidence generated/test-results || true
-	@bash scripts/tdd-comprehensive.sh quick || true; echo "See generated/evidence for report"
+
 
 .PHONY: openapi-lint
 openapi-lint:
@@ -788,11 +777,10 @@ toolbox-test-all:
 		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
-		echo Running curated set: cmd/goats internal/api internal/service generated/tdd-comprehensive; \
+		echo Running curated set: cmd/goats internal/api internal/service; \
 		$(TOOLBOX_GO)"go test -buildvcs=false -v ./cmd/goats"; \
 		$(TOOLBOX_GO)"go test -buildvcs=false -v ./internal/api -run ^Test(AdminType|Queue|Article|Search|Priority|User|TicketZoom|AdminService|AdminStates|AdminGroupManagement|HandleGetQueues|HandleGetPriorities|DatabaseIntegrity)"; \
-		$(TOOLBOX_GO)"go test -buildvcs=false -v ./internal/service"; \
-		$(TOOLBOX_GO)"go test -buildvcs=false -v ./generated/tdd-comprehensive"'
+		$(TOOLBOX_GO)"go test -buildvcs=false -v ./internal/service"'
 
 .PHONY: test-unit
 test-unit:
@@ -832,7 +820,7 @@ test-e2e:
 		-e DEMO_ADMIN_PASSWORD \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; \
-		go test -count=1 -buildvcs=false -v ./tests/e2e -run "$(TEST)" | tee generated/test-results/e2e_$(shell echo $(TEST) | tr ' ' '_').log'
+		go test -tags e2e -count=1 -buildvcs=false -v ./tests/e2e -run "$(TEST)" | tee generated/test-results/e2e_$(shell echo $(TEST) | tr ' ' '_').log'
 
 # Run integration tests (requires running test DB stack)
 toolbox-test-integration:
@@ -1076,26 +1064,6 @@ toolbox-run-file:
 		-e APP_ENV=development \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run $(FILE)'
-
-# Run anti-gaslighting detector in toolbox container
-toolbox-antigaslight:
-	@$(MAKE) toolbox-build
-	@printf "🔍 Running anti-gaslighting detector in container...\n"
-	@$(CONTAINER_CMD) run --rm \
-		-v "$$(pwd):/workspace" \
-		-w /workspace \
-		-u "$$(id -u):$$(id -g)" \
-		--network host \
-		-e DB_HOST=localhost \
-		-e DB_PORT=5432 \
-		-e DB_NAME=gotrs \
-		-e DB_USER=gotrs_user \
-		-e PGPASSWORD=$${DB_PASSWORD:-gotrs_password} \
-		-e VALKEY_HOST=localhost \
-		-e VALKEY_PORT=6388 \
-		-e APP_ENV=development \
-		gotrs-toolbox:latest \
-		sh -c "source .env 2>/dev/null || true && ./scripts/anti-gaslighting-detector.sh detect"
 
 # Run linting with toolbox
 toolbox-lint:
@@ -2241,7 +2209,7 @@ test-e2e-playwright-go:
 		-e XDG_CACHE_HOME=/workspace/.cache/xdg \
 		-e GOCACHE=/workspace/.cache/go-build \
 		-e GOMODCACHE=/workspace/.cache/go-mod \
-		 gotrs-playwright-go:latest bash -lc "go test -v ./tests/e2e/playwright $${ARGS}"
+		 gotrs-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e/playwright $${ARGS}"
 
 .PHONY: test-e2e-go
 test-e2e-go:
@@ -2264,7 +2232,7 @@ test-e2e-go:
 		-e XDG_CACHE_HOME=/workspace/.cache/xdg \
 		-e GOCACHE=/workspace/.cache/go-build \
 		-e GOMODCACHE=/workspace/.cache/go-mod \
-		 gotrs-playwright-go:latest bash -lc "go test -v ./tests/e2e -run \"$${TEST:-CustomerTicket}\""
+		 gotrs-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e -run \"$${TEST:-CustomerTicket}\""
 
 PLAYWRIGHT_RESULTS_DIR ?= /tmp/playwright-results
 PLAYWRIGHT_OUTPUT_DIR ?= /tmp/playwright-artifacts
@@ -2300,7 +2268,7 @@ test-e2e-playwright-watch: playwright-build
 	@$(COMPOSE_CMD) -f docker-compose.playwright.yml run --rm \
 		-e HEADLESS=false \
 		-e SLOW_MO=100 \
-		playwright go test ./tests/e2e/... -v -watch
+		playwright go test -tags e2e ./tests/e2e/... -v -watch
 
 # Check for untranslated keys in UI
 check-translations:
@@ -2316,7 +2284,7 @@ test-e2e-playwright-debug: playwright-build
 		-e SLOW_MO=500 \
 		-e SCREENSHOTS=true \
 		-e VIDEOS=true \
-		playwright go test ./tests/e2e/... -v
+		playwright go test -tags e2e ./tests/e2e/... -v
 
 # Generate HTML test report
 test-e2e-playwright-report:
@@ -2394,14 +2362,13 @@ pre-build: generate-route-map validate-routes
 
 generate-route-map:
 	@printf "📡 Generating API map artifacts...\n"
-	@$(CONTAINER_CMD) run --rm -v "$$PWD:/workspace" -w /workspace --user 1000 alpine:3.19 \
-		sh -c 'apk add --no-cache jq graphviz >/dev/null 2>&1 || true; sh scripts/api_map.sh >/dev/null 2>&1 || true'
-	@printf "   API map complete (runtime/api-map.*)\n"
+	@mkdir -p generated/api-map
+	@$(MAKE) toolbox-exec ARGS='sh scripts/api_map.sh'
+	@printf "   API map complete (generated/api-map/api-map.*)\n"
 
 validate-routes:
 	@printf "🔍 Validating no new static routes...\n"
-	@$(CONTAINER_CMD) run --rm -v "$$PWD:/workspace" -w /workspace --user 1000 alpine:3.19 \
-		sh -c 'sh scripts/validate_routes.sh' || { echo "Route validation failed"; exit 1; }
+	@$(MAKE) toolbox-exec ARGS='sh scripts/validate_routes.sh' || { echo "Route validation failed"; exit 1; }
 	@printf "   Route validation passed\n"
 # ============================================
 # Enhanced Build Targets with BuildKit
@@ -2645,9 +2612,6 @@ ldap-test:
 test-containerized:
 	@bash scripts/test-containerized.sh
 
-# Include task coordination system
-include task-coordination.mk
-
 # CSS Build Commands
 .PHONY: npm-updates css-deps css-build css-watch browserslist-update browserslist-update-one
 
@@ -2780,115 +2744,8 @@ css-watch: css-deps
 # Add these commands after the existing TDD section around line 178:
 
 #########################################
-# COMPREHENSIVE TDD AUTOMATION
+# TEST TARGETS
 #########################################
-
-# Initialize comprehensive TDD environment
-tdd-comprehensive-init:
-	@printf "🚀 Initializing comprehensive TDD environment...\n"
-	@./scripts/comprehensive-tdd-integration.sh init
-
-# Run comprehensive TDD verification with ALL quality gates (containerized)
-tdd-comprehensive:
-	@printf "🧪 Running COMPREHENSIVE TDD verification (host orchestrated)...\n"
-	@mkdir -p generated/tdd-comprehensive generated/evidence generated/test-results || true
-	@if ! $(CONTAINER_CMD) image inspect gotrs-toolbox:latest >/dev/null 2>&1; then \
-		echo "🔧 Building toolbox image (gotrs-toolbox:latest) via compose"; \
-		if [ -f Dockerfile.toolbox ]; then \
-			($(COMPOSE_CMD) build toolbox 2>/dev/null || $(CONTAINER_CMD) build -f Dockerfile.toolbox -t gotrs-toolbox:latest .) || { echo "❌ Failed to build toolbox image" >&2; exit 1; }; \
-		else \
-			echo "❌ Dockerfile.toolbox not found" >&2; exit 1; \
-	fi; \
-	fi
-	@bash scripts/tdd-comprehensive.sh comprehensive
-	@echo "See generated/evidence for report"
-
-.PHONY: tdd-diff evidence-diff
-tdd-diff:
-	@echo "🔍 Diffing last two evidence runs..."
-	@bash scripts/tdd-comprehensive.sh diff || true
-	@latest_html=$$(ls -1t generated/evidence/diff_*.html 2>/dev/null | head -n1); \
-	if [ -n "$$latest_html" ]; then \
-	  echo "✅ Diff HTML: $$latest_html"; \
-	else \
-	  echo "⚠ No diff produced (need at least two evidence JSON files)"; \
-	fi
-
-evidence-diff: tdd-diff
-
-.PHONY: tdd-diff-serve evidence-serve
-# Serve the evidence directory over HTTP on port 3456 (container-first; uses toolbox python)
-tdd-diff-serve:
-	@echo "🌐 Serving generated/evidence on http://localhost:3456 (Ctrl+C to stop)"
-	@mkdir -p generated/evidence || true
-	@# Prefer toolbox container python for consistency; fall back to system python if toolbox not available
-	@if $(CONTAINER_CMD) image inspect gotrs-toolbox:latest >/dev/null 2>&1; then \
-	  $(CONTAINER_CMD) run --rm -it -p 3456:3456 -v $$PWD/generated/evidence:/workspace/evidence -w /workspace/evidence gotrs-toolbox:latest bash -lc 'python3 -m http.server 3456'; \
-	else \
-	  echo "(Toolbox image missing - attempting host python3)"; \
-	  python3 -m http.server 3456 --directory generated/evidence; \
-	fi
-
-evidence-serve: tdd-diff-serve
-
-# Anti-gaslighting detection - prevents false success claims
-anti-gaslighting:
-	@printf "🚨 Running anti-gaslighting detection...\n"
-	@printf "Detecting premature success claims and hidden failures...\n"
-	@./scripts/anti-gaslighting-detector.sh detect
-
-# Initialize test-first TDD cycle with proper enforcement
-tdd-test-first-init:
-	@if [ -z "$(FEATURE)" ]; then \
-		echo "Error: FEATURE required. Usage: make tdd-test-first-init FEATURE='Feature Name'"; \
-		exit 1; \
-	fi
-	@printf "🔴 Initializing test-first TDD cycle for: $(FEATURE)\n"
-	@./scripts/tdd-test-first-enforcer.sh init "$(FEATURE)"
-
-# Generate failing test for TDD cycle
-tdd-generate-test:
-	@if [ ! -f .tdd-state ]; then \
-		echo "Error: TDD not initialized. Run 'make tdd-test-first-init FEATURE=name' first"; \
-		exit 1; \
-	fi
-	@printf "📝 Generating failing test...\n"
-	@printf "Test types: unit, integration, api, browser\n"
-	@read -p "Enter test type (default: unit): " test_type; \
-	test_type=$${test_type:-unit}; \
-	./scripts/tdd-test-first-enforcer.sh generate-test $$test_type
-
-# Verify test is actually failing (TDD enforcement)
-tdd-verify-failing:
-	@if [ -z "$(TEST_FILE)" ]; then \
-		echo "Error: TEST_FILE required. Usage: make tdd-verify-failing TEST_FILE=path/to/test.go"; \
-		exit 1; \
-	fi
-	@printf "🔍 Verifying test actually fails...\n"
-	@./scripts/tdd-test-first-enforcer.sh verify-failing "$(TEST_FILE)"
-
-# Verify tests now pass after implementation
-tdd-verify-passing:
-	@if [ -z "$(TEST_FILE)" ]; then \
-		echo "Error: TEST_FILE required. Usage: make tdd-verify-passing TEST_FILE=path/to/test.go"; \
-		exit 1; \
-	fi
-	@printf "✅ Verifying tests now pass...\n"
-	@./scripts/tdd-test-first-enforcer.sh verify-passing "$(TEST_FILE)"
-
-# Complete guided TDD cycle with comprehensive verification
-tdd-full-cycle:
-	@if [ -z "$(FEATURE)" ]; then \
-		echo "Error: FEATURE required. Usage: make tdd-full-cycle FEATURE='Feature Name'"; \
-		exit 1; \
-	fi
-	@printf "🔄 Starting full TDD cycle for: $(FEATURE)\n"
-	@./scripts/comprehensive-tdd-integration.sh full-cycle "$(FEATURE)"
-
-# Quick verification for development (fast feedback)
-tdd-quick:
-	@printf "⚡ Running quick TDD verification...\n"
-	@./scripts/comprehensive-tdd-integration.sh quick
 
 # Run specific test in toolbox container
 test-specific:
@@ -2908,92 +2765,33 @@ test-specific:
 		gotrs-toolbox:latest \
 			bash -lc 'export PATH=/usr/local/go/bin:$$PATH; echo "Testing with DB_HOST=$$DB_HOST"; go test -buildvcs=false -v ./internal/repository -run $(TEST)'
 
-# Show TDD dashboard with current status and metrics
-tdd-dashboard:
-	@./scripts/comprehensive-tdd-integration.sh dashboard
-
 .PHONY: verify-container-first
 verify-container-first:
 	@chmod +x scripts/tools/check-container-go.sh 2>/dev/null || true
 	@./scripts/tools/check-container-go.sh
 
-# Enhanced test command that integrates with comprehensive TDD
+# Enhanced test command - runs test stack and executes full test suite
 test-comprehensive:
-	@printf "🧪 Running tests with comprehensive TDD integration...\n"
-	@set -eu; \
-		if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
-			echo "ERROR: $(COMPOSE_CMD)"; \
-			echo "Please install the required compose tool and try again."; \
-			exit 1; \
-		fi; \
-		cleanup() { $(MAKE) test-stack-teardown >/dev/null 2>&1 || true; }; \
-		export COMPOSE_FILE="$(TEST_COMPOSE_FILE)"; \
-		export BACKEND_HOST=localhost; \
-		export BACKEND_PORT="$(TEST_BACKEND_PORT)"; \
-		export TEST_BACKEND_SERVICE_HOST="$(TEST_BACKEND_SERVICE_HOST)"; \
-		export TEST_BACKEND_CONTAINER_PORT="$(TEST_BACKEND_CONTAINER_PORT)"; \
-		export TEST_BACKEND_HOST="$(TEST_BACKEND_SERVICE_HOST)"; \
-		export TEST_BACKEND_HOST_PORT="$(TEST_BACKEND_PORT)"; \
-		export TEST_BACKEND_PORT="$(TEST_BACKEND_PORT)"; \
-		export TEST_BACKEND_BASE_URL="$(TEST_BACKEND_BASE_URL)"; \
-		export TEST_DB_DRIVER="$(TEST_DB_DRIVER)"; \
-		export TEST_DB_HOST="$(TEST_DB_HOST)"; \
-		export TEST_DB_PORT="$(TEST_DB_PORT)"; \
-		export TEST_DB_NAME="$(TEST_DB_NAME)"; \
-		export TEST_DB_USER="$(TEST_DB_USER)"; \
-		export TEST_DB_PASSWORD="$(TEST_DB_PASSWORD)"; \
-		trap cleanup EXIT INT TERM; \
-		$(MAKE) test-stack-up; \
-		if [ -f .tdd-state ]; then \
-			echo "TDD cycle active - running comprehensive verification..."; \
-			$(MAKE) tdd-comprehensive; \
-		else \
-			echo "No TDD cycle - running comprehensive test suite..."; \
-			./scripts/tdd-comprehensive.sh comprehensive || exit 1; \
-		fi
-# Test-first enforcement (prevents implementation without failing test)
-test-enforce-first:
-	@printf "🚫 Enforcing test-first development...\n"
-	@if [ ! -f .tdd-state ]; then \
-		echo "Error: No TDD cycle active. Start with 'make tdd-test-first-init FEATURE=name'"; \
-		exit 1; \
-	fi
-	@./scripts/tdd-test-first-enforcer.sh check-implementation
+	@./scripts/test-runner.sh
 
-# Generate comprehensive TDD report
-tdd-report:
-	@printf "📊 Generating comprehensive TDD report...\n"
-	@./scripts/tdd-test-first-enforcer.sh report
+# Run integration tests (curl-based API tests against test backend only)
+.PHONY: test-integration
+test-integration: test-stack-up
+	@printf "🔗 Running integration tests against test backend (port $(TEST_BACKEND_PORT))...\n"
+	@TEST_BACKEND_PORT=$(TEST_BACKEND_PORT) \
+	 DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
+	 DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
+	 ./scripts/integration-test.sh
 
 # Clean TDD state (reset cycle)
 tdd-clean:
 	@printf "🧹 Cleaning TDD state...\n"
 	@rm -f .tdd-state
-	@printf "TDD cycle reset. Start new cycle with 'make tdd-test-first-init FEATURE=name'\n"
-# Verify system integrity (prevents gaslighting)
-verify-integrity:
-	@printf "🔍 Verifying system integrity...\n"
-	@printf "Checking for false success claims and hidden failures...\n"
-	@./scripts/anti-gaslighting-detector.sh detect
-	@printf "Running comprehensive verification...\n"
-	@./scripts/tdd-comprehensive.sh comprehensive
-
-# TDD pre-commit hook (runs before commits)
-tdd-pre-commit:
-	@printf "🔒 Running TDD pre-commit verification...\n"
-	@./scripts/anti-gaslighting-detector.sh quick
-	@if [ -f .tdd-state ]; then \
-		echo "TDD cycle active - verifying cycle state..."; \
-		./scripts/tdd-test-first-enforcer.sh status; \
-	fi
+	@printf "TDD cycle reset.\n"
 
 #########################################
-# EVIDENCE-BASED VERIFICATION OVERRIDES
+# TEST OVERRIDES
 #########################################
 
-# Override existing test command to be more robust
+# Main test target
 test: test-comprehensive
-
-# Override existing tdd-verify to use comprehensive verification
-# (Removed override to allow primary tdd-verify target (earlier in file) to control exit codes accurately)
-# tdd-verify: tdd-comprehensive

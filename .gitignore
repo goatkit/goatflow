@@ -8,6 +8,8 @@ k8s/secrets.yaml
 *.key
 *.pem
 *.crt
+migrations/postgres/000004_generated_test_data.up.sql
+test_credentials.csv
 
 # ============================================
 # Go / Backend
@@ -451,6 +453,9 @@ docs/temp/
 *.draft.md
 bin/
 import-otrs
+
+# Generated artifacts (built in containers)
+generated/
 runtime/routes-manifest.json
 runtime/.manifest.tmp
 runtime/testfile

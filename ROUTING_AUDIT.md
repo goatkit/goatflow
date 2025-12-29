@@ -25,12 +25,12 @@ Code (`htmx_routes.go`) may only register:
 ## Why
 * Eliminates drift between code + YAML
 * Enables multi-document YAML loading (already implemented)
-* Simplifies auditing + visualization (`runtime/api-map.*`)
+* Simplifies auditing + visualization (`generated/api-map/api-map.*`)
 * Makes versioning (`/api/v1/...`) consistent
 
 ## Enforcement Mechanisms
 1. **Pre-build hook** (`make build`):
-   * `generate-route-map` – static scan of templates & JS → `runtime/api-map.json|dot|mmd`
+   * `generate-route-map` – static scan of templates & JS → `generated/api-map/api-map.json|dot|mmd`
    * `validate-routes` – extracts code-defined routes from `internal/api/htmx_routes.go` and compares against baseline.
 2. **Baseline File**: `routing/static_routes_baseline.txt`
    * Created automatically if absent when static routes still exist.
@@ -47,9 +47,9 @@ Code (`htmx_routes.go`) may only register:
 
 ## Visual Map Generation
 Artifacts generated each build:
-* `runtime/api-map.json` – canonical machine-friendly reference.
-* `runtime/api-map.dot` / `runtime/api-map.svg` – Graphviz graph (if graphviz available).
-* `runtime/api-map.mmd` – Mermaid graph for docs.
+* `generated/api-map/api-map.json` – canonical machine-friendly reference.
+* `generated/api-map/api-map.dot` / `generated/api-map/api-map.svg` – Graphviz graph (if graphviz available).
+* `generated/api-map/api-map.mmd` – Mermaid graph for docs.
 
 ## Acceptable Code Routes
 If a non-business route must remain in code (e.g. temporary diagnostics), prefix it with `/dev/` and ensure it is protected; avoid adding it to baseline unless absolutely required.

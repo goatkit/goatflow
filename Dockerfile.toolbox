@@ -52,7 +52,7 @@ ARG UID=1000
 ARG GID=1000
 
 # Install runtime and dev tools
-ARG TOOLBOX_APKS='ca-certificates postgresql15-client mysql-client sqlite git bash make curl jq openssl python3 py3-pip yamllint nodejs npm ripgrep fd tree nss freetype harfbuzz libx11 libxcomposite libxdamage libxext libxfixes libxi libxrandr libxrender libxshmfence libxtst alsa-lib dumb-init ttf-freefont woff2 gcc musl-dev libc6-compat gcompat libstdc++ icu-libs'
+ARG TOOLBOX_APKS='ca-certificates postgresql15-client mysql-client sqlite git bash make curl jq graphviz openssl python3 py3-pip yamllint nodejs npm ripgrep fd tree nss freetype harfbuzz libx11 libxcomposite libxdamage libxext libxfixes libxi libxrandr libxrender libxshmfence libxtst alsa-lib dumb-init ttf-freefont woff2 gcc musl-dev libc6-compat gcompat libstdc++ icu-libs'
 RUN apk add --no-cache \
     # Runtime essentials\
     $TOOLBOX_APKS

@@ -219,7 +219,7 @@ The application now sources most UI/HTMX and several transitional API & alias ro
 * Route fields: `path`, `method`, `handler`, optional `template`, `middleware` (tokens), extended: `redirectTo` (+ optional `status`), `websocket` (boolean upgrade hint).
 * Loader: `internal/api/yaml_router_loader.go` scans `./routes` on startup (called inside `setupHTMXRoutesWithAuth`) and registers groups in lexicographic filename order. Redirects and websocket endpoints receive special handling; others resolve handler names via a small registry map.
 * Hard-coded HTMX routes in `htmx_routes.go` have been reduced to only those needing dynamic or pre-initialization logic. Governance script `scripts/validate_routes.sh` flags newly added static route registrations under protected groups.
-* API reference mapping: `scripts/api_map.sh` generates `runtime/api-map.json|dot|mmd|svg` linking templates & JS assets to `/api/...` endpoints for drift & dead endpoint detection.
+* API reference mapping: `scripts/api_map.sh` generates `generated/api-map/api-map.json|dot|mmd|svg` linking templates & JS assets to `/api/...` endpoints for drift & dead endpoint detection.
 * Manifest drift: `scripts/check_routes_manifest.sh` compares current `runtime/routes-manifest.json` to baseline `runtime/routes-manifest.baseline.json` to detect unintended changes.
 
 Implemented additions:

@@ -1,9 +1,9 @@
 #!/bin/sh
 set -eu
 
-BASE_TPL=web/templates
+BASE_TPL=templates
 BASE_JS=static/js
-OUT_DIR=runtime
+OUT_DIR=generated/api-map
 TMP_DIR=tmp
 
 mkdir -p "$OUT_DIR" "$TMP_DIR"
@@ -16,7 +16,7 @@ RAW_MMD="$OUT_DIR/api-map.mmd"
 
 # Collect page -> endpoint references
 collect_refs() {
-  find "$BASE_TPL" -type f -name '*.html' 2>/dev/null | while read -r f; do
+  find "$BASE_TPL" -type f \( -name '*.html' -o -name '*.pongo2' \) 2>/dev/null | while read -r f; do
     rel=${f#$BASE_TPL/}
     grep -Eho '/api(/[a-zA-Z0-9_./-]+)?' "$f" 2>/dev/null | sort -u | while read -r ep; do
       echo "{\"page\":\"$rel\",\"endpoint\":\"$ep\"}";
@@ -32,15 +32,20 @@ collect_refs() {
 
 # Build JSON array
 tmp_json="$TMP_DIR/api-map-$$.json"
+tmp_refs="$TMP_DIR/api-refs-$$.txt"
+collect_refs > "$tmp_refs"
+
+# Convert to JSON array
 echo '[' > "$tmp_json"
 first=1
-collect_refs | while read -r line; do
+while read -r line; do
   if [ $first -eq 0 ]; then echo ',' >> "$tmp_json"; fi
   printf '%s' "$line" >> "$tmp_json"
   first=0
-done
+done < "$tmp_refs"
 echo ']' >> "$tmp_json"
 mv "$tmp_json" "$RAW_JSON"
+rm -f "$tmp_refs"
 
 # Generate DOT graph
 {
