@@ -14,16 +14,16 @@ services:
       DB_PORT: 3306
       DB_NAME: ${TEST_DB_MYSQL_NAME:-otrs_test}
       DB_USER: ${TEST_DB_MYSQL_USER:-otrs}
-      DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD:-LetClaude.1n}
+      DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD}
       TEST_DB_HOST: ${TEST_DB_MYSQL_HOST:-mariadb-test}
       TEST_DB_NAME: ${TEST_DB_MYSQL_NAME:-otrs_test}
       TEST_DB_USER: ${TEST_DB_MYSQL_USER:-otrs}
-      TEST_DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD:-LetClaude.1n}
+      TEST_DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD}
       REDIS_HOST: ${TEST_DB_REDIS_HOST:-valkey-test}
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${TEST_REDIS_PASSWORD:-valkey-test-password}
-      JWT_SECRET: ${JWT_SECRET:-test-jwt-secret-key}
-      SESSION_SECRET: ${SESSION_SECRET:-test-session-secret}
+      REDIS_PASSWORD: ${TEST_REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET}
     expose:
       - "8080"
     ports:
@@ -57,10 +57,10 @@ services:
       DB_PORT: 3306
       DB_NAME: ${TEST_DB_MYSQL_NAME:-otrs_test}
       DB_USER: ${TEST_DB_MYSQL_USER:-otrs}
-      DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD:-LetClaude.1n}
+      DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD}
       REDIS_HOST: ${TEST_DB_REDIS_HOST:-valkey-test}
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${TEST_REDIS_PASSWORD:-valkey-test-password}
+      REDIS_PASSWORD: ${TEST_REDIS_PASSWORD}
     depends_on:
       backend-test:
         condition: service_healthy
@@ -82,12 +82,12 @@ services:
       DB_PORT: 3306
       DB_NAME: ${TEST_DB_MYSQL_NAME:-otrs_test}
       DB_USER: ${TEST_DB_MYSQL_USER:-otrs}
-      DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD:-LetClaude.1n}
+      DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD}
       REDIS_HOST: ${TEST_DB_REDIS_HOST:-valkey-test}
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${TEST_REDIS_PASSWORD:-valkey-test-password}
-      JWT_SECRET: ${JWT_SECRET:-test-jwt-secret-key}
-      SESSION_SECRET: ${SESSION_SECRET:-test-session-secret}
+      REDIS_PASSWORD: ${TEST_REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      SESSION_SECRET: ${SESSION_SECRET}
     expose:
       - "8080"
     ports:

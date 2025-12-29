@@ -33,7 +33,10 @@ func setupTestRouter() *gin.Engine {
 				c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "email required"})
 				return
 			}
-			if payload.Email == "admin@gotrs.local" && payload.Password == "admin123" {
+			// Test credentials - use env or test constants
+			testEmail := getEnvDefault("TEST_AUTH_EMAIL", "admin@gotrs.local")
+			testPass := getEnvDefault("TEST_AUTH_PASSWORD", "test-password-from-env")
+			if payload.Email == testEmail && payload.Password == testPass {
 				c.Header("HX-Redirect", "/dashboard")
 				c.JSON(http.StatusOK, gin.H{"success": true, "access_token": "test-token", "user": gin.H{"login": payload.Email}})
 				return
@@ -247,6 +250,10 @@ func TestTicketDetailPage(t *testing.T) {
 func TestHTMXLogin(t *testing.T) {
 	router := setupTestRouter()
 
+	// Get test credentials from env or use test defaults
+	testEmail := getEnvDefault("TEST_AUTH_EMAIL", "admin@gotrs.local")
+	testPass := getEnvDefault("TEST_AUTH_PASSWORD", "test-password-from-env")
+
 	tests := []struct {
 		name       string
 		payload    map[string]string
@@ -256,8 +263,8 @@ func TestHTMXLogin(t *testing.T) {
 		{
 			name: "Valid credentials",
 			payload: map[string]string{
-				"email":    "admin@gotrs.local",
-				"password": "admin123",
+				"email":    testEmail,
+				"password": testPass,
 			},
 			wantStatus: http.StatusOK,
 			checkBody: func(t *testing.T, body string) {
@@ -282,7 +289,7 @@ func TestHTMXLogin(t *testing.T) {
 		{
 			name: "Missing email",
 			payload: map[string]string{
-				"password": "admin123",
+				"password": "somepassword",
 			},
 			wantStatus: http.StatusBadRequest,
 			checkBody: func(t *testing.T, body string) {
@@ -612,6 +619,14 @@ func BenchmarkDashboardPage(b *testing.B) {
 		req, _ := http.NewRequest("GET", "/dashboard", nil)
 		router.ServeHTTP(w, req)
 	}
+}
+
+// getEnvDefault returns the environment variable or the default value
+func getEnvDefault(key, defaultVal string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return defaultVal
 }
 
 func BenchmarkTemplateLoading(b *testing.B) {

@@ -230,7 +230,7 @@ initialize_test_db_env() {
     if [ "$driver_family" = "postgres" ]; then
         default_name="${TEST_DB_POSTGRES_NAME:-gotrs_test}"
         default_user="${TEST_DB_POSTGRES_USER:-gotrs_user}"
-        default_password="${TEST_DB_POSTGRES_PASSWORD:-gotrs_password}"
+        default_password="${TEST_DB_POSTGRES_PASSWORD:-}"
         if [ "$IN_CONTAINER" = true ]; then
             default_host="${TEST_DB_POSTGRES_HOST:-postgres-test}"
             default_port="${TEST_DB_POSTGRES_INTERNAL_PORT:-5432}"
@@ -241,7 +241,7 @@ initialize_test_db_env() {
     else
         default_name="${TEST_DB_MYSQL_NAME:-otrs_test}"
         default_user="${TEST_DB_MYSQL_USER:-otrs}"
-        default_password="${TEST_DB_MYSQL_PASSWORD:-LetClaude.1n}"
+        default_password="${TEST_DB_MYSQL_PASSWORD:-}"
         if [ "$IN_CONTAINER" = true ]; then
             default_host="${TEST_DB_MYSQL_HOST:-mariadb-test}"
             default_port="${TEST_DB_MYSQL_INTERNAL_PORT:-3306}"
@@ -261,6 +261,11 @@ initialize_test_db_env() {
     local port="${TEST_DB_PORT:-$default_port}"
     local user="${TEST_DB_USER:-$default_user}"
     local password="${TEST_DB_PASSWORD:-$default_password}"
+
+    if [ -z "$password" ]; then
+        echo -e "${RED}ERROR: TEST_DB_PASSWORD (or TEST_DB_MYSQL_PASSWORD/TEST_DB_POSTGRES_PASSWORD) must be set in .env${NC}" >&2
+        exit 1
+    fi
 
     export TEST_DB_DRIVER="$driver_value"
     export TEST_DB_NAME="$name"

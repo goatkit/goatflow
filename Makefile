@@ -143,6 +143,15 @@ cache-use-volumes:
 VOLUME_PWD := -v "$$(pwd):/workspace"
 WORKDIR_FLAGS := -w /workspace
 USER_FLAGS := -u "$$(id -u):$$(id -g)"
+
+# Credential validation - NO DEFAULT PASSWORDS
+# All credentials MUST be set in .env file
+define check_required_env
+	@if [ -z "$${$(1)}" ]; then \
+		echo "❌ ERROR: $(1) is not set. Add it to your .env file."; \
+		exit 1; \
+	fi
+endef
 # Default DB host: prefer host.containers.internal on Podman
 ifeq ($(findstring podman,$(CONTAINER_CMD)),podman)
 DB_HOST ?= host.containers.internal
@@ -153,7 +162,7 @@ DB_DRIVER ?= mariadb
 DB_PORT ?= 3306
 DB_NAME ?= otrs
 DB_USER ?= otrs
-DB_PASSWORD ?= CHANGEME
+# DB_PASSWORD - MUST be set in .env, no default
 DB_SCOPE ?= primary
 VALKEY_HOST ?= localhost
 VALKEY_PORT ?= 6388
@@ -164,27 +173,27 @@ TEST_DB_POSTGRES_HOST ?= postgres-test
 TEST_DB_POSTGRES_PORT ?= 5433
 TEST_DB_POSTGRES_NAME ?= gotrs_test
 TEST_DB_POSTGRES_USER ?= gotrs_user
-TEST_DB_POSTGRES_PASSWORD ?= gotrs_password
+# TEST_DB_POSTGRES_PASSWORD - MUST be set in .env, no default
 TEST_DB_POSTGRES_CONTAINER_PORT ?= 5432
 TEST_DB_MYSQL_HOST ?= mariadb-test
 TEST_DB_MYSQL_PORT ?= 3308
 TEST_DB_MYSQL_CONTAINER_PORT ?= 3306
 TEST_DB_MYSQL_NAME ?= otrs_test
 TEST_DB_MYSQL_USER ?= otrs
-TEST_DB_MYSQL_PASSWORD ?= LetClaude.1n
+# TEST_DB_MYSQL_PASSWORD - MUST be set in .env, no default
 
 ifeq ($(TEST_DB_DRIVER),postgres)
 TEST_DB_HOST ?= $(TEST_DB_POSTGRES_HOST)
 TEST_DB_PORT ?= $(TEST_DB_POSTGRES_PORT)
 TEST_DB_NAME ?= $(TEST_DB_POSTGRES_NAME)
 TEST_DB_USER ?= $(TEST_DB_POSTGRES_USER)
-TEST_DB_PASSWORD ?= $(TEST_DB_POSTGRES_PASSWORD)
+# TEST_DB_PASSWORD derived from driver-specific var
 else
 TEST_DB_HOST ?= $(TEST_DB_MYSQL_HOST)
 TEST_DB_PORT ?= $(TEST_DB_MYSQL_PORT)
 TEST_DB_NAME ?= $(TEST_DB_MYSQL_NAME)
 TEST_DB_USER ?= $(TEST_DB_MYSQL_USER)
-TEST_DB_PASSWORD ?= $(TEST_DB_MYSQL_PASSWORD)
+# TEST_DB_PASSWORD derived from driver-specific var
 endif
 
 TOOLBOX_TEST_DB_HOST ?= 127.0.0.1
@@ -205,62 +214,9 @@ TEST_COMPOSE_FILE := $(CURDIR)/docker-compose.yml:$(CURDIR)/docker-compose.testd
 
 help:
 	@python3 scripts/tools/make_help.py
-#########################################
-# TDD WORKFLOW COMMANDS
-#########################################
-
-# Initialize TDD workflow
-tdd-init:
-	@printf "🧪 Initializing TDD workflow with mandatory quality gates...\n"
-	@./scripts/tdd-enforcer.sh init
-
-# Start TDD cycle with failing test
-tdd-test-first:
-	@if [ -z "$(FEATURE)" ]; then \
-		echo "Error: FEATURE required. Usage: make tdd-test-first FEATURE='Feature Name'"; \
-		exit 1; \
-	fi
-	@printf "🔴 Starting test-first phase for: $(FEATURE)\n"
-	@./scripts/tdd-enforcer.sh test-first "$(FEATURE)"
-
-# Implement code to pass tests
-tdd-implement:
-	@printf "🔧 Starting implementation phase...\n"
-	@./scripts/tdd-enforcer.sh implement
-
-# Comprehensive verification with all quality gates
-tdd-verify:
-	@printf "✅ Running comprehensive verification (ALL quality gates must pass)...\n"
-	@./scripts/tdd-enforcer.sh verify; rc=$$?; \
-	if [ $$rc -eq 0 ]; then \
-	  echo "TDD VERIFY: SUCCESS (exit 0)"; \
-	  exit 0; \
-	else \
-	  echo "TDD VERIFY: FAILURE (exit $$rc)"; \
-	  exit $$rc; \
-	fi
-
-# Safe refactoring with regression checks
-tdd-refactor:
-	@printf "♻️ Starting refactor phase with regression protection...\n"
-	@./scripts/tdd-enforcer.sh refactor
-
-# Show current TDD workflow status
-tdd-status:
-	@./scripts/tdd-enforcer.sh status
-
-# Run quality gates independently for debugging
-quality-gates:
-	@printf "🚪 Running all quality gates independently...\n"
-	@./scripts/tdd-enforcer.sh verify debug
-
-# Generate evidence report from latest verification
-evidence-report:
-	@printf "📊 Latest evidence reports:\n"
-	@find generated/evidence -name "*_report_*.html" -type f -exec ls -la {} \; | head -5 || echo "No evidence reports found"
 
 #########################################
-# ENHANCED TEST COMMANDS WITH TDD INTEGRATION
+# TEST COMMANDS
 #########################################
 
 # Legacy test target - use test-comprehensive via 'make test' instead
@@ -1633,11 +1589,14 @@ db-init:
 		printf "📡 Starting dependencies (mariadb)...\n"; \
 		$(COMPOSE_CMD) up -d mariadb >/dev/null 2>&1 || true; \
 		printf "🧰 Ensuring minimal users table exists (MariaDB)...\n"; \
+		if [ -z "$(GOTRS_ADMIN_PASSWORD)" ]; then \
+			printf "❌ Error: GOTRS_ADMIN_PASSWORD not set. Add it to .env\n"; exit 1; \
+		fi; \
 		$(CONTAINER_CMD) run --rm --network gotrs-ce_gotrs-network \
 			-e DB_DRIVER=$(DB_DRIVER) -e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 			-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) -e DB_PASSWORD=$(DB_PASSWORD) \
 			gotrs-toolbox:latest \
-			gotrs reset-user --username="root@localhost" --password="Admin123!1" --enable; \
+			gotrs reset-user --username="root@localhost" --password="$(GOTRS_ADMIN_PASSWORD)" --enable; \
 		printf "✅ Database initialized (MariaDB minimal schema; root user created).\n"; \
 	fi
 
@@ -1654,13 +1613,16 @@ db-init-test:
 		printf "📡 Starting dependencies (mariadb-test)...\n"; \
 		APP_ENV=test $(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml up -d mariadb-test >/dev/null 2>&1 || true; \
 		printf "🧰 Ensuring minimal users table exists (MariaDB test)...\n"; \
+		if [ -z "$(GOTRS_ADMIN_PASSWORD)" ]; then \
+			printf "❌ Error: GOTRS_ADMIN_PASSWORD not set. Add it to .env\n"; exit 1; \
+		fi; \
 		$(CONTAINER_CMD) run --rm \
 			--security-opt label=disable \
 			--network gotrs-ce_gotrs-network \
 			-e DB_DRIVER=$(TEST_DB_DRIVER) -e DB_HOST=$(TEST_DB_MYSQL_HOST) -e DB_PORT=$(TEST_DB_MYSQL_CONTAINER_PORT) \
 			-e DB_NAME=$(TEST_DB_MYSQL_NAME) -e DB_USER=$(TEST_DB_MYSQL_USER) -e DB_PASSWORD=$(TEST_DB_MYSQL_PASSWORD) \
 			gotrs-toolbox:latest \
-			gotrs reset-user --username="root@localhost" --password="Admin123!1" --enable; \
+			gotrs reset-user --username="root@localhost" --password="$(GOTRS_ADMIN_PASSWORD)" --enable; \
 		printf "✅ Test database initialized (MariaDB)\n"; \
 	fi
 # Initialize for OTRS import (structure only, no data)
@@ -2538,11 +2500,12 @@ test-ldap-perf:
 
 # Open phpLDAPadmin in browser
 ldap-admin:
-	@printf "Starting phpLDAPadmin...\n"	$(COMPOSE_CMD) --profile tools up -d phpldapadmin
+	@printf "Starting phpLDAPadmin...\n"
+	$(COMPOSE_CMD) --profile tools up -d phpldapadmin
 	@printf "Opening phpLDAPadmin at http://localhost:8091\n"
 	@printf "Login with:\n"
 	@printf "  Login DN: cn=admin,dc=gotrs,dc=local\n"
-	@printf "  Password: admin123\n"
+	@printf "  Password: (LDAP_ADMIN_PASSWORD from .env)\n"
 	@open http://localhost:8091 || xdg-open http://localhost:8091 || echo "Open http://localhost:8091"
 
 # View OpenLDAP logs
@@ -2551,11 +2514,13 @@ ldap-logs:
 
 # Setup LDAP for development (start services and wait)
 ldap-setup:
-	@printf "Setting up LDAP development environment...\n"	$(COMPOSE_CMD) up -d openldap
+	@if [ -z "$${LDAP_ADMIN_PASSWORD}" ]; then echo "ERROR: LDAP_ADMIN_PASSWORD must be set in .env"; exit 1; fi
+	@printf "Setting up LDAP development environment...\n"
+	$(COMPOSE_CMD) up -d openldap
 	@printf "Waiting for LDAP server to initialize (this may take up to 60 seconds)...\n"
 	@timeout=60; \
 	while [ $$timeout -gt 0 ]; do \
-		if $(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost -b "dc=gotrs,dc=local" -D "cn=admin,dc=gotrs,dc=local" -w "admin123" "(objectclass=*)" dn > /dev/null 2>&1; then \
+		if $(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost -b "dc=gotrs,dc=local" -D "cn=admin,dc=gotrs,dc=local" -w "$${LDAP_ADMIN_PASSWORD}" "(objectclass=*)" dn > /dev/null 2>&1; then \
 			echo "✓ LDAP server is ready!"; \
 			break; \
 		else \
@@ -2574,11 +2539,11 @@ ldap-setup:
 	@printf "Host: localhost:389\n"
 	@printf "Base DN: dc=gotrs,dc=local\n"
 	@printf "Admin DN: cn=admin,dc=gotrs,dc=local\n"
-	@printf "Admin Password: admin123\n"
+	@printf "Admin Password: (LDAP_ADMIN_PASSWORD from .env)\n"
 	@printf "Readonly DN: cn=readonly,dc=gotrs,dc=local\n"
-	@printf "Readonly Password: readonly123\n"
+	@printf "Readonly Password: (LDAP_READONLY_PASSWORD from .env)\n"
 	@printf "\n"
-	@printf "Test Users (password: password123):\n"
+	@printf "Test Users (password from LDAP_TEST_USER_PASSWORD):\n"
 	@printf "===================================\n"
 	@printf "jadmin     - john.admin@gotrs.local (System Administrator)\n"
 	@printf "smitchell  - sarah.mitchell@gotrs.local (IT Manager)\n"
@@ -2591,19 +2556,22 @@ ldap-setup:
 	@printf "phpLDAPadmin: http://localhost:8091 (run 'make ldap-admin')\n"
 # Test LDAP authentication with a specific user
 ldap-test-user:
+	@if [ -z "$${LDAP_READONLY_PASSWORD}" ]; then echo "ERROR: LDAP_READONLY_PASSWORD must be set in .env"; exit 1; fi
 	@echo -n "Username to test: "; \
 	read username; \
 	echo "Testing LDAP authentication for user: $$username"; \
 	$(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost \
-		-D "cn=readonly,dc=gotrs,dc=local" -w "readonly123" \
+		-D "cn=readonly,dc=gotrs,dc=local" -w "$${LDAP_READONLY_PASSWORD}" \
 		-b "ou=Users,dc=gotrs,dc=local" \
 		"(&(objectClass=inetOrgPerson)(uid=$$username))" \
 		uid mail displayName telephoneNumber departmentNumber title
 
 # Quick LDAP connectivity test
 ldap-test:
-	@printf "Testing LDAP connectivity...\n"	$(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost \
-		-D "cn=admin,dc=gotrs,dc=local" -w "admin123" \
+	@if [ -z "$${LDAP_ADMIN_PASSWORD}" ]; then echo "ERROR: LDAP_ADMIN_PASSWORD must be set in .env"; exit 1; fi
+	@printf "Testing LDAP connectivity...\n"
+	$(COMPOSE_CMD) exec openldap ldapsearch -x -H ldap://localhost \
+		-D "cn=admin,dc=gotrs,dc=local" -w "$${LDAP_ADMIN_PASSWORD}" \
 		-b "dc=gotrs,dc=local" \
 		"(objectclass=*)" dn | head -20
 
@@ -2782,12 +2750,6 @@ test-integration: test-stack-up
 	 DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
 	 DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
 	 ./scripts/integration-test.sh
-
-# Clean TDD state (reset cycle)
-tdd-clean:
-	@printf "🧹 Cleaning TDD state...\n"
-	@rm -f .tdd-state
-	@printf "TDD cycle reset.\n"
 
 #########################################
 # TEST OVERRIDES

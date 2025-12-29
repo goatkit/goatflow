@@ -70,7 +70,7 @@
 		// For GoatKit autocomplete enhanced inputs, prefer the rendered display (textContent) over canonical login
 		if(input.dataset && input.dataset.gkAutocomplete){
 			const txt=(item.textContent||'').trim();
-			if(txt) displayVal=txt; // textContent holds compiled template (e.g., "Hans Barto (email)")
+			if(txt) displayVal=txt; // textContent holds compiled template
 		}
 		const changed = input.value!==displayVal;
 		input.value=displayVal;

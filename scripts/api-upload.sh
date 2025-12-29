@@ -11,7 +11,13 @@ if [[ -f ".env" ]]; then
 fi
 
 TEST_USERNAME="${ADMIN_USER:-${TEST_USERNAME:-root@localhost}}"
-TEST_PASSWORD="${ADMIN_PASSWORD:-${TEST_PASSWORD:-admin123}}"
+TEST_PASSWORD="${ADMIN_PASSWORD:-${TEST_PASSWORD:-}}"
+
+if [ -z "$TEST_PASSWORD" ]; then
+  echo "ERROR: ADMIN_PASSWORD or TEST_PASSWORD must be set in .env" >&2
+  exit 1
+fi
+
 BACKEND_URL="${BACKEND_URL:-http://localhost:8080}"
 METHOD="${METHOD:-POST}"
 ENDPOINT="$1"

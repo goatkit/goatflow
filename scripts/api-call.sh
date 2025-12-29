@@ -12,7 +12,12 @@ fi
 
 BACKEND_URL="${BACKEND_URL:-http://localhost:8080}"
 LOGIN="${LOGIN:-${ADMIN_USER:-root@localhost}}"
-PASSWORD="${PASSWORD:-${ADMIN_PASSWORD:-admin123}}"
+PASSWORD="${PASSWORD:-${ADMIN_PASSWORD:-}}"
+
+if [ -z "$PASSWORD" ]; then
+  echo "ERROR: PASSWORD or ADMIN_PASSWORD must be set in .env" >&2
+  exit 1
+fi
 
 # Inputs are via env for consistency with http-call.sh
 METHOD="${METHOD:-GET}"

@@ -88,8 +88,10 @@ func GetConfig() *TestConfig {
 		os.Getenv("TEST_PASSWORD"),
 		os.Getenv("TEST_MYSQL_ADMIN_PASSWORD"),
 		os.Getenv("TEST_PG_ADMIN_PASSWORD"),
-		"admin123",
 	)
+	if adminPassword == "" {
+		log.Fatal("[e2e-config] ERROR: DEMO_ADMIN_PASSWORD must be set in .env")
+	}
 
 	headless := os.Getenv("HEADLESS") != "false"
 	slowMo := 0

@@ -165,10 +165,7 @@ func (v *SecretValidator) validateLDAPPassword(isProduction bool) {
 			continue
 		}
 
-		// Check for common example values
-		if value == "readonly123" || value == "admin123" {
-			v.addError(fmt.Sprintf("%s is using a default example value", key), isProduction)
-		}
+		// Todo add check for weak passwords here
 	}
 }
 

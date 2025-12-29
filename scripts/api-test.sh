@@ -36,10 +36,16 @@ if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
     echo "DEBUG: TEST_PASSWORD=${TEST_PASSWORD:-<not set>}"
 fi
 
-# Default test credentials if not set in .env
-# Prefer ADMIN_USER/ADMIN_PASSWORD, fall back to TEST_USERNAME/TEST_PASSWORD, then defaults
+# Test credentials - MUST be set in .env
+# Prefer ADMIN_USER/ADMIN_PASSWORD, fall back to TEST_USERNAME/TEST_PASSWORD
 TEST_USERNAME="${ADMIN_USER:-${TEST_USERNAME:-root@localhost}}"
-TEST_PASSWORD="${ADMIN_PASSWORD:-${TEST_PASSWORD:-admin123}}"
+TEST_PASSWORD="${ADMIN_PASSWORD:-${TEST_PASSWORD:-}}"
+
+if [ -z "$TEST_PASSWORD" ]; then
+    echo "ERROR: ADMIN_PASSWORD or TEST_PASSWORD must be set in .env" >&2
+    exit 1
+fi
+
 # Infer BACKEND_URL if not set: prefer https container name else http localhost
 if [[ -z "${BACKEND_URL:-}" ]]; then
     if getent hosts gotrs-backend >/dev/null 2>&1; then

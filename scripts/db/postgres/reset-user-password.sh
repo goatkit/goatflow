@@ -16,7 +16,13 @@ DB_HOST="${DB_CONN_HOST:-${DB_HOST:-postgres}}"
 DB_PORT="${DB_CONN_PORT:-${DB_PORT:-5432}}"
 DB_NAME="${DB_CONN_NAME:-${DB_NAME:-gotrs}}"
 DB_USER="${DB_CONN_USER:-${DB_USER:-gotrs_user}}"
-DB_PASSWORD="${DB_CONN_PASSWORD:-${DB_PASSWORD:-gotrs_password}}"
+DB_PASSWORD="${DB_CONN_PASSWORD:-${DB_PASSWORD:-}}"
+
+if [ -z "$DB_PASSWORD" ]; then
+  echo "ERROR: DB_PASSWORD must be set in .env" >&2
+  exit 1
+fi
+
 TOOLBOX_IMAGE="${TOOLBOX_IMAGE:-gotrs-toolbox:latest}"
 NETWORK="${DB_CONTAINER_NETWORK:-gotrs-ce_gotrs-network}"
 

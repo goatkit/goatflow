@@ -29,7 +29,13 @@ ERRORS=()
 TEST_BACKEND_PORT="${TEST_BACKEND_PORT:-18081}"
 BASE_URL="http://localhost:${TEST_BACKEND_PORT}"
 ADMIN_EMAIL="${DEMO_ADMIN_EMAIL:-root@localhost}"
-ADMIN_PASSWORD="${DEMO_ADMIN_PASSWORD:-admin123}"
+ADMIN_PASSWORD="${DEMO_ADMIN_PASSWORD:-}"
+
+if [ -z "$ADMIN_PASSWORD" ]; then
+    echo -e "${RED}ERROR: DEMO_ADMIN_PASSWORD must be set in .env${NC}"
+    exit 1
+fi
+
 LOG_FILE="/tmp/integration_test_$(date +%Y%m%d_%H%M%S).log"
 COOKIES="/tmp/integration_test_cookies.txt"
 

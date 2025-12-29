@@ -1,18 +1,14 @@
 -- MariaDB initialization script for GOTRS
 -- Creates database and user if they don't exist
+-- NOTE: User password is set via MYSQL_PASSWORD env var in docker-compose.yml
+-- This script only grants privileges; MariaDB image creates user automatically
 
 -- Create database if it doesn't exist
 CREATE DATABASE IF NOT EXISTS otrs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Create user if it doesn't exist (compatible with both MySQL and MariaDB)
--- Using IF NOT EXISTS syntax for MariaDB 10.1.3+
-CREATE USER IF NOT EXISTS 'otrs'@'%' IDENTIFIED BY 'CHANGEME';
-
--- Grant all privileges on the database
+-- Grant all privileges on the database to the user created by MYSQL_USER env var
+-- The user is automatically created by MariaDB image from MYSQL_USER/MYSQL_PASSWORD
 GRANT ALL PRIVILEGES ON otrs.* TO 'otrs'@'%';
-
--- Also create from localhost for compatibility
-CREATE USER IF NOT EXISTS 'otrs'@'localhost' IDENTIFIED BY 'CHANGEME';
 GRANT ALL PRIVILEGES ON otrs.* TO 'otrs'@'localhost';
 
 -- Flush privileges to ensure they take effect

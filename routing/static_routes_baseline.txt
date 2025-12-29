@@ -1,22 +1,17 @@
+# Static Routes Baseline - Last updated: Dec 29 2025
 #
-# ---- TEMPORARY ACCEPTED CODE-DEFINED ROUTES (Oct 4 2025) ----
-# /static assets and minimal bootstrap in code.
-# 1. Move a code route to YAML.
-# 2. Remove it from htmx_routes.go.
-# 3. Regenerate: make build (script will show no new code routes).
-# 4. Manually edit this baseline to delete the moved path.
-# 5. Commit changes.
-# Do NOT add new entries here unless absolutely necessary and temporary.
-# Grouped by feature. Do not expand this list further; only shrink it.
+# Purpose: Prevent reintroduction of hard-coded routes. All business/API routes
+# must live in YAML route files (routes/*.yaml).
+#
 # Migration Workflow:
-# Purpose: Prevent reintroduction or growth of hard-coded routes. All
-# Static Routes Baseline
-# These were detected by validate_routes during make build. They MUST be
-# This file is auto-created by scripts/validate_routes.sh the first time
-# business/API routes must live in YAML route files. Only keep /health,
-# code-defined (non-YAML) business routes are detected in htmx_routes.go.
-# migrated into YAML route definitions and then removed from this list.
-/admin/users/:id/status
+# 1. Move a code route to YAML
+# 2. Remove it from htmx_routes.go
+# 3. Run: make build (validate_routes.sh will verify)
+# 4. This baseline auto-updates on successful build
+#
+# Do NOT add new entries here. Only shrink this list.
+#
+# Current code-defined routes (47 remaining):
 /canned-responses
 /canned-responses/:id
 /canned-responses/categories
@@ -25,50 +20,25 @@
 /canned-responses/quick
 /canned-responses/search
 /canned-responses/user
-/claude-feedback
-/customer-companies
-/customer-companies/:id
-/customer-user-groups/:login
-/customer-users
-/customer-users/:id
-/customer-users/:id/details
-/customer-users/import
 /customers/search
 /dashboard/activity
-/dashboard/activity-stream
 /dashboard/notifications
 /dashboard/performance
 /dashboard/quick-actions
 /dashboard/recent-tickets
 /dashboard/stats
 /files/*path
-/group-customer-users/:id
 /groups
 /groups/:id
 /groups/:id/members
-/priorities
-/priorities/:id
 /queues
 /queues/:id
 /queues/:id/details
 /queues/:id/status
-/states
-/states/:id
-/templates
-/templates/:id
-/templates/:id/load
-/templates/apply
-/templates/categories
-/templates/modal
-/templates/popular
-/templates/search
 /ticket/:id
 /tickets
 /tickets/:id
 /tickets/:id/assign
-/tickets/:id/attachments
-/tickets/:id/attachments/:attachment_id
-/tickets/:id/attachments/:attachment_id/thumbnail
 /tickets/:id/available-agents
 /tickets/:id/close
 /tickets/:id/history
@@ -83,11 +53,9 @@
 /tickets/search/export
 /tickets/search/history
 /tickets/search/history/:id
-/tickets/search/history/:id/execute
 /tickets/search/saved
 /tickets/search/saved/:id
 /tickets/search/saved/:id/execute
 /tickets/search/suggestions
-/tickets/stream
 /types
 /types/:id

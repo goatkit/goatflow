@@ -504,11 +504,11 @@ services:
   #   environment:
   #     - LDAP_ORGANISATION=GOTRS Test Corp
   #     - LDAP_DOMAIN=gotrs.local
-  #     - LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD:-admin123}
-  #     - LDAP_CONFIG_PASSWORD=${LDAP_CONFIG_PASSWORD:-config123}
+  #     - LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD}
+  #     - LDAP_CONFIG_PASSWORD=${LDAP_CONFIG_PASSWORD}
   #     - LDAP_READONLY_USER=true
   #     - LDAP_READONLY_USER_USERNAME=readonly
-  #     - LDAP_READONLY_USER_PASSWORD=${LDAP_READONLY_PASSWORD:-readonly123}
+  #     - LDAP_READONLY_USER_PASSWORD=${LDAP_READONLY_PASSWORD}
   #     - LDAP_RFC2307BIS_SCHEMA=false
   #     - LDAP_BACKEND=mdb
   #     - LDAP_TLS=true
@@ -535,7 +535,7 @@ services:
   #   networks:
   #     - gotrs-network
   #   healthcheck:
-  #     test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost", "-b", "dc=gotrs,dc=local", "-D", "cn=admin,dc=gotrs,dc=local", "-w", "${LDAP_ADMIN_PASSWORD:-admin123}", "(objectclass=*)", "dn"]
+  #     test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost", "-b", "dc=gotrs,dc=local", "-D", "cn=admin,dc=gotrs,dc=local", "-w", "${LDAP_ADMIN_PASSWORD}", "(objectclass=*)", "dn"]
   #     interval: 30s
   #     timeout: 10s
   #     retries: 5

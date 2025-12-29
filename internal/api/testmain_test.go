@@ -73,7 +73,12 @@ func ensureTestEnvironment() {
 	setDefaultEnv("TEST_DB_PORT", "3306")
 	setDefaultEnv("TEST_DB_NAME", "otrs_test")
 	setDefaultEnv("TEST_DB_USER", "otrs")
-	setDefaultEnv("TEST_DB_PASSWORD", "LetClaude.1n")
+	// TEST_DB_PASSWORD must be set via environment - no default
+	if os.Getenv("TEST_DB_PASSWORD") == "" && os.Getenv("TEST_DB_MYSQL_PASSWORD") == "" {
+		fmt.Fprintln(os.Stderr, "ERROR: TEST_DB_PASSWORD or TEST_DB_MYSQL_PASSWORD must be set in .env")
+		os.Exit(1)
+	}
+	setDefaultEnv("TEST_DB_PASSWORD", os.Getenv("TEST_DB_MYSQL_PASSWORD"))
 }
 
 func waitForTestDatabase(timeout time.Duration) error {

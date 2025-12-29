@@ -3,7 +3,10 @@ import { BASE_URL } from './base-url.js';
 
 async function login(page) {
   const username = process.env.DEMO_ADMIN_EMAIL || 'root@localhost';
-  const password = process.env.DEMO_ADMIN_PASSWORD || 'admin123';
+  const password = process.env.DEMO_ADMIN_PASSWORD;
+  if (!password) {
+    throw new Error('DEMO_ADMIN_PASSWORD must be set in .env');
+  }
   const response = await page.request.post(`${BASE_URL}/api/auth/login`, {
     data: {
       username,

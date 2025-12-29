@@ -151,12 +151,22 @@ func defaultUser(driver string) string {
 }
 
 func defaultPassword(driver string) string {
+	// Password must come from environment - no hardcoded defaults
+	if pw := os.Getenv("TEST_DB_PASSWORD"); pw != "" {
+		return pw
+	}
 	switch driver {
 	case "mysql", "mariadb":
-		return "LetClaude.1n"
+		if pw := os.Getenv("TEST_DB_MYSQL_PASSWORD"); pw != "" {
+			return pw
+		}
 	default:
-		return "gotrs_password"
+		if pw := os.Getenv("TEST_DB_POSTGRES_PASSWORD"); pw != "" {
+			return pw
+		}
 	}
+	// This will cause connection failure - password must be set
+	return ""
 }
 
 func defaultDBName(driver string) string {

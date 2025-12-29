@@ -13,9 +13,14 @@ if [[ -f ".env" ]]; then
     done < .env
 fi
 
-# Prefer ADMIN_USER/ADMIN_PASSWORD; fall back to TEST_USERNAME/TEST_PASSWORD; then defaults
+# Prefer ADMIN_USER/ADMIN_PASSWORD; fall back to TEST_USERNAME/TEST_PASSWORD
 TEST_USERNAME="${ADMIN_USER:-${TEST_USERNAME:-root@localhost}}"
-TEST_PASSWORD="${ADMIN_PASSWORD:-${TEST_PASSWORD:-admin123}}"
+TEST_PASSWORD="${ADMIN_PASSWORD:-${TEST_PASSWORD:-}}"
+
+if [ -z "$TEST_PASSWORD" ]; then
+    echo "ERROR: ADMIN_PASSWORD or TEST_PASSWORD must be set in .env" >&2
+    exit 1
+fi
 
 # Infer BACKEND_URL if not set
 if [[ -z "${BACKEND_URL:-}" ]]; then

@@ -32,8 +32,8 @@ docker-compose --profile tools up -d
 The development LDAP server includes:
 - **Domain**: `gotrs.local`
 - **Base DN**: `dc=gotrs,dc=local`
-- **Admin User**: `cn=admin,dc=gotrs,dc=local` (password: `admin123`)
-- **Readonly User**: `cn=readonly,dc=gotrs,dc=local` (password: `readonly123`)
+- **Admin User**: `cn=admin,dc=gotrs,dc=local` (password: set `LDAP_ADMIN_PASSWORD` in `.env`)
+- **Readonly User**: `cn=readonly,dc=gotrs,dc=local` (password: set `LDAP_READONLY_PASSWORD` in `.env`)
 - **phpLDAPadmin**: http://localhost:8091 (for browsing LDAP data)
 
 ### 2. Test Users

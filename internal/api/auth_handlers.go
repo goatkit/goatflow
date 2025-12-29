@@ -90,10 +90,9 @@ var HandleAuthLogin = func(c *gin.Context) {
 	if err != nil {
 		// Fallback: allow env ADMIN_USER/ADMIN_PASSWORD for bootstrap API JSON logins
 		if strings.Contains(contentType, "application/json") {
-			adminUser := strings.TrimSpace(getEnvDefault("ADMIN_USER", "admin@example.com"))
-			adminPass := strings.TrimSpace(getEnvDefault("ADMIN_PASSWORD", "admin123"))
-			// (debug logging removed before commit)
-			if (username == adminUser || (adminUser == "admin@example.com" && username == "root@localhost")) && password == adminPass {
+			adminUser := strings.TrimSpace(os.Getenv("ADMIN_USER"))
+			adminPass := strings.TrimSpace(os.Getenv("ADMIN_PASSWORD"))
+			if adminUser != "" && adminPass != "" && (username == adminUser || (adminUser == "admin@example.com" && username == "root@localhost")) && password == adminPass {
 				// Issue minimal token via shared JWT manager
 				jwtm := shared.GetJWTManager()
 				if jwtm == nil {

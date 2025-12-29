@@ -25,7 +25,11 @@ case "$scope" in
     host_port=$port
     name=${DB_NAME:-gotrs}
     user=${DB_USER:-gotrs_user}
-    password=${DB_PASSWORD:-gotrs_password}
+    password=${DB_PASSWORD:-}
+    if [ -z "$password" ]; then
+      echo "ERROR: DB_PASSWORD must be set in .env" >&2
+      exit 1
+    fi
     admin_user_var=ADMIN_USER
     admin_password_var=ADMIN_PASSWORD
     admin_user=${ADMIN_USER:-root@localhost}
@@ -37,7 +41,11 @@ case "$scope" in
     port=${TEST_DB_POSTGRES_INTERNAL_PORT:-5432}
     name=${TEST_DB_POSTGRES_NAME:-gotrs_test}
     user=${TEST_DB_POSTGRES_USER:-gotrs_user}
-    password=${TEST_DB_POSTGRES_PASSWORD:-gotrs_password}
+    password=${TEST_DB_POSTGRES_PASSWORD:-}
+    if [ -z "$password" ]; then
+      echo "ERROR: TEST_DB_POSTGRES_PASSWORD must be set in .env" >&2
+      exit 1
+    fi
     scope="pg-test"
     admin_user_var=TEST_PG_ADMIN_USER
     admin_password_var=TEST_PG_ADMIN_PASSWORD
@@ -50,7 +58,11 @@ case "$scope" in
     port=${TEST_DB_MYSQL_INTERNAL_PORT:-3306}
     name=${TEST_DB_MYSQL_NAME:-${TEST_DB_NAME:-${DB_NAME:-otrs_test}}}
     user=${TEST_DB_MYSQL_USER:-${TEST_DB_USER:-otrs}}
-    password=${TEST_DB_PASSWORD:-${TEST_DB_MYSQL_PASSWORD:-${DB_PASSWORD:-CHANGEME}}}
+    password=${TEST_DB_PASSWORD:-${TEST_DB_MYSQL_PASSWORD:-}}
+    if [ -z "$password" ]; then
+      echo "ERROR: TEST_DB_MYSQL_PASSWORD must be set in .env" >&2
+      exit 1
+    fi
     scope="mysql-test"
     admin_user_var=TEST_MYSQL_ADMIN_USER
     admin_password_var=TEST_MYSQL_ADMIN_PASSWORD

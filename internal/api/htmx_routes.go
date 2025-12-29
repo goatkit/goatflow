@@ -1609,8 +1609,10 @@ func handleHTMXLogin(c *gin.Context) {
 		return
 	}
 
-	// Default test credentials accepted for unit tests
-	if payload.Email == "admin@gotrs.local" && payload.Password == "admin123" {
+	// Test credentials from environment for unit tests (no hardcoded defaults)
+	testEmail := os.Getenv("TEST_AUTH_EMAIL")
+	testPass := os.Getenv("TEST_AUTH_PASSWORD")
+	if testEmail != "" && testPass != "" && payload.Email == testEmail && payload.Password == testPass {
 		token := "test-token"
 		c.Header("HX-Redirect", "/dashboard")
 		c.JSON(http.StatusOK, gin.H{
