@@ -104,6 +104,8 @@ issues:
     - vendor
     - node_modules
     - scripts
+  exclude-files:
+    - ".*archived.*\\.go$"
   exclude-rules:
     - path: _test\.go
       linters:
