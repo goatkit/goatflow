@@ -27,6 +27,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch all history for scanning
+
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
@@ -36,14 +37,14 @@ jobs:
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: true
           GITLEAKS_ENABLE_SUMMARY: true
 
-      # Alternative: Run Gitleaks with Docker
-      # - name: Run Gitleaks with Docker
-      #   run: |
-      #     docker run --rm \
-      #       -v "${{ github.workspace }}:/workspace" \
-      #       -w /workspace \
-      #       zricethezav/gitleaks:latest \
-      #       detect --source . --verbose --report-format json --report-path gitleaks-report.json
+      - name: Fallback - Run Gitleaks on files (if git scan fails)
+        if: failure()
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            zricethezav/gitleaks:latest \
+            detect --source . --no-git --verbose --report-format sarif --report-path gitleaks-results.sarif || true
 
       - name: Upload Gitleaks Report
         if: always()
