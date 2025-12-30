@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: Development
     env:
+      # Force Docker (GitHub runners have podman but not podman-compose)
+      CONTAINER_CMD: docker
       # Required secrets from GitHub
       TEST_DB_MYSQL_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
       TEST_DB_ROOT_PASSWORD: ${{ secrets.TEST_DB_ROOT_PASSWORD }}
