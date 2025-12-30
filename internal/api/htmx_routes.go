@@ -3044,7 +3044,7 @@ func handleTicketDetail(c *gin.Context) {
 		}
 	}
 	if tktErr != nil {
-		if tktErr == sql.ErrNoRows {
+		if tktErr == sql.ErrNoRows || strings.Contains(tktErr.Error(), "not found") {
 			sendErrorResponse(c, http.StatusNotFound, "Ticket not found")
 		} else {
 			sendErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve ticket")
@@ -3171,7 +3171,11 @@ func handleTicketDetail(c *gin.Context) {
 		Name   string
 		TypeID int
 	}
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT name, type_id FROM ticket_state WHERE id = $1"), ticket.TicketStateID).Scan(&stateRow.Name, &stateRow.TypeID)
+	err = db.QueryRow(database.ConvertPlaceholders(`
+		SELECT ts.name, ts.type_id
+		FROM ticket_state ts
+		WHERE ts.id = $1
+	`), ticket.TicketStateID).Scan(&stateRow.Name, &stateRow.TypeID)
 	if err == nil {
 		stateName = stateRow.Name
 		stateTypeID = stateRow.TypeID
@@ -3199,11 +3203,8 @@ func handleTicketDetail(c *gin.Context) {
 		}
 	}
 
-	// Check if ticket is closed
-	isClosed := false
-	if stateTypeID == 3 || strings.Contains(strings.ToLower(stateName), "closed") {
-		isClosed = true
-	}
+	// Check if ticket is closed (state type ID 3 = closed in ticket_state_type)
+	isClosed := stateTypeID == models.TicketStateClosed
 
 	// Get customer information
 	var customerName, customerEmail, customerPhone string
@@ -6811,7 +6812,7 @@ func handleAdminPriorities(c *gin.Context) {
 
 	// Get priorities from database
 	rows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT id, name, color, valid_id
+		SELECT id, name, valid_id
 		FROM ticket_priority
 		WHERE valid_id = 1
 		ORDER BY id
@@ -6826,9 +6827,8 @@ func handleAdminPriorities(c *gin.Context) {
 	for rows.Next() {
 		var id, validID int
 		var name string
-		var color sql.NullString
 
-		err := rows.Scan(&id, &name, &color, &validID)
+		err := rows.Scan(&id, &name, &validID)
 		if err != nil {
 			continue
 		}
@@ -6837,10 +6837,6 @@ func handleAdminPriorities(c *gin.Context) {
 			"id":       id,
 			"name":     name,
 			"valid_id": validID,
-		}
-
-		if color.Valid {
-			priority["color"] = color.String
 		}
 
 		priorities = append(priorities, priority)
@@ -6890,41 +6886,34 @@ func handleAdminLookups(c *gin.Context) {
 	}
 
 	// Get various lookup data
-	// Ticket States
+	// Ticket States (with type name from ticket_state_type table)
 	var ticketStates []gin.H
-	rows, err := db.Query("SELECT id, name, type_id, comments FROM ticket_state WHERE valid_id = 1 ORDER BY name")
+	stateRows, err := db.Query(`
+		SELECT ts.id, ts.name, ts.type_id, ts.comments, tst.name as type_name
+		FROM ticket_state ts
+		JOIN ticket_state_type tst ON ts.type_id = tst.id
+		WHERE ts.valid_id = 1
+		ORDER BY ts.name
+	`)
 	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
+		defer stateRows.Close()
+		for stateRows.Next() {
 			var id, typeID int
-			var name string
+			var name, typeName string
 			var comments sql.NullString
-			rows.Scan(&id, &name, &typeID, &comments)
+			if err := stateRows.Scan(&id, &name, &typeID, &comments, &typeName); err != nil {
+				continue
+			}
 
 			state := gin.H{
-				"ID":     id,
-				"Name":   name,
-				"TypeID": typeID,
+				"ID":       id,
+				"Name":     name,
+				"TypeID":   typeID,
+				"TypeName": typeName,
 			}
 			if comments.Valid {
 				state["Comments"] = comments.String
 			}
-
-			// Add type name for display
-			var typeName string
-			switch typeID {
-			case 1:
-				typeName = "New"
-			case 2:
-				typeName = "Open"
-			case 3:
-				typeName = "Pending"
-			case 4:
-				typeName = "Closed"
-			default:
-				typeName = "Unknown"
-			}
-			state["TypeName"] = typeName
 
 			ticketStates = append(ticketStates, state)
 		}
@@ -6932,21 +6921,19 @@ func handleAdminLookups(c *gin.Context) {
 
 	// Ticket Priorities
 	var priorities []gin.H
-	rows, err = db.Query("SELECT id, name, color FROM ticket_priority WHERE valid_id = 1 ORDER BY id")
+	priorityRows, err := db.Query("SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id")
 	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
+		defer priorityRows.Close()
+		for priorityRows.Next() {
 			var id int
 			var name string
-			var color sql.NullString
-			rows.Scan(&id, &name, &color)
+			if err := priorityRows.Scan(&id, &name); err != nil {
+				continue
+			}
 
 			priority := gin.H{
 				"ID":   id,
 				"Name": name,
-			}
-			if color.Valid {
-				priority["Color"] = color.String
 			}
 
 			priorities = append(priorities, priority)
@@ -6955,21 +6942,19 @@ func handleAdminLookups(c *gin.Context) {
 
 	// Ticket Types
 	var types []gin.H
-	rows, err = db.Query("SELECT id, name, comments FROM ticket_type WHERE valid_id = 1 ORDER BY name")
+	typeRows, err := db.Query("SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY name")
 	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
+		defer typeRows.Close()
+		for typeRows.Next() {
 			var id int
 			var name string
-			var comments sql.NullString
-			rows.Scan(&id, &name, &comments)
+			if err := typeRows.Scan(&id, &name); err != nil {
+				continue
+			}
 
 			ticketType := gin.H{
 				"ID":   id,
 				"Name": name,
-			}
-			if comments.Valid {
-				ticketType["Comments"] = comments.String
 			}
 
 			types = append(types, ticketType)
@@ -6978,31 +6963,31 @@ func handleAdminLookups(c *gin.Context) {
 
 	// Services
 	var services []gin.H
-	rows, err = db.Query("SELECT id, name FROM service WHERE valid_id = 1 ORDER BY name")
+	serviceRows, err := db.Query("SELECT id, name FROM service WHERE valid_id = 1 ORDER BY name")
 	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var service gin.H
+		defer serviceRows.Close()
+		for serviceRows.Next() {
 			var id int
 			var name string
-			rows.Scan(&id, &name)
-			service = gin.H{"id": id, "name": name}
-			services = append(services, service)
+			if err := serviceRows.Scan(&id, &name); err != nil {
+				continue
+			}
+			services = append(services, gin.H{"id": id, "name": name})
 		}
 	}
 
 	// SLAs
 	var slas []gin.H
-	rows, err = db.Query("SELECT id, name FROM sla WHERE valid_id = 1 ORDER BY name")
+	slaRows, err := db.Query("SELECT id, name FROM sla WHERE valid_id = 1 ORDER BY name")
 	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var sla gin.H
+		defer slaRows.Close()
+		for slaRows.Next() {
 			var id int
 			var name string
-			rows.Scan(&id, &name)
-			sla = gin.H{"id": id, "name": name}
-			slas = append(slas, sla)
+			if err := slaRows.Scan(&id, &name); err != nil {
+				continue
+			}
+			slas = append(slas, gin.H{"id": id, "name": name})
 		}
 	}
 

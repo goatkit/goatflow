@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
 
@@ -207,18 +208,35 @@ func handleUpdateTicketEnhanced(c *gin.Context) {
 		}
 	}
 
-	// Validate status
+	// Validate status against database state types
 	if updateReq.Status != "" {
-		validStatuses := []string{"new", "open", "pending", "closed"}
-		valid := false
-		for _, s := range validStatuses {
-			if updateReq.Status == s {
-				valid = true
-				break
-			}
+		db, dbErr := database.GetDB()
+		if dbErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
+			return
 		}
-		if !valid {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status. Must be one of: new, open, pending, closed"})
+
+		// Query valid state type names from database
+		var exists bool
+		err := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT EXISTS(
+				SELECT 1 FROM ticket_state_type WHERE LOWER(name) = LOWER($1)
+			)
+		`), updateReq.Status).Scan(&exists)
+		if err != nil || !exists {
+			// Get valid state types for error message
+			rows, _ := db.Query("SELECT DISTINCT name FROM ticket_state_type ORDER BY name")
+			var validTypes []string
+			if rows != nil {
+				defer rows.Close()
+				for rows.Next() {
+					var name string
+					if rows.Scan(&name) == nil {
+						validTypes = append(validTypes, name)
+					}
+				}
+			}
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid status. Must be one of: %s", strings.Join(validTypes, ", "))})
 			return
 		}
 	}

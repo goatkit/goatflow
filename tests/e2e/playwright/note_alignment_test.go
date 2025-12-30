@@ -22,7 +22,6 @@ type ticketIdentifiers struct {
 }
 
 func TestAgentNoteBlockquoteAlignment(t *testing.T) {
-	t.Skip("TODO: Update test to work with current ticket note implementation")
 	browser := helpers.NewBrowserHelper(t)
 	if browser.Config.AdminEmail == "" || browser.Config.AdminPassword == "" {
 		t.Skip("Admin credentials not configured")
@@ -38,13 +37,15 @@ func TestAgentNoteBlockquoteAlignment(t *testing.T) {
 
 	require.NoError(t, browser.NavigateTo("/ticket/"+ids.TicketNum))
 
-	noteForm := browser.Page.Locator("#noteForm")
+	// Use data-testid selector for note form
+	noteForm := browser.Page.Locator("[data-testid='note-form']")
 	require.NoError(t, noteForm.WaitFor())
 
-	noteInput := browser.Page.Locator("#note_content")
+	// Fallback to ID selector for rich text editor (tiptap)
+	noteInput := browser.Page.Locator("#noteEditor, [data-testid='note-editor']")
 	count, err := noteInput.Count()
 	require.NoError(t, err)
-	require.Greater(t, count, 0, "note content input missing")
+	require.Greater(t, count, 0, "note editor missing")
 
 	noteText := fmt.Sprintf("Alignment blockquote note %d", time.Now().UnixNano())
 	noteHTML := fmt.Sprintf("<blockquote>%s</blockquote>", noteText)
@@ -56,7 +57,9 @@ func TestAgentNoteBlockquoteAlignment(t *testing.T) {
 	pageHTML, err := browser.Page.Content()
 	require.NoError(t, err)
 	require.Contains(t, pageHTML, noteText)
-	noteContainer := browser.Page.Locator("div[id^='note-content-']").Filter(playwright.LocatorFilterOptions{HasText: noteText})
+
+	// Use data-testid selector for note content
+	noteContainer := browser.Page.Locator("[data-testid='note-content']").Filter(playwright.LocatorFilterOptions{HasText: noteText})
 	containerCount, err := noteContainer.Count()
 	require.NoError(t, err)
 	if containerCount == 0 {

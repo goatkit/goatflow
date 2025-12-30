@@ -354,7 +354,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                             {% set badge_classes = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200" %}
                             {% set badge_text = t("tickets.internal_only_badge")|default:"Internal only" %}
                         {% endif %}
-                        <li id="note-{{ note_anchor }}" class="note-entry">
+                        <li id="note-{{ note_anchor }}" class="note-entry" data-testid="note-entry">
                             <div class="relative pb-8">
                                 {% if not forloop.last %}
                                 <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-600" aria-hidden="true"></span>
@@ -392,11 +392,11 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                                                     {% endif %}
                                                 </div>
                                                 {% if note.has_html %}
-                                                <div id="note-content-{{ note_counter }}" class="prose prose-sm dark:prose-invert max-w-none break-words article-content" data-article-body>
+                                                <div id="note-content-{{ note_counter }}" class="prose prose-sm dark:prose-invert max-w-none break-words article-content" data-article-body data-testid="note-content">
                                                     {{ note.body|safe }}
                                                 </div>
                                                 {% else %}
-                                                <div id="note-content-{{ note_counter }}" class="article-plain article-content" data-article-body>{{- note.body|escape -}}</div>
+                                                <div id="note-content-{{ note_counter }}" class="article-plain article-content" data-article-body data-testid="note-content">{{- note.body|escape -}}</div></div>
                                                 {% endif %}
                                             </div>
                                         </div>
@@ -411,14 +411,15 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
             {% endif %}
 
             <!-- Add Note Form -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.add_note")|default:"Add Note" }}</h2>
-                <form id="noteForm" class="space-y-4" data-require-time="{% if RequireNoteTimeUnits %}true{% else %}false{% endif %}" data-pending-states="{% if PendingStateIDs %}{% for sid in PendingStateIDs %}{{ sid }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
+            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6" data-testid="add-note-section">
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4" data-testid="add-note-title">{{ t("tickets.add_note")|default:"Add Note" }}</h2>
+                <form id="noteForm" class="space-y-4" data-testid="note-form" data-require-time="{% if RequireNoteTimeUnits %}true{% else %}false{% endif %}" data-pending-states="{% if PendingStateIDs %}{% for sid in PendingStateIDs %}{{ sid }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
                     <div>
                         <label for="note_subject" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             {{ t("tickets.subject")|default:"Subject" }} <span class="text-xs font-normal text-gray-500 dark:text-gray-400">({{ t("tickets.optional")|default:"optional" }})</span>
                         </label>
                         <input type="text" id="note_subject" name="subject" value="{{ t("tickets.internal_note_default_subject")|default:"Note" }}"
+                               data-testid="note-subject-input" aria-label="Note subject"
                                class="mt-1 block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
                     </div>
                     <!-- Template Selection for Notes -->
@@ -426,6 +427,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                     <div>
                         <div class="flex items-center gap-2">
                             <input type="checkbox" id="note_visible_customer" name="is_visible_for_customer" value="1"
+                                   data-testid="note-visible-checkbox" aria-label="Make note visible to customer"
                                    class="h-4 w-4 rounded border-gray-300 text-gotrs-600 focus:ring-gotrs-500">
                             <label for="note_visible_customer" class="text-sm text-gray-700 dark:text-gray-300">{{ t("tickets.visible_for_customer")|default:"Visible to customer" }}</label>
                         </div>
@@ -443,6 +445,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                                 {{ t("tickets.next_state")|default:"Next State" }}
                             </label>
                             <select id="note_next_state" name="next_state_id"
+                                    data-testid="note-next-state" aria-label="Next ticket state"
                                     class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm">
                                 <option value="" selected>{{ t("tickets.keep_current_state")|default:"Keep current state" }} ({{ Ticket.status }})</option>
                                 {% for state in TicketStates %}

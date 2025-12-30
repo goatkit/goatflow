@@ -158,8 +158,8 @@ log "Running Playwright browser tests..."
 if make test-e2e-playwright-go \
     BASE_URL=http://backend-test:8080 \
     PLAYWRIGHT_NETWORK=gotrs-ce_gotrs-network \
-    DEMO_ADMIN_EMAIL=testuser \
-    DEMO_ADMIN_PASSWORD=admin > "$E2E_LOG" 2>&1; then
+    TEST_USERNAME="${TEST_USERNAME:-root@localhost}" \
+    TEST_PASSWORD="${TEST_PASSWORD}" > "$E2E_LOG" 2>&1; then
     
     # Parse results
     E2E_PASSED=$(grep -c "^--- PASS:" "$E2E_LOG" 2>/dev/null || true)

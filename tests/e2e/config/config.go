@@ -77,20 +77,18 @@ func GetConfig() *TestConfig {
 	log.Printf("[e2e-config] Resolved BaseURL=%s (RAW_BASE_URL=%s)", baseURL, os.Getenv("RAW_BASE_URL"))
 
 	adminEmail := firstNonEmpty(
+		os.Getenv("TEST_USERNAME"),
 		os.Getenv("DEMO_ADMIN_EMAIL"),
 		os.Getenv("ADMIN_USER"),
-		os.Getenv("TEST_USERNAME"),
 		"root@localhost",
 	)
 	adminPassword := firstNonEmpty(
+		os.Getenv("TEST_PASSWORD"),
 		os.Getenv("DEMO_ADMIN_PASSWORD"),
 		os.Getenv("ADMIN_PASSWORD"),
-		os.Getenv("TEST_PASSWORD"),
-		os.Getenv("TEST_MYSQL_ADMIN_PASSWORD"),
-		os.Getenv("TEST_PG_ADMIN_PASSWORD"),
 	)
 	if adminPassword == "" {
-		log.Fatal("[e2e-config] ERROR: DEMO_ADMIN_PASSWORD must be set in .env")
+		log.Fatal("[e2e-config] ERROR: TEST_PASSWORD (or DEMO_ADMIN_PASSWORD) must be set in .env")
 	}
 
 	headless := os.Getenv("HEADLESS") != "false"

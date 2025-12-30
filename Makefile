@@ -2140,6 +2140,8 @@ test-e2e-playwright-go:
 		$$( [ -n "$(PLAYWRIGHT_NETWORK)" ] && printf -- "--network $(PLAYWRIGHT_NETWORK)" || printf -- "--network host" ) \
 		-e BASE_URL=$(BASE_URL) \
 		-e RAW_BASE_URL=$(BASE_URL) \
+		-e TEST_USERNAME=$(TEST_USERNAME) \
+		-e TEST_PASSWORD=$(TEST_PASSWORD) \
 		-e DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
 		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
 		-e PLAYWRIGHT_BROWSERS_PATH=/workspace/.cache/ms-playwright \
@@ -2163,6 +2165,8 @@ test-e2e-go:
 		--network host \
 		-e BASE_URL=$(BASE_URL) \
 		-e RAW_BASE_URL=$(BASE_URL) \
+		-e TEST_USERNAME=$(TEST_USERNAME) \
+		-e TEST_PASSWORD=$(TEST_PASSWORD) \
 		-e DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
 		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
 		-e PLAYWRIGHT_BROWSERS_PATH=/workspace/.cache/ms-playwright \

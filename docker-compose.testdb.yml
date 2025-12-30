@@ -40,6 +40,8 @@ services:
       MARIADB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD}
       MARIADB_ROOT_PASSWORD: ${TEST_DB_ROOT_PASSWORD}
       MARIADB_HOST: localhost
+      TEST_USERNAME: ${TEST_USERNAME:-root@localhost}
+      TEST_PASSWORD: ${TEST_PASSWORD}
     expose:
       - "3306"
     ports:
@@ -50,6 +52,7 @@ services:
       - ./docker/mariadb/testdb/10-apply-migrations.sh:/docker-entrypoint-initdb.d/10-apply-migrations.sh:ro,Z
       - ./migrations/mysql:/docker-entrypoint-initdb.d/migrations:ro,Z
       - ./schema/seed/test_integration_mysql.sql:/docker-entrypoint-initdb.d/50-test-integration.sql:ro,Z
+      - ./docker/mariadb/testdb/60-set-admin-password.sh:/docker-entrypoint-initdb.d/60-set-admin-password.sh:ro,Z
     healthcheck:
       test: ["CMD-SHELL", "mariadb-admin --ssl=0 ping -h 127.0.0.1 -u ${TEST_DB_MYSQL_USER} -p${TEST_DB_MYSQL_PASSWORD}" ]
       interval: 5s
