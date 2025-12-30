@@ -19,6 +19,8 @@ jobs:
     env:
       # Force Docker (GitHub runners have podman but not podman-compose)
       CONTAINER_CMD: docker
+      # Use Docker volumes for caching (CI environment)
+      CACHE_USE_VOLUMES: "1"
       # Required secrets from GitHub
       TEST_DB_MYSQL_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
       TEST_DB_ROOT_PASSWORD: ${{ secrets.TEST_DB_ROOT_PASSWORD }}
@@ -45,15 +47,23 @@ jobs:
           chmod 777 .cache tmp generated generated/api-map
           
           # Pre-create Docker volumes and initialize with correct ownership
-          # The volumes need to be initialized with uid 1000 (appuser in container)
+          # Note: There are TWO naming schemes used:
+          #   - gotrs-ce_* (compose-prefixed) for docker compose services  
+          #   - gotrs_* (non-prefixed) for standalone docker run commands in Makefile
+          
+          # Compose volumes (prefixed with project name)
           docker volume create gotrs-ce_gotrs_cache
           docker volume create gotrs-ce_gotrs_runtime  
           docker volume create gotrs-ce_gotrs_node_modules
           
-          # Initialize volumes with correct permissions using a helper container
-          docker run --rm -v gotrs-ce_gotrs_cache:/vol alpine:3.19 sh -c "chown -R 1000:1000 /vol && chmod 775 /vol"
+          # Standalone volumes (used by MOD_CACHE_MOUNT in Makefile)
+          docker volume create gotrs_cache
+          
+          # Initialize all volumes with correct permissions using helper containers
+          docker run --rm -v gotrs-ce_gotrs_cache:/vol alpine:3.19 sh -c "mkdir -p /vol/go-build /vol/go-mod /vol/xdg /vol/npm /vol/golangci-lint && chown -R 1000:1000 /vol && chmod -R 775 /vol"
           docker run --rm -v gotrs-ce_gotrs_runtime:/vol alpine:3.19 sh -c "chown -R 1000:1000 /vol && chmod 775 /vol"
           docker run --rm -v gotrs-ce_gotrs_node_modules:/vol alpine:3.19 sh -c "chown -R 1000:1000 /vol && chmod 775 /vol"
+          docker run --rm -v gotrs_cache:/vol alpine:3.19 sh -c "mkdir -p /vol/go-build /vol/go-mod /vol/xdg /vol/npm /vol/golangci-lint /vol/ms-playwright && chown -R 1000:1000 /vol && chmod -R 775 /vol"
 
       - name: Run containerized tests
         run: make test
