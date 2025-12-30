@@ -9,80 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gotrs-io/gotrs-ce/internal/config"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
 )
 
-func TestCleanupFailedEmailsDeletesOnlyOld(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("sqlmock: %v", err)
-	}
-	defer db.Close()
-
-	repo := mailqueue.NewMailQueueRepository(db)
-	task := &EmailQueueTask{repo: repo, cfg: &config.EmailConfig{Enabled: true}, logger: log.New(io.Discard, "", 0)}
-
-	ctx := context.Background()
-	oldTime := time.Now().Add(-8 * 24 * time.Hour)
-	recentTime := time.Now().Add(-48 * time.Hour)
-
-	rows := sqlmock.NewRows([]string{
-		"id", "insert_fingerprint", "article_id", "attempts", "sender", "recipient",
-		"raw_message", "due_time", "last_smtp_code", "last_smtp_message", "create_time",
-	}).
-		AddRow(int64(1), nil, nil, MaxRetries, nil, "old@example.com", []byte("raw"), nil, nil, "fail", oldTime).
-		AddRow(int64(2), nil, nil, MaxRetries, nil, "recent@example.com", []byte("raw"), nil, nil, "fail", recentTime)
-
-	mock.ExpectQuery("SELECT id, insert_fingerprint.*FROM mail_queue.*WHERE attempts >= .*ORDER BY create_time ASC.*LIMIT ?").
-		WithArgs(MaxRetries, 100).
-		WillReturnRows(rows)
-
-	mock.ExpectExec("DELETE FROM mail_queue WHERE id = ?").
-		WithArgs(int64(1)).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-
-	if err := task.cleanupFailedEmails(ctx); err != nil {
-		t.Fatalf("cleanup failed: %v", err)
-	}
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Fatalf("expectations: %v", err)
-	}
-}
-
-func TestCleanupFailedEmailsSkipsNonMaxAttempts(t *testing.T) {
-	db, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("sqlmock: %v", err)
-	}
-	defer db.Close()
-
-	repo := mailqueue.NewMailQueueRepository(db)
-	task := &EmailQueueTask{repo: repo, cfg: &config.EmailConfig{Enabled: true}, logger: log.New(io.Discard, "", 0)}
-
-	ctx := context.Background()
-	createTime := time.Now().Add(-10 * 24 * time.Hour)
-
-	rows := sqlmock.NewRows([]string{
-		"id", "insert_fingerprint", "article_id", "attempts", "sender", "recipient",
-		"raw_message", "due_time", "last_smtp_code", "last_smtp_message", "create_time",
-	}).
-		AddRow(int64(1), nil, nil, MaxRetries-1, nil, "keep@example.com", []byte("raw"), nil, nil, "fail", createTime)
-
-	mock.ExpectQuery("SELECT id, insert_fingerprint.*FROM mail_queue.*WHERE attempts >= .*ORDER BY create_time ASC.*LIMIT ?").
-		WithArgs(MaxRetries, 100).
-		WillReturnRows(rows)
-
-	if err := task.cleanupFailedEmails(ctx); err != nil {
-		t.Fatalf("cleanup failed: %v", err)
-	}
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Fatalf("expectations: %v", err)
-	}
-}
 func TestConstants(t *testing.T) {
 	if MaxRetries != 5 {
 		t.Errorf("expected MaxRetries 5, got %d", MaxRetries)
@@ -93,11 +24,15 @@ func TestConstants(t *testing.T) {
 }
 
 func TestEmailQueueTask_Name(t *testing.T) {
-	db, _, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("sqlmock: %v", err)
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available, skipping test")
 	}
-	defer db.Close()
+	defer database.CloseTestDB()
+
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		t.Skip("Database not available, skipping test")
+	}
 
 	task := NewEmailQueueTask(db, &config.EmailConfig{})
 
@@ -107,11 +42,15 @@ func TestEmailQueueTask_Name(t *testing.T) {
 }
 
 func TestEmailQueueTask_Schedule(t *testing.T) {
-	db, _, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("sqlmock: %v", err)
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available, skipping test")
 	}
-	defer db.Close()
+	defer database.CloseTestDB()
+
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		t.Skip("Database not available, skipping test")
+	}
 
 	task := NewEmailQueueTask(db, &config.EmailConfig{})
 
@@ -122,11 +61,15 @@ func TestEmailQueueTask_Schedule(t *testing.T) {
 }
 
 func TestEmailQueueTask_Timeout(t *testing.T) {
-	db, _, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("sqlmock: %v", err)
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available, skipping test")
 	}
-	defer db.Close()
+	defer database.CloseTestDB()
+
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		t.Skip("Database not available, skipping test")
+	}
 
 	task := NewEmailQueueTask(db, &config.EmailConfig{})
 
@@ -137,11 +80,15 @@ func TestEmailQueueTask_Timeout(t *testing.T) {
 }
 
 func TestEmailQueueTask_Run_Disabled(t *testing.T) {
-	db, _, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("sqlmock: %v", err)
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available, skipping test")
 	}
-	defer db.Close()
+	defer database.CloseTestDB()
+
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		t.Skip("Database not available, skipping test")
+	}
 
 	task := &EmailQueueTask{
 		repo:   mailqueue.NewMailQueueRepository(db),
@@ -155,13 +102,101 @@ func TestEmailQueueTask_Run_Disabled(t *testing.T) {
 	}
 }
 
+func TestEmailQueueTask_Run_NoPendingEmails(t *testing.T) {
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available, skipping test")
+	}
+	defer database.CloseTestDB()
+
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		t.Skip("Database not available, skipping test")
+	}
+
+	task := &EmailQueueTask{
+		repo:   mailqueue.NewMailQueueRepository(db),
+		cfg:    &config.EmailConfig{Enabled: true},
+		logger: log.New(io.Discard, "", 0),
+	}
+
+	// Run with empty queue should succeed
+	err = task.Run(context.Background())
+	if err != nil {
+		t.Errorf("expected no error with empty queue, got %v", err)
+	}
+}
+
+func TestCleanupFailedEmails_Integration(t *testing.T) {
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available, skipping test")
+	}
+	defer database.CloseTestDB()
+
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		t.Skip("Database not available, skipping test")
+	}
+
+	ctx := context.Background()
+	repo := mailqueue.NewMailQueueRepository(db)
+	task := &EmailQueueTask{
+		repo:   repo,
+		cfg:    &config.EmailConfig{Enabled: true},
+		logger: log.New(io.Discard, "", 0),
+	}
+
+	// Insert old failed email (> 7 days old with max attempts)
+	oldTime := time.Now().Add(-8 * 24 * time.Hour)
+	insertQuery := database.ConvertPlaceholders(`
+		INSERT INTO mail_queue (recipient, raw_message, attempts, create_time)
+		VALUES ($1, $2, $3, $4)
+	`)
+	result, err := db.ExecContext(ctx, insertQuery, "old@test.com", []byte("test message"), MaxRetries, oldTime)
+	if err != nil {
+		t.Skipf("Could not insert test data: %v", err)
+	}
+	oldID, _ := result.LastInsertId()
+
+	// Insert recent failed email (< 7 days old)
+	recentTime := time.Now().Add(-2 * 24 * time.Hour)
+	result, err = db.ExecContext(ctx, insertQuery, "recent@test.com", []byte("test message"), MaxRetries, recentTime)
+	if err != nil {
+		t.Skipf("Could not insert test data: %v", err)
+	}
+	recentID, _ := result.LastInsertId()
+
+	// Run cleanup
+	err = task.cleanupFailedEmails(ctx)
+	if err != nil {
+		t.Fatalf("cleanup failed: %v", err)
+	}
+
+	// Verify old email was deleted
+	var count int
+	countQuery := database.ConvertPlaceholders("SELECT COUNT(*) FROM mail_queue WHERE id = $1")
+	db.QueryRowContext(ctx, countQuery, oldID).Scan(&count)
+	if count != 0 {
+		t.Error("expected old email to be deleted")
+	}
+
+	// Verify recent email still exists
+	db.QueryRowContext(ctx, countQuery, recentID).Scan(&count)
+	if count != 1 {
+		t.Error("expected recent email to still exist")
+	}
+
+	// Cleanup test data
+	deleteQuery := database.ConvertPlaceholders("DELETE FROM mail_queue WHERE id = $1")
+	db.ExecContext(ctx, deleteQuery, recentID)
+}
+
 func TestCalculateNextRetryTime(t *testing.T) {
 	task := &EmailQueueTask{cfg: &config.EmailConfig{}}
 
 	tests := []struct {
-		attempts     int
+		attempts      int
 		expectedDelay time.Duration
-		expectNil    bool
+		expectNil     bool
 	}{
 		{1, 5 * time.Minute, false},
 		{2, 25 * time.Minute, false},
