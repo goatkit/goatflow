@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write  # Required for Codecov OIDC
 
 jobs:
   test:
@@ -80,6 +81,7 @@ jobs:
           flags: unittests
           fail_ci_if_error: false
           verbose: true
+          use_oidc: true
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
