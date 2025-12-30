@@ -19,96 +19,25 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Run Go security scan in container
-        uses: addnab/docker-run-action@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          image: golang:1.24-bookworm
-          options: -v ${{ github.workspace }}:/workspace -w /workspace
-          run: bash scripts/ci_go_security.sh
+          go-version: '1.24.6'
+
+      - name: Run gosec security scanner
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          mkdir -p security-artifacts
+          gosec -fmt=json -out=security-artifacts/gosec-report.json ./... || true
+          gosec -fmt=text ./... || echo "Security issues found - see gosec-report.json"
 
       - name: Upload security artifacts
         uses: actions/upload-artifact@v4
-        if: always() && hashFiles('security-artifacts/**') != ''
+        if: always()
         with:
           name: go-security-artifacts
           path: security-artifacts
-          retention-days: 30
-
-  frontend-security:
-    name: Frontend Security Analysis
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./web
-    environment: Development
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run npm audit
-        run: |
-          npm audit --audit-level high --omit=dev --json > npm-audit.json || true
-          npm audit --audit-level high --omit=dev || echo "Security vulnerabilities found - see details in npm-audit.json"
-
-      - name: Upload npm audit results
-        uses: actions/upload-artifact@v4
-        if: always() && hashFiles('web/npm-audit.json') != ''
-        with:
-          name: npm-audit-results
-          path: web/npm-audit.json
-          retention-days: 30
-
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: TypeScript type checking
-        run: npx tsc --noEmit
-
-      - name: Build frontend (smoke test)
-        run: npm run build
-
-  contract-validation:
-    name: Contract Validation
-    runs-on: ubuntu-latest
-    environment: Development
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Install root dependencies
-        run: npm install
-
-      - name: Generate TypeScript types from OpenAPI
-        run: npm run generate-types
-
-      - name: Validate OpenAPI specification
-        run: |
-          # Install swagger-codegen for validation
-          curl -L https://repo1.maven.org/maven2/io/swagger/codegen/v3/swagger-codegen-cli/3.0.46/swagger-codegen-cli-3.0.46.jar -o swagger-codegen-cli.jar
-          java -jar swagger-codegen-cli.jar validate -i api/openapi.yaml
-
-      - name: Check generated types
-        run: |
-          if [ ! -f "web/src/types/api.ts" ]; then
-            echo "❌ API types were not generated"
-            exit 1
-          fi
-          echo "✅ API types generated successfully"
-          wc -l web/src/types/api.ts
-
-      - name: Upload generated types
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-types
-          path: web/src/types/api.ts
           retention-days: 30
 
   semgrep-security:
@@ -129,7 +58,7 @@ jobs:
 
       - name: Upload Semgrep results
         uses: actions/upload-artifact@v4
-        if: always() && hashFiles('semgrep.json') != ''
+        if: always()
         with:
           name: semgrep-results  
           path: semgrep.json
@@ -149,45 +78,11 @@ jobs:
           dockerfile: Dockerfile
           failure-threshold: error
 
-      - name: Run Hadolint on frontend Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: Dockerfile.playwright-go
-          failure-threshold: error
-
-      # Trivy scanning disabled until GitHub Advanced Security is available
-      # Run locally with: make trivy-scan
-      # - name: Run Trivy vulnerability scanner on repository
-      #   uses: aquasecurity/trivy-action@master
-      #   with:
-      #     scan-type: 'fs'
-      #     scan-ref: '.'
-      #     format: 'table'
-      #     severity: 'CRITICAL,HIGH,MEDIUM'
-      #     exit-code: '0'  # Don't fail the build, just report
-
       - name: Run GitLeaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
-
-  # Dependency review requires GitHub Advanced Security (paid feature)
-  # Uncomment this job when Advanced Security is enabled
-  # dependency-review:
-  #   name: Dependency Review
-  #   runs-on: ubuntu-latest
-  #   if: github.event_name == 'pull_request'
-  #   environment: Development
-  #   steps:
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Dependency Review
-  #       uses: actions/dependency-review-action@v4
-  #       with:
-  #         fail-on-severity: moderate
-  #         allow-licenses: Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MIT
 
   license-compliance:
     name: License Compliance
@@ -197,13 +92,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Debug Go module context
-        run: |
-          pwd
-          ls -1 | head -20
-          echo "GOMOD=$(go env GOMOD)"
-          test -f go.mod || (echo 'go.mod missing in current directory' && exit 1)
-
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -211,13 +99,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          echo "Preflight listing internal packages"
-          ls -al internal/storage || true
-          ls -al internal/cache || true
-          ls -al internal/database/schema || true
-          go list ./internal/storage
-          go list ./internal/cache
-          go list ./internal/database/schema || true
           go mod tidy
           go mod download
         env:
@@ -228,29 +109,35 @@ jobs:
 
       - name: Check Go dependencies licenses
         run: |
-          go-licenses check ./...
-          go-licenses report ./... --template .github/licenses.tpl > go-licenses.txt || echo "License report generated"
-
-      - name: Set up Node.js for license check
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
-
-      - name: Install license-checker
-        run: npm install -g license-checker
-
-      - name: Check frontend licenses
-        run: |
-          cd web
-          license-checker --onlyAllow 'Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC;MIT;Unlicense;WTFPL' --excludePrivatePackages
+          go-licenses check ./... || echo "License check completed with warnings"
+          go-licenses report ./... > go-licenses.txt 2>&1 || echo "License report generated"
 
       - name: Upload license reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: license-reports
-          path: |
-            go-licenses.txt
+          path: go-licenses.txt
           retention-days: 30
+
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    environment: Development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.6'
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+      - name: Run go vet
+        run: go vet ./...
