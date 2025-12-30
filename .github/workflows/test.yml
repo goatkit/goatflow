@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   go-tests:
@@ -353,10 +354,167 @@ jobs:
           wait $SERVER_PID 2>/dev/null || true
           echo "Basic integration tests passed ✓"
 
+  e2e-tests:
+    name: E2E Playwright Tests
+    runs-on: ubuntu-latest
+    needs: [go-tests]
+    environment: Development
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.TEST_DB_ROOT_PASSWORD }}
+          MYSQL_DATABASE: otrs_test
+          MYSQL_USER: otrs
+          MYSQL_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      valkey:
+        image: valkey/valkey:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Install MySQL client tools
+        run: sudo apt-get update && sudo apt-get install -y mysql-client
+
+      - name: Set up test database
+        env:
+          MYSQL_PWD: ${{ secrets.TEST_DB_ROOT_PASSWORD }}
+        run: |
+          # Wait for MariaDB to be ready
+          until mysql -h 127.0.0.1 -P 3306 -u root -e "SELECT 1" > /dev/null 2>&1; do
+            echo "Waiting for MariaDB..."
+            sleep 2
+          done
+          
+          # Run all migrations with FK checks disabled
+          mysql -h 127.0.0.1 -P 3306 -u root otrs_test <<'EOF'
+          SET FOREIGN_KEY_CHECKS=0;
+          SOURCE migrations/mysql/000001_schema_alignment.up.sql;
+          SOURCE migrations/mysql/000002_minimal_data.up.sql;
+          SOURCE migrations/mysql/000003_customer_portal_sysconfig.up.sql;
+          SET FOREIGN_KEY_CHECKS=1;
+          EOF
+          
+          # Set the test admin password (SHA256 hash of TEST_PASSWORD)
+          TEST_PASSWORD_HASH=$(echo -n "${{ secrets.TEST_PASSWORD }}" | sha256sum | cut -d' ' -f1)
+          mysql -h 127.0.0.1 -P 3306 -u root otrs_test -e "UPDATE users SET pw='${TEST_PASSWORD_HASH}', valid_id=1 WHERE login='root@localhost';"
+          
+          # Add test templates for E2E tests
+          mysql -h 127.0.0.1 -P 3306 -u root otrs_test <<'EOF'
+          INSERT INTO standard_template (name, text, content_type, template_type, valid_id, create_time, create_by, change_time, change_by)
+          VALUES 
+            ('Test Template', 'Test template content', 'text/plain', 'Answer', 1, NOW(), 1, NOW(), 1),
+            ('Test Answer Template', 'Answer template content', 'text/plain', 'Answer', 1, NOW(), 1, NOW(), 1),
+            ('Test Note Template', 'Note template content', 'text/plain', 'Note', 1, NOW(), 1, NOW(), 1);
+          EOF
+
+      - name: Generate secure test configuration
+        run: go run cmd/gotrs/main.go synthesize
+
+      - name: Build and start backend
+        env:
+          DB_DRIVER: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: otrs_test
+          DB_USER: otrs
+          DB_PASSWORD: ${{ secrets.TEST_DB_MYSQL_PASSWORD }}
+          VALKEY_HOST: 127.0.0.1
+          VALKEY_PORT: 6379
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          APP_ENV: test
+        run: |
+          # Build the backend
+          go build -o gotrs-backend ./cmd/gotrs
+          
+          # Start the backend in background
+          ./gotrs-backend &
+          BACKEND_PID=$!
+          echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
+          
+          # Wait for backend to be ready
+          echo "Waiting for backend to be ready..."
+          MAX_ATTEMPTS=60
+          ATTEMPT=0
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+              echo "Backend is ready after $((ATTEMPT + 1)) attempts"
+              break
+            fi
+            if [ $ATTEMPT -eq $((MAX_ATTEMPTS - 1)) ]; then
+              echo "Backend failed to start within 60 seconds"
+              kill $BACKEND_PID 2>/dev/null || true
+              exit 1
+            fi
+            echo -n "."
+            sleep 1
+            ATTEMPT=$((ATTEMPT + 1))
+          done
+          echo ""
+
+      - name: Build Playwright test container
+        run: docker build -f Dockerfile.playwright-go -t gotrs-playwright-go:latest .
+
+      - name: Run E2E tests
+        env:
+          TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+        run: |
+          docker run --rm \
+            --network host \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            -e BASE_URL=http://localhost:8080 \
+            -e RAW_BASE_URL=http://localhost:8080 \
+            -e TEST_USERNAME="${TEST_USERNAME:-root@localhost}" \
+            -e TEST_PASSWORD="${TEST_PASSWORD}" \
+            -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+            gotrs-playwright-go:latest \
+            bash -lc "go test -tags e2e -v ./tests/e2e/playwright"
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -n "$BACKEND_PID" ]; then
+            kill $BACKEND_PID 2>/dev/null || true
+          fi
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-test-artifacts
+          path: |
+            tests/e2e/playwright/screenshots/
+            tests/e2e/playwright/videos/
+          retention-days: 7
+
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [go-tests, frontend-tests]
+    needs: [go-tests, frontend-tests, e2e-tests]
     if: always()
     environment: Development
     steps:
@@ -367,10 +525,62 @@ jobs:
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Go Tests | ${{ needs.go-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Frontend Tests | ${{ needs.frontend-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result == 'success' && '✅ Passed' || (needs.e2e-tests.result == 'skipped' && '⏭️ Skipped' || '❌ Failed') }} |" >> $GITHUB_STEP_SUMMARY
           
-          if [[ "${{ needs.go-tests.result }}" != "success" || "${{ needs.frontend-tests.result }}" != "success" ]]; then
+          if [[ "${{ needs.go-tests.result }}" != "success" || "${{ needs.frontend-tests.result }}" != "success" || "${{ needs.e2e-tests.result }}" == "failure" ]]; then
             echo "❌ Some tests failed"
             exit 1
           else
             echo "✅ All tests passed"
           fi
+
+  docker-build-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [go-tests, frontend-tests, e2e-tests]
+    if: success() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    environment: Development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: Image digest
+        run: |
+          echo "## Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
