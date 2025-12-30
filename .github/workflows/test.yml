@@ -159,9 +159,6 @@ jobs:
     name: Frontend Tests
     runs-on: ubuntu-latest
     environment: Development
-    defaults:
-      run:
-        working-directory: ./web
 
     steps:
       - name: Checkout code
@@ -172,7 +169,7 @@ jobs:
         with:
           node-version: '18'
           cache: 'npm'
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -199,7 +196,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
-          path: web/dist/
+          path: dist/
           retention-days: 7
 
   integration-tests:
