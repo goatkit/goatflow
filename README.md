@@ -136,7 +136,7 @@ Rationale: the lightweight Alpine toolbox keeps feedback fast; heavyweight Chrom
 GOTRS uses a modern, hypermedia-driven architecture that scales from single-server deployments to large enterprise clusters:
 
 - **Core Services**: Authentication, Tickets, Users, Notifications, Workflow Engine
-- **Data Layer**: PostgreSQL (primary), Valkey (cache), Zinc (search), S3-compatible storage (attachments)
+- **Data Layer**: MariaDB/MySQL (default) or PostgreSQL, Valkey (cache), Zinc (search), S3-compatible storage (attachments)
 - **API**: RESTful JSON APIs with HTMX hypermedia endpoints
 - **Frontend**: HTMX + Alpine.js for progressive enhancement with Tailwind CSS
 - **Workflow Engine**: Temporal for complex business processes and automation
@@ -198,7 +198,7 @@ GOTRS maintains high code quality and security standards through comprehensive a
 - **Unit Tests**: Go backend with race detection, HTMX frontend
 - **Integration Tests**: End-to-end API testing with test database
 - **Coverage**: Automated coverage reporting via Codecov
-- **Database**: Full PostgreSQL schema validation
+- **Database**: Full schema validation (MariaDB/PostgreSQL)
 
 ### 🚀 Build Pipeline
 - **Multi-arch**: AMD64 and ARM64 container builds
@@ -221,14 +221,14 @@ GOTRS maintains high code quality and security standards through comprehensive a
 - 2 CPU cores
 - 4 GB RAM
 - 20 GB storage
-- PostgreSQL 14+
+- MariaDB 11+ or PostgreSQL 14+
 - Docker 20+ or Podman 3+
 
 **Recommended (Enterprise)**
 - 8+ CPU cores
 - 16+ GB RAM
 - 100+ GB SSD storage
-- PostgreSQL 14+ cluster
+- MariaDB 11+ or PostgreSQL 14+ cluster
 - Kubernetes 1.24+
 
 ### Production Deployment
