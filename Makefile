@@ -29,8 +29,11 @@ routes-baseline-update:
 # GOTRS Makefile - Docker/Podman compatible development
 
 # Detect container runtime and compose command (single source of truth)
+# Allow override via environment (e.g., CI sets CONTAINER_CMD=docker)
 # First check for podman, then docker
+ifndef CONTAINER_CMD
 CONTAINER_CMD := $(shell command -v podman 2> /dev/null || command -v docker 2> /dev/null || echo docker)
+endif
 
 # Detect compose command - try multiple variants in order of preference
 # Priority based on detected container runtime
