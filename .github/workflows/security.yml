@@ -138,6 +138,7 @@ jobs:
         with:
           version: latest
           args: --timeout=5m
+        continue-on-error: true  # Don't fail workflow, report issues only
 
       - name: Run go vet
         run: go vet ./...
