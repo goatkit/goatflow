@@ -68,6 +68,19 @@ jobs:
       - name: Run containerized tests
         run: make test
 
+      - name: Generate coverage report
+        run: make test-coverage
+        continue-on-error: true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: always()
+        with:
+          files: ./generated/coverage.out
+          flags: unittests
+          fail_ci_if_error: false
+          verbose: true
+
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
         if: failure()
