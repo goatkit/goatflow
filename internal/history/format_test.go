@@ -26,11 +26,11 @@ func TestNormalizeHistoryName_NewTicket(t *testing.T) {
 func TestNormalizeHistoryName_EmailAgent(t *testing.T) {
 	entry := models.TicketHistoryEntry{
 		HistoryType: "EmailAgent",
-		Name:        "%%nigel@gibbsoft.com, , ",
+		Name:        "%%testuser1@gotrs.local, , ",
 	}
 
 	got := NormalizeHistoryName(entry)
-	expected := "Agent email sent to nigel@gibbsoft.com"
+	expected := "Agent email sent to testuser1@gotrs.local"
 	if got != expected {
 		t.Fatalf("expected %q, got %q", expected, got)
 	}
