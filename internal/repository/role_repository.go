@@ -2,10 +2,11 @@ package repository
 
 import (
 	"context"
+
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// RoleRepository defines the interface for role operations
+// RoleRepository defines the interface for role operations.
 type RoleRepository interface {
 	CreateRole(ctx context.Context, role *models.Role) error
 	GetRole(ctx context.Context, id string) (*models.Role, error)

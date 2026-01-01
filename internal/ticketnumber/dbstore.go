@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"time"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // We maintain exactly one row per counter_uid and atomically increment using dialect specific UPSERT:

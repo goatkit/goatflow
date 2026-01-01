@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// InternalNote represents an internal note/comment on a ticket
+// InternalNote represents an internal note/comment on a ticket.
 type InternalNote struct {
 	ID          uint       `json:"id"`
 	TicketID    uint       `json:"ticket_id" binding:"required"`
@@ -33,7 +33,7 @@ type InternalNote struct {
 	VisibleToUsers []uint   `json:"visible_to_users,omitempty"` // User-specific visibility
 }
 
-// NoteEdit represents an edit history entry
+// NoteEdit represents an edit history entry.
 type NoteEdit struct {
 	ID         uint      `json:"id"`
 	NoteID     uint      `json:"note_id"`
@@ -45,7 +45,7 @@ type NoteEdit struct {
 	EditReason string    `json:"edit_reason,omitempty"`
 }
 
-// NoteCategory represents categories for organizing notes
+// NoteCategory represents categories for organizing notes.
 type NoteCategory struct {
 	ID          uint   `json:"id"`
 	Name        string `json:"name"`
@@ -56,7 +56,7 @@ type NoteCategory struct {
 	Active      bool   `json:"active"`
 }
 
-// NoteFilter for searching/filtering notes
+// NoteFilter for searching/filtering notes.
 type NoteFilter struct {
 	TicketID      uint       `json:"ticket_id,omitempty"`
 	AuthorID      uint       `json:"author_id,omitempty"`
@@ -74,7 +74,7 @@ type NoteFilter struct {
 	SortOrder     string     `json:"sort_order,omitempty"` // asc, desc
 }
 
-// NoteStatistics represents statistics about notes
+// NoteStatistics represents statistics about notes.
 type NoteStatistics struct {
 	TotalNotes      int            `json:"total_notes"`
 	ImportantNotes  int            `json:"important_notes"`
@@ -85,7 +85,7 @@ type NoteStatistics struct {
 	LastNoteDate    *time.Time     `json:"last_note_date,omitempty"`
 }
 
-// NoteTemplate represents a template for quick note creation
+// NoteTemplate represents a template for quick note creation.
 type NoteTemplate struct {
 	ID          uint      `json:"id"`
 	Name        string    `json:"name" binding:"required"`
@@ -99,7 +99,7 @@ type NoteTemplate struct {
 	UsageCount  int       `json:"usage_count"`
 }
 
-// NoteMention represents a user mention in a note
+// NoteMention represents a user mention in a note.
 type NoteMention struct {
 	ID          uint       `json:"id"`
 	NoteID      uint       `json:"note_id"`
@@ -111,7 +111,7 @@ type NoteMention struct {
 	NotifiedAt  *time.Time `json:"notified_at,omitempty"`
 }
 
-// NoteActivity represents activity on internal notes
+// NoteActivity represents activity on internal notes.
 type NoteActivity struct {
 	ID           uint      `json:"id"`
 	NoteID       uint      `json:"note_id"`
@@ -123,7 +123,7 @@ type NoteActivity struct {
 	Timestamp    time.Time `json:"timestamp"`
 }
 
-// NoteExport represents exported note data
+// NoteExport represents exported note data.
 type NoteExport struct {
 	TicketNumber string         `json:"ticket_number"`
 	TicketTitle  string         `json:"ticket_title"`

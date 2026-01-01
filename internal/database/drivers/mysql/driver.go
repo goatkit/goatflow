@@ -1,3 +1,4 @@
+// Package mysql provides the MySQL database driver implementation.
 package mysql
 
 import (
@@ -7,20 +8,21 @@ import (
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// MySQLDriver implements the DatabaseDriver interface for MySQL/MariaDB
+// MySQLDriver implements the DatabaseDriver interface for MySQL/MariaDB.
 type MySQLDriver struct {
 	db *sql.DB
 }
 
-// NewMySQLDriver creates a new MySQL driver
+// NewMySQLDriver creates a new MySQL driver.
 func NewMySQLDriver() database.DatabaseDriver {
 	return &MySQLDriver{}
 }
 
-// Connect establishes a connection to MySQL
+// Connect establishes a connection to MySQL.
 func (d *MySQLDriver) Connect(ctx context.Context, dsn string) error {
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
@@ -36,7 +38,7 @@ func (d *MySQLDriver) Connect(ctx context.Context, dsn string) error {
 	return nil
 }
 
-// Close closes the database connection
+// Close closes the database connection.
 func (d *MySQLDriver) Close() error {
 	if d.db != nil {
 		return d.db.Close()
@@ -44,7 +46,7 @@ func (d *MySQLDriver) Close() error {
 	return nil
 }
 
-// Ping checks if the connection is alive
+// Ping checks if the connection is alive.
 func (d *MySQLDriver) Ping(ctx context.Context) error {
 	if d.db == nil {
 		return sql.ErrConnDone
@@ -52,7 +54,7 @@ func (d *MySQLDriver) Ping(ctx context.Context) error {
 	return d.db.PingContext(ctx)
 }
 
-// CreateTable generates and returns a CREATE TABLE query for MySQL
+// CreateTable generates and returns a CREATE TABLE query for MySQL.
 func (d *MySQLDriver) CreateTable(schema database.TableSchema) (database.Query, error) {
 	var parts []string
 
@@ -131,7 +133,7 @@ func (d *MySQLDriver) CreateTable(schema database.TableSchema) (database.Query, 
 	return database.Query{SQL: sql, Args: nil}, nil
 }
 
-// DropTable generates a DROP TABLE query
+// DropTable generates a DROP TABLE query.
 func (d *MySQLDriver) DropTable(tableName string) (database.Query, error) {
 	return database.Query{
 		SQL:  fmt.Sprintf("DROP TABLE IF EXISTS `%s`", tableName),
@@ -139,7 +141,7 @@ func (d *MySQLDriver) DropTable(tableName string) (database.Query, error) {
 	}, nil
 }
 
-// TableExists checks if a table exists
+// TableExists checks if a table exists.
 func (d *MySQLDriver) TableExists(tableName string) (bool, error) {
 	query := `
 		SELECT COUNT(*) > 0
@@ -152,7 +154,7 @@ func (d *MySQLDriver) TableExists(tableName string) (bool, error) {
 	return exists, err
 }
 
-// Insert generates an INSERT query (no RETURNING support in MySQL)
+// Insert generates an INSERT query (no RETURNING support in MySQL).
 func (d *MySQLDriver) Insert(table string, data map[string]interface{}) (database.Query, error) {
 	columns := make([]string, 0, len(data))
 	placeholders := make([]string, 0, len(data))
@@ -172,7 +174,7 @@ func (d *MySQLDriver) Insert(table string, data map[string]interface{}) (databas
 	return database.Query{SQL: sql, Args: values}, nil
 }
 
-// Update generates an UPDATE query
+// Update generates an UPDATE query.
 func (d *MySQLDriver) Update(table string, data map[string]interface{}, where string, whereArgs ...interface{}) (database.Query, error) {
 	setClauses := make([]string, 0, len(data))
 	values := make([]interface{}, 0, len(data)+len(whereArgs))
@@ -193,13 +195,13 @@ func (d *MySQLDriver) Update(table string, data map[string]interface{}, where st
 	return database.Query{SQL: sql, Args: values}, nil
 }
 
-// Delete generates a DELETE query
+// Delete generates a DELETE query.
 func (d *MySQLDriver) Delete(table string, where string, whereArgs ...interface{}) (database.Query, error) {
 	sql := fmt.Sprintf("DELETE FROM `%s` WHERE %s", table, where)
 	return database.Query{SQL: sql, Args: whereArgs}, nil
 }
 
-// Select generates a SELECT query
+// Select generates a SELECT query.
 func (d *MySQLDriver) Select(table string, columns []string, where string, whereArgs ...interface{}) (database.Query, error) {
 	cols := "*"
 	if len(columns) > 0 {
@@ -218,7 +220,7 @@ func (d *MySQLDriver) Select(table string, columns []string, where string, where
 	return database.Query{SQL: sql, Args: whereArgs}, nil
 }
 
-// MapType maps schema types to MySQL types
+// MapType maps schema types to MySQL types.
 func (d *MySQLDriver) MapType(schemaType string) string {
 	// Handle parameterized types
 	if strings.HasPrefix(strings.ToLower(schemaType), "varchar") {
@@ -261,22 +263,22 @@ func (d *MySQLDriver) MapType(schemaType string) string {
 	}
 }
 
-// SupportsReturning returns false for MySQL
+// SupportsReturning returns false for MySQL.
 func (d *MySQLDriver) SupportsReturning() bool {
 	return false
 }
 
-// SupportsLastInsertId returns true for MySQL
+// SupportsLastInsertId returns true for MySQL.
 func (d *MySQLDriver) SupportsLastInsertId() bool {
 	return true
 }
 
-// SupportsArrays returns false for MySQL
+// SupportsArrays returns false for MySQL.
 func (d *MySQLDriver) SupportsArrays() bool {
 	return false
 }
 
-// BeginTx starts a new transaction
+// BeginTx starts a new transaction.
 func (d *MySQLDriver) BeginTx(ctx context.Context) (database.Transaction, error) {
 	if d.db == nil {
 		return nil, sql.ErrConnDone
@@ -290,7 +292,7 @@ func (d *MySQLDriver) BeginTx(ctx context.Context) (database.Transaction, error)
 	return &mysqlTransaction{tx: tx}, nil
 }
 
-// Exec executes a query without returning rows
+// Exec executes a query without returning rows.
 func (d *MySQLDriver) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	if d.db == nil {
 		return nil, sql.ErrConnDone
@@ -298,7 +300,7 @@ func (d *MySQLDriver) Exec(ctx context.Context, query string, args ...interface{
 	return d.db.ExecContext(ctx, query, args...)
 }
 
-// Query executes a query that returns rows
+// Query executes a query that returns rows.
 func (d *MySQLDriver) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	if d.db == nil {
 		return nil, sql.ErrConnDone
@@ -306,7 +308,7 @@ func (d *MySQLDriver) Query(ctx context.Context, query string, args ...interface
 	return d.db.QueryContext(ctx, query, args...)
 }
 
-// QueryRow executes a query that returns at most one row
+// QueryRow executes a query that returns at most one row.
 func (d *MySQLDriver) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	if d.db == nil {
 		return nil
@@ -314,7 +316,7 @@ func (d *MySQLDriver) QueryRow(ctx context.Context, query string, args ...interf
 	return d.db.QueryRowContext(ctx, query, args...)
 }
 
-// mysqlTransaction wraps sql.Tx to implement Transaction interface
+// mysqlTransaction wraps sql.Tx to implement Transaction interface.
 type mysqlTransaction struct {
 	tx *sql.Tx
 }

@@ -57,7 +57,7 @@ func SetupTestTemplateRenderer(t *testing.T) {
 	}
 }
 
-// GetTestConfig returns test configuration from environment variables with safe defaults
+// GetTestConfig returns test configuration from environment variables with safe defaults.
 type TestConfig struct {
 	UserLogin     string
 	UserFirstName string
@@ -69,7 +69,7 @@ type TestConfig struct {
 	CompanyName   string
 }
 
-// GetTestConfig retrieves parameterized test configuration
+// GetTestConfig retrieves parameterized test configuration.
 func GetTestConfig() TestConfig {
 	config := TestConfig{
 		UserLogin:     getEnvOrDefault("TEST_USER_LOGIN", "testuser"),

@@ -3,22 +3,23 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// PriorityRepository handles database operations for ticket priorities
+// PriorityRepository handles database operations for ticket priorities.
 type PriorityRepository struct {
 	db *sql.DB
 }
 
-// NewPriorityRepository creates a new priority repository
+// NewPriorityRepository creates a new priority repository.
 func NewPriorityRepository(db *sql.DB) *PriorityRepository {
 	return &PriorityRepository{db: db}
 }
 
-// GetByID retrieves a priority by ID
+// GetByID retrieves a priority by ID.
 func (r *PriorityRepository) GetByID(id uint) (*models.TicketPriority, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
@@ -43,7 +44,7 @@ func (r *PriorityRepository) GetByID(id uint) (*models.TicketPriority, error) {
 	return &priority, err
 }
 
-// List retrieves all active priorities
+// List retrieves all active priorities.
 func (r *PriorityRepository) List() ([]*models.TicketPriority, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
@@ -78,7 +79,7 @@ func (r *PriorityRepository) List() ([]*models.TicketPriority, error) {
 	return priorities, nil
 }
 
-// GetByName retrieves a priority by name
+// GetByName retrieves a priority by name.
 func (r *PriorityRepository) GetByName(name string) (*models.TicketPriority, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by

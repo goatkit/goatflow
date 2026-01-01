@@ -19,7 +19,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
 )
 
-// TestTicketAPIIntegration tests ticket endpoints with actual database
+// TestTicketAPIIntegration tests ticket endpoints with actual database.
 func TestTicketAPIIntegration(t *testing.T) {
 	// Skip if not in integration test mode
 	if testing.Short() {

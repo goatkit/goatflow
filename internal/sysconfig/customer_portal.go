@@ -1,3 +1,4 @@
+// Package sysconfig provides system configuration management.
 package sysconfig
 
 import (
@@ -7,8 +8,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"gopkg.in/yaml.v3"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // CustomerPortalConfig holds global portal settings stored in sysconfig tables.

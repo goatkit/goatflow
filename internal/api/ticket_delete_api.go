@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleDeleteTicketAPI handles ticket deletion/archiving via API
-// In OTRS, tickets are never hard deleted, only archived
+// In OTRS, tickets are never hard deleted, only archived.
 func HandleDeleteTicketAPI(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {

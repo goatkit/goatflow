@@ -1,3 +1,4 @@
+// Package main provides route testing utilities.
 package main
 
 import (
@@ -15,7 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// RouteConfig matches our YAML route structure
+// RouteConfig matches our YAML route structure.
 type RouteConfig struct {
 	APIVersion string `yaml:"apiVersion"`
 	Kind       string `yaml:"kind"`
@@ -71,7 +72,7 @@ type AuthSpec struct {
 	Token    string `yaml:"token,omitempty"`
 }
 
-// TestRunner executes tests against YAML-defined routes
+// TestRunner executes tests against YAML-defined routes.
 type TestRunner struct {
 	baseURL   string
 	client    *http.Client
@@ -356,7 +357,7 @@ func (tr *TestRunner) runTestCase(routeGroup RouteConfig, route Route, testCase 
 		tr.recordResult(routeGroup, route, testCase, testURL, method, testCase.StatusCode, 0, time.Since(start), false, err.Error(), "")
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Read response
 	responseBody, err := io.ReadAll(resp.Body)

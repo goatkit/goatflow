@@ -9,17 +9,17 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// DBRoleRepository handles database operations for roles
+// DBRoleRepository handles database operations for roles.
 type DBRoleRepository struct {
 	db *sql.DB
 }
 
-// NewDBRoleRepository creates a new database role repository
+// NewDBRoleRepository creates a new database role repository.
 func NewDBRoleRepository(db *sql.DB) *DBRoleRepository {
 	return &DBRoleRepository{db: db}
 }
 
-// List returns all roles
+// List returns all roles.
 func (r *DBRoleRepository) List() ([]*models.DBRole, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
@@ -57,7 +57,7 @@ func (r *DBRoleRepository) List() ([]*models.DBRole, error) {
 	return roles, nil
 }
 
-// GetByID returns a role by ID
+// GetByID returns a role by ID.
 func (r *DBRoleRepository) GetByID(id int) (*models.DBRole, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
@@ -87,7 +87,7 @@ func (r *DBRoleRepository) GetByID(id int) (*models.DBRole, error) {
 	return role, nil
 }
 
-// GetByName returns a role by name
+// GetByName returns a role by name.
 func (r *DBRoleRepository) GetByName(name string) (*models.DBRole, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
@@ -117,7 +117,7 @@ func (r *DBRoleRepository) GetByName(name string) (*models.DBRole, error) {
 	return role, nil
 }
 
-// Create creates a new role
+// Create creates a new role.
 func (r *DBRoleRepository) Create(role *models.DBRole) error {
 	now := time.Now()
 	role.CreateTime = now
@@ -150,7 +150,7 @@ func (r *DBRoleRepository) Create(role *models.DBRole) error {
 	return nil
 }
 
-// Update updates an existing role
+// Update updates an existing role.
 func (r *DBRoleRepository) Update(role *models.DBRole) error {
 	role.ChangeTime = time.Now()
 
@@ -176,7 +176,7 @@ func (r *DBRoleRepository) Update(role *models.DBRole) error {
 	return nil
 }
 
-// Delete deletes a role by ID
+// Delete deletes a role by ID.
 func (r *DBRoleRepository) Delete(id int) error {
 	query := database.ConvertPlaceholders(`DELETE FROM roles WHERE id = $1`)
 
@@ -196,7 +196,7 @@ func (r *DBRoleRepository) Delete(id int) error {
 	return nil
 }
 
-// GetUserCount returns the number of users assigned to a role
+// GetUserCount returns the number of users assigned to a role.
 func (r *DBRoleRepository) GetUserCount(roleID int) (int, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM role_user WHERE role_id = $1
@@ -210,7 +210,7 @@ func (r *DBRoleRepository) GetUserCount(roleID int) (int, error) {
 	return count, nil
 }
 
-// GetGroupCount returns the number of groups assigned to a role
+// GetGroupCount returns the number of groups assigned to a role.
 func (r *DBRoleRepository) GetGroupCount(roleID int) (int, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT COUNT(DISTINCT group_id) FROM group_role WHERE role_id = $1
@@ -224,7 +224,7 @@ func (r *DBRoleRepository) GetGroupCount(roleID int) (int, error) {
 	return count, nil
 }
 
-// ListRoleUsers returns all users assigned to a role
+// ListRoleUsers returns all users assigned to a role.
 func (r *DBRoleRepository) ListRoleUsers(roleID int) ([]int, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT user_id FROM role_user WHERE role_id = $1
@@ -248,7 +248,7 @@ func (r *DBRoleRepository) ListRoleUsers(roleID int) ([]int, error) {
 	return userIDs, nil
 }
 
-// ListUserRoles returns all roles assigned to a user
+// ListUserRoles returns all roles assigned to a user.
 func (r *DBRoleRepository) ListUserRoles(userID int) ([]*models.DBRole, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT r.id, r.name, r.comments, r.valid_id, r.create_time, r.create_by, r.change_time, r.change_by
@@ -288,7 +288,7 @@ func (r *DBRoleRepository) ListUserRoles(userID int) ([]*models.DBRole, error) {
 	return roles, nil
 }
 
-// AddUserToRole adds a user to a role
+// AddUserToRole adds a user to a role.
 func (r *DBRoleRepository) AddUserToRole(userID, roleID, createdBy int) error {
 	now := time.Now()
 
@@ -315,7 +315,7 @@ func (r *DBRoleRepository) AddUserToRole(userID, roleID, createdBy int) error {
 	return nil
 }
 
-// RemoveUserFromRole removes a user from a role
+// RemoveUserFromRole removes a user from a role.
 func (r *DBRoleRepository) RemoveUserFromRole(userID, roleID int) error {
 	query := database.ConvertPlaceholders(`DELETE FROM role_user WHERE user_id = $1 AND role_id = $2`)
 
@@ -326,13 +326,13 @@ func (r *DBRoleRepository) RemoveUserFromRole(userID, roleID int) error {
 	return nil
 }
 
-// SetRoleUsers sets the users for a role (replaces all existing)
+// SetRoleUsers sets the users for a role (replaces all existing).
 func (r *DBRoleRepository) SetRoleUsers(roleID int, userIDs []int, changedBy int) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Delete existing users
 	deleteQuery := database.ConvertPlaceholders(`DELETE FROM role_user WHERE role_id = $1`)
@@ -363,13 +363,13 @@ func (r *DBRoleRepository) SetRoleUsers(roleID int, userIDs []int, changedBy int
 	return tx.Commit()
 }
 
-// SetUserRoles sets the roles for a user (replaces all existing)
+// SetUserRoles sets the roles for a user (replaces all existing).
 func (r *DBRoleRepository) SetUserRoles(userID int, roleIDs []int, changedBy int) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Delete existing roles
 	deleteQuery := database.ConvertPlaceholders(`DELETE FROM role_user WHERE user_id = $1`)
@@ -400,7 +400,7 @@ func (r *DBRoleRepository) SetUserRoles(userID int, roleIDs []int, changedBy int
 	return tx.Commit()
 }
 
-// Helper function to convert empty strings to NULL
+// Helper function to convert empty strings to NULL.
 func nullString(s string) sql.NullString {
 	if s == "" {
 		return sql.NullString{}

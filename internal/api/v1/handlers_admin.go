@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Admin handlers - basic stubs for now
+// Admin handlers - basic stubs for now.
 func (router *APIRouter) handleGetSystemInfo(c *gin.Context) {
 	// TODO: Implement actual system info
 	info := gin.H{
@@ -147,67 +147,6 @@ func (router *APIRouter) handleGetAuditLogs(c *gin.Context) {
 	c.JSON(http.StatusOK, APIResponse{
 		Success: true,
 		Data:    logs,
-	})
-}
-
-func (router *APIRouter) handleGetEmailTemplates(c *gin.Context) {
-	// TODO: Implement actual email template listing
-	templates := []gin.H{
-		{
-			"id":      1,
-			"name":    "ticket_created",
-			"subject": "Ticket Created: {ticket_number}",
-			"active":  true,
-		},
-		{
-			"id":      2,
-			"name":    "ticket_updated",
-			"subject": "Ticket Updated: {ticket_number}",
-			"active":  true,
-		},
-	}
-
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Data:    templates,
-	})
-}
-
-func (router *APIRouter) handleUpdateEmailTemplate(c *gin.Context) {
-	templateID := c.Param("id")
-
-	var req struct {
-		Subject string `json:"subject"`
-		Body    string `json:"body"`
-		Active  bool   `json:"active"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		sendError(c, http.StatusBadRequest, "Invalid request: "+err.Error())
-		return
-	}
-
-	// TODO: Implement actual template update
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Message: "Email template " + templateID + " updated successfully",
-	})
-}
-
-func (router *APIRouter) handleRunSystemMaintenance(c *gin.Context) {
-	var req struct {
-		Task string `json:"task" binding:"required"` // cleanup, optimize, reindex
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		sendError(c, http.StatusBadRequest, "Invalid request: "+err.Error())
-		return
-	}
-
-	// TODO: Implement actual maintenance tasks
-	c.JSON(http.StatusAccepted, APIResponse{
-		Success: true,
-		Message: "Maintenance task '" + req.Task + "' initiated",
 	})
 }
 

@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -12,13 +11,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// testDFName generates a unique alphanumeric-only test field name
-// OTRS requires field names to contain only [a-zA-Z0-9]
+// OTRS requires field names to contain only [a-zA-Z0-9].
 func testDFName(prefix string) string {
 	return fmt.Sprintf("%s%d", prefix, time.Now().UnixNano())
 }

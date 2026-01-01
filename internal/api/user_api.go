@@ -5,10 +5,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleUserMeAPI returns the current authenticated user's information
+// HandleUserMeAPI returns the current authenticated user's information.
 func HandleUserMeAPI(c *gin.Context) {
 	// Get user ID from context (set by auth middleware)
 	userIDValue, exists := c.Get("user_id")
@@ -100,7 +101,7 @@ func HandleUserMeAPI(c *gin.Context) {
 
 	rows, err := db.Query(groupQuery, userID)
 	if err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		var groups []gin.H
 		for rows.Next() {
 			var groupID int

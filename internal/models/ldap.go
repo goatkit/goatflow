@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// LDAPConfiguration represents LDAP configuration stored in database
+// LDAPConfiguration represents LDAP configuration stored in database.
 type LDAPConfiguration struct {
 	ID                   int        `json:"id" db:"id"`
 	Name                 string     `json:"name" db:"name"`
@@ -38,7 +38,7 @@ type LDAPConfiguration struct {
 	UpdatedBy            int        `json:"updated_by" db:"updated_by"`
 }
 
-// LDAPSyncHistory represents LDAP sync history
+// LDAPSyncHistory represents LDAP sync history.
 type LDAPSyncHistory struct {
 	ID            int        `json:"id" db:"id"`
 	ConfigID      int        `json:"config_id" db:"config_id"`
@@ -59,7 +59,7 @@ type LDAPSyncHistory struct {
 	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
 }
 
-// LDAPUserMapping represents mapping between LDAP and GOTRS users
+// LDAPUserMapping represents mapping between LDAP and GOTRS users.
 type LDAPUserMapping struct {
 	ID             int       `json:"id" db:"id"`
 	UserID         int       `json:"user_id" db:"user_id"`
@@ -75,7 +75,7 @@ type LDAPUserMapping struct {
 	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
 }
 
-// LDAPGroupMapping represents mapping between LDAP and GOTRS groups
+// LDAPGroupMapping represents mapping between LDAP and GOTRS groups.
 type LDAPGroupMapping struct {
 	ID             int       `json:"id" db:"id"`
 	GroupID        int       `json:"group_id" db:"group_id"`
@@ -91,7 +91,7 @@ type LDAPGroupMapping struct {
 	UpdatedAt      time.Time `json:"updated_at" db:"updated_at"`
 }
 
-// LDAPAuthenticationLog represents LDAP authentication attempts
+// LDAPAuthenticationLog represents LDAP authentication attempts.
 type LDAPAuthenticationLog struct {
 	ID           int       `json:"id" db:"id"`
 	ConfigID     int       `json:"config_id" db:"config_id"`
@@ -105,7 +105,7 @@ type LDAPAuthenticationLog struct {
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 }
 
-// Constants for LDAP sync status
+// Constants for LDAP sync status.
 const (
 	LDAPSyncStatusPending   = "pending"
 	LDAPSyncStatusRunning   = "running"
@@ -114,7 +114,7 @@ const (
 	LDAPSyncStatusCancelled = "cancelled"
 )
 
-// Constants for LDAP sync triggers
+// Constants for LDAP sync triggers.
 const (
 	LDAPSyncTriggerManual    = "manual"
 	LDAPSyncTriggerScheduled = "scheduled"
@@ -122,7 +122,7 @@ const (
 	LDAPSyncTriggerStartup   = "startup"
 )
 
-// LDAPSyncStatistics represents aggregated sync statistics
+// LDAPSyncStatistics represents aggregated sync statistics.
 type LDAPSyncStatistics struct {
 	ConfigID           int        `json:"config_id"`
 	TotalSyncs         int        `json:"total_syncs"`
@@ -138,7 +138,7 @@ type LDAPSyncStatistics struct {
 	ErrorRate          float64    `json:"error_rate"`
 }
 
-// LDAPConnectionTest represents a test connection result
+// LDAPConnectionTest represents a test connection result.
 type LDAPConnectionTest struct {
 	Success      bool      `json:"success"`
 	ErrorMessage string    `json:"error_message,omitempty"`

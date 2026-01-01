@@ -1,3 +1,4 @@
+// Package database provides database connection and adapter management.
 package database
 
 import (
@@ -8,7 +9,7 @@ import (
 	"sync"
 )
 
-// DBAdapter provides database-specific query adaptations
+// DBAdapter provides database-specific query adaptations.
 type DBAdapter interface {
 	// InsertWithReturning handles INSERT ... RETURNING for different databases
 	InsertWithReturning(db *sql.DB, query string, args ...interface{}) (int64, error)
@@ -23,7 +24,7 @@ type DBAdapter interface {
 	TypeCast(value, targetType string) string
 }
 
-// PostgreSQLAdapter implements DBAdapter for PostgreSQL
+// PostgreSQLAdapter implements DBAdapter for PostgreSQL.
 type PostgreSQLAdapter struct{}
 
 func (p *PostgreSQLAdapter) InsertWithReturning(db *sql.DB, query string, args ...interface{}) (int64, error) {
@@ -50,7 +51,7 @@ func (p *PostgreSQLAdapter) TypeCast(value, targetType string) string {
 	return fmt.Sprintf("%s::%s", value, targetType)
 }
 
-// MySQLAdapter implements DBAdapter for MySQL/MariaDB
+// MySQLAdapter implements DBAdapter for MySQL/MariaDB.
 type MySQLAdapter struct{}
 
 func (m *MySQLAdapter) InsertWithReturning(db *sql.DB, query string, args ...interface{}) (int64, error) {
@@ -92,7 +93,7 @@ func (m *MySQLAdapter) TypeCast(value, targetType string) string {
 	return fmt.Sprintf("CAST(%s AS %s)", value, mysqlType)
 }
 
-// Helper function to remove RETURNING clause from query
+// Helper function to remove RETURNING clause from query.
 func removeReturningClause(query string) string {
 	// Remove RETURNING clause and everything after it
 	if idx := strings.Index(strings.ToUpper(query), "RETURNING"); idx != -1 {
@@ -101,13 +102,13 @@ func removeReturningClause(query string) string {
 	return query
 }
 
-// Global adapter instance protected for concurrent access
+// Global adapter instance protected for concurrent access.
 var (
 	adapterMu sync.RWMutex
 	dbAdapter DBAdapter
 )
 
-// GetAdapter returns the appropriate database adapter based on configuration
+// GetAdapter returns the appropriate database adapter based on configuration.
 func GetAdapter() DBAdapter {
 	adapterMu.RLock()
 	if dbAdapter != nil {
@@ -156,8 +157,7 @@ func buildAdapterFromEnv() DBAdapter {
 	}
 }
 
-// ConvertQuery adapts a query for the current database
-// This extends the existing ConvertPlaceholders functionality
+// This extends the existing ConvertPlaceholders functionality.
 func ConvertQuery(query string) string {
 	// First convert placeholders
 	query = ConvertPlaceholders(query)
@@ -175,7 +175,7 @@ func ConvertQuery(query string) string {
 	return query
 }
 
-// convertILIKE converts ILIKE to MySQL-compatible syntax
+// convertILIKE converts ILIKE to MySQL-compatible syntax.
 func convertILIKE(query string) string {
 	// Simple replacement - in production, use proper SQL parser
 	query = strings.ReplaceAll(query, " ILIKE ", " LIKE ")
@@ -186,7 +186,7 @@ func convertILIKE(query string) string {
 	return query
 }
 
-// convertTypeCasting converts PostgreSQL :: casting to MySQL CAST()
+// convertTypeCasting converts PostgreSQL :: casting to MySQL CAST().
 func convertTypeCasting(query string) string {
 	// Simple patterns - in production, use proper SQL parser
 	query = strings.ReplaceAll(query, "::text", "")      // MySQL doesn't need explicit text cast

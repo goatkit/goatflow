@@ -1,3 +1,4 @@
+// Package main provides schema discovery utilities.
 package main
 
 import (
@@ -9,9 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/components/dynamic"
 	_ "github.com/lib/pq"
 	"gopkg.in/yaml.v2"
+
+	"github.com/gotrs-io/gotrs-ce/internal/components/dynamic"
 )
 
 func main() {
@@ -129,7 +131,7 @@ func main() {
 	}
 }
 
-// shouldSkipTable determines if a table should be skipped
+// shouldSkipTable determines if a table should be skipped.
 func shouldSkipTable(tableName string) bool {
 	// Skip PostgreSQL system tables
 	if strings.HasPrefix(tableName, "pg_") ||

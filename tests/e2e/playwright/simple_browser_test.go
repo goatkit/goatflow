@@ -3,12 +3,13 @@
 package playwright
 
 import (
-	"github.com/gotrs-io/gotrs-ce/tests/e2e/config"
-	"github.com/playwright-community/playwright-go"
-	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/gotrs-io/gotrs-ce/tests/e2e/config"
+	"github.com/playwright-community/playwright-go"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSimpleBrowser(t *testing.T) {

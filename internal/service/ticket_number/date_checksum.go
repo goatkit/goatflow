@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// DateChecksumConfig holds configuration for date-checksum generator
+// DateChecksumConfig holds configuration for date-checksum generator.
 type DateChecksumConfig struct {
 	Separator      string
 	CounterDigits  int
@@ -16,14 +16,13 @@ type DateChecksumConfig struct {
 	ResetDaily     bool
 }
 
-// DateChecksumGenerator generates ticket numbers with checksum
-// Format: YYYYMMDD-counter-checksum (e.g., 20250828-000001-42)
+// Format: YYYYMMDD-counter-checksum (e.g., 20250828-000001-42).
 type DateChecksumGenerator struct {
 	db     *sql.DB
 	config DateChecksumConfig
 }
 
-// NewDateChecksumGenerator creates a new date-checksum generator
+// NewDateChecksumGenerator creates a new date-checksum generator.
 func NewDateChecksumGenerator(db *sql.DB, config DateChecksumConfig) *DateChecksumGenerator {
 	// Set defaults
 	if config.Separator == "" {
@@ -42,7 +41,7 @@ func NewDateChecksumGenerator(db *sql.DB, config DateChecksumConfig) *DateChecks
 	}
 }
 
-// Generate creates a new ticket number with checksum
+// Generate creates a new ticket number with checksum.
 func (g *DateChecksumGenerator) Generate() (string, error) {
 	now := time.Now()
 
@@ -77,7 +76,7 @@ func (g *DateChecksumGenerator) Generate() (string, error) {
 	return ticketNumber, nil
 }
 
-// Reset resets the counter (happens automatically with daily counter UIDs)
+// Reset resets the counter (happens automatically with daily counter UIDs).
 func (g *DateChecksumGenerator) Reset() error {
 	// For date-based generators with daily reset,
 	// we use a new counter_uid each day, so no explicit reset needed
@@ -90,7 +89,7 @@ func (g *DateChecksumGenerator) Reset() error {
 	return resetCounter(g.db, counterUID, 0)
 }
 
-// Validate checks if a ticket number has a valid checksum
+// Validate checks if a ticket number has a valid checksum.
 func (g *DateChecksumGenerator) Validate(ticketNumber string) bool {
 	parts := strings.Split(ticketNumber, g.config.Separator)
 	if len(parts) != 3 {
@@ -104,7 +103,7 @@ func (g *DateChecksumGenerator) Validate(ticketNumber string) bool {
 	return parts[2] == expectedChecksum
 }
 
-// calculateChecksum calculates a checksum for the given input
+// calculateChecksum calculates a checksum for the given input.
 func (g *DateChecksumGenerator) calculateChecksum(input string) string {
 	// Use CRC32 for checksum
 	checksum := crc32.ChecksumIEEE([]byte(input))
@@ -124,7 +123,7 @@ func (g *DateChecksumGenerator) calculateChecksum(input string) string {
 	return result
 }
 
-// getCounterUID returns the counter UID for this generator
+// getCounterUID returns the counter UID for this generator.
 func (g *DateChecksumGenerator) getCounterUID(t time.Time) string {
 	if g.config.ResetDaily {
 		// Include date in UID for daily reset
@@ -134,7 +133,7 @@ func (g *DateChecksumGenerator) getCounterUID(t time.Time) string {
 	return "date_checksum_persistent"
 }
 
-// atoi converts string to int, returns 0 on error
+// atoi converts string to int, returns 0 on error.
 func atoi(s string) int {
 	var result int
 	fmt.Sscanf(s, "%d", &result)

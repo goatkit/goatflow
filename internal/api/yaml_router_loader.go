@@ -18,7 +18,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// routeYAML structures reflect our route group schema
+// routeYAML structures reflect our route group schema.
 type routeGroupSpec struct {
 	Prefix     string      `yaml:"prefix"`
 	Middleware []string    `yaml:"middleware"`
@@ -79,7 +79,7 @@ func combineRoutePath(prefix, route string) string {
 	return prefix + "/" + route
 }
 
-// BuildRoutesManifest constructs the manifest JSON without registering routes (for tooling)
+// BuildRoutesManifest constructs the manifest JSON without registering routes (for tooling).
 func BuildRoutesManifest() ([]byte, error) {
 	docs, err := loadYAMLRouteGroups("./routes")
 	if err != nil {
@@ -126,7 +126,7 @@ func BuildRoutesManifest() ([]byte, error) {
 	return json.MarshalIndent(out, "", "  ")
 }
 
-// loadYAMLRouteGroups scans the routes directory and returns parsed groups
+// loadYAMLRouteGroups scans the routes directory and returns parsed groups.
 func loadYAMLRouteGroups(dir string) ([]topRouteDoc, error) {
 	resolved, err := resolveRoutesDir(dir)
 	if err != nil {
@@ -353,7 +353,7 @@ func resolveRoutesDir(initial string) (string, error) {
 	return "", fmt.Errorf("routes directory not found (checked %q)", initial)
 }
 
-// routeAlreadyRegistered checks the engine for an existing method+path
+// routeAlreadyRegistered checks the engine for an existing method+path.
 func routeAlreadyRegistered(r *gin.Engine, method, fullPath string) bool {
 	// Gin stores registered routes in Engine.Routes()
 	// Paths are absolute (including group prefixes). Method is uppercased.
@@ -402,7 +402,7 @@ func registerOne(g *gin.RouterGroup, method, path string, h gin.HandlerFunc) {
 	}
 }
 
-// helper with possible extra middleware chain
+// helper with possible extra middleware chain.
 func registerOneWithChain(g *gin.RouterGroup, method, path string, handlers ...gin.HandlerFunc) {
 	switch method {
 	case "GET":
@@ -420,7 +420,7 @@ func registerOneWithChain(g *gin.RouterGroup, method, path string, handlers ...g
 	}
 }
 
-// fallbackAuthGuard provides a minimal auth gate when full middleware unavailable
+// fallbackAuthGuard provides a minimal auth gate when full middleware unavailable.
 func fallbackAuthGuard() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if _, ok := c.Get("user_id"); ok {

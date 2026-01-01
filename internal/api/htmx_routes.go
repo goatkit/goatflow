@@ -19,16 +19,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/history"
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/ldap"
 	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
@@ -46,7 +45,7 @@ import (
 	"golang.org/x/text/language"
 )
 
-// TicketDisplay represents ticket data for display purposes
+// TicketDisplay represents ticket data for display purposes.
 type TicketDisplay struct {
 	models.Ticket
 	QueueName    string
@@ -61,8 +60,7 @@ const autoCloseNoTimeLabel = "No auto-close time scheduled"
 const pendingReminderStateTypeID = 4
 const pendingReminderNoTimeLabel = "No reminder time scheduled"
 
-// pongo2Renderer delegates to shared.GetGlobalRenderer() for template rendering
-// Kept for backwards compatibility - new code should use shared.GetGlobalRenderer() directly
+// Kept for backwards compatibility - new code should use shared.GetGlobalRenderer() directly.
 func getPongo2Renderer() *shared.TemplateRenderer {
 	return shared.GetGlobalRenderer()
 }
@@ -145,13 +143,6 @@ func humanizeDuration(d time.Duration) string {
 		parts = append(parts, fmt.Sprintf("%ds", seconds))
 	}
 	return strings.Join(parts, " ")
-}
-
-func selectedAttr(current, expected string) string {
-	if strings.TrimSpace(strings.ToLower(current)) == strings.ToLower(expected) {
-		return " selected"
-	}
-	return ""
 }
 
 func defaultGroupPermissionMap() map[string]bool {
@@ -495,60 +486,13 @@ func isMarkdownContent(content string) bool {
 	return false
 }
 
-func translateWithFallback(i18nInst *i18n.I18n, lang, key string, args ...interface{}) string {
-	if i18nInst != nil {
-		if translated := i18nInst.Translate(lang, key, args...); translated != "" && translated != key {
-			return translated
-		}
-
-		if defaultLang := i18nInst.GetDefaultLanguage(); defaultLang != "" && defaultLang != lang {
-			if fallback := i18nInst.Translate(defaultLang, key, args...); fallback != "" && fallback != key {
-				return fallback
-			}
-		}
-	}
-
-	return humanizeTranslationKey(key)
-}
-
-func humanizeTranslationKey(key string) string {
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return ""
-	}
-
-	if idx := strings.LastIndex(key, "."); idx >= 0 && idx+1 < len(key) {
-		key = key[idx+1:]
-	}
-
-	key = strings.ReplaceAll(key, "_", " ")
-	key = strings.ReplaceAll(key, "-", " ")
-	key = strings.TrimSpace(key)
-	if key == "" {
-		return ""
-	}
-
-	words := strings.Fields(key)
-	for i, w := range words {
-		lower := strings.ToLower(w)
-		runes := []rune(lower)
-		if len(runes) == 0 {
-			continue
-		}
-		runes[0] = unicode.ToUpper(runes[0])
-		words[i] = string(runes)
-	}
-
-	return strings.Join(words, " ")
-}
-
 // GetUserMapForTemplate exposes the internal user-context builder for reuse
 // across packages without duplicating logic.
 func GetUserMapForTemplate(c *gin.Context) gin.H {
 	return getUserMapForTemplate(c)
 }
 
-// getUserFromContext safely extracts user from Gin context
+// getUserFromContext safely extracts user from Gin context.
 func getUserMapForTemplate(c *gin.Context) gin.H {
 	titleCaser := cases.Title(language.English)
 	normalizeRole := func(role interface{}) string {
@@ -748,7 +692,7 @@ func getUserMapForTemplate(c *gin.Context) gin.H {
 	}
 }
 
-// sendErrorResponse sends a JSON error response for HTMX/API requests
+// sendErrorResponse sends a JSON error response for HTMX/API requests.
 func sendErrorResponse(c *gin.Context, statusCode int, message string) {
 	// Emit a server log so 500/404 sources are visible in container logs
 	log.Printf("sendErrorResponse: status=%d message=%s path=%s", statusCode, message, c.FullPath())
@@ -776,7 +720,7 @@ func sendErrorResponse(c *gin.Context, statusCode int, message string) {
 	}
 }
 
-// checkAdmin middleware ensures the user is an admin
+// checkAdmin middleware ensures the user is an admin.
 func checkAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		user := getUserMapForTemplate(c)
@@ -818,71 +762,21 @@ func checkAdmin() gin.HandlerFunc {
 	}
 }
 
-// routeExists checks if a route already exists in the router
-func routeExists(r *gin.Engine, method string, path string) bool {
-	routes := r.Routes()
-	for _, route := range routes {
-		if route.Method == method && route.Path == path {
-			return true
-		}
-	}
-	return false
-}
-
-// safeRegisterRoute registers a route only if it doesn't already exist
-func safeRegisterRoute(r *gin.Engine, group *gin.RouterGroup, method string, path string, handlers ...gin.HandlerFunc) bool {
-	// Calculate full path
-	fullPath := group.BasePath() + path
-
-	// Check if route already exists
-	if routeExists(r, method, fullPath) {
-		log.Printf("WARNING: Route already exists: %s %s - skipping registration", method, fullPath)
-		return false
-	}
-
-	// Register the route with panic recovery
-	defer func() {
-		if err := recover(); err != nil {
-			log.Printf("ERROR: Failed to register route %s %s: %v", method, fullPath, err)
-		}
-	}()
-
-	switch method {
-	case "GET":
-		group.GET(path, handlers...)
-	case "POST":
-		group.POST(path, handlers...)
-	case "PUT":
-		group.PUT(path, handlers...)
-	case "DELETE":
-		group.DELETE(path, handlers...)
-	case "PATCH":
-		group.PATCH(path, handlers...)
-	default:
-		log.Printf("WARNING: Unknown HTTP method: %s", method)
-		return false
-	}
-
-	log.Printf("Successfully registered route: %s %s", method, fullPath)
-	return true
-}
-
-// SetupHTMXRoutes sets up all HTMX routes on the given router
+// SetupHTMXRoutes sets up all HTMX routes on the given router.
 func SetupHTMXRoutes(r *gin.Engine) {
 	// For testing or when called without auth services
 	setupHTMXRoutesWithAuth(r, nil, nil, nil)
 }
 
-// NewHTMXRouter creates all routes for the HTMX UI
+// NewHTMXRouter creates all routes for the HTMX UI.
 func NewHTMXRouter(jwtManager *auth.JWTManager, ldapProvider *ldap.Provider) *gin.Engine {
 	r := gin.Default()
 	setupHTMXRoutesWithAuth(r, jwtManager, ldapProvider, nil)
 	return r
 }
 
-// setupHTMXRoutesWithAuth sets up all routes with optional authentication
+// setupHTMXRoutesWithAuth sets up all routes with optional authentication.
 func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapProvider *ldap.Provider, i18nSvc interface{}) {
-
 	// Initialize pongo2 renderer (non-fatal if templates missing to allow route tests without UI assets)
 	templateDir := os.Getenv("TEMPLATES_DIR")
 	if templateDir == "" {
@@ -945,7 +839,7 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 	}
 }
 
-// initDynamicModules initializes the dynamic module system with database connection
+// initDynamicModules initializes the dynamic module system with database connection.
 func initDynamicModules() {
 	var (
 		dbConn *sql.DB
@@ -974,7 +868,7 @@ func initDynamicModules() {
 	}
 }
 
-// Helper function to show under construction message
+// Helper function to show under construction message.
 func underConstruction(feature string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		getPongo2Renderer().HTML(c, http.StatusOK, "pages/under_construction.pongo2", pongo2.Context{
@@ -1005,19 +899,9 @@ func handleAdminBackup(c *gin.Context) {
 	underConstruction("Backup & Restore")(c)
 }
 
-// Helper function for API endpoints under construction
-func underConstructionAPI(endpoint string) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{
-			"success": false,
-			"error":   fmt.Sprintf("Endpoint %s is under construction", endpoint),
-		})
-	}
-}
-
 // Handler functions
 
-// handleLoginPage shows the login page
+// handleLoginPage shows the login page.
 func handleLoginPage(c *gin.Context) {
 	// Check if already logged in
 	if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
@@ -1053,7 +937,7 @@ func handleCustomerLoginPage(c *gin.Context) {
 	})
 }
 
-// handleLogin processes login requests
+// handleLogin processes login requests.
 func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get credentials from form
@@ -1207,7 +1091,7 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	}
 }
 
-// handleHTMXLogin handles HTMX login requests
+// handleHTMXLogin handles HTMX login requests.
 func handleHTMXLogin(c *gin.Context) {
 	// Accept demo credentials via env for deterministic tests
 	demoEmail := os.Getenv("DEMO_LOGIN_EMAIL")
@@ -1281,21 +1165,7 @@ func handleHTMXLogin(c *gin.Context) {
 	c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Invalid credentials"})
 }
 
-// handleHTMXLogout handles HTMX logout requests
-func handleHTMXLogout(c *gin.Context) {
-	// Clear the session cookie
-	c.SetCookie("access_token", "", -1, "/", "", false, true)
-	c.SetCookie("auth_token", "", -1, "/", "", false, true)
-	c.SetCookie("token", "", -1, "/", "", false, true)
-	c.SetCookie("access_token", "", -1, "/customer", "", false, true)
-	c.SetCookie("auth_token", "", -1, "/customer", "", false, true)
-	c.SetCookie("token", "", -1, "/customer", "", false, true)
-	target := loginRedirectPath(c)
-	c.Header("HX-Redirect", target)
-	c.JSON(http.StatusOK, gin.H{"success": true})
-}
-
-// handleDemoCustomerLogin creates a demo customer token for testing
+// handleDemoCustomerLogin creates a demo customer token for testing.
 func handleDemoCustomerLogin(c *gin.Context) {
 	// Create a demo customer token
 	token := fmt.Sprintf("demo_customer_%s_%d", "john.customer", time.Now().Unix())
@@ -1307,7 +1177,7 @@ func handleDemoCustomerLogin(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/customer/")
 }
 
-// handleLogout handles logout requests
+// handleLogout handles logout requests.
 func handleLogout(c *gin.Context) {
 	// Clear the session cookie
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
@@ -1357,7 +1227,7 @@ func loginRedirectPath(c *gin.Context) string {
 	return "/login"
 }
 
-// handleDashboard shows the main dashboard
+// handleDashboard shows the main dashboard.
 func handleDashboard(c *gin.Context) {
 	// If templates unavailable, return JSON error
 	if getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
@@ -1500,7 +1370,7 @@ func buildTicketStatusOptions(db *sql.DB) ([]gin.H, bool) {
 		appendDefaults()
 		return options, hasClosed
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var (
@@ -1534,7 +1404,7 @@ func buildTicketStatusOptions(db *sql.DB) ([]gin.H, bool) {
 	return options, hasClosed
 }
 
-// handleTickets shows the tickets list page
+// handleTickets shows the tickets list page.
 func handleTickets(c *gin.Context) {
 	// Get database connection (graceful fallback to empty list)
 	db, err := database.GetDB()
@@ -1801,7 +1671,7 @@ func handleTickets(c *gin.Context) {
 	})
 }
 
-// handleQueues shows the queues list page
+// handleQueues shows the queues list page.
 func handleQueues(c *gin.Context) {
 	if htmxHandlerSkipDB() {
 		renderQueuesTestFallback(c)
@@ -1843,7 +1713,7 @@ func handleQueues(c *gin.Context) {
 	rows, qerr := db.Query(query)
 	stats := map[uint]map[string]int{}
 	if qerr == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var qid uint
 			var stateName string
@@ -1953,44 +1823,6 @@ func renderQueuesTestFallback(c *gin.Context) {
 	c.String(http.StatusOK, sb.String())
 }
 
-// handleTicketsList serves a minimal ticket list fragment for tests
-func handleTicketsListHTMXFallback(c *gin.Context) {
-	// Only used by unit tests; return deterministic HTML with pagination
-	page := 1
-	if p, err := strconv.Atoi(strings.TrimSpace(c.Query("page"))); err == nil && p > 0 {
-		page = p
-	}
-	total := 3
-	showPrev := page > 1
-	showNext := page*10 < total
-	html := `<div id="ticket-list">`
-	html += `<div class="ticket-row status-open priority-high">Ticket #TICK-2024-003 - Password reset - Queue: Raw </div>`
-	html += `<div>Title</div><div>Queue</div><div>Priority</div><div>Status</div><div>Created</div><div>Updated</div><button>View</button><button>Edit</button><span>user2@example.com</span>`
-	html += `<div class="ticket-row status-open priority-urgent">Ticket #TICK-2024-002 - Server maintenance window - Queue: Raw </div>`
-	html += `<div>Title</div><div>Queue</div><div>Priority</div><div>Status</div><div>Created</div><div>Updated</div><button>View</button><button>Edit</button><span>ops@example.com</span>`
-	html += `<div class="ticket-row status-closed priority-normal">Ticket #TICK-2024-001 - Login issue - Queue: Raw </div>`
-	html += `<div>Title</div><div>Queue</div><div>Priority</div><div>Status</div><div>Created</div><div>Updated</div><button>View</button><button>Edit</button><span>customer@example.com</span>`
-	html += `<div class="badges"><span class="badge badge-new">new</span><span class="badge badge-open">open</span><span class="badge badge-pending">pending</span><span class="badge badge-resolved">resolved</span><span class="badge badge-closed">closed</span>`
-	html += `<span class="priority-urgent" style="display:none"></span><span class="priority-high" style="display:none"></span><span class="priority-normal" style="display:none"></span><span class="priority-low" style="display:none"></span>`
-	html += `<span class="unread-indicator">New message</span><span class="sla-warning">Due in 2h</span><span class="sla-breach">Overdue</span></div>`
-	html += `<div class="pagination">`
-	html += fmt.Sprintf("Page %d", page)
-	html += fmt.Sprintf(`<div>Showing %d-%d of %d tickets</div>`, 1, total, total)
-	if showPrev {
-		html += fmt.Sprintf(`<a hx-get="/tickets?page=%d&per_page=10">Previous</a>`, page-1)
-	}
-	if showNext {
-		html += fmt.Sprintf(`<a hx-get="/tickets?page=%d&per_page=10">Next</a>`, page+1)
-	} else {
-		html += `<a hx-get="/tickets?page=2&per_page=10">Next</a>`
-	}
-	html += `<select name="per_page"><option value="10" selected>10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option></select>`
-	html += `</div>`
-	html += `</div>`
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, html)
-}
-
 func renderDashboardTestFallback(c *gin.Context) {
 	role := strings.ToLower(strings.TrimSpace(c.GetString("user_role")))
 	userVal, _ := c.Get("user")
@@ -2085,84 +1917,7 @@ func renderDashboardTestFallback(c *gin.Context) {
 	c.String(http.StatusOK, sb.String())
 }
 
-// renderTicketsTestFallback renders a minimal Tickets page with a filter form and HTMX wiring
-// Used only in test/dev when templates or DB are unavailable
-func renderTicketsTestFallback(c *gin.Context) {
-	sel := func(val, exp string) string {
-		if strings.EqualFold(strings.TrimSpace(val), exp) {
-			return " selected"
-		}
-		return ""
-	}
-	status := c.DefaultQuery("status", "all")
-	priority := c.DefaultQuery("priority", "all")
-	queue := c.DefaultQuery("queue", "all")
-	search := strings.TrimSpace(c.Query("search"))
-	escapedSearch := template.HTMLEscapeString(search)
-
-	title := "Tickets"
-	if status == "open" || status == "2" {
-		title = "Open Tickets"
-	}
-
-	html := "<h1>" + title + "</h1>"
-	html += `<form id="filter-form" method="GET" hx-get="/api/tickets" hx-target="#ticket-list" hx-trigger="submit">`
-	html += `<div class="search-bar">`
-	html += `<label for="search-input">Search</label>`
-	html += `<input type="search" id="search-input" name="search" value="` + escapedSearch + `" placeholder="Search tickets" />`
-	html += `<button type="submit" id="search-btn">Search</button>`
-	html += `</div>`
-	html += `<label>Status</label><select name="status">`
-	html += `<option value="all"` + sel(status, "all") + `>all</option>`
-	html += `<option value="new"` + sel(status, "new") + `>new</option>`
-	html += `<option value="open"` + sel(status, "open") + `>open</option>`
-	html += `<option value="pending"` + sel(status, "pending") + `>pending</option>`
-	html += `<option value="closed"` + sel(status, "closed") + `>closed</option>`
-	html += `</select>`
-	html += `<label>Priority</label><select name="priority">`
-	html += `<option value="all"` + sel(priority, "all") + `>all</option>`
-	html += `<option value="low"` + sel(priority, "low") + `>low</option>`
-	html += `<option value="normal"` + sel(priority, "normal") + `>normal</option>`
-	html += `<option value="high"` + sel(priority, "high") + `>high</option>`
-	html += `<option value="critical"` + sel(priority, "critical") + `>critical</option>`
-	html += `</select>`
-	html += `<label>Queue</label><select name="queue">`
-	html += `<option value="all"` + sel(queue, "all") + `>all</option>`
-	html += `<option value="1"` + sel(queue, "1") + `>General Support</option>`
-	html += `<option value="2"` + sel(queue, "2") + `>Technical Support</option>`
-	html += `</select>`
-	html += `<button type="submit">Apply Filters</button>`
-	html += `<button type="reset" id="clear-filters-btn">Clear</button>`
-	html += `</form>`
-
-	// Render active filter badges (include × remove icon to satisfy tests)
-	html += `<div class="filter-badges">`
-	if status != "" && status != "all" {
-		html += `<span class="badge status-badge">` + status + ` <span aria-label="remove status" role="button">×</span></span>`
-	}
-	if priority != "" && priority != "all" {
-		html += `<span class="badge priority-badge">` + priority + ` <span aria-label="remove priority" role="button">×</span></span>`
-	}
-	if queue != "" && queue != "all" {
-		html += `<span class="badge queue-badge">` + queue + ` <span aria-label="remove queue" role="button">×</span></span>`
-	}
-	if search != "" {
-		html += `<span class="badge search-badge">` + template.HTMLEscapeString(search) + ` <span aria-label="remove search" role="button">×</span></span>`
-	}
-	html += `</div>`
-
-	// Minimal list container + a couple of deterministic rows
-	html += `<div id="ticket-list">`
-	html += `<div class="ticket-row status-open priority-high">T-2024-004 - Server down - urgent</div>`
-	html += `<div class="ticket-row status-pending priority-normal">T-2024-002 - Software installation request</div>`
-	html += `<div class="ticket-row status-closed priority-low">T-2024-003 - Login issues</div>`
-	html += `</div>`
-
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, html)
-}
-
-// handleQueueDetail shows individual queue details
+// handleQueueDetail shows individual queue details.
 func handleQueueDetail(c *gin.Context) {
 	queueID := c.Param("id")
 	hxRequest := strings.EqualFold(c.GetHeader("HX-Request"), "true")
@@ -2530,7 +2285,7 @@ func LoadTicketStatesForForm(db *sql.DB) ([]gin.H, map[string]gin.H, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	states := make([]gin.H, 0)
 	lookup := make(map[string]gin.H)
@@ -2601,7 +2356,7 @@ func ticketStateLookupKeys(name string) []string {
 	return keys
 }
 
-// handleNewTicket shows the new ticket form
+// handleNewTicket shows the new ticket form.
 func handleNewTicket(c *gin.Context) {
 	if htmxHandlerSkipDB() {
 		c.Redirect(http.StatusFound, "/ticket/new/email")
@@ -2723,7 +2478,7 @@ func handleNewTicket(c *gin.Context) {
 	})
 }
 
-// handleNewEmailTicket shows the email ticket creation form
+// handleNewEmailTicket shows the email ticket creation form.
 func handleNewEmailTicket(c *gin.Context) {
 	if htmxHandlerSkipDB() || getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
 		renderTicketCreationFallback(c, "email")
@@ -2837,7 +2592,7 @@ func handleNewEmailTicket(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// handleNewPhoneTicket shows the phone ticket creation form
+// handleNewPhoneTicket shows the phone ticket creation form.
 func handleNewPhoneTicket(c *gin.Context) {
 	if htmxHandlerSkipDB() || getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
 		renderTicketCreationFallback(c, "phone")
@@ -3004,7 +2759,7 @@ func renderTicketCreationFallback(c *gin.Context, channel string) {
 	c.String(http.StatusOK, builder.String())
 }
 
-// handleTicketDetail shows ticket details
+// handleTicketDetail shows ticket details.
 func handleTicketDetail(c *gin.Context) {
 	ticketID := c.Param("id")
 	log.Printf("DEBUG: handleTicketDetail called with id=%s", ticketID)
@@ -3603,26 +3358,24 @@ func handleTicketDetail(c *gin.Context) {
 	}
 
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/ticket_detail.pongo2", pongo2.Context{
-		"Ticket":                  ticketData,
-		"User":                    getUserMapForTemplate(c),
-		"ActivePage":                  "tickets",
-		"CustomerPanelUser":           panelUser,
-		"CustomerPanelCompany":        panelCompany,
-		"CustomerPanelOpen":           panelOpen,
-		"RequireNoteTimeUnits":        requireTimeUnits,
-		"TicketStates":                ticketStates,
-		"PendingStateIDs":             pendingStateIDs,
-		"DynamicFields":               dynamicFieldsDisplay,
-		"NoteFormDynamicFields":       noteFormDynamicFields,
-		"NoteArticleDynamicFields":    noteArticleDynamicFields,
-		"CloseFormDynamicFields":      closeFormDynamicFields,
-		"CloseArticleDynamicFields":   closeArticleDynamicFields,
+		"Ticket":                    ticketData,
+		"User":                      getUserMapForTemplate(c),
+		"ActivePage":                "tickets",
+		"CustomerPanelUser":         panelUser,
+		"CustomerPanelCompany":      panelCompany,
+		"CustomerPanelOpen":         panelOpen,
+		"RequireNoteTimeUnits":      requireTimeUnits,
+		"TicketStates":              ticketStates,
+		"PendingStateIDs":           pendingStateIDs,
+		"DynamicFields":             dynamicFieldsDisplay,
+		"NoteFormDynamicFields":     noteFormDynamicFields,
+		"NoteArticleDynamicFields":  noteArticleDynamicFields,
+		"CloseFormDynamicFields":    closeFormDynamicFields,
+		"CloseArticleDynamicFields": closeArticleDynamicFields,
 	})
 }
 
-// handleLegacyAgentTicketViewRedirect redirects legacy agent ticket URLs to the unified ticket detail route
-// Example: /agent/tickets/123 -> /ticket/202510131000003
-// HandleLegacyAgentTicketViewRedirect exported for YAML routing
+// HandleLegacyAgentTicketViewRedirect exported for YAML routing.
 func HandleLegacyAgentTicketViewRedirect(c *gin.Context) {
 	legacyID := c.Param("id")
 	if strings.TrimSpace(legacyID) == "" {
@@ -3656,8 +3409,7 @@ func HandleLegacyAgentTicketViewRedirect(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/ticket/"+legacyID)
 }
 
-// handleLegacyTicketsViewRedirect supports old /tickets/:id URLs and redirects to /ticket/:tn
-// HandleLegacyTicketsViewRedirect exported for YAML routing
+// HandleLegacyTicketsViewRedirect exported for YAML routing.
 func HandleLegacyTicketsViewRedirect(c *gin.Context) {
 	legacyID := c.Param("id")
 	if strings.TrimSpace(legacyID) == "" {
@@ -3684,7 +3436,7 @@ func HandleLegacyTicketsViewRedirect(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/ticket/"+legacyID)
 }
 
-// handleProfile shows user profile page
+// handleProfile shows user profile page.
 func handleProfile(c *gin.Context) {
 	user := getUserMapForTemplate(c)
 
@@ -3694,7 +3446,7 @@ func handleProfile(c *gin.Context) {
 	})
 }
 
-// handleSettings shows settings page
+// handleSettings shows settings page.
 func handleSettings(c *gin.Context) {
 	user := getUserMapForTemplate(c)
 
@@ -3718,7 +3470,7 @@ func handleSettings(c *gin.Context) {
 
 // API Handler functions
 
-// handleDashboardStats returns dashboard statistics
+// handleDashboardStats returns dashboard statistics.
 func handleDashboardStats(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -3780,7 +3532,7 @@ func handleDashboardStats(c *gin.Context) {
 	c.String(http.StatusOK, html)
 }
 
-// handleRecentTickets returns recent tickets for dashboard
+// handleRecentTickets returns recent tickets for dashboard.
 func handleRecentTickets(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -3908,7 +3660,7 @@ func handleRecentTickets(c *gin.Context) {
 	c.String(http.StatusOK, html.String())
 }
 
-// dashboard_queue_status returns queue status for dashboard
+// dashboard_queue_status returns queue status for dashboard.
 func dashboard_queue_status(c *gin.Context) {
 	if htmxHandlerSkipDB() {
 		renderDashboardQueueStatusFallback(c)
@@ -3962,7 +3714,7 @@ func dashboard_queue_status(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	// Build HTML response with table format
 	var html strings.Builder
@@ -4096,7 +3848,7 @@ func renderDashboardQueueStatusFallback(c *gin.Context) {
 	c.String(http.StatusOK, stub)
 }
 
-// handleNotifications returns user notifications
+// handleNotifications returns user notifications.
 func handleNotifications(c *gin.Context) {
 	// TODO: Implement actual notifications from database
 	// For now, return empty list
@@ -4178,7 +3930,7 @@ func normalizeUserID(value interface{}) int {
 	return 0
 }
 
-// handleQuickActions returns quick action items
+// handleQuickActions returns quick action items.
 func handleQuickActions(c *gin.Context) {
 	actions := []gin.H{
 		{"id": "new_ticket", "label": "New Ticket", "icon": "plus", "url": "/ticket/new"},
@@ -4188,7 +3940,7 @@ func handleQuickActions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"actions": actions})
 }
 
-// handleActivity returns recent activity
+// handleActivity returns recent activity.
 func handleActivity(c *gin.Context) {
 	activities := []gin.H{
 		{
@@ -4209,7 +3961,7 @@ func handleActivity(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"activities": activities})
 }
 
-// handlePerformance returns performance metrics
+// handlePerformance returns performance metrics.
 func handlePerformance(c *gin.Context) {
 	metrics := gin.H{
 		"responseTime": []gin.H{
@@ -4445,7 +4197,7 @@ func renderTicketsAPITestFallback(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"page": 1, "limit": 10, "total": len(result), "tickets": result})
 }
 
-// handleAPITickets returns list of tickets
+// handleAPITickets returns list of tickets.
 func handleAPITickets(c *gin.Context) {
 	if htmxHandlerSkipDB() {
 		renderTicketsAPITestFallback(c)
@@ -4462,9 +4214,8 @@ func handleAPITickets(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"page": 1, "limit": 10, "total": 0, "tickets": []gin.H{}})
 }
 
-// handleCreateTicket creates a new ticket
+// handleCreateTicket creates a new ticket.
 func handleCreateTicket(c *gin.Context) {
-
 	if htmxHandlerSkipDB() {
 		// Handle malformed multipart early
 		if strings.Contains(strings.ToLower(c.GetHeader("Content-Type")), "multipart/form-data") {
@@ -4579,7 +4330,7 @@ func handleCreateTicket(c *gin.Context) {
 	handleCreateTicketWithAttachments(c)
 }
 
-// handleGetTicket returns a specific ticket
+// handleGetTicket returns a specific ticket.
 func handleGetTicket(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -4617,7 +4368,7 @@ func handleGetTicket(c *gin.Context) {
 	})
 }
 
-// handleUpdateTicket updates a ticket
+// handleUpdateTicket updates a ticket.
 func handleUpdateTicket(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -4635,7 +4386,7 @@ func handleUpdateTicket(c *gin.Context) {
 	})
 }
 
-// handleDeleteTicket deletes a ticket (soft delete)
+// handleDeleteTicket deletes a ticket (soft delete).
 func handleDeleteTicket(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 
@@ -4683,7 +4434,7 @@ func handleDeleteTicket(c *gin.Context) {
 	})
 }
 
-// handleAddTicketNote adds a note to a ticket
+// handleAddTicketNote adds a note to a ticket.
 func handleAddTicketNote(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -4883,7 +4634,7 @@ func handleAddTicketNote(c *gin.Context) {
 	})
 }
 
-// handleAddTicketTime adds a time accounting entry to a ticket and returns updated total minutes
+// handleAddTicketTime adds a time accounting entry to a ticket and returns updated total minutes.
 func handleAddTicketTime(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -4963,7 +4714,7 @@ func handleAddTicketTime(c *gin.Context) {
 // It delegates to handleAddTicketTime to keep the implementation in one place.
 func HandleAddTicketTime(c *gin.Context) { handleAddTicketTime(c) }
 
-// handleGetTicketHistory returns ticket history
+// handleGetTicketHistory returns ticket history.
 func handleGetTicketHistory(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -4989,7 +4740,7 @@ func handleGetTicketHistory(c *gin.Context) {
 	})
 }
 
-// handleGetAvailableAgents returns agents who have permissions for the ticket's queue
+// handleGetAvailableAgents returns agents who have permissions for the ticket's queue.
 func handleGetAvailableAgents(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -5027,7 +4778,7 @@ func handleGetAvailableAgents(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch agents"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	agents := []gin.H{}
 	for rows.Next() {
@@ -5051,7 +4802,7 @@ func handleGetAvailableAgents(c *gin.Context) {
 	})
 }
 
-// handleAssignTicket assigns a ticket to an agent
+// handleAssignTicket assigns a ticket to an agent.
 func handleAssignTicket(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -5158,7 +4909,7 @@ func handleAssignTicket(c *gin.Context) {
 	})
 }
 
-// handleTicketReply creates a reply or internal note on a ticket and returns HTML
+// handleTicketReply creates a reply or internal note on a ticket and returns HTML.
 func handleTicketReply(c *gin.Context) {
 	ticketID := c.Param("id")
 	replyText := c.PostForm("reply")
@@ -5215,7 +4966,7 @@ func handleTicketReply(c *gin.Context) {
 	))
 }
 
-// handleUpdateTicketPriority updates a ticket priority (HTMX/API helper)
+// handleUpdateTicketPriority updates a ticket priority (HTMX/API helper).
 func handleUpdateTicketPriority(c *gin.Context) {
 	ticketID := c.Param("id")
 	priorityInput := strings.TrimSpace(c.PostForm("priority"))
@@ -5286,7 +5037,7 @@ func handleUpdateTicketPriority(c *gin.Context) {
 	})
 }
 
-// handleUpdateTicketQueue moves a ticket to another queue (HTMX/API helper)
+// handleUpdateTicketQueue moves a ticket to another queue (HTMX/API helper).
 func handleUpdateTicketQueue(c *gin.Context) {
 	ticketID := c.Param("id")
 	queueIDStr := c.PostForm("queue_id")
@@ -5347,7 +5098,7 @@ func handleUpdateTicketQueue(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("Ticket %s moved to queue %d", ticketID, qid), "queue_id": qid})
 }
 
-// handleUpdateTicketStatus updates ticket state (supports pending_until)
+// handleUpdateTicketStatus updates ticket state (supports pending_until).
 func handleUpdateTicketStatus(c *gin.Context) {
 	ticketID := c.Param("id")
 	status := strings.TrimSpace(c.PostForm("status"))
@@ -5492,7 +5243,7 @@ func handleUpdateTicketStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// handleCloseTicket closes a ticket
+// handleCloseTicket closes a ticket.
 func handleCloseTicket(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -5555,7 +5306,7 @@ func handleCloseTicket(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Update ticket state
 	_, err = tx.Exec(database.ConvertPlaceholders(`
@@ -5695,7 +5446,7 @@ func handleCloseTicket(c *gin.Context) {
 	})
 }
 
-// handleReopenTicket reopens a ticket
+// handleReopenTicket reopens a ticket.
 func handleReopenTicket(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -5832,7 +5583,7 @@ func handleReopenTicket(c *gin.Context) {
 	})
 }
 
-// handleSearchTickets searches tickets
+// handleSearchTickets searches tickets.
 func handleSearchTickets(c *gin.Context) {
 	// Support both q and search parameters
 	query := c.Query("q")
@@ -5860,7 +5611,7 @@ func handleSearchTickets(c *gin.Context) {
         `), "%"+query+"%")
 
 		if err == nil {
-			defer rows.Close()
+			defer func() { _ = rows.Close() }()
 			for rows.Next() {
 				var id int
 				var tn, title string
@@ -5911,7 +5662,7 @@ func handleSearchTickets(c *gin.Context) {
 	c.String(http.StatusOK, b.String())
 }
 
-// handleFilterTickets filters tickets
+// handleFilterTickets filters tickets.
 func handleFilterTickets(c *gin.Context) {
 	// Get filter parameters
 	filters := gin.H{
@@ -5978,7 +5729,7 @@ func handleFilterTickets(c *gin.Context) {
 	tickets := []gin.H{}
 	rows, err := db.Query(query, args...)
 	if err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var id, stateID, priorityID int
 			var tn, title string
@@ -6002,37 +5753,10 @@ func handleFilterTickets(c *gin.Context) {
 		"total":   len(tickets),
 	})
 }
+
 // SSE handlers
 
-// handleTicketStream provides real-time ticket updates via SSE
-func handleTicketStream(c *gin.Context) {
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-
-	// Send a ping event every 30 seconds
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-
-	// Send initial connection event
-	fmt.Fprintf(c.Writer, "event: connected\ndata: {\"message\": \"Connected to ticket stream\"}\n\n")
-	c.Writer.Flush()
-
-	// Simulate ticket updates
-	for {
-		select {
-		case <-ticker.C:
-			// Send ping to keep connection alive
-			fmt.Fprintf(c.Writer, "event: ping\ndata: {\"time\": \"%s\"}\n\n", time.Now().Format(time.RFC3339))
-			c.Writer.Flush()
-		case <-c.Request.Context().Done():
-			// Client disconnected
-			return
-		}
-	}
-}
-
-// handleActivityStream provides real-time activity updates
+// handleActivityStream provides real-time activity updates.
 func handleActivityStream(c *gin.Context) {
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
@@ -6087,7 +5811,7 @@ func handleActivityStream(c *gin.Context) {
 			`)
 
 			if err == nil && rows != nil {
-				defer rows.Close()
+				defer func() { _ = rows.Close() }()
 
 				activities := []gin.H{}
 				for rows.Next() {
@@ -6161,7 +5885,7 @@ func handleActivityStream(c *gin.Context) {
 
 // Admin handlers
 
-// handleAdminDashboard shows the admin dashboard
+// handleAdminDashboard shows the admin dashboard.
 func handleAdminDashboard(c *gin.Context) {
 	if getPongo2Renderer() == nil || getPongo2Renderer().TemplateSet() == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -6193,25 +5917,7 @@ func handleAdminDashboard(c *gin.Context) {
 	})
 }
 
-// handleSchemaDiscovery shows the schema discovery page
-func handleSchemaDiscovery(c *gin.Context) {
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/schema_discovery.pongo2", pongo2.Context{
-		"User":       getUserMapForTemplate(c),
-		"ActivePage": "admin",
-		"Title":      "Schema Discovery",
-	})
-}
-
-// handleSchemaMonitoring shows the schema monitoring dashboard
-func handleSchemaMonitoring(c *gin.Context) {
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/schema_monitoring.pongo2", pongo2.Context{
-		"User":       getUserMapForTemplate(c),
-		"ActivePage": "admin",
-		"Title":      "Schema Discovery Monitor",
-	})
-}
-
-// handleAdminGroups shows the admin groups page
+// handleAdminGroups shows the admin groups page.
 func handleAdminGroups(c *gin.Context) {
 	saveState := strings.EqualFold(strings.TrimSpace(c.Query("save_state")), "true") || strings.TrimSpace(c.Query("save_state")) == "1"
 	searchTerm := strings.TrimSpace(c.Query("search"))
@@ -6479,7 +6185,7 @@ func renderAdminGroupsTestFallback(c *gin.Context, groups []gin.H, searchTerm, s
 	c.String(http.StatusOK, page.String())
 }
 
-// handleCreateGroup creates a new group
+// handleCreateGroup creates a new group.
 func handleCreateGroup(c *gin.Context) {
 	var groupForm struct {
 		Name     string `form:"name" json:"name" binding:"required"`
@@ -6530,7 +6236,7 @@ func handleCreateGroup(c *gin.Context) {
 	})
 }
 
-// handleGetGroup returns group details
+// handleGetGroup returns group details.
 func handleGetGroup(c *gin.Context) {
 	groupID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -6569,7 +6275,7 @@ func handleGetGroup(c *gin.Context) {
 	})
 }
 
-// handleUpdateGroup updates a group
+// handleUpdateGroup updates a group.
 func handleUpdateGroup(c *gin.Context) {
 	groupID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -6632,7 +6338,7 @@ func handleUpdateGroup(c *gin.Context) {
 	})
 }
 
-// handleDeleteGroup deletes a group
+// handleDeleteGroup deletes a group.
 func handleDeleteGroup(c *gin.Context) {
 	groupID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -6682,7 +6388,7 @@ func handleDeleteGroup(c *gin.Context) {
 	})
 }
 
-// handleAdminQueues shows the admin queues page
+// handleAdminQueues shows the admin queues page.
 func handleAdminQueues(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -6802,7 +6508,7 @@ func handleAdminQueues(c *gin.Context) {
 	})
 }
 
-// handleAdminPriorities shows the admin priorities page
+// handleAdminPriorities shows the admin priorities page.
 func handleAdminPriorities(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -6821,7 +6527,7 @@ func handleAdminPriorities(c *gin.Context) {
 		sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch priorities")
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var priorities []gin.H
 	for rows.Next() {
@@ -6849,7 +6555,7 @@ func handleAdminPriorities(c *gin.Context) {
 	})
 }
 
-// handleAdminLookups shows the admin lookups page
+// handleAdminLookups shows the admin lookups page.
 func handleAdminLookups(c *gin.Context) {
 	// Get the current tab from query parameter
 	currentTab := c.Query("tab")
@@ -7003,19 +6709,13 @@ func handleAdminLookups(c *gin.Context) {
 	})
 }
 
-// handleGetAuditLogs is defined in lookup_crud_handlers.go
-
-// handleExportConfiguration is defined in lookup_crud_handlers.go
-
-// handleImportConfiguration is defined in lookup_crud_handlers.go
-
 // Advanced search handlers are defined in ticket_advanced_search_handler.go
 
 // Ticket merge handlers are defined in ticket_merge_handler.go
 
 // Permission Management handlers
 
-// handleAdminPermissions displays the permission management page
+// handleAdminPermissions displays the permission management page.
 func handleAdminPermissions(c *gin.Context) {
 	// Prevent caching of this page
 	c.Header("Cache-Control", "no-store, no-cache, must-revalidate, private")
@@ -7069,7 +6769,7 @@ func handleAdminPermissions(c *gin.Context) {
 	})
 }
 
-// handleAdminEmailQueue shows the admin email queue management page
+// handleAdminEmailQueue shows the admin email queue management page.
 func handleAdminEmailQueue(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -7089,7 +6789,7 @@ func handleAdminEmailQueue(c *gin.Context) {
 		sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch email queue")
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var emails []gin.H
 	for rows.Next() {
@@ -7163,7 +6863,7 @@ func handleAdminEmailQueue(c *gin.Context) {
 	})
 }
 
-// handleAdminEmailQueueRetry retries sending a specific email from the queue
+// handleAdminEmailQueueRetry retries sending a specific email from the queue.
 func handleAdminEmailQueueRetry(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -7192,7 +6892,7 @@ func handleAdminEmailQueueRetry(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Email queued for retry"})
 }
 
-// handleAdminEmailQueueDelete deletes a specific email from the queue
+// handleAdminEmailQueueDelete deletes a specific email from the queue.
 func handleAdminEmailQueueDelete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -7223,7 +6923,7 @@ func handleAdminEmailQueueDelete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Email deleted from queue"})
 }
 
-// handleAdminEmailQueueRetryAll retries all failed emails in the queue
+// handleAdminEmailQueueRetryAll retries all failed emails in the queue.
 func handleAdminEmailQueueRetryAll(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -7251,7 +6951,7 @@ func handleAdminEmailQueueRetryAll(c *gin.Context) {
 	})
 }
 
-// handleGetUserPermissionMatrix returns the permission matrix for a user
+// handleGetUserPermissionMatrix returns the permission matrix for a user.
 func handleGetUserPermissionMatrix(c *gin.Context) {
 	userIDStr := c.Param("userId")
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
@@ -7279,7 +6979,7 @@ func handleGetUserPermissionMatrix(c *gin.Context) {
 	})
 }
 
-// handleUpdateUserPermissions updates all permissions for a user
+// handleUpdateUserPermissions updates all permissions for a user.
 func handleUpdateUserPermissions(c *gin.Context) {
 	userIDStr := c.Param("userId")
 	userID, err := strconv.ParseUint(userIDStr, 10, 32)
@@ -7379,129 +7079,7 @@ func handleUpdateUserPermissions(c *gin.Context) {
 	})
 }
 
-// handleGetGroupPermissionMatrix gets all users' permissions for a group
-func handleGetGroupPermissionMatrix(c *gin.Context) {
-	groupIDStr := c.Param("groupId")
-	groupID, err := strconv.ParseUint(groupIDStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid group ID"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
-		return
-	}
-
-	permService := service.NewPermissionService(db)
-	matrix, err := permService.GetGroupPermissionMatrix(uint(groupID))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch permissions"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data":    matrix,
-	})
-}
-
-// handleCloneUserPermissions copies permissions from one user to another
-func handleCloneUserPermissions(c *gin.Context) {
-	sourceUserID, _ := strconv.ParseUint(c.PostForm("source_user_id"), 10, 32)
-	targetUserID, _ := strconv.ParseUint(c.PostForm("target_user_id"), 10, 32)
-
-	if sourceUserID == 0 || targetUserID == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid user IDs"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
-		return
-	}
-
-	permService := service.NewPermissionService(db)
-	if err := permService.CloneUserPermissions(uint(sourceUserID), uint(targetUserID)); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to clone permissions"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "Permissions cloned successfully",
-	})
-}
-
-// Group user management handlers (now properly named for groups, not roles)
-
-// handleGetGroupUsers returns users assigned to a group
-func handleGetGroupUsers(c *gin.Context) {
-	groupIDStr := c.Param("id")
-	groupID, err := strconv.ParseUint(groupIDStr, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid group ID"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
-		return
-	}
-
-	groupRepo := repository.NewGroupRepository(db)
-
-	// Get the group details
-	group, err := groupRepo.GetByID(uint(groupID))
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Group not found"})
-		return
-	}
-
-	// Get members of this group
-	members, err := groupRepo.GetGroupMembers(uint(groupID))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch group members"})
-		return
-	}
-
-	// Get all users for the "available users" list
-	userRepo := repository.NewUserRepository(db)
-	allUsers, err := userRepo.List()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch users"})
-		return
-	}
-
-	// Filter out users who are already members
-	memberIDs := make(map[uint]bool)
-	for _, member := range members {
-		memberIDs[member.ID] = true
-	}
-
-	availableUsers := make([]*models.User, 0)
-	for _, user := range allUsers {
-		if !memberIDs[user.ID] && user.ValidID == 1 {
-			availableUsers = append(availableUsers, user)
-		}
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"group": gin.H{
-			"id":          group.ID,
-			"name":        group.Name,
-			"description": group.Comments,
-		},
-		"members":         members,
-		"available_users": availableUsers,
-	})
-}
-
-// handleAddUserToGroup assigns a user to a group
+// handleAddUserToGroup assigns a user to a group.
 func handleAddUserToGroup(c *gin.Context) {
 	groupIDStr := c.Param("id")
 	groupID, err := strconv.ParseUint(groupIDStr, 10, 32)
@@ -7541,7 +7119,7 @@ func handleAddUserToGroup(c *gin.Context) {
 	})
 }
 
-// handleRemoveUserFromGroup removes a user from a group
+// handleRemoveUserFromGroup removes a user from a group.
 func handleRemoveUserFromGroup(c *gin.Context) {
 	groupIDStr := c.Param("id")
 	userIDStr := c.Param("userId")
@@ -7579,7 +7157,7 @@ func handleRemoveUserFromGroup(c *gin.Context) {
 	})
 }
 
-// handleGroupPermissions shows a queue-centric matrix for a group's assignments
+// handleGroupPermissions shows a queue-centric matrix for a group's assignments.
 func handleGroupPermissions(c *gin.Context) {
 	groupIDStr := c.Param("id")
 	groupIDValue, err := strconv.ParseUint(groupIDStr, 10, 32)
@@ -7634,7 +7212,7 @@ type saveGroupPermissionsRequest struct {
 	Assignments []groupPermissionAssignment `json:"assignments"`
 }
 
-// handleSaveGroupPermissions updates permission flags for members in a group
+// handleSaveGroupPermissions updates permission flags for members in a group.
 func handleSaveGroupPermissions(c *gin.Context) {
 	groupIDStr := c.Param("id")
 	groupIDValue, err := strconv.ParseUint(groupIDStr, 10, 32)
@@ -7683,7 +7261,7 @@ func handleSaveGroupPermissions(c *gin.Context) {
 	respondWithGroupPermissionsJSON(c, data)
 }
 
-// handleCustomerSearch handles customer search for autocomplete
+// handleCustomerSearch handles customer search for autocomplete.
 func handleCustomerSearch(c *gin.Context) {
 	query := c.Query("q")
 	if query == "" {
@@ -7720,7 +7298,7 @@ func handleCustomerSearch(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search customers"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var customers []gin.H
 	for rows.Next() {
@@ -7750,7 +7328,7 @@ func handleCustomerSearch(c *gin.Context) {
 	c.JSON(http.StatusOK, customers)
 }
 
-// handleGetGroups returns all groups as JSON for API requests
+// handleGetGroups returns all groups as JSON for API requests.
 func handleGetGroups(c *gin.Context) {
 	// Get database connection
 	db, err := database.GetDB()
@@ -7777,7 +7355,7 @@ func handleGetGroups(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	groups := []map[string]interface{}{}
 	for rows.Next() {
@@ -7802,7 +7380,7 @@ func handleGetGroups(c *gin.Context) {
 	})
 }
 
-// handleGetGroupMembers returns users assigned to a group
+// handleGetGroupMembers returns users assigned to a group.
 func handleGetGroupMembers(c *gin.Context) {
 	groupID := c.Param("id")
 
@@ -7832,7 +7410,7 @@ func handleGetGroupMembers(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	members := []map[string]interface{}{}
 	for rows.Next() {
@@ -7860,7 +7438,7 @@ func handleGetGroupMembers(c *gin.Context) {
 	})
 }
 
-// handleGetGroupAPI returns group details as JSON for API requests
+// handleGetGroupAPI returns group details as JSON for API requests.
 func handleGetGroupAPI(c *gin.Context) {
 	groupID := c.Param("id")
 
@@ -7909,7 +7487,7 @@ func handleGetGroupAPI(c *gin.Context) {
 	})
 }
 
-// SetupAPIv1Routes configures the v1 API routes
+// SetupAPIv1Routes configures the v1 API routes.
 func SetupAPIv1Routes(r *gin.Engine, jwtManager *auth.JWTManager, ldapProvider *ldap.Provider, i18nSvc interface{}) {
 	// Create RBAC instance
 	// rbac := auth.NewRBAC()

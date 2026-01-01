@@ -1,3 +1,4 @@
+// Package ticketnumber provides ticket number generation implementations.
 package ticketnumber
 
 import (

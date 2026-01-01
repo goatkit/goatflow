@@ -10,7 +10,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/zinc"
 )
 
-// SearchService handles search operations for tickets
+// SearchService handles search operations for tickets.
 type SearchService struct {
 	client        zinc.Client
 	savedSearches map[uint]*models.SavedSearch
@@ -20,7 +20,7 @@ type SearchService struct {
 	nextHistoryID uint
 }
 
-// NewSearchService creates a new search service
+// NewSearchService creates a new search service.
 func NewSearchService(client zinc.Client) *SearchService {
 	service := &SearchService{
 		client:        client,
@@ -36,7 +36,7 @@ func NewSearchService(client zinc.Client) *SearchService {
 	return service
 }
 
-// initializeIndex creates the tickets index if it doesn't exist
+// initializeIndex creates the tickets index if it doesn't exist.
 func (s *SearchService) initializeIndex(ctx context.Context) error {
 	exists, err := s.client.IndexExists(ctx, "tickets")
 	if err != nil {
@@ -93,13 +93,13 @@ func (s *SearchService) initializeIndex(ctx context.Context) error {
 	return nil
 }
 
-// IndexTicket indexes a single ticket
+// IndexTicket indexes a single ticket.
 func (s *SearchService) IndexTicket(ctx context.Context, ticket *models.Ticket) error {
 	doc := s.mapTicketToSearchDocument(ticket)
 	return s.client.IndexDocument(ctx, "tickets", doc.ID, doc)
 }
 
-// UpdateTicketInIndex updates a ticket in the search index
+// UpdateTicketInIndex updates a ticket in the search index.
 func (s *SearchService) UpdateTicketInIndex(ctx context.Context, ticket *models.Ticket) error {
 	doc := s.mapTicketToSearchDocument(ticket)
 
@@ -115,12 +115,12 @@ func (s *SearchService) UpdateTicketInIndex(ctx context.Context, ticket *models.
 	return s.client.UpdateDocument(ctx, "tickets", doc.ID, updates)
 }
 
-// DeleteTicketFromIndex removes a ticket from the search index
+// DeleteTicketFromIndex removes a ticket from the search index.
 func (s *SearchService) DeleteTicketFromIndex(ctx context.Context, ticketNumber string) error {
 	return s.client.DeleteDocument(ctx, "tickets", ticketNumber)
 }
 
-// BulkIndexTickets indexes multiple tickets at once
+// BulkIndexTickets indexes multiple tickets at once.
 func (s *SearchService) BulkIndexTickets(ctx context.Context, tickets []models.Ticket) error {
 	docs := make([]interface{}, len(tickets))
 	for i, ticket := range tickets {
@@ -129,7 +129,7 @@ func (s *SearchService) BulkIndexTickets(ctx context.Context, tickets []models.T
 	return s.client.BulkIndex(ctx, "tickets", docs)
 }
 
-// SearchTickets performs a ticket search
+// SearchTickets performs a ticket search.
 func (s *SearchService) SearchTickets(ctx context.Context, request *models.SearchRequest) (*models.SearchResult, error) {
 	// Set defaults
 	if request.Page == 0 {
@@ -142,7 +142,7 @@ func (s *SearchService) SearchTickets(ctx context.Context, request *models.Searc
 	return s.client.Search(ctx, "tickets", request)
 }
 
-// SearchWithFilter performs an advanced search with filters
+// SearchWithFilter performs an advanced search with filters.
 func (s *SearchService) SearchWithFilter(ctx context.Context, filter *models.SearchFilter) (*models.SearchResult, error) {
 	// Build search request from filter
 	request := &models.SearchRequest{
@@ -180,12 +180,12 @@ func (s *SearchService) SearchWithFilter(ctx context.Context, filter *models.Sea
 	return s.client.Search(ctx, "tickets", request)
 }
 
-// GetSearchSuggestions provides search suggestions
+// GetSearchSuggestions provides search suggestions.
 func (s *SearchService) GetSearchSuggestions(ctx context.Context, text string) ([]string, error) {
 	return s.client.Suggest(ctx, "tickets", text, "title")
 }
 
-// SaveSearch saves a search query for later use
+// SaveSearch saves a search query for later use.
 func (s *SearchService) SaveSearch(ctx context.Context, search *models.SavedSearch) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -202,7 +202,7 @@ func (s *SearchService) SaveSearch(ctx context.Context, search *models.SavedSear
 	return nil
 }
 
-// GetSavedSearch retrieves a saved search
+// GetSavedSearch retrieves a saved search.
 func (s *SearchService) GetSavedSearch(ctx context.Context, id uint) (*models.SavedSearch, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -217,7 +217,7 @@ func (s *SearchService) GetSavedSearch(ctx context.Context, id uint) (*models.Sa
 	return &result, nil
 }
 
-// GetSavedSearches retrieves all saved searches for a user
+// GetSavedSearches retrieves all saved searches for a user.
 func (s *SearchService) GetSavedSearches(ctx context.Context, userID uint) ([]models.SavedSearch, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -232,7 +232,7 @@ func (s *SearchService) GetSavedSearches(ctx context.Context, userID uint) ([]mo
 	return searches, nil
 }
 
-// ExecuteSavedSearch runs a saved search
+// ExecuteSavedSearch runs a saved search.
 func (s *SearchService) ExecuteSavedSearch(ctx context.Context, id uint) (*models.SearchResult, error) {
 	search, err := s.GetSavedSearch(ctx, id)
 	if err != nil {
@@ -247,7 +247,7 @@ func (s *SearchService) ExecuteSavedSearch(ctx context.Context, id uint) (*model
 	return s.SearchWithFilter(ctx, &search.Filter)
 }
 
-// RecordSearchHistory records a search in history
+// RecordSearchHistory records a search in history.
 func (s *SearchService) RecordSearchHistory(ctx context.Context, userID uint, request *models.SearchRequest, results *models.SearchResult) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -272,7 +272,7 @@ func (s *SearchService) RecordSearchHistory(ctx context.Context, userID uint, re
 	return nil
 }
 
-// GetSearchHistory retrieves search history for a user
+// GetSearchHistory retrieves search history for a user.
 func (s *SearchService) GetSearchHistory(ctx context.Context, userID uint, limit int) ([]models.SearchHistory, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -291,7 +291,7 @@ func (s *SearchService) GetSearchHistory(ctx context.Context, userID uint, limit
 	return history, nil
 }
 
-// GetSearchAnalytics generates search analytics
+// GetSearchAnalytics generates search analytics.
 func (s *SearchService) GetSearchAnalytics(ctx context.Context, from, to time.Time) (*models.SearchAnalytics, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -373,7 +373,7 @@ func (s *SearchService) GetSearchAnalytics(ctx context.Context, from, to time.Ti
 	return analytics, nil
 }
 
-// ReindexAllTickets reindexes all tickets
+// ReindexAllTickets reindexes all tickets.
 func (s *SearchService) ReindexAllTickets(ctx context.Context, fetcher func() ([]models.Ticket, error)) (*ReindexStats, error) {
 	stats := &ReindexStats{
 		StartTime: time.Now(),
@@ -414,7 +414,7 @@ func (s *SearchService) ReindexAllTickets(ctx context.Context, fetcher func() ([
 	return stats, nil
 }
 
-// mapTicketToSearchDocument converts a ticket to a search document
+// mapTicketToSearchDocument converts a ticket to a search document.
 func (s *SearchService) mapTicketToSearchDocument(ticket *models.Ticket) *models.TicketSearchDocument {
 	doc := &models.TicketSearchDocument{
 		ID:           ticket.TicketNumber,
@@ -442,7 +442,7 @@ func (s *SearchService) mapTicketToSearchDocument(ticket *models.Ticket) *models
 	return doc
 }
 
-// mapTicketStateToStatus maps ticket state ID to status string
+// mapTicketStateToStatus maps ticket state ID to status string.
 func (s *SearchService) mapTicketStateToStatus(stateID int) string {
 	// Based on OTRS default states
 	statusMap := map[int]string{
@@ -464,7 +464,7 @@ func (s *SearchService) mapTicketStateToStatus(stateID int) string {
 	return "unknown"
 }
 
-// mapStateToStatus maps state name to status
+// mapStateToStatus maps state name to status.
 func (s *SearchService) mapStateToStatus(state string) string {
 	// Simple mapping for common states
 	switch state {
@@ -475,7 +475,7 @@ func (s *SearchService) mapStateToStatus(state string) string {
 	}
 }
 
-// mapTicketPriorityToString maps priority ID to string
+// mapTicketPriorityToString maps priority ID to string.
 func (s *SearchService) mapTicketPriorityToString(priorityID int) string {
 	priorityMap := map[int]string{
 		1: "very low",
@@ -491,7 +491,7 @@ func (s *SearchService) mapTicketPriorityToString(priorityID int) string {
 	return "normal"
 }
 
-// mapQueueIDToName maps queue ID to name
+// mapQueueIDToName maps queue ID to name.
 func (s *SearchService) mapQueueIDToName(queueID int) string {
 	// TODO: Fetch actual queue names from database
 	queueMap := map[int]string{
@@ -507,7 +507,7 @@ func (s *SearchService) mapQueueIDToName(queueID int) string {
 	return fmt.Sprintf("Queue %d", queueID)
 }
 
-// requestToFilter converts a search request to a filter
+// requestToFilter converts a search request to a filter.
 func (s *SearchService) requestToFilter(request *models.SearchRequest) models.SearchFilter {
 	filter := models.SearchFilter{
 		Query: request.Query,
@@ -530,7 +530,7 @@ func (s *SearchService) requestToFilter(request *models.SearchRequest) models.Se
 	return filter
 }
 
-// ReindexStats contains statistics for reindexing operation
+// ReindexStats contains statistics for reindexing operation.
 type ReindexStats struct {
 	Total     int
 	Indexed   int

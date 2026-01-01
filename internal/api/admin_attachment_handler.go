@@ -1,8 +1,11 @@
+// Package api provides HTTP handlers for the GOTRS application.
 package api
 
 import (
 	"database/sql"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,10 +13,31 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// StandardAttachment represents a standard attachment in OTRS
+// jsonError sends a JSON error response.
+func jsonError(c *gin.Context, status int, message string) {
+	c.JSON(status, gin.H{"success": false, "error": message})
+}
+
+// readFormFile reads a file from the multipart form.
+func readFormFile(c *gin.Context, fieldName string) ([]byte, *multipart.FileHeader, error) {
+	file, header, err := c.Request.FormFile(fieldName)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer func() { _ = file.Close() }()
+
+	content, err := io.ReadAll(file)
+	if err != nil {
+		return nil, nil, err
+	}
+	return content, header, nil
+}
+
+// StandardAttachment represents a standard attachment in OTRS.
 type StandardAttachment struct {
 	ID                   int       `json:"id"`
 	Name                 string    `json:"name"`
@@ -30,7 +54,7 @@ type StandardAttachment struct {
 	ChangeBy             int       `json:"change_by"`
 }
 
-// handleAdminAttachment displays the admin attachment management page
+// handleAdminAttachment displays the admin attachment management page.
 func handleAdminAttachment(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -56,7 +80,9 @@ func handleAdminAttachment(c *gin.Context) {
 	argCount := 1
 
 	if searchQuery != "" {
-		query += fmt.Sprintf(" AND (LOWER(name) LIKE $%d OR LOWER(filename) LIKE $%d OR LOWER(comments) LIKE $%d)", argCount, argCount+1, argCount+2)
+		query += fmt.Sprintf(
+			" AND (LOWER(name) LIKE $%d OR LOWER(filename) LIKE $%d OR LOWER(comments) LIKE $%d)",
+			argCount, argCount+1, argCount+2)
 		searchPattern := "%" + strings.ToLower(searchQuery) + "%"
 		args = append(args, searchPattern, searchPattern, searchPattern)
 		argCount += 3
@@ -70,7 +96,6 @@ func handleAdminAttachment(c *gin.Context) {
 			query += fmt.Sprintf(" AND valid_id = $%d", argCount)
 			args = append(args, 2)
 		}
-		argCount++
 	}
 
 	query += " ORDER BY name ASC"
@@ -80,7 +105,7 @@ func handleAdminAttachment(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to fetch attachments")
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var attachments []StandardAttachment
 	for rows.Next() {
@@ -103,6 +128,10 @@ func handleAdminAttachment(c *gin.Context) {
 		a.ContentSizeFormatted = formatFileSize(a.ContentSize)
 		attachments = append(attachments, a)
 	}
+	if err := rows.Err(); err != nil {
+		c.String(http.StatusInternalServerError, "Error iterating attachments")
+		return
+	}
 
 	// Valid options for the form dropdown
 	validOptions := []map[string]interface{}{
@@ -123,15 +152,10 @@ func handleAdminAttachment(c *gin.Context) {
 	})
 }
 
-// handleAdminAttachmentCreate creates a new standard attachment
+// handleAdminAttachmentCreate creates a new standard attachment.
 func handleAdminAttachmentCreate(c *gin.Context) {
-	// Parse multipart form for file upload
-	err := c.Request.ParseMultipartForm(10 << 20) // 10 MB max
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Failed to parse form",
-		})
+	if err := c.Request.ParseMultipartForm(10 << 20); err != nil {
+		jsonError(c, http.StatusBadRequest, "Failed to parse form")
 		return
 	}
 
@@ -139,104 +163,61 @@ func handleAdminAttachmentCreate(c *gin.Context) {
 	comments := c.PostForm("comments")
 	validIDStr := c.PostForm("valid_id")
 
-	// Default valid_id to 1 if not provided
 	validID := 1
 	if validIDStr != "" {
-		validID, _ = strconv.Atoi(validIDStr)
+		if parsed, err := strconv.Atoi(validIDStr); err == nil {
+			validID = parsed
+		}
 	}
 
-	// Validate name
 	if strings.TrimSpace(name) == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Name is required",
-		})
+		jsonError(c, http.StatusBadRequest, "Name is required")
 		return
 	}
 
-	// Get uploaded file
-	file, header, err := c.Request.FormFile("file")
+	content, header, err := readFormFile(c, "file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "File is required",
-		})
-		return
-	}
-	defer file.Close()
-
-	// Read file content
-	content := make([]byte, header.Size)
-	_, err = file.Read(content)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to read file",
-		})
+		jsonError(c, http.StatusBadRequest, "File is required")
 		return
 	}
 
 	db, err := database.GetDB()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Database connection failed",
-		})
+		jsonError(c, http.StatusInternalServerError, "Database connection failed")
 		return
 	}
 
-	// Check for duplicate name
 	var exists bool
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM standard_attachment WHERE name = $1)"), name).Scan(&exists)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to check for duplicate",
-		})
+	dupeQuery := database.ConvertPlaceholders(
+		"SELECT EXISTS(SELECT 1 FROM standard_attachment WHERE name = $1)")
+	if err = db.QueryRow(dupeQuery, name).Scan(&exists); err != nil {
+		jsonError(c, http.StatusInternalServerError, "Failed to check for duplicate")
 		return
 	}
-
 	if exists {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Attachment with this name already exists",
-		})
+		jsonError(c, http.StatusBadRequest, "Attachment with this name already exists")
 		return
 	}
 
-	// Insert the new attachment
 	var commentsPtr *string
 	if comments != "" {
 		commentsPtr = &comments
 	}
 
 	result, err := db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO standard_attachment (name, filename, content_type, content, comments, valid_id, create_time, create_by, change_time, change_by)
+		INSERT INTO standard_attachment 
+			(name, filename, content_type, content, comments, valid_id, 
+			 create_time, create_by, change_time, change_by)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW(), 1, NOW(), 1)
 	`), name, header.Filename, header.Header.Get("Content-Type"), content, commentsPtr, validID)
-
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to create attachment: " + err.Error(),
-		})
+		jsonError(c, http.StatusInternalServerError, "Failed to create attachment: "+err.Error())
 		return
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to get attachment ID",
-		})
-		return
-	}
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to create attachment",
-		})
+		jsonError(c, http.StatusInternalServerError, "Failed to get attachment ID")
 		return
 	}
 
@@ -244,54 +225,37 @@ func handleAdminAttachmentCreate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Attachment created successfully",
-		"data": gin.H{
-			"id":       id,
-			"name":     name,
-			"filename": header.Filename,
-		},
+		"data":    gin.H{"id": id, "name": name, "filename": header.Filename},
 	})
 }
 
-// handleAdminAttachmentUpdate updates an existing standard attachment
+// handleAdminAttachmentUpdate updates an existing standard attachment.
 func handleAdminAttachmentUpdate(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Invalid attachment ID",
-		})
+		jsonError(c, http.StatusBadRequest, "Invalid attachment ID")
 		return
 	}
 
-	// Parse multipart form (file is optional for updates)
-	c.Request.ParseMultipartForm(10 << 20) // 10 MB max
-
-	name := c.PostForm("name")
-	comments := c.PostForm("comments")
-	validIDStr := c.PostForm("valid_id")
+	_ = c.Request.ParseMultipartForm(10 << 20) //nolint:errcheck // file is optional
 
 	db, err := database.GetDB()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Database connection failed",
-		})
+		jsonError(c, http.StatusInternalServerError, "Database connection failed")
 		return
 	}
 
-	// Build update query dynamically
 	updates := []string{"change_time = CURRENT_TIMESTAMP", "change_by = 1"}
 	args := []interface{}{}
 	argCount := 1
 
-	if name != "" {
+	if name := c.PostForm("name"); name != "" {
 		updates = append(updates, fmt.Sprintf("name = $%d", argCount))
 		args = append(args, name)
 		argCount++
 	}
 
-	if comments != "" {
+	if comments := c.PostForm("comments"); comments != "" {
 		updates = append(updates, fmt.Sprintf("comments = $%d", argCount))
 		args = append(args, comments)
 		argCount++
@@ -301,65 +265,47 @@ func handleAdminAttachmentUpdate(c *gin.Context) {
 		argCount++
 	}
 
-	if validIDStr != "" {
-		validID, _ := strconv.Atoi(validIDStr)
-		updates = append(updates, fmt.Sprintf("valid_id = $%d", argCount))
-		args = append(args, validID)
-		argCount++
-	}
-
-	// Check if a new file was uploaded
-	file, header, err := c.Request.FormFile("file")
-	if err == nil {
-		defer file.Close()
-
-		// Read new file content
-		content := make([]byte, header.Size)
-		_, err = file.Read(content)
-		if err == nil {
-			updates = append(updates, fmt.Sprintf("filename = $%d", argCount))
-			args = append(args, header.Filename)
-			argCount++
-
-			updates = append(updates, fmt.Sprintf("content_type = $%d", argCount))
-			args = append(args, header.Header.Get("Content-Type"))
-			argCount++
-
-			updates = append(updates, fmt.Sprintf("content = $%d", argCount))
-			args = append(args, content)
+	if validIDStr := c.PostForm("valid_id"); validIDStr != "" {
+		if parsedValidID, err := strconv.Atoi(validIDStr); err == nil {
+			updates = append(updates, fmt.Sprintf("valid_id = $%d", argCount))
+			args = append(args, parsedValidID)
 			argCount++
 		}
 	}
 
+	if content, header, err := readFormFile(c, "file"); err == nil {
+		updates = append(updates, fmt.Sprintf("filename = $%d", argCount))
+		args = append(args, header.Filename)
+		argCount++
+		updates = append(updates, fmt.Sprintf("content_type = $%d", argCount))
+		args = append(args, header.Header.Get("Content-Type"))
+		argCount++
+		updates = append(updates, fmt.Sprintf("content = $%d", argCount))
+		args = append(args, content)
+		argCount++
+	}
+
 	args = append(args, id)
-	query := fmt.Sprintf("UPDATE standard_attachment SET %s WHERE id = $%d", strings.Join(updates, ", "), argCount)
+	query := fmt.Sprintf(
+		"UPDATE standard_attachment SET %s WHERE id = $%d",
+		strings.Join(updates, ", "), argCount)
 
 	result, err := db.Exec(database.ConvertPlaceholders(query), args...)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"error":   "Failed to update attachment: " + err.Error(),
-		})
+		jsonError(c, http.StatusInternalServerError, "Failed to update attachment: "+err.Error())
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{
-			"success": false,
-			"error":   "Attachment not found",
-		})
+	if rowsAffected, err := result.RowsAffected(); err != nil || rowsAffected == 0 {
+		jsonError(c, http.StatusNotFound, "Attachment not found")
 		return
 	}
 
 	c.Header("HX-Trigger", "attachmentUpdated")
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "Attachment updated successfully",
-	})
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Attachment updated successfully"})
 }
 
-// handleAdminAttachmentDelete soft deletes an attachment (sets valid_id = 2)
+// handleAdminAttachmentDelete soft deletes an attachment (sets valid_id = 2).
 func handleAdminAttachmentDelete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -395,8 +341,8 @@ func handleAdminAttachmentDelete(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
 			"error":   "Attachment not found",
@@ -411,7 +357,7 @@ func handleAdminAttachmentDelete(c *gin.Context) {
 	})
 }
 
-// handleAdminAttachmentDownload downloads an attachment
+// handleAdminAttachmentDownload downloads an attachment.
 func handleAdminAttachmentDownload(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -453,7 +399,7 @@ func handleAdminAttachmentDownload(c *gin.Context) {
 	c.Data(http.StatusOK, contentType, content)
 }
 
-// handleAdminAttachmentPreview serves an attachment inline for preview
+// handleAdminAttachmentPreview serves an attachment inline for preview.
 func handleAdminAttachmentPreview(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -496,7 +442,7 @@ func handleAdminAttachmentPreview(c *gin.Context) {
 	c.Data(http.StatusOK, contentType, content)
 }
 
-// handleAdminAttachmentToggle toggles the validity of an attachment
+// handleAdminAttachmentToggle toggles the validity of an attachment.
 func handleAdminAttachmentToggle(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -543,8 +489,8 @@ func handleAdminAttachmentToggle(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
 			"error":   "Attachment not found",

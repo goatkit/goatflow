@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
@@ -41,10 +42,10 @@ func (router *APIRouter) handleGetDashboardStats(c *gin.Context) {
 	`)).Scan(&closedToday)
 
 	stats := gin.H{
-		"total_tickets":  totalTickets,
-		"open_tickets":   openTickets,
-		"closed_today":   closedToday,
-		"avg_response_time": "N/A",
+		"total_tickets":         totalTickets,
+		"open_tickets":          openTickets,
+		"closed_today":          closedToday,
+		"avg_response_time":     "N/A",
 		"customer_satisfaction": 0,
 	}
 
@@ -80,7 +81,7 @@ func (router *APIRouter) handleGetTicketsByStatusChart(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var labels []string
 	var data []int
@@ -131,7 +132,7 @@ func (router *APIRouter) handleGetTicketsByPriorityChart(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var labels []string
 	var data []int
@@ -183,7 +184,7 @@ func (router *APIRouter) handleGetTicketsOverTimeChart(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	dateCreated := make(map[string]int)
 	for rows.Next() {
@@ -207,7 +208,7 @@ func (router *APIRouter) handleGetTicketsOverTimeChart(c *gin.Context) {
 		ORDER BY date
 	`))
 	if err == nil {
-		defer closedRows.Close()
+		defer func() { _ = closedRows.Close() }()
 	}
 
 	dateClosed := make(map[string]int)
@@ -280,7 +281,7 @@ func (router *APIRouter) handleGetRecentActivity(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var activities []gin.H
 	for rows.Next() {
@@ -297,10 +298,10 @@ func (router *APIRouter) handleGetRecentActivity(c *gin.Context) {
 		}
 
 		activity := gin.H{
-			"id":        id,
-			"type":      activityType,
-			"message":   name,
-			"ticket_id": ticketID,
+			"id":            id,
+			"type":          activityType,
+			"message":       name,
+			"ticket_id":     ticketID,
 			"ticket_number": ticketNumber,
 		}
 		if createTime.Valid {
@@ -353,7 +354,7 @@ func (router *APIRouter) handleGetMyTickets(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tickets []gin.H
 	for rows.Next() {

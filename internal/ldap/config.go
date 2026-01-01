@@ -1,3 +1,4 @@
+// Package ldap provides LDAP authentication and directory service integration.
 package ldap
 
 import (
@@ -8,19 +9,19 @@ import (
 	"strings"
 )
 
-// ConfigManager handles LDAP configuration loading and saving
+// ConfigManager handles LDAP configuration loading and saving.
 type ConfigManager struct {
 	configPath string
 }
 
-// NewConfigManager creates a new config manager
+// NewConfigManager creates a new config manager.
 func NewConfigManager(configPath string) *ConfigManager {
 	return &ConfigManager{
 		configPath: configPath,
 	}
 }
 
-// LoadFromEnvironment loads LDAP configuration from environment variables
+// LoadFromEnvironment loads LDAP configuration from environment variables.
 func LoadFromEnvironment() (*Config, error) {
 	// Check if LDAP is enabled
 	enabled := strings.ToLower(os.Getenv("LDAP_ENABLED")) == "true"
@@ -130,7 +131,7 @@ func LoadFromEnvironment() (*Config, error) {
 	return config, nil
 }
 
-// SaveToFile saves LDAP configuration to JSON file
+// SaveToFile saves LDAP configuration to JSON file.
 func (cm *ConfigManager) SaveToFile(config *Config) error {
 	data, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
@@ -140,7 +141,7 @@ func (cm *ConfigManager) SaveToFile(config *Config) error {
 	return os.WriteFile(cm.configPath, data, 0600)
 }
 
-// LoadFromFile loads LDAP configuration from JSON file
+// LoadFromFile loads LDAP configuration from JSON file.
 func (cm *ConfigManager) LoadFromFile() (*Config, error) {
 	data, err := os.ReadFile(cm.configPath)
 	if err != nil {
@@ -158,7 +159,7 @@ func (cm *ConfigManager) LoadFromFile() (*Config, error) {
 	return &config, nil
 }
 
-// GetEnvironmentTemplate returns environment variables template for LDAP configuration
+// GetEnvironmentTemplate returns environment variables template for LDAP configuration.
 func GetEnvironmentTemplate(ldapType string) map[string]string {
 	template := map[string]string{
 		"LDAP_ENABLED":         "true",
@@ -200,7 +201,7 @@ func GetEnvironmentTemplate(ldapType string) map[string]string {
 	return template
 }
 
-// ExampleConfigs provides example configurations for documentation
+// ExampleConfigs provides example configurations for documentation.
 var ExampleConfigs = map[string]string{
 	"active_directory": `# Active Directory Configuration
 LDAP_ENABLED=true

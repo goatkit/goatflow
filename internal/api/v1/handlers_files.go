@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// File handlers - basic stubs for now
+// File handlers - basic stubs for now.
 func (router *APIRouter) handleUploadFile(c *gin.Context) {
 	// TODO: Implement actual file upload
 	file := gin.H{

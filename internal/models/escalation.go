@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// EscalationLevel represents a level in the escalation hierarchy
+// EscalationLevel represents a level in the escalation hierarchy.
 type EscalationLevel int
 
 const (
@@ -15,7 +15,7 @@ const (
 	EscalationLevel5 EscalationLevel = 5 // Executive
 )
 
-// EscalationTrigger represents what triggers an escalation
+// EscalationTrigger represents what triggers an escalation.
 type EscalationTrigger string
 
 const (
@@ -31,7 +31,7 @@ const (
 	EscalationTriggerSentiment   EscalationTrigger = "sentiment"
 )
 
-// EscalationPolicy defines an escalation policy
+// EscalationPolicy defines an escalation policy.
 type EscalationPolicy struct {
 	ID                int                    `json:"id"`
 	Name              string                 `json:"name"`
@@ -47,7 +47,7 @@ type EscalationPolicy struct {
 	UpdatedAt         time.Time              `json:"updated_at"`
 }
 
-// EscalationRule defines a single escalation rule
+// EscalationRule defines a single escalation rule.
 type EscalationRule struct {
 	ID             int                   `json:"id"`
 	PolicyID       int                   `json:"policy_id"`
@@ -62,20 +62,20 @@ type EscalationRule struct {
 	Order          int                   `json:"order"`            // Execution order within policy
 }
 
-// EscalationCondition defines conditions for escalation
+// EscalationCondition defines conditions for escalation.
 type EscalationCondition struct {
 	Field    string      `json:"field"`    // e.g., "priority", "customer.tier", "ticket.reopen_count"
 	Operator string      `json:"operator"` // e.g., "equals", "greater_than", "contains"
 	Value    interface{} `json:"value"`
 }
 
-// EscalationAction defines what happens during escalation
+// EscalationAction defines what happens during escalation.
 type EscalationAction struct {
 	Type   string      `json:"type"` // assign_to_user, assign_to_group, change_priority, notify, etc.
 	Config interface{} `json:"config"`
 }
 
-// EscalationNotification defines notification settings
+// EscalationNotification defines notification settings.
 type EscalationNotification struct {
 	NotifyCustomer    bool     `json:"notify_customer"`
 	NotifyAssignee    bool     `json:"notify_assignee"`
@@ -87,7 +87,7 @@ type EscalationNotification struct {
 	IncludeHistory    bool     `json:"include_history"`
 }
 
-// EscalationPath represents the escalation hierarchy
+// EscalationPath represents the escalation hierarchy.
 type EscalationPath struct {
 	ID          int                   `json:"id"`
 	Name        string                `json:"name"`
@@ -99,7 +99,7 @@ type EscalationPath struct {
 	UpdatedAt   time.Time             `json:"updated_at"`
 }
 
-// EscalationPathLevel defines a level in the escalation path
+// EscalationPathLevel defines a level in the escalation path.
 type EscalationPathLevel struct {
 	Level            EscalationLevel `json:"level"`
 	Name             string          `json:"name"`
@@ -112,7 +112,7 @@ type EscalationPathLevel struct {
 	NotifyGroups     []int           `json:"notify_groups"`
 }
 
-// EscalationHistory records escalation events
+// EscalationHistory records escalation events.
 type EscalationHistory struct {
 	ID               int               `json:"id"`
 	TicketID         int               `json:"ticket_id"`
@@ -130,7 +130,7 @@ type EscalationHistory struct {
 	AutoEscalated    bool              `json:"auto_escalated"`
 }
 
-// EscalationMetrics tracks escalation performance
+// EscalationMetrics tracks escalation performance.
 type EscalationMetrics struct {
 	TicketID            int             `json:"ticket_id"`
 	TotalEscalations    int             `json:"total_escalations"`
@@ -145,7 +145,7 @@ type EscalationMetrics struct {
 	EscalationEffective bool            `json:"escalation_effective"` // Was escalation helpful
 }
 
-// EscalationMatrix defines escalation relationships between teams
+// EscalationMatrix defines escalation relationships between teams.
 type EscalationMatrix struct {
 	ID          int                       `json:"id"`
 	Name        string                    `json:"name"`
@@ -156,7 +156,7 @@ type EscalationMatrix struct {
 	UpdatedAt   time.Time                 `json:"updated_at"`
 }
 
-// EscalationMatrixMapping defines team escalation relationships
+// EscalationMatrixMapping defines team escalation relationships.
 type EscalationMatrixMapping struct {
 	FromTeamID      int    `json:"from_team_id"`
 	ToTeamID        int    `json:"to_team_id"`
@@ -165,7 +165,7 @@ type EscalationMatrixMapping struct {
 	AutoApprove     bool   `json:"auto_approve"`
 }
 
-// EscalationRequest represents a request for escalation (for approval workflows)
+// EscalationRequest represents a request for escalation (for approval workflows).
 type EscalationRequest struct {
 	ID            int             `json:"id"`
 	TicketID      int             `json:"ticket_id"`
@@ -185,7 +185,7 @@ type EscalationRequest struct {
 
 // Helper methods
 
-// GetLevelName returns the name of an escalation level
+// GetLevelName returns the name of an escalation level.
 func (el EscalationLevel) GetLevelName() string {
 	switch el {
 	case EscalationLevel1:
@@ -203,17 +203,17 @@ func (el EscalationLevel) GetLevelName() string {
 	}
 }
 
-// IsHigherThan checks if this level is higher than another
+// IsHigherThan checks if this level is higher than another.
 func (el EscalationLevel) IsHigherThan(other EscalationLevel) bool {
 	return el > other
 }
 
-// CanEscalateTo checks if escalation to target level is valid
+// CanEscalateTo checks if escalation to target level is valid.
 func (el EscalationLevel) CanEscalateTo(target EscalationLevel) bool {
 	return target > el && target <= EscalationLevel5
 }
 
-// ShouldTrigger evaluates if escalation should trigger based on conditions
+// ShouldTrigger evaluates if escalation should trigger based on conditions.
 func (er *EscalationRule) ShouldTrigger(context map[string]interface{}) bool {
 	// Evaluate all conditions
 	for _, condition := range er.Conditions {
@@ -224,7 +224,7 @@ func (er *EscalationRule) ShouldTrigger(context map[string]interface{}) bool {
 	return true
 }
 
-// evaluateCondition checks if a single condition is met
+// evaluateCondition checks if a single condition is met.
 func evaluateCondition(condition EscalationCondition, context map[string]interface{}) bool {
 	// Get field value from context
 	value, exists := context[condition.Field]
@@ -252,7 +252,7 @@ func evaluateCondition(condition EscalationCondition, context map[string]interfa
 	}
 }
 
-// GetNextLevel returns the next escalation level
+// GetNextLevel returns the next escalation level.
 func (ep *EscalationPath) GetNextLevel(currentLevel EscalationLevel) *EscalationPathLevel {
 	for i, level := range ep.Levels {
 		if level.Level == currentLevel && i+1 < len(ep.Levels) {
@@ -262,7 +262,7 @@ func (ep *EscalationPath) GetNextLevel(currentLevel EscalationLevel) *Escalation
 	return nil
 }
 
-// GetLevelConfig returns configuration for a specific level
+// GetLevelConfig returns configuration for a specific level.
 func (ep *EscalationPath) GetLevelConfig(level EscalationLevel) *EscalationPathLevel {
 	for _, l := range ep.Levels {
 		if l.Level == level {

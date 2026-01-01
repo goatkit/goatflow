@@ -1,3 +1,4 @@
+// Package connector provides email server connection interfaces and implementations.
 package connector
 
 import (

@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -11,9 +10,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSearchAPI(t *testing.T) {

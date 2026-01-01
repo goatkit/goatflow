@@ -1,5 +1,6 @@
 //go:build integration
 
+// Package integration provides SMTP4dev client for email integration testing.
 package integration
 
 import (
@@ -124,7 +125,7 @@ func (c *SMTP4DevClient) do(ctx context.Context, method, path string, body inter
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 300 {
 		b, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))

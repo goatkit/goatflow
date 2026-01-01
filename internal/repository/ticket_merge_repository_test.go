@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
 func TestTicketMergeRepository(t *testing.T) {

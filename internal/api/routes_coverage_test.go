@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -9,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TestAllStubRoutesReturn200 verifies all stub routes return 200 OK
+// TestAllStubRoutesReturn200 verifies all stub routes return 200 OK.
 func TestAllStubRoutesReturn200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -68,7 +67,7 @@ func TestAllStubRoutesReturn200(t *testing.T) {
 	}
 }
 
-// TestStaticFilesServed verifies static files are accessible
+// TestStaticFilesServed verifies static files are accessible.
 func TestStaticFilesServed(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

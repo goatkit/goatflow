@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
 )
 
-// stub generator returning fixed TN without using store
+// stub generator returning fixed TN without using store.
 type stubGen struct{}
 
 func (s stubGen) Name() string      { return "AutoIncrement" }
@@ -20,7 +21,7 @@ func (s stubGen) Next(ctx context.Context, store ticketnumber.CounterStore) (str
 	return "45000042", nil
 }
 
-// dummy store (never called because stubGen ignores it)
+// dummy store (never called because stubGen ignores it).
 type dummyStore struct{}
 
 func (d dummyStore) Add(ctx context.Context, dateScoped bool, offset int64) (int64, error) {

@@ -13,19 +13,19 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
-// InternalNoteService handles business logic for internal notes
+// InternalNoteService handles business logic for internal notes.
 type InternalNoteService struct {
 	repo repository.InternalNoteRepository
 }
 
-// NewInternalNoteService creates a new internal note service
+// NewInternalNoteService creates a new internal note service.
 func NewInternalNoteService(repo repository.InternalNoteRepository) *InternalNoteService {
 	return &InternalNoteService{
 		repo: repo,
 	}
 }
 
-// CreateNote creates a new internal note
+// CreateNote creates a new internal note.
 func (s *InternalNoteService) CreateNote(ctx context.Context, note *models.InternalNote) error {
 	// Validate content
 	if err := s.validateNoteContent(note.Content); err != nil {
@@ -52,7 +52,7 @@ func (s *InternalNoteService) CreateNote(ctx context.Context, note *models.Inter
 	return s.repo.CreateNote(ctx, note)
 }
 
-// CreateNoteFromTemplate creates a note from a template
+// CreateNoteFromTemplate creates a note from a template.
 func (s *InternalNoteService) CreateNoteFromTemplate(ctx context.Context, ticketID uint, templateID uint, variables map[string]string, authorID uint) (*models.InternalNote, error) {
 	// Get template
 	template, err := s.repo.GetTemplateByID(ctx, templateID)
@@ -84,27 +84,27 @@ func (s *InternalNoteService) CreateNoteFromTemplate(ctx context.Context, ticket
 	return note, nil
 }
 
-// GetNote retrieves a note by ID
+// GetNote retrieves a note by ID.
 func (s *InternalNoteService) GetNote(ctx context.Context, id uint) (*models.InternalNote, error) {
 	return s.repo.GetNoteByID(ctx, id)
 }
 
-// GetNotesByTicket retrieves all notes for a ticket
+// GetNotesByTicket retrieves all notes for a ticket.
 func (s *InternalNoteService) GetNotesByTicket(ctx context.Context, ticketID uint) ([]models.InternalNote, error) {
 	return s.repo.GetNotesByTicket(ctx, ticketID)
 }
 
-// GetPinnedNotes retrieves pinned notes for a ticket
+// GetPinnedNotes retrieves pinned notes for a ticket.
 func (s *InternalNoteService) GetPinnedNotes(ctx context.Context, ticketID uint) ([]models.InternalNote, error) {
 	return s.repo.GetPinnedNotes(ctx, ticketID)
 }
 
-// GetImportantNotes retrieves important notes for a ticket
+// GetImportantNotes retrieves important notes for a ticket.
 func (s *InternalNoteService) GetImportantNotes(ctx context.Context, ticketID uint) ([]models.InternalNote, error) {
 	return s.repo.GetImportantNotes(ctx, ticketID)
 }
 
-// UpdateNote updates an existing note
+// UpdateNote updates an existing note.
 func (s *InternalNoteService) UpdateNote(ctx context.Context, note *models.InternalNote, editReason string) error {
 	// Validate content
 	if err := s.validateNoteContent(note.Content); err != nil {
@@ -144,7 +144,7 @@ func (s *InternalNoteService) UpdateNote(ctx context.Context, note *models.Inter
 	return s.repo.UpdateNote(ctx, note)
 }
 
-// DeleteNote deletes a note
+// DeleteNote deletes a note.
 func (s *InternalNoteService) DeleteNote(ctx context.Context, id uint, deletedBy uint) error {
 	// Get note for activity logging
 	note, err := s.repo.GetNoteByID(ctx, id)
@@ -165,7 +165,7 @@ func (s *InternalNoteService) DeleteNote(ctx context.Context, id uint, deletedBy
 	return s.repo.DeleteNote(ctx, id)
 }
 
-// PinNote pins or unpins a note
+// PinNote pins or unpins a note.
 func (s *InternalNoteService) PinNote(ctx context.Context, noteID uint, userID uint) error {
 	note, err := s.repo.GetNoteByID(ctx, noteID)
 	if err != nil {
@@ -192,7 +192,7 @@ func (s *InternalNoteService) PinNote(ctx context.Context, noteID uint, userID u
 	return s.repo.UpdateNote(ctx, note)
 }
 
-// MarkImportant marks or unmarks a note as important
+// MarkImportant marks or unmarks a note as important.
 func (s *InternalNoteService) MarkImportant(ctx context.Context, noteID uint, important bool, userID uint) error {
 	note, err := s.repo.GetNoteByID(ctx, noteID)
 	if err != nil {
@@ -219,66 +219,66 @@ func (s *InternalNoteService) MarkImportant(ctx context.Context, noteID uint, im
 	return s.repo.UpdateNote(ctx, note)
 }
 
-// SearchNotes searches for notes
+// SearchNotes searches for notes.
 func (s *InternalNoteService) SearchNotes(ctx context.Context, filter *models.NoteFilter) ([]models.InternalNote, error) {
 	return s.repo.SearchNotes(ctx, filter)
 }
 
-// GetEditHistory retrieves edit history for a note
+// GetEditHistory retrieves edit history for a note.
 func (s *InternalNoteService) GetEditHistory(ctx context.Context, noteID uint) ([]models.NoteEdit, error) {
 	return s.repo.GetEditHistory(ctx, noteID)
 }
 
-// GetTicketNoteSummary gets statistics for a ticket's notes
+// GetTicketNoteSummary gets statistics for a ticket's notes.
 func (s *InternalNoteService) GetTicketNoteSummary(ctx context.Context, ticketID uint) (*models.NoteStatistics, error) {
 	return s.repo.GetNoteStatistics(ctx, ticketID)
 }
 
-// GetRecentActivity gets recent activity for a ticket
+// GetRecentActivity gets recent activity for a ticket.
 func (s *InternalNoteService) GetRecentActivity(ctx context.Context, ticketID uint, limit int) ([]models.NoteActivity, error) {
 	return s.repo.GetActivityLog(ctx, ticketID, limit)
 }
 
-// GetUserMentions gets mentions for a user
+// GetUserMentions gets mentions for a user.
 func (s *InternalNoteService) GetUserMentions(ctx context.Context, userID uint) ([]models.NoteMention, error) {
 	return s.repo.GetMentionsByUser(ctx, userID)
 }
 
-// MarkMentionRead marks a mention as read
+// MarkMentionRead marks a mention as read.
 func (s *InternalNoteService) MarkMentionRead(ctx context.Context, mentionID uint) error {
 	return s.repo.MarkMentionAsRead(ctx, mentionID)
 }
 
-// CreateTemplate creates a note template
+// CreateTemplate creates a note template.
 func (s *InternalNoteService) CreateTemplate(ctx context.Context, template *models.NoteTemplate) error {
 	// Extract variables from content
 	template.Variables = s.extractTemplateVariables(template.Content)
 	return s.repo.CreateTemplate(ctx, template)
 }
 
-// GetTemplates retrieves all templates
+// GetTemplates retrieves all templates.
 func (s *InternalNoteService) GetTemplates(ctx context.Context) ([]models.NoteTemplate, error) {
 	return s.repo.GetTemplates(ctx)
 }
 
-// UpdateTemplate updates a template
+// UpdateTemplate updates a template.
 func (s *InternalNoteService) UpdateTemplate(ctx context.Context, template *models.NoteTemplate) error {
 	// Re-extract variables
 	template.Variables = s.extractTemplateVariables(template.Content)
 	return s.repo.UpdateTemplate(ctx, template)
 }
 
-// DeleteTemplate deletes a template
+// DeleteTemplate deletes a template.
 func (s *InternalNoteService) DeleteTemplate(ctx context.Context, id uint) error {
 	return s.repo.DeleteTemplate(ctx, id)
 }
 
-// GetCategories retrieves all note categories
+// GetCategories retrieves all note categories.
 func (s *InternalNoteService) GetCategories(ctx context.Context) ([]models.NoteCategory, error) {
 	return s.repo.GetCategories(ctx)
 }
 
-// ExportNotes exports notes in various formats
+// ExportNotes exports notes in various formats.
 func (s *InternalNoteService) ExportNotes(ctx context.Context, ticketID uint, format string, exportedBy string) ([]byte, error) {
 	notes, err := s.repo.GetNotesByTicket(ctx, ticketID)
 	if err != nil {
@@ -295,7 +295,7 @@ func (s *InternalNoteService) ExportNotes(ctx context.Context, ticketID uint, fo
 	}
 }
 
-// exportAsJSON exports notes as JSON
+// exportAsJSON exports notes as JSON.
 func (s *InternalNoteService) exportAsJSON(notes []models.InternalNote, ticketID uint, exportedBy string) ([]byte, error) {
 	export := models.NoteExport{
 		TicketNumber: fmt.Sprintf("TICKET-%d", ticketID),
@@ -309,7 +309,7 @@ func (s *InternalNoteService) exportAsJSON(notes []models.InternalNote, ticketID
 	return json.MarshalIndent(export, "", "  ")
 }
 
-// exportAsCSV exports notes as CSV
+// exportAsCSV exports notes as CSV.
 func (s *InternalNoteService) exportAsCSV(notes []models.InternalNote) ([]byte, error) {
 	var buf strings.Builder
 	writer := csv.NewWriter(&buf)
@@ -341,7 +341,7 @@ func (s *InternalNoteService) exportAsCSV(notes []models.InternalNote) ([]byte, 
 	return []byte(buf.String()), nil
 }
 
-// validateNoteContent validates note content
+// validateNoteContent validates note content.
 func (s *InternalNoteService) validateNoteContent(content string) error {
 	if content == "" {
 		return fmt.Errorf("note content cannot be empty")
@@ -352,7 +352,7 @@ func (s *InternalNoteService) validateNoteContent(content string) error {
 	return nil
 }
 
-// detectMentions detects @mentions in content
+// detectMentions detects @mentions in content.
 func (s *InternalNoteService) detectMentions(content string) []string {
 	re := regexp.MustCompile(`@(\w+)`)
 	matches := re.FindAllStringSubmatch(content, -1)
@@ -372,7 +372,7 @@ func (s *InternalNoteService) detectMentions(content string) []string {
 	return mentions
 }
 
-// detectTicketReferences detects ticket references in content
+// detectTicketReferences detects ticket references in content.
 func (s *InternalNoteService) detectTicketReferences(content string) []uint {
 	re := regexp.MustCompile(`(?:TICKET-|#)(\d+)`)
 	matches := re.FindAllStringSubmatch(content, -1)
@@ -396,7 +396,7 @@ func (s *InternalNoteService) detectTicketReferences(content string) []uint {
 	return tickets
 }
 
-// substituteVariables replaces template variables with values
+// substituteVariables replaces template variables with values.
 func (s *InternalNoteService) substituteVariables(template string, variables map[string]string) string {
 	result := template
 	for key, value := range variables {
@@ -405,7 +405,7 @@ func (s *InternalNoteService) substituteVariables(template string, variables map
 	return result
 }
 
-// extractTemplateVariables extracts variables from template content
+// extractTemplateVariables extracts variables from template content.
 func (s *InternalNoteService) extractTemplateVariables(content string) []string {
 	re := regexp.MustCompile(`\{\{(\w+)\}\}`)
 	matches := re.FindAllStringSubmatch(content, -1)

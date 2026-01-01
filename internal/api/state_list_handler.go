@@ -4,10 +4,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleListStatesAPI handles GET /api/v1/states
+// HandleListStatesAPI handles GET /api/v1/states.
 func HandleListStatesAPI(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -27,7 +28,7 @@ func HandleListStatesAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "states lookup failed: query error"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []gin.H
 	for rows.Next() {

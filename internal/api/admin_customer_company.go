@@ -11,11 +11,12 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
-// handleAdminCustomerCompanies shows the customer companies list
+// handleAdminCustomerCompanies shows the customer companies list.
 func handleAdminCustomerCompanies(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		search := strings.TrimSpace(c.Query("search"))
@@ -78,7 +79,7 @@ func handleAdminCustomerCompanies(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load customer companies"})
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		companies := []map[string]interface{}{}
 		for rows.Next() {
@@ -186,7 +187,7 @@ func renderCustomerCompaniesFallback(c *gin.Context, companies []map[string]inte
 	c.String(http.StatusOK, builder.String())
 }
 
-// handleAdminNewCustomerCompany shows the new customer company form
+// handleAdminNewCustomerCompany shows the new customer company form.
 func handleAdminNewCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/customer_company_form.pongo2", pongo2.Context{
@@ -199,7 +200,7 @@ func handleAdminNewCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminCreateCustomerCompany creates a new customer company
+// handleAdminCreateCustomerCompany creates a new customer company.
 func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.PostForm("customer_id")
@@ -245,7 +246,7 @@ func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminEditCustomerCompany shows the edit customer company form with portal customization
+// handleAdminEditCustomerCompany shows the edit customer company form with portal customization.
 func handleAdminEditCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
@@ -334,7 +335,7 @@ func handleAdminEditCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminUpdateCustomerCompany updates a customer company
+// handleAdminUpdateCustomerCompany updates a customer company.
 func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
@@ -418,7 +419,7 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminDeleteCustomerCompany soft-deletes (invalidates) a customer company
+// handleAdminDeleteCustomerCompany soft-deletes (invalidates) a customer company.
 func handleAdminDeleteCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
@@ -463,7 +464,7 @@ func handleAdminDeleteCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminActivateCustomerCompany activates a customer company
+// handleAdminActivateCustomerCompany activates a customer company.
 func handleAdminActivateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
@@ -508,7 +509,7 @@ func handleAdminActivateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminCustomerCompanyUsers shows users belonging to a customer company
+// handleAdminCustomerCompanyUsers shows users belonging to a customer company.
 func handleAdminCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
@@ -527,7 +528,7 @@ func handleAdminCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 			WHERE cu.customer_id = $1
 			ORDER BY cu.last_name, cu.first_name
 		`), customerID)
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		users := []map[string]interface{}{}
 		for rows.Next() {
@@ -569,7 +570,7 @@ func handleAdminCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminCustomerCompanyTickets shows tickets for a customer company
+// handleAdminCustomerCompanyTickets shows tickets for a customer company.
 func handleAdminCustomerCompanyTickets(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
@@ -586,7 +587,7 @@ func handleAdminCustomerCompanyTickets(db *sql.DB) gin.HandlerFunc {
 			ORDER BY t.create_time DESC
 			LIMIT 100
 		`), customerID)
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		tickets := []map[string]interface{}{}
 		for rows.Next() {
@@ -618,7 +619,7 @@ func handleAdminCustomerCompanyTickets(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminCustomerCompanyServices manages service assignments for a customer company
+// handleAdminCustomerCompanyServices manages service assignments for a customer company.
 func handleAdminCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
@@ -644,7 +645,7 @@ func handleAdminCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load services"})
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		services := []map[string]interface{}{}
 		for rows.Next() {
@@ -677,7 +678,7 @@ func handleAdminCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminUpdateCustomerCompanyServices updates service assignments
+// handleAdminUpdateCustomerCompanyServices updates service assignments.
 func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
@@ -703,7 +704,7 @@ func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Transaction failed"})
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Get all customer users for this company
 		rows, err := tx.Query(database.ConvertPlaceholders("SELECT login FROM customer_user WHERE customer_id = $1"), customerID)
@@ -711,7 +712,7 @@ func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load customer users"})
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		userLogins := []string{}
 		for rows.Next() {
 			var login string
@@ -756,7 +757,7 @@ func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminCustomerPortalSettings shows portal customization settings
+// handleAdminCustomerPortalSettings shows portal customization settings.
 func handleAdminCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if db == nil {
@@ -786,7 +787,7 @@ func handleAdminCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminUpdateCustomerPortalSettings updates portal customization
+// handleAdminUpdateCustomerPortalSettings updates portal customization.
 func handleAdminUpdateCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if db == nil {
@@ -882,7 +883,7 @@ func isPortalConfigTableMissing(err error) bool {
 	return strings.Contains(msg, "doesn't exist") || strings.Contains(msg, "does not exist") || strings.Contains(msg, "undefined table") || strings.Contains(msg, "undefined_relation")
 }
 
-// handleAdminUploadCustomerPortalLogo handles logo uploads for customer portals
+// handleAdminUploadCustomerPortalLogo handles logo uploads for customer portals.
 func handleAdminUploadCustomerPortalLogo(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
@@ -893,7 +894,7 @@ func handleAdminUploadCustomerPortalLogo(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
 			return
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		// Validate file type
 		contentType := header.Header.Get("Content-Type")

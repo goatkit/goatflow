@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -352,7 +351,7 @@ func TestTicketMessagesHTMXIntegration(t *testing.T) {
 	}
 }
 
-// Test to verify the exact 404 error user reported is fixed
+// Test to verify the exact 404 error user reported is fixed.
 func TestTicketMessages404Fix(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

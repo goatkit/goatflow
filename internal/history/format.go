@@ -1,3 +1,4 @@
+// Package history provides ticket history formatting and display utilities.
 package history
 
 import (

@@ -8,8 +8,9 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gotrs-io/gotrs-ce/internal/auth"
 )
 
 func TestAuthMiddlewareSetsIsCustomerFlag(t *testing.T) {

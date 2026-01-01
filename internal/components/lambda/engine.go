@@ -9,43 +9,44 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// ExecutionContext provides safe access to data and operations for lambda functions
+// ExecutionContext provides safe access to data and operations for lambda functions.
 type ExecutionContext struct {
 	Item map[string]interface{} `json:"item"`
 	DB   *SafeDBInterface       `json:"db"`
 }
 
-// SafeDBInterface provides read-only database access for lambda functions
+// SafeDBInterface provides read-only database access for lambda functions.
 type SafeDBInterface struct {
 	db database.IDatabase
 }
 
-// SafeRow provides access to query results
+// SafeRow provides access to query results.
 type SafeRow struct {
 	data map[string]interface{}
 }
 
-// SafeRows provides access to multiple query results
+// SafeRows provides access to multiple query results.
 type SafeRows struct {
 	rows []map[string]interface{}
 }
 
-// Engine manages JavaScript lambda execution with security constraints
+// Engine manages JavaScript lambda execution with security constraints.
 type Engine struct {
 	runtime *goja.Runtime
 	ctx     context.Context
 }
 
-// LambdaConfig holds configuration for lambda execution
+// LambdaConfig holds configuration for lambda execution.
 type LambdaConfig struct {
 	TimeoutMs     int64 `yaml:"timeout_ms" json:"timeout_ms"`
 	MemoryLimitMB int64 `yaml:"memory_limit_mb" json:"memory_limit_mb"`
 }
 
-// DefaultLambdaConfig returns safe default configuration
+// DefaultLambdaConfig returns safe default configuration.
 func DefaultLambdaConfig() LambdaConfig {
 	return LambdaConfig{
 		TimeoutMs:     5000, // 5 second timeout
@@ -53,7 +54,7 @@ func DefaultLambdaConfig() LambdaConfig {
 	}
 }
 
-// NewEngine creates a new JavaScript execution engine
+// NewEngine creates a new JavaScript execution engine.
 func NewEngine(ctx context.Context) (*Engine, error) {
 	runtime := goja.New()
 	return &Engine{
@@ -62,13 +63,13 @@ func NewEngine(ctx context.Context) (*Engine, error) {
 	}, nil
 }
 
-// Close properly disposes of the JavaScript runtime
+// Close properly disposes of the JavaScript runtime.
 func (e *Engine) Close() {
 	// Goja runtime doesn't need explicit disposal
 	e.runtime = nil
 }
 
-// ExecuteLambda executes a JavaScript lambda function with the given context
+// ExecuteLambda executes a JavaScript lambda function with the given context.
 func (e *Engine) ExecuteLambda(code string, execCtx ExecutionContext, config LambdaConfig) (string, error) {
 	// Create fresh runtime for each execution to ensure isolation
 	runtime := goja.New()
@@ -116,7 +117,7 @@ func (e *Engine) ExecuteLambda(code string, execCtx ExecutionContext, config Lam
 	}
 }
 
-// injectGlobals provides safe access to data and utilities in the JavaScript context
+// injectGlobals provides safe access to data and utilities in the JavaScript context.
 func (e *Engine) injectGlobals(runtime *goja.Runtime, execCtx ExecutionContext) error {
 	// Set item data directly as JavaScript object
 	runtime.Set("item", execCtx.Item)
@@ -144,7 +145,7 @@ func (e *Engine) injectGlobals(runtime *goja.Runtime, execCtx ExecutionContext) 
 	return nil
 }
 
-// injectUtilities provides safe utility functions
+// injectUtilities provides safe utility functions.
 func (e *Engine) injectUtilities(runtime *goja.Runtime) error {
 	// Add formatDate utility
 	runtime.Set("formatDate", func(call goja.FunctionCall) goja.Value {
@@ -170,7 +171,7 @@ func (e *Engine) injectUtilities(runtime *goja.Runtime) error {
 	return nil
 }
 
-// handleQueryRow executes a single-row query safely
+// handleQueryRow executes a single-row query safely.
 func (e *Engine) handleQueryRow(runtime *goja.Runtime, call goja.FunctionCall, db *SafeDBInterface) goja.Value {
 	if len(call.Arguments) < 1 {
 		return runtime.ToValue("Error: queryRow requires at least 1 argument")
@@ -210,7 +211,7 @@ func (e *Engine) handleQueryRow(runtime *goja.Runtime, call goja.FunctionCall, d
 	return runtime.ToValue(result.data)
 }
 
-// handleQuery executes a multi-row query safely
+// handleQuery executes a multi-row query safely.
 func (e *Engine) handleQuery(runtime *goja.Runtime, call goja.FunctionCall, db *SafeDBInterface) goja.Value {
 	if len(call.Arguments) < 1 {
 		return runtime.ToValue("Error: query requires at least 1 argument")
@@ -238,7 +239,7 @@ func (e *Engine) handleQuery(runtime *goja.Runtime, call goja.FunctionCall, db *
 	return runtime.ToValue(result.rows)
 }
 
-// QueryRow executes a query that returns a single row
+// QueryRow executes a query that returns a single row.
 func (db *SafeDBInterface) QueryRow(query string, args ...interface{}) (*SafeRow, error) {
 	if !isReadOnlyQuery(query) {
 		return nil, fmt.Errorf("only SELECT queries are allowed")
@@ -267,7 +268,7 @@ func (db *SafeDBInterface) QueryRow(query string, args ...interface{}) (*SafeRow
 	return result, nil
 }
 
-// Query executes a query that returns multiple rows
+// Query executes a query that returns multiple rows.
 func (db *SafeDBInterface) Query(query string, args ...interface{}) (*SafeRows, error) {
 	if !isReadOnlyQuery(query) {
 		return nil, fmt.Errorf("only SELECT queries are allowed")
@@ -310,12 +311,12 @@ func (db *SafeDBInterface) Query(query string, args ...interface{}) (*SafeRows, 
 	return result, rows.Err()
 }
 
-// NewSafeDBInterface creates a new safe database interface
+// NewSafeDBInterface creates a new safe database interface.
 func NewSafeDBInterface(db database.IDatabase) *SafeDBInterface {
 	return &SafeDBInterface{db: db}
 }
 
-// isReadOnlyQuery validates that a query is safe (read-only)
+// isReadOnlyQuery validates that a query is safe (read-only).
 func isReadOnlyQuery(query string) bool {
 	// Convert to lowercase for case-insensitive checking
 	q := query
@@ -359,13 +360,13 @@ func isReadOnlyQuery(query string) bool {
 		(trimmed[5] == 'T' || trimmed[5] == 't')
 }
 
-// contains checks if s contains substr (case insensitive)
+// contains checks if s contains substr (case insensitive).
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr ||
 		len(s) > len(substr) && (indexOf(s, substr) >= 0))
 }
 
-// indexOf returns the index of substr in s, -1 if not found (case insensitive)
+// indexOf returns the index of substr in s, -1 if not found (case insensitive).
 func indexOf(s, substr string) int {
 	for i := 0; i <= len(s)-len(substr); i++ {
 		match := true

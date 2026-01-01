@@ -8,13 +8,13 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// RoleRepository provides an in-memory implementation of the RoleRepository interface
+// RoleRepository provides an in-memory implementation of the RoleRepository interface.
 type RoleRepository struct {
 	roles map[string]*models.Role
 	mu    sync.RWMutex
 }
 
-// NewRoleRepository creates a new in-memory role repository
+// NewRoleRepository creates a new in-memory role repository.
 func NewRoleRepository() *RoleRepository {
 	repo := &RoleRepository{
 		roles: make(map[string]*models.Role),
@@ -51,7 +51,7 @@ func NewRoleRepository() *RoleRepository {
 	return repo
 }
 
-// CreateRole creates a new role
+// CreateRole creates a new role.
 func (r *RoleRepository) CreateRole(ctx context.Context, role *models.Role) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -63,7 +63,7 @@ func (r *RoleRepository) CreateRole(ctx context.Context, role *models.Role) erro
 	return nil
 }
 
-// GetRole retrieves a role by ID
+// GetRole retrieves a role by ID.
 func (r *RoleRepository) GetRole(ctx context.Context, id string) (*models.Role, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -75,12 +75,12 @@ func (r *RoleRepository) GetRole(ctx context.Context, id string) (*models.Role, 
 	return role, nil
 }
 
-// GetRoleByName retrieves a role by name
+// GetRoleByName retrieves a role by name.
 func (r *RoleRepository) GetRoleByName(ctx context.Context, name string) (*models.Role, error) {
 	return r.GetByName(ctx, name)
 }
 
-// GetByName retrieves a role by name (alias for GetRoleByName)
+// GetByName retrieves a role by name (alias for GetRoleByName).
 func (r *RoleRepository) GetByName(ctx context.Context, name string) (*models.Role, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -93,7 +93,7 @@ func (r *RoleRepository) GetByName(ctx context.Context, name string) (*models.Ro
 	return nil, fmt.Errorf("role not found")
 }
 
-// UpdateRole updates an existing role
+// UpdateRole updates an existing role.
 func (r *RoleRepository) UpdateRole(ctx context.Context, role *models.Role) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -105,7 +105,7 @@ func (r *RoleRepository) UpdateRole(ctx context.Context, role *models.Role) erro
 	return nil
 }
 
-// DeleteRole deletes a role
+// DeleteRole deletes a role.
 func (r *RoleRepository) DeleteRole(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -117,7 +117,7 @@ func (r *RoleRepository) DeleteRole(ctx context.Context, id string) error {
 	return nil
 }
 
-// ListRoles returns all roles
+// ListRoles returns all roles.
 func (r *RoleRepository) ListRoles(ctx context.Context) ([]models.Role, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

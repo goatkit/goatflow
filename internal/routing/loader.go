@@ -15,7 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// RouteLoader manages loading and registering routes from YAML files
+// RouteLoader manages loading and registering routes from YAML files.
 type RouteLoader struct {
 	mu         sync.RWMutex
 	routesPath string
@@ -30,31 +30,31 @@ type RouteLoader struct {
 	environment string
 }
 
-// LoaderOption is a functional option for RouteLoader
+// LoaderOption is a functional option for RouteLoader.
 type LoaderOption func(*RouteLoader)
 
-// WithHotReload enables hot reload of route configurations
+// WithHotReload enables hot reload of route configurations.
 func WithHotReload(enabled bool) LoaderOption {
 	return func(l *RouteLoader) {
 		l.hotReload = enabled
 	}
 }
 
-// WithStrictMode enables strict mode (fail on missing handlers)
+// WithStrictMode enables strict mode (fail on missing handlers).
 func WithStrictMode(enabled bool) LoaderOption {
 	return func(l *RouteLoader) {
 		l.strictMode = enabled
 	}
 }
 
-// WithEnvironment sets the environment for conditional routes
+// WithEnvironment sets the environment for conditional routes.
 func WithEnvironment(env string) LoaderOption {
 	return func(l *RouteLoader) {
 		l.environment = env
 	}
 }
 
-// NewRouteLoader creates a new route loader
+// NewRouteLoader creates a new route loader.
 func NewRouteLoader(routesPath string, registry *HandlerRegistry, router *gin.Engine, opts ...LoaderOption) (*RouteLoader, error) {
 	loader := &RouteLoader{
 		routesPath:  routesPath,
@@ -84,7 +84,7 @@ func NewRouteLoader(routesPath string, registry *HandlerRegistry, router *gin.En
 	return loader, nil
 }
 
-// LoadRoutes loads all route configurations from the routes directory
+// LoadRoutes loads all route configurations from the routes directory.
 func (l *RouteLoader) LoadRoutes() error {
 	log.Printf("Loading routes from %s", l.routesPath)
 
@@ -118,7 +118,7 @@ func (l *RouteLoader) LoadRoutes() error {
 	return l.registerAllRoutes()
 }
 
-// loadRouteFile loads a single route configuration file
+// loadRouteFile loads a single route configuration file.
 func (l *RouteLoader) loadRouteFile(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -182,7 +182,7 @@ func (l *RouteLoader) loadRouteFile(path string) error {
 	return nil
 }
 
-// validateConfig validates a route configuration
+// validateConfig validates a route configuration.
 func (l *RouteLoader) validateConfig(config *RouteConfig) error {
 	// Check required fields
 	if config.APIVersion == "" {
@@ -225,7 +225,7 @@ func (l *RouteLoader) validateConfig(config *RouteConfig) error {
 	return nil
 }
 
-// registerAllRoutes registers all loaded routes with the router
+// registerAllRoutes registers all loaded routes with the router.
 func (l *RouteLoader) registerAllRoutes() error {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -252,7 +252,7 @@ func (l *RouteLoader) registerAllRoutes() error {
 	return nil
 }
 
-// registerRouteConfig registers routes from a single configuration
+// registerRouteConfig registers routes from a single configuration.
 func (l *RouteLoader) registerRouteConfig(config *RouteConfig) error {
 	// Create route group
 	var group *gin.RouterGroup
@@ -287,7 +287,7 @@ func (l *RouteLoader) registerRouteConfig(config *RouteConfig) error {
 	return nil
 }
 
-// registerRoute registers a single route
+// registerRoute registers a single route.
 func (l *RouteLoader) registerRoute(group *gin.RouterGroup, route *RouteDefinition, config *RouteConfig) error {
 	// Check feature flags
 	for _, feature := range route.Features {
@@ -353,7 +353,7 @@ func (l *RouteLoader) registerRoute(group *gin.RouterGroup, route *RouteDefiniti
 	return nil
 }
 
-// registerMethodRoute registers a route for a specific HTTP method
+// registerMethodRoute registers a route for a specific HTTP method.
 func (l *RouteLoader) registerMethodRoute(group *gin.RouterGroup, method, path string, handlers ...gin.HandlerFunc) {
 	resolved := normalizeRoutePath(group.BasePath(), path)
 
@@ -413,7 +413,7 @@ func normalizeRoutePath(prefix, routePath string) string {
 	return path
 }
 
-// parseMethods parses the method field which can be string or []string
+// parseMethods parses the method field which can be string or []string.
 func (l *RouteLoader) parseMethods(method interface{}) []string {
 	if method == nil {
 		return []string{"GET"} // Default to GET
@@ -437,7 +437,7 @@ func (l *RouteLoader) parseMethods(method interface{}) []string {
 	}
 }
 
-// checkEnvironment checks if the configuration should be loaded in current environment
+// checkEnvironment checks if the configuration should be loaded in current environment.
 func (l *RouteLoader) checkEnvironment(config *RouteConfig) bool {
 	// If no specific environment is set, load in all environments
 	if config.Metadata.Labels == nil {
@@ -460,7 +460,7 @@ func (l *RouteLoader) checkEnvironment(config *RouteConfig) bool {
 	return false
 }
 
-// evaluateCondition evaluates a condition expression
+// evaluateCondition evaluates a condition expression.
 func (l *RouteLoader) evaluateCondition(condition string) bool {
 	// Simple environment variable check for now
 	// Format: ${ENV_VAR_NAME} or ${ENV_VAR_NAME:default}
@@ -483,7 +483,7 @@ func (l *RouteLoader) evaluateCondition(condition string) bool {
 	return true
 }
 
-// watchFiles watches for changes in route files
+// watchFiles watches for changes in route files.
 func (l *RouteLoader) watchFiles() {
 	for {
 		select {
@@ -517,7 +517,7 @@ func (l *RouteLoader) watchFiles() {
 	}
 }
 
-// Close closes the route loader and stops watching files
+// Close closes the route loader and stops watching files.
 func (l *RouteLoader) Close() error {
 	if l.watcher != nil {
 		return l.watcher.Close()
@@ -525,7 +525,7 @@ func (l *RouteLoader) Close() error {
 	return nil
 }
 
-// GetLoadedRoutes returns information about loaded routes
+// GetLoadedRoutes returns information about loaded routes.
 func (l *RouteLoader) GetLoadedRoutes() map[string]*RouteConfig {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
@@ -538,7 +538,7 @@ func (l *RouteLoader) GetLoadedRoutes() map[string]*RouteConfig {
 	return routes
 }
 
-// LoadYAMLRoutes is a package-level function that creates a RouteLoader and loads all routes
+// LoadYAMLRoutes is a package-level function that creates a RouteLoader and loads all routes.
 func LoadYAMLRoutes(router *gin.Engine, routesPath string, registry *HandlerRegistry) error {
 	loader, err := NewRouteLoader(routesPath, registry, router, WithHotReload(false))
 	if err != nil {

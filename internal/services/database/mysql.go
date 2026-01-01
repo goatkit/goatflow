@@ -9,10 +9,11 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+
 	"github.com/gotrs-io/gotrs-ce/internal/services/registry"
 )
 
-// MySQLService implements DatabaseService for MySQL
+// MySQLService implements DatabaseService for MySQL.
 type MySQLService struct {
 	mu      sync.RWMutex
 	config  *registry.ServiceConfig
@@ -21,7 +22,7 @@ type MySQLService struct {
 	metrics *registry.ServiceMetrics
 }
 
-// NewMySQLService creates a new MySQL service instance
+// NewMySQLService creates a new MySQL service instance.
 func NewMySQLService(config *registry.ServiceConfig) (DatabaseService, error) {
 	return &MySQLService{
 		config: config,
@@ -35,7 +36,7 @@ func NewMySQLService(config *registry.ServiceConfig) (DatabaseService, error) {
 	}, nil
 }
 
-// Connect establishes connection to MySQL
+// Connect establishes connection to MySQL.
 func (s *MySQLService) Connect(ctx context.Context) error {
 	s.mu.RLock()
 	cfg := s.config
@@ -88,7 +89,7 @@ func (s *MySQLService) Connect(ctx context.Context) error {
 	return nil
 }
 
-// Disconnect closes the database connection
+// Disconnect closes the database connection.
 func (s *MySQLService) Disconnect(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -103,7 +104,7 @@ func (s *MySQLService) Disconnect(ctx context.Context) error {
 	return nil
 }
 
-// GetDB returns the underlying database connection
+// GetDB returns the underlying database connection.
 func (s *MySQLService) GetDB() *sql.DB {
 	s.mu.RLock()
 	db := s.db
@@ -121,7 +122,7 @@ func (s *MySQLService) GetDB() *sql.DB {
 	return db
 }
 
-// Health returns the service health status
+// Health returns the service health status.
 func (s *MySQLService) Health(ctx context.Context) (*registry.ServiceHealth, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -141,7 +142,7 @@ func (s *MySQLService) Health(ctx context.Context) (*registry.ServiceHealth, err
 	return s.health, nil
 }
 
-// Metrics returns service metrics
+// Metrics returns service metrics.
 func (s *MySQLService) Metrics(ctx context.Context) (*registry.ServiceMetrics, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -154,7 +155,7 @@ func (s *MySQLService) Metrics(ctx context.Context) (*registry.ServiceMetrics, e
 	return s.metrics, nil
 }
 
-// Ping tests the database connection
+// Ping tests the database connection.
 func (s *MySQLService) Ping(ctx context.Context) error {
 	s.mu.RLock()
 	db := s.db
@@ -167,7 +168,7 @@ func (s *MySQLService) Ping(ctx context.Context) error {
 	return db.PingContext(ctx)
 }
 
-// GetConfig returns the service configuration
+// GetConfig returns the service configuration.
 func (s *MySQLService) GetConfig() *registry.ServiceConfig {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -175,7 +176,7 @@ func (s *MySQLService) GetConfig() *registry.ServiceConfig {
 	return s.config
 }
 
-// UpdateConfig updates the service configuration
+// UpdateConfig updates the service configuration.
 func (s *MySQLService) UpdateConfig(config *registry.ServiceConfig) error {
 	if config == nil {
 		return fmt.Errorf("config cannot be nil")
@@ -191,17 +192,17 @@ func (s *MySQLService) UpdateConfig(config *registry.ServiceConfig) error {
 	return s.Connect(context.Background())
 }
 
-// Type returns the service type
+// Type returns the service type.
 func (s *MySQLService) Type() registry.ServiceType {
 	return registry.ServiceTypeDatabase
 }
 
-// Provider returns the service provider
+// Provider returns the service provider.
 func (s *MySQLService) Provider() registry.ServiceProvider {
 	return registry.ProviderMySQL
 }
 
-// ID returns the service ID
+// ID returns the service ID.
 func (s *MySQLService) ID() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -213,7 +214,7 @@ func (s *MySQLService) ID() string {
 	return s.config.ID
 }
 
-// Query executes a query that returns rows
+// Query executes a query that returns rows.
 func (s *MySQLService) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	s.mu.RLock()
 	db := s.db
@@ -226,7 +227,7 @@ func (s *MySQLService) Query(ctx context.Context, query string, args ...interfac
 	return db.QueryContext(ctx, query, args...)
 }
 
-// QueryRow executes a query that returns at most one row
+// QueryRow executes a query that returns at most one row.
 func (s *MySQLService) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	s.mu.RLock()
 	db := s.db
@@ -239,7 +240,7 @@ func (s *MySQLService) QueryRow(ctx context.Context, query string, args ...inter
 	return db.QueryRowContext(ctx, query, args...)
 }
 
-// Exec executes a query without returning any rows
+// Exec executes a query without returning any rows.
 func (s *MySQLService) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	s.mu.RLock()
 	db := s.db
@@ -252,7 +253,7 @@ func (s *MySQLService) Exec(ctx context.Context, query string, args ...interface
 	return db.ExecContext(ctx, query, args...)
 }
 
-// BeginTx starts a database transaction
+// BeginTx starts a database transaction.
 func (s *MySQLService) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
 	s.mu.RLock()
 	db := s.db
@@ -265,7 +266,7 @@ func (s *MySQLService) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.T
 	return db.BeginTx(ctx, opts)
 }
 
-// SetMaxOpenConns sets the maximum number of open connections
+// SetMaxOpenConns sets the maximum number of open connections.
 func (s *MySQLService) SetMaxOpenConns(n int) {
 	s.mu.RLock()
 	db := s.db
@@ -276,7 +277,7 @@ func (s *MySQLService) SetMaxOpenConns(n int) {
 	}
 }
 
-// SetMaxIdleConns sets the maximum number of idle connections
+// SetMaxIdleConns sets the maximum number of idle connections.
 func (s *MySQLService) SetMaxIdleConns(n int) {
 	s.mu.RLock()
 	db := s.db
@@ -287,7 +288,7 @@ func (s *MySQLService) SetMaxIdleConns(n int) {
 	}
 }
 
-// SetConnMaxLifetime sets the maximum lifetime of connections
+// SetConnMaxLifetime sets the maximum lifetime of connections.
 func (s *MySQLService) SetConnMaxLifetime(d time.Duration) {
 	s.mu.RLock()
 	db := s.db
@@ -298,31 +299,31 @@ func (s *MySQLService) SetConnMaxLifetime(d time.Duration) {
 	}
 }
 
-// RunMigrations runs database migrations
+// RunMigrations runs database migrations.
 func (s *MySQLService) RunMigrations(ctx context.Context, migrationsPath string) error {
 	// TODO: Implement MySQL migration support
 	return fmt.Errorf("migrations not yet implemented for MySQL")
 }
 
-// GetSchemaVersion returns the current schema version
+// GetSchemaVersion returns the current schema version.
 func (s *MySQLService) GetSchemaVersion() (int, error) {
 	// TODO: Implement schema version tracking for MySQL
 	return 0, fmt.Errorf("schema version not yet implemented for MySQL")
 }
 
-// Backup performs a database backup
+// Backup performs a database backup.
 func (s *MySQLService) Backup(ctx context.Context, path string) error {
 	// TODO: Implement MySQL backup using mysqldump
 	return fmt.Errorf("backup not yet implemented for MySQL")
 }
 
-// Restore restores a database from backup
+// Restore restores a database from backup.
 func (s *MySQLService) Restore(ctx context.Context, path string) error {
 	// TODO: Implement MySQL restore
 	return fmt.Errorf("restore not yet implemented for MySQL")
 }
 
-// buildConnectionString builds MySQL DSN
+// buildConnectionString builds MySQL DSN.
 func buildMySQLConnectionString(config *registry.ServiceConfig) string {
 	if config == nil {
 		return ""

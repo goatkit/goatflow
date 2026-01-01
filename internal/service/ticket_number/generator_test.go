@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test database connection for integration tests
+// Test database connection for integration tests.
 func getTestDB(t *testing.T) *sql.DB {
 	driver := os.Getenv("TEST_DB_DRIVER")
 	if driver == "" {
@@ -80,7 +80,7 @@ func envOrDefault(key, def string) string {
 	return def
 }
 
-// Test Date Generator
+// Test Date Generator.
 func TestDateGenerator(t *testing.T) {
 	db := getTestDB(t)
 	defer db.Close()
@@ -159,7 +159,7 @@ func TestDateGenerator(t *testing.T) {
 	})
 }
 
-// Test AutoIncrement Generator
+// Test AutoIncrement Generator.
 func TestAutoIncrementGenerator(t *testing.T) {
 	db := getTestDB(t)
 	defer db.Close()
@@ -218,7 +218,7 @@ func TestAutoIncrementGenerator(t *testing.T) {
 	})
 }
 
-// Test Random Generator
+// Test Random Generator.
 func TestRandomGenerator(t *testing.T) {
 	config := RandomConfig{
 		Length:  8,
@@ -263,7 +263,7 @@ func TestRandomGenerator(t *testing.T) {
 	})
 }
 
-// Test DateChecksum Generator
+// Test DateChecksum Generator.
 func TestDateChecksumGenerator(t *testing.T) {
 	db := getTestDB(t)
 	defer db.Close()
@@ -347,7 +347,7 @@ func TestDateChecksumGenerator(t *testing.T) {
 	})
 }
 
-// Test Factory
+// Test Factory.
 func TestGeneratorFactory(t *testing.T) {
 	db := getTestDB(t)
 	defer db.Close()
@@ -422,7 +422,7 @@ func TestGeneratorFactory(t *testing.T) {
 	})
 }
 
-// Test Max Length Constraint (OTRS tn field is VARCHAR(50))
+// Test Max Length Constraint (OTRS tn field is VARCHAR(50)).
 func TestMaxLengthConstraint(t *testing.T) {
 	db := getTestDB(t)
 	defer db.Close()

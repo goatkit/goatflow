@@ -1,3 +1,4 @@
+// Package testutil provides testing utilities and test environment setup.
 package testutil
 
 import (
@@ -6,8 +7,7 @@ import (
 	"testing"
 )
 
-// SetupTestEnvironment loads the .env file for tests
-// Tests should use the synthesized .env with APP_ENV=test
+// Tests should use the synthesized .env with APP_ENV=test.
 func SetupTestEnvironment(t *testing.T) {
 	t.Helper()
 
@@ -26,13 +26,13 @@ func SetupTestEnvironment(t *testing.T) {
 	// For now, tests should run `make synthesize` with APP_ENV=test first
 }
 
-// SetupTestSecret sets a single environment variable for testing
+// SetupTestSecret sets a single environment variable for testing.
 func SetupTestSecret(t *testing.T, key, value string) {
 	t.Helper()
 	t.Setenv(key, value)
 }
 
-// IsTestSecret checks if a value has a test/development prefix
+// IsTestSecret checks if a value has a test/development prefix.
 func IsTestSecret(value string) bool {
 	testPrefixes := []string{
 		"test-",

@@ -1,3 +1,4 @@
+// Package database provides database service interfaces and implementations.
 package database
 
 import (
@@ -9,7 +10,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/services/registry"
 )
 
-// DatabaseService extends the base ServiceInterface with database-specific methods
+// DatabaseService extends the base ServiceInterface with database-specific methods.
 type DatabaseService interface {
 	registry.ServiceInterface
 
@@ -36,7 +37,7 @@ type DatabaseService interface {
 	Restore(ctx context.Context, path string) error
 }
 
-// QueryBuilder provides a fluent interface for building queries
+// QueryBuilder provides a fluent interface for building queries.
 type QueryBuilder interface {
 	Select(columns ...string) QueryBuilder
 	From(table string) QueryBuilder
@@ -50,25 +51,25 @@ type QueryBuilder interface {
 	Build() (string, []interface{})
 }
 
-// DatabaseFactory creates database service instances
+// DatabaseFactory creates database service instances.
 type DatabaseFactory struct {
 	// Map of provider to constructor function
 	constructors map[registry.ServiceProvider]func(*registry.ServiceConfig) (DatabaseService, error)
 }
 
-// NewDatabaseFactory creates a new database factory
+// NewDatabaseFactory creates a new database factory.
 func NewDatabaseFactory() *DatabaseFactory {
 	return &DatabaseFactory{
 		constructors: make(map[registry.ServiceProvider]func(*registry.ServiceConfig) (DatabaseService, error)),
 	}
 }
 
-// RegisterProvider registers a database provider constructor
+// RegisterProvider registers a database provider constructor.
 func (f *DatabaseFactory) RegisterProvider(provider registry.ServiceProvider, constructor func(*registry.ServiceConfig) (DatabaseService, error)) {
 	f.constructors[provider] = constructor
 }
 
-// CreateService creates a database service instance
+// CreateService creates a database service instance.
 func (f *DatabaseFactory) CreateService(config *registry.ServiceConfig) (registry.ServiceInterface, error) {
 	constructor, exists := f.constructors[config.Provider]
 	if !exists {
@@ -78,7 +79,7 @@ func (f *DatabaseFactory) CreateService(config *registry.ServiceConfig) (registr
 	return constructor(config)
 }
 
-// SupportedProviders returns the list of supported database providers
+// SupportedProviders returns the list of supported database providers.
 func (f *DatabaseFactory) SupportedProviders() []registry.ServiceProvider {
 	providers := make([]registry.ServiceProvider, 0, len(f.constructors))
 	for provider := range f.constructors {
@@ -87,14 +88,14 @@ func (f *DatabaseFactory) SupportedProviders() []registry.ServiceProvider {
 	return providers
 }
 
-// DatabasePool manages multiple database connections with load balancing
+// DatabasePool manages multiple database connections with load balancing.
 type DatabasePool struct {
 	primary  DatabaseService
 	replicas []DatabaseService
 	strategy LoadBalanceStrategy
 }
 
-// LoadBalanceStrategy defines how to distribute read queries
+// LoadBalanceStrategy defines how to distribute read queries.
 type LoadBalanceStrategy string
 
 const (
@@ -104,7 +105,7 @@ const (
 	StrategyPrimary    LoadBalanceStrategy = "primary-only"
 )
 
-// NewDatabasePool creates a new database pool
+// NewDatabasePool creates a new database pool.
 func NewDatabasePool(primary DatabaseService, replicas []DatabaseService, strategy LoadBalanceStrategy) *DatabasePool {
 	return &DatabasePool{
 		primary:  primary,
@@ -113,12 +114,12 @@ func NewDatabasePool(primary DatabaseService, replicas []DatabaseService, strate
 	}
 }
 
-// Primary returns the primary database for writes
+// Primary returns the primary database for writes.
 func (p *DatabasePool) Primary() DatabaseService {
 	return p.primary
 }
 
-// Replica returns a replica database for reads
+// Replica returns a replica database for reads.
 func (p *DatabasePool) Replica() DatabaseService {
 	if len(p.replicas) == 0 || p.strategy == StrategyPrimary {
 		return p.primary
@@ -129,7 +130,7 @@ func (p *DatabasePool) Replica() DatabaseService {
 	return p.replicas[0]
 }
 
-// DatabaseConfig provides database-specific configuration
+// DatabaseConfig provides database-specific configuration.
 type DatabaseConfig struct {
 	*registry.ServiceConfig
 

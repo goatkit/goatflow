@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -323,18 +322,18 @@ func TestGetDynamicFieldValuesForDisplay(t *testing.T) {
 			FieldType: DFTypeText,
 			ValidID:   1,
 		}
-		
+
 		display := DynamicFieldDisplay{Field: field}
-		
+
 		// Test with value
 		text := "Hello World"
 		display.DisplayValue = text
 		display.Value = text
-		
+
 		assert.Equal(t, "Hello World", display.DisplayValue)
 		assert.Equal(t, "Test Text", display.Field.Label)
 	})
-	
+
 	t.Run("formats checkbox field correctly", func(t *testing.T) {
 		field := DynamicField{
 			ID:        2,
@@ -343,21 +342,21 @@ func TestGetDynamicFieldValuesForDisplay(t *testing.T) {
 			FieldType: DFTypeCheckbox,
 			ValidID:   1,
 		}
-		
+
 		// Test checked
 		display := DynamicFieldDisplay{
-			Field: field,
-			Value: int64(1),
+			Field:        field,
+			Value:        int64(1),
 			DisplayValue: "Yes",
 		}
 		assert.Equal(t, "Yes", display.DisplayValue)
-		
+
 		// Test unchecked
 		display.Value = int64(0)
 		display.DisplayValue = "No"
 		assert.Equal(t, "No", display.DisplayValue)
 	})
-	
+
 	t.Run("formats date field correctly", func(t *testing.T) {
 		field := DynamicField{
 			ID:        3,
@@ -366,17 +365,17 @@ func TestGetDynamicFieldValuesForDisplay(t *testing.T) {
 			FieldType: DFTypeDate,
 			ValidID:   1,
 		}
-		
+
 		testDate := time.Date(2024, 12, 25, 0, 0, 0, 0, time.UTC)
 		display := DynamicFieldDisplay{
 			Field:        field,
 			Value:        testDate,
 			DisplayValue: "2024-12-25",
 		}
-		
+
 		assert.Equal(t, "2024-12-25", display.DisplayValue)
 	})
-	
+
 	t.Run("handles missing value", func(t *testing.T) {
 		field := DynamicField{
 			ID:        4,
@@ -385,12 +384,12 @@ func TestGetDynamicFieldValuesForDisplay(t *testing.T) {
 			FieldType: DFTypeText,
 			ValidID:   1,
 		}
-		
+
 		display := DynamicFieldDisplay{
 			Field:        field,
 			DisplayValue: "-",
 		}
-		
+
 		assert.Equal(t, "-", display.DisplayValue)
 		assert.Nil(t, display.Value)
 	})

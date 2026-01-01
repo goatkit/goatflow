@@ -1,3 +1,4 @@
+// Package lookups provides static lookup data including country codes.
 package lookups
 
 import (

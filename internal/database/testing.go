@@ -10,7 +10,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 )
 
-// testDB is kept for API compatibility; we do not own the lifecycle
+// testDB is kept for API compatibility; we do not own the lifecycle.
 var (
 	testDBMu       sync.RWMutex
 	testDB         *sql.DB
@@ -74,7 +74,7 @@ func InitDB() error {
 	return InitTestDB()
 }
 
-// dbStack holds saved DB states for nested SetDB/ResetDB calls
+// dbStack holds saved DB states for nested SetDB/ResetDB calls.
 type dbState struct {
 	db       *sql.DB
 	override bool

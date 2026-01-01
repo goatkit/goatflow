@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-// TicketStateContracts defines the API contracts for ticket state endpoints
+// TicketStateContracts defines the API contracts for ticket state endpoints.
 var TicketStateContracts = []Contract{
 	{
 		Name:        "ListTicketStates",
@@ -91,7 +91,7 @@ var TicketStateContracts = []Contract{
 	},
 }
 
-// SLAContracts defines the API contracts for SLA endpoints
+// SLAContracts defines the API contracts for SLA endpoints.
 var SLAContracts = []Contract{
 	{
 		Name:        "ListSLAs",
@@ -227,7 +227,7 @@ var SLAContracts = []Contract{
 	},
 }
 
-// RegisterStateSLAContracts registers ticket state and SLA contracts for testing
+// RegisterStateSLAContracts registers ticket state and SLA contracts for testing.
 func RegisterStateSLAContracts() {
 	// No-op registrar kept for backward compatibility
 }

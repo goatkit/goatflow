@@ -6,12 +6,12 @@ import (
 	"strings"
 )
 
-// UniversalLinter provides linting for all YAML document types
+// UniversalLinter provides linting for all YAML document types.
 type UniversalLinter struct {
 	rules map[YAMLKind][]LintRule
 }
 
-// NewUniversalLinter creates a new universal linter
+// NewUniversalLinter creates a new universal linter.
 func NewUniversalLinter() *UniversalLinter {
 	ul := &UniversalLinter{
 		rules: make(map[YAMLKind][]LintRule),
@@ -23,7 +23,7 @@ func NewUniversalLinter() *UniversalLinter {
 	return ul
 }
 
-// Lint performs linting on a document
+// Lint performs linting on a document.
 func (ul *UniversalLinter) Lint(doc *YAMLDocument) ([]LintIssue, error) {
 	kind := YAMLKind(doc.Kind)
 	issues := []LintIssue{}
@@ -46,7 +46,7 @@ func (ul *UniversalLinter) Lint(doc *YAMLDocument) ([]LintIssue, error) {
 	return issues, nil
 }
 
-// GetRules returns rules for a specific kind
+// GetRules returns rules for a specific kind.
 func (ul *UniversalLinter) GetRules(kind YAMLKind) []LintRule {
 	if rules, exists := ul.rules[kind]; exists {
 		return rules
@@ -54,7 +54,7 @@ func (ul *UniversalLinter) GetRules(kind YAMLKind) []LintRule {
 	return []LintRule{}
 }
 
-// RegisterRule registers a new lint rule
+// RegisterRule registers a new lint rule.
 func (ul *UniversalLinter) RegisterRule(kind YAMLKind, rule LintRule) {
 	if _, exists := ul.rules[kind]; !exists {
 		ul.rules[kind] = []LintRule{}
@@ -62,7 +62,7 @@ func (ul *UniversalLinter) RegisterRule(kind YAMLKind, rule LintRule) {
 	ul.rules[kind] = append(ul.rules[kind], rule)
 }
 
-// applyUniversalRules applies rules that work for all document types
+// applyUniversalRules applies rules that work for all document types.
 func (ul *UniversalLinter) applyUniversalRules(doc *YAMLDocument) []LintIssue {
 	issues := []LintIssue{}
 
@@ -111,7 +111,7 @@ func (ul *UniversalLinter) applyUniversalRules(doc *YAMLDocument) []LintIssue {
 	return issues
 }
 
-// applyRule applies a specific rule to a document
+// applyRule applies a specific rule to a document.
 func (ul *UniversalLinter) applyRule(rule LintRule, doc *YAMLDocument) []LintIssue {
 	issues := []LintIssue{}
 
@@ -176,7 +176,7 @@ func (ul *UniversalLinter) applyRule(rule LintRule, doc *YAMLDocument) []LintIss
 	return issues
 }
 
-// registerDefaultRules registers built-in lint rules
+// registerDefaultRules registers built-in lint rules.
 func (ul *UniversalLinter) registerDefaultRules() {
 	// Route rules
 	ul.RegisterRule(KindRoute, LintRule{

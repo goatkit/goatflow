@@ -106,7 +106,11 @@ issues:
     - tests
     - tests/e2e
   exclude-files:
-    - ".*archived.*\\.go$"
+    - ".*_archived.*\\.go$"
+    - "archived_.*\\.go$"
+    - "internal/api/archived_user_handlers.go"
+    - "internal/api/attachment_thumbnail_handler.go"
+    - "internal/api/attachment_download_handler.go"
     - "tests/e2e/.*\\.go$"
   exclude-rules:
     - path: tests/

@@ -8,9 +8,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	. "github.com/gotrs-io/gotrs-ce/internal/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/gotrs-io/gotrs-ce/internal/api"
 )
 
 func TestCreateTicket_Integration(t *testing.T) {

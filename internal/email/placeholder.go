@@ -1,3 +1,2 @@
+// Package email provides email handling and processing utilities.
 package email
-
-// Placeholder file to make the email package valid

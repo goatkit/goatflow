@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// Group represents a user group in the system
+// Group represents a user group in the system.
 type Group struct {
 	// OTRS-compatible fields (required for database operations)
 	ID         interface{} `json:"id"` // Can be int or string depending on context
@@ -27,7 +27,7 @@ type Group struct {
 	UpdatedAt   time.Time         `json:"updated_at,omitempty"`
 }
 
-// GroupMembership represents a user's membership in a group
+// GroupMembership represents a user's membership in a group.
 type GroupMembership struct {
 	GroupID string    `json:"group_id"`
 	UserID  string    `json:"user_id"`
@@ -36,14 +36,14 @@ type GroupMembership struct {
 	AddedAt time.Time `json:"added_at"`
 }
 
-// Common group types
+// Common group types.
 const (
 	GroupTypeLocal    = "local"
 	GroupTypeLDAP     = "ldap"
 	GroupTypeExternal = "external"
 )
 
-// Common group roles
+// Common group roles.
 const (
 	GroupRoleMember = "member"
 	GroupRoleAdmin  = "admin"

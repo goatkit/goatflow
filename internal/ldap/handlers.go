@@ -11,19 +11,19 @@ import (
 	"golang.org/x/text/language"
 )
 
-// LDAPHandlers provides HTTP handlers for LDAP management
+// LDAPHandlers provides HTTP handlers for LDAP management.
 type LDAPHandlers struct {
 	middleware *AuthMiddleware
 }
 
-// NewLDAPHandlers creates a new LDAP handlers instance
+// NewLDAPHandlers creates a new LDAP handlers instance.
 func NewLDAPHandlers(middleware *AuthMiddleware) *LDAPHandlers {
 	return &LDAPHandlers{
 		middleware: middleware,
 	}
 }
 
-// SetupLDAPRoutes sets up LDAP management routes
+// SetupLDAPRoutes sets up LDAP management routes.
 func (h *LDAPHandlers) SetupLDAPRoutes(router gin.IRouter) {
 	ldap := router.Group("/ldap")
 	{
@@ -55,7 +55,7 @@ func (h *LDAPHandlers) SetupLDAPRoutes(router gin.IRouter) {
 	}
 }
 
-// GetConfiguration returns current LDAP configuration
+// GetConfiguration returns current LDAP configuration.
 func (h *LDAPHandlers) GetConfiguration(c *gin.Context) {
 	if h.middleware.provider == nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -83,7 +83,7 @@ func (h *LDAPHandlers) GetConfiguration(c *gin.Context) {
 	})
 }
 
-// SetConfiguration sets LDAP configuration
+// SetConfiguration sets LDAP configuration.
 func (h *LDAPHandlers) SetConfiguration(c *gin.Context) {
 	var req struct {
 		Enabled      bool    `json:"enabled"`
@@ -147,12 +147,12 @@ func (h *LDAPHandlers) SetConfiguration(c *gin.Context) {
 	})
 }
 
-// UpdateConfiguration updates LDAP configuration (same as SetConfiguration)
+// UpdateConfiguration updates LDAP configuration (same as SetConfiguration).
 func (h *LDAPHandlers) UpdateConfiguration(c *gin.Context) {
 	h.SetConfiguration(c)
 }
 
-// TestConnection tests LDAP connection
+// TestConnection tests LDAP connection.
 func (h *LDAPHandlers) TestConnection(c *gin.Context) {
 	var req *Config
 
@@ -210,7 +210,7 @@ func (h *LDAPHandlers) TestConnection(c *gin.Context) {
 	})
 }
 
-// TestAuthentication tests LDAP authentication with provided credentials
+// TestAuthentication tests LDAP authentication with provided credentials.
 func (h *LDAPHandlers) TestAuthentication(c *gin.Context) {
 	var req struct {
 		Username string  `json:"username" binding:"required"`
@@ -276,7 +276,7 @@ func (h *LDAPHandlers) TestAuthentication(c *gin.Context) {
 	})
 }
 
-// GetUserInfo retrieves user information from LDAP
+// GetUserInfo retrieves user information from LDAP.
 func (h *LDAPHandlers) GetUserInfo(c *gin.Context) {
 	if !h.middleware.enabled || h.middleware.provider == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -339,7 +339,7 @@ func (h *LDAPHandlers) GetUserInfo(c *gin.Context) {
 	})
 }
 
-// SyncUser synchronizes user information from LDAP to local database
+// SyncUser synchronizes user information from LDAP to local database.
 func (h *LDAPHandlers) SyncUser(c *gin.Context) {
 	username := c.Param("username")
 	if username == "" {
@@ -358,7 +358,7 @@ func (h *LDAPHandlers) SyncUser(c *gin.Context) {
 	})
 }
 
-// GetUserGroups retrieves groups for a specific user
+// GetUserGroups retrieves groups for a specific user.
 func (h *LDAPHandlers) GetUserGroups(c *gin.Context) {
 	if !h.middleware.enabled || h.middleware.provider == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -425,7 +425,7 @@ func (h *LDAPHandlers) GetUserGroups(c *gin.Context) {
 	})
 }
 
-// GetTemplates returns available LDAP configuration templates
+// GetTemplates returns available LDAP configuration templates.
 func (h *LDAPHandlers) GetTemplates(c *gin.Context) {
 	templates := make(map[string]interface{})
 	descriptions := map[string]string{
@@ -449,7 +449,7 @@ func (h *LDAPHandlers) GetTemplates(c *gin.Context) {
 	})
 }
 
-// GetTemplate returns a specific LDAP configuration template
+// GetTemplate returns a specific LDAP configuration template.
 func (h *LDAPHandlers) GetTemplate(c *gin.Context) {
 	templateType := c.Param("type")
 	if templateType == "" {
@@ -483,7 +483,7 @@ func (h *LDAPHandlers) GetTemplate(c *gin.Context) {
 	})
 }
 
-// ListGroups lists groups from LDAP (limited implementation)
+// ListGroups lists groups from LDAP (limited implementation).
 func (h *LDAPHandlers) ListGroups(c *gin.Context) {
 	if !h.middleware.enabled || h.middleware.provider == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -513,7 +513,7 @@ func (h *LDAPHandlers) ListGroups(c *gin.Context) {
 	})
 }
 
-// GetGroupMembers returns members of a specific group
+// GetGroupMembers returns members of a specific group.
 func (h *LDAPHandlers) GetGroupMembers(c *gin.Context) {
 	groupName := c.Param("group")
 	if groupName == "" {
@@ -536,7 +536,7 @@ func (h *LDAPHandlers) GetGroupMembers(c *gin.Context) {
 	})
 }
 
-// GetStatistics returns LDAP usage statistics
+// GetStatistics returns LDAP usage statistics.
 func (h *LDAPHandlers) GetStatistics(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -553,7 +553,7 @@ func (h *LDAPHandlers) GetStatistics(c *gin.Context) {
 	})
 }
 
-// GetHealth returns LDAP health status
+// GetHealth returns LDAP health status.
 func (h *LDAPHandlers) GetHealth(c *gin.Context) {
 	if !h.middleware.enabled || h.middleware.provider == nil {
 		c.JSON(http.StatusOK, gin.H{

@@ -17,18 +17,18 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
-// MergeRequest represents a ticket merge request
+// MergeRequest represents a ticket merge request.
 type MergeRequest struct {
 	TicketIDs string `form:"ticket_ids"`
 	Reason    string `form:"reason"`
 }
 
-// UnmergeRequest represents a ticket unmerge request
+// UnmergeRequest represents a ticket unmerge request.
 type UnmergeRequest struct {
 	Reason string `form:"reason"`
 }
 
-// MergeHistory represents merge/unmerge history
+// MergeHistory represents merge/unmerge history.
 type MergeHistory struct {
 	Action      string    `json:"action"`       // "merged" or "unmerged"
 	Tickets     []int     `json:"tickets"`      // Ticket IDs involved
@@ -37,11 +37,11 @@ type MergeHistory struct {
 	PerformedAt time.Time `json:"performed_at"` // When action was performed
 }
 
-// Mock data store for merge tracking (in production, this would be in database)
+// Mock data store for merge tracking (in production, this would be in database).
 var mergedTickets = make(map[int]int)             // Maps merged ticket ID to primary ticket ID
 var mergeHistories = make(map[int][]MergeHistory) // Maps ticket ID to its merge history
 
-// handleMergeTickets handles the merging of multiple tickets into one
+// handleMergeTickets handles the merging of multiple tickets into one.
 func handleMergeTickets(c *gin.Context) {
 	primaryID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -179,7 +179,7 @@ func handleMergeTickets(c *gin.Context) {
 	})
 }
 
-// handleUnmergeTicket handles unmerging a previously merged ticket
+// handleUnmergeTicket handles unmerging a previously merged ticket.
 func handleUnmergeTicket(c *gin.Context) {
 	ticketID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -232,7 +232,7 @@ func handleUnmergeTicket(c *gin.Context) {
 	})
 }
 
-// handleGetMergeHistory returns the merge history for a ticket
+// handleGetMergeHistory returns the merge history for a ticket.
 func handleGetMergeHistory(c *gin.Context) {
 	ticketID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -265,7 +265,7 @@ func handleGetMergeHistory(c *gin.Context) {
 	})
 }
 
-// validateMerge validates if tickets can be merged
+// validateMerge validates if tickets can be merged.
 func validateMerge(primaryTicket map[string]interface{}, mergeTickets []map[string]interface{}) (bool, error) {
 	primaryCustomer := primaryTicket["customer"].(string)
 	primaryStatus := primaryTicket["status"].(string)
@@ -296,7 +296,7 @@ func validateMerge(primaryTicket map[string]interface{}, mergeTickets []map[stri
 	return true, nil
 }
 
-// Helper function to get mock ticket data
+// Helper function to get mock ticket data.
 func getMockTicket(id int) map[string]interface{} {
 	// Mock data for testing
 	tickets := map[int]map[string]interface{}{
@@ -342,7 +342,7 @@ func getMockTicket(id int) map[string]interface{} {
 	return nil
 }
 
-// Helper function to check if agent is assigned to ticket
+// Helper function to check if agent is assigned to ticket.
 func isAgentAssigned(ticket map[string]interface{}, userID interface{}) bool {
 	assignedTo, ok := ticket["assigned_to"].(int)
 	if !ok {

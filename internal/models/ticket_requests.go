@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// CreateTicketRequest represents a request to create a new ticket
+// CreateTicketRequest represents a request to create a new ticket.
 type CreateTicketRequest struct {
 	Title             string                `json:"title" binding:"required"`
 	QueueID           uint                  `json:"queue_id"`
@@ -18,7 +18,7 @@ type CreateTicketRequest struct {
 	InitialArticle    *CreateArticleRequest `json:"initial_article"`
 }
 
-// UpdateTicketRequest represents a request to update a ticket
+// UpdateTicketRequest represents a request to update a ticket.
 type UpdateTicketRequest struct {
 	Title             string `json:"title"`
 	QueueID           uint   `json:"queue_id"`
@@ -30,7 +30,7 @@ type UpdateTicketRequest struct {
 	UpdateBy          uint   `json:"-"`
 }
 
-// CreateArticleRequest represents a request to create a new article
+// CreateArticleRequest represents a request to create a new article.
 type CreateArticleRequest struct {
 	ArticleTypeID uint                      `json:"article_type_id" binding:"required"`
 	SenderTypeID  uint                      `json:"sender_type_id" binding:"required"`
@@ -44,7 +44,7 @@ type CreateArticleRequest struct {
 	Attachments   []CreateAttachmentRequest `json:"attachments"`
 }
 
-// CreateAttachmentRequest represents a request to create an attachment
+// CreateAttachmentRequest represents a request to create an attachment.
 type CreateAttachmentRequest struct {
 	Filename    string `json:"filename" binding:"required"`
 	ContentSize int    `json:"content_size"`
@@ -52,24 +52,24 @@ type CreateAttachmentRequest struct {
 	Content     []byte `json:"content" binding:"required"`
 }
 
-// MergeTicketsRequest represents a request to merge tickets
+// MergeTicketsRequest represents a request to merge tickets.
 type MergeTicketsRequest struct {
 	TargetTicketID uint `json:"target_ticket_id" binding:"required"`
 	SourceTicketID uint `json:"source_ticket_id" binding:"required"`
 }
 
-// AssignTicketRequest represents a request to assign a ticket
+// AssignTicketRequest represents a request to assign a ticket.
 type AssignTicketRequest struct {
 	AgentID uint `json:"agent_id" binding:"required"`
 }
 
-// EscalateTicketRequest represents a request to escalate a ticket
+// EscalateTicketRequest represents a request to escalate a ticket.
 type EscalateTicketRequest struct {
 	PriorityID uint   `json:"priority_id" binding:"required"`
 	Reason     string `json:"reason" binding:"required"`
 }
 
-// TicketHistory represents a ticket history entry
+// TicketHistory represents a ticket history entry.
 type TicketHistory struct {
 	ID         uint      `json:"id"`
 	TicketID   uint      `json:"ticket_id"`

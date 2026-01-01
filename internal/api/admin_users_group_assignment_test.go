@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -13,12 +12,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// TestGroupAssignmentWorkflow tests the complete workflow that the user reported as broken
+// TestGroupAssignmentWorkflow tests the complete workflow that the user reported as broken.
 func TestGroupAssignmentWorkflow(t *testing.T) {
 	// Initialize database connection
 	db, err := database.GetDB()
@@ -174,7 +174,7 @@ func TestGroupAssignmentEdgeCases(t *testing.T) {
 	})
 }
 
-// Helper functions
+// Helper functions.
 type TestUser struct {
 	ID        int
 	Login     string
@@ -223,7 +223,7 @@ func cleanupGroupAssignmentTestUser(t *testing.T, db *sql.DB, userID int) {
 func verifyTestGroups(t *testing.T, db *sql.DB) []TestGroup {
 	rows, err := db.Query("SELECT id, name FROM groups WHERE valid_id = 1 ORDER BY name LIMIT 5")
 	require.NoError(t, err, "Failed to query groups")
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var groups []TestGroup
 	for rows.Next() {
@@ -245,7 +245,7 @@ func getUserGroupsFromDB(t *testing.T, db *sql.DB, userID int) []string {
         ORDER BY g.name`)
 	rows, err := db.Query(sqlQuery, userID)
 	require.NoError(t, err, "Failed to query user groups")
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var groups []string
 	for rows.Next() {

@@ -2,14 +2,15 @@ package middleware
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// DatabaseHealthCheck middleware checks database connectivity
-// and returns a friendly error page if the database is down
+// and returns a friendly error page if the database is down.
 func DatabaseHealthCheck() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Skip health check for static assets and health endpoint

@@ -152,7 +152,7 @@ func getCurrentGroups(t *testing.T, db *sql.DB, userID int) []string {
 
 	rows, err := db.Query(query, userID)
 	require.NoError(t, err)
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var groupName string

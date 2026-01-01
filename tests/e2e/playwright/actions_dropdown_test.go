@@ -3,11 +3,12 @@
 package playwright
 
 import (
+	"testing"
+
 	"github.com/gotrs-io/gotrs-ce/tests/e2e/helpers"
 	"github.com/playwright-community/playwright-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestActionsDropdownVisibility(t *testing.T) {

@@ -11,14 +11,14 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// MemoryTicketTemplateRepository is an in-memory implementation of TicketTemplateRepository
+// MemoryTicketTemplateRepository is an in-memory implementation of TicketTemplateRepository.
 type MemoryTicketTemplateRepository struct {
 	mu        sync.RWMutex
 	templates map[uint]*models.TicketTemplate
 	nextID    uint
 }
 
-// NewMemoryTicketTemplateRepository creates a new in-memory ticket template repository
+// NewMemoryTicketTemplateRepository creates a new in-memory ticket template repository.
 func NewMemoryTicketTemplateRepository() *MemoryTicketTemplateRepository {
 	return &MemoryTicketTemplateRepository{
 		templates: make(map[uint]*models.TicketTemplate),
@@ -26,7 +26,7 @@ func NewMemoryTicketTemplateRepository() *MemoryTicketTemplateRepository {
 	}
 }
 
-// CreateTemplate creates a new template
+// CreateTemplate creates a new template.
 func (r *MemoryTicketTemplateRepository) CreateTemplate(ctx context.Context, template *models.TicketTemplate) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -43,7 +43,7 @@ func (r *MemoryTicketTemplateRepository) CreateTemplate(ctx context.Context, tem
 	return nil
 }
 
-// GetTemplateByID retrieves a template by ID
+// GetTemplateByID retrieves a template by ID.
 func (r *MemoryTicketTemplateRepository) GetTemplateByID(ctx context.Context, id uint) (*models.TicketTemplate, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -58,7 +58,7 @@ func (r *MemoryTicketTemplateRepository) GetTemplateByID(ctx context.Context, id
 	return &result, nil
 }
 
-// GetActiveTemplates retrieves all active templates
+// GetActiveTemplates retrieves all active templates.
 func (r *MemoryTicketTemplateRepository) GetActiveTemplates(ctx context.Context) ([]models.TicketTemplate, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -78,7 +78,7 @@ func (r *MemoryTicketTemplateRepository) GetActiveTemplates(ctx context.Context)
 	return templates, nil
 }
 
-// GetTemplatesByCategory retrieves templates by category
+// GetTemplatesByCategory retrieves templates by category.
 func (r *MemoryTicketTemplateRepository) GetTemplatesByCategory(ctx context.Context, category string) ([]models.TicketTemplate, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -98,7 +98,7 @@ func (r *MemoryTicketTemplateRepository) GetTemplatesByCategory(ctx context.Cont
 	return templates, nil
 }
 
-// UpdateTemplate updates an existing template
+// UpdateTemplate updates an existing template.
 func (r *MemoryTicketTemplateRepository) UpdateTemplate(ctx context.Context, template *models.TicketTemplate) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -119,7 +119,7 @@ func (r *MemoryTicketTemplateRepository) UpdateTemplate(ctx context.Context, tem
 	return nil
 }
 
-// DeleteTemplate deletes a template
+// DeleteTemplate deletes a template.
 func (r *MemoryTicketTemplateRepository) DeleteTemplate(ctx context.Context, id uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -132,7 +132,7 @@ func (r *MemoryTicketTemplateRepository) DeleteTemplate(ctx context.Context, id 
 	return nil
 }
 
-// IncrementUsageCount increments the usage count of a template
+// IncrementUsageCount increments the usage count of a template.
 func (r *MemoryTicketTemplateRepository) IncrementUsageCount(ctx context.Context, templateID uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -148,7 +148,7 @@ func (r *MemoryTicketTemplateRepository) IncrementUsageCount(ctx context.Context
 	return nil
 }
 
-// SearchTemplates searches templates by query string
+// SearchTemplates searches templates by query string.
 func (r *MemoryTicketTemplateRepository) SearchTemplates(ctx context.Context, query string) ([]models.TicketTemplate, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -190,7 +190,7 @@ func (r *MemoryTicketTemplateRepository) SearchTemplates(ctx context.Context, qu
 	return results, nil
 }
 
-// GetCategories retrieves all unique categories
+// GetCategories retrieves all unique categories.
 func (r *MemoryTicketTemplateRepository) GetCategories(ctx context.Context) ([]models.TemplateCategory, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

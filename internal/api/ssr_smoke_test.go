@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -124,7 +123,7 @@ func TestAllPagesSSR(t *testing.T) {
 // Wrapper to satisfy filtered test runs that match "User" in -run pattern.
 func TestUserAllPagesSSR(t *testing.T) { TestAllPagesSSR(t) }
 
-// findProjectRoot looks upward for a directory containing both routes/ and templates/
+// findProjectRoot looks upward for a directory containing both routes/ and templates/.
 func findProjectRoot(t *testing.T) string {
 	t.Helper()
 	dir, _ := os.Getwd()

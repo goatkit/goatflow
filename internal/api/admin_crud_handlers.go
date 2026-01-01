@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
@@ -16,7 +17,7 @@ import (
 
 // Admin Users CRUD Handlers
 
-// HandleAdminUsersCreate handles POST /admin/users
+// HandleAdminUsersCreate handles POST /admin/users.
 func HandleAdminUsersCreate(c *gin.Context) {
 	var req struct {
 		Login     string   `json:"login" form:"login"`
@@ -118,7 +119,7 @@ func HandleAdminUsersCreate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User created", "user_id": user.ID})
 }
 
-// HandleAdminUsersUpdate handles PUT /admin/users/:id
+// HandleAdminUsersUpdate handles PUT /admin/users/:id.
 func HandleAdminUsersUpdate(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.Atoi(userID)
@@ -153,7 +154,7 @@ func HandleAdminUsersUpdate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User updated"})
 }
 
-// HandleAdminUsersDelete handles DELETE /admin/users/:id
+// HandleAdminUsersDelete handles DELETE /admin/users/:id.
 func HandleAdminUsersDelete(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.Atoi(userID)
@@ -180,7 +181,7 @@ func HandleAdminUsersDelete(c *gin.Context) {
 
 // HandleAdminUsersStatus is implemented in admin_users_handlers.go
 
-// HandleAdminUsersList handles GET /admin/users (JSON API)
+// HandleAdminUsersList handles GET /admin/users (JSON API).
 func HandleAdminUsersList(c *gin.Context) {
 	db, err := adapter.GetDB()
 	if err != nil {
@@ -198,7 +199,7 @@ func HandleAdminUsersList(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var users []gin.H
 	for rows.Next() {
@@ -226,7 +227,7 @@ func HandleAdminUsersList(c *gin.Context) {
 
 // Admin Groups CRUD Handlers
 
-// HandleAdminGroupsCreate handles POST /admin/groups
+// HandleAdminGroupsCreate handles POST /admin/groups.
 func HandleAdminGroupsCreate(c *gin.Context) {
 	var req struct {
 		Name     string `json:"name" form:"name"`
@@ -251,7 +252,7 @@ func HandleAdminGroupsCreate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Group created"})
 }
 
-// HandleAdminGroupsUpdate handles PUT /admin/groups/:id
+// HandleAdminGroupsUpdate handles PUT /admin/groups/:id.
 func HandleAdminGroupsUpdate(c *gin.Context) {
 	groupID := c.Param("id")
 	id, err := strconv.Atoi(groupID)
@@ -284,7 +285,7 @@ func HandleAdminGroupsUpdate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Group updated"})
 }
 
-// HandleAdminGroupsDelete handles DELETE /admin/groups/:id
+// HandleAdminGroupsDelete handles DELETE /admin/groups/:id.
 func HandleAdminGroupsDelete(c *gin.Context) {
 	groupID := c.Param("id")
 	id, err := strconv.Atoi(groupID)
@@ -309,7 +310,7 @@ func HandleAdminGroupsDelete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Group deleted"})
 }
 
-// HandleAdminGroupsUsers handles GET /admin/groups/:id/users
+// HandleAdminGroupsUsers handles GET /admin/groups/:id/users.
 func HandleAdminGroupsUsers(c *gin.Context) {
 	groupID := c.Param("id")
 	id, err := strconv.Atoi(groupID)
@@ -335,7 +336,7 @@ func HandleAdminGroupsUsers(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var users []gin.H
 	for rows.Next() {
@@ -361,7 +362,7 @@ func HandleAdminGroupsUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "users": users})
 }
 
-// HandleAdminGroupsAddUser handles POST /admin/groups/:id/users
+// HandleAdminGroupsAddUser handles POST /admin/groups/:id/users.
 func HandleAdminGroupsAddUser(c *gin.Context) {
 	groupID := c.Param("id")
 	id, err := strconv.Atoi(groupID)
@@ -398,7 +399,7 @@ func HandleAdminGroupsAddUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User added to group"})
 }
 
-// HandleAdminGroupsRemoveUser handles DELETE /admin/groups/:id/users/:userId
+// HandleAdminGroupsRemoveUser handles DELETE /admin/groups/:id/users/:userId.
 func HandleAdminGroupsRemoveUser(c *gin.Context) {
 	groupID := c.Param("id")
 	userID := c.Param("userId")

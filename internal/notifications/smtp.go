@@ -160,7 +160,7 @@ func (s *SMTPProvider) authenticate(client *smtp.Client) error {
 	return nil
 }
 
-// loginAuth implements SMTP LOGIN authentication
+// loginAuth implements SMTP LOGIN authentication.
 type loginAuth struct {
 	username, password string
 }

@@ -1,3 +1,4 @@
+// Package main provides translation extraction.
 package main
 
 import (
@@ -5,16 +6,17 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
-// TranslationKey represents a translation key found in templates
+// TranslationKey represents a translation key found in templates.
 type TranslationKey struct {
 	Key     string
 	File    string
@@ -23,7 +25,7 @@ type TranslationKey struct {
 	Default string
 }
 
-// TranslationMap represents the structure of a translation JSON file
+// TranslationMap represents the structure of a translation JSON file.
 type TranslationMap map[string]interface{}
 
 func main() {
@@ -90,7 +92,7 @@ func main() {
 	fmt.Printf("Successfully extracted %d translation keys for %d languages\n", len(keys), len(langs))
 }
 
-// findTemplateFiles recursively finds all .pongo2 and .html template files
+// findTemplateFiles recursively finds all .pongo2 and .html template files.
 func findTemplateFiles(dir string) ([]string, error) {
 	var files []string
 
@@ -109,13 +111,13 @@ func findTemplateFiles(dir string) ([]string, error) {
 	return files, err
 }
 
-// extractKeysFromFile extracts translation keys from a single template file
+// extractKeysFromFile extracts translation keys from a single template file.
 func extractKeysFromFile(filename string, moduleMode bool) ([]*TranslationKey, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var keys []*TranslationKey
 	scanner := bufio.NewScanner(file)
@@ -172,7 +174,7 @@ func extractKeysFromFile(filename string, moduleMode bool) ([]*TranslationKey, e
 	return keys, scanner.Err()
 }
 
-// extractDynamicKeyBase extracts the base part of a dynamic key
+// extractDynamicKeyBase extracts the base part of a dynamic key.
 func extractDynamicKeyBase(key string) string {
 	// For keys like "admin.modules." we keep it as is
 	// This will be expanded with actual module names later
@@ -182,7 +184,7 @@ func extractDynamicKeyBase(key string) string {
 	return key
 }
 
-// extractDefault attempts to extract a default value from the match
+// extractDefault attempts to extract a default value from the match.
 func extractDefault(match []string) string {
 	if len(match) > 2 && match[2] != "" {
 		// Clean up the default value
@@ -193,7 +195,7 @@ func extractDefault(match []string) string {
 	return ""
 }
 
-// groupKeysByPrefix groups translation keys by their prefix
+// groupKeysByPrefix groups translation keys by their prefix.
 func groupKeysByPrefix(keys map[string]*TranslationKey) map[string]map[string]*TranslationKey {
 	grouped := make(map[string]map[string]*TranslationKey)
 
@@ -213,7 +215,7 @@ func groupKeysByPrefix(keys map[string]*TranslationKey) map[string]map[string]*T
 	return grouped
 }
 
-// printExtractedKeys prints the extracted keys in a readable format
+// printExtractedKeys prints the extracted keys in a readable format.
 func printExtractedKeys(grouped map[string]map[string]*TranslationKey) {
 	var prefixes []string
 	for prefix := range grouped {
@@ -241,7 +243,7 @@ func printExtractedKeys(grouped map[string]map[string]*TranslationKey) {
 	}
 }
 
-// generateTranslationFile generates or updates a translation file for a language
+// generateTranslationFile generates or updates a translation file for a language.
 func generateTranslationFile(outputDir, lang string, grouped map[string]map[string]*TranslationKey, verbose bool) error {
 	filename := filepath.Join(outputDir, fmt.Sprintf("%s.json", lang))
 
@@ -278,7 +280,7 @@ func generateTranslationFile(outputDir, lang string, grouped map[string]map[stri
 	return nil
 }
 
-// buildTranslationMap builds a nested translation map from grouped keys
+// buildTranslationMap builds a nested translation map from grouped keys.
 func buildTranslationMap(grouped map[string]map[string]*TranslationKey, existing TranslationMap, lang string) TranslationMap {
 	result := make(TranslationMap)
 
@@ -297,7 +299,7 @@ func buildTranslationMap(grouped map[string]map[string]*TranslationKey, existing
 	return result
 }
 
-// setNestedValue sets a value in a nested map structure
+// setNestedValue sets a value in a nested map structure.
 func setNestedValue(m TranslationMap, key string, value string) {
 	parts := strings.Split(key, ".")
 	current := m
@@ -327,7 +329,7 @@ func setNestedValue(m TranslationMap, key string, value string) {
 	}
 }
 
-// getTranslationValue generates an appropriate translation value
+// getTranslationValue generates an appropriate translation value.
 func getTranslationValue(tk *TranslationKey, lang string) string {
 	// If we have a default, use it for English
 	if tk.Default != "" && lang == "en" {
@@ -353,7 +355,7 @@ func getTranslationValue(tk *TranslationKey, lang string) string {
 	return tk.Key
 }
 
-// countKeys counts the total number of leaf keys in a translation map
+// countKeys counts the total number of leaf keys in a translation map.
 func countKeys(m TranslationMap) int {
 	count := 0
 	for _, v := range m {

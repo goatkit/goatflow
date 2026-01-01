@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// ChangeType represents the type of change
+// ChangeType represents the type of change.
 type ChangeType string
 
 const (
@@ -14,7 +14,7 @@ const (
 	ChangeTypeMajor     ChangeType = "major"     // Significant impact
 )
 
-// ChangeStatus represents the current status of a change
+// ChangeStatus represents the current status of a change.
 type ChangeStatus string
 
 const (
@@ -31,7 +31,7 @@ const (
 	ChangeStatusRejected         ChangeStatus = "rejected"
 )
 
-// ChangeRisk represents the risk level of a change
+// ChangeRisk represents the risk level of a change.
 type ChangeRisk string
 
 const (
@@ -41,7 +41,7 @@ const (
 	ChangeRiskCritical ChangeRisk = "critical"
 )
 
-// ChangeImpact represents the impact level of a change
+// ChangeImpact represents the impact level of a change.
 type ChangeImpact string
 
 const (
@@ -51,7 +51,7 @@ const (
 	ChangeImpactExtensive   ChangeImpact = "extensive"
 )
 
-// Change represents an ITSM change request
+// Change represents an ITSM change request.
 type Change struct {
 	ID           uint         `json:"id" gorm:"primaryKey"`
 	ChangeNumber string       `json:"change_number" gorm:"uniqueIndex;not null"`
@@ -155,7 +155,7 @@ type Change struct {
 	LastModifiedBy   *User     `json:"last_modified_by,omitempty" gorm:"foreignKey:LastModifiedByID"`
 }
 
-// ChangeApproval represents an approval for a change
+// ChangeApproval represents an approval for a change.
 type ChangeApproval struct {
 	ID           uint       `json:"id" gorm:"primaryKey"`
 	ChangeID     uint       `json:"change_id" gorm:"not null"`
@@ -170,7 +170,7 @@ type ChangeApproval struct {
 	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
-// ChangeComment represents a comment on a change
+// ChangeComment represents a comment on a change.
 type ChangeComment struct {
 	ID         uint      `json:"id" gorm:"primaryKey"`
 	ChangeID   uint      `json:"change_id" gorm:"not null"`
@@ -184,7 +184,7 @@ type ChangeComment struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-// ChangeAttachment represents a file attached to a change
+// ChangeAttachment represents a file attached to a change.
 type ChangeAttachment struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
 	ChangeID     uint      `json:"change_id" gorm:"not null"`
@@ -198,7 +198,7 @@ type ChangeAttachment struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// ChangeHistory tracks changes to a change request
+// ChangeHistory tracks changes to a change request.
 type ChangeHistory struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
 	ChangeID     uint      `json:"change_id" gorm:"not null"`
@@ -212,7 +212,7 @@ type ChangeHistory struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// ChangeTask represents a task within a change
+// ChangeTask represents a task within a change.
 type ChangeTask struct {
 	ID           uint       `json:"id" gorm:"primaryKey"`
 	ChangeID     uint       `json:"change_id" gorm:"not null"`
@@ -233,7 +233,7 @@ type ChangeTask struct {
 	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
-// ChangeListRequest represents a request to list changes
+// ChangeListRequest represents a request to list changes.
 type ChangeListRequest struct {
 	Page          int          `json:"page" form:"page"`
 	PerPage       int          `json:"per_page" form:"per_page"`
@@ -251,7 +251,7 @@ type ChangeListRequest struct {
 	IsEmergency   *bool        `json:"is_emergency" form:"is_emergency"`
 }
 
-// ChangeListResponse represents a response containing a list of changes
+// ChangeListResponse represents a response containing a list of changes.
 type ChangeListResponse struct {
 	Changes    []*Change `json:"changes"`
 	Total      int64     `json:"total"`

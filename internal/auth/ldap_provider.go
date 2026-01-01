@@ -9,7 +9,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// LDAPConfig holds LDAP server configuration
+// LDAPConfig holds LDAP server configuration.
 type LDAPConfig struct {
 	Server     string
 	Port       int
@@ -20,20 +20,20 @@ type LDAPConfig struct {
 	TLS        bool
 }
 
-// LDAPAuthProvider provides authentication against LDAP
+// LDAPAuthProvider provides authentication against LDAP.
 type LDAPAuthProvider struct {
 	config *LDAPConfig
 	// Add LDAP client when implementing
 }
 
-// NewLDAPAuthProvider creates a new LDAP authentication provider
+// NewLDAPAuthProvider creates a new LDAP authentication provider.
 func NewLDAPAuthProvider(config *LDAPConfig) *LDAPAuthProvider {
 	return &LDAPAuthProvider{
 		config: config,
 	}
 }
 
-// Authenticate authenticates a user against LDAP
+// Authenticate authenticates a user against LDAP.
 func (p *LDAPAuthProvider) Authenticate(ctx context.Context, username, password string) (*models.User, error) {
 	// TODO: Implement LDAP authentication
 	// 1. Connect to LDAP server
@@ -46,24 +46,24 @@ func (p *LDAPAuthProvider) Authenticate(ctx context.Context, username, password 
 	return nil, fmt.Errorf("LDAP authentication not yet implemented")
 }
 
-// GetUser retrieves user details from LDAP
+// GetUser retrieves user details from LDAP.
 func (p *LDAPAuthProvider) GetUser(ctx context.Context, identifier string) (*models.User, error) {
 	// TODO: Implement LDAP user lookup
 	return nil, fmt.Errorf("LDAP user lookup not yet implemented")
 }
 
-// ValidateToken validates a session token
+// ValidateToken validates a session token.
 func (p *LDAPAuthProvider) ValidateToken(ctx context.Context, token string) (*models.User, error) {
 	// LDAP doesn't handle tokens directly
 	return nil, ErrAuthBackendFailed
 }
 
-// Name returns the name of this auth provider
+// Name returns the name of this auth provider.
 func (p *LDAPAuthProvider) Name() string {
 	return "LDAP"
 }
 
-// Priority returns the priority of this provider
+// Priority returns the priority of this provider.
 func (p *LDAPAuthProvider) Priority() int {
 	return 5 // Higher priority than database
 }

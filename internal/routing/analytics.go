@@ -1,3 +1,4 @@
+// Package routing provides HTTP routing and analytics endpoints.
 package routing
 
 import (
@@ -10,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RouteMetrics tracks performance and usage metrics for routes
+// RouteMetrics tracks performance and usage metrics for routes.
 type RouteMetrics struct {
 	mu             sync.RWMutex
 	routeStats     map[string]*RouteStats
@@ -21,7 +22,7 @@ type RouteMetrics struct {
 	maxRecentLogs  int
 }
 
-// RouteStats contains statistics for a specific route
+// RouteStats contains statistics for a specific route.
 type RouteStats struct {
 	Path            string        `json:"path"`
 	Method          string        `json:"method"`
@@ -36,7 +37,7 @@ type RouteStats struct {
 	StatusCodes     map[int]int64 `json:"status_codes"`
 }
 
-// RequestLog represents a single request log entry
+// RequestLog represents a single request log entry.
 type RequestLog struct {
 	Timestamp  time.Time     `json:"timestamp"`
 	Method     string        `json:"method"`
@@ -47,7 +48,7 @@ type RequestLog struct {
 	IP         string        `json:"ip"`
 }
 
-// NewRouteMetrics creates a new route metrics tracker
+// NewRouteMetrics creates a new route metrics tracker.
 func NewRouteMetrics() *RouteMetrics {
 	return &RouteMetrics{
 		routeStats:     make(map[string]*RouteStats),
@@ -57,7 +58,7 @@ func NewRouteMetrics() *RouteMetrics {
 	}
 }
 
-// MiddlewareWithMetrics returns a Gin middleware that tracks route metrics
+// MiddlewareWithMetrics returns a Gin middleware that tracks route metrics.
 func (rm *RouteMetrics) MiddlewareWithMetrics(routePath, handlerName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		startTime := time.Now()
@@ -81,7 +82,7 @@ func (rm *RouteMetrics) MiddlewareWithMetrics(routePath, handlerName string) gin
 	}
 }
 
-// RouteRequest represents a request to be recorded
+// RouteRequest represents a request to be recorded.
 type RouteRequest struct {
 	Method     string
 	Path       string
@@ -92,7 +93,7 @@ type RouteRequest struct {
 	ClientIP   string
 }
 
-// RecordRequest records metrics for a route request
+// RecordRequest records metrics for a route request.
 func (rm *RouteMetrics) RecordRequest(req RouteRequest) {
 	rm.mu.Lock()
 	defer rm.mu.Unlock()
@@ -152,7 +153,7 @@ func (rm *RouteMetrics) RecordRequest(req RouteRequest) {
 	}
 }
 
-// GetStats returns current statistics
+// GetStats returns current statistics.
 func (rm *RouteMetrics) GetStats() *SystemStats {
 	rm.mu.RLock()
 	defer rm.mu.RUnlock()
@@ -186,7 +187,7 @@ func (rm *RouteMetrics) getRecentRequests(limit int) []RequestLog {
 	return rm.recentRequests[len(rm.recentRequests)-limit:]
 }
 
-// SystemStats represents overall system statistics
+// SystemStats represents overall system statistics.
 type SystemStats struct {
 	TotalRequests  int64         `json:"total_requests"`
 	TotalErrors    int64         `json:"total_errors"`
@@ -196,7 +197,7 @@ type SystemStats struct {
 	RecentRequests []RequestLog  `json:"recent_requests"`
 }
 
-// SetupMetricsEndpoints adds analytics endpoints to the router
+// SetupMetricsEndpoints adds analytics endpoints to the router.
 func (rm *RouteMetrics) SetupMetricsEndpoints(r *gin.Engine) {
 	metrics := r.Group("/metrics")
 
@@ -380,16 +381,16 @@ func (rm *RouteMetrics) generateRouteRows(routes []*RouteStats) string {
 	return rows
 }
 
-// Global metrics instance
+// Global metrics instance.
 var globalMetrics *RouteMetrics
 
-// InitRouteMetrics initializes the global metrics tracker
+// InitRouteMetrics initializes the global metrics tracker.
 func InitRouteMetrics() *RouteMetrics {
 	globalMetrics = NewRouteMetrics()
 	return globalMetrics
 }
 
-// GetGlobalMetrics returns the global metrics instance
+// GetGlobalMetrics returns the global metrics instance.
 func GetGlobalMetrics() *RouteMetrics {
 	if globalMetrics == nil {
 		globalMetrics = NewRouteMetrics()

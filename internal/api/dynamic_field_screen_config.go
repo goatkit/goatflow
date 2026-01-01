@@ -9,13 +9,13 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// FieldWithScreenConfig pairs a field with its screen configuration value
+// FieldWithScreenConfig pairs a field with its screen configuration value.
 type FieldWithScreenConfig struct {
 	Field       DynamicField
 	ConfigValue int // 0=disabled, 1=enabled, 2=required
 }
 
-// ScreenConfigMatrix provides a full view of field-screen mappings for admin UI
+// ScreenConfigMatrix provides a full view of field-screen mappings for admin UI.
 type ScreenConfigMatrix struct {
 	ObjectType string
 	Fields     []DynamicField
@@ -23,7 +23,7 @@ type ScreenConfigMatrix struct {
 	ConfigMap  map[int]map[string]int // fieldID -> screenKey -> configValue
 }
 
-// getScreenConfigForFieldWithDB gets all screen configs for a single field
+// getScreenConfigForFieldWithDB gets all screen configs for a single field.
 func getScreenConfigForFieldWithDB(db *sql.DB, fieldID int) ([]DynamicFieldScreenConfig, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, field_id, screen_key, config_value, create_time, create_by, change_time, change_by
@@ -36,12 +36,12 @@ func getScreenConfigForFieldWithDB(db *sql.DB, fieldID int) ([]DynamicFieldScree
 	if err != nil {
 		return nil, fmt.Errorf("failed to query screen configs: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return scanScreenConfigs(rows)
 }
 
-// GetScreenConfigForField gets all screen configs for a single field
+// GetScreenConfigForField gets all screen configs for a single field.
 func GetScreenConfigForField(fieldID int) ([]DynamicFieldScreenConfig, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -50,7 +50,7 @@ func GetScreenConfigForField(fieldID int) ([]DynamicFieldScreenConfig, error) {
 	return getScreenConfigForFieldWithDB(db, fieldID)
 }
 
-// getScreenConfigForScreenWithDB gets all field configs for a specific screen
+// getScreenConfigForScreenWithDB gets all field configs for a specific screen.
 func getScreenConfigForScreenWithDB(db *sql.DB, screenKey string) ([]DynamicFieldScreenConfig, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, field_id, screen_key, config_value, create_time, create_by, change_time, change_by
@@ -63,12 +63,12 @@ func getScreenConfigForScreenWithDB(db *sql.DB, screenKey string) ([]DynamicFiel
 	if err != nil {
 		return nil, fmt.Errorf("failed to query screen configs: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return scanScreenConfigs(rows)
 }
 
-// GetScreenConfigForScreen gets all field configs for a specific screen
+// GetScreenConfigForScreen gets all field configs for a specific screen.
 func GetScreenConfigForScreen(screenKey string) ([]DynamicFieldScreenConfig, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -77,7 +77,7 @@ func GetScreenConfigForScreen(screenKey string) ([]DynamicFieldScreenConfig, err
 	return getScreenConfigForScreenWithDB(db, screenKey)
 }
 
-// setScreenConfigWithDB sets a single field-screen config
+// setScreenConfigWithDB sets a single field-screen config.
 func setScreenConfigWithDB(db *sql.DB, fieldID int, screenKey string, configValue int, userID int) error {
 	now := time.Now()
 
@@ -103,7 +103,7 @@ func setScreenConfigWithDB(db *sql.DB, fieldID int, screenKey string, configValu
 	return nil
 }
 
-// SetScreenConfig sets a single field-screen config
+// SetScreenConfig sets a single field-screen config.
 func SetScreenConfig(fieldID int, screenKey string, configValue int, userID int) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -112,13 +112,13 @@ func SetScreenConfig(fieldID int, screenKey string, configValue int, userID int)
 	return setScreenConfigWithDB(db, fieldID, screenKey, configValue, userID)
 }
 
-// bulkSetScreenConfigForFieldWithDB replaces all screen configs for a field
+// bulkSetScreenConfigForFieldWithDB replaces all screen configs for a field.
 func bulkSetScreenConfigForFieldWithDB(db *sql.DB, fieldID int, configs map[string]int, userID int) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now()
 
@@ -147,7 +147,7 @@ func bulkSetScreenConfigForFieldWithDB(db *sql.DB, fieldID int, configs map[stri
 	return tx.Commit()
 }
 
-// BulkSetScreenConfigForField replaces all screen configs for a field
+// BulkSetScreenConfigForField replaces all screen configs for a field.
 func BulkSetScreenConfigForField(fieldID int, configs map[string]int, userID int) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -156,7 +156,7 @@ func BulkSetScreenConfigForField(fieldID int, configs map[string]int, userID int
 	return bulkSetScreenConfigForFieldWithDB(db, fieldID, configs, userID)
 }
 
-// getFieldsForScreenWithConfigWithDB gets fields enabled for a specific screen with their config values
+// getFieldsForScreenWithConfigWithDB gets fields enabled for a specific screen with their config values.
 func getFieldsForScreenWithConfigWithDB(db *sql.DB, screenKey, objectType string) ([]FieldWithScreenConfig, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT df.id, df.internal_field, df.name, df.label, df.field_order,
@@ -173,7 +173,7 @@ func getFieldsForScreenWithConfigWithDB(db *sql.DB, screenKey, objectType string
 	if err != nil {
 		return nil, fmt.Errorf("failed to query fields for screen: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var results []FieldWithScreenConfig
 	for rows.Next() {
@@ -197,7 +197,7 @@ func getFieldsForScreenWithConfigWithDB(db *sql.DB, screenKey, objectType string
 	return results, nil
 }
 
-// GetFieldsForScreenWithConfig gets fields enabled for a specific screen
+// GetFieldsForScreenWithConfig gets fields enabled for a specific screen.
 func GetFieldsForScreenWithConfig(screenKey, objectType string) ([]FieldWithScreenConfig, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -206,7 +206,7 @@ func GetFieldsForScreenWithConfig(screenKey, objectType string) ([]FieldWithScre
 	return getFieldsForScreenWithConfigWithDB(db, screenKey, objectType)
 }
 
-// getScreenConfigMatrixWithDB builds a matrix of all fields and their screen configs
+// getScreenConfigMatrixWithDB builds a matrix of all fields and their screen configs.
 func getScreenConfigMatrixWithDB(db *sql.DB, objectType string) (*ScreenConfigMatrix, error) {
 	// Get all fields for object type
 	fieldQuery := database.ConvertPlaceholders(`
@@ -283,7 +283,7 @@ func getScreenConfigMatrixWithDB(db *sql.DB, objectType string) (*ScreenConfigMa
 	}, nil
 }
 
-// GetScreenConfigMatrix builds a matrix of all fields and their screen configs
+// GetScreenConfigMatrix builds a matrix of all fields and their screen configs.
 func GetScreenConfigMatrix(objectType string) (*ScreenConfigMatrix, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -292,8 +292,7 @@ func GetScreenConfigMatrix(objectType string) (*ScreenConfigMatrix, error) {
 	return getScreenConfigMatrixWithDB(db, objectType)
 }
 
-// GetDynamicFieldsForScreenGeneric returns fields with screen config for use by routing package
-// Returns []interface{} to avoid import cycles
+// Returns []interface{} to avoid import cycles.
 func GetDynamicFieldsForScreenGeneric(screenKey, objectType string) ([]interface{}, error) {
 	fields, err := GetFieldsForScreenWithConfig(screenKey, objectType)
 	if err != nil {

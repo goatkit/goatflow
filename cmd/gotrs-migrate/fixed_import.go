@@ -1,18 +1,20 @@
+// Package main provides fixed import utilities for migration.
 package main
 
 import (
 	"bufio"
 	"database/sql"
 	"fmt"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// IDMapping tracks the mapping between old IDs and new IDs during import
+// IDMapping tracks the mapping between old IDs and new IDs during import.
 type IDMapping struct {
 	TicketIDMap  map[int]int // oldID -> newID
 	ArticleIDMap map[int]int // oldID -> newID
@@ -61,7 +63,7 @@ func importSQLDumpFixed(sqlFile, dbURL string, verbose, dryRun, force bool) erro
 	if err != nil {
 		return fmt.Errorf("failed to open SQL file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 	buf := make([]byte, 0, 1024*1024)
@@ -825,8 +827,7 @@ func fixSequences(db *sql.DB) error {
 	return nil
 }
 
-// parseMultipleValueSets splits SQL VALUES statement with multiple rows
-// e.g., "(1,2,3),(4,5,6)" -> ["1,2,3", "4,5,6"]
+// e.g., "(1,2,3),(4,5,6)" -> ["1,2,3", "4,5,6"].
 func parseMultipleValueSets(valuesStr string) []string {
 	var result []string
 	var current strings.Builder
@@ -888,7 +889,7 @@ func parseMultipleValueSets(valuesStr string) []string {
 	return result
 }
 
-// validateDatabaseState checks if the database is ready for import
+// validateDatabaseState checks if the database is ready for import.
 func validateDatabaseState(db *sql.DB, force bool) error {
 	// Tables to check for existing data
 	tables := []string{

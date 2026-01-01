@@ -5,7 +5,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// RequestID adds a unique request ID to each request
+// RequestID adds a unique request ID to each request.
 func RequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Check if request already has an ID (from client)

@@ -4,9 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
 func TestMemoryCannedResponseRepository(t *testing.T) {

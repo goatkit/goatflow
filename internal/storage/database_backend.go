@@ -6,23 +6,24 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"time"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// DatabaseBackend implements article storage in the database (OTRS ArticleStorageDB)
+// DatabaseBackend implements article storage in the database (OTRS ArticleStorageDB).
 type DatabaseBackend struct {
 	db *sql.DB
 }
 
-// NewDatabaseBackend creates a new database storage backend
+// NewDatabaseBackend creates a new database storage backend.
 func NewDatabaseBackend(db *sql.DB) *DatabaseBackend {
 	return &DatabaseBackend{
 		db: db,
 	}
 }
 
-// Store saves article content to the database
+// Store saves article content to the database.
 func (d *DatabaseBackend) Store(ctx context.Context, articleID int64, content *ArticleContent) (*StorageReference, error) {
 	// Calculate checksum
 	hash := sha256.Sum256(content.Content)
@@ -33,7 +34,7 @@ func (d *DatabaseBackend) Store(ctx context.Context, articleID int64, content *A
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Check if this is the main article body or an attachment
 	if content.FileName == "" || content.FileName == "body" {
@@ -186,7 +187,7 @@ func (d *DatabaseBackend) Store(ctx context.Context, articleID int64, content *A
 	}, nil
 }
 
-// Retrieve gets article content from the database
+// Retrieve gets article content from the database.
 func (d *DatabaseBackend) Retrieve(ctx context.Context, ref *StorageReference) (*ArticleContent, error) {
 	content := &ArticleContent{
 		ArticleID: ref.ArticleID,
@@ -274,13 +275,13 @@ func (d *DatabaseBackend) Retrieve(ctx context.Context, ref *StorageReference) (
 	return content, nil
 }
 
-// Delete removes article content from the database
+// Delete removes article content from the database.
 func (d *DatabaseBackend) Delete(ctx context.Context, ref *StorageReference) error {
 	tx, err := d.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Check if this is article body or attachment
 	if ref.FileName == "body" || (len(ref.Location) > 17 && ref.Location[:17] == "article_data_mime") {
@@ -302,7 +303,7 @@ func (d *DatabaseBackend) Delete(ctx context.Context, ref *StorageReference) err
 	return tx.Commit()
 }
 
-// Exists checks if article content exists in the database
+// Exists checks if article content exists in the database.
 func (d *DatabaseBackend) Exists(ctx context.Context, ref *StorageReference) (bool, error) {
 	var exists bool
 
@@ -317,7 +318,7 @@ func (d *DatabaseBackend) Exists(ctx context.Context, ref *StorageReference) (bo
 	return exists, err
 }
 
-// List returns all storage references for an article
+// List returns all storage references for an article.
 func (d *DatabaseBackend) List(ctx context.Context, articleID int64) ([]*StorageReference, error) {
 	refs := make([]*StorageReference, 0)
 
@@ -399,7 +400,7 @@ func (d *DatabaseBackend) List(ctx context.Context, articleID int64) ([]*Storage
 	return refs, nil
 }
 
-// Migrate is handled by the MixedModeBackend
+// Migrate is handled by the MixedModeBackend.
 func (d *DatabaseBackend) Migrate(ctx context.Context, ref *StorageReference, target Backend) (*StorageReference, error) {
 	// Retrieve content
 	content, err := d.Retrieve(ctx, ref)
@@ -416,7 +417,7 @@ func (d *DatabaseBackend) Migrate(ctx context.Context, ref *StorageReference, ta
 	return newRef, nil
 }
 
-// GetInfo returns backend information
+// GetInfo returns backend information.
 func (d *DatabaseBackend) GetInfo() *BackendInfo {
 	stats := &BackendStats{}
 
@@ -458,12 +459,12 @@ func (d *DatabaseBackend) GetInfo() *BackendInfo {
 	}
 }
 
-// HealthCheck verifies the database connection
+// HealthCheck verifies the database connection.
 func (d *DatabaseBackend) HealthCheck(ctx context.Context) error {
 	return d.db.PingContext(ctx)
 }
 
-// Register the database backend with the factory
+// Register the database backend with the factory.
 func init() {
 	DefaultFactory.Register("DB", func(config map[string]interface{}) (Backend, error) {
 		db, ok := config["db"].(*sql.DB)

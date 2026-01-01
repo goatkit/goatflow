@@ -9,7 +9,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// TicketMergeRepository defines the interface for ticket merge operations
+// TicketMergeRepository defines the interface for ticket merge operations.
 type TicketMergeRepository interface {
 	CreateMerge(ctx context.Context, merge *models.TicketMerge) error
 	GetMerge(ctx context.Context, id uint) (*models.TicketMerge, error)
@@ -27,7 +27,7 @@ type TicketMergeRepository interface {
 	DeleteTicketRelation(ctx context.Context, relationID uint) error
 }
 
-// MemoryTicketMergeRepository is an in-memory implementation of TicketMergeRepository
+// MemoryTicketMergeRepository is an in-memory implementation of TicketMergeRepository.
 type MemoryTicketMergeRepository struct {
 	merges    map[uint]*models.TicketMerge
 	relations map[uint]*models.TicketRelation
@@ -36,7 +36,7 @@ type MemoryTicketMergeRepository struct {
 	nextRelID uint
 }
 
-// NewMemoryTicketMergeRepository creates a new in-memory ticket merge repository
+// NewMemoryTicketMergeRepository creates a new in-memory ticket merge repository.
 func NewMemoryTicketMergeRepository() *MemoryTicketMergeRepository {
 	return &MemoryTicketMergeRepository{
 		merges:    make(map[uint]*models.TicketMerge),
@@ -46,7 +46,7 @@ func NewMemoryTicketMergeRepository() *MemoryTicketMergeRepository {
 	}
 }
 
-// CreateMerge creates a new merge record
+// CreateMerge creates a new merge record.
 func (r *MemoryTicketMergeRepository) CreateMerge(ctx context.Context, merge *models.TicketMerge) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -76,7 +76,7 @@ func (r *MemoryTicketMergeRepository) CreateMerge(ctx context.Context, merge *mo
 	return nil
 }
 
-// GetMerge retrieves a merge by ID
+// GetMerge retrieves a merge by ID.
 func (r *MemoryTicketMergeRepository) GetMerge(ctx context.Context, id uint) (*models.TicketMerge, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -91,7 +91,7 @@ func (r *MemoryTicketMergeRepository) GetMerge(ctx context.Context, id uint) (*m
 	return &result, nil
 }
 
-// GetMergesByParent retrieves all active merges for a parent ticket
+// GetMergesByParent retrieves all active merges for a parent ticket.
 func (r *MemoryTicketMergeRepository) GetMergesByParent(ctx context.Context, parentID uint) ([]models.TicketMerge, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -106,7 +106,7 @@ func (r *MemoryTicketMergeRepository) GetMergesByParent(ctx context.Context, par
 	return merges, nil
 }
 
-// GetMergeByChild retrieves the merge record for a child ticket
+// GetMergeByChild retrieves the merge record for a child ticket.
 func (r *MemoryTicketMergeRepository) GetMergeByChild(ctx context.Context, childID uint) (*models.TicketMerge, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -121,7 +121,7 @@ func (r *MemoryTicketMergeRepository) GetMergeByChild(ctx context.Context, child
 	return nil, fmt.Errorf("no active merge found for child ticket %d", childID)
 }
 
-// UnmergeTicket marks a merge as inactive
+// UnmergeTicket marks a merge as inactive.
 func (r *MemoryTicketMergeRepository) UnmergeTicket(ctx context.Context, mergeID uint, unmergedBy uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -143,7 +143,7 @@ func (r *MemoryTicketMergeRepository) UnmergeTicket(ctx context.Context, mergeID
 	return nil
 }
 
-// GetMergeHistory retrieves all merge history for a ticket
+// GetMergeHistory retrieves all merge history for a ticket.
 func (r *MemoryTicketMergeRepository) GetMergeHistory(ctx context.Context, ticketID uint) ([]models.TicketMerge, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -158,7 +158,7 @@ func (r *MemoryTicketMergeRepository) GetMergeHistory(ctx context.Context, ticke
 	return history, nil
 }
 
-// IsMerged checks if a ticket is currently merged
+// IsMerged checks if a ticket is currently merged.
 func (r *MemoryTicketMergeRepository) IsMerged(ctx context.Context, ticketID uint) (bool, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -172,7 +172,7 @@ func (r *MemoryTicketMergeRepository) IsMerged(ctx context.Context, ticketID uin
 	return false, nil
 }
 
-// GetAllChildren retrieves all child ticket IDs for a parent
+// GetAllChildren retrieves all child ticket IDs for a parent.
 func (r *MemoryTicketMergeRepository) GetAllChildren(ctx context.Context, parentID uint) ([]uint, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -187,7 +187,7 @@ func (r *MemoryTicketMergeRepository) GetAllChildren(ctx context.Context, parent
 	return children, nil
 }
 
-// GetMergeStatistics generates merge statistics
+// GetMergeStatistics generates merge statistics.
 func (r *MemoryTicketMergeRepository) GetMergeStatistics(ctx context.Context, from, to time.Time) (*models.MergeStatistics, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -284,7 +284,7 @@ func (r *MemoryTicketMergeRepository) GetMergeStatistics(ctx context.Context, fr
 	return stats, nil
 }
 
-// CreateTicketRelation creates a new ticket relation
+// CreateTicketRelation creates a new ticket relation.
 func (r *MemoryTicketMergeRepository) CreateTicketRelation(ctx context.Context, relation *models.TicketRelation) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -310,7 +310,7 @@ func (r *MemoryTicketMergeRepository) CreateTicketRelation(ctx context.Context, 
 	return nil
 }
 
-// GetTicketRelations retrieves all relations for a ticket
+// GetTicketRelations retrieves all relations for a ticket.
 func (r *MemoryTicketMergeRepository) GetTicketRelations(ctx context.Context, ticketID uint) ([]models.TicketRelation, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -325,7 +325,7 @@ func (r *MemoryTicketMergeRepository) GetTicketRelations(ctx context.Context, ti
 	return relations, nil
 }
 
-// DeleteTicketRelation deletes a ticket relation
+// DeleteTicketRelation deletes a ticket relation.
 func (r *MemoryTicketMergeRepository) DeleteTicketRelation(ctx context.Context, relationID uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

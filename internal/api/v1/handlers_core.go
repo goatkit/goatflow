@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
 
-// handleHealth returns API health status
+// handleHealth returns API health status.
 func (router *APIRouter) handleHealth(c *gin.Context) {
 	sendSuccess(c, gin.H{
 		"status":    "healthy",
@@ -18,7 +19,7 @@ func (router *APIRouter) handleHealth(c *gin.Context) {
 	})
 }
 
-// handleAPIInfo returns API information
+// handleAPIInfo returns API information.
 func (router *APIRouter) handleAPIInfo(c *gin.Context) {
 	sendSuccess(c, gin.H{
 		"name":        "GOTRS API",
@@ -49,7 +50,7 @@ func (router *APIRouter) handleAPIInfo(c *gin.Context) {
 	})
 }
 
-// handleSystemStatus returns system status
+// handleSystemStatus returns system status.
 func (router *APIRouter) handleSystemStatus(c *gin.Context) {
 	// This would normally check various system components
 	sendSuccess(c, gin.H{
@@ -66,86 +67,7 @@ func (router *APIRouter) handleSystemStatus(c *gin.Context) {
 	})
 }
 
-// handleLogin authenticates a user
-func (router *APIRouter) handleLogin(c *gin.Context) {
-	var loginRequest struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&loginRequest); err != nil {
-		sendError(c, http.StatusBadRequest, "Invalid login request: "+err.Error())
-		return
-	}
-
-	// TODO: Implement actual authentication
-	// For now, return a mock response
-	if loginRequest.Email == "demo@example.com" && loginRequest.Password == "demo" {
-		// Generate JWT token
-		token := "mock_jwt_token_" + time.Now().Format("20060102150405")
-
-		sendSuccess(c, gin.H{
-			"token": token,
-			"user": gin.H{
-				"id":    1,
-				"email": loginRequest.Email,
-				"name":  "Demo User",
-				"role":  "Admin",
-			},
-			"expires_at": time.Now().Add(24 * time.Hour).UTC(),
-		})
-		return
-	}
-
-	sendError(c, http.StatusUnauthorized, "Invalid credentials")
-}
-
-// handleRefreshToken refreshes an expired JWT token
-func (router *APIRouter) handleRefreshToken(c *gin.Context) {
-	var refreshRequest struct {
-		RefreshToken string `json:"refresh_token" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&refreshRequest); err != nil {
-		sendError(c, http.StatusBadRequest, "Invalid refresh request: "+err.Error())
-		return
-	}
-
-	// TODO: Implement actual token refresh
-	sendSuccess(c, gin.H{
-		"token":      "refreshed_jwt_token_" + time.Now().Format("20060102150405"),
-		"expires_at": time.Now().Add(24 * time.Hour).UTC(),
-	})
-}
-
-// handleLogout logs out a user
-func (router *APIRouter) handleLogout(c *gin.Context) {
-	// TODO: Implement token blacklisting
-	sendSuccess(c, gin.H{
-		"message": "Successfully logged out",
-	})
-}
-
-// handleRegister registers a new user (if enabled)
-func (router *APIRouter) handleRegister(c *gin.Context) {
-	var registerRequest struct {
-		Email     string `json:"email" binding:"required,email"`
-		Password  string `json:"password" binding:"required,min=8"`
-		FirstName string `json:"first_name" binding:"required"`
-		LastName  string `json:"last_name" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&registerRequest); err != nil {
-		sendError(c, http.StatusBadRequest, "Invalid registration request: "+err.Error())
-		return
-	}
-
-	// TODO: Check if registration is enabled
-	// TODO: Implement actual user registration
-	sendError(c, http.StatusNotImplemented, "User registration is currently disabled")
-}
-
-// handleGetCurrentUser returns current user information
+// handleGetCurrentUser returns current user information.
 func (router *APIRouter) handleGetCurrentUser(c *gin.Context) {
 	userID, email, role, exists := middleware.GetCurrentUser(c)
 	if !exists {
@@ -162,7 +84,7 @@ func (router *APIRouter) handleGetCurrentUser(c *gin.Context) {
 	})
 }
 
-// handleUpdateCurrentUser updates current user information
+// handleUpdateCurrentUser updates current user information.
 func (router *APIRouter) handleUpdateCurrentUser(c *gin.Context) {
 	var updateRequest struct {
 		FirstName string `json:"first_name"`
@@ -191,7 +113,7 @@ func (router *APIRouter) handleUpdateCurrentUser(c *gin.Context) {
 	})
 }
 
-// handleGetUserPreferences returns user preferences
+// handleGetUserPreferences returns user preferences.
 func (router *APIRouter) handleGetUserPreferences(c *gin.Context) {
 	userID, _, _, exists := middleware.GetCurrentUser(c)
 	if !exists {
@@ -217,7 +139,7 @@ func (router *APIRouter) handleGetUserPreferences(c *gin.Context) {
 	})
 }
 
-// handleUpdateUserPreferences updates user preferences
+// handleUpdateUserPreferences updates user preferences.
 func (router *APIRouter) handleUpdateUserPreferences(c *gin.Context) {
 	var prefsRequest struct {
 		Language      string `json:"language"`
@@ -250,7 +172,7 @@ func (router *APIRouter) handleUpdateUserPreferences(c *gin.Context) {
 	})
 }
 
-// handleChangePassword changes user password
+// handleChangePassword changes user password.
 func (router *APIRouter) handleChangePassword(c *gin.Context) {
 	var passwordRequest struct {
 		CurrentPassword string `json:"current_password" binding:"required"`
@@ -279,7 +201,7 @@ func (router *APIRouter) handleChangePassword(c *gin.Context) {
 	})
 }
 
-// handleGetUserSessions returns user's active sessions
+// handleGetUserSessions returns user's active sessions.
 func (router *APIRouter) handleGetUserSessions(c *gin.Context) {
 	userID, _, _, exists := middleware.GetCurrentUser(c)
 	if !exists {
@@ -301,7 +223,7 @@ func (router *APIRouter) handleGetUserSessions(c *gin.Context) {
 	})
 }
 
-// handleRevokeSession revokes a user session
+// handleRevokeSession revokes a user session.
 func (router *APIRouter) handleRevokeSession(c *gin.Context) {
 	sessionID := c.Param("id")
 	if sessionID == "" {

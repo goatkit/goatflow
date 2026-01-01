@@ -1,3 +1,4 @@
+// Package constants provides application-wide constant definitions.
 package constants
 
 // Article type IDs seeded via migrations (see legacy default data).

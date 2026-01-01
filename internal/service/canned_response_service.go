@@ -11,19 +11,19 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
-// CannedResponseService handles business logic for canned responses
+// CannedResponseService handles business logic for canned responses.
 type CannedResponseService struct {
 	repo repository.CannedResponseRepository
 }
 
-// NewCannedResponseService creates a new canned response service
+// NewCannedResponseService creates a new canned response service.
 func NewCannedResponseService(repo repository.CannedResponseRepository) *CannedResponseService {
 	return &CannedResponseService{
 		repo: repo,
 	}
 }
 
-// CreateResponse creates a new canned response
+// CreateResponse creates a new canned response.
 func (s *CannedResponseService) CreateResponse(ctx context.Context, response *models.CannedResponse) error {
 	// Validate response
 	if err := s.validateResponse(response); err != nil {
@@ -45,22 +45,22 @@ func (s *CannedResponseService) CreateResponse(ctx context.Context, response *mo
 	return s.repo.CreateResponse(ctx, response)
 }
 
-// GetResponse retrieves a response by ID
+// GetResponse retrieves a response by ID.
 func (s *CannedResponseService) GetResponse(ctx context.Context, id uint) (*models.CannedResponse, error) {
 	return s.repo.GetResponseByID(ctx, id)
 }
 
-// GetResponseByShortcut retrieves a response by its shortcut
+// GetResponseByShortcut retrieves a response by its shortcut.
 func (s *CannedResponseService) GetResponseByShortcut(ctx context.Context, shortcut string) (*models.CannedResponse, error) {
 	return s.repo.GetResponseByShortcut(ctx, shortcut)
 }
 
-// GetActiveResponses retrieves all active responses
+// GetActiveResponses retrieves all active responses.
 func (s *CannedResponseService) GetActiveResponses(ctx context.Context) ([]models.CannedResponse, error) {
 	return s.repo.GetActiveResponses(ctx)
 }
 
-// GetQuickResponses retrieves responses with shortcuts for quick access
+// GetQuickResponses retrieves responses with shortcuts for quick access.
 func (s *CannedResponseService) GetQuickResponses(ctx context.Context) ([]models.CannedResponse, error) {
 	responses, err := s.repo.GetActiveResponses(ctx)
 	if err != nil {
@@ -78,17 +78,17 @@ func (s *CannedResponseService) GetQuickResponses(ctx context.Context) ([]models
 	return quick, nil
 }
 
-// GetResponsesByCategory retrieves responses by category
+// GetResponsesByCategory retrieves responses by category.
 func (s *CannedResponseService) GetResponsesByCategory(ctx context.Context, category string) ([]models.CannedResponse, error) {
 	return s.repo.GetResponsesByCategory(ctx, category)
 }
 
-// GetResponsesForUser retrieves responses accessible to a specific user
+// GetResponsesForUser retrieves responses accessible to a specific user.
 func (s *CannedResponseService) GetResponsesForUser(ctx context.Context, userID uint) ([]models.CannedResponse, error) {
 	return s.repo.GetResponsesForUser(ctx, userID)
 }
 
-// UpdateResponse updates an existing response
+// UpdateResponse updates an existing response.
 func (s *CannedResponseService) UpdateResponse(ctx context.Context, response *models.CannedResponse) error {
 	// Validate response
 	if err := s.validateResponse(response); err != nil {
@@ -105,27 +105,27 @@ func (s *CannedResponseService) UpdateResponse(ctx context.Context, response *mo
 	return s.repo.UpdateResponse(ctx, response)
 }
 
-// DeleteResponse deletes a response
+// DeleteResponse deletes a response.
 func (s *CannedResponseService) DeleteResponse(ctx context.Context, id uint) error {
 	return s.repo.DeleteResponse(ctx, id)
 }
 
-// SearchResponses searches for responses
+// SearchResponses searches for responses.
 func (s *CannedResponseService) SearchResponses(ctx context.Context, filter *models.CannedResponseFilter) ([]models.CannedResponse, error) {
 	return s.repo.SearchResponses(ctx, filter)
 }
 
-// GetPopularResponses returns the most used responses
+// GetPopularResponses returns the most used responses.
 func (s *CannedResponseService) GetPopularResponses(ctx context.Context, limit int) ([]models.CannedResponse, error) {
 	return s.repo.GetMostUsedResponses(ctx, limit)
 }
 
-// GetCategories retrieves all response categories
+// GetCategories retrieves all response categories.
 func (s *CannedResponseService) GetCategories(ctx context.Context) ([]models.CannedResponseCategory, error) {
 	return s.repo.GetCategories(ctx)
 }
 
-// ApplyResponse applies a canned response to a ticket
+// ApplyResponse applies a canned response to a ticket.
 func (s *CannedResponseService) ApplyResponse(ctx context.Context, application *models.CannedResponseApplication, userID uint) (*models.AppliedResponse, error) {
 	// Get the response
 	response, err := s.repo.GetResponseByID(ctx, application.ResponseID)
@@ -168,7 +168,7 @@ func (s *CannedResponseService) ApplyResponse(ctx context.Context, application *
 	}, nil
 }
 
-// ApplyResponseWithContext applies a response with auto-fill context
+// ApplyResponseWithContext applies a response with auto-fill context.
 func (s *CannedResponseService) ApplyResponseWithContext(ctx context.Context, application *models.CannedResponseApplication, userID uint, autoFillCtx *models.AutoFillContext) (*models.AppliedResponse, error) {
 	// Get the response
 	response, err := s.repo.GetResponseByID(ctx, application.ResponseID)
@@ -233,7 +233,7 @@ func (s *CannedResponseService) ApplyResponseWithContext(ctx context.Context, ap
 	return s.ApplyResponse(ctx, application, userID)
 }
 
-// applyStandardAutoFill applies standard auto-fill for common variable patterns
+// applyStandardAutoFill applies standard auto-fill for common variable patterns.
 func (s *CannedResponseService) applyStandardAutoFill(content string, variables map[string]string, ctx *models.AutoFillContext) {
 	// Standard variable mappings
 	standardMappings := map[string]string{
@@ -258,7 +258,7 @@ func (s *CannedResponseService) applyStandardAutoFill(content string, variables 
 	}
 }
 
-// ExportResponses exports all responses to JSON
+// ExportResponses exports all responses to JSON.
 func (s *CannedResponseService) ExportResponses(ctx context.Context) ([]byte, error) {
 	responses, err := s.repo.GetActiveResponses(ctx)
 	if err != nil {
@@ -278,7 +278,7 @@ func (s *CannedResponseService) ExportResponses(ctx context.Context) ([]byte, er
 	return json.MarshalIndent(export, "", "  ")
 }
 
-// ImportResponses imports responses from JSON
+// ImportResponses imports responses from JSON.
 func (s *CannedResponseService) ImportResponses(ctx context.Context, data []byte) error {
 	var export struct {
 		Version   string                  `json:"version"`
@@ -307,7 +307,7 @@ func (s *CannedResponseService) ImportResponses(ctx context.Context, data []byte
 	return nil
 }
 
-// validateResponse validates a response before saving
+// validateResponse validates a response before saving.
 func (s *CannedResponseService) validateResponse(response *models.CannedResponse) error {
 	if response.Name == "" {
 		return fmt.Errorf("response name is required")
@@ -324,7 +324,7 @@ func (s *CannedResponseService) validateResponse(response *models.CannedResponse
 	return nil
 }
 
-// extractVariables extracts variable placeholders from text
+// extractVariables extracts variable placeholders from text.
 func (s *CannedResponseService) extractVariables(text string) []models.ResponseVariable {
 	variableMap := make(map[string]bool)
 	var variables []models.ResponseVariable
@@ -368,7 +368,7 @@ func (s *CannedResponseService) extractVariables(text string) []models.ResponseV
 	return variables
 }
 
-// determineAutoFill determines the auto-fill type based on variable name
+// determineAutoFill determines the auto-fill type based on variable name.
 func (s *CannedResponseService) determineAutoFill(varName string) string {
 	varNameLower := strings.ToLower(varName)
 
@@ -398,7 +398,7 @@ func (s *CannedResponseService) determineAutoFill(varName string) string {
 	return ""
 }
 
-// substituteVariables replaces variables in text with their values
+// substituteVariables replaces variables in text with their values.
 func (s *CannedResponseService) substituteVariables(text string, variables map[string]string) string {
 	result := text
 

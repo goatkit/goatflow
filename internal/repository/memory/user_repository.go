@@ -7,14 +7,14 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// UserRepository provides an in-memory implementation of the UserRepository interface
+// UserRepository provides an in-memory implementation of the UserRepository interface.
 type UserRepository struct {
 	users  map[uint]*models.User
 	nextID uint
 	mu     sync.RWMutex
 }
 
-// NewUserRepository creates a new in-memory user repository
+// NewUserRepository creates a new in-memory user repository.
 func NewUserRepository() *UserRepository {
 	return &UserRepository{
 		users:  make(map[uint]*models.User),
@@ -22,7 +22,7 @@ func NewUserRepository() *UserRepository {
 	}
 }
 
-// Create creates a new user
+// Create creates a new user.
 func (r *UserRepository) Create(user *models.User) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -33,7 +33,7 @@ func (r *UserRepository) Create(user *models.User) error {
 	return nil
 }
 
-// GetByID retrieves a user by ID
+// GetByID retrieves a user by ID.
 func (r *UserRepository) GetByID(id uint) (*models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -45,7 +45,7 @@ func (r *UserRepository) GetByID(id uint) (*models.User, error) {
 	return user, nil
 }
 
-// GetByEmail retrieves a user by email
+// GetByEmail retrieves a user by email.
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -58,7 +58,7 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	return nil, fmt.Errorf("user not found")
 }
 
-// GetByLogin retrieves a user by login
+// GetByLogin retrieves a user by login.
 func (r *UserRepository) GetByLogin(login string) (*models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -71,7 +71,7 @@ func (r *UserRepository) GetByLogin(login string) (*models.User, error) {
 	return nil, fmt.Errorf("user not found")
 }
 
-// Update updates an existing user
+// Update updates an existing user.
 func (r *UserRepository) Update(user *models.User) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -83,7 +83,7 @@ func (r *UserRepository) Update(user *models.User) error {
 	return nil
 }
 
-// Delete deletes a user
+// Delete deletes a user.
 func (r *UserRepository) Delete(id uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -95,7 +95,7 @@ func (r *UserRepository) Delete(id uint) error {
 	return nil
 }
 
-// List returns all users
+// List returns all users.
 func (r *UserRepository) List() ([]models.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

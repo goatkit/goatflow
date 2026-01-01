@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Manager provides a high-level caching interface with multiple strategies
+// Manager provides a high-level caching interface with multiple strategies.
 type Manager struct {
 	redis      *RedisCache
 	localCache *LocalCache
@@ -17,7 +17,7 @@ type Manager struct {
 	config     *ManagerConfig
 }
 
-// ManagerConfig defines cache manager configuration
+// ManagerConfig defines cache manager configuration.
 type ManagerConfig struct {
 	RedisConfig *CacheConfig
 	LocalConfig *LocalCacheConfig
@@ -32,14 +32,14 @@ type ManagerConfig struct {
 	WarmupFunctions map[string]WarmupFunc
 }
 
-// LocalCacheConfig defines local cache settings
+// LocalCacheConfig defines local cache settings.
 type LocalCacheConfig struct {
 	MaxSize         int
 	DefaultTTL      time.Duration
 	CleanupInterval time.Duration
 }
 
-// CacheStrategy defines how data should be cached
+// CacheStrategy defines how data should be cached.
 type CacheStrategy interface {
 	Get(ctx context.Context, key string) (interface{}, error)
 	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
@@ -49,10 +49,10 @@ type CacheStrategy interface {
 	SetMulti(ctx context.Context, items map[string]interface{}, ttl time.Duration) error
 }
 
-// WarmupFunc is a function that pre-populates cache
+// WarmupFunc is a function that pre-populates cache.
 type WarmupFunc func(ctx context.Context, cache *Manager) error
 
-// CacheItem represents a cached item with metadata
+// CacheItem represents a cached item with metadata.
 type CacheItem struct {
 	Key       string
 	Value     interface{}
@@ -63,7 +63,7 @@ type CacheItem struct {
 	UpdatedAt time.Time
 }
 
-// NewManager creates a new cache manager
+// NewManager creates a new cache manager.
 func NewManager(config *ManagerConfig) (*Manager, error) {
 	m := &Manager{
 		config:     config,
@@ -100,7 +100,7 @@ func NewManager(config *ManagerConfig) (*Manager, error) {
 	return m, nil
 }
 
-// setupStrategies configures caching strategies
+// setupStrategies configures caching strategies.
 func (m *Manager) setupStrategies() {
 	// Write-through strategy: Write to both local and Redis
 	m.strategies["write-through"] = &WriteThroughStrategy{
@@ -128,7 +128,7 @@ func (m *Manager) setupStrategies() {
 	}
 }
 
-// GetStrategy returns a caching strategy by name
+// GetStrategy returns a caching strategy by name.
 func (m *Manager) GetStrategy(name string) CacheStrategy {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -148,7 +148,7 @@ func (m *Manager) GetStrategy(name string) CacheStrategy {
 
 // Ticket caching methods
 
-// GetTicket retrieves a ticket from cache
+// GetTicket retrieves a ticket from cache.
 func (m *Manager) GetTicket(ctx context.Context, ticketID int64) (*CachedTicket, error) {
 	key := fmt.Sprintf("ticket:%d", ticketID)
 	strategy := m.GetStrategy("read-through")
@@ -170,7 +170,7 @@ func (m *Manager) GetTicket(ctx context.Context, ticketID int64) (*CachedTicket,
 	return ticket, nil
 }
 
-// SetTicket caches a ticket
+// SetTicket caches a ticket.
 func (m *Manager) SetTicket(ctx context.Context, ticket *CachedTicket) error {
 	key := fmt.Sprintf("ticket:%d", ticket.ID)
 	strategy := m.GetStrategy("write-through")
@@ -183,7 +183,7 @@ func (m *Manager) SetTicket(ctx context.Context, ticket *CachedTicket) error {
 	return strategy.Set(ctx, key, data, 5*time.Minute)
 }
 
-// InvalidateTicket removes a ticket from cache
+// InvalidateTicket removes a ticket from cache.
 func (m *Manager) InvalidateTicket(ctx context.Context, ticketID int64) error {
 	key := fmt.Sprintf("ticket:%d", ticketID)
 	strategy := m.GetStrategy("write-through")
@@ -210,7 +210,7 @@ func (m *Manager) InvalidateTicket(ctx context.Context, ticketID int64) error {
 
 // Queue caching methods
 
-// GetQueueTickets retrieves tickets for a queue from cache
+// GetQueueTickets retrieves tickets for a queue from cache.
 func (m *Manager) GetQueueTickets(ctx context.Context, queueID int, page, limit int) ([]*CachedTicket, error) {
 	key := fmt.Sprintf("queue:%d:tickets:page:%d:limit:%d", queueID, page, limit)
 	strategy := m.GetStrategy("read-through")
@@ -232,7 +232,7 @@ func (m *Manager) GetQueueTickets(ctx context.Context, queueID int, page, limit 
 	return tickets, nil
 }
 
-// SetQueueTickets caches tickets for a queue
+// SetQueueTickets caches tickets for a queue.
 func (m *Manager) SetQueueTickets(ctx context.Context, queueID int, page, limit int, tickets []*CachedTicket) error {
 	key := fmt.Sprintf("queue:%d:tickets:page:%d:limit:%d", queueID, page, limit)
 	strategy := m.GetStrategy("write-behind")
@@ -248,7 +248,7 @@ func (m *Manager) SetQueueTickets(ctx context.Context, queueID int, page, limit 
 
 // User caching methods
 
-// GetUser retrieves a user from cache
+// GetUser retrieves a user from cache.
 func (m *Manager) GetUser(ctx context.Context, userID int) (*CachedUser, error) {
 	key := fmt.Sprintf("user:%d", userID)
 	strategy := m.GetStrategy("read-through")
@@ -270,7 +270,7 @@ func (m *Manager) GetUser(ctx context.Context, userID int) (*CachedUser, error) 
 	return user, nil
 }
 
-// SetUser caches a user
+// SetUser caches a user.
 func (m *Manager) SetUser(ctx context.Context, user *CachedUser) error {
 	key := fmt.Sprintf("user:%d", user.ID)
 	strategy := m.GetStrategy("write-through")
@@ -286,7 +286,7 @@ func (m *Manager) SetUser(ctx context.Context, user *CachedUser) error {
 
 // Session caching methods
 
-// GetSession retrieves a session from cache
+// GetSession retrieves a session from cache.
 func (m *Manager) GetSession(ctx context.Context, sessionID string) (*CachedSession, error) {
 	key := fmt.Sprintf("session:%s", sessionID)
 	strategy := m.GetStrategy("write-through")
@@ -308,7 +308,7 @@ func (m *Manager) GetSession(ctx context.Context, sessionID string) (*CachedSess
 	return session, nil
 }
 
-// SetSession caches a session
+// SetSession caches a session.
 func (m *Manager) SetSession(ctx context.Context, session *CachedSession) error {
 	key := fmt.Sprintf("session:%s", session.ID)
 	strategy := m.GetStrategy("write-through")
@@ -324,7 +324,7 @@ func (m *Manager) SetSession(ctx context.Context, session *CachedSession) error 
 
 // Search result caching
 
-// GetSearchResults retrieves cached search results
+// GetSearchResults retrieves cached search results.
 func (m *Manager) GetSearchResults(ctx context.Context, query string, filters map[string]interface{}) (*CachedSearchResults, error) {
 	// Generate cache key from query and filters
 	key := m.generateSearchKey(query, filters)
@@ -347,7 +347,7 @@ func (m *Manager) GetSearchResults(ctx context.Context, query string, filters ma
 	return results, nil
 }
 
-// SetSearchResults caches search results
+// SetSearchResults caches search results.
 func (m *Manager) SetSearchResults(ctx context.Context, query string, filters map[string]interface{}, results *CachedSearchResults) error {
 	key := m.generateSearchKey(query, filters)
 	strategy := m.GetStrategy("cache-aside")
@@ -361,7 +361,7 @@ func (m *Manager) SetSearchResults(ctx context.Context, query string, filters ma
 	return strategy.Set(ctx, key, data, 5*time.Minute)
 }
 
-// generateSearchKey creates a cache key from search parameters
+// generateSearchKey creates a cache key from search parameters.
 func (m *Manager) generateSearchKey(query string, filters map[string]interface{}) string {
 	// Simple implementation - in production use a hash
 	filterStr, _ := json.Marshal(filters)
@@ -370,7 +370,7 @@ func (m *Manager) generateSearchKey(query string, filters map[string]interface{}
 
 // Bulk operations
 
-// GetMultiTickets retrieves multiple tickets from cache
+// GetMultiTickets retrieves multiple tickets from cache.
 func (m *Manager) GetMultiTickets(ctx context.Context, ticketIDs []int64) (map[int64]*CachedTicket, error) {
 	keys := make([]string, len(ticketIDs))
 	for i, id := range ticketIDs {
@@ -399,7 +399,7 @@ func (m *Manager) GetMultiTickets(ctx context.Context, ticketIDs []int64) (map[i
 
 // Cache warming
 
-// WarmCache pre-populates cache with frequently accessed data
+// WarmCache pre-populates cache with frequently accessed data.
 func (m *Manager) WarmCache(ctx context.Context) error {
 	var wg sync.WaitGroup
 	errors := make(chan error, len(m.config.WarmupFunctions))
@@ -432,13 +432,13 @@ func (m *Manager) WarmCache(ctx context.Context) error {
 
 // Cache invalidation
 
-// InvalidatePattern invalidates all keys matching a pattern
+// InvalidatePattern invalidates all keys matching a pattern.
 func (m *Manager) InvalidatePattern(ctx context.Context, pattern string) error {
 	strategy := m.GetStrategy("write-through")
 	return strategy.Clear(ctx, pattern)
 }
 
-// InvalidateAll clears all caches
+// InvalidateAll clears all caches.
 func (m *Manager) InvalidateAll(ctx context.Context) error {
 	// Clear local cache
 	if m.localCache != nil {
@@ -455,7 +455,7 @@ func (m *Manager) InvalidateAll(ctx context.Context) error {
 
 // Statistics
 
-// GetStats returns cache statistics
+// GetStats returns cache statistics.
 func (m *Manager) GetStats() *CacheStats {
 	stats := &CacheStats{
 		Timestamp: time.Now(),
@@ -489,7 +489,7 @@ func (m *Manager) GetStats() *CacheStats {
 
 // Cached data types
 
-// CachedTicket represents a cached ticket
+// CachedTicket represents a cached ticket.
 type CachedTicket struct {
 	ID           int64     `json:"id"`
 	TicketNumber string    `json:"ticket_number"`
@@ -502,7 +502,7 @@ type CachedTicket struct {
 	CachedAt     time.Time `json:"cached_at"`
 }
 
-// CachedUser represents a cached user
+// CachedUser represents a cached user.
 type CachedUser struct {
 	ID       int       `json:"id"`
 	Login    string    `json:"login"`
@@ -513,7 +513,7 @@ type CachedUser struct {
 	CachedAt time.Time `json:"cached_at"`
 }
 
-// CachedSession represents a cached session
+// CachedSession represents a cached session.
 type CachedSession struct {
 	ID        string                 `json:"id"`
 	UserID    int                    `json:"user_id"`
@@ -522,7 +522,7 @@ type CachedSession struct {
 	CachedAt  time.Time              `json:"cached_at"`
 }
 
-// CachedSearchResults represents cached search results
+// CachedSearchResults represents cached search results.
 type CachedSearchResults struct {
 	Query      string        `json:"query"`
 	TotalCount int           `json:"total_count"`
@@ -530,7 +530,7 @@ type CachedSearchResults struct {
 	CachedAt   time.Time     `json:"cached_at"`
 }
 
-// CacheStats represents cache statistics
+// CacheStats represents cache statistics.
 type CacheStats struct {
 	LocalHits   int64     `json:"local_hits"`
 	LocalMisses int64     `json:"local_misses"`

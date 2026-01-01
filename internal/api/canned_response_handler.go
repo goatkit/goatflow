@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CannedResponse represents a pre-written response
+// CannedResponse represents a pre-written response.
 type CannedResponse struct {
 	ID           int        `json:"id"`
 	Name         string     `json:"name"`
@@ -29,7 +29,7 @@ type CannedResponse struct {
 	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
-// Mock storage for canned responses
+// Mock storage for canned responses.
 var cannedResponses = map[int]*CannedResponse{
 	1: {
 		ID:          1,
@@ -92,7 +92,7 @@ var cannedResponsesByName = map[string][]int{
 	"Service Maintenance":         {4},
 }
 
-// handleCreateCannedResponse creates a new canned response
+// handleCreateCannedResponse creates a new canned response.
 func handleCreateCannedResponse(c *gin.Context) {
 	var req struct {
 		Name         string   `json:"name"`
@@ -192,7 +192,7 @@ func handleCreateCannedResponse(c *gin.Context) {
 	})
 }
 
-// handleGetCannedResponses returns accessible canned responses
+// handleGetCannedResponses returns accessible canned responses.
 func handleGetCannedResponses(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	teamID, _ := c.Get("team_id")
@@ -257,7 +257,7 @@ func handleGetCannedResponses(c *gin.Context) {
 	})
 }
 
-// handleUpdateCannedResponse updates a canned response
+// handleUpdateCannedResponse updates a canned response.
 func handleUpdateCannedResponse(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -331,7 +331,7 @@ func handleUpdateCannedResponse(c *gin.Context) {
 	})
 }
 
-// handleDeleteCannedResponse deletes a canned response
+// handleDeleteCannedResponse deletes a canned response.
 func handleDeleteCannedResponse(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -366,7 +366,7 @@ func handleDeleteCannedResponse(c *gin.Context) {
 	})
 }
 
-// handleUseCannedResponse applies a canned response with placeholder substitution
+// handleUseCannedResponse applies a canned response with placeholder substitution.
 func handleUseCannedResponse(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -421,7 +421,7 @@ func handleUseCannedResponse(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// handleGetCannedResponseCategories returns all available categories
+// handleGetCannedResponseCategories returns all available categories.
 func handleGetCannedResponseCategories(c *gin.Context) {
 	categoryMap := make(map[string]int)
 	colorMap := map[string]string{
@@ -457,7 +457,7 @@ func handleGetCannedResponseCategories(c *gin.Context) {
 	})
 }
 
-// handleGetCannedResponseStatistics returns usage statistics
+// handleGetCannedResponseStatistics returns usage statistics.
 func handleGetCannedResponseStatistics(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
@@ -524,7 +524,7 @@ func handleGetCannedResponseStatistics(c *gin.Context) {
 	})
 }
 
-// handleShareCannedResponse shares a personal response with team or global
+// handleShareCannedResponse shares a personal response with team or global.
 func handleShareCannedResponse(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -569,7 +569,7 @@ func handleShareCannedResponse(c *gin.Context) {
 	})
 }
 
-// handleCopyCannedResponse copies a shared response to personal
+// handleCopyCannedResponse copies a shared response to personal.
 func handleCopyCannedResponse(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -611,7 +611,7 @@ func handleCopyCannedResponse(c *gin.Context) {
 	})
 }
 
-// handleExportCannedResponses exports user's canned responses
+// handleExportCannedResponses exports user's canned responses.
 func handleExportCannedResponses(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	format := c.Query("format")
@@ -658,7 +658,7 @@ func handleExportCannedResponses(c *gin.Context) {
 	}
 }
 
-// handleImportCannedResponses imports canned responses
+// handleImportCannedResponses imports canned responses.
 func handleImportCannedResponses(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 

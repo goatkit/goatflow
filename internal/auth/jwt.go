@@ -39,12 +39,12 @@ func (m *JWTManager) GenerateToken(userID uint, email, role string, tenantID uin
 	return m.GenerateTokenWithLogin(userID, email, email, role, false, tenantID)
 }
 
-// GenerateTokenWithAdmin creates a JWT with explicit isAdmin flag
+// GenerateTokenWithAdmin creates a JWT with explicit isAdmin flag.
 func (m *JWTManager) GenerateTokenWithAdmin(userID uint, email, role string, isAdmin bool, tenantID uint) (string, error) {
 	return m.GenerateTokenWithLogin(userID, email, email, role, isAdmin, tenantID)
 }
 
-// GenerateTokenWithLogin creates a JWT with explicit login and email values
+// GenerateTokenWithLogin creates a JWT with explicit login and email values.
 func (m *JWTManager) GenerateTokenWithLogin(userID uint, login, email, role string, isAdmin bool, tenantID uint) (string, error) {
 	claims := Claims{
 		UserID:   userID,

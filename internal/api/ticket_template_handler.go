@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TicketTemplate represents a reusable ticket template
+// TicketTemplate represents a reusable ticket template.
 type TicketTemplate struct {
 	ID           int       `json:"id"`
 	Name         string    `json:"name"`
@@ -30,7 +30,7 @@ type TicketTemplate struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
-// Mock storage for templates (in production, this would be in database)
+// Mock storage for templates (in production, this would be in database).
 var templates = map[int]*TicketTemplate{
 	1: {
 		ID:          1,
@@ -84,7 +84,7 @@ var templatesByName = map[string]int{
 	"Software Installation":   3,
 }
 
-// handleCreateTicketTemplate creates a new ticket template
+// handleCreateTicketTemplate creates a new ticket template.
 func handleCreateTicketTemplate(c *gin.Context) {
 	// Check permissions
 	userRole, _ := c.Get("user_role")
@@ -192,7 +192,7 @@ func handleCreateTicketTemplate(c *gin.Context) {
 	})
 }
 
-// handleGetTicketTemplates returns list of templates
+// handleGetTicketTemplates returns list of templates.
 func handleGetTicketTemplates(c *gin.Context) {
 	// Check permissions
 	userRole, _ := c.Get("user_role")
@@ -231,7 +231,7 @@ func handleGetTicketTemplates(c *gin.Context) {
 	})
 }
 
-// handleGetTicketTemplateByID returns a specific template
+// handleGetTicketTemplateByID returns a specific template.
 func handleGetTicketTemplateByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -249,7 +249,7 @@ func handleGetTicketTemplateByID(c *gin.Context) {
 	c.JSON(http.StatusOK, template)
 }
 
-// handleUpdateTicketTemplate updates an existing template
+// handleUpdateTicketTemplate updates an existing template.
 func handleUpdateTicketTemplate(c *gin.Context) {
 	// Check permissions
 	userRole, _ := c.Get("user_role")
@@ -319,7 +319,7 @@ func handleUpdateTicketTemplate(c *gin.Context) {
 	})
 }
 
-// handleDeleteTicketTemplate deletes a template
+// handleDeleteTicketTemplate deletes a template.
 func handleDeleteTicketTemplate(c *gin.Context) {
 	// Check permissions
 	userRole, _ := c.Get("user_role")
@@ -355,7 +355,7 @@ func handleDeleteTicketTemplate(c *gin.Context) {
 	})
 }
 
-// handleCreateTicketFromTemplate creates a new ticket using a template
+// handleCreateTicketFromTemplate creates a new ticket using a template.
 func handleCreateTicketFromTemplate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -424,7 +424,7 @@ func handleCreateTicketFromTemplate(c *gin.Context) {
 	})
 }
 
-// replacePlaceholders replaces placeholder tokens in text
+// replacePlaceholders replaces placeholder tokens in text.
 func replacePlaceholders(text string, values map[string]string) (string, []string) {
 	result := text
 	var missing []string

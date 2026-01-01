@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// CIType represents the type of configuration item
+// CIType represents the type of configuration item.
 type CIType string
 
 const (
@@ -23,7 +23,7 @@ const (
 	CITypeOther          CIType = "other"
 )
 
-// CIStatus represents the status of a configuration item
+// CIStatus represents the status of a configuration item.
 type CIStatus string
 
 const (
@@ -37,7 +37,7 @@ const (
 	CIStatusInTransit     CIStatus = "in_transit"
 )
 
-// CIEnvironment represents the environment of a CI
+// CIEnvironment represents the environment of a CI.
 type CIEnvironment string
 
 const (
@@ -48,7 +48,7 @@ const (
 	CIEnvironmentDR          CIEnvironment = "disaster_recovery"
 )
 
-// ConfigurationItem represents an item in the CMDB
+// ConfigurationItem represents an item in the CMDB.
 type ConfigurationItem struct {
 	ID          uint          `json:"id" gorm:"primaryKey"`
 	CINumber    string        `json:"ci_number" gorm:"uniqueIndex;not null"`
@@ -158,7 +158,7 @@ type ConfigurationItem struct {
 	LastVerifiedBy   *User      `json:"last_verified_by,omitempty" gorm:"foreignKey:LastVerifiedByID"`
 }
 
-// CIRelationship represents relationships between configuration items
+// CIRelationship represents relationships between configuration items.
 type CIRelationship struct {
 	ID           uint               `json:"id" gorm:"primaryKey"`
 	SourceCIID   uint               `json:"source_ci_id" gorm:"not null"`
@@ -172,7 +172,7 @@ type CIRelationship struct {
 	UpdatedAt    time.Time          `json:"updated_at"`
 }
 
-// CIHistory tracks changes to configuration items
+// CIHistory tracks changes to configuration items.
 type CIHistory struct {
 	ID              uint               `json:"id" gorm:"primaryKey"`
 	CIID            uint               `json:"ci_id" gorm:"not null;index"`
@@ -188,7 +188,7 @@ type CIHistory struct {
 	CreatedAt       time.Time          `json:"created_at"`
 }
 
-// Service represents a business or IT service
+// Service represents a business or IT service.
 type Service struct {
 	ID          uint   `json:"id" gorm:"primaryKey"`
 	ServiceCode string `json:"service_code" gorm:"uniqueIndex;not null"`
@@ -235,7 +235,7 @@ type Service struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// Vendor represents a vendor/supplier
+// Vendor represents a vendor/supplier.
 type Vendor struct {
 	ID          uint   `json:"id" gorm:"primaryKey"`
 	VendorCode  string `json:"vendor_code" gorm:"uniqueIndex;not null"`
@@ -276,7 +276,7 @@ type Vendor struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// CIListRequest represents a request to list configuration items
+// CIListRequest represents a request to list configuration items.
 type CIListRequest struct {
 	Page        int           `json:"page" form:"page"`
 	PerPage     int           `json:"per_page" form:"per_page"`
@@ -290,7 +290,7 @@ type CIListRequest struct {
 	SortOrder   string        `json:"sort_order" form:"sort_order"`
 }
 
-// CIListResponse represents a response containing a list of configuration items
+// CIListResponse represents a response containing a list of configuration items.
 type CIListResponse struct {
 	ConfigurationItems []*ConfigurationItem `json:"configuration_items"`
 	Total              int64                `json:"total"`

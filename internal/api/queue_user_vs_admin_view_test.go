@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -10,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TestQueuesUserVsAdminPages ensures /queues renders the user list (cards) and /admin/queues renders the admin management table
+// TestQueuesUserVsAdminPages ensures /queues renders the user list (cards) and /admin/queues renders the admin management table.
 func TestQueuesUserVsAdminPages(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

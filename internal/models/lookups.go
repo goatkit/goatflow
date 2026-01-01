@@ -9,7 +9,7 @@ type LookupItem struct {
 	Active bool   `json:"active"`
 }
 
-// QueueInfo represents queue information for dropdowns
+// QueueInfo represents queue information for dropdowns.
 type QueueInfo struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
@@ -17,7 +17,7 @@ type QueueInfo struct {
 	Active      bool   `json:"active"`
 }
 
-// TicketFormData contains all the data needed for ticket forms
+// TicketFormData contains all the data needed for ticket forms.
 type TicketFormData struct {
 	Queues     []QueueInfo  `json:"queues"`
 	Priorities []LookupItem `json:"priorities"`

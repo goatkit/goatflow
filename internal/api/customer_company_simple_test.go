@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -14,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCustomerCompanyJSONResponses tests JSON response formats without database dependencies
+// TestCustomerCompanyJSONResponses tests JSON response formats without database dependencies.
 func TestCustomerCompanyJSONResponses(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

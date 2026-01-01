@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -17,7 +16,7 @@ type linkTarget struct {
 	url    string
 }
 
-// TestAllLinksReturn200 dynamically checks all links in templates for 404s
+// TestAllLinksReturn200 dynamically checks all links in templates for 404s.
 func TestAllLinksReturn200(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -290,7 +289,7 @@ func TestAllLinksReturn200(t *testing.T) {
 	t.Logf("Checked %d unique URLs", len(visited))
 }
 
-// TestLogoutRouteExists specifically tests the logout functionality
+// TestLogoutRouteExists specifically tests the logout functionality.
 func TestLogoutRouteExists(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()
@@ -358,7 +357,7 @@ func TestLogoutRouteExists(t *testing.T) {
 	}
 }
 
-// TestAllFormsHaveValidActions checks that all forms point to valid endpoints
+// TestAllFormsHaveValidActions checks that all forms point to valid endpoints.
 func TestAllFormsHaveValidActions(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()
@@ -410,7 +409,7 @@ func TestAllFormsHaveValidActions(t *testing.T) {
 	}
 }
 
-// TestHTMXEndpointsExist verifies all HTMX endpoints are properly routed
+// TestHTMXEndpointsExist verifies all HTMX endpoints are properly routed.
 func TestHTMXEndpointsExist(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()
@@ -447,14 +446,14 @@ func TestHTMXEndpointsExist(t *testing.T) {
 	}
 }
 
-// BrokenLink represents a broken link found during testing
+// BrokenLink represents a broken link found during testing.
 type BrokenLink struct {
 	URL      string
 	Status   int
 	Referrer string
 }
 
-// TestNoOrphanedRoutes ensures all defined routes are accessible from somewhere
+// TestNoOrphanedRoutes ensures all defined routes are accessible from somewhere.
 func TestNoOrphanedRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()
@@ -544,7 +543,7 @@ func TestNoOrphanedRoutes(t *testing.T) {
 	}
 }
 
-// TestLinkConsistency ensures links are consistent across pages
+// TestLinkConsistency ensures links are consistent across pages.
 func TestLinkConsistency(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()
@@ -593,7 +592,7 @@ func TestLinkConsistency(t *testing.T) {
 	}
 }
 
-// Benchmark test to ensure link checking is performant
+// Benchmark test to ensure link checking is performant.
 func BenchmarkLinkChecker(b *testing.B) {
 	gin.SetMode(gin.TestMode)
 	router := NewSimpleRouter()

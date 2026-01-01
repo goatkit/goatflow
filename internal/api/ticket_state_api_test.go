@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -14,9 +13,10 @@ import (
 	"database/sql"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/stretchr/testify/assert"
 )
 
 func requireTicketStateTable(t *testing.T) *sql.DB {

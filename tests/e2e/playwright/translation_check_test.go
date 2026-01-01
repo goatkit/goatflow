@@ -3,14 +3,15 @@
 package playwright
 
 import (
-	"github.com/gotrs-io/gotrs-ce/tests/e2e/helpers"
-	"github.com/playwright-community/playwright-go"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gotrs-io/gotrs-ce/tests/e2e/helpers"
+	"github.com/playwright-community/playwright-go"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTranslationKeys(t *testing.T) {

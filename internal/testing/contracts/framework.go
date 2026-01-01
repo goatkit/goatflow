@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Contract defines an API contract to be tested
+// Contract defines an API contract to be tested.
 type Contract struct {
 	Name        string
 	Description string
@@ -23,7 +23,7 @@ type Contract struct {
 	Expected    Response
 }
 
-// Response defines expected response characteristics
+// Response defines expected response characteristics.
 type Response struct {
 	Status      int
 	Headers     map[string]string
@@ -31,17 +31,17 @@ type Response struct {
 	Validations []Validation
 }
 
-// Validation is a custom validation function
+// Validation is a custom validation function.
 type Validation func(body []byte) error
 
-// ContractTest runs a contract test against a handler
+// ContractTest runs a contract test against a handler.
 type ContractTest struct {
 	t         *testing.T
 	contracts []Contract
 	router    *gin.Engine
 }
 
-// NewContractTest creates a new contract test runner
+// NewContractTest creates a new contract test runner.
 func NewContractTest(t *testing.T, router *gin.Engine) *ContractTest {
 	return &ContractTest{
 		t:      t,
@@ -49,12 +49,12 @@ func NewContractTest(t *testing.T, router *gin.Engine) *ContractTest {
 	}
 }
 
-// AddContract adds a contract to test
+// AddContract adds a contract to test.
 func (ct *ContractTest) AddContract(contract Contract) {
 	ct.contracts = append(ct.contracts, contract)
 }
 
-// Run executes all contract tests
+// Run executes all contract tests.
 func (ct *ContractTest) Run() {
 	for _, contract := range ct.contracts {
 		ct.t.Run(contract.Name, func(t *testing.T) {
@@ -63,7 +63,7 @@ func (ct *ContractTest) Run() {
 	}
 }
 
-// runContract executes a single contract test
+// runContract executes a single contract test.
 func (ct *ContractTest) runContract(t *testing.T, contract Contract) {
 	// Prepare request body
 	var bodyReader io.Reader
@@ -119,7 +119,7 @@ func (ct *ContractTest) runContract(t *testing.T, contract Contract) {
 	}
 }
 
-// ValidateSchema validates that a response matches expected schema
+// ValidateSchema validates that a response matches expected schema.
 func ValidateSchema(actual interface{}, expected interface{}) error {
 	// Handle different types
 	switch exp := expected.(type) {
@@ -132,7 +132,7 @@ func ValidateSchema(actual interface{}, expected interface{}) error {
 	}
 }
 
-// validateMap validates map structures
+// validateMap validates map structures.
 func validateMap(actual interface{}, expected map[string]interface{}) error {
 	actualMap, ok := actual.(map[string]interface{})
 	if !ok {
@@ -153,7 +153,7 @@ func validateMap(actual interface{}, expected map[string]interface{}) error {
 	return nil
 }
 
-// validateBasicType validates basic types
+// validateBasicType validates basic types.
 func validateBasicType(actual, expected interface{}) error {
 	expType := reflect.TypeOf(expected)
 	actType := reflect.TypeOf(actual)
@@ -165,12 +165,12 @@ func validateBasicType(actual, expected interface{}) error {
 	return nil
 }
 
-// Schema interface for custom schema validation
+// Schema interface for custom schema validation.
 type Schema interface {
 	Validate(interface{}) error
 }
 
-// StringSchema validates string fields
+// StringSchema validates string fields.
 type StringSchema struct {
 	Required  bool
 	MinLength int
@@ -199,7 +199,7 @@ func (s StringSchema) Validate(value interface{}) error {
 	return nil
 }
 
-// NumberSchema validates numeric fields
+// NumberSchema validates numeric fields.
 type NumberSchema struct {
 	Required bool
 	Min      *float64
@@ -228,7 +228,7 @@ func (s NumberSchema) Validate(value interface{}) error {
 	return nil
 }
 
-// ArraySchema validates array fields
+// ArraySchema validates array fields.
 type ArraySchema struct {
 	Required    bool
 	MinItems    int
@@ -265,13 +265,13 @@ func (s ArraySchema) Validate(value interface{}) error {
 	return nil
 }
 
-// ObjectSchema validates object fields
+// ObjectSchema validates object fields.
 type ObjectSchema struct {
 	Required   bool
 	Properties map[string]Schema
 }
 
-// BooleanSchema validates boolean fields
+// BooleanSchema validates boolean fields.
 type BooleanSchema struct {
 	Required bool
 }
@@ -308,7 +308,7 @@ func (s ObjectSchema) Validate(value interface{}) error {
 	return nil
 }
 
-// Helper function to check if response contains expected fields
+// Helper function to check if response contains expected fields.
 func HasFields(fields ...string) Validation {
 	return func(body []byte) error {
 		var data map[string]interface{}
@@ -325,7 +325,7 @@ func HasFields(fields ...string) Validation {
 	}
 }
 
-// Helper function to validate error response format
+// Helper function to validate error response format.
 func IsErrorResponse() Validation {
 	return func(body []byte) error {
 		var data map[string]interface{}
@@ -346,7 +346,7 @@ func IsErrorResponse() Validation {
 	}
 }
 
-// Helper function to validate success response format
+// Helper function to validate success response format.
 func IsSuccessResponse() Validation {
 	return func(body []byte) error {
 		var data map[string]interface{}

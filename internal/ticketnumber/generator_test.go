@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// dummy store to drive expected counters sequentially per scope
+// dummy store to drive expected counters sequentially per scope.
 type memStore struct {
 	mu     sync.Mutex
 	global int64

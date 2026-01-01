@@ -1,3 +1,4 @@
+// Package main provides test utilities for password hashing and OTRS compatibility.
 package main
 
 import (
@@ -13,7 +14,9 @@ func main() {
 	fmt.Println("====================================")
 
 	// Create hasher with SHA256 (OTRS default)
-	os.Setenv("PASSWORD_HASH_TYPE", "sha256")
+	if err := os.Setenv("PASSWORD_HASH_TYPE", "sha256"); err != nil {
+		fmt.Printf("Warning: Failed to set PASSWORD_HASH_TYPE: %v\n", err)
+	}
 	hasher := auth.NewPasswordHasher()
 
 	// Test password "changeme" which should match root@localhost

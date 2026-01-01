@@ -19,6 +19,8 @@ import (
 
 	gomessage "github.com/emersion/go-message"
 	gomail "github.com/emersion/go-message/mail"
+	htmlcharset "golang.org/x/net/html/charset"
+
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/core"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
@@ -26,7 +28,6 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/filters"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
-	htmlcharset "golang.org/x/net/html/charset"
 )
 
 type ticketCreator interface {

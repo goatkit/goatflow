@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -299,7 +298,7 @@ func TestCustomerEmailPrePopulation(t *testing.T) {
 	})
 }
 
-// Integration test that would run against actual database
+// Integration test that would run against actual database.
 func TestTicketZoomIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")

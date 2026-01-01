@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// sendToastResponse sends either an HTMX toast notification or redirects with success message
+// sendToastResponse sends either an HTMX toast notification or redirects with success message.
 func SendToastResponse(c *gin.Context, success bool, message, redirectPath string) {
 	if c.GetHeader("HX-Request") == "true" {
 		// Return HTML partial with toast notification

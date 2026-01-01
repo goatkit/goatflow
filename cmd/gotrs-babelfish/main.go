@@ -1,3 +1,4 @@
+// Package main provides translation file processing.
 package main
 
 import (
@@ -338,7 +339,7 @@ func exportTranslations(i18n *i18n.I18n, lang string, filePath string, format st
 		fmt.Fprintf(os.Stderr, "Error creating file: %v\n", err)
 		os.Exit(1)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	switch format {
 	case "csv":
@@ -379,7 +380,7 @@ func importTranslations(i18n *i18n.I18n, lang string, filePath string, format st
 		fmt.Fprintf(os.Stderr, "Error opening file: %v\n", err)
 		os.Exit(1)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	switch format {
 	case "csv":
@@ -445,7 +446,7 @@ func saveTranslations(translations map[string]interface{}, path string) {
 		fmt.Fprintf(os.Stderr, "Error creating file: %v\n", err)
 		os.Exit(1)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")

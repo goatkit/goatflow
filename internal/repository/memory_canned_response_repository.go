@@ -11,7 +11,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// MemoryCannedResponseRepository is an in-memory implementation of CannedResponseRepository
+// MemoryCannedResponseRepository is an in-memory implementation of CannedResponseRepository.
 type MemoryCannedResponseRepository struct {
 	mu           sync.RWMutex
 	responses    map[uint]*models.CannedResponse
@@ -20,7 +20,7 @@ type MemoryCannedResponseRepository struct {
 	nextUsageID  uint
 }
 
-// NewMemoryCannedResponseRepository creates a new in-memory canned response repository
+// NewMemoryCannedResponseRepository creates a new in-memory canned response repository.
 func NewMemoryCannedResponseRepository() *MemoryCannedResponseRepository {
 	return &MemoryCannedResponseRepository{
 		responses:    make(map[uint]*models.CannedResponse),
@@ -30,7 +30,7 @@ func NewMemoryCannedResponseRepository() *MemoryCannedResponseRepository {
 	}
 }
 
-// CreateResponse creates a new canned response
+// CreateResponse creates a new canned response.
 func (r *MemoryCannedResponseRepository) CreateResponse(ctx context.Context, response *models.CannedResponse) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -47,7 +47,7 @@ func (r *MemoryCannedResponseRepository) CreateResponse(ctx context.Context, res
 	return nil
 }
 
-// GetResponseByID retrieves a response by ID
+// GetResponseByID retrieves a response by ID.
 func (r *MemoryCannedResponseRepository) GetResponseByID(ctx context.Context, id uint) (*models.CannedResponse, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -62,7 +62,7 @@ func (r *MemoryCannedResponseRepository) GetResponseByID(ctx context.Context, id
 	return &result, nil
 }
 
-// GetResponseByShortcut retrieves a response by its shortcut
+// GetResponseByShortcut retrieves a response by its shortcut.
 func (r *MemoryCannedResponseRepository) GetResponseByShortcut(ctx context.Context, shortcut string) (*models.CannedResponse, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -78,7 +78,7 @@ func (r *MemoryCannedResponseRepository) GetResponseByShortcut(ctx context.Conte
 	return nil, fmt.Errorf("response with shortcut %s not found or inactive", shortcut)
 }
 
-// GetActiveResponses retrieves all active responses
+// GetActiveResponses retrieves all active responses.
 func (r *MemoryCannedResponseRepository) GetActiveResponses(ctx context.Context) ([]models.CannedResponse, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -98,7 +98,7 @@ func (r *MemoryCannedResponseRepository) GetActiveResponses(ctx context.Context)
 	return responses, nil
 }
 
-// GetResponsesByCategory retrieves responses by category
+// GetResponsesByCategory retrieves responses by category.
 func (r *MemoryCannedResponseRepository) GetResponsesByCategory(ctx context.Context, category string) ([]models.CannedResponse, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -118,7 +118,7 @@ func (r *MemoryCannedResponseRepository) GetResponsesByCategory(ctx context.Cont
 	return responses, nil
 }
 
-// GetResponsesForUser retrieves responses accessible to a specific user
+// GetResponsesForUser retrieves responses accessible to a specific user.
 func (r *MemoryCannedResponseRepository) GetResponsesForUser(ctx context.Context, userID uint) ([]models.CannedResponse, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -161,7 +161,7 @@ func (r *MemoryCannedResponseRepository) GetResponsesForUser(ctx context.Context
 	return responses, nil
 }
 
-// UpdateResponse updates an existing response
+// UpdateResponse updates an existing response.
 func (r *MemoryCannedResponseRepository) UpdateResponse(ctx context.Context, response *models.CannedResponse) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -183,7 +183,7 @@ func (r *MemoryCannedResponseRepository) UpdateResponse(ctx context.Context, res
 	return nil
 }
 
-// DeleteResponse deletes a response
+// DeleteResponse deletes a response.
 func (r *MemoryCannedResponseRepository) DeleteResponse(ctx context.Context, id uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -198,7 +198,7 @@ func (r *MemoryCannedResponseRepository) DeleteResponse(ctx context.Context, id 
 	return nil
 }
 
-// IncrementUsageCount increments the usage count of a response
+// IncrementUsageCount increments the usage count of a response.
 func (r *MemoryCannedResponseRepository) IncrementUsageCount(ctx context.Context, responseID uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -214,7 +214,7 @@ func (r *MemoryCannedResponseRepository) IncrementUsageCount(ctx context.Context
 	return nil
 }
 
-// RecordUsage records when a response was used
+// RecordUsage records when a response was used.
 func (r *MemoryCannedResponseRepository) RecordUsage(ctx context.Context, usage *models.CannedResponseUsage) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -235,7 +235,7 @@ func (r *MemoryCannedResponseRepository) RecordUsage(ctx context.Context, usage 
 	return nil
 }
 
-// GetUsageHistory retrieves usage history for a response
+// GetUsageHistory retrieves usage history for a response.
 func (r *MemoryCannedResponseRepository) GetUsageHistory(ctx context.Context, responseID uint, limit int) ([]models.CannedResponseUsage, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -260,7 +260,7 @@ func (r *MemoryCannedResponseRepository) GetUsageHistory(ctx context.Context, re
 	return result, nil
 }
 
-// SearchResponses searches responses based on filter criteria
+// SearchResponses searches responses based on filter criteria.
 func (r *MemoryCannedResponseRepository) SearchResponses(ctx context.Context, filter *models.CannedResponseFilter) ([]models.CannedResponse, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -324,7 +324,6 @@ func (r *MemoryCannedResponseRepository) SearchResponses(ctx context.Context, fi
 				!strings.Contains(strings.ToLower(resp.Content), query) &&
 				!strings.Contains(strings.ToLower(resp.Subject), query) &&
 				!strings.Contains(strings.ToLower(resp.Shortcut), query) {
-
 				// Check in tags
 				tagMatch := false
 				for _, tag := range resp.Tags {
@@ -361,7 +360,7 @@ func (r *MemoryCannedResponseRepository) SearchResponses(ctx context.Context, fi
 	return results, nil
 }
 
-// GetMostUsedResponses returns the most frequently used responses
+// GetMostUsedResponses returns the most frequently used responses.
 func (r *MemoryCannedResponseRepository) GetMostUsedResponses(ctx context.Context, limit int) ([]models.CannedResponse, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -389,7 +388,7 @@ func (r *MemoryCannedResponseRepository) GetMostUsedResponses(ctx context.Contex
 	return responses, nil
 }
 
-// GetCategories retrieves all unique categories
+// GetCategories retrieves all unique categories.
 func (r *MemoryCannedResponseRepository) GetCategories(ctx context.Context) ([]models.CannedResponseCategory, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

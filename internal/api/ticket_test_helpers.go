@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// handleTicketNew returns a minimal ticket creation form
+// handleTicketNew returns a minimal ticket creation form.
 func handleTicketNew(c *gin.Context) {
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, `
@@ -34,7 +34,7 @@ func handleTicketNew(c *gin.Context) {
 </form>`)
 }
 
-// handleTicketCreate validates form input and returns HTMX-friendly response
+// handleTicketCreate validates form input and returns HTMX-friendly response.
 func handleTicketCreate(c *gin.Context) {
 	title := c.PostForm("title")
 	queueID := c.PostForm("queue_id")
@@ -81,7 +81,7 @@ func handleTicketCreate(c *gin.Context) {
 	c.String(http.StatusOK, "Ticket created successfully<br>Ticket #0001")
 }
 
-// handleTicketsList returns a simple list based on filters
+// handleTicketsList returns a simple list based on filters.
 func handleTicketsList(c *gin.Context) {
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	status := c.Query("status")
@@ -258,7 +258,7 @@ func handleTicketsList(c *gin.Context) {
 	c.String(http.StatusOK, b.String())
 }
 
-// handleTicketQuickAction performs simple quick actions
+// handleTicketQuickAction performs simple quick actions.
 func handleTicketQuickAction(c *gin.Context) {
 	action := c.PostForm("action")
 	switch action {
@@ -273,7 +273,7 @@ func handleTicketQuickAction(c *gin.Context) {
 	}
 }
 
-// handleTicketBulkAction processes bulk actions for tickets (tests only)
+// handleTicketBulkAction processes bulk actions for tickets (tests only).
 func handleTicketBulkAction(c *gin.Context) {
 	ids := c.PostForm("ticket_ids")
 	action := c.PostForm("action")
@@ -308,7 +308,7 @@ func handleTicketBulkAction(c *gin.Context) {
 	}
 }
 
-// handleTicketWorkflow renders a simple workflow diagram fragment
+// handleTicketWorkflow renders a simple workflow diagram fragment.
 func handleTicketWorkflow(c *gin.Context) {
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	// Always show open as current for tests
@@ -333,7 +333,7 @@ func handleTicketWorkflow(c *gin.Context) {
 </div>`)
 }
 
-// handleTicketTransition performs state transition validations and returns JSON
+// handleTicketTransition performs state transition validations and returns JSON.
 func handleTicketTransition(c *gin.Context) {
 	roleVal, _ := c.Get("user_role")
 	userRole, _ := roleVal.(string)
@@ -401,7 +401,7 @@ func handleTicketTransition(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-// handleTicketHistory returns a timeline fragment
+// handleTicketHistory returns a timeline fragment.
 func handleTicketHistory(c *gin.Context) {
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, `
@@ -413,7 +413,7 @@ func handleTicketHistory(c *gin.Context) {
 </div>`)
 }
 
-// handleTicketAutoTransition performs automatic state changes based on triggers
+// handleTicketAutoTransition performs automatic state changes based on triggers.
 func handleTicketAutoTransition(c *gin.Context) {
 	trigger := c.PostForm("trigger")
 	switch trigger {

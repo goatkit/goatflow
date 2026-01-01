@@ -1,3 +1,4 @@
+// Package main provides the contract test runner.
 package main
 
 import (
@@ -9,11 +10,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/api"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 )
 
-// ContractResult represents the result of a contract test
+// ContractResult represents the result of a contract test.
 type ContractResult struct {
 	Endpoint    string `json:"endpoint"`
 	Method      string `json:"method"`
@@ -22,7 +24,7 @@ type ContractResult struct {
 	Error       string `json:"error,omitempty"`
 }
 
-// ContractReport represents the overall test report
+// ContractReport represents the overall test report.
 type ContractReport struct {
 	Timestamp   time.Time        `json:"timestamp"`
 	TotalTests  int              `json:"total_tests"`

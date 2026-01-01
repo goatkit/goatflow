@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// ServiceItemType represents the type of service catalog item
+// ServiceItemType represents the type of service catalog item.
 type ServiceItemType string
 
 const (
@@ -14,7 +14,7 @@ const (
 	ServiceItemTypeQuestion ServiceItemType = "question"
 )
 
-// ServiceItemStatus represents the status of a service catalog item
+// ServiceItemStatus represents the status of a service catalog item.
 type ServiceItemStatus string
 
 const (
@@ -24,7 +24,7 @@ const (
 	ServiceItemStatusRetired  ServiceItemStatus = "retired"
 )
 
-// RequestStatus represents the status of a service request
+// RequestStatus represents the status of a service request.
 type RequestStatus string
 
 const (
@@ -38,7 +38,7 @@ const (
 	RequestStatusClosed     RequestStatus = "closed"
 )
 
-// ServiceCatalogItem represents an item in the service catalog
+// ServiceCatalogItem represents an item in the service catalog.
 type ServiceCatalogItem struct {
 	ID               uint              `json:"id" gorm:"primaryKey"`
 	ItemNumber       string            `json:"item_number" gorm:"uniqueIndex;not null"`
@@ -117,7 +117,7 @@ type ServiceCatalogItem struct {
 	LastModifiedBy   *User     `json:"last_modified_by,omitempty" gorm:"foreignKey:LastModifiedByID"`
 }
 
-// ServiceCategory represents a category in the service catalog
+// ServiceCategory represents a category in the service catalog.
 type ServiceCategory struct {
 	ID          uint              `json:"id" gorm:"primaryKey"`
 	Name        string            `json:"name" gorm:"not null;uniqueIndex"`
@@ -136,7 +136,7 @@ type ServiceCategory struct {
 	UpdatedAt   time.Time         `json:"updated_at"`
 }
 
-// ServiceRequest represents a user's service request
+// ServiceRequest represents a user's service request.
 type ServiceRequest struct {
 	ID            uint                `json:"id" gorm:"primaryKey"`
 	RequestNumber string              `json:"request_number" gorm:"uniqueIndex;not null"`
@@ -208,7 +208,7 @@ type ServiceRequest struct {
 	CreatedBy   *User     `json:"created_by,omitempty" gorm:"foreignKey:CreatedByID"`
 }
 
-// RequestApproval represents an approval for a service request
+// RequestApproval represents an approval for a service request.
 type RequestApproval struct {
 	ID         uint            `json:"id" gorm:"primaryKey"`
 	RequestID  uint            `json:"request_id" gorm:"not null"`
@@ -223,7 +223,7 @@ type RequestApproval struct {
 	UpdatedAt  time.Time       `json:"updated_at"`
 }
 
-// RequestComment represents a comment on a service request
+// RequestComment represents a comment on a service request.
 type RequestComment struct {
 	ID         uint            `json:"id" gorm:"primaryKey"`
 	RequestID  uint            `json:"request_id" gorm:"not null"`
@@ -237,7 +237,7 @@ type RequestComment struct {
 	UpdatedAt  time.Time       `json:"updated_at"`
 }
 
-// RequestAttachment represents a file attached to a service request
+// RequestAttachment represents a file attached to a service request.
 type RequestAttachment struct {
 	ID           uint            `json:"id" gorm:"primaryKey"`
 	RequestID    uint            `json:"request_id" gorm:"not null"`
@@ -251,7 +251,7 @@ type RequestAttachment struct {
 	CreatedAt    time.Time       `json:"created_at"`
 }
 
-// FormTemplate represents a form template for service requests
+// FormTemplate represents a form template for service requests.
 type FormTemplate struct {
 	ID              uint                   `json:"id" gorm:"primaryKey"`
 	Name            string                 `json:"name" gorm:"not null;uniqueIndex"`
@@ -264,7 +264,7 @@ type FormTemplate struct {
 	UpdatedAt       time.Time              `json:"updated_at"`
 }
 
-// ServiceCatalogListRequest represents a request to list catalog items
+// ServiceCatalogListRequest represents a request to list catalog items.
 type ServiceCatalogListRequest struct {
 	Page         int               `json:"page" form:"page"`
 	PerPage      int               `json:"per_page" form:"per_page"`
@@ -279,7 +279,7 @@ type ServiceCatalogListRequest struct {
 	SortOrder    string            `json:"sort_order" form:"sort_order"`
 }
 
-// ServiceCatalogListResponse represents a response containing catalog items
+// ServiceCatalogListResponse represents a response containing catalog items.
 type ServiceCatalogListResponse struct {
 	Items      []*ServiceCatalogItem `json:"items"`
 	Total      int64                 `json:"total"`
@@ -288,7 +288,7 @@ type ServiceCatalogListResponse struct {
 	TotalPages int                   `json:"total_pages"`
 }
 
-// ServiceRequestListRequest represents a request to list service requests
+// ServiceRequestListRequest represents a request to list service requests.
 type ServiceRequestListRequest struct {
 	Page          int           `json:"page" form:"page"`
 	PerPage       int           `json:"per_page" form:"per_page"`
@@ -303,7 +303,7 @@ type ServiceRequestListRequest struct {
 	ToDate        *time.Time    `json:"to_date" form:"to_date"`
 }
 
-// ServiceRequestListResponse represents a response containing service requests
+// ServiceRequestListResponse represents a response containing service requests.
 type ServiceRequestListResponse struct {
 	Requests   []*ServiceRequest `json:"requests"`
 	Total      int64             `json:"total"`

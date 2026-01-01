@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -11,11 +10,12 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// MockHTMXService for testing
+// MockHTMXService for testing.
 type MockHTMXService struct {
 	LoginFunc      func(email, password string) (*models.User, string, string, error)
 	GetTicketsFunc func(userID uint, filters map[string]interface{}) ([]*models.Ticket, error)

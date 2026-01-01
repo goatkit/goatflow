@@ -9,16 +9,17 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
-// NewSimpleRouter creates a router with basic routes
+// NewSimpleRouter creates a router with basic routes.
 func NewSimpleRouter() *gin.Engine {
 	return NewSimpleRouterWithDB(nil)
 }
 
-// NewSimpleRouterWithDB creates a router with basic routes and a specific database connection
+// NewSimpleRouterWithDB creates a router with basic routes and a specific database connection.
 func NewSimpleRouterWithDB(db *sql.DB) *gin.Engine {
 	log.Println("🔧 Starting NewSimpleRouter initialization")
 
@@ -89,7 +90,7 @@ func NewSimpleRouterWithDB(db *sql.DB) *gin.Engine {
 	return r
 }
 
-// setupYAMLRouting initializes the YAML routing system
+// setupYAMLRouting initializes the YAML routing system.
 func setupYAMLRouting(r *gin.Engine, db *sql.DB) error {
 	log.Println("🔧 Setting up YAML routing system")
 
@@ -185,7 +186,7 @@ func ensureRoute(r *gin.Engine, method, path string, handler gin.HandlerFunc) {
 	r.Handle(method, path, handler)
 }
 
-// SetupBasicRoutes adds basic routes to an existing router
+// SetupBasicRoutes adds basic routes to an existing router.
 func SetupBasicRoutes(r *gin.Engine) {
 	log.Println("🔧 SetupBasicRoutes called - adding manual routes")
 	log.Println("Basic routes disabled - using YAML routing system")

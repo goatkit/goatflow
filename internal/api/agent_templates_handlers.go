@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// TemplateForAgent represents a template available to agents
+// TemplateForAgent represents a template available to agents.
 type TemplateForAgent struct {
 	ID           int    `json:"id"`
 	Name         string `json:"name"`
@@ -20,7 +21,7 @@ type TemplateForAgent struct {
 	TemplateType string `json:"template_type"`
 }
 
-// GetTemplatesForQueue returns templates available for a specific queue and optional type filter
+// GetTemplatesForQueue returns templates available for a specific queue and optional type filter.
 func GetTemplatesForQueue(queueID int, templateType string) ([]TemplateForAgent, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -48,7 +49,7 @@ func GetTemplatesForQueue(queueID int, templateType string) ([]TemplateForAgent,
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var templates []TemplateForAgent
 	for rows.Next() {
@@ -69,7 +70,7 @@ func GetTemplatesForQueue(queueID int, templateType string) ([]TemplateForAgent,
 	return templates, nil
 }
 
-// SubstituteTemplateVariables replaces template variables with actual values
+// SubstituteTemplateVariables replaces template variables with actual values.
 func SubstituteTemplateVariables(text string, vars map[string]string) string {
 	result := text
 	for key, value := range vars {
@@ -80,8 +81,7 @@ func SubstituteTemplateVariables(text string, vars map[string]string) string {
 	return result
 }
 
-// handleGetAgentTemplates returns templates for a specific queue
-// GET /agent/api/templates?queue_id=X&type=Answer
+// GET /agent/api/templates?queue_id=X&type=Answer.
 func handleGetAgentTemplates(c *gin.Context) {
 	queueIDStr := c.Query("queue_id")
 	templateType := c.Query("type")
@@ -118,8 +118,7 @@ func handleGetAgentTemplates(c *gin.Context) {
 	})
 }
 
-// handleGetAgentTemplate returns a single template with variable substitution
-// GET /agent/api/templates/:id?ticket_id=X
+// GET /agent/api/templates/:id?ticket_id=X.
 func handleGetAgentTemplate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -174,7 +173,7 @@ func handleGetAgentTemplate(c *gin.Context) {
 	})
 }
 
-// GetTicketTemplateVariables returns template variables for a ticket
+// GetTicketTemplateVariables returns template variables for a ticket.
 func GetTicketTemplateVariables(ticketID int) map[string]string {
 	vars := make(map[string]string)
 
@@ -238,7 +237,7 @@ func GetTicketTemplateVariables(ticketID int) map[string]string {
 	return vars
 }
 
-// AttachmentInfo represents minimal attachment info for agent API
+// AttachmentInfo represents minimal attachment info for agent API.
 type AttachmentInfo struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
@@ -247,7 +246,7 @@ type AttachmentInfo struct {
 	ContentSize int64  `json:"content_size"`
 }
 
-// GetAttachmentsByIDs returns attachment details for given IDs
+// GetAttachmentsByIDs returns attachment details for given IDs.
 func GetAttachmentsByIDs(ids []int) []AttachmentInfo {
 	if len(ids) == 0 {
 		return []AttachmentInfo{}

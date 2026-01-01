@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleGetTicketAPI handles GET /api/v1/tickets/:id
+// HandleGetTicketAPI handles GET /api/v1/tickets/:id.
 func HandleGetTicketAPI(c *gin.Context) {
 	// Test-mode lightweight path: still enforce auth semantics and basic validation
 	if os.Getenv("APP_ENV") == "test" {

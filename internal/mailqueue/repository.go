@@ -1,3 +1,4 @@
+// Package mailqueue provides email queue storage and management.
 package mailqueue
 
 import (
@@ -15,7 +16,7 @@ import (
 	"github.com/yuin/goldmark/renderer/html"
 )
 
-// MailQueueItem represents an email in the queue
+// MailQueueItem represents an email in the queue.
 type MailQueueItem struct {
 	ID                int64
 	InsertFingerprint *string
@@ -30,17 +31,17 @@ type MailQueueItem struct {
 	CreateTime        time.Time
 }
 
-// MailQueueRepository handles database operations for the mail queue
+// MailQueueRepository handles database operations for the mail queue.
 type MailQueueRepository struct {
 	db *sql.DB
 }
 
-// NewMailQueueRepository creates a new mail queue repository
+// NewMailQueueRepository creates a new mail queue repository.
 func NewMailQueueRepository(db *sql.DB) *MailQueueRepository {
 	return &MailQueueRepository{db: db}
 }
 
-// Insert adds a new email to the queue
+// Insert adds a new email to the queue.
 func (r *MailQueueRepository) Insert(ctx context.Context, item *MailQueueItem) error {
 	query := `
 		INSERT INTO mail_queue (
@@ -70,7 +71,7 @@ func (r *MailQueueRepository) Insert(ctx context.Context, item *MailQueueItem) e
 	return nil
 }
 
-// GetPending retrieves emails that are ready to be sent (due_time is null or past)
+// GetPending retrieves emails that are ready to be sent (due_time is null or past).
 func (r *MailQueueRepository) GetPending(ctx context.Context, limit int) ([]*MailQueueItem, error) {
 	query := `
 		SELECT id, insert_fingerprint, article_id, attempts, sender, recipient,
@@ -112,7 +113,7 @@ func (r *MailQueueRepository) GetPending(ctx context.Context, limit int) ([]*Mai
 	return items, rows.Err()
 }
 
-// UpdateAttempts increments the attempt count and sets the next due time
+// UpdateAttempts increments the attempt count and sets the next due time.
 func (r *MailQueueRepository) UpdateAttempts(ctx context.Context, id int64, smtpCode *int, smtpMessage *string, nextDueTime *time.Time) error {
 	query := `
 		UPDATE mail_queue
@@ -131,7 +132,7 @@ func (r *MailQueueRepository) UpdateAttempts(ctx context.Context, id int64, smtp
 	return nil
 }
 
-// Delete removes a successfully sent email from the queue
+// Delete removes a successfully sent email from the queue.
 func (r *MailQueueRepository) Delete(ctx context.Context, id int64) error {
 	query := `DELETE FROM mail_queue WHERE id = ?`
 
@@ -143,7 +144,7 @@ func (r *MailQueueRepository) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-// GetFailed retrieves emails that have exceeded max attempts
+// GetFailed retrieves emails that have exceeded max attempts.
 func (r *MailQueueRepository) GetFailed(ctx context.Context, maxAttempts int, limit int) ([]*MailQueueItem, error) {
 	query := `
 		SELECT id, insert_fingerprint, article_id, attempts, sender, recipient,
@@ -185,21 +186,21 @@ func (r *MailQueueRepository) GetFailed(ctx context.Context, maxAttempts int, li
 	return items, rows.Err()
 }
 
-// BuildHTMLEmailMessage constructs a properly formatted HTML email message
+// BuildHTMLEmailMessage constructs a properly formatted HTML email message.
 func BuildHTMLEmailMessage(from, to, subject, htmlBody string) []byte {
 	return BuildEmailMessageWithHeaders(from, to, subject, htmlBody, map[string]string{
 		"Content-Type": "text/html; charset=UTF-8",
 	})
 }
 
-// BuildTextEmailMessage constructs a properly formatted plain text email message
+// BuildTextEmailMessage constructs a properly formatted plain text email message.
 func BuildTextEmailMessage(from, to, subject, textBody string) []byte {
 	return BuildEmailMessageWithHeaders(from, to, subject, textBody, map[string]string{
 		"Content-Type": "text/plain; charset=UTF-8",
 	})
 }
 
-// BuildEmailMessageWithHeaders builds an email message with optional headers for threading
+// BuildEmailMessageWithHeaders builds an email message with optional headers for threading.
 func BuildEmailMessageWithHeaders(from, to, subject, body string, headers map[string]string) []byte {
 	var headerLines []string
 
@@ -227,7 +228,7 @@ func BuildEmailMessageWithHeaders(from, to, subject, body string, headers map[st
 	return []byte(message)
 }
 
-// BuildEmailMessageWithThreading builds an email message with threading headers
+// BuildEmailMessageWithThreading builds an email message with threading headers.
 func BuildEmailMessageWithThreading(from, to, subject, body, domain string, inReplyTo, references string) []byte {
 	headers := make(map[string]string)
 
@@ -246,12 +247,12 @@ func BuildEmailMessageWithThreading(from, to, subject, body, domain string, inRe
 	return BuildEmailMessageWithHeaders(from, to, subject, body, headers)
 }
 
-// BuildEmailMessage automatically detects content type and builds appropriate email message
+// BuildEmailMessage automatically detects content type and builds appropriate email message.
 func BuildEmailMessage(from, to, subject, body string) []byte {
 	return BuildEmailMessageWithHeaders(from, to, subject, body, nil)
 }
 
-// containsHTML checks if the content contains HTML tags
+// containsHTML checks if the content contains HTML tags.
 func containsHTML(content string) bool {
 	htmlTags := []string{"<p>", "<br", "<div>", "<span>", "<strong>", "<em>", "<b>", "<i>", "<h1>", "<h2>", "<h3>", "<ul>", "<ol>", "<li>", "<table>", "<a ", "<blockquote>", "<img "}
 	for _, tag := range htmlTags {
@@ -262,7 +263,7 @@ func containsHTML(content string) bool {
 	return false
 }
 
-// isMarkdownContent checks if the content appears to be markdown
+// isMarkdownContent checks if the content appears to be markdown.
 func isMarkdownContent(content string) bool {
 	markdownPatterns := []string{"**", "*", "_", "`", "# ", "## ", "### ", "- ", "* ", "+ ", "1. ", "[", "](", "![", "](", "\n"}
 	markdownCount := 0
@@ -275,7 +276,7 @@ func isMarkdownContent(content string) bool {
 	return markdownCount >= 2
 }
 
-// markdownToHTML converts markdown content to HTML
+// markdownToHTML converts markdown content to HTML.
 func markdownToHTML(markdown string) string {
 	md := goldmark.New(
 		goldmark.WithExtensions(
@@ -297,7 +298,7 @@ func markdownToHTML(markdown string) string {
 	return buf.String()
 }
 
-// GenerateMessageID creates a unique Message-ID header for email threading
+// GenerateMessageID creates a unique Message-ID header for email threading.
 func GenerateMessageID(domain string) string {
 	// Generate a random component
 	randomBytes := make([]byte, 8)
@@ -310,7 +311,7 @@ func GenerateMessageID(domain string) string {
 	return fmt.Sprintf("<%d.%s@%s>", timestamp, randomHex, domain)
 }
 
-// ExtractMessageIDFromRawMessage extracts the Message-ID header from a raw email message
+// ExtractMessageIDFromRawMessage extracts the Message-ID header from a raw email message.
 func ExtractMessageIDFromRawMessage(rawMessage []byte) string {
 	message := string(rawMessage)
 	lines := strings.Split(message, "\n")

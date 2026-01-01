@@ -10,14 +10,15 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
-	"golang.org/x/crypto/bcrypt"
 )
 
-// HandleAdminUsers renders the admin users management page
+// HandleAdminUsers renders the admin users management page.
 func HandleAdminUsers(c *gin.Context) {
 	// Fallbacks for tests or when DB/templates are not ready
 	if os.Getenv("APP_ENV") == "test" {
@@ -37,7 +38,7 @@ func HandleAdminUsers(c *gin.Context) {
 			FROM users
 			ORDER BY last_name, first_name, id`))
 		if err == nil {
-			defer rows.Close()
+			defer func() { _ = rows.Close() }()
 			type urow struct {
 				id                   int
 				login, title, fn, ln string
@@ -114,7 +115,7 @@ func HandleAdminUsers(c *gin.Context) {
 	})
 }
 
-// HandleAdminUserGet handles GET /admin/users/:id
+// HandleAdminUserGet handles GET /admin/users/:id.
 func HandleAdminUserGet(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.Atoi(userID)
@@ -205,7 +206,7 @@ func HandleAdminUserGet(c *gin.Context) {
 	groupNames := make([]string, 0)
 	rows, err := db.Query(groupQuery, id)
 	if err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var gid int
 			var gname string
@@ -238,7 +239,7 @@ func HandleAdminUserGet(c *gin.Context) {
 	})
 }
 
-// HandleAdminUserCreate handles POST /admin/users
+// HandleAdminUserCreate handles POST /admin/users.
 func HandleAdminUserCreate(c *gin.Context) {
 	var req struct {
 		Login     string   `json:"login" form:"login"`
@@ -410,7 +411,7 @@ func HandleAdminUserCreate(c *gin.Context) {
 	})
 }
 
-// HandleAdminUserUpdate handles PUT /admin/users/:id
+// HandleAdminUserUpdate handles PUT /admin/users/:id.
 func HandleAdminUserUpdate(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.Atoi(userID)
@@ -572,7 +573,7 @@ func HandleAdminUserUpdate(c *gin.Context) {
 			})
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		if _, err := tx.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1 AND permission_key = 'rw'"), id); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -666,7 +667,7 @@ func ensureGroupID(tx *sql.Tx, auditID int, token string) (int, error) {
 	return 0, err
 }
 
-// HandleAdminUserDelete handles DELETE /admin/users/:id
+// HandleAdminUserDelete handles DELETE /admin/users/:id.
 func HandleAdminUserDelete(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.Atoi(userID)
@@ -704,7 +705,7 @@ func HandleAdminUserDelete(c *gin.Context) {
 	})
 }
 
-// HandleAdminUserGroups handles GET /admin/users/:id/groups
+// HandleAdminUserGroups handles GET /admin/users/:id/groups.
 func HandleAdminUserGroups(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.Atoi(userID)
@@ -742,7 +743,7 @@ func HandleAdminUserGroups(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var groups []gin.H
 	for rows.Next() {
@@ -762,7 +763,7 @@ func HandleAdminUserGroups(c *gin.Context) {
 	})
 }
 
-// HandleAdminUsersStatus handles PUT /admin/users/:id/status to toggle user valid status
+// HandleAdminUsersStatus handles PUT /admin/users/:id/status to toggle user valid status.
 func HandleAdminUsersStatus(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.Atoi(userID)
@@ -833,7 +834,7 @@ func HandleAdminUsersStatus(c *gin.Context) {
 	})
 }
 
-// HandlePasswordPolicy returns the current password policy settings
+// HandlePasswordPolicy returns the current password policy settings.
 func HandlePasswordPolicy(c *gin.Context) {
 	// TODO: In the future, read these from the actual config system
 	// For now, return the defaults from Config.yaml

@@ -1,10 +1,11 @@
 package ticketnumber
 
 import (
-	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 	"log"
 	"path/filepath"
 	"strconv"
+
+	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 )
 
 type SetupResult struct {

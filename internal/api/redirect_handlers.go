@@ -1,11 +1,12 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
-// handleRedirectTickets redirects to the appropriate tickets page based on user role
+// handleRedirectTickets redirects to the appropriate tickets page based on user role.
 func handleRedirectTickets(c *gin.Context) {
 	role, exists := c.Get("user_role")
 	if !exists {
@@ -25,7 +26,7 @@ func handleRedirectTickets(c *gin.Context) {
 	}
 }
 
-// handleRedirectTicketsNew redirects to the appropriate new ticket page based on user role
+// handleRedirectTicketsNew redirects to the appropriate new ticket page based on user role.
 func handleRedirectTicketsNew(c *gin.Context) {
 	role, exists := c.Get("user_role")
 	if !exists {
@@ -44,7 +45,7 @@ func handleRedirectTicketsNew(c *gin.Context) {
 	}
 }
 
-// handleRedirectQueues redirects to the appropriate queues page based on user role
+// handleRedirectQueues redirects to the appropriate queues page based on user role.
 func handleRedirectQueues(c *gin.Context) {
 	role, exists := c.Get("user_role")
 	if !exists {
@@ -66,7 +67,7 @@ func handleRedirectQueues(c *gin.Context) {
 	}
 }
 
-// handleRedirectProfile redirects to the appropriate profile page based on user role
+// handleRedirectProfile redirects to the appropriate profile page based on user role.
 func handleRedirectProfile(c *gin.Context) {
 	role, exists := c.Get("user_role")
 	if !exists {
@@ -85,7 +86,7 @@ func handleRedirectProfile(c *gin.Context) {
 	}
 }
 
-// handleRedirectSettings redirects to the appropriate settings page based on user role
+// handleRedirectSettings redirects to the appropriate settings page based on user role.
 func handleRedirectSettings(c *gin.Context) {
 	role, exists := c.Get("user_role")
 	if !exists {

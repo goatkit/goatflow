@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -265,12 +264,7 @@ func WithCleanDB(t *testing.T) {
 	t.Cleanup(ResetTestDB)
 }
 
-// resetTestDatabase restores the test database to a canonical known state.
-// This ensures test isolation by cleaning up polluted data from previous runs.
-// The canonical data matches migrations:
-// - 4 queues: Postmaster(1), Raw(2), Junk(3), Misc(4)
-// - Raw queue has 2 tickets, Junk has 1, others have 0
-// - Ticket 123 exists for attachment tests
+// - Ticket 123 exists for attachment tests.
 func resetTestDatabase() error {
 	// Reinitialize the real test database connection in case a previous test
 	// injected a mock DB that wasn't properly cleaned up

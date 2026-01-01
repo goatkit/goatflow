@@ -239,7 +239,7 @@ func TestSchemaDiscovery_InferFieldType(t *testing.T) {
 	}
 }
 
-// Helper function
+// Helper function.
 func findField(fields []Field, name string) *Field {
 	for _, f := range fields {
 		if f.Name == name {

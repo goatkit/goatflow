@@ -6,22 +6,23 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/webhook"
 )
 
-// WebhookHandlers handles webhook-related API endpoints
+// WebhookHandlers handles webhook-related API endpoints.
 type WebhookHandlers struct {
 	webhookManager *webhook.Manager
 }
 
-// NewWebhookHandlers creates a new webhook handlers instance
+// NewWebhookHandlers creates a new webhook handlers instance.
 func NewWebhookHandlers(webhookManager *webhook.Manager) *WebhookHandlers {
 	return &WebhookHandlers{
 		webhookManager: webhookManager,
 	}
 }
 
-// SetupWebhookRoutes sets up webhook API routes
+// SetupWebhookRoutes sets up webhook API routes.
 func (h *WebhookHandlers) SetupWebhookRoutes(router *APIRouter, adminRoutes *gin.RouterGroup) {
 	webhooks := adminRoutes.Group("/webhooks")
 	{
@@ -50,7 +51,7 @@ func (h *WebhookHandlers) SetupWebhookRoutes(router *APIRouter, adminRoutes *gin
 	}
 }
 
-// handleListWebhooks returns all configured webhooks
+// handleListWebhooks returns all configured webhooks.
 func (h *WebhookHandlers) handleListWebhooks(c *gin.Context) {
 	webhooks, err := h.webhookManager.ListWebhooks()
 	if err != nil {
@@ -61,7 +62,7 @@ func (h *WebhookHandlers) handleListWebhooks(c *gin.Context) {
 	sendSuccess(c, webhooks)
 }
 
-// handleCreateWebhook creates a new webhook
+// handleCreateWebhook creates a new webhook.
 func (h *WebhookHandlers) handleCreateWebhook(c *gin.Context) {
 	var req webhook.WebhookRequest
 
@@ -88,7 +89,7 @@ func (h *WebhookHandlers) handleCreateWebhook(c *gin.Context) {
 	})
 }
 
-// handleGetWebhook returns a specific webhook
+// handleGetWebhook returns a specific webhook.
 func (h *WebhookHandlers) handleGetWebhook(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -105,7 +106,7 @@ func (h *WebhookHandlers) handleGetWebhook(c *gin.Context) {
 	sendSuccess(c, webhook)
 }
 
-// handleUpdateWebhook updates an existing webhook
+// handleUpdateWebhook updates an existing webhook.
 func (h *WebhookHandlers) handleUpdateWebhook(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -134,7 +135,7 @@ func (h *WebhookHandlers) handleUpdateWebhook(c *gin.Context) {
 	sendSuccess(c, updatedWebhook)
 }
 
-// handleDeleteWebhook removes a webhook
+// handleDeleteWebhook removes a webhook.
 func (h *WebhookHandlers) handleDeleteWebhook(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -154,7 +155,7 @@ func (h *WebhookHandlers) handleDeleteWebhook(c *gin.Context) {
 	})
 }
 
-// handleTestWebhook tests a webhook by sending a test payload
+// handleTestWebhook tests a webhook by sending a test payload.
 func (h *WebhookHandlers) handleTestWebhook(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -171,7 +172,7 @@ func (h *WebhookHandlers) handleTestWebhook(c *gin.Context) {
 	sendSuccess(c, result)
 }
 
-// handleGetWebhookStats returns webhook statistics
+// handleGetWebhookStats returns webhook statistics.
 func (h *WebhookHandlers) handleGetWebhookStats(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -188,7 +189,7 @@ func (h *WebhookHandlers) handleGetWebhookStats(c *gin.Context) {
 	sendSuccess(c, stats)
 }
 
-// handleGetWebhookDeliveries returns webhook delivery history
+// handleGetWebhookDeliveries returns webhook delivery history.
 func (h *WebhookHandlers) handleGetWebhookDeliveries(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -213,7 +214,7 @@ func (h *WebhookHandlers) handleGetWebhookDeliveries(c *gin.Context) {
 	})
 }
 
-// handleGetWebhookDelivery returns a specific webhook delivery
+// handleGetWebhookDelivery returns a specific webhook delivery.
 func (h *WebhookHandlers) handleGetWebhookDelivery(c *gin.Context) {
 	webhookID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -238,7 +239,7 @@ func (h *WebhookHandlers) handleGetWebhookDelivery(c *gin.Context) {
 	})
 }
 
-// handleActivateWebhook activates a webhook
+// handleActivateWebhook activates a webhook.
 func (h *WebhookHandlers) handleActivateWebhook(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -254,7 +255,7 @@ func (h *WebhookHandlers) handleActivateWebhook(c *gin.Context) {
 	})
 }
 
-// handleDeactivateWebhook deactivates a webhook
+// handleDeactivateWebhook deactivates a webhook.
 func (h *WebhookHandlers) handleDeactivateWebhook(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -270,7 +271,7 @@ func (h *WebhookHandlers) handleDeactivateWebhook(c *gin.Context) {
 	})
 }
 
-// handleListWebhookEvents returns available webhook events
+// handleListWebhookEvents returns available webhook events.
 func (h *WebhookHandlers) handleListWebhookEvents(c *gin.Context) {
 	events := map[string]interface{}{
 		"ticket_events": []string{
@@ -313,7 +314,7 @@ func (h *WebhookHandlers) handleListWebhookEvents(c *gin.Context) {
 	sendSuccess(c, events)
 }
 
-// handleTestAllWebhooks tests all active webhooks
+// handleTestAllWebhooks tests all active webhooks.
 func (h *WebhookHandlers) handleTestAllWebhooks(c *gin.Context) {
 	webhooks, err := h.webhookManager.ListWebhooks()
 	if err != nil {
@@ -352,7 +353,7 @@ func (h *WebhookHandlers) handleTestAllWebhooks(c *gin.Context) {
 	})
 }
 
-// handleGetGlobalWebhookStats returns global webhook statistics
+// handleGetGlobalWebhookStats returns global webhook statistics.
 func (h *WebhookHandlers) handleGetGlobalWebhookStats(c *gin.Context) {
 	webhooks, err := h.webhookManager.ListWebhooks()
 	if err != nil {
@@ -391,7 +392,7 @@ func (h *WebhookHandlers) handleGetGlobalWebhookStats(c *gin.Context) {
 	})
 }
 
-// handleCleanupWebhookDeliveries triggers cleanup of old webhook deliveries
+// handleCleanupWebhookDeliveries triggers cleanup of old webhook deliveries.
 func (h *WebhookHandlers) handleCleanupWebhookDeliveries(c *gin.Context) {
 	var req struct {
 		OlderThanDays int `json:"older_than_days" binding:"required,min=1"`
@@ -409,7 +410,7 @@ func (h *WebhookHandlers) handleCleanupWebhookDeliveries(c *gin.Context) {
 	})
 }
 
-// validateWebhookEvents validates that all provided events are valid
+// validateWebhookEvents validates that all provided events are valid.
 func (h *WebhookHandlers) validateWebhookEvents(events []webhook.WebhookEvent) error {
 	validEvents := map[webhook.WebhookEvent]bool{
 		webhook.EventTicketCreated:         true,

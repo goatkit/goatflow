@@ -6,7 +6,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// CannedResponseRepository defines the interface for canned response persistence
+// CannedResponseRepository defines the interface for canned response persistence.
 type CannedResponseRepository interface {
 	// Response CRUD operations
 	CreateResponse(ctx context.Context, response *models.CannedResponse) error

@@ -1,10 +1,11 @@
+// Package contracts provides API contract definitions for integration testing.
 package contracts
 
 import (
 	"net/http"
 )
 
-// ArticleContracts defines the API contracts for article endpoints
+// ArticleContracts defines the API contracts for article endpoints.
 var ArticleContracts = []Contract{
 	{
 		Name:        "ListArticles",
@@ -141,7 +142,7 @@ var ArticleContracts = []Contract{
 	},
 }
 
-// RegisterArticleContracts registers article contracts for testing
+// RegisterArticleContracts registers article contracts for testing.
 func RegisterArticleContracts() {
 	// No-op registrar kept for backward compatibility
 }

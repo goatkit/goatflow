@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -13,12 +12,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// setupServiceTestRouter creates a minimal router with the admin services handlers
+// setupServiceTestRouter creates a minimal router with the admin services handlers.
 func setupServiceTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -37,7 +37,7 @@ func setupServiceTestRouter() *gin.Engine {
 	return router
 }
 
-// createAdminTestService creates a test service in the database
+// createAdminTestService creates a test service in the database.
 func createAdminTestService(t *testing.T, name string) (int, bool) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -61,7 +61,7 @@ func createAdminTestService(t *testing.T, name string) (int, bool) {
 	return id, true
 }
 
-// cleanupTestServiceByName removes a test service by name - only works if DB is already connected
+// cleanupTestServiceByName removes a test service by name - only works if DB is already connected.
 func cleanupTestServiceByName(t *testing.T, name string) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {

@@ -10,7 +10,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// DynamicFieldFilter represents a filter condition for dynamic field values
+// DynamicFieldFilter represents a filter condition for dynamic field values.
 type DynamicFieldFilter struct {
 	FieldID   int    // ID of the dynamic field
 	FieldName string // Name of the dynamic field (alternative to ID)
@@ -18,13 +18,13 @@ type DynamicFieldFilter struct {
 	Value     string // Value to compare against (comma-separated for 'in' operator)
 }
 
-// SearchableDynamicField wraps DynamicField with template-friendly Options
+// SearchableDynamicField wraps DynamicField with template-friendly Options.
 type SearchableDynamicField struct {
 	DynamicField
 	Options []map[string]string `json:"options"` // [{key: "value", value: "display_name"}, ...]
 }
 
-// Cache for searchable fields (reduces DB queries on every page load)
+// Cache for searchable fields (reduces DB queries on every page load).
 var (
 	searchableFieldsCache     []SearchableDynamicField
 	searchableFieldsCacheMu   sync.RWMutex
@@ -32,8 +32,7 @@ var (
 	searchableFieldsCacheTTL  = 30 * time.Second
 )
 
-// GetFieldsForSearch returns dynamic fields that are searchable (Ticket object type, valid)
-// Results are cached for 30 seconds to improve performance
+// Results are cached for 30 seconds to improve performance.
 func GetFieldsForSearch() ([]SearchableDynamicField, error) {
 	searchableFieldsCacheMu.RLock()
 	if searchableFieldsCache != nil && time.Since(searchableFieldsCacheTime) < searchableFieldsCacheTTL {
@@ -75,7 +74,7 @@ func getFieldsForSearchWithDB(db *sql.DB) ([]SearchableDynamicField, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query searchable dynamic fields: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	fields, err := scanDynamicFields(rows)
 	if err != nil {
@@ -100,8 +99,7 @@ func getFieldsForSearchWithDB(db *sql.DB) ([]SearchableDynamicField, error) {
 	return result, nil
 }
 
-// BuildDynamicFieldFilterSQL builds SQL conditions for filtering tickets by dynamic field values
-// Returns the WHERE clause fragment and arguments to append
+// Returns the WHERE clause fragment and arguments to append.
 func BuildDynamicFieldFilterSQL(filters []DynamicFieldFilter, startArgNum int) (string, []interface{}, error) {
 	if len(filters) == 0 {
 		return "", nil, nil
@@ -226,8 +224,7 @@ func BuildDynamicFieldFilterSQL(filters []DynamicFieldFilter, startArgNum int) (
 	return " AND " + strings.Join(conditions, " AND "), args, nil
 }
 
-// ParseDynamicFieldFiltersFromQuery parses URL query parameters into DynamicFieldFilter slice
-// Expected format: df_FieldName=value or df_FieldName_op=value (e.g., df_CustomerType=VIP, df_Amount_gt=1000)
+// Expected format: df_FieldName=value or df_FieldName_op=value (e.g., df_CustomerType=VIP, df_Amount_gt=1000).
 func ParseDynamicFieldFiltersFromQuery(queryParams map[string][]string) []DynamicFieldFilter {
 	var filters []DynamicFieldFilter
 
@@ -262,8 +259,7 @@ func ParseDynamicFieldFiltersFromQuery(queryParams map[string][]string) []Dynami
 	return filters
 }
 
-// GetDistinctDynamicFieldValues returns distinct values for a dropdown/multiselect field
-// Useful for populating filter dropdown options
+// Useful for populating filter dropdown options.
 func GetDistinctDynamicFieldValues(fieldID int, limit int) ([]string, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -286,7 +282,7 @@ func GetDistinctDynamicFieldValues(fieldID int, limit int) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query distinct values: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var values []string
 	for rows.Next() {

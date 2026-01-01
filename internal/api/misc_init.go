@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 )
@@ -19,7 +20,7 @@ func init() {
 	routing.RegisterHandler("handleTicketCustomerUsers", HandleTicketCustomerUsersWrapper)
 }
 
-// HandleTicketCustomerUsersWrapper wraps handleTicketCustomerUsers with DB lookup
+// HandleTicketCustomerUsersWrapper wraps handleTicketCustomerUsers with DB lookup.
 var HandleTicketCustomerUsersWrapper gin.HandlerFunc = func(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {

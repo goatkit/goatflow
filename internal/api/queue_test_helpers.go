@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// handleQueuesList returns a simple HTML page with queue checkboxes and hidden bulk toolbar
+// handleQueuesList returns a simple HTML page with queue checkboxes and hidden bulk toolbar.
 func handleQueuesList(c *gin.Context) {
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	// Query params
@@ -265,7 +265,7 @@ func handleQueuesList(c *gin.Context) {
 	c.String(http.StatusOK, html.String())
 }
 
-// handleBulkActionsToolbar returns an HTML snippet for the toolbar with the count and buttons
+// handleBulkActionsToolbar returns an HTML snippet for the toolbar with the count and buttons.
 func handleBulkActionsToolbar(c *gin.Context) {
 	count := c.Query("count")
 	if count == "" {
@@ -275,7 +275,7 @@ func handleBulkActionsToolbar(c *gin.Context) {
 	c.String(http.StatusOK, count+" queues selected\n<button>Activate Selected</button><button>Deactivate Selected</button><button class=\"bg-red-600\">Delete Selected</button><button>Cancel Selection</button>")
 }
 
-// handleBulkQueueAction processes activate/deactivate/delete actions for selected queues
+// handleBulkQueueAction processes activate/deactivate/delete actions for selected queues.
 func handleBulkQueueAction(c *gin.Context) {
 	action := c.Param("action")
 	if action != "activate" && action != "deactivate" && action != "delete" {
@@ -310,7 +310,7 @@ func handleBulkQueueAction(c *gin.Context) {
 	})
 }
 
-// handleBulkQueueDelete deletes selected queues; skips those that have tickets
+// handleBulkQueueDelete deletes selected queues; skips those that have tickets.
 func handleBulkQueueDelete(c *gin.Context) {
 	// Try to read confirm from query first
 	confirm := c.Request.URL.Query().Get("confirm")
@@ -375,7 +375,7 @@ func handleBulkQueueDelete(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": msg, "deleted": deleted, "skipped": skipped})
 }
 
-// handleQueueDetailJSON returns queue details as HTML or JSON based on Accept header (test helper)
+// handleQueueDetailJSON returns queue details as HTML or JSON based on Accept header (test helper).
 func handleQueueDetailJSON(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -442,7 +442,7 @@ func handleQueueDetailJSON(c *gin.Context) {
 
 // Note: Frontend HTMX handlers (forms/confirmations) are implemented in queue_frontend_handlers.go
 
-// handleQueueTickets returns HTML of tickets for a queue (test helper)
+// handleQueueTickets returns HTML of tickets for a queue (test helper).
 func handleQueueTickets_legacy(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)

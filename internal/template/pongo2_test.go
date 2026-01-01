@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TemplateTestHelper provides utilities for testing pongo2 templates
+// TemplateTestHelper provides utilities for testing pongo2 templates.
 type TemplateTestHelper struct {
 	TemplateDir string
 	TemplateSet *pongo2.TemplateSet
 }
 
-// NewTemplateTestHelper creates a helper for template testing
+// NewTemplateTestHelper creates a helper for template testing.
 func NewTemplateTestHelper(t *testing.T) *TemplateTestHelper {
 	// Find template directory relative to project root
 	cwd, err := os.Getwd()
@@ -54,7 +54,7 @@ func findTemplateDir(startDir string) string {
 	return ""
 }
 
-// RenderTemplate renders a template with the given context
+// RenderTemplate renders a template with the given context.
 func (h *TemplateTestHelper) RenderTemplate(templatePath string, ctx pongo2.Context) (string, error) {
 	tmpl, err := h.TemplateSet.FromFile(templatePath)
 	if err != nil {
@@ -63,18 +63,18 @@ func (h *TemplateTestHelper) RenderTemplate(templatePath string, ctx pongo2.Cont
 	return tmpl.Execute(ctx)
 }
 
-// HTMLAsserter provides assertions on rendered HTML
+// HTMLAsserter provides assertions on rendered HTML.
 type HTMLAsserter struct {
 	t    *testing.T
 	html string
 }
 
-// NewHTMLAsserter creates an asserter for HTML content
+// NewHTMLAsserter creates an asserter for HTML content.
 func NewHTMLAsserter(t *testing.T, html string) *HTMLAsserter {
 	return &HTMLAsserter{t: t, html: html}
 }
 
-// HasAttribute checks if an element with selector has the given attribute value
+// HasAttribute checks if an element with selector has the given attribute value.
 func (a *HTMLAsserter) HasAttribute(elementPattern, attrName, expectedValue string) {
 	// Build regex to find element and extract attribute
 	// This is a simple implementation - for complex cases use goquery
@@ -87,53 +87,53 @@ func (a *HTMLAsserter) HasAttribute(elementPattern, attrName, expectedValue stri
 	assert.Equal(a.t, expectedValue, matches[1], "Attribute %s value mismatch", attrName)
 }
 
-// ContainsAttribute checks if any element has the attribute with value
+// ContainsAttribute checks if any element has the attribute with value.
 func (a *HTMLAsserter) ContainsAttribute(attrName, expectedValue string) bool {
 	pattern := regexp.MustCompile(attrName + `="` + regexp.QuoteMeta(expectedValue) + `"`)
 	return pattern.MatchString(a.html)
 }
 
-// HasHTMXPost checks for hx-post attribute with given URL
+// HasHTMXPost checks for hx-post attribute with given URL.
 func (a *HTMLAsserter) HasHTMXPost(url string) {
 	if !a.ContainsAttribute("hx-post", url) {
 		a.t.Errorf("Expected hx-post=\"%s\" not found in HTML", url)
 	}
 }
 
-// HasHTMXPut checks for hx-put attribute with given URL
+// HasHTMXPut checks for hx-put attribute with given URL.
 func (a *HTMLAsserter) HasHTMXPut(url string) {
 	if !a.ContainsAttribute("hx-put", url) {
 		a.t.Errorf("Expected hx-put=\"%s\" not found in HTML", url)
 	}
 }
 
-// HasNoHTMXPost checks that hx-post is NOT present
+// HasNoHTMXPost checks that hx-post is NOT present.
 func (a *HTMLAsserter) HasNoHTMXPost() {
 	if strings.Contains(a.html, "hx-post=") {
 		a.t.Error("Expected no hx-post attribute but found one")
 	}
 }
 
-// HasNoHTMXPut checks that hx-put is NOT present  
+// HasNoHTMXPut checks that hx-put is NOT present.
 func (a *HTMLAsserter) HasNoHTMXPut() {
 	if strings.Contains(a.html, "hx-put=") {
 		a.t.Error("Expected no hx-put attribute but found one")
 	}
 }
 
-// HasFormAction checks form action attribute
+// HasFormAction checks form action attribute.
 func (a *HTMLAsserter) HasFormAction(url string) {
 	if !a.ContainsAttribute("action", url) {
 		a.t.Errorf("Expected form action=\"%s\" not found", url)
 	}
 }
 
-// Contains checks if HTML contains a string
+// Contains checks if HTML contains a string.
 func (a *HTMLAsserter) Contains(expected string) {
 	assert.Contains(a.t, a.html, expected)
 }
 
-// NotContains checks if HTML does not contain a string
+// NotContains checks if HTML does not contain a string.
 func (a *HTMLAsserter) NotContains(unexpected string) {
 	assert.NotContains(a.t, a.html, unexpected)
 }

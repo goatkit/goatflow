@@ -6,21 +6,20 @@ import (
 	"time"
 )
 
-// DateConfig holds configuration for date-based generator
+// DateConfig holds configuration for date-based generator.
 type DateConfig struct {
 	IncludeHour   bool
 	CounterDigits int
 	ResetDaily    bool
 }
 
-// DateGenerator generates ticket numbers in OTRS Date format
-// Format: YYYYMMDDHH + counter (e.g., 2025082814000001)
+// Format: YYYYMMDDHH + counter (e.g., 2025082814000001).
 type DateGenerator struct {
 	db     *sql.DB
 	config DateConfig
 }
 
-// NewDateGenerator creates a new date-based generator
+// NewDateGenerator creates a new date-based generator.
 func NewDateGenerator(db *sql.DB, config DateConfig) *DateGenerator {
 	// Set defaults
 	if config.CounterDigits == 0 {
@@ -33,7 +32,7 @@ func NewDateGenerator(db *sql.DB, config DateConfig) *DateGenerator {
 	}
 }
 
-// Generate creates a new ticket number
+// Generate creates a new ticket number.
 func (g *DateGenerator) Generate() (string, error) {
 	now := time.Now()
 
@@ -66,7 +65,7 @@ func (g *DateGenerator) Generate() (string, error) {
 	return ticketNumber, nil
 }
 
-// Reset resets the counter (happens automatically with daily counter UIDs)
+// Reset resets the counter (happens automatically with daily counter UIDs).
 func (g *DateGenerator) Reset() error {
 	// For date-based generators with daily reset,
 	// we use a new counter_uid each day, so no explicit reset needed
@@ -79,7 +78,7 @@ func (g *DateGenerator) Reset() error {
 	return resetCounter(g.db, counterUID, 0)
 }
 
-// getCounterUID returns the counter UID for this generator
+// getCounterUID returns the counter UID for this generator.
 func (g *DateGenerator) getCounterUID(t time.Time) string {
 	if g.config.ResetDaily {
 		// Include date in UID for daily reset

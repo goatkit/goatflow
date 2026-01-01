@@ -1,9 +1,11 @@
+// Package main provides route manifest generation.
 package main
 
 import (
-	"github.com/gotrs-io/gotrs-ce/internal/api"
 	"log"
 	"os"
+
+	"github.com/gotrs-io/gotrs-ce/internal/api"
 )
 
 func main() {

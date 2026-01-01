@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
@@ -107,8 +108,8 @@ func ensureCoreHandlers() {
 		"HandleMailAccountPollStatus": HandleMailAccountPollStatus,
 
 		// Static and basic routes
-		"handleStaticFiles":       HandleStaticFiles,
-		"handleLogout":            handleLogout,
+		"handleStaticFiles": HandleStaticFiles,
+		"handleLogout":      handleLogout,
 		"handleCustomerLogout": func(c *gin.Context) {
 			// clear all auth cookies and redirect to customer login
 			// Clear for root path
@@ -265,38 +266,38 @@ func ensureCoreHandlers() {
 		"handleAdminRoleUserRemove":        handleAdminRoleUserRemove,
 		"handleAdminRolePermissions":       handleAdminRolePermissions,
 		"handleAdminRolePermissionsUpdate": handleAdminRolePermissionsUpdate,
-		"handleAdminEmailQueue":         handleAdminEmailQueue,
-		"handleAdminEmailQueueRetry":    handleAdminEmailQueueRetry,
-		"handleAdminEmailQueueDelete":   handleAdminEmailQueueDelete,
-		"handleAdminEmailQueueRetryAll": handleAdminEmailQueueRetryAll,
-		"handleAdminDynamicIndex":       handleAdminDynamicIndex,
-		"handleAdminDynamicModule":      handleAdminDynamicModule,
+		"handleAdminEmailQueue":            handleAdminEmailQueue,
+		"handleAdminEmailQueueRetry":       handleAdminEmailQueueRetry,
+		"handleAdminEmailQueueDelete":      handleAdminEmailQueueDelete,
+		"handleAdminEmailQueueRetryAll":    handleAdminEmailQueueRetryAll,
+		"handleAdminDynamicIndex":          handleAdminDynamicIndex,
+		"handleAdminDynamicModule":         handleAdminDynamicModule,
 		// Dynamic Fields management handlers
-		"handleAdminDynamicFields":                handleAdminDynamicFields,
-		"handleAdminDynamicFieldNew":              handleAdminDynamicFieldNew,
-		"handleAdminDynamicFieldEdit":             handleAdminDynamicFieldEdit,
-		"handleAdminDynamicFieldScreenConfig":     handleAdminDynamicFieldScreenConfig,
-		"handleCreateDynamicField":                handleCreateDynamicField,
-		"handleUpdateDynamicField":                handleUpdateDynamicField,
-		"handleDeleteDynamicField":                handleDeleteDynamicField,
-		"handleAdminDynamicFieldScreenConfigSave": handleAdminDynamicFieldScreenConfigSave,
+		"handleAdminDynamicFields":                  handleAdminDynamicFields,
+		"handleAdminDynamicFieldNew":                handleAdminDynamicFieldNew,
+		"handleAdminDynamicFieldEdit":               handleAdminDynamicFieldEdit,
+		"handleAdminDynamicFieldScreenConfig":       handleAdminDynamicFieldScreenConfig,
+		"handleCreateDynamicField":                  handleCreateDynamicField,
+		"handleUpdateDynamicField":                  handleUpdateDynamicField,
+		"handleDeleteDynamicField":                  handleDeleteDynamicField,
+		"handleAdminDynamicFieldScreenConfigSave":   handleAdminDynamicFieldScreenConfigSave,
 		"handleAdminDynamicFieldScreenConfigSingle": handleAdminDynamicFieldScreenConfigSingle,
-		"handleAdminStates":             handleAdminStates,
-		"handleAdminTypes":              handleAdminTypes,
-		"handleAdminServices":           handleAdminServices,
-		"handleAdminServiceCreate":      handleAdminServiceCreate,
-		"handleAdminServiceUpdate":      handleAdminServiceUpdate,
-		"handleAdminServiceDelete":      handleAdminServiceDelete,
-		"handleAdminSLA":                handleAdminSLA,
-		"handleAdminSLACreate":          handleAdminSLACreate,
-		"handleAdminSLAUpdate":          handleAdminSLAUpdate,
-		"handleAdminSLADelete":          handleAdminSLADelete,
-		"handleAdminLookups":            handleAdminLookups,
-		"dashboard_stats":               handleDashboardStats,
-		"dashboard_recent_tickets":      handleRecentTickets,
-		"dashboard_activity":            handleActivity,
-		"dashboard_activity_stream":     handleActivityStream,
-		"dashboard_queue_status":        dashboard_queue_status,
+		"handleAdminStates":                         handleAdminStates,
+		"handleAdminTypes":                          handleAdminTypes,
+		"handleAdminServices":                       handleAdminServices,
+		"handleAdminServiceCreate":                  handleAdminServiceCreate,
+		"handleAdminServiceUpdate":                  handleAdminServiceUpdate,
+		"handleAdminServiceDelete":                  handleAdminServiceDelete,
+		"handleAdminSLA":                            handleAdminSLA,
+		"handleAdminSLACreate":                      handleAdminSLACreate,
+		"handleAdminSLAUpdate":                      handleAdminSLAUpdate,
+		"handleAdminSLADelete":                      handleAdminSLADelete,
+		"handleAdminLookups":                        handleAdminLookups,
+		"dashboard_stats":                           handleDashboardStats,
+		"dashboard_recent_tickets":                  handleRecentTickets,
+		"dashboard_activity":                        handleActivity,
+		"dashboard_activity_stream":                 handleActivityStream,
+		"dashboard_queue_status":                    dashboard_queue_status,
 
 		// Customer company handlers - full implementations
 		"handleAdminCustomerCompanies": HandleAdminCustomerCompanies,
@@ -442,12 +443,12 @@ func ensureCoreHandlers() {
 		},
 		"handleAgentSearch": AgentHandlerExports.HandleAgentSearch,
 		// Ticket action APIs (YAML routes)
-		"handleAddTicketTime":         handleAddTicketTime,
-		"handleUpdateTicketStatus":    handleUpdateTicketStatus,
-		"handleTicketReply":           handleTicketReply,
-		"handleUpdateTicketPriority":  handleUpdateTicketPriority,
-		"handleUpdateTicketQueue":     handleUpdateTicketQueue,
-		"HandleAPIQueueGet":           HandleAPIQueueGet,
+		"handleAddTicketTime":        handleAddTicketTime,
+		"handleUpdateTicketStatus":   handleUpdateTicketStatus,
+		"handleTicketReply":          handleTicketReply,
+		"handleUpdateTicketPriority": handleUpdateTicketPriority,
+		"handleUpdateTicketQueue":    handleUpdateTicketQueue,
+		"HandleAPIQueueGet":          HandleAPIQueueGet,
 		"HandleAPIQueueDetails":      HandleAPIQueueDetails,
 		"HandleAPIQueueStatus":       HandleAPIQueueStatus,
 		"HandleLoginAPI":             HandleLoginAPI,
@@ -521,17 +522,17 @@ func ensureCoreHandlers() {
 		"handleGetMergeHistory":      handleGetMergeHistory,
 
 		// Dashboard API handlers (migrated from protectedAPI routes)
-		"handleDashboardStats":  handleDashboardStats,
-		"handleRecentTickets":   handleRecentTickets,
-		"handleNotifications":   handleNotifications,
-		"handleQuickActions":    handleQuickActions,
-		"handleActivity":        handleActivity,
-		"handleActivityStream":  handleActivityStream,
-		"handlePerformance":     handlePerformance,
+		"handleDashboardStats": handleDashboardStats,
+		"handleRecentTickets":  handleRecentTickets,
+		"handleNotifications":  handleNotifications,
+		"handleQuickActions":   handleQuickActions,
+		"handleActivity":       handleActivity,
+		"handleActivityStream": handleActivityStream,
+		"handlePerformance":    handlePerformance,
 
 		// Queue API handlers (migrated from protectedAPI routes)
-		"handleGetQueuesAPI":        handleGetQueuesAPI,
-		"handleCreateQueueWrapper":  handleCreateQueueWrapper,
+		"handleGetQueuesAPI":       handleGetQueuesAPI,
+		"handleCreateQueueWrapper": handleCreateQueueWrapper,
 
 		// Group API handlers (migrated from protectedAPI routes)
 		"handleGetGroups":       handleGetGroups,
@@ -615,7 +616,7 @@ func dynamicModuleHandlerMap() map[string]gin.HandlerFunc {
 	return out
 }
 
-// init automatically registers all handlers when the package is imported
+// init automatically registers all handlers when the package is imported.
 func init() {
 	log.Printf("🔧 Initializing handler registry...")
 	ensureCoreHandlers()

@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -15,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestGroupAssignmentRobustnessFixes tests the improved group assignment workflow
+// TestGroupAssignmentRobustnessFixes tests the improved group assignment workflow.
 func TestGroupAssignmentRobustnessFixes(t *testing.T) {
 	t.Run("Verify HandleAdminUserGet returns groups correctly", func(t *testing.T) {
 		// This test ensures that when we fetch a user, the groups are properly formatted

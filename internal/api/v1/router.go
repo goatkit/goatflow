@@ -4,19 +4,20 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/ldap"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
 
-// APIRouter manages all v1 API routes
+// APIRouter manages all v1 API routes.
 type APIRouter struct {
 	rbac         *auth.RBAC
 	jwtManager   *auth.JWTManager
 	ldapHandlers *ldap.LDAPHandlers
 }
 
-// NewAPIRouter creates a new API router instance
+// NewAPIRouter creates a new API router instance.
 func NewAPIRouter(rbac *auth.RBAC, jwtManager *auth.JWTManager, ldapHandlers *ldap.LDAPHandlers) *APIRouter {
 	return &APIRouter{
 		rbac:         rbac,
@@ -25,7 +26,7 @@ func NewAPIRouter(rbac *auth.RBAC, jwtManager *auth.JWTManager, ldapHandlers *ld
 	}
 }
 
-// SetupV1Routes configures all v1 API routes
+// SetupV1Routes configures all v1 API routes.
 func (router *APIRouter) SetupV1Routes(r *gin.Engine) {
 	log.Println("SetupV1Routes called")
 	v1 := r.Group("/api/v1")
@@ -84,7 +85,7 @@ func (router *APIRouter) SetupV1Routes(r *gin.Engine) {
 	router.setupAgentRoutes(agentRoutes)
 }
 
-// setupPublicRoutes configures public API endpoints
+// setupPublicRoutes configures public API endpoints.
 func (router *APIRouter) setupPublicRoutes(v1 *gin.RouterGroup) {
 	// Health check
 	v1.GET("/health", router.handleHealth)
@@ -98,7 +99,7 @@ func (router *APIRouter) setupPublicRoutes(v1 *gin.RouterGroup) {
 	// (legacy placeholder removed; using unified /auth/login above)
 }
 
-// setupUserRoutes configures user-related endpoints
+// setupUserRoutes configures user-related endpoints.
 func (router *APIRouter) setupUserRoutes(protected *gin.RouterGroup) {
 	users := protected.Group("/users")
 	{
@@ -112,7 +113,7 @@ func (router *APIRouter) setupUserRoutes(protected *gin.RouterGroup) {
 	}
 }
 
-// setupTicketRoutes configures ticket-related endpoints
+// setupTicketRoutes configures ticket-related endpoints.
 func (router *APIRouter) setupTicketRoutes(protected *gin.RouterGroup) {
 	tickets := protected.Group("/tickets")
 
@@ -192,7 +193,7 @@ func (router *APIRouter) setupTicketRoutes(protected *gin.RouterGroup) {
 	tickets.POST("/bulk/queue", middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate), router.handleBulkMoveQueue)
 }
 
-// setupQueueRoutes configures queue-related endpoints
+// setupQueueRoutes configures queue-related endpoints.
 func (router *APIRouter) setupQueueRoutes(protected *gin.RouterGroup) {
 	queues := protected.Group("/queues")
 	queues.Use(middleware.RequireAgentAccess(router.rbac))
@@ -209,7 +210,7 @@ func (router *APIRouter) setupQueueRoutes(protected *gin.RouterGroup) {
 	}
 }
 
-// setupPriorityRoutes configures priority-related endpoints
+// setupPriorityRoutes configures priority-related endpoints.
 func (router *APIRouter) setupPriorityRoutes(protected *gin.RouterGroup) {
 	priorities := protected.Group("/priorities")
 	{
@@ -221,7 +222,7 @@ func (router *APIRouter) setupPriorityRoutes(protected *gin.RouterGroup) {
 	}
 }
 
-// setupSearchRoutes configures search endpoints
+// setupSearchRoutes configures search endpoints.
 func (router *APIRouter) setupSearchRoutes(protected *gin.RouterGroup) {
 	search := protected.Group("/search")
 	{
@@ -240,7 +241,7 @@ func (router *APIRouter) setupSearchRoutes(protected *gin.RouterGroup) {
 	}
 }
 
-// setupFileRoutes configures file/attachment endpoints
+// setupFileRoutes configures file/attachment endpoints.
 func (router *APIRouter) setupFileRoutes(protected *gin.RouterGroup) {
 	files := protected.Group("/files")
 	{
@@ -251,7 +252,7 @@ func (router *APIRouter) setupFileRoutes(protected *gin.RouterGroup) {
 	}
 }
 
-// setupDashboardRoutes configures dashboard endpoints
+// setupDashboardRoutes configures dashboard endpoints.
 func (router *APIRouter) setupDashboardRoutes(protected *gin.RouterGroup) {
 	dashboard := protected.Group("/dashboard")
 	{
@@ -266,7 +267,7 @@ func (router *APIRouter) setupDashboardRoutes(protected *gin.RouterGroup) {
 	}
 }
 
-// setupAdminRoutes configures admin-only endpoints
+// setupAdminRoutes configures admin-only endpoints.
 func (router *APIRouter) setupAdminRoutes(adminRoutes *gin.RouterGroup) {
 	admin := adminRoutes.Group("/admin")
 	{
@@ -323,7 +324,7 @@ func (router *APIRouter) setupAdminRoutes(adminRoutes *gin.RouterGroup) {
 	}
 }
 
-// setupAgentRoutes configures agent-level endpoints
+// setupAgentRoutes configures agent-level endpoints.
 func (router *APIRouter) setupAgentRoutes(agentRoutes *gin.RouterGroup) {
 	agent := agentRoutes.Group("/agent")
 	{
@@ -358,7 +359,7 @@ func (router *APIRouter) setupAgentRoutes(agentRoutes *gin.RouterGroup) {
 	}
 }
 
-// Response helper structures
+// Response helper structures.
 type APIResponse struct {
 	Success bool        `json:"success"`
 	Data    interface{} `json:"data,omitempty"`
@@ -382,7 +383,7 @@ type Pagination struct {
 	HasPrev    bool `json:"has_prev"`
 }
 
-// SetupTicketArticleRoutes registers only ticket article routes (not in YAML)
+// SetupTicketArticleRoutes registers only ticket article routes (not in YAML).
 func (router *APIRouter) SetupTicketArticleRoutes(r *gin.Engine) {
 	log.Println("SetupTicketArticleRoutes called")
 	v1 := r.Group("/api/v1")
@@ -394,7 +395,7 @@ func (router *APIRouter) SetupTicketArticleRoutes(r *gin.Engine) {
 	tickets.GET("/:id/articles/:article_id", router.handleGetTicketArticle)
 }
 
-// Helper functions
+// Helper functions.
 func sendSuccess(c *gin.Context, data interface{}) {
 	c.JSON(200, APIResponse{
 		Success: true,

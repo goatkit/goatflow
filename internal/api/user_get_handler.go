@@ -6,10 +6,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleGetUserAPI handles GET /api/v1/users/:id
+// HandleGetUserAPI handles GET /api/v1/users/:id.
 func HandleGetUserAPI(c *gin.Context) {
 	// Check authentication
 	_, exists := c.Get("user_id")
@@ -134,7 +135,7 @@ func HandleGetUserAPI(c *gin.Context) {
 
 	rows, err := db.Query(groupQuery, userID)
 	if err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		groups := []map[string]interface{}{}
 		for rows.Next() {

@@ -1,3 +1,4 @@
+// Package main provides configuration management utilities.
 package main
 
 import (
@@ -7,10 +8,11 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"gopkg.in/yaml.v3"
+
+	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 )
 
 func main() {

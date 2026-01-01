@@ -14,7 +14,7 @@ import (
 
 // Use keys defined in storage_service.go (same package)
 
-// DatabaseStorageService implements StorageService by storing attachment bytes in the DB
+// DatabaseStorageService implements StorageService by storing attachment bytes in the DB.
 type DatabaseStorageService struct {
 	db *sql.DB
 }
@@ -27,7 +27,7 @@ func NewDatabaseStorageService() (*DatabaseStorageService, error) {
 	return &DatabaseStorageService{db: db}, nil
 }
 
-// Store reads the file and inserts into article_data_mime_attachment for the article_id found in ctx
+// Store reads the file and inserts into article_data_mime_attachment for the article_id found in ctx.
 func (s *DatabaseStorageService) Store(ctx context.Context, file multipart.File, header *multipart.FileHeader, _ string) (*FileMetadata, error) {
 	v := ctx.Value(CtxKeyArticleID)
 	articleID, ok := v.(int)

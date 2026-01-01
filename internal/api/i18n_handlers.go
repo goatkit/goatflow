@@ -6,29 +6,24 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
 
-// I18nHandlers handles internationalization-related requests
+// I18nHandlers handles internationalization-related requests.
 type I18nHandlers struct {
 	i18n *i18n.I18n
 }
 
-// NewI18nHandlers creates new i18n handlers
+// NewI18nHandlers creates new i18n handlers.
 func NewI18nHandlers() *I18nHandlers {
 	return &I18nHandlers{
 		i18n: i18n.GetInstance(),
 	}
 }
 
-// GetSupportedLanguages returns the list of supported languages
-// @Summary Get supported languages
-// @Description Get list of all supported languages
-// @Tags I18n
-// @Produce json
-// @Success 200 {object} LanguagesResponse
-// @Router /api/v1/i18n/languages [get]
+// @Router /api/v1/i18n/languages [get].
 func (h *I18nHandlers) GetSupportedLanguages(c *gin.Context) {
 	languages := h.i18n.GetSupportedLanguages()
 	currentLang := middleware.GetLanguage(c)
@@ -52,16 +47,7 @@ func (h *I18nHandlers) GetSupportedLanguages(c *gin.Context) {
 	})
 }
 
-// SetLanguage sets the user's preferred language
-// @Summary Set user language
-// @Description Set the preferred language for the user
-// @Tags I18n
-// @Accept json
-// @Produce json
-// @Param request body SetLanguageRequest true "Language selection"
-// @Success 200 {object} SuccessResponse
-// @Failure 400 {object} ErrorResponse
-// @Router /api/v1/i18n/language [post]
+// @Router /api/v1/i18n/language [post].
 func (h *I18nHandlers) SetLanguage(c *gin.Context) {
 	var req SetLanguageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -104,15 +90,7 @@ func (h *I18nHandlers) SetLanguage(c *gin.Context) {
 	})
 }
 
-// GetTranslations returns translations for a specific language
-// @Summary Get translations
-// @Description Get all translations for a specific language
-// @Tags I18n
-// @Produce json
-// @Param lang path string true "Language code"
-// @Success 200 {object} TranslationsResponse
-// @Failure 404 {object} ErrorResponse
-// @Router /api/v1/i18n/translations/{lang} [get]
+// @Router /api/v1/i18n/translations/{lang} [get].
 func (h *I18nHandlers) GetTranslations(c *gin.Context) {
 	lang := c.Param("lang")
 
@@ -141,13 +119,7 @@ func (h *I18nHandlers) GetTranslations(c *gin.Context) {
 	})
 }
 
-// GetCurrentTranslations returns translations for the current language
-// @Summary Get current translations
-// @Description Get all translations for the current user's language
-// @Tags I18n
-// @Produce json
-// @Success 200 {object} TranslationsResponse
-// @Router /api/v1/i18n/translations [get]
+// @Router /api/v1/i18n/translations [get].
 func (h *I18nHandlers) GetCurrentTranslations(c *gin.Context) {
 	lang := middleware.GetLanguage(c)
 	translations := h.i18n.GetTranslations(lang)
@@ -158,15 +130,7 @@ func (h *I18nHandlers) GetCurrentTranslations(c *gin.Context) {
 	})
 }
 
-// Translate translates a specific key
-// @Summary Translate key
-// @Description Translate a specific key to the current language
-// @Tags I18n
-// @Accept json
-// @Produce json
-// @Param request body TranslateRequest true "Translation request"
-// @Success 200 {object} TranslateResponse
-// @Router /api/v1/i18n/translate [post]
+// @Router /api/v1/i18n/translate [post].
 func (h *I18nHandlers) Translate(c *gin.Context) {
 	var req TranslateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -194,13 +158,7 @@ func (h *I18nHandlers) Translate(c *gin.Context) {
 	})
 }
 
-// GetLanguageStats returns language usage statistics
-// @Summary Get language statistics
-// @Description Get usage statistics for all languages
-// @Tags I18n
-// @Produce json
-// @Success 200 {object} LanguageStatsResponse
-// @Router /api/v1/i18n/stats [get]
+// @Router /api/v1/i18n/stats [get].
 func (h *I18nHandlers) GetLanguageStats(c *gin.Context) {
 	// In a real implementation, this would fetch from database
 	stats := LanguageStatsResponse{
@@ -220,13 +178,7 @@ func (h *I18nHandlers) GetLanguageStats(c *gin.Context) {
 	c.JSON(http.StatusOK, stats)
 }
 
-// GetTranslationCoverage returns translation coverage statistics
-// @Summary Get translation coverage
-// @Description Get translation coverage statistics for all languages
-// @Tags I18n
-// @Produce json
-// @Success 200 {object} CoverageResponse
-// @Router /api/v1/i18n/coverage [get]
+// @Router /api/v1/i18n/coverage [get].
 func (h *I18nHandlers) GetTranslationCoverage(c *gin.Context) {
 	baseKeys := h.i18n.GetAllKeys("en")
 	totalKeys := len(baseKeys)
@@ -261,15 +213,7 @@ func (h *I18nHandlers) GetTranslationCoverage(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// GetMissingTranslations returns missing translation keys for a language
-// @Summary Get missing translations
-// @Description Get list of missing translation keys for a specific language
-// @Tags I18n
-// @Produce json
-// @Param lang path string true "Language code"
-// @Success 200 {object} MissingKeysResponse
-// @Failure 404 {object} ErrorResponse
-// @Router /api/v1/i18n/missing/{lang} [get]
+// @Router /api/v1/i18n/missing/{lang} [get].
 func (h *I18nHandlers) GetMissingTranslations(c *gin.Context) {
 	lang := c.Param("lang")
 
@@ -327,17 +271,7 @@ func (h *I18nHandlers) GetMissingTranslations(c *gin.Context) {
 	})
 }
 
-// ExportTranslations exports translations in various formats
-// @Summary Export translations
-// @Description Export translations for a language in JSON or CSV format
-// @Tags I18n
-// @Produce json,text/csv
-// @Param lang path string true "Language code"
-// @Param format query string false "Export format (json or csv)" default(json)
-// @Success 200 {object} map[string]interface{} "JSON translations"
-// @Success 200 {string} string "CSV translations"
-// @Failure 404 {object} ErrorResponse
-// @Router /api/v1/i18n/export/{lang} [get]
+// @Router /api/v1/i18n/export/{lang} [get].
 func (h *I18nHandlers) ExportTranslations(c *gin.Context) {
 	lang := c.Param("lang")
 	format := c.DefaultQuery("format", "json")
@@ -382,7 +316,7 @@ func (h *I18nHandlers) ExportTranslations(c *gin.Context) {
 	}
 }
 
-// flattenTranslations flattens nested translations for CSV export
+// flattenTranslations flattens nested translations for CSV export.
 func (h *I18nHandlers) flattenTranslations(m map[string]interface{}, prefix string, writer *strings.Builder) {
 	for key, value := range m {
 		fullKey := key
@@ -400,15 +334,7 @@ func (h *I18nHandlers) flattenTranslations(m map[string]interface{}, prefix stri
 	}
 }
 
-// ValidateTranslations validates translations for completeness and correctness
-// @Summary Validate translations
-// @Description Validate translations for a language
-// @Tags I18n
-// @Produce json
-// @Param lang path string true "Language code"
-// @Success 200 {object} ValidationResponse
-// @Failure 404 {object} ErrorResponse
-// @Router /api/v1/i18n/validate/{lang} [get]
+// @Router /api/v1/i18n/validate/{lang} [get].
 func (h *I18nHandlers) ValidateTranslations(c *gin.Context) {
 	lang := c.Param("lang")
 
@@ -538,7 +464,7 @@ func (h *I18nHandlers) getLanguageNativeName(code string) string {
 
 // Request and response types
 
-// LanguageInfo represents information about a language
+// LanguageInfo represents information about a language.
 type LanguageInfo struct {
 	Code       string `json:"code"`
 	Name       string `json:"name"`
@@ -546,53 +472,53 @@ type LanguageInfo struct {
 	Active     bool   `json:"active"`
 }
 
-// LanguagesResponse represents the response for supported languages
+// LanguagesResponse represents the response for supported languages.
 type LanguagesResponse struct {
 	Languages []LanguageInfo `json:"languages"`
 	Current   string         `json:"current"`
 	Default   string         `json:"default"`
 }
 
-// SetLanguageRequest represents a request to set language
+// SetLanguageRequest represents a request to set language.
 type SetLanguageRequest struct {
 	Language string `json:"language" binding:"required"`
 }
 
-// TranslationsResponse represents the response for translations
+// TranslationsResponse represents the response for translations.
 type TranslationsResponse struct {
 	Language     string                 `json:"language"`
 	Translations map[string]interface{} `json:"translations"`
 }
 
-// TranslateRequest represents a request to translate a key
+// TranslateRequest represents a request to translate a key.
 type TranslateRequest struct {
 	Key      string        `json:"key" binding:"required"`
 	Language string        `json:"language"`
 	Args     []interface{} `json:"args"`
 }
 
-// TranslateResponse represents the response for translation
+// TranslateResponse represents the response for translation.
 type TranslateResponse struct {
 	Key         string `json:"key"`
 	Translation string `json:"translation"`
 	Language    string `json:"language"`
 }
 
-// LanguageStats represents language usage statistics
+// LanguageStats represents language usage statistics.
 type LanguageStats struct {
 	Code       string  `json:"code"`
 	Users      int     `json:"users"`
 	Percentage float64 `json:"percentage"`
 }
 
-// LanguageStatsResponse represents language statistics response
+// LanguageStatsResponse represents language statistics response.
 type LanguageStatsResponse struct {
 	TotalUsers      int             `json:"total_users"`
 	Languages       []LanguageStats `json:"languages"`
 	DefaultLanguage string          `json:"default_language"`
 }
 
-// LanguageCoverage represents coverage data for a language
+// LanguageCoverage represents coverage data for a language.
 type LanguageCoverage struct {
 	Code           string  `json:"code"`
 	Name           string  `json:"name"`
@@ -602,7 +528,7 @@ type LanguageCoverage struct {
 	Coverage       float64 `json:"coverage"`
 }
 
-// CoverageResponse represents the coverage statistics response
+// CoverageResponse represents the coverage statistics response.
 type CoverageResponse struct {
 	Languages []LanguageCoverage `json:"languages"`
 	Summary   struct {
@@ -611,21 +537,21 @@ type CoverageResponse struct {
 	} `json:"summary"`
 }
 
-// MissingKey represents a missing translation key
+// MissingKey represents a missing translation key.
 type MissingKey struct {
 	Key          string `json:"key"`
 	EnglishValue string `json:"english_value"`
 	Category     string `json:"category"`
 }
 
-// MissingKeysResponse represents missing keys response
+// MissingKeysResponse represents missing keys response.
 type MissingKeysResponse struct {
 	Language    string       `json:"language"`
 	MissingKeys []MissingKey `json:"missing_keys"`
 	Count       int          `json:"count"`
 }
 
-// ValidationResponse represents translation validation response
+// ValidationResponse represents translation validation response.
 type ValidationResponse struct {
 	Language   string   `json:"language"`
 	IsValid    bool     `json:"is_valid"`
@@ -635,7 +561,7 @@ type ValidationResponse struct {
 	Warnings   []string `json:"warnings"`
 }
 
-// RegisterRoutes registers i18n routes
+// RegisterRoutes registers i18n routes.
 func (h *I18nHandlers) RegisterRoutes(router *gin.RouterGroup) {
 	i18n := router.Group("/i18n")
 	{

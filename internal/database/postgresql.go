@@ -10,20 +10,20 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// PostgreSQLDatabase implements IDatabase for PostgreSQL
+// PostgreSQLDatabase implements IDatabase for PostgreSQL.
 type PostgreSQLDatabase struct {
 	config DatabaseConfig
 	db     *sql.DB
 }
 
-// NewPostgreSQLDatabase creates a new PostgreSQL database instance
+// NewPostgreSQLDatabase creates a new PostgreSQL database instance.
 func NewPostgreSQLDatabase(config DatabaseConfig) *PostgreSQLDatabase {
 	return &PostgreSQLDatabase{
 		config: config,
 	}
 }
 
-// Connect establishes connection to PostgreSQL database
+// Connect establishes connection to PostgreSQL database.
 func (p *PostgreSQLDatabase) Connect() error {
 	dsn := p.buildDSN()
 
@@ -50,7 +50,7 @@ func (p *PostgreSQLDatabase) Connect() error {
 	return p.Ping()
 }
 
-// Close closes the database connection
+// Close closes the database connection.
 func (p *PostgreSQLDatabase) Close() error {
 	if p.db != nil {
 		return p.db.Close()
@@ -58,7 +58,7 @@ func (p *PostgreSQLDatabase) Close() error {
 	return nil
 }
 
-// Ping tests the database connection
+// Ping tests the database connection.
 func (p *PostgreSQLDatabase) Ping() error {
 	if p.db == nil {
 		return fmt.Errorf("database connection not established")
@@ -66,32 +66,32 @@ func (p *PostgreSQLDatabase) Ping() error {
 	return p.db.Ping()
 }
 
-// GetType returns the database type
+// GetType returns the database type.
 func (p *PostgreSQLDatabase) GetType() DatabaseType {
 	return PostgreSQL
 }
 
-// GetConfig returns the database configuration
+// GetConfig returns the database configuration.
 func (p *PostgreSQLDatabase) GetConfig() DatabaseConfig {
 	return p.config
 }
 
-// Query executes a query and returns rows
+// Query executes a query and returns rows.
 func (p *PostgreSQLDatabase) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	return p.db.QueryContext(ctx, query, args...)
 }
 
-// QueryRow executes a query and returns a single row
+// QueryRow executes a query and returns a single row.
 func (p *PostgreSQLDatabase) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	return p.db.QueryRowContext(ctx, query, args...)
 }
 
-// Exec executes a query and returns the result
+// Exec executes a query and returns the result.
 func (p *PostgreSQLDatabase) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	return p.db.ExecContext(ctx, query, args...)
 }
 
-// Begin starts a transaction
+// Begin starts a transaction.
 func (p *PostgreSQLDatabase) Begin(ctx context.Context) (ITransaction, error) {
 	tx, err := p.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -100,7 +100,7 @@ func (p *PostgreSQLDatabase) Begin(ctx context.Context) (ITransaction, error) {
 	return &PostgreSQLTransaction{tx: tx}, nil
 }
 
-// BeginTx starts a transaction with options
+// BeginTx starts a transaction with options.
 func (p *PostgreSQLDatabase) BeginTx(ctx context.Context, opts *sql.TxOptions) (ITransaction, error) {
 	tx, err := p.db.BeginTx(ctx, opts)
 	if err != nil {
@@ -109,7 +109,7 @@ func (p *PostgreSQLDatabase) BeginTx(ctx context.Context, opts *sql.TxOptions) (
 	return &PostgreSQLTransaction{tx: tx}, nil
 }
 
-// TableExists checks if a table exists
+// TableExists checks if a table exists.
 func (p *PostgreSQLDatabase) TableExists(ctx context.Context, tableName string) (bool, error) {
 	query := `
 		SELECT EXISTS (
@@ -123,7 +123,7 @@ func (p *PostgreSQLDatabase) TableExists(ctx context.Context, tableName string) 
 	return exists, err
 }
 
-// GetTableColumns returns column information for a table
+// GetTableColumns returns column information for a table.
 func (p *PostgreSQLDatabase) GetTableColumns(ctx context.Context, tableName string) ([]ColumnInfo, error) {
 	query := `
 		SELECT 
@@ -187,21 +187,21 @@ func (p *PostgreSQLDatabase) GetTableColumns(ctx context.Context, tableName stri
 	return columns, rows.Err()
 }
 
-// CreateTable creates a table from definition
+// CreateTable creates a table from definition.
 func (p *PostgreSQLDatabase) CreateTable(ctx context.Context, definition *TableDefinition) error {
 	sql := p.buildCreateTableSQL(definition)
 	_, err := p.db.ExecContext(ctx, sql)
 	return err
 }
 
-// DropTable drops a table
+// DropTable drops a table.
 func (p *PostgreSQLDatabase) DropTable(ctx context.Context, tableName string) error {
 	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", p.Quote(tableName))
 	_, err := p.db.ExecContext(ctx, query)
 	return err
 }
 
-// CreateIndex creates an index
+// CreateIndex creates an index.
 func (p *PostgreSQLDatabase) CreateIndex(ctx context.Context, tableName, indexName string, columns []string, unique bool) error {
 	uniqueClause := ""
 	if unique {
@@ -223,19 +223,19 @@ func (p *PostgreSQLDatabase) CreateIndex(ctx context.Context, tableName, indexNa
 	return err
 }
 
-// DropIndex drops an index
+// DropIndex drops an index.
 func (p *PostgreSQLDatabase) DropIndex(ctx context.Context, tableName, indexName string) error {
 	query := fmt.Sprintf("DROP INDEX IF EXISTS %s", p.Quote(indexName))
 	_, err := p.db.ExecContext(ctx, query)
 	return err
 }
 
-// Quote quotes an identifier
+// Quote quotes an identifier.
 func (p *PostgreSQLDatabase) Quote(identifier string) string {
 	return fmt.Sprintf(`"%s"`, identifier)
 }
 
-// QuoteValue quotes a value
+// QuoteValue quotes a value.
 func (p *PostgreSQLDatabase) QuoteValue(value interface{}) string {
 	switch v := value.(type) {
 	case string:
@@ -247,7 +247,7 @@ func (p *PostgreSQLDatabase) QuoteValue(value interface{}) string {
 	}
 }
 
-// BuildInsert builds an INSERT statement
+// BuildInsert builds an INSERT statement.
 func (p *PostgreSQLDatabase) BuildInsert(tableName string, data map[string]interface{}) (string, []interface{}) {
 	columns := make([]string, 0, len(data))
 	placeholders := make([]string, 0, len(data))
@@ -269,7 +269,7 @@ func (p *PostgreSQLDatabase) BuildInsert(tableName string, data map[string]inter
 	return query, values
 }
 
-// BuildUpdate builds an UPDATE statement
+// BuildUpdate builds an UPDATE statement.
 func (p *PostgreSQLDatabase) BuildUpdate(tableName string, data map[string]interface{}, where string, whereArgs []interface{}) (string, []interface{}) {
 	setParts := make([]string, 0, len(data))
 	values := make([]interface{}, 0, len(data)+len(whereArgs))
@@ -292,7 +292,7 @@ func (p *PostgreSQLDatabase) BuildUpdate(tableName string, data map[string]inter
 	return query, values
 }
 
-// BuildSelect builds a SELECT statement
+// BuildSelect builds a SELECT statement.
 func (p *PostgreSQLDatabase) BuildSelect(tableName string, columns []string, where string, orderBy string, limit int) string {
 	quotedColumns := make([]string, len(columns))
 	for i, col := range columns {
@@ -318,7 +318,7 @@ func (p *PostgreSQLDatabase) BuildSelect(tableName string, columns []string, whe
 	return query
 }
 
-// GetLimitClause returns database-specific LIMIT clause
+// GetLimitClause returns database-specific LIMIT clause.
 func (p *PostgreSQLDatabase) GetLimitClause(limit, offset int) string {
 	if limit > 0 && offset > 0 {
 		return fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset)
@@ -330,27 +330,27 @@ func (p *PostgreSQLDatabase) GetLimitClause(limit, offset int) string {
 	return ""
 }
 
-// GetDateFunction returns current date function
+// GetDateFunction returns current date function.
 func (p *PostgreSQLDatabase) GetDateFunction() string {
 	return "NOW()"
 }
 
-// GetConcatFunction returns concatenation function
+// GetConcatFunction returns concatenation function.
 func (p *PostgreSQLDatabase) GetConcatFunction(fields []string) string {
 	return fmt.Sprintf("CONCAT(%s)", strings.Join(fields, ", "))
 }
 
-// SupportsReturning returns true if database supports RETURNING clause
+// SupportsReturning returns true if database supports RETURNING clause.
 func (p *PostgreSQLDatabase) SupportsReturning() bool {
 	return true
 }
 
-// Stats returns database connection statistics
+// Stats returns database connection statistics.
 func (p *PostgreSQLDatabase) Stats() sql.DBStats {
 	return p.db.Stats()
 }
 
-// IsHealthy checks if database is healthy
+// IsHealthy checks if database is healthy.
 func (p *PostgreSQLDatabase) IsHealthy() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -358,7 +358,7 @@ func (p *PostgreSQLDatabase) IsHealthy() bool {
 	return p.db.PingContext(ctx) == nil
 }
 
-// buildDSN builds the PostgreSQL connection string
+// buildDSN builds the PostgreSQL connection string.
 func (p *PostgreSQLDatabase) buildDSN() string {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		p.config.Host, p.config.Port, p.config.Username, p.config.Password, p.config.Database, p.config.SSLMode)
@@ -371,7 +371,7 @@ func (p *PostgreSQLDatabase) buildDSN() string {
 	return dsn
 }
 
-// buildCreateTableSQL builds CREATE TABLE SQL for PostgreSQL
+// buildCreateTableSQL builds CREATE TABLE SQL for PostgreSQL.
 func (p *PostgreSQLDatabase) buildCreateTableSQL(def *TableDefinition) string {
 	var parts []string
 
@@ -399,7 +399,7 @@ func (p *PostgreSQLDatabase) buildCreateTableSQL(def *TableDefinition) string {
 	return fmt.Sprintf("CREATE TABLE %s (\n  %s\n)", p.Quote(def.Name), strings.Join(parts, ",\n  "))
 }
 
-// buildColumnSQL builds column definition SQL
+// buildColumnSQL builds column definition SQL.
 func (p *PostgreSQLDatabase) buildColumnSQL(col ColumnDefinition) string {
 	var parts []string
 
@@ -429,7 +429,7 @@ func (p *PostgreSQLDatabase) buildColumnSQL(col ColumnDefinition) string {
 	return strings.Join(parts, " ")
 }
 
-// buildConstraintSQL builds constraint SQL
+// buildConstraintSQL builds constraint SQL.
 func (p *PostgreSQLDatabase) buildConstraintSQL(constraint ConstraintDefinition) string {
 	switch constraint.Type {
 	case "FOREIGN_KEY":
@@ -456,7 +456,7 @@ func (p *PostgreSQLDatabase) buildConstraintSQL(constraint ConstraintDefinition)
 	}
 }
 
-// PostgreSQLTransaction implements ITransaction for PostgreSQL
+// PostgreSQLTransaction implements ITransaction for PostgreSQL.
 type PostgreSQLTransaction struct {
 	tx *sql.Tx
 }

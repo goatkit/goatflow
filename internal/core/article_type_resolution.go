@@ -1,3 +1,4 @@
+// Package core provides core business logic for article type resolution.
 package core
 
 import (
@@ -33,11 +34,7 @@ var (
 	errDisallowedCombination = errors.New("disallowed article type + sender combination")
 )
 
-// DetermineArticleType maps an ArticleIntent to concrete article_type_id and visibility.
-// Precedence:
-// 1. ExplicitArticleTypeID (validated)
-// 2. Interaction mapping
-// 3. Fallback (internal note for agent/system, email-external for customer)
+// 3. Fallback (internal note for agent/system, email-external for customer).
 func DetermineArticleType(intent ArticleIntent) (ResolvedArticle, error) {
 	res := ResolvedArticle{ArticleSenderTypeID: intent.SenderTypeID}
 

@@ -4,10 +4,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleCreatePriorityAPI handles POST /api/v1/priorities
+// HandleCreatePriorityAPI handles POST /api/v1/priorities.
 func HandleCreatePriorityAPI(c *gin.Context) {
 	// Check authentication and admin permissions
 	userIDRaw, exists := c.Get("user_id")

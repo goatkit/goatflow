@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	// Import api package to trigger init() registrations
+	// Import api package to trigger init() registrations.
 	_ "github.com/gotrs-io/gotrs-ce/internal/api"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 
@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// RouteFile represents the structure of a YAML route file
+// RouteFile represents the structure of a YAML route file.
 type RouteFile struct {
 	Spec struct {
 		Routes []struct {
@@ -30,9 +30,9 @@ type RouteFile struct {
 // is registered in the global handler registry via init().
 //
 // When adding new handlers:
-// 1. Create the handler function in internal/api/
-// 2. Create an init() function that calls routing.RegisterHandler("handlerName", HandlerFunc)
-//    (see internal/api/admin_sla_init.go for example)
+//  1. Create the handler function in internal/api/
+//  2. Create an init() function that calls routing.RegisterHandler("handlerName", HandlerFunc)
+//     (see internal/api/admin_sla_init.go for example)
 func TestAllYAMLHandlersAreRegistered(t *testing.T) {
 	// Find routes directory
 	routesDir := findRoutesDir(t)

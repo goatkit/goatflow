@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
@@ -24,7 +25,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
-// HandleCreateTicketAPI handles ticket creation via API
+// HandleCreateTicketAPI handles ticket creation via API.
 func HandleCreateTicketAPI(c *gin.Context) {
 	// Require authentication
 	if _, exists := c.Get("user_id"); !exists {

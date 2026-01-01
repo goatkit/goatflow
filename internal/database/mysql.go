@@ -6,23 +6,23 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	// _ "github.com/go-sql-driver/mysql" // TODO: Add when implementing MySQL support
+	// _ "github.com/go-sql-driver/mysql" // TODO: Add when implementing MySQL support.
 )
 
-// MySQLDatabase implements IDatabase for MySQL/MariaDB
+// MySQLDatabase implements IDatabase for MySQL/MariaDB.
 type MySQLDatabase struct {
 	config DatabaseConfig
 	db     *sql.DB
 }
 
-// NewMySQLDatabase creates a new MySQL database instance
+// NewMySQLDatabase creates a new MySQL database instance.
 func NewMySQLDatabase(config DatabaseConfig) *MySQLDatabase {
 	return &MySQLDatabase{
 		config: config,
 	}
 }
 
-// Connect establishes connection to MySQL database
+// Connect establishes connection to MySQL database.
 func (m *MySQLDatabase) Connect() error {
 	dsn := m.buildDSN()
 
@@ -49,7 +49,7 @@ func (m *MySQLDatabase) Connect() error {
 	return m.Ping()
 }
 
-// Close closes the database connection
+// Close closes the database connection.
 func (m *MySQLDatabase) Close() error {
 	if m.db != nil {
 		return m.db.Close()
@@ -57,7 +57,7 @@ func (m *MySQLDatabase) Close() error {
 	return nil
 }
 
-// Ping tests the database connection
+// Ping tests the database connection.
 func (m *MySQLDatabase) Ping() error {
 	if m.db == nil {
 		return fmt.Errorf("database connection not established")
@@ -65,32 +65,32 @@ func (m *MySQLDatabase) Ping() error {
 	return m.db.Ping()
 }
 
-// GetType returns the database type
+// GetType returns the database type.
 func (m *MySQLDatabase) GetType() DatabaseType {
 	return MySQL
 }
 
-// GetConfig returns the database configuration
+// GetConfig returns the database configuration.
 func (m *MySQLDatabase) GetConfig() DatabaseConfig {
 	return m.config
 }
 
-// Query executes a query and returns rows
+// Query executes a query and returns rows.
 func (m *MySQLDatabase) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	return m.db.QueryContext(ctx, query, args...)
 }
 
-// QueryRow executes a query and returns a single row
+// QueryRow executes a query and returns a single row.
 func (m *MySQLDatabase) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	return m.db.QueryRowContext(ctx, query, args...)
 }
 
-// Exec executes a query and returns the result
+// Exec executes a query and returns the result.
 func (m *MySQLDatabase) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	return m.db.ExecContext(ctx, query, args...)
 }
 
-// Begin starts a transaction
+// Begin starts a transaction.
 func (m *MySQLDatabase) Begin(ctx context.Context) (ITransaction, error) {
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -99,7 +99,7 @@ func (m *MySQLDatabase) Begin(ctx context.Context) (ITransaction, error) {
 	return &MySQLTransaction{tx: tx}, nil
 }
 
-// BeginTx starts a transaction with options
+// BeginTx starts a transaction with options.
 func (m *MySQLDatabase) BeginTx(ctx context.Context, opts *sql.TxOptions) (ITransaction, error) {
 	tx, err := m.db.BeginTx(ctx, opts)
 	if err != nil {
@@ -108,7 +108,7 @@ func (m *MySQLDatabase) BeginTx(ctx context.Context, opts *sql.TxOptions) (ITran
 	return &MySQLTransaction{tx: tx}, nil
 }
 
-// TableExists checks if a table exists
+// TableExists checks if a table exists.
 func (m *MySQLDatabase) TableExists(ctx context.Context, tableName string) (bool, error) {
 	query := `
 		SELECT COUNT(*) > 0 
@@ -121,26 +121,26 @@ func (m *MySQLDatabase) TableExists(ctx context.Context, tableName string) (bool
 	return exists, err
 }
 
-// GetTableColumns returns column information for a table (stub implementation)
+// GetTableColumns returns column information for a table (stub implementation).
 func (m *MySQLDatabase) GetTableColumns(ctx context.Context, tableName string) ([]ColumnInfo, error) {
 	// TODO: Implement MySQL-specific column introspection
 	return []ColumnInfo{}, fmt.Errorf("GetTableColumns not yet implemented for MySQL")
 }
 
-// CreateTable creates a table from definition (stub implementation)
+// CreateTable creates a table from definition (stub implementation).
 func (m *MySQLDatabase) CreateTable(ctx context.Context, definition *TableDefinition) error {
 	// TODO: Implement MySQL-specific CREATE TABLE
 	return fmt.Errorf("CreateTable not yet implemented for MySQL")
 }
 
-// DropTable drops a table
+// DropTable drops a table.
 func (m *MySQLDatabase) DropTable(ctx context.Context, tableName string) error {
 	query := fmt.Sprintf("DROP TABLE IF EXISTS %s", m.Quote(tableName))
 	_, err := m.db.ExecContext(ctx, query)
 	return err
 }
 
-// CreateIndex creates an index
+// CreateIndex creates an index.
 func (m *MySQLDatabase) CreateIndex(ctx context.Context, tableName, indexName string, columns []string, unique bool) error {
 	uniqueClause := ""
 	if unique {
@@ -162,19 +162,19 @@ func (m *MySQLDatabase) CreateIndex(ctx context.Context, tableName, indexName st
 	return err
 }
 
-// DropIndex drops an index
+// DropIndex drops an index.
 func (m *MySQLDatabase) DropIndex(ctx context.Context, tableName, indexName string) error {
 	query := fmt.Sprintf("DROP INDEX %s ON %s", m.Quote(indexName), m.Quote(tableName))
 	_, err := m.db.ExecContext(ctx, query)
 	return err
 }
 
-// Quote quotes an identifier (MySQL uses backticks)
+// Quote quotes an identifier (MySQL uses backticks).
 func (m *MySQLDatabase) Quote(identifier string) string {
 	return fmt.Sprintf("`%s`", identifier)
 }
 
-// QuoteValue quotes a value
+// QuoteValue quotes a value.
 func (m *MySQLDatabase) QuoteValue(value interface{}) string {
 	switch v := value.(type) {
 	case string:
@@ -186,19 +186,19 @@ func (m *MySQLDatabase) QuoteValue(value interface{}) string {
 	}
 }
 
-// BuildInsert builds an INSERT statement (stub implementation)
+// BuildInsert builds an INSERT statement (stub implementation).
 func (m *MySQLDatabase) BuildInsert(tableName string, data map[string]interface{}) (string, []interface{}) {
 	// TODO: Implement MySQL-specific INSERT with ? placeholders
 	return "", nil
 }
 
-// BuildUpdate builds an UPDATE statement (stub implementation)
+// BuildUpdate builds an UPDATE statement (stub implementation).
 func (m *MySQLDatabase) BuildUpdate(tableName string, data map[string]interface{}, where string, whereArgs []interface{}) (string, []interface{}) {
 	// TODO: Implement MySQL-specific UPDATE with ? placeholders
 	return "", nil
 }
 
-// BuildSelect builds a SELECT statement
+// BuildSelect builds a SELECT statement.
 func (m *MySQLDatabase) BuildSelect(tableName string, columns []string, where string, orderBy string, limit int) string {
 	quotedColumns := make([]string, len(columns))
 	for i, col := range columns {
@@ -224,7 +224,7 @@ func (m *MySQLDatabase) BuildSelect(tableName string, columns []string, where st
 	return query
 }
 
-// GetLimitClause returns MySQL-specific LIMIT clause
+// GetLimitClause returns MySQL-specific LIMIT clause.
 func (m *MySQLDatabase) GetLimitClause(limit, offset int) string {
 	if limit > 0 && offset > 0 {
 		return fmt.Sprintf("LIMIT %d, %d", offset, limit)
@@ -234,27 +234,27 @@ func (m *MySQLDatabase) GetLimitClause(limit, offset int) string {
 	return ""
 }
 
-// GetDateFunction returns current date function
+// GetDateFunction returns current date function.
 func (m *MySQLDatabase) GetDateFunction() string {
 	return "NOW()"
 }
 
-// GetConcatFunction returns concatenation function
+// GetConcatFunction returns concatenation function.
 func (m *MySQLDatabase) GetConcatFunction(fields []string) string {
 	return fmt.Sprintf("CONCAT(%s)", strings.Join(fields, ", "))
 }
 
-// SupportsReturning returns false for MySQL
+// SupportsReturning returns false for MySQL.
 func (m *MySQLDatabase) SupportsReturning() bool {
 	return false
 }
 
-// Stats returns database connection statistics
+// Stats returns database connection statistics.
 func (m *MySQLDatabase) Stats() sql.DBStats {
 	return m.db.Stats()
 }
 
-// IsHealthy checks if database is healthy
+// IsHealthy checks if database is healthy.
 func (m *MySQLDatabase) IsHealthy() bool {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -262,7 +262,7 @@ func (m *MySQLDatabase) IsHealthy() bool {
 	return m.db.PingContext(ctx) == nil
 }
 
-// buildDSN builds the MySQL connection string
+// buildDSN builds the MySQL connection string.
 func (m *MySQLDatabase) buildDSN() string {
 	// MySQL DSN format: user:password@tcp(host:port)/dbname
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s",
@@ -283,7 +283,7 @@ func (m *MySQLDatabase) buildDSN() string {
 	return dsn
 }
 
-// MySQLTransaction implements ITransaction for MySQL
+// MySQLTransaction implements ITransaction for MySQL.
 type MySQLTransaction struct {
 	tx *sql.Tx
 }

@@ -1,2 +1,2 @@
-// Deprecated placeholder implementation removed. This file intentionally left minimal to avoid duplicate JWT types.
+// Package auth provides authentication and JWT token handling.
 package auth

@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RouteProfiler collects and analyzes route performance metrics
+// RouteProfiler collects and analyzes route performance metrics.
 type RouteProfiler struct {
 	mu          sync.RWMutex
 	profiles    map[string]*RouteProfile
@@ -22,7 +22,7 @@ type RouteProfiler struct {
 	anomalies   []PerformanceAnomaly
 }
 
-// RouteProfile contains performance data for a specific route
+// RouteProfile contains performance data for a specific route.
 type RouteProfile struct {
 	Path            string           `json:"path"`
 	Method          string           `json:"method"`
@@ -33,7 +33,7 @@ type RouteProfile struct {
 	LastUpdated     time.Time        `json:"last_updated"`
 }
 
-// RequestSample represents a single request measurement
+// RequestSample represents a single request measurement.
 type RequestSample struct {
 	Timestamp  time.Time          `json:"timestamp"`
 	Duration   time.Duration      `json:"duration"`
@@ -45,7 +45,7 @@ type RequestSample struct {
 	Breakdown  *DurationBreakdown `json:"breakdown,omitempty"`
 }
 
-// DurationBreakdown shows where time was spent
+// DurationBreakdown shows where time was spent.
 type DurationBreakdown struct {
 	Middleware    time.Duration `json:"middleware"`
 	Handler       time.Duration `json:"handler"`
@@ -54,7 +54,7 @@ type DurationBreakdown struct {
 	Serialization time.Duration `json:"serialization"`
 }
 
-// RouteStatistics contains aggregated performance metrics
+// RouteStatistics contains aggregated performance metrics.
 type RouteStatistics struct {
 	Count         int64         `json:"count"`
 	TotalDuration time.Duration `json:"total_duration"`
@@ -70,7 +70,7 @@ type RouteStatistics struct {
 	AvgBytesOut   int64         `json:"avg_bytes_out"`
 }
 
-// AlertRule defines conditions for performance alerts
+// AlertRule defines conditions for performance alerts.
 type AlertRule struct {
 	Name        string
 	Description string
@@ -78,7 +78,7 @@ type AlertRule struct {
 	Message     func(*RouteProfile) string
 }
 
-// PerformanceAnomaly represents detected performance issues
+// PerformanceAnomaly represents detected performance issues.
 type PerformanceAnomaly struct {
 	Route       string    `json:"route"`
 	Type        string    `json:"type"`
@@ -88,7 +88,7 @@ type PerformanceAnomaly struct {
 	Evidence    string    `json:"evidence"`
 }
 
-// NewRouteProfiler creates a new performance profiler
+// NewRouteProfiler creates a new performance profiler.
 func NewRouteProfiler() *RouteProfiler {
 	profiler := &RouteProfiler{
 		profiles:    make(map[string]*RouteProfile),
@@ -104,7 +104,7 @@ func NewRouteProfiler() *RouteProfiler {
 	return profiler
 }
 
-// ProfileMiddleware creates Gin middleware for profiling
+// ProfileMiddleware creates Gin middleware for profiling.
 func (rp *RouteProfiler) ProfileMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !rp.shouldProfile() {
@@ -158,7 +158,7 @@ func (rp *RouteProfiler) ProfileMiddleware() gin.HandlerFunc {
 	}
 }
 
-// RecordDatabaseTime records time spent in database operations
+// RecordDatabaseTime records time spent in database operations.
 func (rp *RouteProfiler) RecordDatabaseTime(c *gin.Context, duration time.Duration) {
 	if breakdown, exists := c.Get("duration_breakdown"); exists {
 		if db, ok := breakdown.(*DurationBreakdown); ok {
@@ -171,7 +171,7 @@ func (rp *RouteProfiler) RecordDatabaseTime(c *gin.Context, duration time.Durati
 	}
 }
 
-// RecordExternalTime records time spent in external API calls
+// RecordExternalTime records time spent in external API calls.
 func (rp *RouteProfiler) RecordExternalTime(c *gin.Context, duration time.Duration) {
 	if breakdown, exists := c.Get("duration_breakdown"); exists {
 		if db, ok := breakdown.(*DurationBreakdown); ok {
@@ -184,7 +184,7 @@ func (rp *RouteProfiler) RecordExternalTime(c *gin.Context, duration time.Durati
 	}
 }
 
-// GetProfile returns performance profile for a specific route
+// GetProfile returns performance profile for a specific route.
 func (rp *RouteProfiler) GetProfile(path, method string) *RouteProfile {
 	rp.mu.RLock()
 	defer rp.mu.RUnlock()
@@ -193,7 +193,7 @@ func (rp *RouteProfiler) GetProfile(path, method string) *RouteProfile {
 	return rp.profiles[key]
 }
 
-// GetAllProfiles returns all route profiles
+// GetAllProfiles returns all route profiles.
 func (rp *RouteProfiler) GetAllProfiles() map[string]*RouteProfile {
 	rp.mu.RLock()
 	defer rp.mu.RUnlock()
@@ -205,7 +205,7 @@ func (rp *RouteProfiler) GetAllProfiles() map[string]*RouteProfile {
 	return profiles
 }
 
-// GetTopSlowest returns the slowest routes by P95 latency
+// GetTopSlowest returns the slowest routes by P95 latency.
 func (rp *RouteProfiler) GetTopSlowest(count int) []*RouteProfile {
 	rp.mu.RLock()
 	defer rp.mu.RUnlock()
@@ -229,7 +229,7 @@ func (rp *RouteProfiler) GetTopSlowest(count int) []*RouteProfile {
 	return profiles
 }
 
-// GetAnomalies returns detected performance anomalies
+// GetAnomalies returns detected performance anomalies.
 func (rp *RouteProfiler) GetAnomalies() []PerformanceAnomaly {
 	rp.mu.RLock()
 	defer rp.mu.RUnlock()
@@ -239,7 +239,7 @@ func (rp *RouteProfiler) GetAnomalies() []PerformanceAnomaly {
 	return anomalies
 }
 
-// GenerateReport creates a comprehensive performance report
+// GenerateReport creates a comprehensive performance report.
 func (rp *RouteProfiler) GenerateReport() *PerformanceReport {
 	rp.mu.RLock()
 	defer rp.mu.RUnlock()
@@ -565,7 +565,7 @@ func defaultAlertRules() []AlertRule {
 	}
 }
 
-// PerformanceReport represents a complete performance analysis
+// PerformanceReport represents a complete performance analysis.
 type PerformanceReport struct {
 	GeneratedAt time.Time                `json:"generated_at"`
 	Profiles    map[string]*RouteProfile `json:"profiles"`
@@ -573,7 +573,7 @@ type PerformanceReport struct {
 	Anomalies   []PerformanceAnomaly     `json:"anomalies"`
 }
 
-// PerformanceSummary contains high-level performance metrics
+// PerformanceSummary contains high-level performance metrics.
 type PerformanceSummary struct {
 	TotalRoutes      int             `json:"total_routes"`
 	TotalRequests    int64           `json:"total_requests"`

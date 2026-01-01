@@ -1,3 +1,4 @@
+// Package handlers provides base CRUD handlers for component operations.
 package handlers
 
 import (
@@ -8,10 +9,11 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
-// CRUDConfig defines the configuration for a CRUD handler
+// CRUDConfig defines the configuration for a CRUD handler.
 type CRUDConfig struct {
 	EntityName       string // e.g., "priority", "state", "type"
 	EntityNamePlural string // e.g., "priorities", "states", "types"
@@ -29,7 +31,7 @@ type CRUDConfig struct {
 	HasColor     bool // For entities with color picker
 }
 
-// FieldConfig defines a field in the entity
+// FieldConfig defines a field in the entity.
 type FieldConfig struct {
 	Name         string
 	DBColumn     string
@@ -41,7 +43,7 @@ type FieldConfig struct {
 	Validation   string // Regex or validation rule
 }
 
-// FieldType represents the type of field
+// FieldType represents the type of field.
 type FieldType string
 
 const (
@@ -56,14 +58,14 @@ const (
 	FieldTypeText     FieldType = "text"
 )
 
-// BaseCRUDHandler provides generic CRUD operations
+// BaseCRUDHandler provides generic CRUD operations.
 type BaseCRUDHandler struct {
 	Config   CRUDConfig
 	DB       *sql.DB
 	Renderer *shared.TemplateRenderer
 }
 
-// NewBaseCRUDHandler creates a new base CRUD handler
+// NewBaseCRUDHandler creates a new base CRUD handler.
 func NewBaseCRUDHandler(config CRUDConfig, db *sql.DB, renderer *shared.TemplateRenderer) *BaseCRUDHandler {
 	return &BaseCRUDHandler{
 		Config:   config,
@@ -72,7 +74,7 @@ func NewBaseCRUDHandler(config CRUDConfig, db *sql.DB, renderer *shared.Template
 	}
 }
 
-// RegisterRoutes registers all CRUD routes
+// RegisterRoutes registers all CRUD routes.
 func (h *BaseCRUDHandler) RegisterRoutes(router *gin.RouterGroup) {
 	group := router.Group(h.Config.RoutePrefix)
 	{
@@ -93,7 +95,7 @@ func (h *BaseCRUDHandler) RegisterRoutes(router *gin.RouterGroup) {
 	}
 }
 
-// List handles GET requests for listing entities
+// List handles GET requests for listing entities.
 func (h *BaseCRUDHandler) List(c *gin.Context) {
 	query := h.buildListQuery()
 	rows, err := h.DB.Query(query)
@@ -129,7 +131,7 @@ func (h *BaseCRUDHandler) List(c *gin.Context) {
 	})
 }
 
-// Get handles GET requests for a single entity
+// Get handles GET requests for a single entity.
 func (h *BaseCRUDHandler) Get(c *gin.Context) {
 	id := c.Param("id")
 
@@ -151,7 +153,7 @@ func (h *BaseCRUDHandler) Get(c *gin.Context) {
 	})
 }
 
-// Create handles POST requests to create a new entity
+// Create handles POST requests to create a new entity.
 func (h *BaseCRUDHandler) Create(c *gin.Context) {
 	data := h.parseFormData(c)
 
@@ -181,7 +183,7 @@ func (h *BaseCRUDHandler) Create(c *gin.Context) {
 	})
 }
 
-// Update handles PUT requests to update an entity
+// Update handles PUT requests to update an entity.
 func (h *BaseCRUDHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	data := h.parseFormData(c)
@@ -209,7 +211,7 @@ func (h *BaseCRUDHandler) Update(c *gin.Context) {
 	})
 }
 
-// Delete handles DELETE requests (soft delete if configured)
+// Delete handles DELETE requests (soft delete if configured).
 func (h *BaseCRUDHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
 
@@ -237,7 +239,7 @@ func (h *BaseCRUDHandler) Delete(c *gin.Context) {
 	})
 }
 
-// Import handles CSV import
+// Import handles CSV import.
 func (h *BaseCRUDHandler) Import(c *gin.Context) {
 	// Implementation depends on specific requirements
 	c.JSON(http.StatusNotImplemented, gin.H{
@@ -246,7 +248,7 @@ func (h *BaseCRUDHandler) Import(c *gin.Context) {
 	})
 }
 
-// Export handles CSV export
+// Export handles CSV export.
 func (h *BaseCRUDHandler) Export(c *gin.Context) {
 	// Implementation depends on specific requirements
 	c.JSON(http.StatusNotImplemented, gin.H{
@@ -255,7 +257,7 @@ func (h *BaseCRUDHandler) Export(c *gin.Context) {
 	})
 }
 
-// Search handles search requests
+// Search handles search requests.
 func (h *BaseCRUDHandler) Search(c *gin.Context) {
 	searchTerm := c.Query("q")
 	if searchTerm == "" {
@@ -482,7 +484,7 @@ func (h *BaseCRUDHandler) isAPIRequest(c *gin.Context) bool {
 		c.GetHeader("Accept") == "application/json"
 }
 
-// Utility function
+// Utility function.
 func joinStrings(strs []string, sep string) string {
 	result := ""
 	for i, str := range strs {

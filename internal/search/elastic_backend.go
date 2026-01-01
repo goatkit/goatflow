@@ -1,3 +1,4 @@
+// Package search provides search backend implementations including Elasticsearch.
 package search
 
 import (
@@ -11,7 +12,7 @@ import (
 	"time"
 )
 
-// ElasticBackend implements SearchBackend using Elasticsearch-compatible APIs (works with Zinc)
+// ElasticBackend implements SearchBackend using Elasticsearch-compatible APIs (works with Zinc).
 type ElasticBackend struct {
 	endpoint string
 	username string
@@ -19,7 +20,7 @@ type ElasticBackend struct {
 	client   *http.Client
 }
 
-// NewElasticBackend creates a new Elasticsearch/Zinc search backend
+// NewElasticBackend creates a new Elasticsearch/Zinc search backend.
 func NewElasticBackend(endpoint, username, password string) *ElasticBackend {
 	if endpoint == "" {
 		endpoint = os.Getenv("ELASTIC_ENDPOINT")
@@ -50,12 +51,12 @@ func NewElasticBackend(endpoint, username, password string) *ElasticBackend {
 	}
 }
 
-// GetBackendName returns the backend name
+// GetBackendName returns the backend name.
 func (eb *ElasticBackend) GetBackendName() string {
 	return "elasticsearch"
 }
 
-// Search performs a search using Elasticsearch/Zinc
+// Search performs a search using Elasticsearch/Zinc.
 func (eb *ElasticBackend) Search(ctx context.Context, query SearchQuery) (*SearchResults, error) {
 	// Build Elasticsearch query
 	esQuery := map[string]interface{}{
@@ -138,7 +139,7 @@ func (eb *ElasticBackend) Search(ctx context.Context, query SearchQuery) (*Searc
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -180,7 +181,7 @@ func (eb *ElasticBackend) Search(ctx context.Context, query SearchQuery) (*Searc
 	return results, nil
 }
 
-// Index adds or updates a document in Elasticsearch/Zinc
+// Index adds or updates a document in Elasticsearch/Zinc.
 func (eb *ElasticBackend) Index(ctx context.Context, doc Document) error {
 	body, err := json.Marshal(doc)
 	if err != nil {
@@ -200,7 +201,7 @@ func (eb *ElasticBackend) Index(ctx context.Context, doc Document) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -210,7 +211,7 @@ func (eb *ElasticBackend) Index(ctx context.Context, doc Document) error {
 	return nil
 }
 
-// Delete removes a document from Elasticsearch/Zinc
+// Delete removes a document from Elasticsearch/Zinc.
 func (eb *ElasticBackend) Delete(ctx context.Context, docType string, id string) error {
 	url := fmt.Sprintf("%s/%s/_doc/%s", eb.endpoint, docType, id)
 	req, err := http.NewRequestWithContext(ctx, "DELETE", url, nil)
@@ -224,7 +225,7 @@ func (eb *ElasticBackend) Delete(ctx context.Context, docType string, id string)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -234,7 +235,7 @@ func (eb *ElasticBackend) Delete(ctx context.Context, docType string, id string)
 	return nil
 }
 
-// BulkIndex indexes multiple documents at once
+// BulkIndex indexes multiple documents at once.
 func (eb *ElasticBackend) BulkIndex(ctx context.Context, docs []Document) error {
 	var bulkBody bytes.Buffer
 
@@ -269,7 +270,7 @@ func (eb *ElasticBackend) BulkIndex(ctx context.Context, docs []Document) error 
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -279,7 +280,7 @@ func (eb *ElasticBackend) BulkIndex(ctx context.Context, docs []Document) error 
 	return nil
 }
 
-// HealthCheck verifies the Elasticsearch/Zinc connection
+// HealthCheck verifies the Elasticsearch/Zinc connection.
 func (eb *ElasticBackend) HealthCheck(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("%s/healthz", eb.endpoint), nil)
 	if err != nil {
@@ -292,7 +293,7 @@ func (eb *ElasticBackend) HealthCheck(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("health check failed with status %d", resp.StatusCode)
@@ -301,7 +302,7 @@ func (eb *ElasticBackend) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-// ElasticSearchResponse represents Elasticsearch API response
+// ElasticSearchResponse represents Elasticsearch API response.
 type ElasticSearchResponse struct {
 	Took int64 `json:"took"`
 	Hits struct {
@@ -317,7 +318,7 @@ type ElasticSearchResponse struct {
 	} `json:"hits"`
 }
 
-// getStringField safely extracts a string field from a map
+// getStringField safely extracts a string field from a map.
 func getStringField(m map[string]interface{}, key string) string {
 	if val, ok := m[key]; ok {
 		if str, ok := val.(string); ok {

@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleAssignQueueGroupAPI handles POST /api/v1/queues/:id/groups
+// HandleAssignQueueGroupAPI handles POST /api/v1/queues/:id/groups.
 func HandleAssignQueueGroupAPI(c *gin.Context) {
 	// Auth
 	if _, ok := c.Get("user_id"); !ok {
@@ -67,7 +68,7 @@ func HandleAssignQueueGroupAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Group assigned", "data": gin.H{"queue_id": queueID, "group_id": req.GroupID, "permissions": req.Permissions}})
 }
 
-// HandleRemoveQueueGroupAPI handles DELETE /api/v1/queues/:id/groups/:group_id
+// HandleRemoveQueueGroupAPI handles DELETE /api/v1/queues/:id/groups/:group_id.
 func HandleRemoveQueueGroupAPI(c *gin.Context) {
 	// Auth
 	if _, ok := c.Get("user_id"); !ok {

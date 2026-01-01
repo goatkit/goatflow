@@ -1,9 +1,11 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 )
 
 // HandleDebugConfigSources lists configuration settings with their source.
@@ -22,7 +24,7 @@ func HandleDebugConfigSources(c *gin.Context) {
 	result := make([]gin.H, 0, len(settings))
 	for _, s := range settings {
 		name, _ := s["name"].(string)
-		defVal, _ := s["default"]
+		defVal := s["default"]
 		val, hasVal := s["value"]
 		effective := defVal
 		source := "default"

@@ -10,19 +10,20 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/lookups"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// TemplateRenderer handles template rendering with pongo2
+// TemplateRenderer handles template rendering with pongo2.
 type TemplateRenderer struct {
 	templateSet *pongo2.TemplateSet
 	templateDir string
 }
 
-// NewTemplateRenderer creates a new template renderer
+// NewTemplateRenderer creates a new template renderer.
 func NewTemplateRenderer(templateDir string) (*TemplateRenderer, error) {
 	if templateDir == "" {
 		return nil, fmt.Errorf("template directory is required")
@@ -45,7 +46,7 @@ func NewTemplateRenderer(templateDir string) (*TemplateRenderer, error) {
 	}, nil
 }
 
-// TemplateSet returns the underlying pongo2 template set for modules that need direct access
+// TemplateSet returns the underlying pongo2 template set for modules that need direct access.
 func (r *TemplateRenderer) TemplateSet() *pongo2.TemplateSet {
 	if r == nil {
 		return nil
@@ -53,7 +54,7 @@ func (r *TemplateRenderer) TemplateSet() *pongo2.TemplateSet {
 	return r.templateSet
 }
 
-// HTML renders a template
+// HTML renders a template.
 func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data interface{}) {
 	// Convert gin.H to pongo2.Context
 	var ctx pongo2.Context
@@ -124,7 +125,7 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 	}
 }
 
-// getUserFromContext extracts the user from gin context (set by JWT middleware)
+// getUserFromContext extracts the user from gin context (set by JWT middleware).
 func getUserFromContext(c *gin.Context, isAdmin bool) *models.User {
 	// Try direct user object first
 	userInterface, exists := c.Get("user")
@@ -190,7 +191,7 @@ func getUserFromContext(c *gin.Context, isAdmin bool) *models.User {
 	return user
 }
 
-// translateWithFallback provides a fallback translation function
+// translateWithFallback provides a fallback translation function.
 func translateWithFallback(i18nInst *i18n.I18n, lang, key string, args ...interface{}) string {
 	if i18nInst == nil {
 		return key
@@ -198,12 +199,12 @@ func translateWithFallback(i18nInst *i18n.I18n, lang, key string, args ...interf
 	return i18nInst.Translate(lang, key, args...)
 }
 
-// GetGlobalRenderer returns the global template renderer instance
+// GetGlobalRenderer returns the global template renderer instance.
 func GetGlobalRenderer() *TemplateRenderer {
 	return globalTemplateRenderer
 }
 
-// SetGlobalRenderer sets the global template renderer instance
+// SetGlobalRenderer sets the global template renderer instance.
 func SetGlobalRenderer(renderer *TemplateRenderer) {
 	globalTemplateRenderer = renderer
 }

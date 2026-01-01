@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// StorageType represents the type of storage backend
+// StorageType represents the type of storage backend.
 type StorageType string
 
 const (
@@ -19,7 +19,7 @@ const (
 	StorageTypeS3    StorageType = "s3"
 )
 
-// FileMetadata contains metadata about a stored file
+// FileMetadata contains metadata about a stored file.
 type FileMetadata struct {
 	ID           string    `json:"id"`
 	OriginalName string    `json:"original_name"`
@@ -30,7 +30,7 @@ type FileMetadata struct {
 	UploadedAt   time.Time `json:"uploaded_at"`
 }
 
-// StorageService defines the interface for file storage operations
+// StorageService defines the interface for file storage operations.
 type StorageService interface {
 	// Store saves a file and returns its metadata
 	Store(ctx context.Context, file multipart.File, header *multipart.FileHeader, path string) (*FileMetadata, error)
@@ -51,22 +51,22 @@ type StorageService interface {
 	GetMetadata(ctx context.Context, path string) (*FileMetadata, error)
 }
 
-// Context keys for passing storage-related metadata (article/user IDs)
+// Context keys for passing storage-related metadata (article/user IDs).
 type ctxKey string
 
 const (
-	// CtxKeyArticleID is the context key to pass the target article ID
+	// CtxKeyArticleID is the context key to pass the target article ID.
 	CtxKeyArticleID ctxKey = "article_id"
-	// CtxKeyUserID is the context key to pass the acting user ID
+	// CtxKeyUserID is the context key to pass the acting user ID.
 	CtxKeyUserID ctxKey = "user_id"
 )
 
-// WithArticleID attaches an article ID to context
+// WithArticleID attaches an article ID to context.
 func WithArticleID(ctx context.Context, articleID int) context.Context {
 	return context.WithValue(ctx, CtxKeyArticleID, articleID)
 }
 
-// ArticleIDFromContext retrieves article ID from context
+// ArticleIDFromContext retrieves article ID from context.
 func ArticleIDFromContext(ctx context.Context) (int, bool) {
 	v := ctx.Value(CtxKeyArticleID)
 	if v == nil {
@@ -78,12 +78,12 @@ func ArticleIDFromContext(ctx context.Context) (int, bool) {
 	return 0, false
 }
 
-// WithUserID attaches a user ID to context
+// WithUserID attaches a user ID to context.
 func WithUserID(ctx context.Context, userID int) context.Context {
 	return context.WithValue(ctx, CtxKeyUserID, userID)
 }
 
-// UserIDFromContext retrieves user ID from context
+// UserIDFromContext retrieves user ID from context.
 func UserIDFromContext(ctx context.Context) (int, bool) {
 	v := ctx.Value(CtxKeyUserID)
 	if v == nil {
@@ -95,12 +95,12 @@ func UserIDFromContext(ctx context.Context) (int, bool) {
 	return 0, false
 }
 
-// LocalStorageService implements StorageService for local file system
+// LocalStorageService implements StorageService for local file system.
 type LocalStorageService struct {
 	basePath string
 }
 
-// NewLocalStorageService creates a new local storage service
+// NewLocalStorageService creates a new local storage service.
 func NewLocalStorageService(basePath string) (*LocalStorageService, error) {
 	// Ensure base path exists
 	if err := os.MkdirAll(basePath, 0755); err != nil {
@@ -118,7 +118,7 @@ func NewLocalStorageService(basePath string) (*LocalStorageService, error) {
 	}, nil
 }
 
-// Store saves a file to the local file system
+// Store saves a file to the local file system.
 func (s *LocalStorageService) Store(ctx context.Context, file multipart.File, header *multipart.FileHeader, path string) (*FileMetadata, error) {
 	// Sanitize the path to prevent directory traversal
 	cleanPath := sanitizePath(path)
@@ -157,7 +157,7 @@ func (s *LocalStorageService) Store(ctx context.Context, file multipart.File, he
 	return metadata, nil
 }
 
-// Retrieve gets a file from the local file system
+// Retrieve gets a file from the local file system.
 func (s *LocalStorageService) Retrieve(ctx context.Context, path string) (io.ReadCloser, error) {
 	cleanPath := sanitizePath(path)
 	fullPath := filepath.Join(s.basePath, cleanPath)
@@ -176,7 +176,7 @@ func (s *LocalStorageService) Retrieve(ctx context.Context, path string) (io.Rea
 	return file, nil
 }
 
-// Delete removes a file from the local file system
+// Delete removes a file from the local file system.
 func (s *LocalStorageService) Delete(ctx context.Context, path string) error {
 	cleanPath := sanitizePath(path)
 	fullPath := filepath.Join(s.basePath, cleanPath)
@@ -198,7 +198,7 @@ func (s *LocalStorageService) Delete(ctx context.Context, path string) error {
 	return nil
 }
 
-// Exists checks if a file exists in the local file system
+// Exists checks if a file exists in the local file system.
 func (s *LocalStorageService) Exists(ctx context.Context, path string) (bool, error) {
 	cleanPath := sanitizePath(path)
 	fullPath := filepath.Join(s.basePath, cleanPath)
@@ -214,14 +214,14 @@ func (s *LocalStorageService) Exists(ctx context.Context, path string) (bool, er
 	return true, nil
 }
 
-// GetURL returns the file path for local storage (no pre-signed URLs)
+// GetURL returns the file path for local storage (no pre-signed URLs).
 func (s *LocalStorageService) GetURL(ctx context.Context, path string, expiry time.Duration) (string, error) {
 	// For local storage, just return the path
 	// In production, this might return a URL to a file server
 	return "/files/" + sanitizePath(path), nil
 }
 
-// GetMetadata retrieves file metadata
+// GetMetadata retrieves file metadata.
 func (s *LocalStorageService) GetMetadata(ctx context.Context, path string) (*FileMetadata, error) {
 	cleanPath := sanitizePath(path)
 	fullPath := filepath.Join(s.basePath, cleanPath)
@@ -247,7 +247,7 @@ func (s *LocalStorageService) GetMetadata(ctx context.Context, path string) (*Fi
 
 // Helper functions
 
-// sanitizePath cleans a file path to prevent directory traversal attacks
+// sanitizePath cleans a file path to prevent directory traversal attacks.
 func sanitizePath(path string) string {
 	// Remove any .. or . components
 	path = filepath.Clean(path)
@@ -262,7 +262,7 @@ func sanitizePath(path string) string {
 	return path
 }
 
-// generateFileID creates a unique file identifier
+// generateFileID creates a unique file identifier.
 func generateFileID() string {
 	// In production, use a proper UUID library
 	return fmt.Sprintf("%d_%d", time.Now().Unix(), time.Now().Nanosecond())
@@ -299,7 +299,7 @@ func GenerateOTRSStoragePath(ticketID int, articleID int, filename string) strin
 	return path
 }
 
-// sanitizeFilename makes a filename safe for storage
+// sanitizeFilename makes a filename safe for storage.
 func sanitizeFilename(filename string) string {
 	// Remove directory components
 	filename = filepath.Base(filename)

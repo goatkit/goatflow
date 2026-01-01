@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
@@ -15,7 +16,7 @@ import (
 
 var globalJWTManager *auth.JWTManager
 
-// getJWTManager returns a singleton JWT manager
+// getJWTManager returns a singleton JWT manager.
 func getJWTManager() *auth.JWTManager {
 	if globalJWTManager == nil {
 		globalJWTManager = shared.GetJWTManager()
@@ -23,7 +24,7 @@ func getJWTManager() *auth.JWTManager {
 	return globalJWTManager
 }
 
-// HandleLoginAPI authenticates a user and returns JWT tokens
+// HandleLoginAPI authenticates a user and returns JWT tokens.
 func HandleLoginAPI(c *gin.Context) {
 	var loginRequest struct {
 		Login    string `json:"login" binding:"required"`
@@ -106,7 +107,7 @@ func HandleLoginAPI(c *gin.Context) {
 	})
 }
 
-// HandleRefreshTokenAPI refreshes an expired JWT token
+// HandleRefreshTokenAPI refreshes an expired JWT token.
 func HandleRefreshTokenAPI(c *gin.Context) {
 	var refreshRequest struct {
 		RefreshToken string `json:"refresh_token" binding:"required"`
@@ -151,7 +152,7 @@ func HandleRefreshTokenAPI(c *gin.Context) {
 	})
 }
 
-// HandleLogoutAPI logs out a user (client-side token removal)
+// HandleLogoutAPI logs out a user (client-side token removal).
 func HandleLogoutAPI(c *gin.Context) {
 	// In a JWT-based system, logout is typically handled client-side
 	// We could implement token blacklisting here if needed
@@ -162,7 +163,7 @@ func HandleLogoutAPI(c *gin.Context) {
 	})
 }
 
-// HandleRegisterAPI registers a new user (if enabled)
+// HandleRegisterAPI registers a new user (if enabled).
 func HandleRegisterAPI(c *gin.Context) {
 	// Registration is typically disabled in OTRS-style systems
 	// Users are created by administrators
@@ -172,7 +173,7 @@ func HandleRegisterAPI(c *gin.Context) {
 	})
 }
 
-// ExtractToken extracts the JWT token from the Authorization header
+// ExtractToken extracts the JWT token from the Authorization header.
 func ExtractToken(c *gin.Context) string {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
@@ -188,7 +189,7 @@ func ExtractToken(c *gin.Context) string {
 	return parts[1]
 }
 
-// JWTAuthMiddleware is a middleware that requires JWT authentication
+// JWTAuthMiddleware is a middleware that requires JWT authentication.
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := ExtractToken(c)

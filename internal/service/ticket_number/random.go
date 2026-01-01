@@ -5,21 +5,19 @@ import (
 	"math/big"
 )
 
-// RandomConfig holds configuration for random generator
+// RandomConfig holds configuration for random generator.
 type RandomConfig struct {
 	Length  int
 	Charset string
 	Prefix  string
 }
 
-// RandomGenerator generates random ticket numbers
-// Format: PREFIX + random string (e.g., TKT-A3X9K2M8)
+// Format: PREFIX + random string (e.g., TKT-A3X9K2M8).
 type RandomGenerator struct {
 	config RandomConfig
 }
 
-// NewRandomGenerator creates a new random generator
-// This generator doesn't need a database connection
+// This generator doesn't need a database connection.
 func NewRandomGenerator(config RandomConfig) *RandomGenerator {
 	// Set defaults
 	if config.Length == 0 {
@@ -34,7 +32,7 @@ func NewRandomGenerator(config RandomConfig) *RandomGenerator {
 	}
 }
 
-// Generate creates a new random ticket number
+// Generate creates a new random ticket number.
 func (g *RandomGenerator) Generate() (string, error) {
 	// Generate random string
 	randomStr, err := generateRandomString(g.config.Length, g.config.Charset)
@@ -48,13 +46,13 @@ func (g *RandomGenerator) Generate() (string, error) {
 	return ticketNumber, nil
 }
 
-// Reset does nothing for random generator
+// Reset does nothing for random generator.
 func (g *RandomGenerator) Reset() error {
 	// Random generator doesn't have a counter to reset
 	return nil
 }
 
-// generateRandomString generates a random string of specified length from charset
+// generateRandomString generates a random string of specified length from charset.
 func generateRandomString(length int, charset string) (string, error) {
 	result := make([]byte, length)
 	charsetLen := big.NewInt(int64(len(charset)))

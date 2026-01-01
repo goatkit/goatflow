@@ -7,10 +7,11 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleAdminTickets displays all tickets for admin management
+// HandleAdminTickets displays all tickets for admin management.
 func HandleAdminTickets(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -114,7 +115,7 @@ func HandleAdminTickets(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	// Collect tickets
 	var tickets []map[string]interface{}

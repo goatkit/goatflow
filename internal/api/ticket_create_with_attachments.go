@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
@@ -26,8 +27,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
-// handleCreateTicketWithAttachments is an enhanced version that properly handles file attachments
-// This fixes the 500 error when users try to create tickets with attachments
+// This fixes the 500 error when users try to create tickets with attachments.
 func handleCreateTicketWithAttachments(c *gin.Context) {
 	var req struct {
 		Title          string `json:"title" form:"title"`
@@ -299,7 +299,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 			}
 			// Ensure we close after processing this iteration
 			func() {
-				defer file.Close()
+				defer func() { _ = file.Close() }()
 
 				// Determine content type (fallback using simple detection)
 				contentType := fileHeader.Header.Get("Content-Type")
@@ -462,7 +462,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	if ticketRepo != nil && !ticketSideEffectsDisabled() {
 		recorder := history.NewRecorder(ticketRepo)
 
-		var historyTicket *models.Ticket = ticket
+		var historyTicket = ticket
 		if snapshot, err := ticketRepo.GetByID(uint(ticket.ID)); err == nil {
 			historyTicket = snapshot
 		} else {

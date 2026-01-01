@@ -33,7 +33,7 @@ var (
 	servicesOverride    bool
 )
 
-// InitializeServices initializes singleton service instances
+// InitializeServices initializes singleton service instances.
 func InitializeServices() {
 	currentOverride := database.IsTestDBOverride()
 	db, dbErr := database.GetDB()
@@ -80,49 +80,49 @@ func InitializeServices() {
 	servicesOverride = currentOverride
 }
 
-// GetTicketService returns the singleton simple ticket service instance
+// GetTicketService returns the singleton simple ticket service instance.
 func GetTicketService() *service.SimpleTicketService {
 	InitializeServices()
 	return simpleTicketService
 }
 
-// GetStorageService returns the singleton storage service instance
+// GetStorageService returns the singleton storage service instance.
 func GetStorageService() service.StorageService {
 	InitializeServices()
 	return storageService
 }
 
-// GetTicketRepository returns the singleton ticket repository instance
+// GetTicketRepository returns the singleton ticket repository instance.
 func GetTicketRepository() repository.ITicketRepository {
 	InitializeServices()
 	return ticketRepo
 }
 
-// GetLookupService returns the singleton lookup service instance
+// GetLookupService returns the singleton lookup service instance.
 func GetLookupService() *service.LookupService {
 	InitializeServices()
 	return lookupService
 }
 
-// GetQueueRepository returns the singleton queue repository instance
+// GetQueueRepository returns the singleton queue repository instance.
 func GetQueueRepository() *repository.QueueRepository {
 	InitializeServices()
 	return queueRepo
 }
 
-// GetPriorityRepository returns the singleton priority repository instance
+// GetPriorityRepository returns the singleton priority repository instance.
 func GetPriorityRepository() *repository.PriorityRepository {
 	InitializeServices()
 	return priorityRepo
 }
 
-// GetUserRepository returns the singleton user repository instance
+// GetUserRepository returns the singleton user repository instance.
 func GetUserRepository() *repository.UserRepository {
 	InitializeServices()
 	return userRepo
 }
 
-// GetAuthService returns the singleton auth service instance
+// GetAuthService returns the singleton auth service instance.
 func GetAuthService() *service.AuthService {
 	InitializeServices()
 	return authService

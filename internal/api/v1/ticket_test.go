@@ -9,12 +9,13 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	. "github.com/gotrs-io/gotrs-ce/internal/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/gotrs-io/gotrs-ce/internal/api"
 )
 
-// Acceptance Test: As an agent, I can create a new ticket
+// Acceptance Test: As an agent, I can create a new ticket.
 func TestCreateTicket_AcceptanceTest(t *testing.T) {
 	requireDatabase(t)
 	ensureTicketFixtures(t)
@@ -65,7 +66,7 @@ func TestCreateTicket_AcceptanceTest(t *testing.T) {
 	assert.Equal(t, float64(1), data["state_id"])
 }
 
-// Acceptance Test: As an agent, I can list tickets with filters
+// Acceptance Test: As an agent, I can list tickets with filters.
 func TestListTickets_AcceptanceTest(t *testing.T) {
 	requireDatabase(t)
 	ensureTicketFixtures(t)
@@ -108,7 +109,7 @@ func TestListTickets_AcceptanceTest(t *testing.T) {
 	assert.NotNil(t, firstTicket["create_time"])
 }
 
-// Acceptance Test: As an agent, I can view ticket details with articles
+// Acceptance Test: As an agent, I can view ticket details with articles.
 func TestGetTicketDetails_AcceptanceTest(t *testing.T) {
 	requireDatabase(t)
 	ensureTicketFixtures(t)
@@ -148,7 +149,7 @@ func TestGetTicketDetails_AcceptanceTest(t *testing.T) {
 	assert.GreaterOrEqual(t, len(articles), 1, "Should have at least initial article")
 }
 
-// Acceptance Test: As an agent, I can update ticket state
+// Acceptance Test: As an agent, I can update ticket state.
 func TestUpdateTicketState_AcceptanceTest(t *testing.T) {
 	requireDatabase(t)
 	ensureTicketFixtures(t)
@@ -188,7 +189,7 @@ func TestUpdateTicketState_AcceptanceTest(t *testing.T) {
 	assert.Equal(t, float64(4), data["state_id"], "State should be updated to open")
 }
 
-// Helper functions
+// Helper functions.
 func setupTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

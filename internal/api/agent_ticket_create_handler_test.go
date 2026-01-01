@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -14,6 +13,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"

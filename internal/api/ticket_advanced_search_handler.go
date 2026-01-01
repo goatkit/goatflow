@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SearchResult represents a search result item
+// SearchResult represents a search result item.
 type SearchResult struct {
 	ID           int               `json:"id"`
 	Subject      string            `json:"subject"`
@@ -28,7 +28,7 @@ type SearchResult struct {
 	Highlights   map[string]string `json:"highlights,omitempty"`
 }
 
-// SavedSearch represents a user's saved search
+// SavedSearch represents a user's saved search.
 type SavedSearch struct {
 	ID        int       `json:"id"`
 	UserID    int       `json:"user_id"`
@@ -39,7 +39,7 @@ type SavedSearch struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// SearchHistory represents a user's search history entry
+// SearchHistory represents a user's search history entry.
 type SearchHistory struct {
 	ID        int       `json:"id"`
 	UserID    int       `json:"user_id"`
@@ -49,7 +49,7 @@ type SearchHistory struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// Mock data for searches
+// Mock data for searches.
 var savedSearches = map[int]*SavedSearch{
 	1: {
 		ID:        1,
@@ -65,7 +65,7 @@ var searchHistory = []SearchHistory{}
 var nextSavedSearchID = 2
 var nextHistoryID = 1
 
-// Mock tickets for searching
+// Mock tickets for searching.
 var searchableTickets = []SearchResult{
 	{
 		ID:           1,
@@ -108,7 +108,7 @@ var searchableTickets = []SearchResult{
 	},
 }
 
-// handleAdvancedTicketSearch handles advanced ticket search with filters
+// handleAdvancedTicketSearch handles advanced ticket search with filters.
 func handleAdvancedTicketSearch(c *gin.Context) {
 	query := c.Query("q")
 	if query == "" {
@@ -306,7 +306,7 @@ func handleAdvancedTicketSearch(c *gin.Context) {
 	})
 }
 
-// handleSearchSuggestions returns search suggestions based on partial query
+// handleSearchSuggestions returns search suggestions based on partial query.
 func handleSearchSuggestions(c *gin.Context) {
 	query := c.Query("q")
 
@@ -344,7 +344,7 @@ func handleSearchSuggestions(c *gin.Context) {
 	})
 }
 
-// handleSaveSearchHistory saves a search to user's history
+// handleSaveSearchHistory saves a search to user's history.
 func handleSaveSearchHistory(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	query := c.Query("q")
@@ -373,7 +373,7 @@ func handleSaveSearchHistory(c *gin.Context) {
 	})
 }
 
-// handleGetSearchHistory returns user's search history
+// handleGetSearchHistory returns user's search history.
 func handleGetSearchHistory(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
@@ -389,7 +389,7 @@ func handleGetSearchHistory(c *gin.Context) {
 	})
 }
 
-// handleDeleteSearchHistory removes a search from history
+// handleDeleteSearchHistory removes a search from history.
 func handleDeleteSearchHistory(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -423,7 +423,7 @@ func handleDeleteSearchHistory(c *gin.Context) {
 	})
 }
 
-// handleCreateSavedSearch creates a new saved search
+// handleCreateSavedSearch creates a new saved search.
 func handleCreateSavedSearch(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	name := c.Query("name")
@@ -452,7 +452,7 @@ func handleCreateSavedSearch(c *gin.Context) {
 	})
 }
 
-// handleGetSavedSearches returns user's saved searches
+// handleGetSavedSearches returns user's saved searches.
 func handleGetSavedSearches(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 
@@ -468,7 +468,7 @@ func handleGetSavedSearches(c *gin.Context) {
 	})
 }
 
-// handleExecuteSavedSearch executes a saved search
+// handleExecuteSavedSearch executes a saved search.
 func handleExecuteSavedSearch(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -505,7 +505,7 @@ func handleExecuteSavedSearch(c *gin.Context) {
 	})
 }
 
-// handleUpdateSavedSearch updates a saved search
+// handleUpdateSavedSearch updates a saved search.
 func handleUpdateSavedSearch(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -537,7 +537,7 @@ func handleUpdateSavedSearch(c *gin.Context) {
 	})
 }
 
-// handleDeleteSavedSearch deletes a saved search
+// handleDeleteSavedSearch deletes a saved search.
 func handleDeleteSavedSearch(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -561,7 +561,7 @@ func handleDeleteSavedSearch(c *gin.Context) {
 	})
 }
 
-// handleExportSearchResults exports search results in various formats
+// handleExportSearchResults exports search results in various formats.
 func handleExportSearchResults(c *gin.Context) {
 	query := c.Query("q")
 	format := c.Query("format")

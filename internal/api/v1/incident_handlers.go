@@ -1,21 +1,22 @@
 package v1
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
-// IncidentHandlers handles incident-related HTTP requests
+// IncidentHandlers handles incident-related HTTP requests.
 type IncidentHandlers struct {
 	// TODO: Add incident service when interface is defined
 }
 
-// NewIncidentHandlers creates a new incident handlers instance
+// NewIncidentHandlers creates a new incident handlers instance.
 func NewIncidentHandlers() *IncidentHandlers {
 	return &IncidentHandlers{}
 }
 
-// RegisterRoutes registers incident routes
+// RegisterRoutes registers incident routes.
 func (h *IncidentHandlers) RegisterRoutes(router *gin.RouterGroup) {
 	incidents := router.Group("/incidents")
 	{

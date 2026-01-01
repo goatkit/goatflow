@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Field type constants matching OTRS
+// Field type constants matching OTRS.
 const (
 	DFTypeText        = "Text"
 	DFTypeTextArea    = "TextArea"
@@ -19,7 +19,7 @@ const (
 	DFTypeDateTime    = "DateTime"
 )
 
-// Object type constants matching OTRS
+// Object type constants matching OTRS.
 const (
 	DFObjectTicket          = "Ticket"
 	DFObjectArticle         = "Article"
@@ -27,14 +27,14 @@ const (
 	DFObjectCustomerCompany = "CustomerCompany"
 )
 
-// Screen config value constants
+// Screen config value constants.
 const (
 	DFScreenDisabled = 0
 	DFScreenEnabled  = 1
 	DFScreenRequired = 2
 )
 
-// ValidFieldTypes returns all supported field types
+// ValidFieldTypes returns all supported field types.
 func ValidFieldTypes() []string {
 	return []string{
 		DFTypeText,
@@ -47,7 +47,7 @@ func ValidFieldTypes() []string {
 	}
 }
 
-// ValidObjectTypes returns all supported object types
+// ValidObjectTypes returns all supported object types.
 func ValidObjectTypes() []string {
 	return []string{
 		DFObjectTicket,
@@ -57,18 +57,18 @@ func ValidObjectTypes() []string {
 	}
 }
 
-// DynamicFieldConfig stores type-specific configuration (YAML-serialized for OTRS compatibility)
+// DynamicFieldConfig stores type-specific configuration (YAML-serialized for OTRS compatibility).
 type DynamicFieldConfig struct {
 	// Common to all types
 	DefaultValue string `yaml:"DefaultValue,omitempty"`
 
 	// Text/TextArea fields
-	MaxLength    int      `yaml:"MaxLength,omitempty"`
-	RegExList    []RegEx  `yaml:"RegExList,omitempty"` // OTRS uses RegExList
-	Link         string   `yaml:"Link,omitempty"`
-	LinkPreview  string   `yaml:"LinkPreview,omitempty"`
-	Rows         int      `yaml:"Rows,omitempty"` // TextArea only
-	Cols         int      `yaml:"Cols,omitempty"` // TextArea only
+	MaxLength   int     `yaml:"MaxLength,omitempty"`
+	RegExList   []RegEx `yaml:"RegExList,omitempty"` // OTRS uses RegExList
+	Link        string  `yaml:"Link,omitempty"`
+	LinkPreview string  `yaml:"LinkPreview,omitempty"`
+	Rows        int     `yaml:"Rows,omitempty"` // TextArea only
+	Cols        int     `yaml:"Cols,omitempty"` // TextArea only
 
 	// Dropdown/Multiselect
 	PossibleValues     map[string]string `yaml:"PossibleValues,omitempty"`
@@ -83,13 +83,13 @@ type DynamicFieldConfig struct {
 	YearsPeriod     int    `yaml:"YearsPeriod,omitempty"`
 }
 
-// RegEx represents a regex validation pattern (OTRS format)
+// RegEx represents a regex validation pattern (OTRS format).
 type RegEx struct {
 	Value        string `yaml:"Value"`
 	ErrorMessage string `yaml:"ErrorMessage"`
 }
 
-// DynamicField represents a field definition from dynamic_field table
+// DynamicField represents a field definition from dynamic_field table.
 type DynamicField struct {
 	ID            int                 `json:"id" db:"id"`
 	InternalField int                 `json:"internal_field" db:"internal_field"`
@@ -107,7 +107,7 @@ type DynamicField struct {
 	ChangeBy      int                 `json:"change_by" db:"change_by"`
 }
 
-// DynamicFieldValue represents a stored value from dynamic_field_value table
+// DynamicFieldValue represents a stored value from dynamic_field_value table.
 type DynamicFieldValue struct {
 	ID        int        `json:"id" db:"id"`
 	FieldID   int        `json:"field_id" db:"field_id"`
@@ -117,7 +117,7 @@ type DynamicFieldValue struct {
 	ValueInt  *int64     `json:"value_int,omitempty" db:"value_int"`
 }
 
-// DynamicFieldScreenConfig maps fields to screens
+// DynamicFieldScreenConfig maps fields to screens.
 type DynamicFieldScreenConfig struct {
 	ID          int       `json:"id" db:"id"`
 	FieldID     int       `json:"field_id" db:"field_id"`
@@ -129,7 +129,7 @@ type DynamicFieldScreenConfig struct {
 	ChangeBy    int       `json:"change_by" db:"change_by"`
 }
 
-// ScreenDefinition describes a screen that can display dynamic fields
+// ScreenDefinition describes a screen that can display dynamic fields.
 type ScreenDefinition struct {
 	Key              string `json:"key"`
 	Name             string `json:"name"`
@@ -138,7 +138,7 @@ type ScreenDefinition struct {
 	IsDisplayOnly    bool   `json:"is_display_only"`
 }
 
-// GetScreenDefinitions returns all screens that support dynamic fields
+// GetScreenDefinitions returns all screens that support dynamic fields.
 func GetScreenDefinitions() []ScreenDefinition {
 	return []ScreenDefinition{
 		// Ticket screens
@@ -161,7 +161,7 @@ func GetScreenDefinitions() []ScreenDefinition {
 	}
 }
 
-// ParseConfig deserializes YAML config blob into DynamicFieldConfig
+// ParseConfig deserializes YAML config blob into DynamicFieldConfig.
 func (df *DynamicField) ParseConfig() error {
 	if df.ConfigRaw == nil || len(df.ConfigRaw) == 0 {
 		df.Config = &DynamicFieldConfig{}
@@ -176,7 +176,7 @@ func (df *DynamicField) ParseConfig() error {
 	return nil
 }
 
-// SerializeConfig serializes DynamicFieldConfig to YAML for storage
+// SerializeConfig serializes DynamicFieldConfig to YAML for storage.
 func (df *DynamicField) SerializeConfig() error {
 	if df.Config == nil {
 		df.ConfigRaw = nil
@@ -191,7 +191,7 @@ func (df *DynamicField) SerializeConfig() error {
 	return nil
 }
 
-// Validate checks the dynamic field for errors
+// Validate checks the dynamic field for errors.
 func (df *DynamicField) Validate() error {
 	if df.Name == "" {
 		return fmt.Errorf("name is required")
@@ -253,17 +253,17 @@ func isValidObjectType(ot string) bool {
 	return false
 }
 
-// IsActive returns true if the field is valid (active)
+// IsActive returns true if the field is valid (active).
 func (df *DynamicField) IsActive() bool {
 	return df.ValidID == 1
 }
 
-// IsInternal returns true if this is an internal/system field
+// IsInternal returns true if this is an internal/system field.
 func (df *DynamicField) IsInternal() bool {
 	return df.InternalField == 1
 }
 
-// GetValueColumn returns the database column name used for storing values of this field type
+// GetValueColumn returns the database column name used for storing values of this field type.
 func (df *DynamicField) GetValueColumn() string {
 	switch df.FieldType {
 	case DFTypeCheckbox:

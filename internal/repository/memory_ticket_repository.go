@@ -16,7 +16,7 @@ type MemoryTicketRepository struct {
 	nextID  uint
 }
 
-// NewMemoryTicketRepository creates a new in-memory ticket repository
+// NewMemoryTicketRepository creates a new in-memory ticket repository.
 func NewMemoryTicketRepository() *MemoryTicketRepository {
 	return &MemoryTicketRepository{
 		tickets: make(map[uint]*models.SimpleTicket),
@@ -24,7 +24,7 @@ func NewMemoryTicketRepository() *MemoryTicketRepository {
 	}
 }
 
-// Create saves a new ticket to memory
+// Create saves a new ticket to memory.
 func (r *MemoryTicketRepository) Create(ticket *models.Ticket) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -71,7 +71,7 @@ func (r *MemoryTicketRepository) Create(ticket *models.Ticket) error {
 	return nil
 }
 
-// GetByID retrieves a ticket by its ID
+// GetByID retrieves a ticket by its ID.
 func (r *MemoryTicketRepository) GetByID(id uint) (*models.Ticket, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -86,7 +86,7 @@ func (r *MemoryTicketRepository) GetByID(id uint) (*models.Ticket, error) {
 	return ortsTicket, nil
 }
 
-// Update modifies an existing ticket
+// Update modifies an existing ticket.
 func (r *MemoryTicketRepository) Update(ticket *models.Ticket) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -104,7 +104,7 @@ func (r *MemoryTicketRepository) Update(ticket *models.Ticket) error {
 	return nil
 }
 
-// Delete removes a ticket from memory
+// Delete removes a ticket from memory.
 func (r *MemoryTicketRepository) Delete(id uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -117,7 +117,7 @@ func (r *MemoryTicketRepository) Delete(id uint) error {
 	return nil
 }
 
-// List returns a paginated list of tickets
+// List returns a paginated list of tickets.
 func (r *MemoryTicketRepository) List(req *models.TicketListRequest) (*models.TicketListResponse, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -164,14 +164,14 @@ func (r *MemoryTicketRepository) List(req *models.TicketListRequest) (*models.Ti
 	}, nil
 }
 
-// containsIgnoreCase checks if a string contains another string (case-insensitive)
+// containsIgnoreCase checks if a string contains another string (case-insensitive).
 func containsIgnoreCase(s, substr string) bool {
 	return len(s) > 0 && len(substr) > 0 &&
 		(s == substr || len(s) > len(substr) &&
 			(s[:len(substr)] == substr || containsIgnoreCase(s[1:], substr)))
 }
 
-// GetByTicketNumber retrieves a ticket by its ticket number
+// GetByTicketNumber retrieves a ticket by its ticket number.
 func (r *MemoryTicketRepository) GetByTicketNumber(ticketNumber string) (*models.Ticket, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -186,7 +186,7 @@ func (r *MemoryTicketRepository) GetByTicketNumber(ticketNumber string) (*models
 	return nil, fmt.Errorf("ticket not found: %s", ticketNumber)
 }
 
-// Count returns the total number of tickets
+// Count returns the total number of tickets.
 func (r *MemoryTicketRepository) Count() (int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -194,7 +194,7 @@ func (r *MemoryTicketRepository) Count() (int, error) {
 	return len(r.tickets), nil
 }
 
-// CountByStatus returns the count of tickets by status
+// CountByStatus returns the count of tickets by status.
 func (r *MemoryTicketRepository) CountByStatus(status string) (int, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

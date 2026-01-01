@@ -1,3 +1,4 @@
+// Package config provides application configuration management.
 package config
 
 import (
@@ -16,7 +17,7 @@ var (
 	mu   sync.RWMutex
 )
 
-// Config represents the application configuration
+// Config represents the application configuration.
 type Config struct {
 	App          AppConfig          `mapstructure:"app"`
 	Server       ServerConfig       `mapstructure:"server"`
@@ -273,7 +274,7 @@ type IntegrationsConfig struct {
 	} `mapstructure:"webhook"`
 }
 
-// Load initializes the configuration with hot reload support
+// Load initializes the configuration with hot reload support.
 func Load(configPath string) error {
 	var err error
 	once.Do(func() {
@@ -336,14 +337,14 @@ func Load(configPath string) error {
 	return err
 }
 
-// Get returns the current configuration (thread-safe)
+// Get returns the current configuration (thread-safe).
 func Get() *Config {
 	mu.RLock()
 	defer mu.RUnlock()
 	return cfg
 }
 
-// GetDSN returns the PostgreSQL connection string
+// GetDSN returns the PostgreSQL connection string.
 func (c *DatabaseConfig) GetDSN() string {
 	return fmt.Sprintf(
 		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
@@ -351,27 +352,27 @@ func (c *DatabaseConfig) GetDSN() string {
 	)
 }
 
-// GetValkeyAddr returns the Valkey server address
+// GetValkeyAddr returns the Valkey server address.
 func (c *ValkeyConfig) GetValkeyAddr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
 
-// GetServerAddr returns the server listen address
+// GetServerAddr returns the server listen address.
 func (c *ServerConfig) GetServerAddr() string {
 	return fmt.Sprintf("%s:%d", c.Host, c.Port)
 }
 
-// IsProduction returns true if running in production mode
+// IsProduction returns true if running in production mode.
 func (c *AppConfig) IsProduction() bool {
 	return c.Env == "production"
 }
 
-// IsDevelopment returns true if running in development mode
+// IsDevelopment returns true if running in development mode.
 func (c *AppConfig) IsDevelopment() bool {
 	return c.Env == "development"
 }
 
-// LoadFromFile loads configuration from a specific file (useful for testing)
+// LoadFromFile loads configuration from a specific file (useful for testing).
 func LoadFromFile(configFile string) error {
 	v := viper.New()
 	v.SetConfigFile(configFile)
@@ -392,7 +393,7 @@ func LoadFromFile(configFile string) error {
 	return nil
 }
 
-// MustLoad loads configuration and panics on error
+// MustLoad loads configuration and panics on error.
 func MustLoad(configPath string) {
 	if err := Load(configPath); err != nil {
 		panic(fmt.Sprintf("Failed to load configuration: %v", err))

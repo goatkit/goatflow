@@ -1,11 +1,11 @@
-
 package api
 
 import (
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

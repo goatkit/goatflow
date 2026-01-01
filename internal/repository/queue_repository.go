@@ -8,17 +8,17 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// QueueRepository handles database operations for queues
+// QueueRepository handles database operations for queues.
 type QueueRepository struct {
 	db *sql.DB
 }
 
-// NewQueueRepository creates a new queue repository
+// NewQueueRepository creates a new queue repository.
 func NewQueueRepository(db *sql.DB) *QueueRepository {
 	return &QueueRepository{db: db}
 }
 
-// GetByID retrieves a queue by ID
+// GetByID retrieves a queue by ID.
 func (r *QueueRepository) GetByID(id uint) (*models.Queue, error) {
 	query := `
 		SELECT id, name, system_address_id, salutation_id, signature_id,
@@ -72,7 +72,7 @@ func (r *QueueRepository) GetByID(id uint) (*models.Queue, error) {
 	return &queue, err
 }
 
-// GetByName retrieves a queue by name
+// GetByName retrieves a queue by name.
 func (r *QueueRepository) GetByName(name string) (*models.Queue, error) {
 	query := `
 		SELECT id, name, system_address_id, salutation_id, signature_id,
@@ -126,7 +126,7 @@ func (r *QueueRepository) GetByName(name string) (*models.Queue, error) {
 	return &queue, err
 }
 
-// List retrieves all active queues
+// List retrieves all active queues.
 func (r *QueueRepository) List() ([]*models.Queue, error) {
 	query := `
 		SELECT q.id, q.name, q.system_address_id, q.salutation_id, q.signature_id,
@@ -196,7 +196,7 @@ func (r *QueueRepository) List() ([]*models.Queue, error) {
 	return queues, nil
 }
 
-// Create creates a new queue
+// Create creates a new queue.
 func (r *QueueRepository) Create(queue *models.Queue) error {
 	query := `
 		INSERT INTO queue (
@@ -244,7 +244,7 @@ func (r *QueueRepository) Create(queue *models.Queue) error {
 	return err
 }
 
-// Update updates a queue
+// Update updates a queue.
 func (r *QueueRepository) Update(queue *models.Queue) error {
 	query := `
 		UPDATE queue SET

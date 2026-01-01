@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -17,15 +16,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	// Import database package directly
+	// Import database package directly.
 	"database/sql"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
+
 	_ "github.com/lib/pq"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // NOTE: Do not force override DB host/port here; rely on environment.
 
-// TestFullStackTicketCreation tests the complete ticket creation flow with real database
+// TestFullStackTicketCreation tests the complete ticket creation flow with real database.
 func TestFullStackTicketCreation(t *testing.T) {
 	// Skip if DB env not configured or unreachable
 	if os.Getenv("DB_HOST") == "" {
@@ -251,7 +252,7 @@ func TestFullStackTicketCreation(t *testing.T) {
 	})
 }
 
-// Helper function to create a test ticket
+// Helper function to create a test ticket.
 func createTestTicket(t *testing.T, router *gin.Engine) int {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
@@ -276,7 +277,7 @@ func createTestTicket(t *testing.T, router *gin.Engine) int {
 	return int(resp["id"].(float64))
 }
 
-// TestDatabaseIntegrity verifies our database operations maintain referential integrity
+// TestDatabaseIntegrity verifies our database operations maintain referential integrity.
 func TestDatabaseIntegrity(t *testing.T) {
 	if err := database.InitTestDB(); err != nil {
 		t.Skip("Database not available")
@@ -373,7 +374,7 @@ func TestDatabaseIntegrity(t *testing.T) {
 	})
 }
 
-// TestCleanupOldTestData ensures we don't accumulate test data over time
+// TestCleanupOldTestData ensures we don't accumulate test data over time.
 func TestCleanupOldTestData(t *testing.T) {
 	if err := database.InitTestDB(); err != nil {
 		t.Skip("Database not available")

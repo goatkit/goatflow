@@ -73,10 +73,10 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/users.pongo2":                     true,
 
 	// Agent templates
-	"pages/agent/dashboard.pongo2":           true,
-	"pages/agent/queues.pongo2":              true,
-	"pages/agent/ticket_view.pongo2":         true,
-	"pages/agent/tickets.pongo2":             true,
+	"pages/agent/dashboard.pongo2":   true,
+	"pages/agent/queues.pongo2":      true,
+	"pages/agent/ticket_view.pongo2": true,
+	"pages/agent/tickets.pongo2":     true,
 
 	// Customer templates
 	"pages/customer/company_info.pongo2":   true,
@@ -179,15 +179,15 @@ func sampleGroup() map[string]interface{} {
 
 func sampleUser() map[string]interface{} {
 	return map[string]interface{}{
-		"ID":         1,
-		"Login":      "testuser",
-		"FirstName":  "Test",
-		"LastName":   "User",
-		"Email":      "test@example.com",
-		"ValidID":    1,
-		"IsAdmin":    false,
-		"Created":    time.Now(),
-		"Changed":    time.Now(),
+		"ID":        1,
+		"Login":     "testuser",
+		"FirstName": "Test",
+		"LastName":  "User",
+		"Email":     "test@example.com",
+		"ValidID":   1,
+		"IsAdmin":   false,
+		"Created":   time.Now(),
+		"Changed":   time.Now(),
 	}
 }
 
@@ -218,49 +218,49 @@ func sampleCompany() map[string]interface{} {
 
 func sampleDynamicField() map[string]interface{} {
 	return map[string]interface{}{
-		"ID":        1,
-		"Name":      "TestField",
-		"Label":     "Test Field",
-		"FieldType": "Text",
+		"ID":         1,
+		"Name":       "TestField",
+		"Label":      "Test Field",
+		"FieldType":  "Text",
 		"ObjectType": "Ticket",
-		"Config":    map[string]interface{}{"DefaultValue": "", "MaxLength": 100},
-		"ValidID":   1,
+		"Config":     map[string]interface{}{"DefaultValue": "", "MaxLength": 100},
+		"ValidID":    1,
 	}
 }
 
 func sampleArticle() map[string]interface{} {
 	return map[string]interface{}{
-		"ID":               1,
-		"TicketID":         123,
-		"ArticleType":      "note-internal",
-		"SenderType":       "agent",
-		"From":             "agent@example.com",
-		"To":               "customer@example.com",
-		"Subject":          "Test Article",
-		"Body":             "Test body content",
-		"ContentType":      "text/plain",
-		"Created":          time.Now(),
-		"IncomingTime":     time.Now(),
+		"ID":           1,
+		"TicketID":     123,
+		"ArticleType":  "note-internal",
+		"SenderType":   "agent",
+		"From":         "agent@example.com",
+		"To":           "customer@example.com",
+		"Subject":      "Test Article",
+		"Body":         "Test body content",
+		"ContentType":  "text/plain",
+		"Created":      time.Now(),
+		"IncomingTime": time.Now(),
 	}
 }
 
 func sampleService() map[string]interface{} {
 	return map[string]interface{}{
-		"ID":       1,
-		"Name":     "Test Service",
-		"Comment":  "Test service",
-		"ValidID":  1,
+		"ID":      1,
+		"Name":    "Test Service",
+		"Comment": "Test service",
+		"ValidID": 1,
 	}
 }
 
 func sampleSLA() map[string]interface{} {
 	return map[string]interface{}{
-		"ID":               1,
-		"Name":             "Test SLA",
-		"Comment":          "Test SLA",
+		"ID":                1,
+		"Name":              "Test SLA",
+		"Comment":           "Test SLA",
 		"FirstResponseTime": 3600,
-		"SolutionTime":     86400,
-		"ValidID":          1,
+		"SolutionTime":      86400,
+		"ValidID":           1,
 	}
 }
 
@@ -284,11 +284,11 @@ func samplePriority() map[string]interface{} {
 
 func sampleState() map[string]interface{} {
 	return map[string]interface{}{
-		"ID":        1,
-		"Name":      "open",
-		"TypeID":    1,
-		"TypeName":  "open",
-		"ValidID":   1,
+		"ID":       1,
+		"Name":     "open",
+		"TypeID":   1,
+		"TypeName": "open",
+		"ValidID":  1,
 	}
 }
 
@@ -302,14 +302,14 @@ func sampleType() map[string]interface{} {
 
 func sampleKBArticle() map[string]interface{} {
 	return map[string]interface{}{
-		"ID":          1,
-		"CategoryID":  1,
-		"Title":       "Test KB Article",
-		"Slug":        "test-kb-article",
-		"Content":     "<p>Test content</p>",
-		"ViewCount":   100,
-		"Published":   true,
-		"Created":     time.Now(),
+		"ID":         1,
+		"CategoryID": 1,
+		"Title":      "Test KB Article",
+		"Slug":       "test-kb-article",
+		"Content":    "<p>Test content</p>",
+		"ViewCount":  100,
+		"Published":  true,
+		"Created":    time.Now(),
 	}
 }
 
@@ -835,13 +835,13 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 			ctx: func() pongo2.Context {
 				ctx := adminContext()
 				ctx["Template"] = map[string]interface{}{
-					"ID":          0,
-					"Name":        "",
-					"Subject":     "",
-					"Body":        "",
-					"ContentType": "text/plain",
+					"ID":             0,
+					"Name":           "",
+					"Subject":        "",
+					"Body":           "",
+					"ContentType":    "text/plain",
 					"TemplateTypeID": 1,
-					"ValidID":     1,
+					"ValidID":        1,
 				}
 				ctx["IsNew"] = true
 				ctx["TemplateTypes"] = []map[string]interface{}{
@@ -1411,7 +1411,7 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 // 100% COVERAGE ENFORCEMENT TEST
 // =============================================================================
 
-// TestAllPageTemplatesHaveCoverage ensures every page template is tested
+// TestAllPageTemplatesHaveCoverage ensures every page template is tested.
 func TestAllPageTemplatesHaveCoverage(t *testing.T) {
 	helper := NewTemplateTestHelper(t)
 

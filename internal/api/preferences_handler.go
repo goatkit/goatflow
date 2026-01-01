@@ -5,11 +5,12 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
 
-// HandleGetSessionTimeout retrieves the user's session timeout preference
+// HandleGetSessionTimeout retrieves the user's session timeout preference.
 func HandleGetSessionTimeout(c *gin.Context) {
 	// Get user ID from context (middleware sets "user_id" not "userID")
 	userIDInterface, exists := c.Get("user_id")
@@ -67,7 +68,7 @@ func HandleGetSessionTimeout(c *gin.Context) {
 	})
 }
 
-// HandleSetSessionTimeout sets the user's session timeout preference
+// HandleSetSessionTimeout sets the user's session timeout preference.
 func HandleSetSessionTimeout(c *gin.Context) {
 	// Get user ID from context (middleware sets "user_id" not "userID")
 	userIDInterface, exists := c.Get("user_id")

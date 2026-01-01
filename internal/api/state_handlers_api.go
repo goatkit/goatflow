@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// handleGetStates returns list of ticket states
+// handleGetStates returns list of ticket states.
 func handleGetStates(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -26,7 +27,7 @@ func handleGetStates(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch states"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var data []gin.H
 	for rows.Next() {
 		var (
@@ -47,7 +48,7 @@ func handleGetStates(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
 }
 
-// handleCreateState creates a new ticket state
+// handleCreateState creates a new ticket state.
 func handleCreateState(c *gin.Context) {
 	var input struct {
 		Name     string  `json:"name"`
@@ -95,7 +96,7 @@ func handleCreateState(c *gin.Context) {
 	}})
 }
 
-// handleUpdateState updates a ticket state
+// handleUpdateState updates a ticket state.
 func handleUpdateState(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -154,7 +155,7 @@ func handleUpdateState(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": resp})
 }
 
-// handleDeleteState soft deletes a ticket state
+// handleDeleteState soft deletes a ticket state.
 func handleDeleteState(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)

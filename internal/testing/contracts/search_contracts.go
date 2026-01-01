@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-// SearchContracts defines the API contracts for search endpoints
+// SearchContracts defines the API contracts for search endpoints.
 var SearchContracts = []Contract{
 	{
 		Name:        "SearchAll",
@@ -176,7 +176,7 @@ var SearchContracts = []Contract{
 	},
 }
 
-// RegisterSearchContracts registers search contracts for testing
+// RegisterSearchContracts registers search contracts for testing.
 func RegisterSearchContracts() {
 	// No-op registrar kept for backward compatibility
 }

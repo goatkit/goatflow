@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleGetPriorityAPI handles GET /api/v1/priorities/:id
+// HandleGetPriorityAPI handles GET /api/v1/priorities/:id.
 func HandleGetPriorityAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

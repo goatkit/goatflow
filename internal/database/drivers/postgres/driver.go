@@ -1,3 +1,4 @@
+// Package postgres provides the PostgreSQL database driver implementation.
 package postgres
 
 import (
@@ -6,21 +7,22 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	_ "github.com/lib/pq"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// PostgreSQLDriver implements the DatabaseDriver interface for PostgreSQL
+// PostgreSQLDriver implements the DatabaseDriver interface for PostgreSQL.
 type PostgreSQLDriver struct {
 	db *sql.DB
 }
 
-// NewPostgreSQLDriver creates a new PostgreSQL driver
+// NewPostgreSQLDriver creates a new PostgreSQL driver.
 func NewPostgreSQLDriver() database.DatabaseDriver {
 	return &PostgreSQLDriver{}
 }
 
-// Connect establishes a connection to PostgreSQL
+// Connect establishes a connection to PostgreSQL.
 func (d *PostgreSQLDriver) Connect(ctx context.Context, dsn string) error {
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
@@ -36,7 +38,7 @@ func (d *PostgreSQLDriver) Connect(ctx context.Context, dsn string) error {
 	return nil
 }
 
-// Close closes the database connection
+// Close closes the database connection.
 func (d *PostgreSQLDriver) Close() error {
 	if d.db != nil {
 		return d.db.Close()
@@ -44,7 +46,7 @@ func (d *PostgreSQLDriver) Close() error {
 	return nil
 }
 
-// Ping checks if the connection is alive
+// Ping checks if the connection is alive.
 func (d *PostgreSQLDriver) Ping(ctx context.Context) error {
 	if d.db == nil {
 		return sql.ErrConnDone
@@ -52,7 +54,7 @@ func (d *PostgreSQLDriver) Ping(ctx context.Context) error {
 	return d.db.PingContext(ctx)
 }
 
-// CreateTable generates and returns a CREATE TABLE query for PostgreSQL
+// CreateTable generates and returns a CREATE TABLE query for PostgreSQL.
 func (d *PostgreSQLDriver) CreateTable(schema database.TableSchema) (database.Query, error) {
 	var parts []string
 
@@ -122,7 +124,7 @@ func (d *PostgreSQLDriver) CreateTable(schema database.TableSchema) (database.Qu
 	return database.Query{SQL: sql, Args: nil}, nil
 }
 
-// DropTable generates a DROP TABLE query
+// DropTable generates a DROP TABLE query.
 func (d *PostgreSQLDriver) DropTable(tableName string) (database.Query, error) {
 	return database.Query{
 		SQL:  fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE", tableName),
@@ -130,7 +132,7 @@ func (d *PostgreSQLDriver) DropTable(tableName string) (database.Query, error) {
 	}, nil
 }
 
-// TableExists checks if a table exists
+// TableExists checks if a table exists.
 func (d *PostgreSQLDriver) TableExists(tableName string) (bool, error) {
 	query := `
 		SELECT EXISTS (
@@ -144,7 +146,7 @@ func (d *PostgreSQLDriver) TableExists(tableName string) (bool, error) {
 	return exists, err
 }
 
-// Insert generates an INSERT query with RETURNING support
+// Insert generates an INSERT query with RETURNING support.
 func (d *PostgreSQLDriver) Insert(table string, data map[string]interface{}) (database.Query, error) {
 	columns := make([]string, 0, len(data))
 	placeholders := make([]string, 0, len(data))
@@ -166,7 +168,7 @@ func (d *PostgreSQLDriver) Insert(table string, data map[string]interface{}) (da
 	return database.Query{SQL: sql, Args: values}, nil
 }
 
-// Update generates an UPDATE query
+// Update generates an UPDATE query.
 func (d *PostgreSQLDriver) Update(table string, data map[string]interface{}, where string, whereArgs ...interface{}) (database.Query, error) {
 	setClauses := make([]string, 0, len(data))
 	values := make([]interface{}, 0, len(data)+len(whereArgs))
@@ -196,13 +198,13 @@ func (d *PostgreSQLDriver) Update(table string, data map[string]interface{}, whe
 	return database.Query{SQL: sql, Args: values}, nil
 }
 
-// Delete generates a DELETE query
+// Delete generates a DELETE query.
 func (d *PostgreSQLDriver) Delete(table string, where string, whereArgs ...interface{}) (database.Query, error) {
 	sql := fmt.Sprintf("DELETE FROM %s WHERE %s", table, where)
 	return database.Query{SQL: sql, Args: whereArgs}, nil
 }
 
-// Select generates a SELECT query
+// Select generates a SELECT query.
 func (d *PostgreSQLDriver) Select(table string, columns []string, where string, whereArgs ...interface{}) (database.Query, error) {
 	cols := "*"
 	if len(columns) > 0 {
@@ -217,7 +219,7 @@ func (d *PostgreSQLDriver) Select(table string, columns []string, where string, 
 	return database.Query{SQL: sql, Args: whereArgs}, nil
 }
 
-// MapType maps schema types to PostgreSQL types
+// MapType maps schema types to PostgreSQL types.
 func (d *PostgreSQLDriver) MapType(schemaType string) string {
 	// Handle parameterized types
 	if strings.HasPrefix(schemaType, "varchar") {
@@ -260,22 +262,22 @@ func (d *PostgreSQLDriver) MapType(schemaType string) string {
 	}
 }
 
-// SupportsReturning returns true for PostgreSQL
+// SupportsReturning returns true for PostgreSQL.
 func (d *PostgreSQLDriver) SupportsReturning() bool {
 	return true
 }
 
-// SupportsLastInsertId returns false for PostgreSQL
+// SupportsLastInsertId returns false for PostgreSQL.
 func (d *PostgreSQLDriver) SupportsLastInsertId() bool {
 	return false
 }
 
-// SupportsArrays returns true for PostgreSQL
+// SupportsArrays returns true for PostgreSQL.
 func (d *PostgreSQLDriver) SupportsArrays() bool {
 	return true
 }
 
-// BeginTx starts a new transaction
+// BeginTx starts a new transaction.
 func (d *PostgreSQLDriver) BeginTx(ctx context.Context) (database.Transaction, error) {
 	if d.db == nil {
 		return nil, sql.ErrConnDone
@@ -289,7 +291,7 @@ func (d *PostgreSQLDriver) BeginTx(ctx context.Context) (database.Transaction, e
 	return &pgTransaction{tx: tx}, nil
 }
 
-// Exec executes a query without returning rows
+// Exec executes a query without returning rows.
 func (d *PostgreSQLDriver) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	if d.db == nil {
 		return nil, sql.ErrConnDone
@@ -297,7 +299,7 @@ func (d *PostgreSQLDriver) Exec(ctx context.Context, query string, args ...inter
 	return d.db.ExecContext(ctx, query, args...)
 }
 
-// Query executes a query that returns rows
+// Query executes a query that returns rows.
 func (d *PostgreSQLDriver) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	if d.db == nil {
 		return nil, sql.ErrConnDone
@@ -305,7 +307,7 @@ func (d *PostgreSQLDriver) Query(ctx context.Context, query string, args ...inte
 	return d.db.QueryContext(ctx, query, args...)
 }
 
-// QueryRow executes a query that returns at most one row
+// QueryRow executes a query that returns at most one row.
 func (d *PostgreSQLDriver) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	if d.db == nil {
 		return nil
@@ -313,7 +315,7 @@ func (d *PostgreSQLDriver) QueryRow(ctx context.Context, query string, args ...i
 	return d.db.QueryRowContext(ctx, query, args...)
 }
 
-// pgTransaction wraps sql.Tx to implement Transaction interface
+// pgTransaction wraps sql.Tx to implement Transaction interface.
 type pgTransaction struct {
 	tx *sql.Tx
 }

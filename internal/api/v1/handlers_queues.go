@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Queue handlers - basic stubs for now
+// Queue handlers - basic stubs for now.
 func (router *APIRouter) handleListQueues(c *gin.Context) {
 	// TODO: Implement actual queue listing
 	queues := []gin.H{

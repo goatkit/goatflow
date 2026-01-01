@@ -10,41 +10,41 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// OpenAPISpec represents a simplified OpenAPI specification
+// OpenAPISpec represents a simplified OpenAPI specification.
 type OpenAPISpec struct {
 	OpenAPI string                 `yaml:"openapi"`
 	Info    map[string]interface{} `yaml:"info"`
 	Paths   map[string]PathItem    `yaml:"paths"`
 }
 
-// PathItem represents an OpenAPI path item
+// PathItem represents an OpenAPI path item.
 type PathItem map[string]Operation
 
-// Operation represents an OpenAPI operation
+// Operation represents an OpenAPI operation.
 type Operation struct {
 	OperationID string              `yaml:"operationId"`
 	Responses   map[string]Response `yaml:"responses"`
 	RequestBody *RequestBody        `yaml:"requestBody,omitempty"`
 }
 
-// Response represents an OpenAPI response
+// Response represents an OpenAPI response.
 type Response struct {
 	Description string               `yaml:"description"`
 	Content     map[string]MediaType `yaml:"content,omitempty"`
 }
 
-// RequestBody represents an OpenAPI request body
+// RequestBody represents an OpenAPI request body.
 type RequestBody struct {
 	Required bool                 `yaml:"required"`
 	Content  map[string]MediaType `yaml:"content"`
 }
 
-// MediaType represents an OpenAPI media type
+// MediaType represents an OpenAPI media type.
 type MediaType struct {
 	Schema Schema `yaml:"schema"`
 }
 
-// Schema represents a simplified OpenAPI schema
+// Schema represents a simplified OpenAPI schema.
 type Schema struct {
 	Type       string            `yaml:"type"`
 	Properties map[string]Schema `yaml:"properties,omitempty"`
@@ -53,12 +53,12 @@ type Schema struct {
 	Ref        string            `yaml:"$ref,omitempty"`
 }
 
-// OpenAPIValidator provides OpenAPI contract validation
+// OpenAPIValidator provides OpenAPI contract validation.
 type OpenAPIValidator struct {
 	spec *OpenAPISpec
 }
 
-// NewOpenAPIValidator creates a new OpenAPI validator from the spec file
+// NewOpenAPIValidator creates a new OpenAPI validator from the spec file.
 func NewOpenAPIValidator(specPath string) (*OpenAPIValidator, error) {
 	// Read the OpenAPI spec file
 	specData, err := os.ReadFile(specPath)
@@ -75,7 +75,7 @@ func NewOpenAPIValidator(specPath string) (*OpenAPIValidator, error) {
 	return &OpenAPIValidator{spec: &spec}, nil
 }
 
-// ValidateResponse validates that a response matches the OpenAPI spec
+// ValidateResponse validates that a response matches the OpenAPI spec.
 func (v *OpenAPIValidator) ValidateResponse() gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		// Store the original writer
@@ -99,7 +99,7 @@ func (v *OpenAPIValidator) ValidateResponse() gin.HandlerFunc {
 	})
 }
 
-// responseWriter captures response data for validation
+// responseWriter captures response data for validation.
 type responseWriter struct {
 	gin.ResponseWriter
 	statusCode int
@@ -116,7 +116,7 @@ func (w *responseWriter) WriteHeader(statusCode int) {
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
-// validateResponse checks if the response matches the OpenAPI specification
+// validateResponse checks if the response matches the OpenAPI specification.
 func (v *OpenAPIValidator) validateResponse(method, path string, statusCode int, body []byte) error {
 	// Find the path in the spec (simplified - doesn't handle path parameters)
 	pathItem, exists := v.spec.Paths[path]
@@ -170,7 +170,7 @@ func (v *OpenAPIValidator) validateResponse(method, path string, statusCode int,
 	return nil
 }
 
-// validateJSONSchema performs basic schema validation
+// validateJSONSchema performs basic schema validation.
 func (v *OpenAPIValidator) validateJSONSchema(data interface{}, schema Schema) error {
 	switch schema.Type {
 	case "object":
@@ -232,7 +232,7 @@ func (v *OpenAPIValidator) validateJSONSchema(data interface{}, schema Schema) e
 	return nil
 }
 
-// LoadOpenAPIMiddleware creates the OpenAPI validation middleware
+// LoadOpenAPIMiddleware creates the OpenAPI validation middleware.
 func LoadOpenAPIMiddleware() gin.HandlerFunc {
 	// Find the OpenAPI spec file
 	specPath := filepath.Join("api", "openapi.yaml")

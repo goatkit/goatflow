@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TestTicketContracts tests all ticket endpoint contracts
+// TestTicketContracts tests all ticket endpoint contracts.
 func TestTicketContracts(t *testing.T) {
 	// Set up router
 	gin.SetMode(gin.TestMode)
@@ -240,7 +240,7 @@ func TestTicketContracts(t *testing.T) {
 	ct.Run()
 }
 
-// TestTicketActionContracts tests ticket action endpoint contracts
+// TestTicketActionContracts tests ticket action endpoint contracts.
 func TestTicketActionContracts(t *testing.T) {
 	// Set up router
 	gin.SetMode(gin.TestMode)

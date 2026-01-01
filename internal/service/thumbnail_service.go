@@ -21,7 +21,7 @@ type ThumbnailService struct {
 	cacheTTL    time.Duration
 }
 
-// NewThumbnailService creates a new thumbnail service with Redis caching
+// NewThumbnailService creates a new thumbnail service with Redis caching.
 func NewThumbnailService(redisClient *redis.Client) *ThumbnailService {
 	return &ThumbnailService{
 		redisClient: redisClient,
@@ -29,7 +29,7 @@ func NewThumbnailService(redisClient *redis.Client) *ThumbnailService {
 	}
 }
 
-// ThumbnailOptions defines options for thumbnail generation
+// ThumbnailOptions defines options for thumbnail generation.
 type ThumbnailOptions struct {
 	Width   int
 	Height  int
@@ -37,7 +37,7 @@ type ThumbnailOptions struct {
 	Format  string // "jpeg" or "png"
 }
 
-// DefaultThumbnailOptions returns sensible defaults
+// DefaultThumbnailOptions returns sensible defaults.
 func DefaultThumbnailOptions() ThumbnailOptions {
 	return ThumbnailOptions{
 		Width:   200,
@@ -47,7 +47,7 @@ func DefaultThumbnailOptions() ThumbnailOptions {
 	}
 }
 
-// GenerateThumbnail generates a thumbnail from image data
+// GenerateThumbnail generates a thumbnail from image data.
 func (s *ThumbnailService) GenerateThumbnail(data []byte, contentType string, opts ThumbnailOptions) ([]byte, string, error) {
 	// Decode the image
 	reader := bytes.NewReader(data)
@@ -78,7 +78,7 @@ func (s *ThumbnailService) GenerateThumbnail(data []byte, contentType string, op
 	return buf.Bytes(), outputFormat, nil
 }
 
-// GetOrCreateThumbnail gets a thumbnail from cache or generates it
+// GetOrCreateThumbnail gets a thumbnail from cache or generates it.
 func (s *ThumbnailService) GetOrCreateThumbnail(ctx context.Context, attachmentID int, data []byte, contentType string, opts ThumbnailOptions) ([]byte, string, error) {
 	// Generate cache key
 	cacheKey := s.generateCacheKey(attachmentID, opts)
@@ -115,7 +115,7 @@ func (s *ThumbnailService) GetOrCreateThumbnail(ctx context.Context, attachmentI
 	return thumbnailData, outputFormat, nil
 }
 
-// InvalidateThumbnail removes a thumbnail from cache
+// InvalidateThumbnail removes a thumbnail from cache.
 func (s *ThumbnailService) InvalidateThumbnail(ctx context.Context, attachmentID int) error {
 	// Remove all size variations
 	pattern := fmt.Sprintf("thumbnail:%d:*", attachmentID)
@@ -142,7 +142,7 @@ func (s *ThumbnailService) InvalidateThumbnail(ctx context.Context, attachmentID
 	return nil
 }
 
-// generateCacheKey creates a unique cache key for a thumbnail
+// generateCacheKey creates a unique cache key for a thumbnail.
 func (s *ThumbnailService) generateCacheKey(attachmentID int, opts ThumbnailOptions) string {
 	// Create a hash of the options for uniqueness
 	optStr := fmt.Sprintf("%dx%d-q%d-%s", opts.Width, opts.Height, opts.Quality, opts.Format)
@@ -150,7 +150,7 @@ func (s *ThumbnailService) generateCacheKey(attachmentID int, opts ThumbnailOpti
 	return fmt.Sprintf("thumbnail:%d:%s", attachmentID, hash[:8])
 }
 
-// IsSupportedImageType checks if a content type can be thumbnailed
+// IsSupportedImageType checks if a content type can be thumbnailed.
 func IsSupportedImageType(contentType string) bool {
 	supportedTypes := []string{
 		"image/jpeg",
@@ -170,7 +170,7 @@ func IsSupportedImageType(contentType string) bool {
 	return false
 }
 
-// GetPlaceholderThumbnail returns a placeholder image for non-image files
+// GetPlaceholderThumbnail returns a placeholder image for non-image files.
 func GetPlaceholderThumbnail(contentType string) ([]byte, string) {
 	// Simple SVG placeholder based on file type
 	var svg string

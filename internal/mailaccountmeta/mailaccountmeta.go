@@ -1,3 +1,4 @@
+// Package mailaccountmeta provides mail account metadata parsing and serialization.
 package mailaccountmeta
 
 import (

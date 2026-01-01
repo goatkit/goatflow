@@ -8,6 +8,7 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
@@ -560,7 +561,7 @@ func fetchSystemAddresses(db *sql.DB) ([]systemAddressDTO, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []systemAddressDTO
 	for rows.Next() {
@@ -600,7 +601,7 @@ func fetchSalutations(db *sql.DB) ([]salutationDTO, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []salutationDTO
 	for rows.Next() {
@@ -638,7 +639,7 @@ func fetchSignatures(db *sql.DB) ([]signatureDTO, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []signatureDTO
 	for rows.Next() {
@@ -670,7 +671,7 @@ func fetchQueueOptions(db *sql.DB) ([]queueOptionDTO, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []queueOptionDTO
 	for rows.Next() {

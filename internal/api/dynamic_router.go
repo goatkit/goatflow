@@ -1,11 +1,12 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"os"
 	"sync/atomic"
+
+	"github.com/gin-gonic/gin"
 )
 
 // dynamicEngine holds only YAML routes (selective mode) and can be swapped without impacting static routes.

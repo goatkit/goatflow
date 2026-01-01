@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -45,7 +44,7 @@ func TestAgentTicketsHandler_NoPriorityColorColumn(t *testing.T) {
 	assert.NotContains(t, w.Body.String(), "pq:")
 }
 
-// Mock repository for testing
+// Mock repository for testing.
 type mockTicketRepository struct {
 	simulateNoPriorityColor bool
 }

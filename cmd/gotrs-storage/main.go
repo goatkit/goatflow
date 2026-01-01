@@ -1,3 +1,4 @@
+// Package main provides storage management utilities.
 package main
 
 import (
@@ -9,9 +10,10 @@ import (
 	"os"
 	"time"
 
+	_ "github.com/lib/pq"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/storage"
-	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -101,7 +103,7 @@ func main() {
 	}
 }
 
-// SwitchOptions contains options for storage backend switching
+// SwitchOptions contains options for storage backend switching.
 type SwitchOptions struct {
 	FSPath       string
 	Tolerant     bool
@@ -113,7 +115,7 @@ type SwitchOptions struct {
 	Verbose      bool
 }
 
-// switchBackend switches the storage backend
+// switchBackend switches the storage backend.
 func switchBackend(ctx context.Context, db *sql.DB, targetBackend string, opts *SwitchOptions) error {
 	fmt.Printf("Switching storage backend to: %s\n", targetBackend)
 
@@ -170,7 +172,6 @@ func switchBackend(ctx context.Context, db *sql.DB, targetBackend string, opts *
 	if opts.CreatedAfter != "" {
 		query += fmt.Sprintf(" AND t.create_time > $%d", argNum)
 		args = append(args, opts.CreatedAfter)
-		argNum++
 	}
 
 	query += " ORDER BY a.id"
@@ -234,7 +235,7 @@ func switchBackend(ctx context.Context, db *sql.DB, targetBackend string, opts *
 	return nil
 }
 
-// processBatch processes a batch of articles
+// processBatch processes a batch of articles.
 func processBatch(ctx context.Context, source, target storage.Backend, articleIDs []int64, opts *SwitchOptions) (processed, failed int) {
 	for _, articleID := range articleIDs {
 		if opts.Verbose {
@@ -294,7 +295,7 @@ func processBatch(ctx context.Context, source, target storage.Backend, articleID
 	return processed, failed
 }
 
-// showStatus shows current storage status
+// showStatus shows current storage status.
 func showStatus(ctx context.Context, db *sql.DB, fsPath string, verbose bool) error {
 	fmt.Println("Storage Status")
 	fmt.Println("==============")
@@ -382,7 +383,7 @@ func showStatus(ctx context.Context, db *sql.DB, fsPath string, verbose bool) er
 	return nil
 }
 
-// verifyStorage verifies storage integrity
+// verifyStorage verifies storage integrity.
 func verifyStorage(ctx context.Context, db *sql.DB, fsPath string, verbose bool) error {
 	fmt.Println("Verifying Storage Integrity")
 	fmt.Println("===========================")

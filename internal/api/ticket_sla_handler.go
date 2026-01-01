@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
-// SLA represents Service Level Agreement status
+// SLA represents Service Level Agreement status.
 type SLA struct {
 	Status        string    `json:"status"` // within, warning, overdue
 	Deadline      time.Time `json:"deadline"`
@@ -18,7 +19,7 @@ type SLA struct {
 	TimeRemaining string    `json:"time_remaining"`
 }
 
-// EscalationResult represents the result of escalation check
+// EscalationResult represents the result of escalation check.
 type EscalationResult struct {
 	ShouldEscalate  bool     `json:"should_escalate"`
 	EscalationLevel string   `json:"escalation_level"`
@@ -26,7 +27,7 @@ type EscalationResult struct {
 	Level           string   `json:"level"`
 }
 
-// SLA hours by priority (configurable, using defaults for now)
+// SLA hours by priority (configurable, using defaults for now).
 var slaHours = map[string]float64{
 	"5 very high": 1,  // 1 hour
 	"4 high":      4,  // 4 hours
@@ -37,7 +38,7 @@ var slaHours = map[string]float64{
 
 var warningThreshold = 75.0 // Warn when 75% of SLA is used
 
-// Calculate SLA status for a ticket
+// Calculate SLA status for a ticket.
 func calculateSLA(priority string, createdAt, currentTime time.Time) SLA {
 	hours, exists := slaHours[priority]
 	if !exists {
@@ -73,7 +74,7 @@ func calculateSLA(priority string, createdAt, currentTime time.Time) SLA {
 	}
 }
 
-// Format duration in human-readable format
+// Format duration in human-readable format.
 func formatDuration(d time.Duration) string {
 	hours := int(d.Hours())
 	minutes := int(d.Minutes()) % 60
@@ -88,7 +89,7 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%dm", minutes)
 }
 
-// Get ticket SLA status handler
+// Get ticket SLA status handler.
 func handleGetTicketSLA(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -173,7 +174,7 @@ func handleGetTicketSLA(c *gin.Context) {
 	})
 }
 
-// Escalate ticket handler
+// Escalate ticket handler.
 func handleEscalateTicket(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -249,7 +250,7 @@ func handleEscalateTicket(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// Check if ticket should be auto-escalated
+// Check if ticket should be auto-escalated.
 func checkAutoEscalation(ticketData map[string]interface{}) EscalationResult {
 	// Already escalated?
 	if escalated, ok := ticketData["escalated"].(bool); ok && escalated {
@@ -293,7 +294,7 @@ func checkAutoEscalation(ticketData map[string]interface{}) EscalationResult {
 	return EscalationResult{ShouldEscalate: false}
 }
 
-// Get SLA report handler
+// Get SLA report handler.
 func handleSLAReport(c *gin.Context) {
 	startDate := c.Query("start_date")
 	endDate := c.Query("end_date")
@@ -356,7 +357,7 @@ func handleSLAReport(c *gin.Context) {
 	c.JSON(http.StatusOK, report)
 }
 
-// Update SLA configuration handler
+// Update SLA configuration handler.
 func handleUpdateSLAConfig(c *gin.Context) {
 	var req struct {
 		VeryHighHours     string `form:"very_high_hours"`
@@ -442,7 +443,7 @@ func handleUpdateSLAConfig(c *gin.Context) {
 	})
 }
 
-// Determine escalation level based on priority and overdue time
+// Determine escalation level based on priority and overdue time.
 func determineEscalationLevel(priority string, hoursOverdue float64, previousLevel string) EscalationResult {
 	var level string
 	var notifyList []string

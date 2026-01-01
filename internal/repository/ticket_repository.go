@@ -15,7 +15,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
 )
 
-// TicketRepository handles database operations for tickets
+// TicketRepository handles database operations for tickets.
 type TicketRepository struct {
 	db        *sql.DB
 	generator ticketnumber.Generator
@@ -47,7 +47,7 @@ func TicketNumberGeneratorInfo() (string, bool) {
 	return defaultTicketNumberGen.Name(), defaultTicketNumberGen.IsDateBased()
 }
 
-// NewTicketRepository creates a new ticket repository
+// NewTicketRepository creates a new ticket repository.
 func NewTicketRepository(db *sql.DB) *TicketRepository {
 	return &TicketRepository{
 		db:               db,
@@ -95,12 +95,12 @@ func (r *TicketRepository) GetTicketStateByID(stateID int) (*models.TicketState,
 	return &state, nil
 }
 
-// GetDB returns the database connection
+// GetDB returns the database connection.
 func (r *TicketRepository) GetDB() *sql.DB {
 	return r.db
 }
 
-// Create creates a new ticket in the database
+// Create creates a new ticket in the database.
 func (r *TicketRepository) Create(ticket *models.Ticket) error {
 	if (r.generator == nil || r.store == nil) && (defaultTicketNumberGen != nil && defaultTicketNumberStore != nil) {
 		r.generator = defaultTicketNumberGen
@@ -139,7 +139,6 @@ func (r *TicketRepository) Create(ticket *models.Ticket) error {
 
 // insertTicket performs the actual INSERT returning ticket id.
 func (r *TicketRepository) insertTicket(ticket *models.Ticket) error {
-
 	query := fmt.Sprintf(`
 		INSERT INTO ticket (
 			tn, title, queue_id, ticket_lock_id, %s,
@@ -219,7 +218,7 @@ func isUniqueTNError(err error) bool {
 	return false
 }
 
-// GetByID retrieves a ticket by its ID
+// GetByID retrieves a ticket by its ID.
 func (r *TicketRepository) GetByID(id uint) (*models.Ticket, error) {
 	query := fmt.Sprintf(`
 		SELECT 
@@ -271,7 +270,7 @@ func (r *TicketRepository) GetByID(id uint) (*models.Ticket, error) {
 	return &ticket, err
 }
 
-// GetByTN retrieves a ticket by its ticket number
+// GetByTN retrieves a ticket by its ticket number.
 func (r *TicketRepository) GetByTN(tn string) (*models.Ticket, error) {
 	query := fmt.Sprintf(`
 		SELECT 
@@ -323,7 +322,7 @@ func (r *TicketRepository) GetByTN(tn string) (*models.Ticket, error) {
 	return &ticket, err
 }
 
-// Update updates a ticket in the database
+// Update updates a ticket in the database.
 func (r *TicketRepository) Update(ticket *models.Ticket) error {
 	ticket.ChangeTime = time.Now()
 
@@ -395,7 +394,7 @@ func (r *TicketRepository) Update(ticket *models.Ticket) error {
 	return nil
 }
 
-// Delete deletes a ticket from the database
+// Delete deletes a ticket from the database.
 func (r *TicketRepository) Delete(id uint) error {
 	query := `DELETE FROM ticket WHERE id = $1`
 	// Convert placeholders for MySQL compatibility
@@ -417,7 +416,7 @@ func (r *TicketRepository) Delete(id uint) error {
 	return nil
 }
 
-// List retrieves a paginated list of tickets with filters
+// List retrieves a paginated list of tickets with filters.
 func (r *TicketRepository) List(req *models.TicketListRequest) (*models.TicketListResponse, error) {
 	// Set defaults
 	if req.Page <= 0 {
@@ -588,7 +587,7 @@ func (r *TicketRepository) List(req *models.TicketListRequest) (*models.TicketLi
 	}, nil
 }
 
-// GetTicketsByCustomer retrieves all tickets for a specific customer
+// GetTicketsByCustomer retrieves all tickets for a specific customer.
 func (r *TicketRepository) GetTicketsByCustomer(customerID uint, includeArchived bool) ([]models.Ticket, error) {
 	typeSelect := fmt.Sprintf("%s AS type_id", database.QualifiedTicketTypeColumn("t"))
 	query := fmt.Sprintf(`
@@ -630,7 +629,7 @@ func (r *TicketRepository) GetTicketsByCustomer(customerID uint, includeArchived
 	return tickets, nil
 }
 
-// GetTicketsByOwner retrieves all tickets assigned to a specific user
+// GetTicketsByOwner retrieves all tickets assigned to a specific user.
 func (r *TicketRepository) GetTicketsByOwner(ownerID uint, includeArchived bool) ([]models.Ticket, error) {
 	typeSelect := fmt.Sprintf("%s AS type_id", database.QualifiedTicketTypeColumn("t"))
 	query := fmt.Sprintf(`
@@ -672,7 +671,7 @@ func (r *TicketRepository) GetTicketsByOwner(ownerID uint, includeArchived bool)
 	return tickets, nil
 }
 
-// GetTicketWithRelations retrieves a ticket with all related data
+// GetTicketWithRelations retrieves a ticket with all related data.
 func (r *TicketRepository) GetTicketWithRelations(id uint) (*models.Ticket, error) {
 	typeSelect := fmt.Sprintf("%s AS type_id", database.QualifiedTicketTypeColumn("t"))
 	query := fmt.Sprintf(`
@@ -752,7 +751,7 @@ func (r *TicketRepository) GetTicketWithRelations(id uint) (*models.Ticket, erro
 	return &ticket, nil
 }
 
-// LockTicket locks a ticket for a specific user
+// LockTicket locks a ticket for a specific user.
 func (r *TicketRepository) LockTicket(ticketID uint, userID uint, lockType int) error {
 	query := `
 		UPDATE ticket 
@@ -788,7 +787,7 @@ func (r *TicketRepository) LockTicket(ticketID uint, userID uint, lockType int) 
 	return nil
 }
 
-// UnlockTicket unlocks a ticket
+// UnlockTicket unlocks a ticket.
 func (r *TicketRepository) UnlockTicket(ticketID uint, userID uint) error {
 	query := `
 		UPDATE ticket 
@@ -809,7 +808,7 @@ func (r *TicketRepository) UnlockTicket(ticketID uint, userID uint) error {
 	return err
 }
 
-// ArchiveTicket archives a ticket
+// ArchiveTicket archives a ticket.
 func (r *TicketRepository) ArchiveTicket(ticketID uint, userID uint) error {
 	query := `
 		UPDATE ticket 
@@ -823,7 +822,7 @@ func (r *TicketRepository) ArchiveTicket(ticketID uint, userID uint) error {
 	return err
 }
 
-// RestoreTicket restores an archived ticket
+// RestoreTicket restores an archived ticket.
 func (r *TicketRepository) RestoreTicket(ticketID uint, userID uint) error {
 	query := `
 		UPDATE ticket 
@@ -837,7 +836,7 @@ func (r *TicketRepository) RestoreTicket(ticketID uint, userID uint) error {
 	return err
 }
 
-// UpdateStatus updates the status of a ticket
+// UpdateStatus updates the status of a ticket.
 func (r *TicketRepository) UpdateStatus(ticketID uint, stateID uint, userID uint) error {
 	query := `
 		UPDATE ticket 
@@ -851,7 +850,7 @@ func (r *TicketRepository) UpdateStatus(ticketID uint, stateID uint, userID uint
 	return err
 }
 
-// UpdatePriority updates the priority of a ticket
+// UpdatePriority updates the priority of a ticket.
 func (r *TicketRepository) UpdatePriority(ticketID uint, priorityID uint, userID uint) error {
 	query := `
 		UPDATE ticket 
@@ -865,7 +864,7 @@ func (r *TicketRepository) UpdatePriority(ticketID uint, priorityID uint, userID
 	return err
 }
 
-// UpdateQueue transfers a ticket to a different queue
+// UpdateQueue transfers a ticket to a different queue.
 func (r *TicketRepository) UpdateQueue(ticketID uint, queueID uint, userID uint) error {
 	query := `
 		UPDATE ticket 
@@ -879,7 +878,7 @@ func (r *TicketRepository) UpdateQueue(ticketID uint, queueID uint, userID uint)
 	return err
 }
 
-// GetQueues retrieves all active queues
+// GetQueues retrieves all active queues.
 func (r *TicketRepository) GetQueues() ([]models.Queue, error) {
 	query := `
 		SELECT id, name, group_id, comment, unlock_timeout,
@@ -924,7 +923,7 @@ func (r *TicketRepository) GetQueues() ([]models.Queue, error) {
 	return queues, nil
 }
 
-// GetTicketStates retrieves all active ticket states
+// GetTicketStates retrieves all active ticket states.
 func (r *TicketRepository) GetTicketStates() ([]models.TicketState, error) {
 	query := `
 		SELECT id, name, type_id, valid_id,
@@ -964,7 +963,7 @@ func (r *TicketRepository) GetTicketStates() ([]models.TicketState, error) {
 	return states, nil
 }
 
-// GetTicketPriorities retrieves all active ticket priorities
+// GetTicketPriorities retrieves all active ticket priorities.
 func (r *TicketRepository) GetTicketPriorities() ([]models.TicketPriority, error) {
 	query := `
 		SELECT id, name, valid_id,
@@ -1003,7 +1002,7 @@ func (r *TicketRepository) GetTicketPriorities() ([]models.TicketPriority, error
 	return priorities, nil
 }
 
-// GetByTicketNumber retrieves a ticket by its ticket number
+// GetByTicketNumber retrieves a ticket by its ticket number.
 func (r *TicketRepository) GetByTicketNumber(ticketNumber string) (*models.Ticket, error) {
 	var ticket models.Ticket
 	query := `
@@ -1055,7 +1054,7 @@ func (r *TicketRepository) GetByTicketNumber(ticketNumber string) (*models.Ticke
 	return &ticket, err
 }
 
-// Count returns the total number of tickets
+// Count returns the total number of tickets.
 func (r *TicketRepository) Count() (int, error) {
 	var count int
 	query := `SELECT COUNT(*) FROM ticket`
@@ -1065,7 +1064,7 @@ func (r *TicketRepository) Count() (int, error) {
 	return count, err
 }
 
-// CountByStatus returns the number of tickets with a specific status
+// CountByStatus returns the number of tickets with a specific status.
 func (r *TicketRepository) CountByStatus(status string) (int, error) {
 	var count int
 	query := `
@@ -1080,7 +1079,7 @@ func (r *TicketRepository) CountByStatus(status string) (int, error) {
 	return count, err
 }
 
-// CountByStateID returns the number of tickets with a specific state ID
+// CountByStateID returns the number of tickets with a specific state ID.
 func (r *TicketRepository) CountByStateID(stateID int) (int, error) {
 	var count int
 	query := `SELECT COUNT(*) FROM ticket WHERE ticket_state_id = $1`
@@ -1090,7 +1089,7 @@ func (r *TicketRepository) CountByStateID(stateID int) (int, error) {
 	return count, err
 }
 
-// CountClosedToday returns the number of tickets closed today
+// CountClosedToday returns the number of tickets closed today.
 func (r *TicketRepository) CountClosedToday() (int, error) {
 	var count int
 	query := `

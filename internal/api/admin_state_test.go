@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -12,9 +11,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 func createAdminTestState(t *testing.T, name string) (int, bool) {

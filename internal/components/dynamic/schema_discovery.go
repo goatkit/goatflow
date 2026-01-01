@@ -3,18 +3,19 @@ package dynamic
 import (
 	"database/sql"
 	"fmt"
+	"strings"
+
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-	"strings"
 )
 
-// TableInfo represents database table information
+// TableInfo represents database table information.
 type TableInfo struct {
 	Name    string
 	Comment string
 }
 
-// ColumnInfo represents database column information
+// ColumnInfo represents database column information.
 type ColumnInfo struct {
 	Name         string
 	DataType     string
@@ -27,24 +28,24 @@ type ColumnInfo struct {
 	IsForeignKey bool
 }
 
-// ConstraintInfo represents database constraint information
+// ConstraintInfo represents database constraint information.
 type ConstraintInfo struct {
 	Name       string
 	Type       string
 	ColumnName string
 }
 
-// SchemaDiscovery handles database schema introspection
+// SchemaDiscovery handles database schema introspection.
 type SchemaDiscovery struct {
 	db *sql.DB
 }
 
-// NewSchemaDiscovery creates a new schema discovery instance
+// NewSchemaDiscovery creates a new schema discovery instance.
 func NewSchemaDiscovery(db *sql.DB) *SchemaDiscovery {
 	return &SchemaDiscovery{db: db}
 }
 
-// GetTables retrieves all tables from the database
+// GetTables retrieves all tables from the database.
 func (sd *SchemaDiscovery) GetTables() ([]TableInfo, error) {
 	query := `
 		SELECT 
@@ -75,7 +76,7 @@ func (sd *SchemaDiscovery) GetTables() ([]TableInfo, error) {
 	return tables, nil
 }
 
-// GetTableColumns retrieves column information for a specific table
+// GetTableColumns retrieves column information for a specific table.
 func (sd *SchemaDiscovery) GetTableColumns(tableName string) ([]ColumnInfo, error) {
 	query := `
 		SELECT 
@@ -155,7 +156,7 @@ func (sd *SchemaDiscovery) GetTableColumns(tableName string) ([]ColumnInfo, erro
 	return columns, nil
 }
 
-// GetTableConstraints retrieves constraint information for a table
+// GetTableConstraints retrieves constraint information for a table.
 func (sd *SchemaDiscovery) GetTableConstraints(tableName string) ([]ConstraintInfo, error) {
 	query := `
 		SELECT 
@@ -189,7 +190,7 @@ func (sd *SchemaDiscovery) GetTableConstraints(tableName string) ([]ConstraintIn
 	return constraints, nil
 }
 
-// GenerateModuleConfig generates a ModuleConfig from database schema
+// GenerateModuleConfig generates a ModuleConfig from database schema.
 func (sd *SchemaDiscovery) GenerateModuleConfig(tableName string) (*ModuleConfig, error) {
 	columns, err := sd.GetTableColumns(tableName)
 	if err != nil {
@@ -260,7 +261,7 @@ func (sd *SchemaDiscovery) GenerateModuleConfig(tableName string) (*ModuleConfig
 	return config, nil
 }
 
-// InferFieldType infers the appropriate field type from column name and data type
+// InferFieldType infers the appropriate field type from column name and data type.
 func (sd *SchemaDiscovery) InferFieldType(columnName, dataType string) string {
 	columnLower := strings.ToLower(columnName)
 	dataTypeLower := strings.ToLower(dataType)

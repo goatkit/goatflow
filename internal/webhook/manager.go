@@ -1,3 +1,4 @@
+// Package webhook provides webhook delivery and management.
 package webhook
 
 import (
@@ -16,7 +17,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Manager handles webhook operations
+// Manager handles webhook operations.
 type Manager struct {
 	webhooks      map[uint]*Webhook
 	deliveryQueue chan *WebhookDelivery
@@ -31,7 +32,7 @@ type Manager struct {
 	deliveryRepo DeliveryRepository
 }
 
-// WebhookRepository interface for webhook storage operations
+// WebhookRepository interface for webhook storage operations.
 type WebhookRepository interface {
 	Create(webhook *Webhook) error
 	GetByID(id uint) (*Webhook, error)
@@ -42,7 +43,7 @@ type WebhookRepository interface {
 	UpdateStatistics(id uint, stats WebhookStatistics) error
 }
 
-// DeliveryRepository interface for webhook delivery storage operations
+// DeliveryRepository interface for webhook delivery storage operations.
 type DeliveryRepository interface {
 	Create(delivery *WebhookDelivery) error
 	GetByID(id uint) (*WebhookDelivery, error)
@@ -52,7 +53,7 @@ type DeliveryRepository interface {
 	CleanupOldDeliveries(olderThan time.Time) error
 }
 
-// NewManager creates a new webhook manager
+// NewManager creates a new webhook manager.
 func NewManager(webhookRepo WebhookRepository, deliveryRepo DeliveryRepository) *Manager {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -86,13 +87,13 @@ func NewManager(webhookRepo WebhookRepository, deliveryRepo DeliveryRepository) 
 	return manager
 }
 
-// Stop gracefully shuts down the webhook manager
+// Stop gracefully shuts down the webhook manager.
 func (m *Manager) Stop() {
 	m.cancel()
 	close(m.deliveryQueue)
 }
 
-// loadWebhooks loads all active webhooks from storage
+// loadWebhooks loads all active webhooks from storage.
 func (m *Manager) loadWebhooks() error {
 	webhooks, err := m.webhookRepo.ListActive()
 	if err != nil {
@@ -109,7 +110,7 @@ func (m *Manager) loadWebhooks() error {
 	return nil
 }
 
-// CreateWebhook creates a new webhook
+// CreateWebhook creates a new webhook.
 func (m *Manager) CreateWebhook(req WebhookRequest) (*Webhook, error) {
 	webhook := &Webhook{
 		Name:          req.Name,
@@ -150,7 +151,7 @@ func (m *Manager) CreateWebhook(req WebhookRequest) (*Webhook, error) {
 	return webhook, nil
 }
 
-// GetWebhook retrieves a webhook by ID
+// GetWebhook retrieves a webhook by ID.
 func (m *Manager) GetWebhook(id uint) (*Webhook, error) {
 	m.mutex.RLock()
 	webhook, exists := m.webhooks[id]
@@ -163,12 +164,12 @@ func (m *Manager) GetWebhook(id uint) (*Webhook, error) {
 	return m.webhookRepo.GetByID(id)
 }
 
-// ListWebhooks returns all webhooks
+// ListWebhooks returns all webhooks.
 func (m *Manager) ListWebhooks() ([]*Webhook, error) {
 	return m.webhookRepo.List()
 }
 
-// UpdateWebhook updates an existing webhook
+// UpdateWebhook updates an existing webhook.
 func (m *Manager) UpdateWebhook(id uint, req WebhookRequest) (*Webhook, error) {
 	webhook, err := m.GetWebhook(id)
 	if err != nil {
@@ -212,7 +213,7 @@ func (m *Manager) UpdateWebhook(id uint, req WebhookRequest) (*Webhook, error) {
 	return webhook, nil
 }
 
-// DeleteWebhook removes a webhook
+// DeleteWebhook removes a webhook.
 func (m *Manager) DeleteWebhook(id uint) error {
 	err := m.webhookRepo.Delete(id)
 	if err != nil {
@@ -226,7 +227,7 @@ func (m *Manager) DeleteWebhook(id uint) error {
 	return nil
 }
 
-// TriggerEvent triggers webhooks for a specific event
+// TriggerEvent triggers webhooks for a specific event.
 func (m *Manager) TriggerEvent(event WebhookEvent, data interface{}, previousData interface{}) error {
 	m.mutex.RLock()
 	relevantWebhooks := make([]*Webhook, 0)
@@ -254,7 +255,7 @@ func (m *Manager) TriggerEvent(event WebhookEvent, data interface{}, previousDat
 	return nil
 }
 
-// shouldTriggerWebhook determines if a webhook should be triggered for an event
+// shouldTriggerWebhook determines if a webhook should be triggered for an event.
 func (m *Manager) shouldTriggerWebhook(webhook *Webhook, event WebhookEvent, data interface{}) bool {
 	// Check if webhook is active
 	if webhook.Status != StatusActive {
@@ -278,7 +279,7 @@ func (m *Manager) shouldTriggerWebhook(webhook *Webhook, event WebhookEvent, dat
 	return m.applyFilters(webhook.Filters, data)
 }
 
-// applyFilters checks if the data matches the webhook filters
+// applyFilters checks if the data matches the webhook filters.
 func (m *Manager) applyFilters(filters WebhookFilters, data interface{}) bool {
 	// If no filters are defined, trigger for all events
 	if len(filters.QueueIDs) == 0 && len(filters.Priorities) == 0 &&
@@ -364,7 +365,7 @@ func (m *Manager) applyFilters(filters WebhookFilters, data interface{}) bool {
 	return true
 }
 
-// createDelivery creates a new webhook delivery
+// createDelivery creates a new webhook delivery.
 func (m *Manager) createDelivery(webhook *Webhook, event WebhookEvent, data interface{}, previousData interface{}) *WebhookDelivery {
 	payload := WebhookPayload{
 		Event:     event,
@@ -395,7 +396,7 @@ func (m *Manager) createDelivery(webhook *Webhook, event WebhookEvent, data inte
 	}
 }
 
-// worker processes webhook deliveries from the queue
+// worker processes webhook deliveries from the queue.
 func (m *Manager) worker() {
 	for {
 		select {
@@ -409,7 +410,7 @@ func (m *Manager) worker() {
 	}
 }
 
-// processDelivery processes a single webhook delivery
+// processDelivery processes a single webhook delivery.
 func (m *Manager) processDelivery(delivery *WebhookDelivery) {
 	webhook, err := m.GetWebhook(delivery.WebhookID)
 	if err != nil {
@@ -479,7 +480,7 @@ func (m *Manager) processDelivery(delivery *WebhookDelivery) {
 		delivery.ErrorMessage = err.Error()
 		m.scheduleRetry(webhook, delivery)
 	} else {
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		delivery.ResponseStatusCode = resp.StatusCode
 
@@ -517,14 +518,14 @@ func (m *Manager) processDelivery(delivery *WebhookDelivery) {
 	}
 }
 
-// generateSignature generates HMAC-SHA256 signature for webhook payload
+// generateSignature generates HMAC-SHA256 signature for webhook payload.
 func (m *Manager) generateSignature(payload []byte, secret string) string {
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write(payload)
 	return "sha256=" + hex.EncodeToString(h.Sum(nil))
 }
 
-// scheduleRetry schedules a retry for a failed delivery
+// scheduleRetry schedules a retry for a failed delivery.
 func (m *Manager) scheduleRetry(webhook *Webhook, delivery *WebhookDelivery) {
 	if delivery.AttemptCount >= webhook.RetryCount {
 		delivery.Status = DeliveryExpired
@@ -539,7 +540,7 @@ func (m *Manager) scheduleRetry(webhook *Webhook, delivery *WebhookDelivery) {
 	delivery.NextRetryAt = &nextRetry
 }
 
-// retryProcessor handles retrying failed deliveries
+// retryProcessor handles retrying failed deliveries.
 func (m *Manager) retryProcessor() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
@@ -554,7 +555,7 @@ func (m *Manager) retryProcessor() {
 	}
 }
 
-// processRetries finds and processes deliveries that are ready for retry
+// processRetries finds and processes deliveries that are ready for retry.
 func (m *Manager) processRetries() {
 	retries, err := m.deliveryRepo.GetPendingRetries()
 	if err != nil {
@@ -575,7 +576,7 @@ func (m *Manager) processRetries() {
 	}
 }
 
-// updateWebhookStats updates webhook delivery statistics
+// updateWebhookStats updates webhook delivery statistics.
 func (m *Manager) updateWebhookStats(webhook *Webhook, success bool, duration time.Duration) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -613,7 +614,7 @@ func (m *Manager) updateWebhookStats(webhook *Webhook, success bool, duration ti
 	}()
 }
 
-// cleanupRoutine periodically cleans up old delivery records
+// cleanupRoutine periodically cleans up old delivery records.
 func (m *Manager) cleanupRoutine() {
 	ticker := time.NewTicker(24 * time.Hour) // Run daily
 	defer ticker.Stop()
@@ -630,7 +631,7 @@ func (m *Manager) cleanupRoutine() {
 	}
 }
 
-// TestWebhook tests a webhook by sending a test payload
+// TestWebhook tests a webhook by sending a test payload.
 func (m *Manager) TestWebhook(webhookID uint) (*WebhookTestResult, error) {
 	webhook, err := m.GetWebhook(webhookID)
 	if err != nil {
@@ -708,7 +709,7 @@ func (m *Manager) TestWebhook(webhookID uint) (*WebhookTestResult, error) {
 		return result, nil
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	result.StatusCode = resp.StatusCode
 
 	bodyBytes, err := io.ReadAll(resp.Body)
@@ -724,12 +725,12 @@ func (m *Manager) TestWebhook(webhookID uint) (*WebhookTestResult, error) {
 	return result, nil
 }
 
-// GetDeliveries returns delivery history for a webhook
+// GetDeliveries returns delivery history for a webhook.
 func (m *Manager) GetDeliveries(webhookID uint, limit int) ([]*WebhookDelivery, error) {
 	return m.deliveryRepo.ListByWebhookID(webhookID, limit)
 }
 
-// GetWebhookStatistics returns statistics for a webhook
+// GetWebhookStatistics returns statistics for a webhook.
 func (m *Manager) GetWebhookStatistics(webhookID uint) (*WebhookStatistics, error) {
 	webhook, err := m.GetWebhook(webhookID)
 	if err != nil {

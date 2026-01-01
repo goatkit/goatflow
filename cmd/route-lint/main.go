@@ -1,3 +1,4 @@
+// Package main provides route linting utilities.
 package main
 
 import (
@@ -11,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// LintRule represents a validation rule
+// LintRule represents a validation rule.
 type LintRule struct {
 	ID          string
 	Name        string
@@ -20,7 +21,7 @@ type LintRule struct {
 	Check       func(*RouteConfig, string) []LintIssue
 }
 
-// LintIssue represents a linting issue found
+// LintIssue represents a linting issue found.
 type LintIssue struct {
 	Rule     string
 	Severity string
@@ -29,7 +30,7 @@ type LintIssue struct {
 	Line     int
 }
 
-// RouteConfig matches our YAML route structure
+// RouteConfig matches our YAML route structure.
 type RouteConfig struct {
 	APIVersion string `yaml:"apiVersion"`
 	Kind       string `yaml:"kind"`

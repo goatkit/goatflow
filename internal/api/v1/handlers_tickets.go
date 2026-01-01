@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	api "github.com/gotrs-io/gotrs-ce/internal/api"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
@@ -17,13 +18,13 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/service/ticket_number"
 )
 
-// HandleListTickets returns a paginated list of tickets (exported for tests)
+// HandleListTickets returns a paginated list of tickets (exported for tests).
 func (router *APIRouter) HandleListTickets(c *gin.Context) { api.HandleListTicketsAPI(c) }
 
-// HandleUpdateTicket updates a ticket (exported for tests)
+// HandleUpdateTicket updates a ticket (exported for tests).
 func (router *APIRouter) HandleUpdateTicket(c *gin.Context) { api.HandleUpdateTicketAPI(c) }
 
-// handleListTickets returns a paginated list of tickets
+// handleListTickets returns a paginated list of tickets.
 func (router *APIRouter) handleListTickets(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "25"))
@@ -148,7 +149,7 @@ func (router *APIRouter) handleListTickets(c *gin.Context) {
 	sendPaginatedResponse(c, tickets, pagination)
 }
 
-// HandleCreateTicket creates a new ticket
+// HandleCreateTicket creates a new ticket.
 func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 	var ticketRequest struct {
 		Title          string                 `json:"title" binding:"required"`
@@ -231,7 +232,7 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 		sendError(c, http.StatusInternalServerError, "Failed to start transaction")
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Get database adapter
 	adapter := database.GetAdapter()
@@ -392,7 +393,7 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 	})
 }
 
-// handleGetTicket returns a specific ticket by ID
+// handleGetTicket returns a specific ticket by ID.
 func (router *APIRouter) handleGetTicket(c *gin.Context) {
 	ticketID := c.Param("id")
 	if ticketID == "" {
@@ -424,7 +425,7 @@ func (router *APIRouter) handleGetTicket(c *gin.Context) {
 	sendSuccess(c, ticket)
 }
 
-// handleUpdateTicket updates an existing ticket
+// handleUpdateTicket updates an existing ticket.
 func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -647,7 +648,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 	sendSuccess(c, ticket)
 }
 
-// HandleDeleteTicket archives a ticket (OTRS doesn't hard delete tickets) - exported for YAML routing
+// HandleDeleteTicket archives a ticket (OTRS doesn't hard delete tickets) - exported for YAML routing.
 func (router *APIRouter) HandleDeleteTicket(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -778,7 +779,7 @@ func (router *APIRouter) HandleDeleteTicket(c *gin.Context) {
 	})
 }
 
-// HandleAssignTicket assigns a ticket to a user
+// HandleAssignTicket assigns a ticket to a user.
 func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -852,7 +853,7 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 		sendError(c, http.StatusInternalServerError, "Failed to start transaction")
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Update ticket with new responsible user
 	updateQuery := database.ConvertPlaceholders(`
@@ -948,7 +949,7 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 	})
 }
 
-// HandleCloseTicket closes a ticket
+// HandleCloseTicket closes a ticket.
 func (router *APIRouter) HandleCloseTicket(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -1023,7 +1024,7 @@ func (router *APIRouter) HandleCloseTicket(c *gin.Context) {
 		sendError(c, http.StatusInternalServerError, "Failed to start transaction")
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Update ticket state
 	updateQuery := database.ConvertPlaceholders(`
@@ -1112,7 +1113,7 @@ func (router *APIRouter) HandleCloseTicket(c *gin.Context) {
 	})
 }
 
-// HandleReopenTicket reopens a closed ticket
+// HandleReopenTicket reopens a closed ticket.
 func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -1176,7 +1177,7 @@ func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 		sendError(c, http.StatusInternalServerError, "Failed to start transaction")
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Update ticket state to open
 	updateQuery := database.ConvertPlaceholders(`
@@ -1253,7 +1254,7 @@ func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 	})
 }
 
-// handleUpdateTicketPriority updates ticket priority
+// handleUpdateTicketPriority updates ticket priority.
 func (router *APIRouter) handleUpdateTicketPriority(c *gin.Context) {
 	ticketID := c.Param("id")
 	if ticketID == "" {
@@ -1280,7 +1281,7 @@ func (router *APIRouter) handleUpdateTicketPriority(c *gin.Context) {
 	})
 }
 
-// handleMoveTicketQueue moves ticket to a different queue
+// handleMoveTicketQueue moves ticket to a different queue.
 func (router *APIRouter) handleMoveTicketQueue(c *gin.Context) {
 	ticketID := c.Param("id")
 	if ticketID == "" {
@@ -1307,7 +1308,7 @@ func (router *APIRouter) handleMoveTicketQueue(c *gin.Context) {
 	})
 }
 
-// handleGetTicketArticles returns ticket articles/messages
+// handleGetTicketArticles returns ticket articles/messages.
 func (router *APIRouter) handleGetTicketArticles(c *gin.Context) {
 	ticketID := c.Param("id")
 	if ticketID == "" {
@@ -1342,10 +1343,10 @@ func (router *APIRouter) handleGetTicketArticles(c *gin.Context) {
 	sendSuccess(c, articles)
 }
 
-// handleAddTicketArticle adds a new article to a ticket
+// handleAddTicketArticle adds a new article to a ticket.
 func (router *APIRouter) handleAddTicketArticle(c *gin.Context) { api.HandleCreateArticleAPI(c) }
 
-// handleGetTicketArticle returns a specific article
+// handleGetTicketArticle returns a specific article.
 func (router *APIRouter) handleGetTicketArticle(c *gin.Context) {
 	ticketID := c.Param("id")
 	articleID := c.Param("article_id")
@@ -1381,7 +1382,7 @@ func (router *APIRouter) handleGetTicketArticle(c *gin.Context) {
 
 // Bulk operations
 
-// handleBulkAssignTickets assigns multiple tickets to a user
+// handleBulkAssignTickets assigns multiple tickets to a user.
 func (router *APIRouter) handleBulkAssignTickets(c *gin.Context) {
 	var bulkRequest struct {
 		TicketIDs  []int  `json:"ticket_ids" binding:"required"`
@@ -1404,7 +1405,7 @@ func (router *APIRouter) handleBulkAssignTickets(c *gin.Context) {
 	})
 }
 
-// handleBulkCloseTickets closes multiple tickets
+// handleBulkCloseTickets closes multiple tickets.
 func (router *APIRouter) handleBulkCloseTickets(c *gin.Context) {
 	var bulkRequest struct {
 		TicketIDs  []int  `json:"ticket_ids" binding:"required"`
@@ -1427,7 +1428,7 @@ func (router *APIRouter) handleBulkCloseTickets(c *gin.Context) {
 	})
 }
 
-// handleBulkUpdatePriority updates priority for multiple tickets
+// handleBulkUpdatePriority updates priority for multiple tickets.
 func (router *APIRouter) handleBulkUpdatePriority(c *gin.Context) {
 	var bulkRequest struct {
 		TicketIDs []int  `json:"ticket_ids" binding:"required"`
@@ -1450,7 +1451,7 @@ func (router *APIRouter) handleBulkUpdatePriority(c *gin.Context) {
 	})
 }
 
-// handleBulkMoveQueue moves multiple tickets to a queue
+// handleBulkMoveQueue moves multiple tickets to a queue.
 func (router *APIRouter) handleBulkMoveQueue(c *gin.Context) {
 	var bulkRequest struct {
 		TicketIDs []int  `json:"ticket_ids" binding:"required"`

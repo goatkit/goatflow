@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Config represents storage configuration
+// Config represents storage configuration.
 type Config struct {
 	// Backend type: "DB" or "FS"
 	Backend string
@@ -26,7 +26,7 @@ type Config struct {
 	DB *sql.DB
 }
 
-// NewConfigFromEnv creates configuration from environment variables
+// NewConfigFromEnv creates configuration from environment variables.
 func NewConfigFromEnv(db *sql.DB) *Config {
 	config := &Config{
 		Backend:            getEnv("ARTICLE_STORAGE_BACKEND", "DB"),
@@ -45,7 +45,7 @@ func NewConfigFromEnv(db *sql.DB) *Config {
 	return config
 }
 
-// Validate checks if the configuration is valid
+// Validate checks if the configuration is valid.
 func (c *Config) Validate() error {
 	// Validate backend type
 	backend := strings.ToUpper(c.Backend)
@@ -81,7 +81,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-// CreateBackend creates a storage backend based on configuration
+// CreateBackend creates a storage backend based on configuration.
 func (c *Config) CreateBackend() (Backend, error) {
 	// Create primary backend
 	var primary Backend

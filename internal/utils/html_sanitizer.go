@@ -1,3 +1,4 @@
+// Package utils provides utility functions including HTML sanitization.
 package utils
 
 import (
@@ -8,12 +9,12 @@ import (
 	"github.com/yuin/goldmark/renderer/html"
 )
 
-// HTMLSanitizer provides HTML sanitization for user input
+// HTMLSanitizer provides HTML sanitization for user input.
 type HTMLSanitizer struct {
 	policy *bluemonday.Policy
 }
 
-// NewHTMLSanitizer creates a new HTML sanitizer with GOTRS-specific policy
+// NewHTMLSanitizer creates a new HTML sanitizer with GOTRS-specific policy.
 func NewHTMLSanitizer() *HTMLSanitizer {
 	// Create a policy that allows common formatting but prevents XSS
 	p := bluemonday.NewPolicy()
@@ -65,12 +66,12 @@ func NewHTMLSanitizer() *HTMLSanitizer {
 	}
 }
 
-// Sanitize cleans HTML content to prevent XSS attacks
+// Sanitize cleans HTML content to prevent XSS attacks.
 func (s *HTMLSanitizer) Sanitize(html string) string {
 	return s.policy.Sanitize(html)
 }
 
-// IsHTML checks if the content appears to be HTML
+// IsHTML checks if the content appears to be HTML.
 func IsHTML(content string) bool {
 	// Check for common HTML tags
 	htmlTags := []string{"<p>", "<br>", "<div>", "<span>", "<b>", "<i>", "<strong>", "<em>", "<h1>", "<h2>", "<h3>", "<ul>", "<ol>", "<li>", "<table>", "<a ", "<blockquote>", "<img "}
@@ -85,7 +86,7 @@ func IsHTML(content string) bool {
 	return false
 }
 
-// IsMarkdown checks if the content appears to be markdown (common patterns from Tiptap conversion)
+// IsMarkdown checks if the content appears to be markdown (common patterns from Tiptap conversion).
 func IsMarkdown(content string) bool {
 	// Check for common markdown patterns that indicate rich text formatting
 	markdownPatterns := []string{"**", "*", "_", "`", "# ", "## ", "### ", "- ", "* ", "+ ", "1. ", "[", "](", "![", "](", "\n"}
@@ -102,7 +103,7 @@ func IsMarkdown(content string) bool {
 	return markdownCount >= 2
 }
 
-// MarkdownToHTML converts markdown content to HTML
+// MarkdownToHTML converts markdown content to HTML.
 func MarkdownToHTML(markdown string) string {
 	md := goldmark.New(
 		goldmark.WithRendererOptions(
@@ -119,7 +120,7 @@ func MarkdownToHTML(markdown string) string {
 	return buf.String()
 }
 
-// StripHTML removes all HTML tags and returns plain text
+// StripHTML removes all HTML tags and returns plain text.
 func StripHTML(html string) string {
 	// Use strict policy that strips all HTML
 	p := bluemonday.StrictPolicy()

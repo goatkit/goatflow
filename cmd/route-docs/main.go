@@ -1,3 +1,4 @@
+// Package main provides route documentation generation.
 package main
 
 import (
@@ -14,7 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// RouteConfig matches our YAML route structure
+// RouteConfig matches our YAML route structure.
 type RouteConfig struct {
 	APIVersion string `yaml:"apiVersion"`
 	Kind       string `yaml:"kind"`
@@ -62,7 +63,7 @@ type RateLimit struct {
 	Key      string `yaml:"key"`
 }
 
-// DocumentationGenerator generates API documentation from YAML routes
+// DocumentationGenerator generates API documentation from YAML routes.
 type DocumentationGenerator struct {
 	routesDir string
 	outputDir string
@@ -196,7 +197,7 @@ Generated from YAML route definitions
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return t.Execute(file, g.routes)
 }
@@ -376,7 +377,7 @@ func (g *DocumentationGenerator) generateHTML() error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return t.Execute(file, g.routes)
 }

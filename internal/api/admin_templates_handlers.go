@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gopkg.in/yaml.v3"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
-	"gopkg.in/yaml.v3"
 )
 
-// StandardTemplate represents a response template in the system
+// StandardTemplate represents a response template in the system.
 type StandardTemplate struct {
 	ID           int       `json:"id"`
 	Name         string    `json:"name"`
@@ -30,19 +31,19 @@ type StandardTemplate struct {
 	ChangeBy     int       `json:"change_by"`
 }
 
-// StandardTemplateWithStats includes usage statistics
+// StandardTemplateWithStats includes usage statistics.
 type StandardTemplateWithStats struct {
 	StandardTemplate
 	QueueCount int `json:"queue_count"`
 }
 
-// TemplateTypeOption represents a template type for UI selection
+// TemplateTypeOption represents a template type for UI selection.
 type TemplateTypeOption struct {
 	Key   string `json:"key"`
 	Label string `json:"label"`
 }
 
-// ValidTemplateTypes returns all available template types matching Znuny
+// ValidTemplateTypes returns all available template types matching Znuny.
 func ValidTemplateTypes() []TemplateTypeOption {
 	return []TemplateTypeOption{
 		{Key: "Answer", Label: "Answer"},
@@ -56,7 +57,7 @@ func ValidTemplateTypes() []TemplateTypeOption {
 	}
 }
 
-// ParseTemplateTypes splits a comma-separated type string into a slice
+// ParseTemplateTypes splits a comma-separated type string into a slice.
 func ParseTemplateTypes(typeStr string) []string {
 	if typeStr == "" {
 		return nil
@@ -73,7 +74,7 @@ func ParseTemplateTypes(typeStr string) []string {
 	return result
 }
 
-// JoinTemplateTypes joins template types into a sorted comma-separated string
+// JoinTemplateTypes joins template types into a sorted comma-separated string.
 func JoinTemplateTypes(types []string) string {
 	sorted := make([]string, len(types))
 	copy(sorted, types)
@@ -83,7 +84,7 @@ func JoinTemplateTypes(types []string) string {
 
 // Repository functions
 
-// ListStandardTemplates returns all templates with optional filters
+// ListStandardTemplates returns all templates with optional filters.
 func ListStandardTemplates(search string, validFilter string, typeFilter string, sortBy string, sortOrder string) ([]StandardTemplateWithStats, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -152,7 +153,7 @@ func ListStandardTemplates(search string, validFilter string, typeFilter string,
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var templates []StandardTemplateWithStats
 	for rows.Next() {
@@ -179,7 +180,7 @@ func ListStandardTemplates(search string, validFilter string, typeFilter string,
 	return templates, nil
 }
 
-// GetStandardTemplate retrieves a single template by ID
+// GetStandardTemplate retrieves a single template by ID.
 func GetStandardTemplate(id int) (*StandardTemplate, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -215,7 +216,7 @@ func GetStandardTemplate(id int) (*StandardTemplate, error) {
 	return &t, nil
 }
 
-// CheckTemplateNameExists checks if a template name already exists (excluding a specific ID)
+// CheckTemplateNameExists checks if a template name already exists (excluding a specific ID).
 func CheckTemplateNameExists(name string, excludeID int) (bool, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -239,7 +240,7 @@ func CheckTemplateNameExists(name string, excludeID int) (bool, error) {
 	return count > 0, nil
 }
 
-// CreateStandardTemplate creates a new template
+// CreateStandardTemplate creates a new template.
 func CreateStandardTemplate(t *StandardTemplate, userID int) (int, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -298,7 +299,7 @@ func CreateStandardTemplate(t *StandardTemplate, userID int) (int, error) {
 	return int(id), nil
 }
 
-// UpdateStandardTemplate updates an existing template
+// UpdateStandardTemplate updates an existing template.
 func UpdateStandardTemplate(t *StandardTemplate, userID int) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -335,7 +336,7 @@ func UpdateStandardTemplate(t *StandardTemplate, userID int) error {
 	return err
 }
 
-// DeleteStandardTemplate deletes a template and its relationships
+// DeleteStandardTemplate deletes a template and its relationships.
 func DeleteStandardTemplate(id int) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -371,7 +372,7 @@ func DeleteStandardTemplate(id int) error {
 
 // Queue relationship functions
 
-// GetTemplateQueues returns all queues assigned to a template
+// GetTemplateQueues returns all queues assigned to a template.
 func GetTemplateQueues(templateID int) ([]int, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -384,7 +385,7 @@ func GetTemplateQueues(templateID int) ([]int, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var queueIDs []int
 	for rows.Next() {
@@ -398,7 +399,7 @@ func GetTemplateQueues(templateID int) ([]int, error) {
 	return queueIDs, nil
 }
 
-// SetTemplateQueues sets the queue assignments for a template
+// SetTemplateQueues sets the queue assignments for a template.
 func SetTemplateQueues(templateID int, queueIDs []int, userID int) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -435,7 +436,7 @@ func SetTemplateQueues(templateID int, queueIDs []int, userID int) error {
 
 // Attachment relationship functions
 
-// ListStandardAttachments returns all valid standard attachments
+// ListStandardAttachments returns all valid standard attachments.
 func ListStandardAttachments() ([]StandardAttachment, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -452,7 +453,7 @@ func ListStandardAttachments() ([]StandardAttachment, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var attachments []StandardAttachment
 	for rows.Next() {
@@ -467,7 +468,7 @@ func ListStandardAttachments() ([]StandardAttachment, error) {
 	return attachments, nil
 }
 
-// GetTemplateAttachments returns all attachment IDs assigned to a template
+// GetTemplateAttachments returns all attachment IDs assigned to a template.
 func GetTemplateAttachments(templateID int) ([]int, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -480,7 +481,7 @@ func GetTemplateAttachments(templateID int) ([]int, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var attachmentIDs []int
 	for rows.Next() {
@@ -494,7 +495,7 @@ func GetTemplateAttachments(templateID int) ([]int, error) {
 	return attachmentIDs, nil
 }
 
-// SetTemplateAttachments sets the attachment assignments for a template
+// SetTemplateAttachments sets the attachment assignments for a template.
 func SetTemplateAttachments(templateID int, attachmentIDs []int, userID int) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -529,7 +530,7 @@ func SetTemplateAttachments(templateID int, attachmentIDs []int, userID int) err
 	return nil
 }
 
-// TemplateExport represents a single template for YAML export
+// TemplateExport represents a single template for YAML export.
 type TemplateExport struct {
 	Name         string   `yaml:"name"`
 	Text         string   `yaml:"text,omitempty"`
@@ -541,14 +542,14 @@ type TemplateExport struct {
 	Attachments  []string `yaml:"attachments,omitempty"`
 }
 
-// TemplateExportFile represents the full export file structure
+// TemplateExportFile represents the full export file structure.
 type TemplateExportFile struct {
-	Version   string           `yaml:"version"`
-	ExportedAt string          `yaml:"exported_at"`
-	Templates []TemplateExport `yaml:"templates"`
+	Version    string           `yaml:"version"`
+	ExportedAt string           `yaml:"exported_at"`
+	Templates  []TemplateExport `yaml:"templates"`
 }
 
-// ExportTemplate exports a single template with its relationships
+// ExportTemplate exports a single template with its relationships.
 func ExportTemplate(id int) (*TemplateExport, error) {
 	template, err := GetStandardTemplate(id)
 	if err != nil {
@@ -600,7 +601,7 @@ func ExportTemplate(id int) (*TemplateExport, error) {
 	return export, nil
 }
 
-// ExportAllTemplates exports all templates
+// ExportAllTemplates exports all templates.
 func ExportAllTemplates() (*TemplateExportFile, error) {
 	templates, err := ListStandardTemplates("", "all", "all", "name", "asc")
 	if err != nil {
@@ -624,7 +625,7 @@ func ExportAllTemplates() (*TemplateExportFile, error) {
 	return export, nil
 }
 
-// ImportTemplates imports templates from YAML data
+// ImportTemplates imports templates from YAML data.
 func ImportTemplates(data []byte, overwrite bool, userID int) (imported int, skipped int, errors []string) {
 	var exportFile TemplateExportFile
 	if err := yaml.Unmarshal(data, &exportFile); err != nil {
@@ -741,7 +742,7 @@ func ImportTemplates(data []byte, overwrite bool, userID int) (imported int, ski
 
 // Handler functions
 
-// handleAdminStandardTemplates renders the admin templates list page
+// handleAdminStandardTemplates renders the admin templates list page.
 func handleAdminStandardTemplates(c *gin.Context) {
 	search := c.Query("search")
 	validFilter := c.DefaultQuery("valid", "all")
@@ -775,7 +776,7 @@ func handleAdminStandardTemplates(c *gin.Context) {
 	})
 }
 
-// handleAdminStandardTemplateNew renders the new template form
+// handleAdminStandardTemplateNew renders the new template form.
 func handleAdminStandardTemplateNew(c *gin.Context) {
 	renderer := shared.GetGlobalRenderer()
 	if renderer == nil {
@@ -793,7 +794,7 @@ func handleAdminStandardTemplateNew(c *gin.Context) {
 	})
 }
 
-// handleAdminStandardTemplateEdit renders the edit template form
+// handleAdminStandardTemplateEdit renders the edit template form.
 func handleAdminStandardTemplateEdit(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -828,7 +829,7 @@ func handleAdminStandardTemplateEdit(c *gin.Context) {
 	})
 }
 
-// handleCreateStandardTemplate handles POST to create a new template
+// handleCreateStandardTemplate handles POST to create a new template.
 func handleCreateStandardTemplate(c *gin.Context) {
 	template, err := parseTemplateForm(c)
 	if err != nil {
@@ -870,7 +871,7 @@ func handleCreateStandardTemplate(c *gin.Context) {
 	})
 }
 
-// handleUpdateStandardTemplate handles PUT to update an existing template
+// handleUpdateStandardTemplate handles PUT to update an existing template.
 func handleUpdateStandardTemplate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -928,7 +929,7 @@ func handleUpdateStandardTemplate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// handleDeleteStandardTemplate handles DELETE to remove a template
+// handleDeleteStandardTemplate handles DELETE to remove a template.
 func handleDeleteStandardTemplate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -955,7 +956,7 @@ func handleDeleteStandardTemplate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// handleAdminStandardTemplateQueues renders the template queue assignment page
+// handleAdminStandardTemplateQueues renders the template queue assignment page.
 func handleAdminStandardTemplateQueues(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -994,7 +995,7 @@ func handleAdminStandardTemplateQueues(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load queues"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type QueueOption struct {
 		ID       int
@@ -1032,7 +1033,7 @@ func handleAdminStandardTemplateQueues(c *gin.Context) {
 	})
 }
 
-// handleUpdateStandardTemplateQueues handles PUT to update queue assignments
+// handleUpdateStandardTemplateQueues handles PUT to update queue assignments.
 func handleUpdateStandardTemplateQueues(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -1076,7 +1077,7 @@ func handleUpdateStandardTemplateQueues(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// handleAdminStandardTemplateAttachments renders the template attachment assignment page
+// handleAdminStandardTemplateAttachments renders the template attachment assignment page.
 func handleAdminStandardTemplateAttachments(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -1153,7 +1154,7 @@ func handleAdminStandardTemplateAttachments(c *gin.Context) {
 	})
 }
 
-// handleUpdateStandardTemplateAttachments handles PUT to update attachment assignments
+// handleUpdateStandardTemplateAttachments handles PUT to update attachment assignments.
 func handleUpdateStandardTemplateAttachments(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -1197,7 +1198,7 @@ func handleUpdateStandardTemplateAttachments(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// parseTemplateForm extracts template data from form submission
+// parseTemplateForm extracts template data from form submission.
 func parseTemplateForm(c *gin.Context) (*StandardTemplate, error) {
 	if err := c.Request.ParseForm(); err != nil {
 		return nil, fmt.Errorf("failed to parse form: %w", err)
@@ -1244,7 +1245,7 @@ func parseTemplateForm(c *gin.Context) (*StandardTemplate, error) {
 	return t, nil
 }
 
-// handleExportStandardTemplate exports a single template as YAML
+// handleExportStandardTemplate exports a single template as YAML.
 func handleExportStandardTemplate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -1277,7 +1278,7 @@ func handleExportStandardTemplate(c *gin.Context) {
 	c.Data(http.StatusOK, "application/x-yaml", data)
 }
 
-// handleExportAllStandardTemplates exports all templates as YAML
+// handleExportAllStandardTemplates exports all templates as YAML.
 func handleExportAllStandardTemplates(c *gin.Context) {
 	exportFile, err := ExportAllTemplates()
 	if err != nil {
@@ -1297,7 +1298,7 @@ func handleExportAllStandardTemplates(c *gin.Context) {
 	c.Data(http.StatusOK, "application/x-yaml", data)
 }
 
-// handleAdminStandardTemplateImport renders the import page
+// handleAdminStandardTemplateImport renders the import page.
 func handleAdminStandardTemplateImport(c *gin.Context) {
 	renderer := shared.GetGlobalRenderer()
 	if renderer == nil {
@@ -1312,7 +1313,7 @@ func handleAdminStandardTemplateImport(c *gin.Context) {
 	})
 }
 
-// handleImportStandardTemplates handles the import form submission
+// handleImportStandardTemplates handles the import form submission.
 func handleImportStandardTemplates(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {

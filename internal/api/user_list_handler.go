@@ -8,10 +8,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleListUsersAPI handles GET /api/v1/users
+// HandleListUsersAPI handles GET /api/v1/users.
 func HandleListUsersAPI(c *gin.Context) {
 	// Check authentication
 	_, exists := c.Get("user_id")
@@ -153,7 +154,7 @@ func HandleListUsersAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	users := []map[string]interface{}{}
 	for rows.Next() {

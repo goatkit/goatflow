@@ -1,3 +1,4 @@
+// Package data provides data access repositories for lookup tables.
 package data
 
 import (
@@ -8,7 +9,7 @@ import (
 	"time"
 )
 
-// LookupItem represents a database lookup value
+// LookupItem represents a database lookup value.
 type LookupItem struct {
 	ID       int
 	Name     string
@@ -17,19 +18,19 @@ type LookupItem struct {
 	TypeID   int // For states
 }
 
-// LookupsRepository handles database operations for lookup values
+// LookupsRepository handles database operations for lookup values.
 type LookupsRepository struct {
 	db *sql.DB
 }
 
-// NewLookupsRepository creates a new lookups repository
+// NewLookupsRepository creates a new lookups repository.
 func NewLookupsRepository(db *sql.DB) *LookupsRepository {
 	return &LookupsRepository{
 		db: db,
 	}
 }
 
-// GetTicketStates fetches all ticket states from the database
+// GetTicketStates fetches all ticket states from the database.
 func (r *LookupsRepository) GetTicketStates(ctx context.Context) ([]LookupItem, error) {
 	query := `
 		SELECT id, name, valid_id, type_id,
@@ -72,7 +73,7 @@ func (r *LookupsRepository) GetTicketStates(ctx context.Context) ([]LookupItem, 
 	return states, nil
 }
 
-// GetTicketPriorities fetches all ticket priorities from the database
+// GetTicketPriorities fetches all ticket priorities from the database.
 func (r *LookupsRepository) GetTicketPriorities(ctx context.Context) ([]LookupItem, error) {
 	query := `
 		SELECT id, name, valid_id,
@@ -115,7 +116,7 @@ func (r *LookupsRepository) GetTicketPriorities(ctx context.Context) ([]LookupIt
 	return priorities, nil
 }
 
-// GetQueues fetches all queues from the database
+// GetQueues fetches all queues from the database.
 func (r *LookupsRepository) GetQueues(ctx context.Context) ([]LookupItem, error) {
 	query := `
 		SELECT id, name, valid_id,
@@ -148,7 +149,7 @@ func (r *LookupsRepository) GetQueues(ctx context.Context) ([]LookupItem, error)
 	return queues, nil
 }
 
-// GetTicketTypes fetches all ticket types from the database
+// GetTicketTypes fetches all ticket types from the database.
 func (r *LookupsRepository) GetTicketTypes(ctx context.Context) ([]LookupItem, error) {
 	// Check if ticket_types table exists
 	var tableExists bool
@@ -202,7 +203,7 @@ func (r *LookupsRepository) GetTicketTypes(ctx context.Context) ([]LookupItem, e
 	return types, nil
 }
 
-// GetTranslation fetches a translation from the lookup_translations table
+// GetTranslation fetches a translation from the lookup_translations table.
 func (r *LookupsRepository) GetTranslation(ctx context.Context, tableName, fieldValue, lang string) (string, error) {
 	var translation string
 	query := `
@@ -228,7 +229,7 @@ func (r *LookupsRepository) GetTranslation(ctx context.Context, tableName, field
 	return translation, nil
 }
 
-// AddTranslation adds a new translation to the database
+// AddTranslation adds a new translation to the database.
 func (r *LookupsRepository) AddTranslation(ctx context.Context, tableName, fieldValue, lang, translation string, isSystem bool) error {
 	query := `
 		INSERT INTO lookup_translations (table_name, field_value, language_code, translation, is_system, create_time, change_time)
@@ -249,7 +250,7 @@ func (r *LookupsRepository) AddTranslation(ctx context.Context, tableName, field
 	return nil
 }
 
-// GetAllTranslations fetches all translations for a specific language
+// GetAllTranslations fetches all translations for a specific language.
 func (r *LookupsRepository) GetAllTranslations(ctx context.Context, lang string) (map[string]map[string]string, error) {
 	query := `
 		SELECT table_name, field_value, translation

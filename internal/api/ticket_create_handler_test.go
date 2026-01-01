@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -14,6 +13,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
@@ -27,14 +27,14 @@ func (g stubGen) Next(ctx context.Context, store ticketnumber.CounterStore) (str
 	return g.n, nil
 }
 
-// minimal counter store implementing ticketnumber.CounterStore
+// minimal counter store implementing ticketnumber.CounterStore.
 type stubStore struct{}
 
 func (stubStore) Add(ctx context.Context, dateScoped bool, offset int64) (int64, error) {
 	return 1, nil
 }
 
-// prepareRouter minimal for handler
+// prepareRouter minimal for handler.
 func setupCreateRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

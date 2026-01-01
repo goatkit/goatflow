@@ -1,3 +1,4 @@
+// Package postmaster provides email parsing, filtering, and dispatch orchestration.
 package postmaster
 
 import (

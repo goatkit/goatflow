@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -14,9 +13,10 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/stretchr/testify/require"
 )
 
 func TestHandleCreateTicket_PendingStateWithDueDate(t *testing.T) {

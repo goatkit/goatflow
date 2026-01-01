@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-// NewGeneratorFromConfig creates a ticket number generator based on configuration
+// NewGeneratorFromConfig creates a ticket number generator based on configuration.
 func NewGeneratorFromConfig(db *sql.DB, config map[string]interface{}) (TicketNumberGenerator, error) {
 	// Get generator type, default to "date"
 	generatorType, _ := config["type"].(string)

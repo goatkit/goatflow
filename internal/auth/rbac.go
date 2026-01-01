@@ -5,7 +5,7 @@ import "github.com/gotrs-io/gotrs-ce/internal/models"
 type Permission string
 
 const (
-	// Ticket permissions
+	// Ticket permissions.
 	PermissionTicketCreate Permission = "ticket:create"
 	PermissionTicketRead   Permission = "ticket:read"
 	PermissionTicketUpdate Permission = "ticket:update"
@@ -13,21 +13,21 @@ const (
 	PermissionTicketAssign Permission = "ticket:assign"
 	PermissionTicketClose  Permission = "ticket:close"
 
-	// User permissions
+	// User permissions.
 	PermissionUserCreate Permission = "user:create"
 	PermissionUserRead   Permission = "user:read"
 	PermissionUserUpdate Permission = "user:update"
 	PermissionUserDelete Permission = "user:delete"
 
-	// Admin permissions
+	// Admin permissions.
 	PermissionAdminAccess  Permission = "admin:access"
 	PermissionSystemConfig Permission = "system:config"
 
-	// Report permissions
+	// Report permissions.
 	PermissionReportView   Permission = "report:view"
 	PermissionReportCreate Permission = "report:create"
 
-	// Customer permissions
+	// Customer permissions.
 	PermissionOwnTicketRead   Permission = "own:ticket:read"
 	PermissionOwnTicketCreate Permission = "own:ticket:create"
 )

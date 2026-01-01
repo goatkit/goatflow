@@ -6,17 +6,18 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 	"github.com/gotrs-io/gotrs-ce/internal/zinc"
 )
 
-// SearchHandlers handles search-related API endpoints
+// SearchHandlers handles search-related API endpoints.
 type SearchHandlers struct {
 	searchService *service.SearchService
 }
 
-// NewSearchHandlers creates new search handlers
+// NewSearchHandlers creates new search handlers.
 func NewSearchHandlers() *SearchHandlers {
 	// Initialize with mock client for now
 	// TODO: Replace with real Zinc client in production
@@ -26,7 +27,7 @@ func NewSearchHandlers() *SearchHandlers {
 	}
 }
 
-// SearchTickets performs a ticket search
+// SearchTickets performs a ticket search.
 func (h *SearchHandlers) SearchTickets(c *gin.Context) {
 	var request models.SearchRequest
 
@@ -85,7 +86,7 @@ func (h *SearchHandlers) SearchTickets(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
-// AdvancedSearch performs an advanced search with filters
+// AdvancedSearch performs an advanced search with filters.
 func (h *SearchHandlers) AdvancedSearch(c *gin.Context) {
 	var filter models.SearchFilter
 
@@ -114,7 +115,7 @@ func (h *SearchHandlers) AdvancedSearch(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
-// GetSearchSuggestions provides search suggestions
+// GetSearchSuggestions provides search suggestions.
 func (h *SearchHandlers) GetSearchSuggestions(c *gin.Context) {
 	text := c.Query("text")
 	if text == "" {
@@ -136,7 +137,7 @@ func (h *SearchHandlers) GetSearchSuggestions(c *gin.Context) {
 	})
 }
 
-// SaveSearch saves a search query
+// SaveSearch saves a search query.
 func (h *SearchHandlers) SaveSearch(c *gin.Context) {
 	var savedSearch models.SavedSearch
 
@@ -160,7 +161,7 @@ func (h *SearchHandlers) SaveSearch(c *gin.Context) {
 	c.JSON(http.StatusCreated, savedSearch)
 }
 
-// GetSavedSearches retrieves saved searches for a user
+// GetSavedSearches retrieves saved searches for a user.
 func (h *SearchHandlers) GetSavedSearches(c *gin.Context) {
 	userID := uint(1) // Default for testing
 	if uid, exists := c.Get("user_id"); exists {
@@ -176,7 +177,7 @@ func (h *SearchHandlers) GetSavedSearches(c *gin.Context) {
 	c.JSON(http.StatusOK, searches)
 }
 
-// GetSavedSearch retrieves a specific saved search
+// GetSavedSearch retrieves a specific saved search.
 func (h *SearchHandlers) GetSavedSearch(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -193,7 +194,7 @@ func (h *SearchHandlers) GetSavedSearch(c *gin.Context) {
 	c.JSON(http.StatusOK, search)
 }
 
-// ExecuteSavedSearch executes a saved search
+// ExecuteSavedSearch executes a saved search.
 func (h *SearchHandlers) ExecuteSavedSearch(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -210,7 +211,7 @@ func (h *SearchHandlers) ExecuteSavedSearch(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
-// GetSearchHistory retrieves search history for a user
+// GetSearchHistory retrieves search history for a user.
 func (h *SearchHandlers) GetSearchHistory(c *gin.Context) {
 	userID := uint(1) // Default for testing
 	if uid, exists := c.Get("user_id"); exists {
@@ -231,7 +232,7 @@ func (h *SearchHandlers) GetSearchHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, history)
 }
 
-// GetSearchAnalytics retrieves search analytics
+// GetSearchAnalytics retrieves search analytics.
 func (h *SearchHandlers) GetSearchAnalytics(c *gin.Context) {
 	// Parse date range
 	from := time.Now().AddDate(0, 0, -30) // Default: last 30 days
@@ -258,7 +259,7 @@ func (h *SearchHandlers) GetSearchAnalytics(c *gin.Context) {
 	c.JSON(http.StatusOK, analytics)
 }
 
-// ReindexTickets triggers reindexing of all tickets
+// ReindexTickets triggers reindexing of all tickets.
 func (h *SearchHandlers) ReindexTickets(c *gin.Context) {
 	// This would typically fetch tickets from the database
 	// For now, we'll use a mock fetcher
@@ -279,7 +280,7 @@ func (h *SearchHandlers) ReindexTickets(c *gin.Context) {
 	})
 }
 
-// IndexTicket indexes a single ticket
+// IndexTicket indexes a single ticket.
 func (h *SearchHandlers) IndexTicket(c *gin.Context) {
 	var ticket models.Ticket
 
@@ -296,7 +297,7 @@ func (h *SearchHandlers) IndexTicket(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket indexed successfully"})
 }
 
-// UpdateTicketIndex updates a ticket in the search index
+// UpdateTicketIndex updates a ticket in the search index.
 func (h *SearchHandlers) UpdateTicketIndex(c *gin.Context) {
 	var ticket models.Ticket
 
@@ -313,7 +314,7 @@ func (h *SearchHandlers) UpdateTicketIndex(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Ticket index updated successfully"})
 }
 
-// DeleteTicketFromIndex removes a ticket from the search index
+// DeleteTicketFromIndex removes a ticket from the search index.
 func (h *SearchHandlers) DeleteTicketFromIndex(c *gin.Context) {
 	ticketNumber := c.Param("ticket_number")
 	if ticketNumber == "" {

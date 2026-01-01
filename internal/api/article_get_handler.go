@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleGetArticleAPI handles GET /api/v1/tickets/:ticket_id/articles/:id
+// HandleGetArticleAPI handles GET /api/v1/tickets/:ticket_id/articles/:id.
 func HandleGetArticleAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -110,7 +111,7 @@ func HandleGetArticleAPI(c *gin.Context) {
 
 		rows, err := db.Query(attachQuery, articleID)
 		if err == nil {
-			defer rows.Close()
+			defer func() { _ = rows.Close() }()
 			attachments := []gin.H{}
 			for rows.Next() {
 				var attachment struct {

@@ -1,3 +1,4 @@
+// Package k8s provides Kubernetes environment detection and integration.
 package k8s
 
 import (
@@ -9,7 +10,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/services/registry"
 )
 
-// EnvironmentType represents the deployment environment
+// EnvironmentType represents the deployment environment.
 type EnvironmentType string
 
 const (
@@ -20,14 +21,14 @@ const (
 	EnvOpenShift  EnvironmentType = "openshift"
 )
 
-// Detector detects the runtime environment and adapts service configuration
+// Detector detects the runtime environment and adapts service configuration.
 type Detector struct {
 	environment EnvironmentType
 	namespace   string
 	cluster     string
 }
 
-// NewDetector creates a new environment detector
+// NewDetector creates a new environment detector.
 func NewDetector() *Detector {
 	d := &Detector{
 		environment: detectEnvironment(),
@@ -42,7 +43,7 @@ func NewDetector() *Detector {
 	return d
 }
 
-// detectEnvironment determines the current runtime environment
+// detectEnvironment determines the current runtime environment.
 func detectEnvironment() EnvironmentType {
 	// Check for Knative
 	if os.Getenv("K_SERVICE") != "" {
@@ -68,19 +69,19 @@ func detectEnvironment() EnvironmentType {
 	return EnvLocal
 }
 
-// Environment returns the detected environment type
+// Environment returns the detected environment type.
 func (d *Detector) Environment() EnvironmentType {
 	return d.environment
 }
 
-// IsKubernetes returns true if running in any Kubernetes environment
+// IsKubernetes returns true if running in any Kubernetes environment.
 func (d *Detector) IsKubernetes() bool {
 	return d.environment == EnvKubernetes ||
 		d.environment == EnvKnative ||
 		d.environment == EnvOpenShift
 }
 
-// AdaptServiceConfig adapts service configuration based on environment
+// AdaptServiceConfig adapts service configuration based on environment.
 func (d *Detector) AdaptServiceConfig(config *registry.ServiceConfig) *registry.ServiceConfig {
 	if !d.IsKubernetes() {
 		return config
@@ -115,7 +116,7 @@ func (d *Detector) AdaptServiceConfig(config *registry.ServiceConfig) *registry.
 	return &adapted
 }
 
-// loadFromSecrets loads credentials from Kubernetes secrets
+// loadFromSecrets loads credentials from Kubernetes secrets.
 func (d *Detector) loadFromSecrets(config *registry.ServiceConfig) {
 	// Check for mounted secrets
 	secretPath := fmt.Sprintf("/var/run/secrets/%s", config.ID)
@@ -137,7 +138,7 @@ func (d *Detector) loadFromSecrets(config *registry.ServiceConfig) {
 	}
 }
 
-// adaptForKnative adapts configuration for Knative Serving
+// adaptForKnative adapts configuration for Knative Serving.
 func (d *Detector) adaptForKnative(config *registry.ServiceConfig) {
 	// Knative specific adaptations
 	if config.Options == nil {
@@ -163,7 +164,7 @@ func (d *Detector) adaptForKnative(config *registry.ServiceConfig) {
 	config.Annotations["serving.knative.dev/revision"] = os.Getenv("K_REVISION")
 }
 
-// DiscoverServices discovers services from Kubernetes API
+// DiscoverServices discovers services from Kubernetes API.
 func (d *Detector) DiscoverServices(ctx context.Context, serviceType registry.ServiceType) ([]*registry.ServiceConfig, error) {
 	if !d.IsKubernetes() {
 		return nil, fmt.Errorf("service discovery only available in Kubernetes")
@@ -221,7 +222,7 @@ func (d *Detector) DiscoverServices(ctx context.Context, serviceType registry.Se
 	return services, nil
 }
 
-// WatchServices watches for service changes in Kubernetes
+// WatchServices watches for service changes in Kubernetes.
 func (d *Detector) WatchServices(ctx context.Context, callback func(*registry.ServiceConfig, string)) error {
 	if !d.IsKubernetes() {
 		return fmt.Errorf("service watching only available in Kubernetes")
@@ -232,7 +233,7 @@ func (d *Detector) WatchServices(ctx context.Context, callback func(*registry.Se
 	return fmt.Errorf("service watching not yet implemented")
 }
 
-// Helper function to convert string to int
+// Helper function to convert string to int.
 func atoi(s string) int {
 	var result int
 	fmt.Sscanf(s, "%d", &result)

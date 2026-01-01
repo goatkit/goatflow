@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
@@ -363,7 +364,7 @@ func isHTMXRequest(c *gin.Context) bool {
 	return c.GetHeader("HX-Request") == "true"
 }
 
-// RegisterDynamicFieldRoutes registers all dynamic field admin routes
+// RegisterDynamicFieldRoutes registers all dynamic field admin routes.
 func RegisterDynamicFieldRoutes(router *gin.RouterGroup, adminRouter *gin.RouterGroup) {
 	adminRouter.GET("/dynamic-fields", handleAdminDynamicFields)
 	adminRouter.GET("/dynamic-fields/new", handleAdminDynamicFieldNew)
@@ -378,7 +379,7 @@ func RegisterDynamicFieldRoutes(router *gin.RouterGroup, adminRouter *gin.Router
 	router.POST("/dynamic-fields/:id/screen", handleAdminDynamicFieldScreenConfigSingle)
 }
 
-// GetDynamicFieldsForScreen retrieves active fields for a specific screen
+// GetDynamicFieldsForScreen retrieves active fields for a specific screen.
 func GetDynamicFieldsForScreen(objectType, screenKey string) ([]DynamicField, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -402,7 +403,7 @@ func GetDynamicFieldsForScreen(objectType, screenKey string) ([]DynamicField, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to query screen fields: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var fields []DynamicField
 	for rows.Next() {
@@ -426,7 +427,7 @@ func GetDynamicFieldsForScreen(objectType, screenKey string) ([]DynamicField, er
 	return fields, nil
 }
 
-// handleAdminDynamicFieldScreenConfig shows the screen configuration page
+// handleAdminDynamicFieldScreenConfig shows the screen configuration page.
 func handleAdminDynamicFieldScreenConfig(c *gin.Context) {
 	objectType := c.DefaultQuery("object_type", "Ticket")
 
@@ -491,7 +492,7 @@ func handleAdminDynamicFieldScreenConfig(c *gin.Context) {
 	})
 }
 
-// handleAdminDynamicFieldScreenConfigSave saves screen configuration for a field
+// handleAdminDynamicFieldScreenConfigSave saves screen configuration for a field.
 func handleAdminDynamicFieldScreenConfigSave(c *gin.Context) {
 	idStr := c.Param("id")
 	fieldID, err := strconv.Atoi(idStr)
@@ -518,7 +519,7 @@ func handleAdminDynamicFieldScreenConfigSave(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// handleAdminDynamicFieldScreenConfigSingle saves a single screen config
+// handleAdminDynamicFieldScreenConfigSingle saves a single screen config.
 func handleAdminDynamicFieldScreenConfigSingle(c *gin.Context) {
 	idStr := c.Param("id")
 	fieldID, err := strconv.Atoi(idStr)

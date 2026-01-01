@@ -9,14 +9,14 @@ import (
 	"golang.org/x/text/language"
 )
 
-// AuthMiddleware provides LDAP authentication middleware
+// AuthMiddleware provides LDAP authentication middleware.
 type AuthMiddleware struct {
 	provider     *Provider
 	enabled      bool
 	fallbackAuth bool // If true, fall back to local auth when LDAP fails
 }
 
-// NewAuthMiddleware creates a new LDAP authentication middleware
+// NewAuthMiddleware creates a new LDAP authentication middleware.
 func NewAuthMiddleware(config *Config, enabled, fallbackAuth bool) *AuthMiddleware {
 	var provider *Provider
 	if enabled && config != nil {
@@ -30,7 +30,7 @@ func NewAuthMiddleware(config *Config, enabled, fallbackAuth bool) *AuthMiddlewa
 	}
 }
 
-// AuthenticateUser authenticates a user with LDAP
+// AuthenticateUser authenticates a user with LDAP.
 func (m *AuthMiddleware) AuthenticateUser(username, password string) (*User, error) {
 	if !m.enabled || m.provider == nil {
 		return nil, nil // Not enabled, fall back to local auth
@@ -49,7 +49,7 @@ func (m *AuthMiddleware) AuthenticateUser(username, password string) (*User, err
 	return result.User, nil
 }
 
-// AuthError represents an LDAP authentication error
+// AuthError represents an LDAP authentication error.
 type AuthError struct {
 	Message string
 }
@@ -58,7 +58,7 @@ func (e *AuthError) Error() string {
 	return e.Message
 }
 
-// HandleLogin handles LDAP login requests
+// HandleLogin handles LDAP login requests.
 func (m *AuthMiddleware) HandleLogin(c *gin.Context) {
 	var loginRequest struct {
 		Username string `json:"username" binding:"required"`
@@ -107,7 +107,7 @@ func (m *AuthMiddleware) HandleLogin(c *gin.Context) {
 	})
 }
 
-// SyncUserMiddleware synchronizes LDAP users with local database
+// SyncUserMiddleware synchronizes LDAP users with local database.
 func (m *AuthMiddleware) SyncUserMiddleware() gin.HandlerFunc {
 	return gin.HandlerFunc(func(c *gin.Context) {
 		if !m.enabled {
@@ -136,7 +136,7 @@ func (m *AuthMiddleware) SyncUserMiddleware() gin.HandlerFunc {
 	})
 }
 
-// TestConnectionHandler provides an endpoint to test LDAP connection
+// TestConnectionHandler provides an endpoint to test LDAP connection.
 func (m *AuthMiddleware) TestConnectionHandler(c *gin.Context) {
 	if !m.enabled || m.provider == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -160,7 +160,7 @@ func (m *AuthMiddleware) TestConnectionHandler(c *gin.Context) {
 	})
 }
 
-// GetUserInfoHandler retrieves user information from LDAP
+// GetUserInfoHandler retrieves user information from LDAP.
 func (m *AuthMiddleware) GetUserInfoHandler(c *gin.Context) {
 	if !m.enabled || m.provider == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -220,7 +220,7 @@ func (m *AuthMiddleware) GetUserInfoHandler(c *gin.Context) {
 	})
 }
 
-// ConfigurationHandler handles LDAP configuration endpoints
+// ConfigurationHandler handles LDAP configuration endpoints.
 func (m *AuthMiddleware) ConfigurationHandler(c *gin.Context) {
 	switch c.Request.Method {
 	case "GET":
@@ -313,7 +313,7 @@ func (m *AuthMiddleware) updateConfiguration(c *gin.Context) {
 	m.setConfiguration(c)
 }
 
-// TemplateHandler provides LDAP configuration templates
+// TemplateHandler provides LDAP configuration templates.
 func (m *AuthMiddleware) TemplateHandler(c *gin.Context) {
 	ldapType := c.Param("type")
 	if ldapType == "" {

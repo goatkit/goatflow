@@ -5,10 +5,11 @@ package ticketnumber
 import (
 	"context"
 	"database/sql"
-	_ "github.com/lib/pq"
 	"os"
 	"sync"
 	"testing"
+
+	_ "github.com/lib/pq"
 )
 
 func openTestDB(t *testing.T) *sql.DB {

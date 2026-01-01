@@ -6,14 +6,14 @@ import (
 )
 
 var (
-	// Global LDAP instances
+	// Global LDAP instances.
 	globalProvider   *Provider
 	globalMiddleware *AuthMiddleware
 	globalHandlers   *LDAPHandlers
 	initOnce         sync.Once
 )
 
-// Initialize sets up the global LDAP components
+// Initialize sets up the global LDAP components.
 func Initialize() (*AuthMiddleware, *LDAPHandlers, error) {
 	var initErr error
 
@@ -65,22 +65,22 @@ func Initialize() (*AuthMiddleware, *LDAPHandlers, error) {
 	return globalMiddleware, globalHandlers, initErr
 }
 
-// GetProvider returns the global LDAP provider instance
+// GetProvider returns the global LDAP provider instance.
 func GetProvider() *Provider {
 	return globalProvider
 }
 
-// GetMiddleware returns the global LDAP middleware instance
+// GetMiddleware returns the global LDAP middleware instance.
 func GetMiddleware() *AuthMiddleware {
 	return globalMiddleware
 }
 
-// GetHandlers returns the global LDAP handlers instance
+// GetHandlers returns the global LDAP handlers instance.
 func GetHandlers() *LDAPHandlers {
 	return globalHandlers
 }
 
-// IsEnabled returns true if LDAP authentication is enabled
+// IsEnabled returns true if LDAP authentication is enabled.
 func IsEnabled() bool {
 	if globalMiddleware == nil {
 		return false
@@ -88,8 +88,7 @@ func IsEnabled() bool {
 	return globalMiddleware.enabled
 }
 
-// Reinitialize forces reinitialization of LDAP components
-// This is useful for configuration updates at runtime
+// This is useful for configuration updates at runtime.
 func Reinitialize() error {
 	// Reset the sync.Once
 	initOnce = sync.Once{}

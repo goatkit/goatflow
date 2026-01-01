@@ -1,3 +1,4 @@
+// Package cache provides caching utilities including compression support.
 package cache
 
 import (
@@ -29,7 +30,7 @@ var (
 	}
 )
 
-// compress compresses data using gzip
+// compress compresses data using gzip.
 func compress(data []byte) []byte {
 	if len(data) == 0 {
 		return data
@@ -66,7 +67,7 @@ func compress(data []byte) []byte {
 	return data
 }
 
-// decompress decompresses gzip data
+// decompress decompresses gzip data.
 func decompress(data []byte) []byte {
 	if len(data) == 0 {
 		return data
@@ -124,7 +125,7 @@ func decompressString(s string) string {
 	return string(decompressed)
 }
 
-// CompressionRatio calculates the compression ratio
+// CompressionRatio calculates the compression ratio.
 func CompressionRatio(original, compressed []byte) float64 {
 	if len(original) == 0 {
 		return 0
@@ -132,7 +133,7 @@ func CompressionRatio(original, compressed []byte) float64 {
 	return float64(len(compressed)) / float64(len(original))
 }
 
-// ShouldCompress determines if data should be compressed based on size and type
+// ShouldCompress determines if data should be compressed based on size and type.
 func ShouldCompress(data []byte) bool {
 	// Don't compress small data
 	if len(data) < 1024 {

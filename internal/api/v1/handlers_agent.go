@@ -130,7 +130,7 @@ func (router *APIRouter) handleGetCannedResponseCategories(c *gin.Context) {
 	})
 }
 
-// Ticket template handlers
+// Ticket template handlers.
 func (router *APIRouter) handleListTicketTemplates(c *gin.Context) {
 	// TODO: Implement actual ticket templates listing
 	templates := []gin.H{
@@ -248,146 +248,7 @@ func (router *APIRouter) handleDeleteTicketTemplate(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
-func (router *APIRouter) handleApplyTicketTemplate(c *gin.Context) {
-	ticketID := c.Param("id")
-	templateID := c.Param("template_id")
-
-	// TODO: Implement actual template application
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Message: "Template " + templateID + " applied to ticket " + ticketID,
-	})
-}
-
-// Workflow handlers
-func (router *APIRouter) handleListWorkflows(c *gin.Context) {
-	// TODO: Implement actual workflow listing
-	workflows := []gin.H{
-		{
-			"id":          1,
-			"name":        "Standard Support Workflow",
-			"description": "Default workflow for support tickets",
-			"steps":       5,
-			"active":      true,
-		},
-	}
-
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Data:    workflows,
-	})
-}
-
-func (router *APIRouter) handleCreateWorkflow(c *gin.Context) {
-	var req struct {
-		Name        string                   `json:"name" binding:"required"`
-		Description string                   `json:"description"`
-		Steps       []map[string]interface{} `json:"steps" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		sendError(c, http.StatusBadRequest, "Invalid request: "+err.Error())
-		return
-	}
-
-	// TODO: Implement actual workflow creation
-	workflow := gin.H{
-		"id":          2,
-		"name":        req.Name,
-		"description": req.Description,
-		"steps":       len(req.Steps),
-		"active":      true,
-		"created_at":  time.Now(),
-	}
-
-	c.JSON(http.StatusCreated, APIResponse{
-		Success: true,
-		Data:    workflow,
-	})
-}
-
-func (router *APIRouter) handleUpdateWorkflow(c *gin.Context) {
-	workflowID := c.Param("id")
-
-	var req struct {
-		Name        string                   `json:"name"`
-		Description string                   `json:"description"`
-		Steps       []map[string]interface{} `json:"steps"`
-		Active      bool                     `json:"active"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		sendError(c, http.StatusBadRequest, "Invalid request: "+err.Error())
-		return
-	}
-
-	// TODO: Implement actual workflow update
-	workflow := gin.H{
-		"id":          workflowID,
-		"name":        req.Name,
-		"description": req.Description,
-		"steps":       len(req.Steps),
-		"active":      req.Active,
-		"updated_at":  time.Now(),
-	}
-
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Data:    workflow,
-	})
-}
-
-func (router *APIRouter) handleDeleteWorkflow(c *gin.Context) {
-	// workflowID := c.Param("id")
-
-	// TODO: Implement actual workflow deletion
-	c.JSON(http.StatusNoContent, nil)
-}
-
-func (router *APIRouter) handleGetWorkflowStatus(c *gin.Context) {
-	ticketID := c.Param("id")
-
-	// TODO: Implement actual workflow status fetching
-	status := gin.H{
-		"ticket_id":     ticketID,
-		"workflow_id":   1,
-		"workflow_name": "Standard Support Workflow",
-		"current_step":  2,
-		"total_steps":   5,
-		"status":        "in_progress",
-	}
-
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Data:    status,
-	})
-}
-
-func (router *APIRouter) handleAdvanceWorkflow(c *gin.Context) {
-	ticketID := c.Param("id")
-
-	var req struct {
-		Action  string `json:"action" binding:"required"` // approve, reject, skip
-		Comment string `json:"comment"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		sendError(c, http.StatusBadRequest, "Invalid request: "+err.Error())
-		return
-	}
-
-	// TODO: Implement actual workflow advancement
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Message: "Workflow advanced for ticket " + ticketID,
-		Data: gin.H{
-			"action":  req.Action,
-			"comment": req.Comment,
-		},
-	})
-}
-
-// Performance metrics handlers
+// Performance metrics handlers.
 func (router *APIRouter) handleGetMyPerformance(c *gin.Context) {
 	// TODO: Implement actual performance metrics
 	performance := gin.H{

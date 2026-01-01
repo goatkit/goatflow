@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -14,16 +13,15 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-// This test focuses on the EXACT scenario the user reported:
-// 1. User has groups in database (confirmed via testing)
-// 2. But UI/API might not be displaying or updating them correctly
+// 2. But UI/API might not be displaying or updating them correctly.
 func TestRealGroupAssignmentIssue(t *testing.T) {
 	config := GetTestConfig()
 

@@ -7,9 +7,10 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	. "github.com/gotrs-io/gotrs-ce/internal/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/gotrs-io/gotrs-ce/internal/api"
 )
 
 func TestListTickets_Pagination(t *testing.T) {
@@ -467,7 +468,7 @@ func TestListTickets_EdgeCases(t *testing.T) {
 	}
 }
 
-// TestListTickets_IncludeRelations tests including related data
+// TestListTickets_IncludeRelations tests including related data.
 func TestListTickets_IncludeRelations(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

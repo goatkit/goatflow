@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// HotReloadManager manages hot reloading for all YAML configurations
+// HotReloadManager manages hot reloading for all YAML configurations.
 type HotReloadManager struct {
 	mu             sync.RWMutex
 	watcher        *fsnotify.Watcher
@@ -29,7 +29,7 @@ type HotReloadManager struct {
 	pendingReloads map[string]time.Time
 }
 
-// NewHotReloadManager creates a new hot reload manager
+// NewHotReloadManager creates a new hot reload manager.
 func NewHotReloadManager(versionMgr *VersionManager, validator Validator) (*HotReloadManager, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -57,7 +57,7 @@ func NewHotReloadManager(versionMgr *VersionManager, validator Validator) (*HotR
 	return hrm, nil
 }
 
-// RegisterHandler registers a reload handler for a specific kind
+// RegisterHandler registers a reload handler for a specific kind.
 func (hrm *HotReloadManager) RegisterHandler(kind YAMLKind, handler ReloadHandler) {
 	hrm.mu.Lock()
 	defer hrm.mu.Unlock()
@@ -68,7 +68,7 @@ func (hrm *HotReloadManager) RegisterHandler(kind YAMLKind, handler ReloadHandle
 	hrm.handlers[kind] = append(hrm.handlers[kind], handler)
 }
 
-// WatchDirectory starts watching a directory for YAML changes
+// WatchDirectory starts watching a directory for YAML changes.
 func (hrm *HotReloadManager) WatchDirectory(dir string, kind YAMLKind) error {
 	hrm.mu.Lock()
 	defer hrm.mu.Unlock()
@@ -94,12 +94,12 @@ func (hrm *HotReloadManager) WatchDirectory(dir string, kind YAMLKind) error {
 	return nil
 }
 
-// Events returns the event channel
+// Events returns the event channel.
 func (hrm *HotReloadManager) Events() <-chan ConfigEvent {
 	return hrm.eventChan
 }
 
-// Stop stops the hot reload manager
+// Stop stops the hot reload manager.
 func (hrm *HotReloadManager) Stop() {
 	hrm.cancel()
 	hrm.watcher.Close()

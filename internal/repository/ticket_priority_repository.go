@@ -9,17 +9,17 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// TicketPriorityRepository handles database operations for ticket priorities
+// TicketPriorityRepository handles database operations for ticket priorities.
 type TicketPriorityRepository struct {
 	db *sql.DB
 }
 
-// NewTicketPriorityRepository creates a new ticket priority repository
+// NewTicketPriorityRepository creates a new ticket priority repository.
 func NewTicketPriorityRepository(db *sql.DB) *TicketPriorityRepository {
 	return &TicketPriorityRepository{db: db}
 }
 
-// GetByID retrieves a ticket priority by ID
+// GetByID retrieves a ticket priority by ID.
 func (r *TicketPriorityRepository) GetByID(id uint) (*models.TicketPriority, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, color, create_time, create_by, change_time, change_by
@@ -45,7 +45,7 @@ func (r *TicketPriorityRepository) GetByID(id uint) (*models.TicketPriority, err
 	return &priority, err
 }
 
-// GetByName retrieves a ticket priority by name
+// GetByName retrieves a ticket priority by name.
 func (r *TicketPriorityRepository) GetByName(name string) (*models.TicketPriority, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, color, create_time, create_by, change_time, change_by
@@ -71,7 +71,7 @@ func (r *TicketPriorityRepository) GetByName(name string) (*models.TicketPriorit
 	return &priority, err
 }
 
-// List retrieves all active ticket priorities
+// List retrieves all active ticket priorities.
 func (r *TicketPriorityRepository) List() ([]*models.TicketPriority, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, color, create_time, create_by, change_time, change_by
@@ -107,7 +107,7 @@ func (r *TicketPriorityRepository) List() ([]*models.TicketPriority, error) {
 	return priorities, nil
 }
 
-// Create creates a new ticket priority
+// Create creates a new ticket priority.
 func (r *TicketPriorityRepository) Create(priority *models.TicketPriority) error {
 	if priority.CreateTime.IsZero() {
 		priority.CreateTime = time.Now().UTC()
@@ -138,7 +138,7 @@ func (r *TicketPriorityRepository) Create(priority *models.TicketPriority) error
 	return err
 }
 
-// Update updates a ticket priority
+// Update updates a ticket priority.
 func (r *TicketPriorityRepository) Update(priority *models.TicketPriority) error {
 	if priority.ChangeTime.IsZero() {
 		priority.ChangeTime = time.Now().UTC()
@@ -179,12 +179,12 @@ func (r *TicketPriorityRepository) Update(priority *models.TicketPriority) error
 	return nil
 }
 
-// GetDefault returns the default priority (usually "normal" with ID 3)
+// GetDefault returns the default priority (usually "normal" with ID 3).
 func (r *TicketPriorityRepository) GetDefault() (*models.TicketPriority, error) {
 	return r.GetByName("normal")
 }
 
-// GetHighPriorities returns all priorities considered "high" (4=high, 5=very high)
+// GetHighPriorities returns all priorities considered "high" (4=high, 5=very high).
 func (r *TicketPriorityRepository) GetHighPriorities() ([]*models.TicketPriority, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, color, create_time, create_by, change_time, change_by

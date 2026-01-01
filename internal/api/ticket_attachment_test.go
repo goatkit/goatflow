@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -14,16 +13,17 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // Test-Driven Development for Ticket Attachment Feature
 // Attachments allow users to upload files to tickets
 // Tests use the actual test database with seeded data
 
-// createTestTicketWithAttachment creates a test ticket with an article and attachment
+// createTestTicketWithAttachment creates a test ticket with an article and attachment.
 func createTestTicketWithAttachment(t *testing.T, db *sql.DB) (ticketID int, articleID int, attachmentID int, err error) {
 	t.Helper()
 
@@ -69,7 +69,7 @@ func createTestTicketWithAttachment(t *testing.T, db *sql.DB) (ticketID int, art
 	return ticketID, articleID, attachmentID, nil
 }
 
-// createTestTicketWithoutAttachment creates a test ticket without attachments
+// createTestTicketWithoutAttachment creates a test ticket without attachments.
 func createTestTicketWithoutAttachment(t *testing.T, db *sql.DB) (ticketID int, err error) {
 	t.Helper()
 
@@ -93,7 +93,7 @@ func createTestTicketWithoutAttachment(t *testing.T, db *sql.DB) (ticketID int, 
 	return ticketID, nil
 }
 
-// setupAttachmentTestDB initializes the test database and returns a cleanup function
+// setupAttachmentTestDB initializes the test database and returns a cleanup function.
 func setupAttachmentTestDB(t *testing.T) (ticketID int, articleID int, attachmentID int, cleanup func()) {
 	t.Helper()
 
@@ -168,7 +168,7 @@ func setupAttachmentTestDB(t *testing.T) (ticketID int, articleID int, attachmen
 	return ticketID, articleID, attachmentID, cleanup
 }
 
-// setupTicketWithoutAttachments creates a ticket with an article but no attachments
+// setupTicketWithoutAttachments creates a ticket with an article but no attachments.
 func setupTicketWithoutAttachments(t *testing.T) (ticketID int, cleanup func()) {
 	t.Helper()
 
@@ -192,7 +192,6 @@ func setupTicketWithoutAttachments(t *testing.T) (ticketID int, cleanup func()) 
 		db, err = database.GetDB()
 		require.NoError(t, err, "Failed to get new database connection")
 	}
-
 
 	// Create a test ticket
 	var existingID int

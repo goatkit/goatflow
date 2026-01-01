@@ -4,12 +4,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 )
 
 // Exported handlers for use by the routing system
 
-// Core handlers
+// Core handlers.
 var (
 	HandleLoginPage           = handleLoginPage
 	HandleCustomerLoginPage   = handleCustomerLoginPage
@@ -25,10 +26,10 @@ var (
 
 // Auth API handlers are directly exported from auth_handlers.go
 
-// Admin handlers
+// Admin handlers.
 var (
 	HandleAdminDashboard = handleAdminDashboard
-	// Users are handled by dynamic modules and admin_users_handlers.go
+	// Users are handled by dynamic modules and admin_users_handlers.go.
 	HandleAdminUserEdit           = HandleAdminUserGet // Same handler for edit form
 	HandleAdminPasswordPolicy     = HandlePasswordPolicy
 	HandleAdminGroups             = handleAdminGroups
@@ -62,7 +63,7 @@ var (
 	HandleAdminSLAUpdate          = handleAdminSLAUpdate
 	HandleAdminSLADelete          = handleAdminSLADelete
 	HandleAdminLookups            = handleAdminLookups
-	// Roles management
+	// Roles management.
 	HandleAdminRoles                 = handleAdminRoles
 	HandleAdminRoleCreate            = handleAdminRoleCreate
 	HandleAdminRoleGet               = handleAdminRoleGet
@@ -73,7 +74,7 @@ var (
 	HandleAdminRoleUserRemove        = handleAdminRoleUserRemove
 	HandleAdminRolePermissions       = handleAdminRolePermissions
 	HandleAdminRolePermissionsUpdate = handleAdminRolePermissionsUpdate
-	// Customer company handlers - wrapped to get database from adapter
+	// Customer company handlers - wrapped to get database from adapter.
 	HandleAdminCustomerCompanies = func(c *gin.Context) {
 		dbService, err := adapter.GetDatabase()
 		if err != nil {
@@ -187,7 +188,7 @@ var (
 		handleAdminUploadCustomerPortalLogo(dbService.GetDB())(c)
 	}
 
-	// Customer user ↔ services management
+	// Customer user ↔ services management.
 	HandleAdminCustomerUserServices = func(c *gin.Context) {
 		dbService, err := adapter.GetDatabase()
 		if err != nil {
@@ -245,19 +246,19 @@ var (
 		handleAdminDefaultServicesUpdate(dbService.GetDB())(c)
 	}
 
-	// Dynamic Fields management
-	HandleAdminDynamicFields                 = handleAdminDynamicFields
-	HandleAdminDynamicFieldNew               = handleAdminDynamicFieldNew
-	HandleAdminDynamicFieldEdit              = handleAdminDynamicFieldEdit
-	HandleAdminDynamicFieldScreenConfig      = handleAdminDynamicFieldScreenConfig
-	HandleCreateDynamicField                 = handleCreateDynamicField
-	HandleUpdateDynamicField                 = handleUpdateDynamicField
-	HandleDeleteDynamicField                 = handleDeleteDynamicField
-	HandleAdminDynamicFieldScreenConfigSave  = handleAdminDynamicFieldScreenConfigSave
+	// Dynamic Fields management.
+	HandleAdminDynamicFields                  = handleAdminDynamicFields
+	HandleAdminDynamicFieldNew                = handleAdminDynamicFieldNew
+	HandleAdminDynamicFieldEdit               = handleAdminDynamicFieldEdit
+	HandleAdminDynamicFieldScreenConfig       = handleAdminDynamicFieldScreenConfig
+	HandleCreateDynamicField                  = handleCreateDynamicField
+	HandleUpdateDynamicField                  = handleUpdateDynamicField
+	HandleDeleteDynamicField                  = handleDeleteDynamicField
+	HandleAdminDynamicFieldScreenConfigSave   = handleAdminDynamicFieldScreenConfigSave
 	HandleAdminDynamicFieldScreenConfigSingle = handleAdminDynamicFieldScreenConfigSingle
 )
 
-// Ticket handlers
+// Ticket handlers.
 var (
 	HandleTicketDetail   = handleTicketDetail
 	HandleQueueDetail    = handleQueueDetail
@@ -266,7 +267,7 @@ var (
 	HandleNewPhoneTicket = handleNewPhoneTicket
 )
 
-// Attachment handlers (exported for routing)
+// Attachment handlers (exported for routing).
 var (
 	HandleGetAttachments     = handleGetAttachments
 	HandleUploadAttachment   = handleUploadAttachment

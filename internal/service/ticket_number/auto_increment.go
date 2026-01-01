@@ -1,27 +1,28 @@
+// Package ticket_number provides ticket number generation strategies.
 package ticket_number
 
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// AutoIncrementConfig holds configuration for auto-increment generator
+// AutoIncrementConfig holds configuration for auto-increment generator.
 type AutoIncrementConfig struct {
 	Prefix    string
 	MinDigits int
 	StartFrom int64
 }
 
-// AutoIncrementGenerator generates simple sequential ticket numbers
-// Format: PREFIX + padded number (e.g., T-0001000)
+// Format: PREFIX + padded number (e.g., T-0001000).
 type AutoIncrementGenerator struct {
 	db         *sql.DB
 	config     AutoIncrementConfig
 	counterUID string
 }
 
-// NewAutoIncrementGenerator creates a new auto-increment generator
+// NewAutoIncrementGenerator creates a new auto-increment generator.
 func NewAutoIncrementGenerator(db *sql.DB, config AutoIncrementConfig) *AutoIncrementGenerator {
 	// Set defaults
 	if config.MinDigits == 0 {
@@ -38,7 +39,7 @@ func NewAutoIncrementGenerator(db *sql.DB, config AutoIncrementConfig) *AutoIncr
 	}
 }
 
-// Generate creates a new ticket number
+// Generate creates a new ticket number.
 func (g *AutoIncrementGenerator) Generate() (string, error) {
 	// Get next counter value
 	counter, err := g.getNextCounterWithStart()
@@ -53,12 +54,12 @@ func (g *AutoIncrementGenerator) Generate() (string, error) {
 	return ticketNumber, nil
 }
 
-// Reset resets the counter to the starting value
+// Reset resets the counter to the starting value.
 func (g *AutoIncrementGenerator) Reset() error {
 	return resetCounter(g.db, g.counterUID, g.config.StartFrom-1)
 }
 
-// getNextCounterWithStart gets the next counter, handling the StartFrom value
+// getNextCounterWithStart gets the next counter, handling the StartFrom value.
 func (g *AutoIncrementGenerator) getNextCounterWithStart() (int64, error) {
 	var counter int64
 

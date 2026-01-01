@@ -6,23 +6,23 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	// _ "github.com/godror/godror" // TODO: Add when implementing Oracle support
+	// _ "github.com/godror/godror" // TODO: Add when implementing Oracle support.
 )
 
-// OracleDatabase implements IDatabase for Oracle
+// OracleDatabase implements IDatabase for Oracle.
 type OracleDatabase struct {
 	config DatabaseConfig
 	db     *sql.DB
 }
 
-// NewOracleDatabase creates a new Oracle database instance
+// NewOracleDatabase creates a new Oracle database instance.
 func NewOracleDatabase(config DatabaseConfig) *OracleDatabase {
 	return &OracleDatabase{
 		config: config,
 	}
 }
 
-// Connect establishes connection to Oracle database (stub implementation)
+// Connect establishes connection to Oracle database (stub implementation).
 func (o *OracleDatabase) Connect() error {
 	// TODO: Implement Oracle connection
 	// dsn := o.buildDSN()
@@ -31,7 +31,7 @@ func (o *OracleDatabase) Connect() error {
 	return fmt.Errorf("oracle driver not yet implemented - requires github.com/godror/godror")
 }
 
-// Close closes the database connection
+// Close closes the database connection.
 func (o *OracleDatabase) Close() error {
 	if o.db != nil {
 		return o.db.Close()
@@ -39,7 +39,7 @@ func (o *OracleDatabase) Close() error {
 	return nil
 }
 
-// Ping tests the database connection
+// Ping tests the database connection.
 func (o *OracleDatabase) Ping() error {
 	if o.db == nil {
 		return fmt.Errorf("database connection not established")
@@ -47,32 +47,32 @@ func (o *OracleDatabase) Ping() error {
 	return o.db.Ping()
 }
 
-// GetType returns the database type
+// GetType returns the database type.
 func (o *OracleDatabase) GetType() DatabaseType {
 	return Oracle
 }
 
-// GetConfig returns the database configuration
+// GetConfig returns the database configuration.
 func (o *OracleDatabase) GetConfig() DatabaseConfig {
 	return o.config
 }
 
-// Query executes a query and returns rows
+// Query executes a query and returns rows.
 func (o *OracleDatabase) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	return o.db.QueryContext(ctx, query, args...)
 }
 
-// QueryRow executes a query and returns a single row
+// QueryRow executes a query and returns a single row.
 func (o *OracleDatabase) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	return o.db.QueryRowContext(ctx, query, args...)
 }
 
-// Exec executes a query and returns the result
+// Exec executes a query and returns the result.
 func (o *OracleDatabase) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	return o.db.ExecContext(ctx, query, args...)
 }
 
-// Begin starts a transaction
+// Begin starts a transaction.
 func (o *OracleDatabase) Begin(ctx context.Context) (ITransaction, error) {
 	tx, err := o.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -81,7 +81,7 @@ func (o *OracleDatabase) Begin(ctx context.Context) (ITransaction, error) {
 	return &OracleTransaction{tx: tx}, nil
 }
 
-// BeginTx starts a transaction with options
+// BeginTx starts a transaction with options.
 func (o *OracleDatabase) BeginTx(ctx context.Context, opts *sql.TxOptions) (ITransaction, error) {
 	tx, err := o.db.BeginTx(ctx, opts)
 	if err != nil {
@@ -90,50 +90,50 @@ func (o *OracleDatabase) BeginTx(ctx context.Context, opts *sql.TxOptions) (ITra
 	return &OracleTransaction{tx: tx}, nil
 }
 
-// TableExists checks if a table exists (stub implementation)
+// TableExists checks if a table exists (stub implementation).
 func (o *OracleDatabase) TableExists(ctx context.Context, tableName string) (bool, error) {
 	// TODO: Implement Oracle-specific table existence check
 	return false, fmt.Errorf("tableExists not yet implemented for Oracle")
 }
 
-// GetTableColumns returns column information for a table (stub implementation)
+// GetTableColumns returns column information for a table (stub implementation).
 func (o *OracleDatabase) GetTableColumns(ctx context.Context, tableName string) ([]ColumnInfo, error) {
 	// TODO: Implement Oracle-specific column introspection
 	return []ColumnInfo{}, fmt.Errorf("getTableColumns not yet implemented for Oracle")
 }
 
-// CreateTable creates a table from definition (stub implementation)
+// CreateTable creates a table from definition (stub implementation).
 func (o *OracleDatabase) CreateTable(ctx context.Context, definition *TableDefinition) error {
 	// TODO: Implement Oracle-specific CREATE TABLE
 	return fmt.Errorf("createTable not yet implemented for Oracle")
 }
 
-// DropTable drops a table
+// DropTable drops a table.
 func (o *OracleDatabase) DropTable(ctx context.Context, tableName string) error {
 	query := fmt.Sprintf("DROP TABLE %s", o.Quote(tableName))
 	_, err := o.db.ExecContext(ctx, query)
 	return err
 }
 
-// CreateIndex creates an index (stub implementation)
+// CreateIndex creates an index (stub implementation).
 func (o *OracleDatabase) CreateIndex(ctx context.Context, tableName, indexName string, columns []string, unique bool) error {
 	// TODO: Implement Oracle-specific CREATE INDEX
 	return fmt.Errorf("createIndex not yet implemented for Oracle")
 }
 
-// DropIndex drops an index
+// DropIndex drops an index.
 func (o *OracleDatabase) DropIndex(ctx context.Context, tableName, indexName string) error {
 	query := fmt.Sprintf("DROP INDEX %s", o.Quote(indexName))
 	_, err := o.db.ExecContext(ctx, query)
 	return err
 }
 
-// Quote quotes an identifier (Oracle uses double quotes)
+// Quote quotes an identifier (Oracle uses double quotes).
 func (o *OracleDatabase) Quote(identifier string) string {
 	return fmt.Sprintf(`"%s"`, strings.ToUpper(identifier))
 }
 
-// QuoteValue quotes a value
+// QuoteValue quotes a value.
 func (o *OracleDatabase) QuoteValue(value interface{}) string {
 	switch v := value.(type) {
 	case string:
@@ -145,19 +145,19 @@ func (o *OracleDatabase) QuoteValue(value interface{}) string {
 	}
 }
 
-// BuildInsert builds an INSERT statement (stub implementation)
+// BuildInsert builds an INSERT statement (stub implementation).
 func (o *OracleDatabase) BuildInsert(tableName string, data map[string]interface{}) (string, []interface{}) {
 	// TODO: Implement Oracle-specific INSERT with :1, :2 placeholders
 	return "", nil
 }
 
-// BuildUpdate builds an UPDATE statement (stub implementation)
+// BuildUpdate builds an UPDATE statement (stub implementation).
 func (o *OracleDatabase) BuildUpdate(tableName string, data map[string]interface{}, where string, whereArgs []interface{}) (string, []interface{}) {
 	// TODO: Implement Oracle-specific UPDATE with :1, :2 placeholders
 	return "", nil
 }
 
-// BuildSelect builds a SELECT statement
+// BuildSelect builds a SELECT statement.
 func (o *OracleDatabase) BuildSelect(tableName string, columns []string, where string, orderBy string, limit int) string {
 	quotedColumns := make([]string, len(columns))
 	for i, col := range columns {
@@ -184,7 +184,7 @@ func (o *OracleDatabase) BuildSelect(tableName string, columns []string, where s
 	return query
 }
 
-// GetLimitClause returns Oracle-specific LIMIT clause (using ROWNUM)
+// GetLimitClause returns Oracle-specific LIMIT clause (using ROWNUM).
 func (o *OracleDatabase) GetLimitClause(limit, offset int) string {
 	// Oracle 12c+ supports OFFSET/FETCH, older versions need ROWNUM
 	if limit > 0 && offset > 0 {
@@ -195,23 +195,23 @@ func (o *OracleDatabase) GetLimitClause(limit, offset int) string {
 	return ""
 }
 
-// GetDateFunction returns current date function
+// GetDateFunction returns current date function.
 func (o *OracleDatabase) GetDateFunction() string {
 	return "SYSDATE"
 }
 
-// GetConcatFunction returns concatenation function
+// GetConcatFunction returns concatenation function.
 func (o *OracleDatabase) GetConcatFunction(fields []string) string {
 	// Oracle uses || for concatenation
 	return strings.Join(fields, " || ")
 }
 
-// SupportsReturning returns true for Oracle (RETURNING INTO)
+// SupportsReturning returns true for Oracle (RETURNING INTO).
 func (o *OracleDatabase) SupportsReturning() bool {
 	return true
 }
 
-// Stats returns database connection statistics
+// Stats returns database connection statistics.
 func (o *OracleDatabase) Stats() sql.DBStats {
 	if o.db != nil {
 		return o.db.Stats()
@@ -219,7 +219,7 @@ func (o *OracleDatabase) Stats() sql.DBStats {
 	return sql.DBStats{}
 }
 
-// IsHealthy checks if database is healthy
+// IsHealthy checks if database is healthy.
 func (o *OracleDatabase) IsHealthy() bool {
 	if o.db == nil {
 		return false
@@ -231,7 +231,7 @@ func (o *OracleDatabase) IsHealthy() bool {
 	return o.db.PingContext(ctx) == nil
 }
 
-// buildDSN builds the Oracle connection string (stub)
+// buildDSN builds the Oracle connection string (stub).
 func (o *OracleDatabase) buildDSN() string {
 	// TODO: Implement Oracle DSN format
 	// Example: oracle://user:pass@host:port/service_name
@@ -239,7 +239,7 @@ func (o *OracleDatabase) buildDSN() string {
 		o.config.Username, o.config.Password, o.config.Host, o.config.Port, o.config.Database)
 }
 
-// OracleTransaction implements ITransaction for Oracle
+// OracleTransaction implements ITransaction for Oracle.
 type OracleTransaction struct {
 	tx *sql.Tx
 }

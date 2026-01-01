@@ -1,7 +1,7 @@
 package dynamic
 
 import (
-	// "encoding/json"
+	// "encoding/json".
 	"fmt"
 	"log"
 	"strings"
@@ -11,7 +11,7 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-// WorkflowEngine manages automated workflows for dynamic modules
+// WorkflowEngine manages automated workflows for dynamic modules.
 type WorkflowEngine struct {
 	cron      *cron.Cron
 	workflows map[string]*Workflow
@@ -19,7 +19,7 @@ type WorkflowEngine struct {
 	db        interface{} // Database connection
 }
 
-// Workflow represents an automated workflow configuration
+// Workflow represents an automated workflow configuration.
 type Workflow struct {
 	ID          string                 `json:"id" yaml:"id"`
 	Name        string                 `json:"name" yaml:"name"`
@@ -32,7 +32,7 @@ type Workflow struct {
 	Metadata    map[string]interface{} `json:"metadata" yaml:"metadata"`
 }
 
-// Trigger defines when a workflow should execute
+// Trigger defines when a workflow should execute.
 type Trigger struct {
 	Type     string                 `json:"type" yaml:"type"` // schedule, event, webhook, manual
 	Config   map[string]interface{} `json:"config" yaml:"config"`
@@ -40,7 +40,7 @@ type Trigger struct {
 	Event    string                 `json:"event,omitempty" yaml:"event,omitempty"`       // create, update, delete
 }
 
-// Condition defines requirements for workflow execution
+// Condition defines requirements for workflow execution.
 type Condition struct {
 	Type     string                 `json:"type" yaml:"type"` // field_value, field_change, time_based, record_count
 	Field    string                 `json:"field,omitempty" yaml:"field,omitempty"`
@@ -49,17 +49,17 @@ type Condition struct {
 	Config   map[string]interface{} `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
-// Action defines what happens when a workflow executes
+// Action defines what happens when a workflow executes.
 type Action struct {
 	Type   string                 `json:"type" yaml:"type"` // update_field, send_email, call_webhook, create_record, delete_record
 	Config map[string]interface{} `json:"config" yaml:"config"`
 	Order  int                    `json:"order" yaml:"order"`
 }
 
-// WorkflowHandler processes workflow actions
+// WorkflowHandler processes workflow actions.
 type WorkflowHandler func(ctx *WorkflowContext, action Action) error
 
-// WorkflowContext provides context for workflow execution
+// WorkflowContext provides context for workflow execution.
 type WorkflowContext struct {
 	Workflow  *Workflow
 	Module    string
@@ -70,7 +70,7 @@ type WorkflowContext struct {
 	Logs      []string
 }
 
-// NewWorkflowEngine creates a new workflow engine
+// NewWorkflowEngine creates a new workflow engine.
 func NewWorkflowEngine(db interface{}) *WorkflowEngine {
 	return &WorkflowEngine{
 		cron:      cron.New(cron.WithSeconds()),
@@ -80,12 +80,12 @@ func NewWorkflowEngine(db interface{}) *WorkflowEngine {
 	}
 }
 
-// RegisterHandler registers a workflow action handler
+// RegisterHandler registers a workflow action handler.
 func (we *WorkflowEngine) RegisterHandler(actionType string, handler WorkflowHandler) {
 	we.handlers[actionType] = handler
 }
 
-// RegisterWorkflow registers a new workflow
+// RegisterWorkflow registers a new workflow.
 func (we *WorkflowEngine) RegisterWorkflow(workflow *Workflow) error {
 	we.workflows[workflow.ID] = workflow
 
@@ -104,7 +104,7 @@ func (we *WorkflowEngine) RegisterWorkflow(workflow *Workflow) error {
 	return nil
 }
 
-// ExecuteWorkflow executes a workflow
+// ExecuteWorkflow executes a workflow.
 func (we *WorkflowEngine) ExecuteWorkflow(workflowID string, record map[string]interface{}) error {
 	workflow, exists := we.workflows[workflowID]
 	if !exists {
@@ -147,7 +147,7 @@ func (we *WorkflowEngine) ExecuteWorkflow(workflowID string, record map[string]i
 	return nil
 }
 
-// checkConditions evaluates all conditions for a workflow
+// checkConditions evaluates all conditions for a workflow.
 func (we *WorkflowEngine) checkConditions(ctx *WorkflowContext, conditions []Condition) bool {
 	for _, condition := range conditions {
 		if !we.evaluateCondition(ctx, condition) {
@@ -158,7 +158,7 @@ func (we *WorkflowEngine) checkConditions(ctx *WorkflowContext, conditions []Con
 	return true
 }
 
-// evaluateCondition evaluates a single condition
+// evaluateCondition evaluates a single condition.
 func (we *WorkflowEngine) evaluateCondition(ctx *WorkflowContext, condition Condition) bool {
 	switch condition.Type {
 	case "field_value":
@@ -174,7 +174,7 @@ func (we *WorkflowEngine) evaluateCondition(ctx *WorkflowContext, condition Cond
 	}
 }
 
-// evaluateFieldCondition checks field value conditions
+// evaluateFieldCondition checks field value conditions.
 func (we *WorkflowEngine) evaluateFieldCondition(ctx *WorkflowContext, condition Condition) bool {
 	if ctx.Record == nil {
 		return false
@@ -201,7 +201,7 @@ func (we *WorkflowEngine) evaluateFieldCondition(ctx *WorkflowContext, condition
 	}
 }
 
-// evaluateFieldChangeCondition checks if a field has changed
+// evaluateFieldChangeCondition checks if a field has changed.
 func (we *WorkflowEngine) evaluateFieldChangeCondition(ctx *WorkflowContext, condition Condition) bool {
 	if ctx.Record == nil || ctx.OldRecord == nil {
 		return false
@@ -213,21 +213,21 @@ func (we *WorkflowEngine) evaluateFieldChangeCondition(ctx *WorkflowContext, con
 	return fmt.Sprintf("%v", newValue) != fmt.Sprintf("%v", oldValue)
 }
 
-// evaluateTimeCondition checks time-based conditions
+// evaluateTimeCondition checks time-based conditions.
 func (we *WorkflowEngine) evaluateTimeCondition(ctx *WorkflowContext, condition Condition) bool {
 	// Implementation for time-based conditions
 	// e.g., "created more than 7 days ago", "modified in last hour"
 	return true // Simplified for now
 }
 
-// evaluateRecordCountCondition checks record count conditions
+// evaluateRecordCountCondition checks record count conditions.
 func (we *WorkflowEngine) evaluateRecordCountCondition(ctx *WorkflowContext, condition Condition) bool {
 	// Implementation for record count conditions
 	// e.g., "more than 100 records", "less than 5 active users"
 	return true // Simplified for now
 }
 
-// compareValues compares two values numerically
+// compareValues compares two values numerically.
 func compareValues(a, b interface{}) int {
 	// Simplified numeric comparison
 	aStr := fmt.Sprintf("%v", a)
@@ -241,20 +241,20 @@ func compareValues(a, b interface{}) int {
 	return -1
 }
 
-// Log adds a log entry to the workflow context
+// Log adds a log entry to the workflow context.
 func (ctx *WorkflowContext) Log(message string) {
 	timestamp := time.Now().Format("15:04:05")
 	ctx.Logs = append(ctx.Logs, fmt.Sprintf("[%s] %s", timestamp, message))
 	log.Printf("[Workflow %s] %s", ctx.Workflow.ID, message)
 }
 
-// Start starts the workflow engine
+// Start starts the workflow engine.
 func (we *WorkflowEngine) Start() {
 	we.cron.Start()
 	log.Println("Workflow engine started")
 }
 
-// Stop stops the workflow engine
+// Stop stops the workflow engine.
 func (we *WorkflowEngine) Stop() {
 	we.cron.Stop()
 	log.Println("Workflow engine stopped")
@@ -262,7 +262,7 @@ func (we *WorkflowEngine) Stop() {
 
 // Built-in Action Handlers
 
-// UpdateFieldHandler updates a field value
+// UpdateFieldHandler updates a field value.
 func UpdateFieldHandler(ctx *WorkflowContext, action Action) error {
 	field, _ := action.Config["field"].(string)
 	value := action.Config["value"]
@@ -276,7 +276,7 @@ func UpdateFieldHandler(ctx *WorkflowContext, action Action) error {
 	return nil
 }
 
-// SendEmailHandler sends an email notification
+// SendEmailHandler sends an email notification.
 func SendEmailHandler(ctx *WorkflowContext, action Action) error {
 	to, _ := action.Config["to"].(string)
 	subject, _ := action.Config["subject"].(string)
@@ -292,7 +292,7 @@ func SendEmailHandler(ctx *WorkflowContext, action Action) error {
 	return nil
 }
 
-// CallWebhookHandler calls an external webhook
+// CallWebhookHandler calls an external webhook.
 func CallWebhookHandler(ctx *WorkflowContext, action Action) error {
 	url, _ := action.Config["url"].(string)
 	method, _ := action.Config["method"].(string)
@@ -307,7 +307,7 @@ func CallWebhookHandler(ctx *WorkflowContext, action Action) error {
 	return nil
 }
 
-// CreateRecordHandler creates a new record
+// CreateRecordHandler creates a new record.
 func CreateRecordHandler(ctx *WorkflowContext, action Action) error {
 	module, _ := action.Config["module"].(string)
 	_, _ = action.Config["fields"].(map[string]interface{})
@@ -318,7 +318,7 @@ func CreateRecordHandler(ctx *WorkflowContext, action Action) error {
 	return nil
 }
 
-// DeleteRecordHandler soft deletes a record
+// DeleteRecordHandler soft deletes a record.
 func DeleteRecordHandler(ctx *WorkflowContext, action Action) error {
 	recordID, _ := action.Config["record_id"].(string)
 
@@ -328,7 +328,7 @@ func DeleteRecordHandler(ctx *WorkflowContext, action Action) error {
 	return nil
 }
 
-// replaceVariables replaces variables in a string template
+// replaceVariables replaces variables in a string template.
 func replaceVariables(template string, variables map[string]interface{}) string {
 	result := template
 	for key, value := range variables {
@@ -340,7 +340,7 @@ func replaceVariables(template string, variables map[string]interface{}) string 
 
 // HTTP Handler for Workflow Management
 
-// HandleWorkflowList lists all workflows
+// HandleWorkflowList lists all workflows.
 func (we *WorkflowEngine) HandleWorkflowList(c *gin.Context) {
 	workflows := make([]*Workflow, 0, len(we.workflows))
 	for _, w := range we.workflows {
@@ -354,7 +354,7 @@ func (we *WorkflowEngine) HandleWorkflowList(c *gin.Context) {
 	})
 }
 
-// HandleWorkflowCreate creates a new workflow
+// HandleWorkflowCreate creates a new workflow.
 func (we *WorkflowEngine) HandleWorkflowCreate(c *gin.Context) {
 	var workflow Workflow
 	if err := c.ShouldBindJSON(&workflow); err != nil {
@@ -375,7 +375,7 @@ func (we *WorkflowEngine) HandleWorkflowCreate(c *gin.Context) {
 	})
 }
 
-// HandleWorkflowExecute manually executes a workflow
+// HandleWorkflowExecute manually executes a workflow.
 func (we *WorkflowEngine) HandleWorkflowExecute(c *gin.Context) {
 	workflowID := c.Param("id")
 
@@ -393,7 +393,7 @@ func (we *WorkflowEngine) HandleWorkflowExecute(c *gin.Context) {
 	})
 }
 
-// HandleWorkflowToggle enables/disables a workflow
+// HandleWorkflowToggle enables/disables a workflow.
 func (we *WorkflowEngine) HandleWorkflowToggle(c *gin.Context) {
 	workflowID := c.Param("id")
 
@@ -411,7 +411,7 @@ func (we *WorkflowEngine) HandleWorkflowToggle(c *gin.Context) {
 	})
 }
 
-// HandleWorkflowDelete deletes a workflow
+// HandleWorkflowDelete deletes a workflow.
 func (we *WorkflowEngine) HandleWorkflowDelete(c *gin.Context) {
 	workflowID := c.Param("id")
 

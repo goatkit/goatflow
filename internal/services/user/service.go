@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// UserService handles all user-related operations as a microservice
+// UserService handles all user-related operations as a microservice.
 type UserService struct {
 	UnimplementedUserServiceServer
 	repository UserRepository
@@ -23,7 +23,7 @@ type UserService struct {
 	metrics    MetricsCollector
 }
 
-// UserRepository defines the interface for user data access
+// UserRepository defines the interface for user data access.
 type UserRepository interface {
 	Create(ctx context.Context, user *User) error
 	GetByID(ctx context.Context, id string) (*User, error)
@@ -36,7 +36,7 @@ type UserRepository interface {
 	GetByRole(ctx context.Context, role string) ([]*User, error)
 }
 
-// CacheService defines the interface for caching
+// CacheService defines the interface for caching.
 type CacheService interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
@@ -44,20 +44,20 @@ type CacheService interface {
 	Invalidate(ctx context.Context, pattern string) error
 }
 
-// EventBus defines the interface for event publishing
+// EventBus defines the interface for event publishing.
 type EventBus interface {
 	Publish(ctx context.Context, event Event) error
 	Subscribe(ctx context.Context, topic string, handler EventHandler) error
 }
 
-// MetricsCollector defines the interface for metrics collection
+// MetricsCollector defines the interface for metrics collection.
 type MetricsCollector interface {
 	IncrementCounter(name string, labels map[string]string)
 	RecordDuration(name string, duration time.Duration, labels map[string]string)
 	SetGauge(name string, value float64, labels map[string]string)
 }
 
-// Event represents a domain event
+// Event represents a domain event.
 type Event struct {
 	ID        string                 `json:"id"`
 	Type      string                 `json:"type"`
@@ -67,10 +67,10 @@ type Event struct {
 	Version   string                 `json:"version"`
 }
 
-// EventHandler processes events
+// EventHandler processes events.
 type EventHandler func(ctx context.Context, event Event) error
 
-// NewUserService creates a new user service instance
+// NewUserService creates a new user service instance.
 func NewUserService(repo UserRepository, cache CacheService, events EventBus, metrics MetricsCollector) *UserService {
 	return &UserService{
 		repository: repo,
@@ -80,7 +80,7 @@ func NewUserService(repo UserRepository, cache CacheService, events EventBus, me
 	}
 }
 
-// CreateUser creates a new user
+// CreateUser creates a new user.
 func (s *UserService) CreateUser(ctx context.Context, req *CreateUserRequest) (*CreateUserResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -165,7 +165,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *CreateUserRequest) (*
 	}, nil
 }
 
-// GetUser retrieves a user by ID
+// GetUser retrieves a user by ID.
 func (s *UserService) GetUser(ctx context.Context, req *GetUserRequest) (*GetUserResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -208,7 +208,7 @@ func (s *UserService) GetUser(ctx context.Context, req *GetUserRequest) (*GetUse
 	}, nil
 }
 
-// UpdateUser updates an existing user
+// UpdateUser updates an existing user.
 func (s *UserService) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*UpdateUserResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -288,7 +288,7 @@ func (s *UserService) UpdateUser(ctx context.Context, req *UpdateUserRequest) (*
 	}, nil
 }
 
-// AuthenticateUser authenticates a user with email and password
+// AuthenticateUser authenticates a user with email and password.
 func (s *UserService) AuthenticateUser(ctx context.Context, req *AuthenticateUserRequest) (*AuthenticateUserResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -378,7 +378,7 @@ func (s *UserService) AuthenticateUser(ctx context.Context, req *AuthenticateUse
 	}, nil
 }
 
-// ListUsers lists users with filtering
+// ListUsers lists users with filtering.
 func (s *UserService) ListUsers(ctx context.Context, req *ListUsersRequest) (*ListUsersResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -412,7 +412,7 @@ func (s *UserService) ListUsers(ctx context.Context, req *ListUsersRequest) (*Li
 	return s.buildListResponse(users), nil
 }
 
-// Start starts the gRPC server
+// Start starts the gRPC server.
 func (s *UserService) Start(port int) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
@@ -429,7 +429,7 @@ func (s *UserService) Start(port int) error {
 	return grpcServer.Serve(lis)
 }
 
-// unaryInterceptor adds logging and metrics to all unary RPC calls
+// unaryInterceptor adds logging and metrics to all unary RPC calls.
 func (s *UserService) unaryInterceptor(
 	ctx context.Context,
 	req interface{},

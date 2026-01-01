@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// SLA represents a Service Level Agreement
+// SLA represents a Service Level Agreement.
 type SLA struct {
 	ID                uint       `json:"id"`
 	Name              string     `json:"name" binding:"required"`
@@ -27,7 +27,7 @@ type SLA struct {
 	EscalationRules []SLAEscalationRule `json:"escalation_rules,omitempty"`
 }
 
-// SLAConditions defines when an SLA applies
+// SLAConditions defines when an SLA applies.
 type SLAConditions struct {
 	Queues         []uint   `json:"queues,omitempty"`
 	Priorities     []int    `json:"priorities,omitempty"`
@@ -37,7 +37,7 @@ type SLAConditions struct {
 	Tags           []string `json:"tags,omitempty"`
 }
 
-// SLAEscalationRule defines escalation actions when SLA is breached
+// SLAEscalationRule defines escalation actions when SLA is breached.
 type SLAEscalationRule struct {
 	ID             uint     `json:"id"`
 	SLAID          uint     `json:"sla_id"`
@@ -52,7 +52,7 @@ type SLAEscalationRule struct {
 	IsActive       bool     `json:"is_active"`
 }
 
-// BusinessCalendar defines working hours and holidays (SLA data model)
+// BusinessCalendar defines working hours and holidays (SLA data model).
 type BusinessCalendar struct {
 	ID           uint           `json:"id"`
 	Name         string         `json:"name" binding:"required"`
@@ -65,7 +65,7 @@ type BusinessCalendar struct {
 	UpdatedAt    time.Time      `json:"updated_at"`
 }
 
-// WorkingHours defines working hours for each day
+// WorkingHours defines working hours for each day.
 type WorkingHours struct {
 	DayOfWeek    int    `json:"day_of_week"` // 0=Sunday, 6=Saturday
 	StartTime    string `json:"start_time"`  // HH:MM format
@@ -73,7 +73,7 @@ type WorkingHours struct {
 	IsWorkingDay bool   `json:"is_working_day"`
 }
 
-// SLAHoliday represents a non-working day
+// SLAHoliday represents a non-working day.
 type SLAHoliday struct {
 	ID          uint      `json:"id"`
 	CalendarID  uint      `json:"calendar_id"`
@@ -82,7 +82,7 @@ type SLAHoliday struct {
 	IsRecurring bool      `json:"is_recurring"`
 }
 
-// TicketSLA tracks SLA compliance for a ticket
+// TicketSLA tracks SLA compliance for a ticket.
 type TicketSLA struct {
 	ID                 uint       `json:"id"`
 	TicketID           uint       `json:"ticket_id"`
@@ -103,7 +103,7 @@ type TicketSLA struct {
 	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
-// SLAMetrics provides SLA performance metrics
+// SLAMetrics provides SLA performance metrics.
 type SLAMetrics struct {
 	SLAID              uint    `json:"sla_id"`
 	SLAName            string  `json:"sla_name"`
@@ -119,7 +119,7 @@ type SLAMetrics struct {
 	TotalEscalations   int     `json:"total_escalations"`
 }
 
-// SLAReport represents a comprehensive SLA report
+// SLAReport represents a comprehensive SLA report.
 type SLAReport struct {
 	StartDate         time.Time      `json:"start_date"`
 	EndDate           time.Time      `json:"end_date"`
@@ -131,7 +131,7 @@ type SLAReport struct {
 	TopBreachReasons  []BreachReason `json:"top_breach_reasons"`
 }
 
-// SLATrend represents SLA compliance trend over time
+// SLATrend represents SLA compliance trend over time.
 type SLATrend struct {
 	Date              time.Time `json:"date"`
 	CompliancePercent float64   `json:"compliance_percent"`
@@ -139,14 +139,14 @@ type SLATrend struct {
 	BreachCount       int       `json:"breach_count"`
 }
 
-// BreachReason represents reasons for SLA breaches
+// BreachReason represents reasons for SLA breaches.
 type BreachReason struct {
 	Reason  string  `json:"reason"`
 	Count   int     `json:"count"`
 	Percent float64 `json:"percent"`
 }
 
-// SLAEscalationHistory tracks escalation events
+// SLAEscalationHistory tracks escalation events.
 type SLAEscalationHistory struct {
 	ID               uint      `json:"id"`
 	TicketSLAID      uint      `json:"ticket_sla_id"`
@@ -158,7 +158,7 @@ type SLAEscalationHistory struct {
 	ErrorMessage     string    `json:"error_message,omitempty"`
 }
 
-// SLAPauseReason represents why an SLA was paused
+// SLAPauseReason represents why an SLA was paused.
 type SLAPauseReason struct {
 	ID          uint       `json:"id"`
 	TicketSLAID uint       `json:"ticket_sla_id"`
@@ -169,7 +169,7 @@ type SLAPauseReason struct {
 	Duration    int        `json:"duration_minutes"`
 }
 
-// SLAConfiguration represents global SLA settings
+// SLAConfiguration represents global SLA settings.
 type SLAConfiguration struct {
 	EnableSLA               bool   `json:"enable_sla"`
 	DefaultCalendarID       uint   `json:"default_calendar_id"`

@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleCloseTicketAPI handles ticket closure via API
+// HandleCloseTicketAPI handles ticket closure via API.
 func HandleCloseTicketAPI(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -111,7 +112,7 @@ func HandleCloseTicketAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Update ticket state
 	updateQuery := database.ConvertPlaceholders(`
@@ -207,7 +208,7 @@ func HandleCloseTicketAPI(c *gin.Context) {
 	})
 }
 
-// HandleReopenTicketAPI handles ticket reopening via API
+// HandleReopenTicketAPI handles ticket reopening via API.
 func HandleReopenTicketAPI(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -295,7 +296,7 @@ func HandleReopenTicketAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Update ticket state to open
 	updateQuery := database.ConvertPlaceholders(`
@@ -379,7 +380,7 @@ func HandleReopenTicketAPI(c *gin.Context) {
 	})
 }
 
-// HandleAssignTicketAPI handles ticket assignment via API
+// HandleAssignTicketAPI handles ticket assignment via API.
 func HandleAssignTicketAPI(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -480,7 +481,7 @@ func HandleAssignTicketAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Update ticket with new responsible user
 	updateQuery := database.ConvertPlaceholders(`

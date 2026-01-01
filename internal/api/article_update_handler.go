@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleUpdateArticleAPI handles PUT /api/v1/tickets/:ticket_id/articles/:id
+// HandleUpdateArticleAPI handles PUT /api/v1/tickets/:ticket_id/articles/:id.
 func HandleUpdateArticleAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lib/pq"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/lib/pq"
 )
 
-// SimpleTicketService handles ticket operations without database transactions
-// This is for development/testing with in-memory repository
+// This is for development/testing with in-memory repository.
 type SimpleTicketService struct {
 	ticketRepo repository.ITicketRepository
 	messages   map[uint][]*SimpleTicketMessage // In-memory message storage by ticket ID
@@ -23,7 +23,7 @@ type SimpleTicketService struct {
 	nextMsgID  uint                            // Auto-incrementing message ID
 }
 
-// NewSimpleTicketService creates a new simple ticket service
+// NewSimpleTicketService creates a new simple ticket service.
 func NewSimpleTicketService(repo repository.ITicketRepository) *SimpleTicketService {
 	return &SimpleTicketService{
 		ticketRepo: repo,
@@ -32,7 +32,7 @@ func NewSimpleTicketService(repo repository.ITicketRepository) *SimpleTicketServ
 	}
 }
 
-// CreateTicket creates a new ticket
+// CreateTicket creates a new ticket.
 func (s *SimpleTicketService) CreateTicket(ticket *models.Ticket) error {
 	if ticket == nil {
 		return fmt.Errorf("ticket cannot be nil")
@@ -47,7 +47,7 @@ func (s *SimpleTicketService) CreateTicket(ticket *models.Ticket) error {
 	return s.ticketRepo.Create(ticket)
 }
 
-// GetTicket retrieves a ticket by ID
+// GetTicket retrieves a ticket by ID.
 func (s *SimpleTicketService) GetTicket(ticketID uint) (*models.Ticket, error) {
 	if s.ticketRepo == nil {
 		// DB-less mode in tests: only ticket 1 exists
@@ -60,7 +60,7 @@ func (s *SimpleTicketService) GetTicket(ticketID uint) (*models.Ticket, error) {
 	return s.ticketRepo.GetByID(ticketID)
 }
 
-// UpdateTicket updates an existing ticket
+// UpdateTicket updates an existing ticket.
 func (s *SimpleTicketService) UpdateTicket(ticket *models.Ticket) error {
 	if ticket == nil {
 		return fmt.Errorf("ticket cannot be nil")
@@ -69,12 +69,12 @@ func (s *SimpleTicketService) UpdateTicket(ticket *models.Ticket) error {
 	return s.ticketRepo.Update(ticket)
 }
 
-// DeleteTicket deletes a ticket
+// DeleteTicket deletes a ticket.
 func (s *SimpleTicketService) DeleteTicket(ticketID uint) error {
 	return s.ticketRepo.Delete(ticketID)
 }
 
-// ListTickets returns a paginated list of tickets
+// ListTickets returns a paginated list of tickets.
 func (s *SimpleTicketService) ListTickets(req *models.TicketListRequest) (*models.TicketListResponse, error) {
 	if req == nil {
 		req = &models.TicketListRequest{
@@ -86,7 +86,7 @@ func (s *SimpleTicketService) ListTickets(req *models.TicketListRequest) (*model
 	return s.ticketRepo.List(req)
 }
 
-// SimpleTicketMessage is a simplified message model
+// SimpleTicketMessage is a simplified message model.
 type SimpleTicketMessage struct {
 	ID          uint                `json:"id"`
 	TicketID    uint                `json:"ticket_id"`
@@ -103,7 +103,7 @@ type SimpleTicketMessage struct {
 	Attachments []*SimpleAttachment `json:"attachments,omitempty"`
 }
 
-// SimpleAttachment is a simplified attachment model
+// SimpleAttachment is a simplified attachment model.
 type SimpleAttachment struct {
 	ID          uint      `json:"id"`
 	MessageID   uint      `json:"message_id"`
@@ -114,7 +114,7 @@ type SimpleAttachment struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-// AddMessage adds a message to a ticket
+// AddMessage adds a message to a ticket.
 func (s *SimpleTicketService) AddMessage(ticketID uint, message *SimpleTicketMessage) error {
 	// Validate the ticket exists
 	var err error
@@ -169,7 +169,7 @@ func (s *SimpleTicketService) AddMessage(ticketID uint, message *SimpleTicketMes
 	return nil
 }
 
-// GetMessages retrieves all messages for a ticket
+// GetMessages retrieves all messages for a ticket.
 func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage, error) {
 	// Validate the ticket exists
 	var err error

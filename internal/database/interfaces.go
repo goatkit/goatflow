@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// DatabaseType represents the supported database backends
+// DatabaseType represents the supported database backends.
 type DatabaseType string
 
 const (
@@ -16,7 +16,7 @@ const (
 	SQLServer  DatabaseType = "sqlserver"
 )
 
-// DatabaseConfig holds database connection configuration
+// DatabaseConfig holds database connection configuration.
 type DatabaseConfig struct {
 	Type     DatabaseType `json:"type" yaml:"type"`
 	Host     string       `json:"host" yaml:"host"`
@@ -36,7 +36,7 @@ type DatabaseConfig struct {
 	Options map[string]string `json:"options,omitempty" yaml:"options,omitempty"`
 }
 
-// IDatabase defines the database abstraction interface (inspired by OTRS Kernel::System::DB)
+// IDatabase defines the database abstraction interface (inspired by OTRS Kernel::System::DB).
 type IDatabase interface {
 	// Connection management
 	Connect() error
@@ -82,7 +82,7 @@ type IDatabase interface {
 	IsHealthy() bool
 }
 
-// ITransaction defines the transaction interface
+// ITransaction defines the transaction interface.
 type ITransaction interface {
 	Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row
@@ -91,7 +91,7 @@ type ITransaction interface {
 	Rollback() error
 }
 
-// ColumnInfo represents database column information
+// ColumnInfo represents database column information.
 type ColumnInfo struct {
 	Name            string
 	DataType        string
@@ -102,7 +102,7 @@ type ColumnInfo struct {
 	IsAutoIncrement bool
 }
 
-// TableDefinition represents a database table structure
+// TableDefinition represents a database table structure.
 type TableDefinition struct {
 	Name        string
 	Columns     []ColumnDefinition
@@ -110,7 +110,7 @@ type TableDefinition struct {
 	Constraints []ConstraintDefinition
 }
 
-// ColumnDefinition defines a table column
+// ColumnDefinition defines a table column.
 type ColumnDefinition struct {
 	Name          string
 	DataType      string
@@ -123,7 +123,7 @@ type ColumnDefinition struct {
 	DefaultValue  *string
 }
 
-// IndexDefinition defines a table index
+// IndexDefinition defines a table index.
 type IndexDefinition struct {
 	Name    string
 	Columns []string
@@ -131,7 +131,7 @@ type IndexDefinition struct {
 	Type    string // btree, hash, gin, gist for PostgreSQL
 }
 
-// ConstraintDefinition defines a table constraint
+// ConstraintDefinition defines a table constraint.
 type ConstraintDefinition struct {
 	Name             string
 	Type             string // PRIMARY_KEY, FOREIGN_KEY, UNIQUE, CHECK
@@ -142,14 +142,14 @@ type ConstraintDefinition struct {
 	OnUpdate         *string // CASCADE, SET NULL, RESTRICT
 }
 
-// IDatabaseFactory creates database instances
+// IDatabaseFactory creates database instances.
 type IDatabaseFactory interface {
 	Create(config DatabaseConfig) (IDatabase, error)
 	GetSupportedTypes() []DatabaseType
 	ValidateConfig(config DatabaseConfig) error
 }
 
-// DatabaseFeatures represents database-specific feature support
+// DatabaseFeatures represents database-specific feature support.
 type DatabaseFeatures struct {
 	SupportsReturning       bool
 	SupportsUpsert          bool

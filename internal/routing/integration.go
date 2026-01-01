@@ -7,13 +7,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
-// IntegrateWithExistingSystem demonstrates how to integrate the YAML-based routing
-// with the existing handler functions
+// with the existing handler functions.
 func IntegrateWithExistingSystem(router *gin.Engine, db *sql.DB, jwtManager interface{}) error {
 	// Create handler registry
 	registry := NewHandlerRegistry()
@@ -50,7 +50,7 @@ func IntegrateWithExistingSystem(router *gin.Engine, db *sql.DB, jwtManager inte
 	return nil
 }
 
-// registerExistingHandlers registers all existing handler functions
+// registerExistingHandlers registers all existing handler functions.
 func registerExistingHandlers(registry *HandlerRegistry, db *sql.DB, jwtManager interface{}) error {
 	handlers := map[string]gin.HandlerFunc{
 		// Health checks
@@ -167,7 +167,7 @@ func registerExistingHandlers(registry *HandlerRegistry, db *sql.DB, jwtManager 
 	return registry.RegisterBatch(handlers)
 }
 
-// registerDevHandlers registers dev-specific handlers
+// registerDevHandlers registers dev-specific handlers.
 func registerDevHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	// Dev dashboard handlers - placeholders
 	handlers["HandleDevDashboard"] = func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"}) }
@@ -177,7 +177,7 @@ func registerDevHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	handlers["HandleDevDatabase"] = func(c *gin.Context) { c.JSON(http.StatusNotImplemented, gin.H{"error": "Not implemented"}) }
 }
 
-// registerCoreHandlers registers core handlers including redirects
+// registerCoreHandlers registers core handlers including redirects.
 func registerCoreHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	// Redirect handlers
 	handlers["redirect_tickets"] = wrapHandler(db, "handleRedirectTickets")
@@ -187,7 +187,7 @@ func registerCoreHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	handlers["redirect_settings"] = wrapHandler(db, "handleRedirectSettings")
 }
 
-// registerAdminHandlers registers admin-specific handlers
+// registerAdminHandlers registers admin-specific handlers.
 func registerAdminHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	// Customer company handlers
 	handlers["handleAdminCustomerCompanies"] = wrapHandler(db, "handleAdminCustomerCompanies")
@@ -242,7 +242,7 @@ func registerAdminHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	// Add other admin handlers...
 }
 
-// registerAgentHandlers registers agent-specific handlers
+// registerAgentHandlers registers agent-specific handlers.
 func registerAgentHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	// These would come from agent_routes.go
 	handlers["handleAgentDashboard"] = wrapHandler(db, "handleAgentDashboard")
@@ -265,9 +265,8 @@ func registerAgentHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	// Add other agent handlers...
 }
 
-// registerCustomerHandlers registers customer-specific handlers
+// registerCustomerHandlers registers customer-specific handlers.
 func registerCustomerHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
-
 	handlers["handleCustomerCloseTicket"] = wrapHandler(db, "handleCustomerCloseTicket")
 	handlers["handleCustomerProfile"] = wrapHandler(db, "handleCustomerProfile")
 	handlers["handleCustomerUpdateProfile"] = wrapHandler(db, "handleCustomerUpdateProfile")
@@ -280,7 +279,7 @@ func registerCustomerHandlers(handlers map[string]gin.HandlerFunc, db *sql.DB) {
 	handlers["handleCustomerCompanyUsers"] = wrapHandler(db, "handleCustomerCompanyUsers")
 }
 
-// registerExistingMiddleware registers all existing middleware
+// registerExistingMiddleware registers all existing middleware.
 func registerExistingMiddleware(registry *HandlerRegistry, jwtManager interface{}) error {
 	middlewares := map[string]gin.HandlerFunc{
 		// Authentication middleware
@@ -360,16 +359,15 @@ func registerExistingMiddleware(registry *HandlerRegistry, jwtManager interface{
 	return registry.RegisterMiddlewareBatch(middlewares)
 }
 
-// Global handler map that will be populated by the API package
+// Global handler map that will be populated by the API package.
 var GlobalHandlerMap = make(map[string]gin.HandlerFunc)
 
-// RegisterHandler allows the API package to register handlers
+// RegisterHandler allows the API package to register handlers.
 func RegisterHandler(name string, handler gin.HandlerFunc) {
 	GlobalHandlerMap[name] = handler
 }
 
-// wrapHandler is a helper to wrap handler functions that need database access
-// It looks up the actual handler function from the global registry and passes the database connection
+// It looks up the actual handler function from the global registry and passes the database connection.
 func wrapHandler(db *sql.DB, handlerName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Look up the handler in the global map
@@ -390,7 +388,7 @@ func wrapHandler(db *sql.DB, handlerName string) gin.HandlerFunc {
 	}
 }
 
-// MigrateExistingRoutes helps migrate existing hardcoded routes to YAML
+// MigrateExistingRoutes helps migrate existing hardcoded routes to YAML.
 func MigrateExistingRoutes() error {
 	// This function could analyze existing route registrations
 	// and generate corresponding YAML files automatically

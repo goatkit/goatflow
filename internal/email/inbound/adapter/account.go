@@ -1,3 +1,4 @@
+// Package adapter provides mail account adapters for inbound email processing.
 package adapter
 
 import (

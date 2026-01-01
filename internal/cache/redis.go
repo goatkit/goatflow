@@ -11,7 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// RedisCache implements a distributed caching layer using Redis
+// RedisCache implements a distributed caching layer using Redis.
 type RedisCache struct {
 	client      *redis.Client
 	cluster     *redis.ClusterClient
@@ -23,7 +23,7 @@ type RedisCache struct {
 	maxRetries  int
 }
 
-// CacheMetrics tracks cache performance
+// CacheMetrics tracks cache performance.
 type CacheMetrics struct {
 	hits    prometheus.Counter
 	misses  prometheus.Counter
@@ -34,7 +34,7 @@ type CacheMetrics struct {
 	size    prometheus.Gauge
 }
 
-// CacheConfig defines cache configuration
+// CacheConfig defines cache configuration.
 type CacheConfig struct {
 	// Redis connection
 	RedisAddr     []string
@@ -61,7 +61,7 @@ type CacheConfig struct {
 	WriteTimeout time.Duration
 }
 
-// NewRedisCache creates a new Redis cache instance
+// NewRedisCache creates a new Redis cache instance.
 func NewRedisCache(config *CacheConfig) (*RedisCache, error) {
 	cache := &RedisCache{
 		defaultTTL:  config.DefaultTTL,
@@ -146,7 +146,7 @@ func NewRedisCache(config *CacheConfig) (*RedisCache, error) {
 	return cache, nil
 }
 
-// getClient returns the appropriate Redis client
+// getClient returns the appropriate Redis client.
 func (rc *RedisCache) getClient() redis.Cmdable {
 	if rc.isCluster {
 		return rc.cluster
@@ -154,7 +154,7 @@ func (rc *RedisCache) getClient() redis.Cmdable {
 	return rc.client
 }
 
-// Get retrieves a value from Redis
+// Get retrieves a value from Redis.
 func (rc *RedisCache) Get(ctx context.Context, key string) (interface{}, error) {
 	timer := prometheus.NewTimer(rc.metrics.latency)
 	defer timer.ObserveDuration()
@@ -182,7 +182,7 @@ func (rc *RedisCache) Get(ctx context.Context, key string) (interface{}, error) 
 	return val, nil
 }
 
-// Set stores a value in Redis
+// Set stores a value in Redis.
 func (rc *RedisCache) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	timer := prometheus.NewTimer(rc.metrics.latency)
 	defer timer.ObserveDuration()
@@ -217,7 +217,7 @@ func (rc *RedisCache) Set(ctx context.Context, key string, value interface{}, tt
 	return nil
 }
 
-// Delete removes a value from Redis
+// Delete removes a value from Redis.
 func (rc *RedisCache) Delete(ctx context.Context, key string) error {
 	timer := prometheus.NewTimer(rc.metrics.latency)
 	defer timer.ObserveDuration()
@@ -235,7 +235,7 @@ func (rc *RedisCache) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// Clear removes all keys matching a pattern
+// Clear removes all keys matching a pattern.
 func (rc *RedisCache) Clear(ctx context.Context, pattern string) error {
 	timer := prometheus.NewTimer(rc.metrics.latency)
 	defer timer.ObserveDuration()
@@ -298,7 +298,7 @@ func (rc *RedisCache) Clear(ctx context.Context, pattern string) error {
 	return nil
 }
 
-// GetMulti retrieves multiple values from Redis
+// GetMulti retrieves multiple values from Redis.
 func (rc *RedisCache) GetMulti(ctx context.Context, keys []string) (map[string]interface{}, error) {
 	timer := prometheus.NewTimer(rc.metrics.latency)
 	defer timer.ObserveDuration()
@@ -350,7 +350,7 @@ func (rc *RedisCache) GetMulti(ctx context.Context, keys []string) (map[string]i
 	return result, nil
 }
 
-// SetMulti stores multiple values in Redis
+// SetMulti stores multiple values in Redis.
 func (rc *RedisCache) SetMulti(ctx context.Context, items map[string]interface{}, ttl time.Duration) error {
 	timer := prometheus.NewTimer(rc.metrics.latency)
 	defer timer.ObserveDuration()
@@ -397,7 +397,7 @@ func (rc *RedisCache) SetMulti(ctx context.Context, items map[string]interface{}
 	return nil
 }
 
-// Exists checks if a key exists in Redis
+// Exists checks if a key exists in Redis.
 func (rc *RedisCache) Exists(ctx context.Context, key string) (bool, error) {
 	timer := prometheus.NewTimer(rc.metrics.latency)
 	defer timer.ObserveDuration()
@@ -414,7 +414,7 @@ func (rc *RedisCache) Exists(ctx context.Context, key string) (bool, error) {
 	return exists > 0, nil
 }
 
-// TTL returns the TTL of a key
+// TTL returns the TTL of a key.
 func (rc *RedisCache) TTL(ctx context.Context, key string) (time.Duration, error) {
 	fullKey := rc.keyPrefix + key
 	client := rc.getClient()
@@ -428,7 +428,7 @@ func (rc *RedisCache) TTL(ctx context.Context, key string) (time.Duration, error
 	return ttl, nil
 }
 
-// Expire sets a new TTL for a key
+// Expire sets a new TTL for a key.
 func (rc *RedisCache) Expire(ctx context.Context, key string, ttl time.Duration) error {
 	fullKey := rc.keyPrefix + key
 	client := rc.getClient()
@@ -442,7 +442,7 @@ func (rc *RedisCache) Expire(ctx context.Context, key string, ttl time.Duration)
 	return nil
 }
 
-// GetObject retrieves and unmarshals a value from cache
+// GetObject retrieves and unmarshals a value from cache.
 func (rc *RedisCache) GetObject(ctx context.Context, key string, dest interface{}) error {
 	val, err := rc.Get(ctx, key)
 	if err != nil {
@@ -461,17 +461,17 @@ func (rc *RedisCache) GetObject(ctx context.Context, key string, dest interface{
 	return json.Unmarshal(data, dest)
 }
 
-// SetObject marshals and stores a value in cache
+// SetObject marshals and stores a value in cache.
 func (rc *RedisCache) SetObject(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	return rc.Set(ctx, key, value, ttl)
 }
 
-// Invalidate removes cache entries matching pattern
+// Invalidate removes cache entries matching pattern.
 func (rc *RedisCache) Invalidate(ctx context.Context, pattern string) error {
 	return rc.Clear(ctx, pattern)
 }
 
-// Info returns cache information
+// Info returns cache information.
 func (rc *RedisCache) Info(ctx context.Context) (map[string]interface{}, error) {
 	client := rc.getClient()
 
@@ -505,7 +505,7 @@ func (rc *RedisCache) Info(ctx context.Context) (map[string]interface{}, error) 
 	return info, nil
 }
 
-// Pipeline executes a batch of operations
+// Pipeline executes a batch of operations.
 func (rc *RedisCache) Pipeline(ctx context.Context, fn func(pipe redis.Pipeliner) error) error {
 	client := rc.getClient()
 	pipe := client.Pipeline()
@@ -518,7 +518,7 @@ func (rc *RedisCache) Pipeline(ctx context.Context, fn func(pipe redis.Pipeliner
 	return err
 }
 
-// Close closes the Redis connection
+// Close closes the Redis connection.
 func (rc *RedisCache) Close() error {
 	if rc.isCluster {
 		return rc.cluster.Close()

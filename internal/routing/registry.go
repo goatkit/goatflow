@@ -7,10 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// HandlerFunc is the standard handler function type
+// HandlerFunc is the standard handler function type.
 type HandlerFunc gin.HandlerFunc
 
-// HandlerRegistry manages the mapping between handler names and functions
+// HandlerRegistry manages the mapping between handler names and functions.
 type HandlerRegistry struct {
 	mu       sync.RWMutex
 	handlers map[string]gin.HandlerFunc
@@ -22,7 +22,7 @@ type HandlerRegistry struct {
 	features map[string]bool
 }
 
-// NewHandlerRegistry creates a new handler registry
+// NewHandlerRegistry creates a new handler registry.
 func NewHandlerRegistry() *HandlerRegistry {
 	return &HandlerRegistry{
 		handlers:   make(map[string]gin.HandlerFunc),
@@ -31,7 +31,7 @@ func NewHandlerRegistry() *HandlerRegistry {
 	}
 }
 
-// Register adds a handler to the registry
+// Register adds a handler to the registry.
 func (r *HandlerRegistry) Register(name string, handler gin.HandlerFunc) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -44,7 +44,7 @@ func (r *HandlerRegistry) Register(name string, handler gin.HandlerFunc) error {
 	return nil
 }
 
-// Override replaces an existing handler or registers a new one
+// Override replaces an existing handler or registers a new one.
 func (r *HandlerRegistry) Override(name string, handler gin.HandlerFunc) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -52,7 +52,7 @@ func (r *HandlerRegistry) Override(name string, handler gin.HandlerFunc) {
 	r.handlers[name] = handler
 }
 
-// RegisterMiddleware adds a middleware to the registry
+// RegisterMiddleware adds a middleware to the registry.
 func (r *HandlerRegistry) RegisterMiddleware(name string, middleware gin.HandlerFunc) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -65,7 +65,7 @@ func (r *HandlerRegistry) RegisterMiddleware(name string, middleware gin.Handler
 	return nil
 }
 
-// Get retrieves a handler by name
+// Get retrieves a handler by name.
 func (r *HandlerRegistry) Get(name string) (gin.HandlerFunc, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -78,7 +78,7 @@ func (r *HandlerRegistry) Get(name string) (gin.HandlerFunc, error) {
 	return handler, nil
 }
 
-// GetMiddleware retrieves middleware by name
+// GetMiddleware retrieves middleware by name.
 func (r *HandlerRegistry) GetMiddleware(name string) (gin.HandlerFunc, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -91,7 +91,7 @@ func (r *HandlerRegistry) GetMiddleware(name string) (gin.HandlerFunc, error) {
 	return middleware, nil
 }
 
-// MustGet retrieves a handler by name, panics if not found
+// MustGet retrieves a handler by name, panics if not found.
 func (r *HandlerRegistry) MustGet(name string) gin.HandlerFunc {
 	handler, err := r.Get(name)
 	if err != nil {
@@ -100,7 +100,7 @@ func (r *HandlerRegistry) MustGet(name string) gin.HandlerFunc {
 	return handler
 }
 
-// RegisterBatch registers multiple handlers at once
+// RegisterBatch registers multiple handlers at once.
 func (r *HandlerRegistry) RegisterBatch(handlers map[string]gin.HandlerFunc) error {
 	for name, handler := range handlers {
 		if err := r.Register(name, handler); err != nil {
@@ -110,14 +110,14 @@ func (r *HandlerRegistry) RegisterBatch(handlers map[string]gin.HandlerFunc) err
 	return nil
 }
 
-// OverrideBatch replaces multiple existing handlers or registers new ones
+// OverrideBatch replaces multiple existing handlers or registers new ones.
 func (r *HandlerRegistry) OverrideBatch(handlers map[string]gin.HandlerFunc) {
 	for name, handler := range handlers {
 		r.Override(name, handler)
 	}
 }
 
-// RegisterMiddlewareBatch registers multiple middleware at once
+// RegisterMiddlewareBatch registers multiple middleware at once.
 func (r *HandlerRegistry) RegisterMiddlewareBatch(middlewares map[string]gin.HandlerFunc) error {
 	for name, middleware := range middlewares {
 		if err := r.RegisterMiddleware(name, middleware); err != nil {
@@ -127,21 +127,21 @@ func (r *HandlerRegistry) RegisterMiddlewareBatch(middlewares map[string]gin.Han
 	return nil
 }
 
-// SetFeature enables or disables a feature flag
+// SetFeature enables or disables a feature flag.
 func (r *HandlerRegistry) SetFeature(name string, enabled bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.features[name] = enabled
 }
 
-// IsFeatureEnabled checks if a feature is enabled
+// IsFeatureEnabled checks if a feature is enabled.
 func (r *HandlerRegistry) IsFeatureEnabled(name string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.features[name]
 }
 
-// ListHandlers returns all registered handler names
+// ListHandlers returns all registered handler names.
 func (r *HandlerRegistry) ListHandlers() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -153,7 +153,7 @@ func (r *HandlerRegistry) ListHandlers() []string {
 	return names
 }
 
-// GetAllHandlers returns all registered handlers as a map
+// GetAllHandlers returns all registered handlers as a map.
 func (r *HandlerRegistry) GetAllHandlers() map[string]gin.HandlerFunc {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -165,7 +165,7 @@ func (r *HandlerRegistry) GetAllHandlers() map[string]gin.HandlerFunc {
 	return handlers
 }
 
-// ListMiddleware returns all registered middleware names
+// ListMiddleware returns all registered middleware names.
 func (r *HandlerRegistry) ListMiddleware() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -177,7 +177,7 @@ func (r *HandlerRegistry) ListMiddleware() []string {
 	return names
 }
 
-// Clear removes all registered handlers and middleware
+// Clear removes all registered handlers and middleware.
 func (r *HandlerRegistry) Clear() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -187,7 +187,7 @@ func (r *HandlerRegistry) Clear() {
 	r.features = make(map[string]bool)
 }
 
-// HandlerExists checks if a handler is registered
+// HandlerExists checks if a handler is registered.
 func (r *HandlerRegistry) HandlerExists(name string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -196,7 +196,7 @@ func (r *HandlerRegistry) HandlerExists(name string) bool {
 	return exists
 }
 
-// MiddlewareExists checks if middleware is registered
+// MiddlewareExists checks if middleware is registered.
 func (r *HandlerRegistry) MiddlewareExists(name string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -205,7 +205,7 @@ func (r *HandlerRegistry) MiddlewareExists(name string) bool {
 	return exists
 }
 
-// GetHandlerChain builds a complete handler chain with middleware
+// GetHandlerChain builds a complete handler chain with middleware.
 func (r *HandlerRegistry) GetHandlerChain(middlewareNames []string, handlerName string) ([]gin.HandlerFunc, error) {
 	chain := make([]gin.HandlerFunc, 0, len(middlewareNames)+1)
 

@@ -10,12 +10,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gopkg.in/yaml.v3"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
-	"gopkg.in/yaml.v3"
 )
 
-// Signature represents an email signature in the system
+// Signature represents an email signature in the system.
 type Signature struct {
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`
@@ -29,13 +30,13 @@ type Signature struct {
 	ChangeBy    int       `json:"change_by"`
 }
 
-// SignatureWithStats includes queue usage statistics
+// SignatureWithStats includes queue usage statistics.
 type SignatureWithStats struct {
 	Signature
 	QueueCount int `json:"queue_count"`
 }
 
-// QueueBasic represents minimal queue info for display
+// QueueBasic represents minimal queue info for display.
 type QueueBasic struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
@@ -43,7 +44,7 @@ type QueueBasic struct {
 
 // Repository functions
 
-// ListSignatures returns all signatures with optional filters
+// ListSignatures returns all signatures with optional filters.
 func ListSignatures(search string, validFilter string, sortBy string, sortOrder string) ([]SignatureWithStats, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -106,7 +107,7 @@ func ListSignatures(search string, validFilter string, sortBy string, sortOrder 
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var signatures []SignatureWithStats
 	for rows.Next() {
@@ -135,7 +136,7 @@ func ListSignatures(search string, validFilter string, sortBy string, sortOrder 
 	return signatures, nil
 }
 
-// GetSignature returns a single signature by ID
+// GetSignature returns a single signature by ID.
 func GetSignature(id int) (*Signature, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -170,7 +171,7 @@ func GetSignature(id int) (*Signature, error) {
 	return &s, nil
 }
 
-// CreateSignature creates a new signature
+// CreateSignature creates a new signature.
 func CreateSignature(name, text, contentType, comments string, validID, userID int) (int, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -202,7 +203,7 @@ func CreateSignature(name, text, contentType, comments string, validID, userID i
 	return int(id), nil
 }
 
-// UpdateSignature updates an existing signature
+// UpdateSignature updates an existing signature.
 func UpdateSignature(id int, name, text, contentType, comments string, validID, userID int) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -231,7 +232,7 @@ func UpdateSignature(id int, name, text, contentType, comments string, validID, 
 	return nil
 }
 
-// DeleteSignature deletes a signature by ID
+// DeleteSignature deletes a signature by ID.
 func DeleteSignature(id int) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -261,7 +262,7 @@ func DeleteSignature(id int) error {
 	return nil
 }
 
-// CheckSignatureNameExists checks if a signature name already exists
+// CheckSignatureNameExists checks if a signature name already exists.
 func CheckSignatureNameExists(name string, excludeID int) (bool, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -285,7 +286,7 @@ func CheckSignatureNameExists(name string, excludeID int) (bool, error) {
 	return count > 0, nil
 }
 
-// GetSignatureQueues returns queues that use a specific signature
+// GetSignatureQueues returns queues that use a specific signature.
 func GetSignatureQueues(signatureID int) ([]QueueBasic, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -303,7 +304,7 @@ func GetSignatureQueues(signatureID int) ([]QueueBasic, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var queues []QueueBasic
 	for rows.Next() {
@@ -321,7 +322,7 @@ func GetSignatureQueues(signatureID int) ([]QueueBasic, error) {
 	return queues, nil
 }
 
-// GetAllSignatures returns all valid signatures for dropdowns
+// GetAllSignatures returns all valid signatures for dropdowns.
 func GetAllSignatures() ([]Signature, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -340,7 +341,7 @@ func GetAllSignatures() ([]Signature, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var signatures []Signature
 	for rows.Next() {
@@ -370,7 +371,7 @@ func GetAllSignatures() ([]Signature, error) {
 
 // Handler functions
 
-// handleAdminSignatures renders the signatures list page
+// handleAdminSignatures renders the signatures list page.
 func handleAdminSignatures(c *gin.Context) {
 	search := c.Query("search")
 	validFilter := c.Query("valid")
@@ -400,7 +401,7 @@ func handleAdminSignatures(c *gin.Context) {
 	})
 }
 
-// handleAdminSignatureNew renders the new signature form
+// handleAdminSignatureNew renders the new signature form.
 func handleAdminSignatureNew(c *gin.Context) {
 	renderer := shared.GetGlobalRenderer()
 	if renderer == nil {
@@ -417,7 +418,7 @@ func handleAdminSignatureNew(c *gin.Context) {
 	})
 }
 
-// handleAdminSignatureEdit renders the edit signature form
+// handleAdminSignatureEdit renders the edit signature form.
 func handleAdminSignatureEdit(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -450,7 +451,7 @@ func handleAdminSignatureEdit(c *gin.Context) {
 	})
 }
 
-// handleCreateSignature creates a new signature
+// handleCreateSignature creates a new signature.
 func handleCreateSignature(c *gin.Context) {
 	var input struct {
 		Name        string `json:"name" form:"name"`
@@ -503,7 +504,7 @@ func handleCreateSignature(c *gin.Context) {
 	})
 }
 
-// handleUpdateSignature updates an existing signature
+// handleUpdateSignature updates an existing signature.
 func handleUpdateSignature(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -560,7 +561,7 @@ func handleUpdateSignature(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// handleDeleteSignature deletes a signature
+// handleDeleteSignature deletes a signature.
 func handleDeleteSignature(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -586,7 +587,7 @@ func handleDeleteSignature(c *gin.Context) {
 
 // Export/Import functions
 
-// SignatureExportData represents a signature for YAML export
+// SignatureExportData represents a signature for YAML export.
 type SignatureExportData struct {
 	Name        string   `yaml:"name"`
 	Text        string   `yaml:"text"`
@@ -596,7 +597,7 @@ type SignatureExportData struct {
 	Queues      []string `yaml:"queues,omitempty"`
 }
 
-// ExportSignature exports a single signature to YAML
+// ExportSignature exports a single signature to YAML.
 func ExportSignature(id int) ([]byte, error) {
 	sig, err := GetSignature(id)
 	if err != nil || sig == nil {
@@ -621,7 +622,7 @@ func ExportSignature(id int) ([]byte, error) {
 	return yaml.Marshal(export)
 }
 
-// ExportAllSignatures exports all signatures to YAML
+// ExportAllSignatures exports all signatures to YAML.
 func ExportAllSignatures() ([]byte, error) {
 	signatures, err := ListSignatures("", "", "name", "asc")
 	if err != nil {
@@ -649,7 +650,7 @@ func ExportAllSignatures() ([]byte, error) {
 	return yaml.Marshal(exports)
 }
 
-// handleExportSignature exports a single signature
+// handleExportSignature exports a single signature.
 func handleExportSignature(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -671,7 +672,7 @@ func handleExportSignature(c *gin.Context) {
 	c.Data(http.StatusOK, "application/x-yaml", data)
 }
 
-// handleExportSignatures exports all signatures
+// handleExportSignatures exports all signatures.
 func handleExportSignatures(c *gin.Context) {
 	data, err := ExportAllSignatures()
 	if err != nil {
@@ -683,7 +684,7 @@ func handleExportSignatures(c *gin.Context) {
 	c.Data(http.StatusOK, "application/x-yaml", data)
 }
 
-// handleImportSignatures imports signatures from YAML
+// handleImportSignatures imports signatures from YAML.
 func handleImportSignatures(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -726,7 +727,7 @@ func handleImportSignatures(c *gin.Context) {
 	})
 }
 
-// ImportSignatures imports signatures from YAML data
+// ImportSignatures imports signatures from YAML data.
 func ImportSignatures(data []byte, overwrite bool) (imported int, skipped int, err error) {
 	var exports []SignatureExportData
 
@@ -791,8 +792,7 @@ func ImportSignatures(data []byte, overwrite bool) (imported int, skipped int, e
 	return imported, skipped, nil
 }
 
-// SubstituteSignatureVariables replaces signature variables with actual values
-// Reuses the same variable substitution logic as templates
+// Reuses the same variable substitution logic as templates.
 func SubstituteSignatureVariables(text string, vars map[string]string) string {
 	return SubstituteTemplateVariables(text, vars)
 }

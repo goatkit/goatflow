@@ -8,7 +8,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// Common errors
+// Common errors.
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUserNotFound       = errors.New("user not found")
@@ -16,7 +16,7 @@ var (
 	ErrAuthBackendFailed  = errors.New("authentication backend failed")
 )
 
-// AuthProvider defines the interface for authentication providers
+// AuthProvider defines the interface for authentication providers.
 type AuthProvider interface {
 	// Authenticate attempts to authenticate a user with the given credentials
 	// Returns the authenticated user and nil error on success
@@ -35,13 +35,13 @@ type AuthProvider interface {
 	Priority() int
 }
 
-// Authenticator manages multiple authentication providers
+// Authenticator manages multiple authentication providers.
 type Authenticator struct {
 	providers []AuthProvider
 	primary   AuthProvider
 }
 
-// NewAuthenticator creates a new authenticator with the given providers
+// NewAuthenticator creates a new authenticator with the given providers.
 func NewAuthenticator(providers ...AuthProvider) *Authenticator {
 	auth := &Authenticator{
 		providers: providers,
@@ -60,7 +60,7 @@ func NewAuthenticator(providers ...AuthProvider) *Authenticator {
 	return auth
 }
 
-// Authenticate attempts to authenticate using all configured providers
+// Authenticate attempts to authenticate using all configured providers.
 func (a *Authenticator) Authenticate(ctx context.Context, username, password string) (*models.User, error) {
 	if len(a.providers) == 0 {
 		return nil, ErrAuthBackendFailed
@@ -90,7 +90,7 @@ func (a *Authenticator) Authenticate(ctx context.Context, username, password str
 	return nil, ErrInvalidCredentials
 }
 
-// GetUser retrieves user information from the primary provider
+// GetUser retrieves user information from the primary provider.
 func (a *Authenticator) GetUser(ctx context.Context, identifier string) (*models.User, error) {
 	if a.primary == nil {
 		return nil, ErrAuthBackendFailed
@@ -99,7 +99,7 @@ func (a *Authenticator) GetUser(ctx context.Context, identifier string) (*models
 	return a.primary.GetUser(ctx, identifier)
 }
 
-// ValidateToken validates a token using the primary provider
+// ValidateToken validates a token using the primary provider.
 func (a *Authenticator) ValidateToken(ctx context.Context, token string) (*models.User, error) {
 	if a.primary == nil {
 		return nil, ErrAuthBackendFailed
@@ -108,7 +108,7 @@ func (a *Authenticator) ValidateToken(ctx context.Context, token string) (*model
 	return a.primary.ValidateToken(ctx, token)
 }
 
-// AddProvider adds a new authentication provider
+// AddProvider adds a new authentication provider.
 func (a *Authenticator) AddProvider(provider AuthProvider) {
 	a.providers = append(a.providers, provider)
 
@@ -118,7 +118,7 @@ func (a *Authenticator) AddProvider(provider AuthProvider) {
 	}
 }
 
-// GetProviders returns the list of configured providers
+// GetProviders returns the list of configured providers.
 func (a *Authenticator) GetProviders() []string {
 	names := make([]string, len(a.providers))
 	for i, p := range a.providers {

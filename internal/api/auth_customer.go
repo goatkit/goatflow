@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
@@ -14,7 +15,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/sysconfig"
 )
 
-// HandleCustomerLogin is the exported handler for customer login POST requests
+// HandleCustomerLogin is the exported handler for customer login POST requests.
 var HandleCustomerLogin = func(c *gin.Context) {
 	handleCustomerLogin(shared.GetJWTManager())(c)
 }

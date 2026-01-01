@@ -1,4 +1,3 @@
-
 package api_test
 
 import (
@@ -8,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+
 	apipkg "github.com/gotrs-io/gotrs-ce/internal/api"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 )

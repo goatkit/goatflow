@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/knadh/go-pop3"
+
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
@@ -32,7 +34,6 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/runner/tasks"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
-	"github.com/knadh/go-pop3"
 )
 
 type smtp4devConfig struct {

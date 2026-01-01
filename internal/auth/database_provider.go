@@ -11,14 +11,14 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
-// DatabaseAuthProvider provides authentication against the database
+// DatabaseAuthProvider provides authentication against the database.
 type DatabaseAuthProvider struct {
 	userRepo *repository.UserRepository
 	db       *sql.DB
 	hasher   *PasswordHasher
 }
 
-// NewDatabaseAuthProvider creates a new database authentication provider
+// NewDatabaseAuthProvider creates a new database authentication provider.
 func NewDatabaseAuthProvider(db *sql.DB) *DatabaseAuthProvider {
 	return &DatabaseAuthProvider{
 		userRepo: repository.NewUserRepository(db),
@@ -27,7 +27,7 @@ func NewDatabaseAuthProvider(db *sql.DB) *DatabaseAuthProvider {
 	}
 }
 
-// Authenticate authenticates a user against the database
+// Authenticate authenticates a user against the database.
 func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, password string) (*models.User, error) {
 	// Try to find user by login or email
 	var user *models.User
@@ -66,7 +66,7 @@ func (p *DatabaseAuthProvider) Authenticate(ctx context.Context, username, passw
 	return user, nil
 }
 
-// GetUser retrieves user details by username or email
+// GetUser retrieves user details by username or email.
 func (p *DatabaseAuthProvider) GetUser(ctx context.Context, identifier string) (*models.User, error) {
 	var user *models.User
 	var err error
@@ -95,24 +95,24 @@ func (p *DatabaseAuthProvider) GetUser(ctx context.Context, identifier string) (
 	return user, nil
 }
 
-// ValidateToken validates a session token (for future implementation)
+// ValidateToken validates a session token (for future implementation).
 func (p *DatabaseAuthProvider) ValidateToken(ctx context.Context, token string) (*models.User, error) {
 	// TODO: Implement token validation when we add session management
 	// For now, return not implemented
 	return nil, ErrAuthBackendFailed
 }
 
-// Name returns the name of this auth provider
+// Name returns the name of this auth provider.
 func (p *DatabaseAuthProvider) Name() string {
 	return "Database"
 }
 
-// Priority returns the priority of this provider
+// Priority returns the priority of this provider.
 func (p *DatabaseAuthProvider) Priority() int {
 	return 10 // Default priority for database auth
 }
 
-// authenticateCustomerUser authenticates a customer user from the customer_user table
+// authenticateCustomerUser authenticates a customer user from the customer_user table.
 func (p *DatabaseAuthProvider) authenticateCustomerUser(ctx context.Context, username, password string) (*models.User, error) {
 	// Query customer_user table - allow login by username OR email
 	var login, email, customerID, firstName, lastName, pw string

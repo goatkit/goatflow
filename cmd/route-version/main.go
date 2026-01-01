@@ -1,3 +1,4 @@
+// Package main provides route version management.
 package main
 
 import (
@@ -8,8 +9,9 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/routing"
 	"gopkg.in/yaml.v3"
+
+	"github.com/gotrs-io/gotrs-ce/internal/routing"
 )
 
 func main() {

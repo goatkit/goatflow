@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -8,8 +7,9 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 func TestQueueDetailSimple(t *testing.T) {

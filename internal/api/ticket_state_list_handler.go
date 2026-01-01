@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleListTicketStatesAPI handles GET /api/v1/ticket-states
+// HandleListTicketStatesAPI handles GET /api/v1/ticket-states.
 func HandleListTicketStatesAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -87,7 +88,7 @@ func HandleListTicketStatesAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch ticket states"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	// Collect results
 	states := []gin.H{}

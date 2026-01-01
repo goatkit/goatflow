@@ -2,7 +2,7 @@ package repository
 
 import "github.com/gotrs-io/gotrs-ce/internal/models"
 
-// ITicketRepository defines the interface for ticket data operations
+// ITicketRepository defines the interface for ticket data operations.
 type ITicketRepository interface {
 	Create(ticket *models.Ticket) error
 	GetByID(id uint) (*models.Ticket, error)

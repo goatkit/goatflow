@@ -1011,6 +1011,9 @@ toolbox-lint:
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
+		-e GOCACHE=/workspace/.cache/go-build \
+		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOPATH=/workspace/.cache/gopath \
 		gotrs-toolbox:latest \
 		golangci-lint run ./...
 
@@ -1421,10 +1424,7 @@ db-reseed-test:
 
  .PHONY: toolbox-exec
 toolbox-exec:
-	@if [ -z "$(ARGS)" ]; then \
-		echo "Usage: make toolbox-exec ARGS=\"<command>\""; \
-		exit 2; \
-	fi
+	@sh -c 'if [ -z "$$1" ]; then echo "Usage: make toolbox-exec ARGS=\"<command>\""; exit 2; fi' -- "$(ARGS)"
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		echo "ERROR: $(COMPOSE_CMD)"; \
 		echo "Please install the required compose tool and try again."; \
@@ -1433,9 +1433,9 @@ toolbox-exec:
 	@printf "\n🔧 toolbox -> %s\n" "$(ARGS)"
 	@# Always include testdb profile so tests can reach the test database
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES="toolbox,testdb" $(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml run --rm -T toolbox bash -lc "$(ARGS)"; \
+		COMPOSE_PROFILES="toolbox,testdb" $(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml run --rm -T toolbox bash -lc 'set -o pipefail; bash -lc "$$1"; rc=$$?; if [ $$rc -ne 0 ]; then echo "❌ toolbox command failed with exit $$rc"; exit $$rc; fi' -- "$(ARGS)"; \
 	else \
-		$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile toolbox --profile testdb run --rm -T toolbox bash -lc "$(ARGS)"; \
+		$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile toolbox --profile testdb run --rm -T toolbox bash -lc 'set -o pipefail; bash -lc "$$1"; rc=$$?; if [ $$rc -ne 0 ]; then echo "❌ toolbox command failed with exit $$rc"; exit $$rc; fi' -- "$(ARGS)"; \
 	fi
 
 toolbox-exec-test:
@@ -1444,7 +1444,7 @@ toolbox-exec-test:
 		echo "Please install the required compose tool and try again."; \
 		exit 1; \
 	fi
-	@$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox bash -lc "$(ARGS)"
+	@$(COMPOSE_CMD) --profile toolbox run --rm -T toolbox bash -lc 'set -o pipefail; bash -lc "$$1"; rc=$$?; if [ $$rc -ne 0 ]; then echo "❌ toolbox command failed with exit $$rc"; exit $$rc; fi' -- "$(ARGS)"
 
 api-call-test:
 	@if [ -z "$(ENDPOINT)" ]; then echo "❌ ENDPOINT required. Usage: make api-call-test [METHOD=GET] ENDPOINT=/api/v1/tickets [BODY='{}']"; exit 1; fi

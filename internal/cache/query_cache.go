@@ -12,20 +12,20 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// QueryCache implements caching for database query results
+// QueryCache implements caching for database query results.
 type QueryCache struct {
 	cache         *RedisCache
 	defaultTTL    time.Duration
 	invalidations map[string][]string // table -> cache key patterns
 }
 
-// QueryCacheConfig defines query cache configuration
+// QueryCacheConfig defines query cache configuration.
 type QueryCacheConfig struct {
 	RedisCache *RedisCache
 	DefaultTTL time.Duration
 }
 
-// QueryResult represents a cached query result
+// QueryResult represents a cached query result.
 type QueryResult struct {
 	Query     string        `json:"query"`
 	Args      []interface{} `json:"args"`
@@ -35,7 +35,7 @@ type QueryResult struct {
 	ExpiresAt time.Time     `json:"expires_at"`
 }
 
-// NewQueryCache creates a new query cache instance
+// NewQueryCache creates a new query cache instance.
 func NewQueryCache(config *QueryCacheConfig) *QueryCache {
 	qc := &QueryCache{
 		cache:         config.RedisCache,
@@ -49,7 +49,7 @@ func NewQueryCache(config *QueryCacheConfig) *QueryCache {
 	return qc
 }
 
-// Get retrieves a cached query result
+// Get retrieves a cached query result.
 func (qc *QueryCache) Get(ctx context.Context, query string, args ...interface{}) (*QueryResult, error) {
 	key := qc.buildQueryKey(query, args...)
 
@@ -72,7 +72,7 @@ func (qc *QueryCache) Get(ctx context.Context, query string, args ...interface{}
 	return &result, nil
 }
 
-// Set stores a query result in cache
+// Set stores a query result in cache.
 func (qc *QueryCache) Set(ctx context.Context, query string, result interface{}, args ...interface{}) error {
 	key := qc.buildQueryKey(query, args...)
 
@@ -95,7 +95,7 @@ func (qc *QueryCache) Set(ctx context.Context, query string, result interface{},
 	return qc.cache.SetObject(ctx, key, cacheResult, ttl)
 }
 
-// InvalidateTable invalidates all queries related to a table
+// InvalidateTable invalidates all queries related to a table.
 func (qc *QueryCache) InvalidateTable(ctx context.Context, table string) error {
 	patterns, exists := qc.invalidations[table]
 	if !exists {
@@ -114,15 +114,14 @@ func (qc *QueryCache) InvalidateTable(ctx context.Context, table string) error {
 	return nil
 }
 
-// InvalidateAll clears all query cache
+// InvalidateAll clears all query cache.
 func (qc *QueryCache) InvalidateAll(ctx context.Context) error {
 	return qc.cache.Invalidate(ctx, "query:*")
 }
 
-// GetOrSet attempts to get from cache, otherwise executes and caches
+// GetOrSet attempts to get from cache, otherwise executes and caches.
 func (qc *QueryCache) GetOrSet(ctx context.Context, query string, args []interface{},
 	executor func() (interface{}, error)) (interface{}, error) {
-
 	// Try to get from cache
 	cached, err := qc.Get(ctx, query, args...)
 	if err == nil && cached != nil {
@@ -141,7 +140,7 @@ func (qc *QueryCache) GetOrSet(ctx context.Context, query string, args []interfa
 	return result, nil
 }
 
-// WarmUp pre-loads commonly used queries
+// WarmUp pre-loads commonly used queries.
 func (qc *QueryCache) WarmUp(ctx context.Context, queries []WarmUpQuery) error {
 	for _, wq := range queries {
 		if wq.Executor == nil {
@@ -163,14 +162,14 @@ func (qc *QueryCache) WarmUp(ctx context.Context, queries []WarmUpQuery) error {
 	return nil
 }
 
-// WarmUpQuery defines a query to warm up
+// WarmUpQuery defines a query to warm up.
 type WarmUpQuery struct {
 	Query    string
 	Args     []interface{}
 	Executor func() (interface{}, error)
 }
 
-// GetStats returns cache statistics
+// GetStats returns cache statistics.
 func (qc *QueryCache) GetStats(ctx context.Context) (map[string]interface{}, error) {
 	info, err := qc.cache.Info(ctx)
 	if err != nil {
@@ -329,7 +328,7 @@ func (qc *QueryCache) registerInvalidations() {
 	}
 }
 
-// CacheableQuery wraps a database query for automatic caching
+// CacheableQuery wraps a database query for automatic caching.
 type CacheableQuery struct {
 	cache    *QueryCache
 	query    string
@@ -338,7 +337,7 @@ type CacheableQuery struct {
 	executor func() (interface{}, error)
 }
 
-// NewCacheableQuery creates a new cacheable query
+// NewCacheableQuery creates a new cacheable query.
 func (qc *QueryCache) NewCacheableQuery(query string, args []interface{}) *CacheableQuery {
 	return &CacheableQuery{
 		cache: qc,
@@ -348,19 +347,19 @@ func (qc *QueryCache) NewCacheableQuery(query string, args []interface{}) *Cache
 	}
 }
 
-// WithTTL sets a custom TTL for this query
+// WithTTL sets a custom TTL for this query.
 func (cq *CacheableQuery) WithTTL(ttl time.Duration) *CacheableQuery {
 	cq.ttl = ttl
 	return cq
 }
 
-// WithExecutor sets the query executor
+// WithExecutor sets the query executor.
 func (cq *CacheableQuery) WithExecutor(executor func() (interface{}, error)) *CacheableQuery {
 	cq.executor = executor
 	return cq
 }
 
-// Execute runs the query with caching
+// Execute runs the query with caching.
 func (cq *CacheableQuery) Execute(ctx context.Context) (interface{}, error) {
 	if cq.executor == nil {
 		return nil, fmt.Errorf("no executor defined for cacheable query")
@@ -369,7 +368,7 @@ func (cq *CacheableQuery) Execute(ctx context.Context) (interface{}, error) {
 	return cq.cache.GetOrSet(ctx, cq.query, cq.args, cq.executor)
 }
 
-// Invalidate removes this specific query from cache
+// Invalidate removes this specific query from cache.
 func (cq *CacheableQuery) Invalidate(ctx context.Context) error {
 	key := cq.cache.buildQueryKey(cq.query, cq.args...)
 	return cq.cache.cache.Delete(ctx, key)

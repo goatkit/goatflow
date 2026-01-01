@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
 
-// User management handlers
+// User management handlers.
 func (router *APIRouter) handleListUsers(c *gin.Context) {
 	// TODO: Implement actual user listing
 	users := []gin.H{
@@ -155,46 +156,6 @@ func (router *APIRouter) handleResetUserPassword(c *gin.Context) {
 	})
 }
 
-func (router *APIRouter) handleGetUserGroups(c *gin.Context) {
-	userID := c.Param("id")
-
-	// TODO: Implement actual user groups fetching
-	groups := []gin.H{
-		{
-			"id":          1,
-			"name":        "admin",
-			"permissions": []string{"rw"},
-		},
-	}
-
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Data: gin.H{
-			"user_id": userID,
-			"groups":  groups,
-		},
-	})
-}
-
-func (router *APIRouter) handleUpdateUserGroups(c *gin.Context) {
-	userID := c.Param("id")
-
-	var req struct {
-		Groups []int `json:"groups" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		sendError(c, http.StatusBadRequest, "Invalid request: "+err.Error())
-		return
-	}
-
-	// TODO: Implement actual user groups update
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Message: "Groups updated successfully for user " + userID,
-	})
-}
-
 func (router *APIRouter) handleGetUserNotifications(c *gin.Context) {
 	userID, _, _, exists := middleware.GetCurrentUser(c)
 	if !exists {
@@ -239,32 +200,4 @@ func (router *APIRouter) handleGetNotifications(c *gin.Context) {
 func (router *APIRouter) handleListAllUsers(c *gin.Context) {
 	// Alias for handleListUsers
 	router.handleListUsers(c)
-}
-
-func (router *APIRouter) handleGetUserActivityLog(c *gin.Context) {
-	userID := c.Param("id")
-
-	// TODO: Implement actual activity log fetching
-	activities := []gin.H{
-		{
-			"id":        1,
-			"action":    "login",
-			"ip":        "192.168.1.1",
-			"timestamp": time.Now().Add(-2 * time.Hour),
-		},
-		{
-			"id":        2,
-			"action":    "ticket_created",
-			"details":   "Created ticket #2024080100001",
-			"timestamp": time.Now().Add(-1 * time.Hour),
-		},
-	}
-
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Data: gin.H{
-			"user_id":    userID,
-			"activities": activities,
-		},
-	})
 }

@@ -1,3 +1,4 @@
+// Package main provides the GOTRS server application.
 package main
 
 import (
@@ -7,11 +8,12 @@ import (
 	"path/filepath"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gotrs-io/gotrs-ce/internal/config"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	_ "github.com/lib/pq"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/gotrs-io/gotrs-ce/internal/config"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 var (
@@ -385,7 +387,7 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// ensureUsersTable creates a minimal users table if absent (portable across postgres/mysql)
+// ensureUsersTable creates a minimal users table if absent (portable across postgres/mysql).
 func ensureUsersTable(db *sql.DB, driverName string) error {
 	// Check existence
 	checkSQL := "SELECT 1 FROM users LIMIT 1"

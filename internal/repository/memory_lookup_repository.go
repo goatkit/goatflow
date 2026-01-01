@@ -10,7 +10,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// MemoryLookupRepository is an in-memory implementation of LookupRepository
+// MemoryLookupRepository is an in-memory implementation of LookupRepository.
 type MemoryLookupRepository struct {
 	mu         sync.RWMutex
 	queues     map[int]*models.QueueInfo
@@ -21,7 +21,7 @@ type MemoryLookupRepository struct {
 	nextID     map[string]int // Track next ID for each entity type
 }
 
-// NewMemoryLookupRepository creates a new in-memory lookup repository with default data
+// NewMemoryLookupRepository creates a new in-memory lookup repository with default data.
 func NewMemoryLookupRepository() *MemoryLookupRepository {
 	repo := &MemoryLookupRepository{
 		queues:     make(map[int]*models.QueueInfo),
@@ -73,7 +73,7 @@ func (r *MemoryLookupRepository) initializeDefaults() {
 	r.statuses[5] = &models.LookupItem{ID: 5, Value: "closed", Label: "Closed", Order: 5, Active: true}
 }
 
-// Queue operations
+// Queue operations.
 func (r *MemoryLookupRepository) GetQueues(ctx context.Context) ([]models.QueueInfo, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -139,7 +139,7 @@ func (r *MemoryLookupRepository) DeleteQueue(ctx context.Context, id int) error 
 	return nil
 }
 
-// Priority operations
+// Priority operations.
 func (r *MemoryLookupRepository) GetPriorities(ctx context.Context) ([]models.LookupItem, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -185,7 +185,7 @@ func (r *MemoryLookupRepository) UpdatePriority(ctx context.Context, priority *m
 	return nil
 }
 
-// Type operations
+// Type operations.
 func (r *MemoryLookupRepository) GetTypes(ctx context.Context) ([]models.LookupItem, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -251,7 +251,7 @@ func (r *MemoryLookupRepository) DeleteType(ctx context.Context, id int) error {
 	return nil
 }
 
-// Status operations
+// Status operations.
 func (r *MemoryLookupRepository) GetStatuses(ctx context.Context) ([]models.LookupItem, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -297,7 +297,7 @@ func (r *MemoryLookupRepository) UpdateStatus(ctx context.Context, status *model
 	return nil
 }
 
-// Audit operations
+// Audit operations.
 func (r *MemoryLookupRepository) LogChange(ctx context.Context, change *LookupAuditLog) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -337,7 +337,7 @@ func (r *MemoryLookupRepository) GetAuditLogs(ctx context.Context, entityType st
 	return filtered, nil
 }
 
-// Export/Import operations
+// Export/Import operations.
 func (r *MemoryLookupRepository) ExportConfiguration(ctx context.Context) (*LookupConfiguration, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

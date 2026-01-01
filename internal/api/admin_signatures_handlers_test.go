@@ -367,12 +367,12 @@ func TestHandleImportSignaturesValidation(t *testing.T) {
 
 func TestImportSignatures(t *testing.T) {
 	tests := []struct {
-		name            string
-		yaml            string
-		overwrite       bool
-		expectImported  int
-		expectSkipped   int
-		expectError     bool
+		name           string
+		yaml           string
+		overwrite      bool
+		expectImported int
+		expectSkipped  int
+		expectError    bool
 	}{
 		{
 			name:           "invalid yaml",
@@ -395,7 +395,7 @@ func TestImportSignatures(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			imported, skipped, err := ImportSignatures([]byte(tc.yaml), tc.overwrite)
-			
+
 			if tc.expectError && err == nil {
 				t.Error("Expected error, got nil")
 			}
@@ -414,7 +414,7 @@ func TestImportSignatures(t *testing.T) {
 
 func TestContentTypeValidation(t *testing.T) {
 	validTypes := []string{"text/plain", "text/html", "text/markdown", ""}
-	
+
 	for _, ct := range validTypes {
 		sig := Signature{
 			ID:          1,

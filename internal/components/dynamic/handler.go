@@ -1,3 +1,4 @@
+// Package dynamic provides dynamic component rendering and field handling.
 package dynamic
 
 import (
@@ -30,8 +31,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
 
-// hashPassword hashes a password using SHA256 with salt
-// Format: sha256$salt$hash (similar to OTRS format)
+// Format: sha256$salt$hash (similar to OTRS format).
 func hashPassword(password string) string {
 	// Generate a random salt (16 bytes = 32 hex chars)
 	salt := generateSalt()
@@ -45,7 +45,7 @@ func hashPassword(password string) string {
 	return fmt.Sprintf("sha256$%s$%s", salt, hashStr)
 }
 
-// generateSalt generates a random salt for password hashing
+// generateSalt generates a random salt for password hashing.
 func generateSalt() string {
 	// Generate 16 random bytes
 	salt := make([]byte, 16)
@@ -59,7 +59,7 @@ func generateSalt() string {
 	return hex.EncodeToString(salt)
 }
 
-// ModuleConfig represents a module's configuration
+// ModuleConfig represents a module's configuration.
 type ModuleConfig struct {
 	Module struct {
 		Name        string `yaml:"name"`
@@ -99,7 +99,7 @@ type ModuleConfig struct {
 	LambdaConfig lambda.LambdaConfig `yaml:"lambda_config" json:"lambda_config"`
 }
 
-// Field represents a field in the module
+// Field represents a field in the module.
 type Field struct {
 	Name            string         `yaml:"name"`
 	Type            string         `yaml:"type"`
@@ -127,7 +127,7 @@ type Field struct {
 	Virtual         bool           `yaml:"virtual"`
 }
 
-// ComputedField represents a computed field that's not directly from the database
+// ComputedField represents a computed field that's not directly from the database.
 type ComputedField struct {
 	Name         string `yaml:"name"`
 	Label        string `yaml:"label"`
@@ -137,14 +137,14 @@ type ComputedField struct {
 	ListPosition int    `yaml:"list_position"` // Optional position in list view
 }
 
-// Option for select fields
+// Option for select fields.
 type Option struct {
 	Value string `yaml:"value"`
 	Label string `yaml:"label"`
 	Group string `yaml:"group,omitempty"`
 }
 
-// Filter represents a filter configuration
+// Filter represents a filter configuration.
 type Filter struct {
 	Field         string         `yaml:"field" json:"field"`
 	Type          string         `yaml:"type" json:"type"`
@@ -157,13 +157,13 @@ type Filter struct {
 	Options       []FilterOption `yaml:"options" json:"options"`
 }
 
-// FilterOption represents an option in a filter dropdown
+// FilterOption represents an option in a filter dropdown.
 type FilterOption struct {
 	Value string `yaml:"value" json:"value"`
 	Label string `yaml:"label" json:"label"`
 }
 
-// DynamicModuleHandler handles all dynamic modules
+// DynamicModuleHandler handles all dynamic modules.
 type DynamicModuleHandler struct {
 	configs      map[string]*ModuleConfig
 	mu           sync.RWMutex
@@ -176,7 +176,7 @@ type DynamicModuleHandler struct {
 	i18n         *i18n.I18n
 }
 
-// NewDynamicModuleHandler creates a new dynamic module handler
+// NewDynamicModuleHandler creates a new dynamic module handler.
 func NewDynamicModuleHandler(db *sql.DB, renderer *pongo2.TemplateSet, modulesPath string) (*DynamicModuleHandler, error) {
 	ctx := context.Background()
 	lambdaEngine, err := lambda.NewEngine(ctx)
@@ -207,7 +207,7 @@ func NewDynamicModuleHandler(db *sql.DB, renderer *pongo2.TemplateSet, modulesPa
 	return h, nil
 }
 
-// loadAllConfigs loads all YAML configs from modules directory
+// loadAllConfigs loads all YAML configs from modules directory.
 func (h *DynamicModuleHandler) loadAllConfigs() error {
 	files, err := os.ReadDir(h.modulesPath)
 	if err != nil {
@@ -227,7 +227,7 @@ func (h *DynamicModuleHandler) loadAllConfigs() error {
 	return nil
 }
 
-// loadConfig loads a single YAML config
+// loadConfig loads a single YAML config.
 func (h *DynamicModuleHandler) loadConfig(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -247,7 +247,7 @@ func (h *DynamicModuleHandler) loadConfig(path string) error {
 	return nil
 }
 
-// setupWatcher sets up file system watcher for hot reload
+// setupWatcher sets up file system watcher for hot reload.
 func (h *DynamicModuleHandler) setupWatcher() error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -267,7 +267,7 @@ func (h *DynamicModuleHandler) setupWatcher() error {
 	return nil
 }
 
-// watchFiles watches for file changes
+// watchFiles watches for file changes.
 func (h *DynamicModuleHandler) watchFiles() {
 	for {
 		select {
@@ -299,7 +299,7 @@ func (h *DynamicModuleHandler) watchFiles() {
 	}
 }
 
-// resolveTranslation resolves a translation key if it starts with @
+// resolveTranslation resolves a translation key if it starts with @.
 func (h *DynamicModuleHandler) resolveTranslation(value string, lang string) string {
 	if strings.HasPrefix(value, "@") {
 		raw := strings.TrimPrefix(value, "@")
@@ -337,7 +337,7 @@ func (h *DynamicModuleHandler) resolveTranslation(value string, lang string) str
 	return value
 }
 
-// resolveConfigTranslations processes a module config and resolves all translation keys
+// resolveConfigTranslations processes a module config and resolves all translation keys.
 func (h *DynamicModuleHandler) resolveConfigTranslations(config *ModuleConfig, lang string) *ModuleConfig {
 	// Create a deep copy to avoid modifying the original
 	resolved := *config
@@ -396,7 +396,7 @@ func (h *DynamicModuleHandler) resolveConfigTranslations(config *ModuleConfig, l
 	return &resolved
 }
 
-// ServeModule handles requests for any dynamic module
+// ServeModule handles requests for any dynamic module.
 func (h *DynamicModuleHandler) ServeModule(c *gin.Context) {
 	moduleName := c.Param("module")
 
@@ -453,7 +453,7 @@ func (h *DynamicModuleHandler) ServeModule(c *gin.Context) {
 	}
 }
 
-// handleList handles listing all records
+// handleList handles listing all records.
 func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) {
 	// Get current language
 	lang := middleware.GetLanguage(c)
@@ -801,7 +801,7 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(html))
 }
 
-// handleExport handles exporting data to CSV with current filters
+// handleExport handles exporting data to CSV with current filters.
 func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig) {
 	if !config.Features.ExportCSV {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Export not enabled for this module"})
@@ -906,7 +906,7 @@ func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig
 	c.Data(http.StatusOK, "text/csv", csvData.Bytes())
 }
 
-// handleGet handles getting a single record
+// handleGet handles getting a single record.
 func (h *DynamicModuleHandler) handleGet(c *gin.Context, config *ModuleConfig, id string) {
 	// Get current language and resolve translations
 	lang := middleware.GetLanguage(c)
@@ -954,7 +954,7 @@ func (h *DynamicModuleHandler) handleGet(c *gin.Context, config *ModuleConfig, i
 	})
 }
 
-// handleCreate handles creating a new record
+// handleCreate handles creating a new record.
 func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig) {
 	// Get current language and resolve translations
 	lang := middleware.GetLanguage(c)
@@ -1113,7 +1113,7 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 	})
 }
 
-// handleUpdate handles updating a record
+// handleUpdate handles updating a record.
 func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig, id string) {
 	// Get current language and resolve translations
 	lang := middleware.GetLanguage(c)
@@ -1233,7 +1233,7 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 	})
 }
 
-// handleDelete handles deleting (or soft deleting) a record
+// handleDelete handles deleting (or soft deleting) a record.
 func (h *DynamicModuleHandler) handleDelete(c *gin.Context, config *ModuleConfig, id string) {
 	// Get current language and resolve translations
 	lang := middleware.GetLanguage(c)
@@ -1546,7 +1546,7 @@ func (h *DynamicModuleHandler) isAPIRequest(c *gin.Context) bool {
 		strings.Contains(c.GetHeader("Accept"), "application/json")
 }
 
-// GetAvailableModules returns list of loaded modules
+// GetAvailableModules returns list of loaded modules.
 func (h *DynamicModuleHandler) GetAvailableModules() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -1558,7 +1558,7 @@ func (h *DynamicModuleHandler) GetAvailableModules() []string {
 	return modules
 }
 
-// handleSchemaDiscovery handles schema discovery requests
+// handleSchemaDiscovery handles schema discovery requests.
 func (h *DynamicModuleHandler) handleSchemaDiscovery(c *gin.Context) {
 	action := c.Query("action")
 	tableName := c.Query("table")
@@ -1662,7 +1662,7 @@ func (h *DynamicModuleHandler) handleSchemaDiscovery(c *gin.Context) {
 	}
 }
 
-// populateLookupOptions populates Options for fields with lookup tables
+// populateLookupOptions populates Options for fields with lookup tables.
 func (h *DynamicModuleHandler) populateLookupOptions(config *ModuleConfig) {
 	for i, field := range config.Fields {
 		if field.LookupTable != "" && field.ShowInForm {
@@ -1715,7 +1715,7 @@ func (h *DynamicModuleHandler) populateLookupOptions(config *ModuleConfig) {
 	}
 }
 
-// processLookups resolves foreign key lookups for display
+// processLookups resolves foreign key lookups for display.
 func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, config *ModuleConfig) {
 	for _, field := range config.Fields {
 		// Skip if no lookup table defined
@@ -1805,7 +1805,7 @@ func (h *DynamicModuleHandler) processLookups(items []map[string]interface{}, co
 	}
 }
 
-// processComputedFields processes all computed fields for the given items
+// processComputedFields processes all computed fields for the given items.
 func (h *DynamicModuleHandler) processComputedFields(items []map[string]interface{}, config *ModuleConfig) {
 	if len(config.ComputedFields) == 0 {
 		return
@@ -1846,7 +1846,7 @@ func (h *DynamicModuleHandler) processComputedFields(items []map[string]interfac
 	}
 }
 
-// executeLambda executes a JavaScript lambda function for a computed field
+// executeLambda executes a JavaScript lambda function for a computed field.
 func (h *DynamicModuleHandler) executeLambda(lambdaCode string, item map[string]interface{}, dbInterface *lambda.SafeDBInterface, config lambda.LambdaConfig) (string, error) {
 	// Create execution context
 	execCtx := lambda.ExecutionContext{
@@ -1863,12 +1863,12 @@ func (h *DynamicModuleHandler) executeLambda(lambdaCode string, item map[string]
 	return result, nil
 }
 
-// createDatabaseInterface creates a safe database interface for lambda execution
+// createDatabaseInterface creates a safe database interface for lambda execution.
 func (h *DynamicModuleHandler) createDatabaseInterface() *lambda.SafeDBInterface {
 	return lambda.NewSafeDBInterface(&simpleDatabaseWrapper{db: h.db})
 }
 
-// simpleDatabaseWrapper implements the database.IDatabase interface for lambda use
+// simpleDatabaseWrapper implements the database.IDatabase interface for lambda use.
 type simpleDatabaseWrapper struct {
 	db *sql.DB
 }
@@ -1891,7 +1891,7 @@ func (w *simpleDatabaseWrapper) Exec(ctx context.Context, query string, args ...
 	return w.db.Exec(converted, remapped...)
 }
 
-// Implement the required interface methods (minimal implementation for lambda use)
+// Implement the required interface methods (minimal implementation for lambda use).
 func (w *simpleDatabaseWrapper) Connect() error                     { return nil }
 func (w *simpleDatabaseWrapper) Close() error                       { return nil }
 func (w *simpleDatabaseWrapper) Ping() error                        { return w.db.Ping() }
@@ -1945,7 +1945,7 @@ func (w *simpleDatabaseWrapper) SupportsReturning() bool { return true }
 func (w *simpleDatabaseWrapper) Stats() sql.DBStats      { return w.db.Stats() }
 func (w *simpleDatabaseWrapper) IsHealthy() bool         { return w.db.Ping() == nil }
 
-// handleAction handles special actions on records
+// handleAction handles special actions on records.
 func (h *DynamicModuleHandler) handleAction(c *gin.Context, config *ModuleConfig, id, action string) {
 	switch action {
 	case "details":
@@ -1957,7 +1957,7 @@ func (h *DynamicModuleHandler) handleAction(c *gin.Context, config *ModuleConfig
 	}
 }
 
-// handleDetails handles detailed information requests
+// handleDetails handles detailed information requests.
 func (h *DynamicModuleHandler) handleDetails(c *gin.Context, config *ModuleConfig, id string) {
 	// For sysconfig module, 'id' is actually the config name
 	if config.Module.Name == "sysconfig" {
@@ -1981,7 +1981,7 @@ func (h *DynamicModuleHandler) handleDetails(c *gin.Context, config *ModuleConfi
 	})
 }
 
-// handleSysconfigDetails handles sysconfig-specific details
+// handleSysconfigDetails handles sysconfig-specific details.
 func (h *DynamicModuleHandler) handleSysconfigDetails(c *gin.Context, config *ModuleConfig, configName string) {
 	query := `
 		SELECT name, description, navigation, effective_value, xml_content_parsed,
@@ -2052,7 +2052,7 @@ func (h *DynamicModuleHandler) handleSysconfigDetails(c *gin.Context, config *Mo
 	})
 }
 
-// handleReset handles reset-to-default requests
+// handleReset handles reset-to-default requests.
 func (h *DynamicModuleHandler) handleReset(c *gin.Context, config *ModuleConfig, id string) {
 	// For sysconfig module, 'id' is actually the config name
 	if config.Module.Name == "sysconfig" {
@@ -2064,7 +2064,7 @@ func (h *DynamicModuleHandler) handleReset(c *gin.Context, config *ModuleConfig,
 	c.JSON(http.StatusBadRequest, gin.H{"error": "Reset action not supported for this module"})
 }
 
-// handleSysconfigReset handles sysconfig reset to default
+// handleSysconfigReset handles sysconfig reset to default.
 func (h *DynamicModuleHandler) handleSysconfigReset(c *gin.Context, config *ModuleConfig, configName string) {
 	// Remove any custom value from sysconfig_modified table
 	query := `DELETE FROM sysconfig_modified WHERE name = $1`
@@ -2081,7 +2081,7 @@ func (h *DynamicModuleHandler) handleSysconfigReset(c *gin.Context, config *Modu
 	})
 }
 
-// generateCSVResponse generates a CSV response from items
+// generateCSVResponse generates a CSV response from items.
 func (h *DynamicModuleHandler) generateCSVResponse(c *gin.Context, config *ModuleConfig, items []map[string]interface{}) {
 	var csvData bytes.Buffer
 	csvWriter := csv.NewWriter(&csvData)
@@ -2225,7 +2225,7 @@ func (h *DynamicModuleHandler) exec(query string, args ...interface{}) (sql.Resu
 	return res, err
 }
 
-// buildFilterWhereClause builds WHERE clause based on filter parameters
+// buildFilterWhereClause builds WHERE clause based on filter parameters.
 func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *ModuleConfig) (string, []interface{}) {
 	var conditions []string
 	var args []interface{}
@@ -2328,7 +2328,7 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 	return "", nil
 }
 
-// Close closes the lambda engine
+// Close closes the lambda engine.
 func (h *DynamicModuleHandler) Close() {
 	if h.lambdaEngine != nil {
 		h.lambdaEngine.Close()

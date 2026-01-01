@@ -9,13 +9,14 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
-// HandleAuthLogin handles the login form submission
+// HandleAuthLogin handles the login form submission.
 var HandleAuthLogin = func(c *gin.Context) {
 	contentType := c.GetHeader("Content-Type")
 	var username, password string
@@ -189,7 +190,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, redirectTarget)
 }
 
-// HandleAuthLogout handles user logout
+// HandleAuthLogout handles user logout.
 var HandleAuthLogout = func(c *gin.Context) {
 	// Clear cookies
 	c.SetCookie("auth_token", "", -1, "/", "", false, true)
@@ -200,7 +201,7 @@ var HandleAuthLogout = func(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, "/login")
 }
 
-// HandleAuthCheck checks if user is authenticated
+// HandleAuthCheck checks if user is authenticated.
 var HandleAuthCheck = func(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -230,7 +231,7 @@ func handleAuthRegister(c *gin.Context) {
 	})
 }
 
-// getEnvDefault returns environment variable value or fallback default
+// getEnvDefault returns environment variable value or fallback default.
 func getEnvDefault(key, def string) string {
 	v := os.Getenv(key)
 	if v == "" {

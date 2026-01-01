@@ -11,11 +11,12 @@ import (
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
+
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository/memory"
 )
 
-// LDAPService handles LDAP/Active Directory integration
+// LDAPService handles LDAP/Active Directory integration.
 type LDAPService struct {
 	userRepo     *memory.UserRepository
 	roleRepo     *memory.RoleRepository
@@ -29,7 +30,7 @@ type LDAPService struct {
 	authLogs     []AuthLog
 }
 
-// AuthLog represents an authentication attempt log entry
+// AuthLog represents an authentication attempt log entry.
 type AuthLog struct {
 	Username  string    `json:"username"`
 	Success   bool      `json:"success"`
@@ -39,7 +40,7 @@ type AuthLog struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-// LDAPConfig represents LDAP configuration
+// LDAPConfig represents LDAP configuration.
 type LDAPConfig struct {
 	Host                 string           `json:"host"`
 	Port                 int              `json:"port"`
@@ -64,7 +65,7 @@ type LDAPConfig struct {
 	UserGroups           []string         `json:"user_groups,omitempty"`
 }
 
-// LDAPAttributeMap maps LDAP attributes to GOTRS user fields
+// LDAPAttributeMap maps LDAP attributes to GOTRS user fields.
 type LDAPAttributeMap struct {
 	Username    string `json:"username"`     // sAMAccountName, uid
 	Email       string `json:"email"`        // mail, userPrincipalName
@@ -80,7 +81,7 @@ type LDAPAttributeMap struct {
 	ObjectSID   string `json:"object_sid"`   // objectSid
 }
 
-// LDAPUser represents a user from LDAP
+// LDAPUser represents a user from LDAP.
 type LDAPUser struct {
 	DN          string            `json:"dn"`
 	Username    string            `json:"username"`
@@ -100,7 +101,7 @@ type LDAPUser struct {
 	IsActive    bool              `json:"is_active"`
 }
 
-// LDAPGroup represents a group from LDAP
+// LDAPGroup represents a group from LDAP.
 type LDAPGroup struct {
 	DN          string   `json:"dn"`
 	Name        string   `json:"name"`
@@ -110,7 +111,7 @@ type LDAPGroup struct {
 	ObjectSID   string   `json:"object_sid"`
 }
 
-// LDAPSyncResult represents the result of an LDAP sync operation
+// LDAPSyncResult represents the result of an LDAP sync operation.
 type LDAPSyncResult struct {
 	UsersFound    int           `json:"users_found"`
 	UsersCreated  int           `json:"users_created"`
@@ -126,7 +127,7 @@ type LDAPSyncResult struct {
 	DryRun        bool          `json:"dry_run"`
 }
 
-// NewLDAPService creates a new LDAP service
+// NewLDAPService creates a new LDAP service.
 func NewLDAPService(userRepo *memory.UserRepository, roleRepo *memory.RoleRepository, groupRepo *memory.GroupRepository) *LDAPService {
 	return &LDAPService{
 		userRepo:     userRepo,
@@ -139,7 +140,7 @@ func NewLDAPService(userRepo *memory.UserRepository, roleRepo *memory.RoleReposi
 	}
 }
 
-// ConfigureLDAP configures LDAP integration
+// ConfigureLDAP configures LDAP integration.
 func (s *LDAPService) ConfigureLDAP(config *LDAPConfig) error {
 	// Validate configuration
 	if err := s.validateConfig(config); err != nil {
@@ -174,7 +175,7 @@ func (s *LDAPService) ConfigureLDAP(config *LDAPConfig) error {
 	return nil
 }
 
-// AuthenticateUser authenticates a user against LDAP
+// AuthenticateUser authenticates a user against LDAP.
 func (s *LDAPService) AuthenticateUser(username, password string) (*LDAPUser, error) {
 	s.mu.RLock()
 	config := s.config
@@ -215,7 +216,7 @@ func (s *LDAPService) AuthenticateUser(username, password string) (*LDAPUser, er
 	return ldapUser, nil
 }
 
-// SyncUsers synchronizes users from LDAP
+// SyncUsers synchronizes users from LDAP.
 func (s *LDAPService) SyncUsers() (*LDAPSyncResult, error) {
 	s.mu.RLock()
 	config := s.config
@@ -285,7 +286,7 @@ func (s *LDAPService) SyncUsers() (*LDAPSyncResult, error) {
 	return result, nil
 }
 
-// GetUser retrieves a user from LDAP
+// GetUser retrieves a user from LDAP.
 func (s *LDAPService) GetUser(username string) (*LDAPUser, error) {
 	s.mu.RLock()
 	config := s.config
@@ -308,7 +309,7 @@ func (s *LDAPService) GetUser(username string) (*LDAPUser, error) {
 	return s.searchUser(conn, config, username)
 }
 
-// GetGroups retrieves groups from LDAP
+// GetGroups retrieves groups from LDAP.
 func (s *LDAPService) GetGroups() ([]*LDAPGroup, error) {
 	s.mu.RLock()
 	config := s.config
@@ -331,7 +332,7 @@ func (s *LDAPService) GetGroups() ([]*LDAPGroup, error) {
 	return s.searchAllGroups(conn, config)
 }
 
-// TestConnection tests the LDAP connection
+// TestConnection tests the LDAP connection.
 func (s *LDAPService) TestConnection(config *LDAPConfig) error {
 	conn, err := s.connect(config)
 	if err != nil {
@@ -342,7 +343,7 @@ func (s *LDAPService) TestConnection(config *LDAPConfig) error {
 	return conn.Bind(config.BindDN, config.BindPassword)
 }
 
-// GetSyncStatus returns the status of the last sync
+// GetSyncStatus returns the status of the last sync.
 func (s *LDAPService) GetSyncStatus() map[string]interface{} {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -355,14 +356,14 @@ func (s *LDAPService) GetSyncStatus() map[string]interface{} {
 	}
 }
 
-// Stop stops the LDAP service
+// Stop stops the LDAP service.
 func (s *LDAPService) Stop() {
 	close(s.stopChan)
 }
 
 // Private methods
 
-// connect establishes connection to LDAP server
+// connect establishes connection to LDAP server.
 func (s *LDAPService) connect(config *LDAPConfig) (*ldap.Conn, error) {
 	// Prefer URL-based dialing with timeout
 	scheme := "ldap"
@@ -388,7 +389,7 @@ func (s *LDAPService) connect(config *LDAPConfig) (*ldap.Conn, error) {
 	return conn, nil
 }
 
-// searchUser searches for a single user in LDAP
+// searchUser searches for a single user in LDAP.
 func (s *LDAPService) searchUser(conn *ldap.Conn, config *LDAPConfig, username string) (*LDAPUser, error) {
 	searchBase := config.UserSearchBase
 	if searchBase == "" {
@@ -430,7 +431,7 @@ func (s *LDAPService) searchUser(conn *ldap.Conn, config *LDAPConfig, username s
 	return s.mapLDAPUser(sr.Entries[0], config), nil
 }
 
-// searchAllUsers searches for all users in LDAP
+// searchAllUsers searches for all users in LDAP.
 func (s *LDAPService) searchAllUsers(conn *ldap.Conn, config *LDAPConfig) ([]*LDAPUser, error) {
 	searchBase := config.UserSearchBase
 	if searchBase == "" {
@@ -467,7 +468,7 @@ func (s *LDAPService) searchAllUsers(conn *ldap.Conn, config *LDAPConfig) ([]*LD
 	return users, nil
 }
 
-// searchAllGroups searches for all groups in LDAP
+// searchAllGroups searches for all groups in LDAP.
 func (s *LDAPService) searchAllGroups(conn *ldap.Conn, config *LDAPConfig) ([]*LDAPGroup, error) {
 	if config.GroupFilter == "" {
 		return nil, nil // Groups not configured
@@ -503,7 +504,7 @@ func (s *LDAPService) searchAllGroups(conn *ldap.Conn, config *LDAPConfig) ([]*L
 	return groups, nil
 }
 
-// getUserAttributes returns the list of user attributes to retrieve
+// getUserAttributes returns the list of user attributes to retrieve.
 func (s *LDAPService) getUserAttributes(config *LDAPConfig) []string {
 	attrs := []string{
 		"dn",
@@ -533,7 +534,7 @@ func (s *LDAPService) getUserAttributes(config *LDAPConfig) []string {
 	return result
 }
 
-// getGroupAttributes returns the list of group attributes to retrieve
+// getGroupAttributes returns the list of group attributes to retrieve.
 func (s *LDAPService) getGroupAttributes(config *LDAPConfig) []string {
 	attrs := []string{
 		"dn",
@@ -555,7 +556,7 @@ func (s *LDAPService) getGroupAttributes(config *LDAPConfig) []string {
 	return result
 }
 
-// mapLDAPUser maps an LDAP entry to an LDAPUser
+// mapLDAPUser maps an LDAP entry to an LDAPUser.
 func (s *LDAPService) mapLDAPUser(entry *ldap.Entry, config *LDAPConfig) *LDAPUser {
 	user := &LDAPUser{
 		DN:         entry.DN,
@@ -604,7 +605,7 @@ func (s *LDAPService) mapLDAPUser(entry *ldap.Entry, config *LDAPConfig) *LDAPUs
 	return user
 }
 
-// mapLDAPGroup maps an LDAP entry to an LDAPGroup
+// mapLDAPGroup maps an LDAP entry to an LDAPGroup.
 func (s *LDAPService) mapLDAPGroup(entry *ldap.Entry, config *LDAPConfig) *LDAPGroup {
 	group := &LDAPGroup{
 		DN:          entry.DN,
@@ -622,7 +623,7 @@ func (s *LDAPService) mapLDAPGroup(entry *ldap.Entry, config *LDAPConfig) *LDAPG
 	return group
 }
 
-// getAttributeValue safely gets an attribute value from LDAP entry
+// getAttributeValue safely gets an attribute value from LDAP entry.
 func (s *LDAPService) getAttributeValue(entry *ldap.Entry, attribute string) string {
 	if attribute == "" {
 		return ""
@@ -634,7 +635,7 @@ func (s *LDAPService) getAttributeValue(entry *ldap.Entry, attribute string) str
 	return ""
 }
 
-// createOrUpdateUser creates or updates a user from LDAP data
+// createOrUpdateUser creates or updates a user from LDAP data.
 func (s *LDAPService) createOrUpdateUser(ldapUser *LDAPUser) error {
 	// Check if user exists
 	existingUser, err := s.userRepo.GetByEmail(ldapUser.Email)
@@ -689,7 +690,7 @@ func (s *LDAPService) createOrUpdateUser(ldapUser *LDAPUser) error {
 	}
 }
 
-// updateUserRole updates user role based on LDAP group membership
+// updateUserRole updates user role based on LDAP group membership.
 func (s *LDAPService) updateUserRole(user *models.User, ldapUser *LDAPUser) {
 	if s.config == nil {
 		return
@@ -720,7 +721,7 @@ func (s *LDAPService) updateUserRole(user *models.User, ldapUser *LDAPUser) {
 	}
 }
 
-// syncGroups synchronizes groups from LDAP
+// syncGroups synchronizes groups from LDAP.
 func (s *LDAPService) syncGroups(conn *ldap.Conn, config *LDAPConfig) (*LDAPSyncResult, error) {
 	result := &LDAPSyncResult{
 		StartTime: time.Now(),
@@ -779,7 +780,7 @@ func (s *LDAPService) syncGroups(conn *ldap.Conn, config *LDAPConfig) (*LDAPSync
 	return result, nil
 }
 
-// validateConfig validates LDAP configuration
+// validateConfig validates LDAP configuration.
 func (s *LDAPService) validateConfig(config *LDAPConfig) error {
 	if config.Host == "" {
 		return fmt.Errorf("host is required")
@@ -837,7 +838,7 @@ func (s *LDAPService) validateConfig(config *LDAPConfig) error {
 	return nil
 }
 
-// startSyncScheduler starts the background sync scheduler
+// startSyncScheduler starts the background sync scheduler.
 func (s *LDAPService) startSyncScheduler() {
 	ticker := time.NewTicker(s.syncInterval)
 	defer ticker.Stop()
@@ -859,7 +860,7 @@ func (s *LDAPService) startSyncScheduler() {
 	}
 }
 
-// ImportUsers imports specific users from LDAP
+// ImportUsers imports specific users from LDAP.
 func (s *LDAPService) ImportUsers(usernames []string, dryRun bool) (*LDAPSyncResult, error) {
 	if s.config == nil {
 		return nil, fmt.Errorf("LDAP not configured")
@@ -893,14 +894,14 @@ func (s *LDAPService) ImportUsers(usernames []string, dryRun bool) (*LDAPSyncRes
 	return result, nil
 }
 
-// GetConfig returns the current LDAP configuration (without sensitive data)
+// GetConfig returns the current LDAP configuration (without sensitive data).
 func (s *LDAPService) GetConfig() *LDAPConfig {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.config
 }
 
-// GetAuthLogs returns authentication logs
+// GetAuthLogs returns authentication logs.
 func (s *LDAPService) GetAuthLogs(limit int) []AuthLog {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -14,6 +14,7 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/history"
@@ -23,7 +24,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
-// formatAge formats a timestamp as a human-readable relative time
+// formatAge formats a timestamp as a human-readable relative time.
 func formatAge(t time.Time) string {
 	now := time.Now()
 	diff := now.Sub(t)
@@ -53,13 +54,13 @@ func formatAge(t time.Time) string {
 	}
 }
 
-// RegisterAgentRoutes registers all agent interface routes
+// RegisterAgentRoutes registers all agent interface routes.
 func RegisterAgentRoutes(r *gin.RouterGroup, db *sql.DB) {
 	// Note: Routes are now handled via YAML configuration files
 	// See routes/agent/*.yaml for route definitions
 }
 
-// handleAgentDashboard shows the agent's main dashboard
+// handleAgentDashboard shows the agent's main dashboard.
 func handleAgentDashboard(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := c.GetInt("userID")
@@ -140,7 +141,7 @@ func handleAgentDashboard(db *sql.DB) gin.HandlerFunc {
 			ORDER BY t.create_time DESC
 			LIMIT 10
 		`), userID)
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		recentTickets := []map[string]interface{}{}
 		for rows.Next() {
@@ -235,7 +236,7 @@ func handleAgentDashboard(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAgentTickets shows the agent's ticket list
+// handleAgentTickets shows the agent's ticket list.
 func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user ID from context (middleware sets "user_id" not "userID")
@@ -459,7 +460,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		tickets := []map[string]interface{}{}
 		for rows.Next() {
@@ -597,7 +598,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 
 // Other handler functions would continue here...
 
-// Helper functions
+// Helper functions.
 func sanitizeSortColumn(col string) string {
 	allowedColumns := map[string]bool{
 		"create_time": true,
@@ -685,7 +686,7 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Insert article (sender_type_id = 1 for agent reply, communication_channel_id = 1 for email)
 		rawInsert := `
@@ -752,7 +753,7 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 					log.Printf("Error opening attachment %s: %v", fileHeader.Filename, err)
 					continue
 				}
-				defer file.Close()
+				defer func() { _ = file.Close() }()
 
 				// Read file content
 				content, err := io.ReadAll(file)
@@ -941,7 +942,7 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Insert article (sender_type_id = 1 for agent)
 		rawInsert := `
@@ -1282,7 +1283,7 @@ func handleAgentTicketPhone(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Insert article (sender_type_id = 1 for agent, phone communication type)
 		rawInsert := `
@@ -1479,7 +1480,7 @@ func handleAgentTicketPriority(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// NEWLY ADDED: Missing handlers that were causing 404 errors
+// NEWLY ADDED: Missing handlers that were causing 404 errors.
 func handleAgentTicketQueue(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ticketID := c.Param("id")
@@ -1523,7 +1524,7 @@ func handleAgentTicketMerge(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Find target ticket ID by ticket number
 		var targetTicketID int
@@ -1577,7 +1578,7 @@ func handleAgentTicketMerge(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleArticleAttachmentDownload serves attachment files for a specific article
+// handleArticleAttachmentDownload serves attachment files for a specific article.
 func handleArticleAttachmentDownload(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ticketID := c.Param("id")
@@ -1621,7 +1622,7 @@ func handleArticleAttachmentDownload(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleTicketCustomerUsers returns customer users available for a ticket
+// handleTicketCustomerUsers returns customer users available for a ticket.
 func handleTicketCustomerUsers(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ticketID := c.Param("id")
@@ -1677,7 +1678,7 @@ func handleTicketCustomerUsers(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch customer users"})
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		for rows.Next() {
 			var cu CustomerUserOption
@@ -1766,7 +1767,7 @@ func handleAgentQueues(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		queues := []map[string]interface{}{}
 		for rows.Next() {
@@ -1844,7 +1845,7 @@ func handleAgentQueueUnlock(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAgentTicketDraft saves a draft reply for a ticket
+// handleAgentTicketDraft saves a draft reply for a ticket.
 func handleAgentTicketDraft(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ticketID := c.Param("id")

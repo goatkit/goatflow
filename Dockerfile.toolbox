@@ -22,6 +22,13 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Copy only necessary source first (exclude heavy directories by .dockerignore)
 COPY . .
 
+# Install frontend dependencies in builder if package.json exists (safe: use npm ci and ignore scripts)
+RUN if [ -f package.json ]; then \
+        apk add --no-cache nodejs npm; \
+        if [ -f package-lock.json ]; then npm ci --no-audit --no-progress --ignore-scripts || true; else npm install --no-audit --no-progress --ignore-scripts || true; fi; \
+    fi && \
+    mkdir -p /workspace/node_modules
+
 # Build additional toolbox utilities with optimization
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
@@ -35,7 +42,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 ARG GOIMPORTS_VERSION=v0.24.0
 ARG GOSEC_VERSION=v2.21.4
 ARG STATICCHECK_VERSION=2024.1.1
-ARG GOLANGCI_LINT_VERSION=v1.60.3
+ARG GOLANGCI_LINT_VERSION=v1.64.8
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     go install golang.org/x/tools/cmd/goimports@${GOIMPORTS_VERSION} && \
@@ -52,7 +59,7 @@ ARG UID=1000
 ARG GID=1000
 
 # Install runtime and dev tools
-ARG TOOLBOX_APKS='ca-certificates postgresql15-client mysql-client sqlite git bash make curl jq graphviz openssl python3 py3-pip yamllint nodejs npm ripgrep fd tree nss freetype harfbuzz libx11 libxcomposite libxdamage libxext libxfixes libxi libxrandr libxrender libxshmfence libxtst alsa-lib dumb-init ttf-freefont woff2 gcc musl-dev libc6-compat gcompat libstdc++ icu-libs'
+ARG TOOLBOX_APKS='ca-certificates postgresql15-client mysql-client sqlite git bash make curl jq graphviz openssl python3 py3-pip yamllint ripgrep fd tree nss freetype harfbuzz libx11 libxcomposite libxdamage libxext libxfixes libxi libxrandr libxrender libxshmfence libxtst alsa-lib dumb-init su-exec ttf-freefont woff2 libc6-compat gcompat libstdc++ icu-libs' 
 RUN apk add --no-cache \
     # Runtime essentials\
     $TOOLBOX_APKS
@@ -67,8 +74,9 @@ RUN addgroup -g ${GID} -S appgroup && \
 # Set up workspace
 WORKDIR /workspace
 # Pre-create cache directories for Go, Playwright, and NPM to avoid root-owned creation during first run
-RUN mkdir -p /workspace/.cache /tmp/.cache/go-build /tmp/.cache/go-mod /home/appuser/.cache/ms-playwright-go /tmp/npm-cache /home/appuser/.cache && \
-    chown -R appuser:appgroup /workspace/.cache /tmp/.cache /tmp/npm-cache /workspace /home/appuser/.cache
+# Only chown the cache dirs we create (avoid changing ownership of host-mounted workspace files at runtime)
+RUN mkdir -p /workspace/.cache /workspace/.cache/go-build /workspace/.cache/go-mod /home/appuser/.cache/ms-playwright-go /tmp/npm-cache /home/appuser/.cache && \
+    chown -R appuser:appgroup /workspace/.cache /tmp/npm-cache /home/appuser/.cache
 
 # Copy binaries from artifacts image
 COPY --from=artifacts --chown=appuser:appgroup /artifacts/goats /usr/local/bin/goats
@@ -84,8 +92,10 @@ COPY --from=toolbox-builder /usr/local/go /usr/local/go
 # Verify go toolchain present; fallback install via apk + curl if copy failed (defensive)
 RUN if [ ! -x /usr/local/go/bin/go ]; then \
             echo 'Go toolchain copy missing, installing fallback'; \
-            apk add --no-cache curl tar bash ca-certificates; \
+            apk add --no-cache curl tar bash ca-certificates jq; \
             curl -fsSL https://go.dev/dl/go1.24.6.linux-amd64.tar.gz -o /tmp/go.tgz; \
+            GO_SHA=$(curl -fsSL https://go.dev/dl/?mode=json | jq -r '.[] | select(.version=="go1.24.6") | .files[] | select(.filename=="go1.24.6.linux-amd64.tar.gz") | .sha256') && \
+            echo "$GO_SHA  /tmp/go.tgz" | sha256sum -c - && \
             tar -C /usr/local -xzf /tmp/go.tgz; \
             rm /tmp/go.tgz; \
         fi && /usr/local/go/bin/go version || (echo 'Go toolchain unavailable after fallback' && exit 1)
@@ -96,15 +106,52 @@ RUN for bin in /usr/local/go/bin/*; do ln -sf "$bin" /usr/local/bin/$(basename "
 # Copy workspace files for development
 COPY --chown=appuser:appgroup . /workspace/
 
-# Switch to non-root user
-USER appuser
+# Copy frontend node_modules from builder if available (preinstalled in builder stage)
+COPY --from=toolbox-builder --chown=appuser:appgroup /workspace/node_modules /workspace/node_modules
+# (If you need to re-run install locally, run npm ci on your host; avoid running npm in the final image for CI reproducibility)
 
-# Pre-install frontend dependencies (tailwindcss, esbuild, etc.) to avoid
-# on-demand npm install failures in CI/offline builds. Non-fatal if it fails.
-RUN if [ -f package.json ]; then \
-        echo "Installing frontend dependencies (toolbox bake)..." && \
-        npm install --no-audit --no-fund --no-progress || echo "(frontend deps install skipped)"; \
+# Add an entrypoint script that ensures workspace caches are owned by the provided UID/GID
+# and then drops privileges to the non-root user before executing the requested command.
+USER root
+RUN cat << 'EOF' > /usr/local/bin/toolbox-entrypoint.sh
+#!/bin/sh
+set -e
+# If running as root, ensure caches and workspace cache dirs are owned by the requested UID/GID
+if [ "$(id -u)" -eq 0 ]; then
+  UID_VAL=${UID:-1000}
+  GID_VAL=${GID:-1000}
+  # Create and chown only the top-level cache directories we control (non-recursive)
+  mkdir -p /home/appuser/.cache
+  chown "$UID_VAL:$GID_VAL" /home/appuser/.cache 2>/dev/null || echo "info: cannot chown /home/appuser/.cache (likely host mount)"
+  for d in /workspace/.cache /workspace/.cache/go-mod /workspace/.cache/go-build /workspace/.cache/npm; do
+    if [ ! -d "$d" ]; then
+      mkdir -p "$d" && chown "$UID_VAL:$GID_VAL" "$d" 2>/dev/null || true
+    else
+      chown "$UID_VAL:$GID_VAL" "$d" 2>/dev/null || echo "info: skip chown $d (permission denied)"
     fi
+  done
+  # Check that su-exec can drop privileges; if it fails, warn and run command (no privilege drop)
+  if su-exec appuser true 2>/dev/null; then
+    if [ "$#" -eq 0 ]; then
+      exec su-exec appuser /bin/bash
+    fi
+    exec su-exec appuser "$@"
+  else
+    echo "warning: su-exec unavailable or cannot setgroups; running command without privilege drop"
+    if [ "$#" -eq 0 ]; then
+      exec /bin/bash
+    fi
+    exec "$@"
+  fi
+else
+  # Already running as non-root (e.g., docker -u), just exec the requested command
+  if [ "$#" -eq 0 ]; then
+    exec /bin/bash
+  fi
+  exec "$@"
+fi
+EOF
+RUN chmod +x /usr/local/bin/toolbox-entrypoint.sh
 
 # Set environment for Go caching and prevent auto toolchain downloads
 ENV GOCACHE=/workspace/.cache/go-build \
@@ -114,6 +161,8 @@ ENV GOCACHE=/workspace/.cache/go-build \
     XDG_CACHE_HOME=/workspace/.cache/xdg \
     PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
+# Entrypoint will chown host-mounted workspace and drop to appuser
+ENTRYPOINT ["/usr/local/bin/toolbox-entrypoint.sh"]
 # Default to bash shell for interactive use
 CMD ["/bin/bash"]
  

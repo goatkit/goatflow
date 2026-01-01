@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// TicketTemplate represents a reusable template for common ticket types
+// TicketTemplate represents a reusable template for common ticket types.
 type TicketTemplate struct {
 	ID          uint      `json:"id"`
 	Name        string    `json:"name" binding:"required"`
@@ -30,7 +30,7 @@ type TicketTemplate struct {
 	AttachmentURLs []string `json:"attachment_urls,omitempty"`
 }
 
-// TemplateVariable represents a placeholder in the template
+// TemplateVariable represents a placeholder in the template.
 type TemplateVariable struct {
 	Name         string `json:"name"`        // e.g., "{{customer_name}}"
 	Description  string `json:"description"` // Help text for the variable
@@ -38,7 +38,7 @@ type TemplateVariable struct {
 	DefaultValue string `json:"default_value,omitempty"`
 }
 
-// TemplateCategory represents a category for organizing templates
+// TemplateCategory represents a category for organizing templates.
 type TemplateCategory struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
@@ -48,7 +48,7 @@ type TemplateCategory struct {
 	Active      bool   `json:"active"`
 }
 
-// ApplyTemplate creates a new ticket from a template with variable substitution
+// ApplyTemplate creates a new ticket from a template with variable substitution.
 type TemplateApplication struct {
 	TemplateID      uint              `json:"template_id" binding:"required"`
 	Variables       map[string]string `json:"variables"`

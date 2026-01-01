@@ -2,10 +2,11 @@ package auth
 
 import (
 	"context"
+
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// simpleFakeProvider for ordering tests
+// simpleFakeProvider for ordering tests.
 type simpleFakeProvider struct {
 	name     string
 	priority int

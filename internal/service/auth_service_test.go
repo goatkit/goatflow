@@ -2,14 +2,15 @@ package service
 
 import (
 	"context"
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 )
 
-// helper to build a minimal config adapter with Auth::Providers list
+// helper to build a minimal config adapter with Auth::Providers list.
 func testConfigAdapter(t *testing.T, providers []string) *yamlmgmt.ConfigAdapter {
 	t.Helper()
 	vm := yamlmgmt.NewVersionManager(t.TempDir())
@@ -32,7 +33,7 @@ func testConfigAdapter(t *testing.T, providers []string) *yamlmgmt.ConfigAdapter
 	return yamlmgmt.NewConfigAdapter(vm)
 }
 
-// minimal jwt manager constructor (reuse existing shared constructor if available); here we just create one directly
+// minimal jwt manager constructor (reuse existing shared constructor if available); here we just create one directly.
 func testJWTManager(t *testing.T) *auth.JWTManager {
 	t.Helper()
 	return auth.NewJWTManager("test-secret", time.Hour)

@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// PasswordHashType represents the hashing algorithm to use
+// PasswordHashType represents the hashing algorithm to use.
 type PasswordHashType string
 
 const (
@@ -21,12 +21,12 @@ const (
 	HashTypeAuto   PasswordHashType = "auto" // Auto-detect from hash format
 )
 
-// PasswordHasher handles password hashing and verification
+// PasswordHasher handles password hashing and verification.
 type PasswordHasher struct {
 	defaultType PasswordHashType
 }
 
-// NewPasswordHasher creates a new password hasher
+// NewPasswordHasher creates a new password hasher.
 func NewPasswordHasher() *PasswordHasher {
 	// Get hash type from environment, default to SHA256 for OTRS compatibility
 	hashType := os.Getenv("PASSWORD_HASH_TYPE")
@@ -39,7 +39,7 @@ func NewPasswordHasher() *PasswordHasher {
 	}
 }
 
-// HashPassword hashes a password using the configured algorithm
+// HashPassword hashes a password using the configured algorithm.
 func (h *PasswordHasher) HashPassword(password string) (string, error) {
 	switch h.defaultType {
 	case HashTypeBcrypt:
@@ -52,7 +52,7 @@ func (h *PasswordHasher) HashPassword(password string) (string, error) {
 	}
 }
 
-// VerifyPassword checks if a password matches the hash
+// VerifyPassword checks if a password matches the hash.
 func (h *PasswordHasher) VerifyPassword(password, hash string) bool {
 	// Use the consolidated password verification logic
 	return h.verifyPassword(password, hash)
@@ -87,7 +87,7 @@ func (h *PasswordHasher) detectHashType(hash string) PasswordHashType {
 	return HashTypeSHA256
 }
 
-// hashBcrypt creates a bcrypt hash
+// hashBcrypt creates a bcrypt hash.
 func (h *PasswordHasher) hashBcrypt(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -105,7 +105,7 @@ func (h *PasswordHasher) verifyBcrypt(password, hash string) bool {
 	return err == nil
 }
 
-// hashSHA256 creates a SHA256 hash (OTRS compatible)
+// hashSHA256 creates a SHA256 hash (OTRS compatible).
 func (h *PasswordHasher) hashSHA256(password string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(password))
@@ -120,8 +120,7 @@ func (h *PasswordHasher) verifySHA256(password, hash string) bool {
 	return h.verifyPassword(password, hash)
 }
 
-// verifyPassword checks if a password matches a hashed password (with or without salt)
-// This is the consolidated password verification logic
+// This is the consolidated password verification logic.
 func (h *PasswordHasher) verifyPassword(password, hashedPassword string) bool {
 	// Check if it's a bcrypt hash (starts with $2a$, $2b$, or $2y$)
 	if strings.HasPrefix(hashedPassword, "$2a$") || strings.HasPrefix(hashedPassword, "$2b$") || strings.HasPrefix(hashedPassword, "$2y$") {
@@ -162,7 +161,7 @@ func isHex(s string) bool {
 	return true
 }
 
-// MigratePasswordHash optionally upgrades password hash on successful login
+// MigratePasswordHash optionally upgrades password hash on successful login.
 func (h *PasswordHasher) MigratePasswordHash(password, oldHash string, targetType PasswordHashType) (string, error) {
 	// Only migrate if configured to do so
 	if os.Getenv("MIGRATE_PASSWORD_HASHES") != "true" {

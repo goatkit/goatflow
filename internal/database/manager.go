@@ -11,20 +11,20 @@ var (
 	initOnce   sync.Once
 )
 
-// Manager provides a singleton database instance using the abstraction layer
+// Manager provides a singleton database instance using the abstraction layer.
 type Manager struct {
 	database IDatabase
 	factory  IDatabaseFactory
 }
 
-// NewManager creates a new database manager
+// NewManager creates a new database manager.
 func NewManager() *Manager {
 	return &Manager{
 		factory: NewDatabaseFactory(),
 	}
 }
 
-// Initialize sets up the database connection with the given configuration
+// Initialize sets up the database connection with the given configuration.
 func (m *Manager) Initialize(config DatabaseConfig) error {
 	var err error
 	initOnce.Do(func() {
@@ -44,7 +44,7 @@ func (m *Manager) Initialize(config DatabaseConfig) error {
 	return err
 }
 
-// GetAbstractDB returns the global database instance (for backward compatibility)
+// GetAbstractDB returns the global database instance (for backward compatibility).
 func GetAbstractDB() (*sql.DB, error) {
 	if abstractDB == nil {
 		// Fallback to legacy connection method
@@ -67,19 +67,19 @@ func GetAbstractDB() (*sql.DB, error) {
 	}
 }
 
-// GetDatabase returns the database abstraction instance
+// GetDatabase returns the database abstraction instance.
 func GetDatabase() IDatabase {
 	return abstractDB
 }
 
-// InitializeDefault initializes the database with default configuration from environment
+// InitializeDefault initializes the database with default configuration from environment.
 func InitializeDefault() error {
 	config := LoadConfigFromEnv()
 	manager := NewManager()
 	return manager.Initialize(config)
 }
 
-// getLegacyDB is the original connection logic for backward compatibility
+// getLegacyDB is the original connection logic for backward compatibility.
 func getLegacyDB() (*sql.DB, error) {
 	// This is the original code from connection.go for fallback
 	config := LoadConfigFromEnv()

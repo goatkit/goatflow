@@ -1,13 +1,15 @@
+// Package middleware provides HTTP middleware for authentication and authorization.
 package middleware
 
 import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// RequireAdminGroup checks if the user is in the admin group
+// RequireAdminGroup checks if the user is in the admin group.
 func RequireAdminGroup() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user ID from context (set by auth middleware)

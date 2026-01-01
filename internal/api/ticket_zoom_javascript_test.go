@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -10,8 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestTicketZoomJavaScriptFunctionsTDD verifies that required JavaScript functions exist
-// This test addresses the "UNCAUGHT REFERENCEERROR: ADDNOTE IS NOT DEFINED" issue
+// This test addresses the "UNCAUGHT REFERENCEERROR: ADDNOTE IS NOT DEFINED" issue.
 func TestTicketZoomJavaScriptFunctionsTDD(t *testing.T) {
 	// Test that all required JavaScript functions are defined in the frontend
 	// These tests will fail initially (TDD approach) until we implement the functions
@@ -36,7 +34,7 @@ func TestTicketZoomJavaScriptFunctionsTDD(t *testing.T) {
 	}
 }
 
-// TestTicketZoomTemplateIntegration verifies template-JavaScript integration
+// TestTicketZoomTemplateIntegration verifies template-JavaScript integration.
 func TestTicketZoomTemplateIntegration(t *testing.T) {
 	t.Run("template includes ticket-zoom.js script", func(t *testing.T) {
 		t.Skip("Template integration not implemented - TDD failing test")
@@ -51,7 +49,7 @@ func TestTicketZoomTemplateIntegration(t *testing.T) {
 	})
 }
 
-// TestTicketZoomHandlerRequirements documents required handlers
+// TestTicketZoomHandlerRequirements documents required handlers.
 func TestTicketZoomHandlerRequirements(t *testing.T) {
 	requiredHandlers := []string{
 		"HandleAgentTicketReply",

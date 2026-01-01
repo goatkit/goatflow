@@ -11,10 +11,11 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleAdminCustomerUsersList handles GET /admin/customer-users
+// HandleAdminCustomerUsersList handles GET /admin/customer-users.
 func HandleAdminCustomerUsersList(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -104,11 +105,11 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var customers []map[string]interface{}
 	for rows.Next() {
-		var customer map[string]interface{} = make(map[string]interface{})
+		var customer = make(map[string]interface{})
 		var companyName sql.NullString
 		var firstName, lastName, phone, city, country sql.NullString
 		var ticketCount int
@@ -162,7 +163,7 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 	if companyRows != nil {
 		defer companyRows.Close()
 		for companyRows.Next() {
-			var company map[string]interface{} = make(map[string]interface{})
+			var company = make(map[string]interface{})
 			var companyCustomerID, companyName string
 			companyRows.Scan(&companyCustomerID, &companyName)
 			company["customer_id"] = companyCustomerID
@@ -204,7 +205,7 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 	})
 }
 
-// HandleAdminCustomerUsersGet handles GET /admin/customer-users/:id
+// HandleAdminCustomerUsersGet handles GET /admin/customer-users/:id.
 func HandleAdminCustomerUsersGet(c *gin.Context) {
 	customerID := c.Param("id")
 	id, err := strconv.Atoi(customerID)
@@ -236,7 +237,7 @@ func HandleAdminCustomerUsersGet(c *gin.Context) {
 		WHERE cu.id = $1`
 	query = database.ConvertPlaceholders(query)
 
-	var customer map[string]interface{} = make(map[string]interface{})
+	var customer = make(map[string]interface{})
 	var companyName sql.NullString
 	var pw, title, firstName, lastName, phone, fax, mobile sql.NullString
 	var street, zip, city, country, comments sql.NullString
@@ -298,7 +299,7 @@ func HandleAdminCustomerUsersGet(c *gin.Context) {
 	})
 }
 
-// HandleAdminCustomerUsersCreate handles POST /admin/customer-users
+// HandleAdminCustomerUsersCreate handles POST /admin/customer-users.
 func HandleAdminCustomerUsersCreate(c *gin.Context) {
 	var req struct {
 		Login      string `json:"login" form:"login" binding:"required"`
@@ -396,7 +397,7 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 	}
 }
 
-// HandleAdminCustomerUsersUpdate handles PUT /admin/customer-users/:id
+// HandleAdminCustomerUsersUpdate handles PUT /admin/customer-users/:id.
 func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 	customerID := c.Param("id")
 	id, err := strconv.Atoi(customerID)
@@ -516,7 +517,7 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 	}
 }
 
-// HandleAdminCustomerUsersDelete handles DELETE /admin/customer-users/:id (soft delete)
+// HandleAdminCustomerUsersDelete handles DELETE /admin/customer-users/:id (soft delete).
 func HandleAdminCustomerUsersDelete(c *gin.Context) {
 	customerID := c.Param("id")
 	id, err := strconv.Atoi(customerID)
@@ -568,7 +569,7 @@ func HandleAdminCustomerUsersDelete(c *gin.Context) {
 	})
 }
 
-// HandleAdminCustomerUsersTickets handles GET /admin/customer-users/:id/tickets
+// HandleAdminCustomerUsersTickets handles GET /admin/customer-users/:id/tickets.
 func HandleAdminCustomerUsersTickets(c *gin.Context) {
 	customerID := c.Param("id")
 	id, err := strconv.Atoi(customerID)
@@ -621,11 +622,11 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tickets []map[string]interface{}
 	for rows.Next() {
-		var ticket map[string]interface{} = make(map[string]interface{})
+		var ticket = make(map[string]interface{})
 		var state, priority, queue sql.NullString
 		var ticketID int
 		var title, ticketNumber string
@@ -662,7 +663,7 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 	})
 }
 
-// HandleAdminCustomerUsersImportForm handles GET /admin/customer-users/import
+// HandleAdminCustomerUsersImportForm handles GET /admin/customer-users/import.
 func HandleAdminCustomerUsersImportForm(c *gin.Context) {
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/customer_users_import.pongo2", pongo2.Context{
 		"User":       getUserFromContext(c),
@@ -671,7 +672,7 @@ func HandleAdminCustomerUsersImportForm(c *gin.Context) {
 	})
 }
 
-// HandleAdminCustomerUsersImport handles POST /admin/customer-users/import
+// HandleAdminCustomerUsersImport handles POST /admin/customer-users/import.
 func HandleAdminCustomerUsersImport(c *gin.Context) {
 	file, _, err := c.Request.FormFile("csv_file")
 	if err != nil {
@@ -681,7 +682,7 @@ func HandleAdminCustomerUsersImport(c *gin.Context) {
 		})
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	reader := csv.NewReader(file)
 	records, err := reader.ReadAll()
@@ -797,7 +798,7 @@ func HandleAdminCustomerUsersImport(c *gin.Context) {
 	})
 }
 
-// HandleAdminCustomerUsersExport handles GET /admin/customer-users/export
+// HandleAdminCustomerUsersExport handles GET /admin/customer-users/export.
 func HandleAdminCustomerUsersExport(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -824,7 +825,7 @@ func HandleAdminCustomerUsersExport(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	c.Header("Content-Type", "text/csv")
 	c.Header("Content-Disposition", "attachment; filename=customer_users.csv")
@@ -842,8 +843,8 @@ func HandleAdminCustomerUsersExport(c *gin.Context) {
 
 	// Write data
 	for rows.Next() {
-		var record []string = make([]string, 16)
-		var nullableFields []*sql.NullString = make([]*sql.NullString, 16)
+		var record = make([]string, 16)
+		var nullableFields = make([]*sql.NullString, 16)
 
 		for i := range nullableFields {
 			nullableFields[i] = &sql.NullString{}
@@ -888,7 +889,7 @@ func HandleAdminCustomerUsersExport(c *gin.Context) {
 	}
 }
 
-// HandleAdminCustomerUsersBulkAction handles POST /admin/customer-users/bulk-action
+// HandleAdminCustomerUsersBulkAction handles POST /admin/customer-users/bulk-action.
 func HandleAdminCustomerUsersBulkAction(c *gin.Context) {
 	var req struct {
 		Action string   `json:"action" form:"action" binding:"required"`

@@ -10,7 +10,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
-// LDAPRepository is an in-memory implementation of LDAPRepository
+// LDAPRepository is an in-memory implementation of LDAPRepository.
 type LDAPRepository struct {
 	mu              sync.RWMutex
 	configs         map[int]*models.LDAPConfiguration
@@ -26,7 +26,7 @@ type LDAPRepository struct {
 	nextAuthLogID   int
 }
 
-// NewLDAPRepository creates a new in-memory LDAP repository
+// NewLDAPRepository creates a new in-memory LDAP repository.
 func NewLDAPRepository() repository.LDAPRepository {
 	return &LDAPRepository{
 		configs:         make(map[int]*models.LDAPConfiguration),

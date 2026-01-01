@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleGetTicketStateAPI handles GET /api/v1/ticket-states/:id
+// HandleGetTicketStateAPI handles GET /api/v1/ticket-states/:id.
 func HandleGetTicketStateAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -59,7 +60,7 @@ func HandleGetTicketStateAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, state)
 }
 
-// HandleCreateTicketStateAPI handles POST /api/v1/ticket-states
+// HandleCreateTicketStateAPI handles POST /api/v1/ticket-states.
 func HandleCreateTicketStateAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -118,7 +119,7 @@ func HandleCreateTicketStateAPI(c *gin.Context) {
 	})
 }
 
-// HandleUpdateTicketStateAPI handles PUT /api/v1/ticket-states/:id
+// HandleUpdateTicketStateAPI handles PUT /api/v1/ticket-states/:id.
 func HandleUpdateTicketStateAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -189,7 +190,7 @@ func HandleUpdateTicketStateAPI(c *gin.Context) {
 	})
 }
 
-// HandleDeleteTicketStateAPI handles DELETE /api/v1/ticket-states/:id
+// HandleDeleteTicketStateAPI handles DELETE /api/v1/ticket-states/:id.
 func HandleDeleteTicketStateAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -274,7 +275,7 @@ func HandleDeleteTicketStateAPI(c *gin.Context) {
 	})
 }
 
-// HandleTicketStateStatisticsAPI handles GET /api/v1/ticket-states/statistics
+// HandleTicketStateStatisticsAPI handles GET /api/v1/ticket-states/statistics.
 func HandleTicketStateStatisticsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -316,7 +317,7 @@ func HandleTicketStateStatisticsAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	statistics := []gin.H{}
 	totalTickets := 0

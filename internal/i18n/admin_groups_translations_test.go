@@ -1,3 +1,4 @@
+// Package i18n contains tests for internationalization and translation functionality.
 package i18n
 
 import (

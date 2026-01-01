@@ -7,14 +7,15 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// contextKey is a private type to avoid key collisions in context
+// contextKey is a private type to avoid key collisions in context.
 type contextKey string
 
-// SessionMiddleware validates JWT tokens from cookies or Authorization header
+// SessionMiddleware validates JWT tokens from cookies or Authorization header.
 func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Check for token in cookie first
@@ -157,7 +158,7 @@ func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	}
 }
 
-// RequireRole checks if the user has the required role
+// RequireRole checks if the user has the required role.
 func RequireRole(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRole, exists := c.Get("user_role")
@@ -187,7 +188,7 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 	}
 }
 
-// GetCurrentUser retrieves the current user from context
+// GetCurrentUser retrieves the current user from context.
 func GetCurrentUser(c *gin.Context) (uint, string, string, bool) {
 	userID, idExists := c.Get("user_id")
 	email, emailExists := c.Get("user_email")
@@ -215,7 +216,7 @@ func GetCurrentUser(c *gin.Context) (uint, string, string, bool) {
 	return id, emailStr, roleStr, true
 }
 
-// isAPIRequest checks if the request is for an API endpoint
+// isAPIRequest checks if the request is for an API endpoint.
 func isAPIRequest(c *gin.Context) bool {
 	// Check for AJAX request header
 	if c.GetHeader("X-Requested-With") == "XMLHttpRequest" {
@@ -229,7 +230,7 @@ func isAPIRequest(c *gin.Context) bool {
 	return strings.HasPrefix(c.Request.URL.Path, "/api/")
 }
 
-// OptionalAuth is middleware that validates tokens if present but doesn't require them
+// OptionalAuth is middleware that validates tokens if present but doesn't require them.
 func OptionalAuth(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Check for token in cookie first
@@ -267,7 +268,7 @@ func OptionalAuth(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	}
 }
 
-// RequirePermission checks if the user has the required permission
+// RequirePermission checks if the user has the required permission.
 func RequirePermission(rbac *auth.RBAC, permission auth.Permission) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRole, exists := c.Get("user_role")
@@ -308,7 +309,7 @@ func RequirePermission(rbac *auth.RBAC, permission auth.Permission) gin.HandlerF
 	}
 }
 
-// RequireAnyPermission checks if the user has any of the required permissions
+// RequireAnyPermission checks if the user has any of the required permissions.
 func RequireAnyPermission(rbac *auth.RBAC, permissions ...auth.Permission) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userRole, exists := c.Get("user_role")
@@ -351,7 +352,7 @@ func RequireAnyPermission(rbac *auth.RBAC, permissions ...auth.Permission) gin.H
 	}
 }
 
-// RequireTicketAccess checks if the user can access a specific ticket
+// RequireTicketAccess checks if the user can access a specific ticket.
 func RequireTicketAccess(rbac *auth.RBAC) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID, _, userRole, hasUser := GetCurrentUser(c)
@@ -400,12 +401,12 @@ func RequireTicketAccess(rbac *auth.RBAC) gin.HandlerFunc {
 	}
 }
 
-// RequireAdminAccess is a convenience function for admin-only routes
+// RequireAdminAccess is a convenience function for admin-only routes.
 func RequireAdminAccess(rbac *auth.RBAC) gin.HandlerFunc {
 	return RequirePermission(rbac, auth.PermissionAdminAccess)
 }
 
-// RequireAgentAccess allows both admins and agents
+// RequireAgentAccess allows both admins and agents.
 func RequireAgentAccess(rbac *auth.RBAC) gin.HandlerFunc {
 	return RequireAnyPermission(rbac,
 		auth.PermissionAdminAccess,

@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleDeletePriorityAPI handles DELETE /api/v1/priorities/:id
+// HandleDeletePriorityAPI handles DELETE /api/v1/priorities/:id.
 func HandleDeletePriorityAPI(c *gin.Context) {
 	// Check authentication
 	userIDRaw, exists := c.Get("user_id")

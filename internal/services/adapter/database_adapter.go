@@ -1,3 +1,4 @@
+// Package adapter provides service adapters for database operations.
 package adapter
 
 import (
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+
 	"github.com/gotrs-io/gotrs-ce/internal/services/database"
 	"github.com/gotrs-io/gotrs-ce/internal/services/registry"
 )
@@ -22,7 +24,7 @@ var (
 	initErr        error
 )
 
-// InitializeServiceRegistry initializes the global service registry
+// InitializeServiceRegistry initializes the global service registry.
 func InitializeServiceRegistry() (*registry.ServiceRegistry, error) {
 	once.Do(func() {
 		globalRegistry = registry.NewServiceRegistry()
@@ -55,7 +57,7 @@ func InitializeServiceRegistry() (*registry.ServiceRegistry, error) {
 //     return os.Getenv("DB_HOST") != "" || os.Getenv("DATABASE_URL") != ""
 // }
 
-// AutoConfigureDatabase configures database from environment variables
+// AutoConfigureDatabase configures database from environment variables.
 func AutoConfigureDatabase() error {
 	// In tests with no DB configured, treat as no-op (allow DB-less tests)
 	if os.Getenv("APP_ENV") == "test" && os.Getenv("TEST_DB_HOST") == "" && os.Getenv("TEST_DB_NAME") == "" && os.Getenv("DATABASE_URL") == "" {
@@ -162,7 +164,7 @@ func ensureDatabaseConnection(dbSvc database.DatabaseService) error {
 	return nil
 }
 
-// buildDatabaseConfig builds database configuration from environment
+// buildDatabaseConfig builds database configuration from environment.
 func buildDatabaseConfig() *registry.ServiceConfig {
 	// In test mode, prefer TEST_ prefixed environment variables
 	driver := os.Getenv("TEST_DB_DRIVER")
@@ -230,7 +232,7 @@ func buildDatabaseConfig() *registry.ServiceConfig {
 	return config
 }
 
-// GetDatabase returns the primary database service
+// GetDatabase returns the primary database service.
 func GetDatabase() (database.DatabaseService, error) {
 	if globalDB == nil {
 		// Try to initialize; in tests without DB, return explicit error quickly
@@ -245,7 +247,7 @@ func GetDatabase() (database.DatabaseService, error) {
 	return globalDB, nil
 }
 
-// GetDatabaseForApp returns a database service bound to a specific application
+// GetDatabaseForApp returns a database service bound to a specific application.
 func GetDatabaseForApp(appID string, purpose string) (database.DatabaseService, error) {
 	reg, err := InitializeServiceRegistry()
 	if err != nil {
@@ -265,7 +267,7 @@ func GetDatabaseForApp(appID string, purpose string) (database.DatabaseService, 
 	return dbService, nil
 }
 
-// GetDB returns a *sql.DB for compatibility with existing code
+// GetDB returns a *sql.DB for compatibility with existing code.
 func GetDB() (*sql.DB, error) {
 	// Quick check if already initialized
 	if globalDB != nil {
@@ -327,7 +329,7 @@ func GetDB() (*sql.DB, error) {
 	return db, nil
 }
 
-// GetDirectDB creates a direct database connection using environment variables
+// GetDirectDB creates a direct database connection using environment variables.
 func GetDirectDB() *sql.DB {
 	if os.Getenv("APP_ENV") == "test" {
 		// Respect a very short timeout by ping, but don't attempt if no host
@@ -371,7 +373,7 @@ func GetDirectDB() *sql.DB {
 	return db
 }
 
-// RegisterDatabaseService registers a custom database service
+// RegisterDatabaseService registers a custom database service.
 func RegisterDatabaseService(config *registry.ServiceConfig) error {
 	reg, err := InitializeServiceRegistry()
 	if err != nil {
@@ -381,7 +383,7 @@ func RegisterDatabaseService(config *registry.ServiceConfig) error {
 	return reg.RegisterService(config)
 }
 
-// MigrateDatabase migrates from one database to another
+// MigrateDatabase migrates from one database to another.
 func MigrateDatabase(fromServiceID, toServiceID string, strategy registry.MigrationStrategy) error {
 	reg, err := InitializeServiceRegistry()
 	if err != nil {

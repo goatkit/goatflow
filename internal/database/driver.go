@@ -5,7 +5,7 @@ import (
 	"database/sql"
 )
 
-// TableSchema represents a table definition from YAML
+// TableSchema represents a table definition from YAML.
 type TableSchema struct {
 	Name       string                 `yaml:"name"`
 	PK         string                 `yaml:"pk"` // Primary key field name (default: "id")
@@ -16,7 +16,7 @@ type TableSchema struct {
 	Meta       map[string]interface{} `yaml:"meta"`       // Driver-specific metadata
 }
 
-// ColumnDef represents a column definition
+// ColumnDef represents a column definition.
 type ColumnDef struct {
 	Type     string      `yaml:"type"`     // varchar(200), int, serial, etc.
 	Required bool        `yaml:"required"` // NOT NULL
@@ -25,13 +25,13 @@ type ColumnDef struct {
 	Index    bool        `yaml:"index"`
 }
 
-// Query represents a SQL query with arguments
+// Query represents a SQL query with arguments.
 type Query struct {
 	SQL  string
 	Args []interface{}
 }
 
-// Transaction represents a database transaction
+// Transaction represents a database transaction.
 type Transaction interface {
 	Commit() error
 	Rollback() error
@@ -40,7 +40,7 @@ type Transaction interface {
 	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
-// DatabaseDriver interface for database abstraction
+// DatabaseDriver interface for database abstraction.
 type DatabaseDriver interface {
 	// Connection management
 	Connect(ctx context.Context, dsn string) error
@@ -75,7 +75,7 @@ type DatabaseDriver interface {
 	QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row
 }
 
-// DumpDriver interface for SQL dump file handling
+// DumpDriver interface for SQL dump file handling.
 type DumpDriver interface {
 	// Parse and iterate through a dump file
 	Open(filename string) error
@@ -95,7 +95,7 @@ type DumpDriver interface {
 	WriteData(table string, rows []map[string]interface{}) error
 }
 
-// DriverRegistry for managing available drivers
+// DriverRegistry for managing available drivers.
 type DriverRegistry struct {
 	drivers map[string]func() DatabaseDriver
 	dumps   map[string]func() DumpDriver
@@ -106,17 +106,17 @@ var defaultRegistry = &DriverRegistry{
 	dumps:   make(map[string]func() DumpDriver),
 }
 
-// RegisterDriver registers a database driver
+// RegisterDriver registers a database driver.
 func RegisterDriver(name string, factory func() DatabaseDriver) {
 	defaultRegistry.drivers[name] = factory
 }
 
-// RegisterDumpDriver registers a dump file driver
+// RegisterDumpDriver registers a dump file driver.
 func RegisterDumpDriver(name string, factory func() DumpDriver) {
 	defaultRegistry.dumps[name] = factory
 }
 
-// GetDriver returns a database driver by name
+// GetDriver returns a database driver by name.
 func GetDriver(name string) (DatabaseDriver, error) {
 	factory, ok := defaultRegistry.drivers[name]
 	if !ok {
@@ -125,7 +125,7 @@ func GetDriver(name string) (DatabaseDriver, error) {
 	return factory(), nil
 }
 
-// GetDumpDriver returns a dump driver by name
+// GetDumpDriver returns a dump driver by name.
 func GetDumpDriver(name string) (DumpDriver, error) {
 	factory, ok := defaultRegistry.dumps[name]
 	if !ok {

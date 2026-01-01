@@ -1,6 +1,6 @@
 package constants
 
-// Session timeout constants (in seconds)
+// Session timeout constants (in seconds).
 const (
 	DefaultSessionTimeout     = 57600 // 16 hours total lifetime
 	DefaultSessionIdleTimeout = 7200  // 2 hours idle window
@@ -11,7 +11,7 @@ const (
 	SessionWarningTime        = 300
 )
 
-// Predefined timeout options for user preferences (in seconds)
+// Predefined timeout options for user preferences (in seconds).
 var SessionTimeoutOptions = map[string]int{
 	"System Default": 0,
 	"1 hour":         3600,

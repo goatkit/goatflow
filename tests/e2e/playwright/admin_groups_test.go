@@ -3,10 +3,11 @@
 package playwright
 
 import (
+	"testing"
+
 	"github.com/gotrs-io/gotrs-ce/tests/e2e/helpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestAdminGroupsUI(t *testing.T) {

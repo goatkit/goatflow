@@ -7,10 +7,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
 
-// handleServeFile serves files from storage with authorization checks
+// handleServeFile serves files from storage with authorization checks.
 func handleServeFile(c *gin.Context) {
 	// Get the file path from URL
 	filePath := c.Param("path")

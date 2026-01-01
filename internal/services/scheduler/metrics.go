@@ -3,9 +3,10 @@ package scheduler
 import (
 	"sync"
 
-	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+
+	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
 )
 
 type emailPollMetrics struct {

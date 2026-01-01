@@ -2,10 +2,11 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 )
 
-// Customer handler exports that get database from connection pool
+// Customer handler exports that get database from connection pool.
 var (
 	HandleCustomerDashboard = func(c *gin.Context) {
 		db, _ := adapter.GetDB()

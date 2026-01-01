@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// UpdateUserRequest represents the request to update a user
+// UpdateUserRequest represents the request to update a user.
 type UpdateUserRequest struct {
 	Email     *string `json:"email"`
 	FirstName *string `json:"first_name"`
@@ -22,7 +23,7 @@ type UpdateUserRequest struct {
 	ValidID   *int    `json:"valid_id"`
 }
 
-// HandleUpdateUserAPI handles PUT /api/v1/users/:id
+// HandleUpdateUserAPI handles PUT /api/v1/users/:id.
 func HandleUpdateUserAPI(c *gin.Context) {
 	// Check authentication
 	currentUserID, exists := c.Get("user_id")

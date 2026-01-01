@@ -13,10 +13,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleDashboardStatisticsAPI handles GET /api/v1/statistics/dashboard
+// HandleDashboardStatisticsAPI handles GET /api/v1/statistics/dashboard.
 func HandleDashboardStatisticsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -77,7 +78,7 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 		ORDER BY cnt DESC
 	`
 	if rows, err := db.Query(queueQuery); err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var (
 				queueID int
@@ -105,7 +106,7 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 		ORDER BY p.id
 	`
 	if rows, err := db.Query(priorityQuery); err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var (
 				priorityID int
@@ -131,7 +132,7 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 		LIMIT 10
 	`
 	if rows, err := db.Query(activityQuery); err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var (
 				typeLabel string
@@ -163,7 +164,7 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 	})
 }
 
-// HandleTicketTrendsAPI handles GET /api/v1/statistics/trends
+// HandleTicketTrendsAPI handles GET /api/v1/statistics/trends.
 func HandleTicketTrendsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -210,7 +211,7 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 		`)
 		rows, err := db.Query(query, start)
 		if err == nil {
-			defer rows.Close()
+			defer func() { _ = rows.Close() }()
 			for rows.Next() {
 				var (
 					createTime time.Time
@@ -305,7 +306,7 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 		WHERE t.create_time >= $1 OR (t.change_time IS NOT NULL AND t.change_time >= $1)
 	`)
 	if rows, err := db.Query(query, firstOfMonth); err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var (
 				createTime time.Time
@@ -380,7 +381,7 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// HandleAgentPerformanceAPI handles GET /api/v1/statistics/agents
+// HandleAgentPerformanceAPI handles GET /api/v1/statistics/agents.
 func HandleAgentPerformanceAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -552,7 +553,7 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 	})
 }
 
-// HandleQueueMetricsAPI handles GET /api/v1/statistics/queues
+// HandleQueueMetricsAPI handles GET /api/v1/statistics/queues.
 func HandleQueueMetricsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -673,7 +674,7 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 	})
 }
 
-// HandleTimeBasedAnalyticsAPI handles GET /api/v1/statistics/analytics
+// HandleTimeBasedAnalyticsAPI handles GET /api/v1/statistics/analytics.
 func HandleTimeBasedAnalyticsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -720,7 +721,6 @@ func HandleTimeBasedAnalyticsAPI(c *gin.Context) {
 			"data":       data,
 			"peak_hours": peakHours,
 		})
-
 	} else if analysisType == "day_of_week" {
 		// Day of week distribution
 		days := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
@@ -756,7 +756,7 @@ func HandleTimeBasedAnalyticsAPI(c *gin.Context) {
 	}
 }
 
-// HandleCustomerStatisticsAPI handles GET /api/v1/statistics/customers
+// HandleCustomerStatisticsAPI handles GET /api/v1/statistics/customers.
 func HandleCustomerStatisticsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -794,7 +794,7 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type customerStats struct {
 		id               string
@@ -919,7 +919,7 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 	})
 }
 
-// HandleExportStatisticsAPI handles GET /api/v1/statistics/export
+// HandleExportStatisticsAPI handles GET /api/v1/statistics/export.
 func HandleExportStatisticsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -971,7 +971,7 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load tickets"})
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		tickets := []map[string]interface{}{}
 		for rows.Next() {
@@ -1010,7 +1010,6 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 			return
 		}
 		data = tickets
-
 	} else {
 		// Summary data
 		data = gin.H{
@@ -1055,7 +1054,6 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 		c.Header("Content-Type", "text/csv")
 		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=statistics_%s.csv", time.Now().Format("20060102_150405")))
 		c.Data(http.StatusOK, "text/csv", buf.Bytes())
-
 	} else {
 		// Export as JSON
 		c.Header("Content-Type", "application/json")

@@ -1,3 +1,4 @@
+// Package main provides the GOATS CLI tool.
 package main
 
 import (
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/api"
 	_ "github.com/gotrs-io/gotrs-ce/internal/api" // Import for handler_registry.go init()
 	"github.com/gotrs-io/gotrs-ce/internal/cache"
@@ -476,7 +478,7 @@ func initValkeyCache(cfg *config.Config) *cache.RedisCache {
 	return cacheClient
 }
 
-// runRunner starts the background task runner
+// runRunner starts the background task runner.
 func runRunner(db *sql.DB) {
 	log.Println("Starting GOTRS background task runner...")
 

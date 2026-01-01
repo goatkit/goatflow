@@ -8,17 +8,17 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 )
 
-// UserPreferencesService handles user preference operations
+// UserPreferencesService handles user preference operations.
 type UserPreferencesService struct {
 	db *sql.DB
 }
 
-// NewUserPreferencesService creates a new user preferences service
+// NewUserPreferencesService creates a new user preferences service.
 func NewUserPreferencesService(db *sql.DB) *UserPreferencesService {
 	return &UserPreferencesService{db: db}
 }
 
-// GetPreference retrieves a user preference by key
+// GetPreference retrieves a user preference by key.
 func (s *UserPreferencesService) GetPreference(userID int, key string) (string, error) {
 	var value []byte
 	query := `
@@ -38,7 +38,7 @@ func (s *UserPreferencesService) GetPreference(userID int, key string) (string, 
 	return string(value), nil
 }
 
-// SetPreference sets a user preference
+// SetPreference sets a user preference.
 func (s *UserPreferencesService) SetPreference(userID int, key string, value string) error {
 	// First, try to update existing preference
 	updateQuery := `
@@ -74,7 +74,7 @@ func (s *UserPreferencesService) SetPreference(userID int, key string, value str
 	return nil
 }
 
-// DeletePreference removes a user preference
+// DeletePreference removes a user preference.
 func (s *UserPreferencesService) DeletePreference(userID int, key string) error {
 	query := `DELETE FROM user_preferences WHERE user_id = $1 AND preferences_key = $2`
 
@@ -86,8 +86,7 @@ func (s *UserPreferencesService) DeletePreference(userID int, key string) error 
 	return nil
 }
 
-// GetSessionTimeout returns the user's preferred session timeout in seconds
-// Returns 0 if no preference is set (use system default)
+// Returns 0 if no preference is set (use system default).
 func (s *UserPreferencesService) GetSessionTimeout(userID int) int {
 	value, err := s.GetPreference(userID, "SessionTimeout")
 	if err != nil || value == "" {
@@ -112,7 +111,7 @@ func (s *UserPreferencesService) GetSessionTimeout(userID int) int {
 	return timeout
 }
 
-// SetSessionTimeout sets the user's preferred session timeout
+// SetSessionTimeout sets the user's preferred session timeout.
 func (s *UserPreferencesService) SetSessionTimeout(userID int, timeout int) error {
 	// Enforce limits
 	if timeout != 0 { // 0 means use system default
@@ -126,7 +125,7 @@ func (s *UserPreferencesService) SetSessionTimeout(userID int, timeout int) erro
 	return s.SetPreference(userID, "SessionTimeout", strconv.Itoa(timeout))
 }
 
-// GetAllPreferences returns all preferences for a user
+// GetAllPreferences returns all preferences for a user.
 func (s *UserPreferencesService) GetAllPreferences(userID int) (map[string]string, error) {
 	query := `
 		SELECT preferences_key, preferences_value 

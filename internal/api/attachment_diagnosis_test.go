@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -14,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Diagnostic test to understand why ticket creation with attachments fails
+// Diagnostic test to understand why ticket creation with attachments fails.
 func TestAttachmentProcessingDiagnosis(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -14,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test to reproduce the exact 500 error user reported
+// Test to reproduce the exact 500 error user reported.
 func TestTicketCreation500ErrorReproduction(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

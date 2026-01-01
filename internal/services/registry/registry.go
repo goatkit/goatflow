@@ -1,3 +1,4 @@
+// Package registry provides service registration and lifecycle management.
 package registry
 
 import (
@@ -7,7 +8,7 @@ import (
 	"time"
 )
 
-// ServiceRegistry manages all registered services
+// ServiceRegistry manages all registered services.
 type ServiceRegistry struct {
 	mu           sync.RWMutex
 	services     map[string]ServiceInterface
@@ -25,7 +26,7 @@ type ServiceRegistry struct {
 	cancel context.CancelFunc
 }
 
-// NewServiceRegistry creates a new service registry
+// NewServiceRegistry creates a new service registry.
 func NewServiceRegistry() *ServiceRegistry {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -42,7 +43,7 @@ func NewServiceRegistry() *ServiceRegistry {
 	}
 }
 
-// RegisterFactory registers a service factory for a specific service type
+// RegisterFactory registers a service factory for a specific service type.
 func (r *ServiceRegistry) RegisterFactory(serviceType ServiceType, factory ServiceFactory) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -55,7 +56,7 @@ func (r *ServiceRegistry) RegisterFactory(serviceType ServiceType, factory Servi
 	return nil
 }
 
-// RegisterService registers a service instance
+// RegisterService registers a service instance.
 func (r *ServiceRegistry) RegisterService(config *ServiceConfig) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -95,7 +96,7 @@ func (r *ServiceRegistry) RegisterService(config *ServiceConfig) error {
 	return nil
 }
 
-// UnregisterService removes a service from the registry
+// UnregisterService removes a service from the registry.
 func (r *ServiceRegistry) UnregisterService(serviceID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -129,7 +130,7 @@ func (r *ServiceRegistry) UnregisterService(serviceID string) error {
 	return nil
 }
 
-// GetService retrieves a service by ID
+// GetService retrieves a service by ID.
 func (r *ServiceRegistry) GetService(serviceID string) (ServiceInterface, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -142,7 +143,7 @@ func (r *ServiceRegistry) GetService(serviceID string) (ServiceInterface, error)
 	return service, nil
 }
 
-// GetServicesByType retrieves all services of a specific type
+// GetServicesByType retrieves all services of a specific type.
 func (r *ServiceRegistry) GetServicesByType(serviceType ServiceType) []ServiceInterface {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -157,7 +158,7 @@ func (r *ServiceRegistry) GetServicesByType(serviceType ServiceType) []ServiceIn
 	return services
 }
 
-// CreateBinding creates a binding between an application and a service
+// CreateBinding creates a binding between an application and a service.
 func (r *ServiceRegistry) CreateBinding(binding *ServiceBinding) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -176,7 +177,7 @@ func (r *ServiceRegistry) CreateBinding(binding *ServiceBinding) error {
 	return nil
 }
 
-// GetBindings retrieves all bindings for an application
+// GetBindings retrieves all bindings for an application.
 func (r *ServiceRegistry) GetBindings(appID string) []*ServiceBinding {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -184,7 +185,7 @@ func (r *ServiceRegistry) GetBindings(appID string) []*ServiceBinding {
 	return r.bindings[appID]
 }
 
-// GetBoundService retrieves a service bound to an application by purpose
+// GetBoundService retrieves a service bound to an application by purpose.
 func (r *ServiceRegistry) GetBoundService(appID string, purpose string) (ServiceInterface, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -213,7 +214,7 @@ func (r *ServiceRegistry) GetBoundService(appID string, purpose string) (Service
 	return service, nil
 }
 
-// startHealthMonitoring starts periodic health checks for a service
+// startHealthMonitoring starts periodic health checks for a service.
 func (r *ServiceRegistry) startHealthMonitoring(serviceID string, service ServiceInterface) {
 	ticker := time.NewTicker(30 * time.Second)
 	r.healthChecks[serviceID] = ticker
@@ -250,7 +251,7 @@ func (r *ServiceRegistry) startHealthMonitoring(serviceID string, service Servic
 	}()
 }
 
-// StartMigration initiates a migration from one service to another
+// StartMigration initiates a migration from one service to another.
 func (r *ServiceRegistry) StartMigration(fromServiceID, toServiceID string, strategy MigrationStrategy) (*ServiceMigration, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -283,7 +284,7 @@ func (r *ServiceRegistry) StartMigration(fromServiceID, toServiceID string, stra
 	return migration, nil
 }
 
-// executeMigration performs the actual migration
+// executeMigration performs the actual migration.
 func (r *ServiceRegistry) executeMigration(migration *ServiceMigration) {
 	// This is a simplified implementation
 	// In a real system, this would handle data migration, traffic shifting, etc.
@@ -324,7 +325,7 @@ func (r *ServiceRegistry) executeMigration(migration *ServiceMigration) {
 	}
 }
 
-// GetMigration retrieves a migration by ID
+// GetMigration retrieves a migration by ID.
 func (r *ServiceRegistry) GetMigration(migrationID string) (*ServiceMigration, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -337,17 +338,17 @@ func (r *ServiceRegistry) GetMigration(migrationID string) (*ServiceMigration, e
 	return migration, nil
 }
 
-// HealthEvents returns a channel for receiving health events
+// HealthEvents returns a channel for receiving health events.
 func (r *ServiceRegistry) HealthEvents() <-chan ServiceHealth {
 	return r.healthEvents
 }
 
-// ErrorEvents returns a channel for receiving error events
+// ErrorEvents returns a channel for receiving error events.
 func (r *ServiceRegistry) ErrorEvents() <-chan error {
 	return r.errorEvents
 }
 
-// Shutdown gracefully shuts down the registry
+// Shutdown gracefully shuts down the registry.
 func (r *ServiceRegistry) Shutdown(ctx context.Context) error {
 	r.cancel()
 

@@ -10,12 +10,12 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// PostgresBackend implements SearchBackend using PostgreSQL full-text search
+// PostgresBackend implements SearchBackend using PostgreSQL full-text search.
 type PostgresBackend struct {
 	db *sql.DB
 }
 
-// NewPostgresBackend creates a new PostgreSQL search backend
+// NewPostgresBackend creates a new PostgreSQL search backend.
 func NewPostgresBackend() (*PostgresBackend, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -24,12 +24,12 @@ func NewPostgresBackend() (*PostgresBackend, error) {
 	return &PostgresBackend{db: db}, nil
 }
 
-// GetBackendName returns the backend name
+// GetBackendName returns the backend name.
 func (pb *PostgresBackend) GetBackendName() string {
 	return "postgresql"
 }
 
-// Search performs a full-text search using PostgreSQL
+// Search performs a full-text search using PostgreSQL.
 func (pb *PostgresBackend) Search(ctx context.Context, query SearchQuery) (*SearchResults, error) {
 	startTime := time.Now()
 	results := &SearchResults{
@@ -84,7 +84,7 @@ func (pb *PostgresBackend) Search(ctx context.Context, query SearchQuery) (*Sear
 	return results, nil
 }
 
-// searchTickets searches for tickets
+// searchTickets searches for tickets.
 func (pb *PostgresBackend) searchTickets(ctx context.Context, query SearchQuery) ([]SearchHit, error) {
 	// Build the SQL query with full-text search
 	sqlQuery := database.ConvertPlaceholders(`
@@ -178,7 +178,7 @@ func (pb *PostgresBackend) searchTickets(ctx context.Context, query SearchQuery)
 	return hits, nil
 }
 
-// searchArticles searches for articles
+// searchArticles searches for articles.
 func (pb *PostgresBackend) searchArticles(ctx context.Context, query SearchQuery) ([]SearchHit, error) {
 	sqlQuery := database.ConvertPlaceholders(`
 		SELECT 
@@ -241,7 +241,7 @@ func (pb *PostgresBackend) searchArticles(ctx context.Context, query SearchQuery
 	return hits, nil
 }
 
-// searchCustomers searches for customers
+// searchCustomers searches for customers.
 func (pb *PostgresBackend) searchCustomers(ctx context.Context, query SearchQuery) ([]SearchHit, error) {
 	sqlQuery := database.ConvertPlaceholders(`
 		SELECT 
@@ -299,33 +299,33 @@ func (pb *PostgresBackend) searchCustomers(ctx context.Context, query SearchQuer
 	return hits, nil
 }
 
-// Index adds or updates a document (no-op for PostgreSQL as it searches directly)
+// Index adds or updates a document (no-op for PostgreSQL as it searches directly).
 func (pb *PostgresBackend) Index(ctx context.Context, doc Document) error {
 	// PostgreSQL searches directly on the database tables
 	// No separate indexing needed
 	return nil
 }
 
-// Delete removes a document from the index (no-op for PostgreSQL)
+// Delete removes a document from the index (no-op for PostgreSQL).
 func (pb *PostgresBackend) Delete(ctx context.Context, docType string, id string) error {
 	// PostgreSQL searches directly on the database tables
 	// No separate deletion needed
 	return nil
 }
 
-// BulkIndex indexes multiple documents (no-op for PostgreSQL)
+// BulkIndex indexes multiple documents (no-op for PostgreSQL).
 func (pb *PostgresBackend) BulkIndex(ctx context.Context, docs []Document) error {
 	// PostgreSQL searches directly on the database tables
 	// No separate indexing needed
 	return nil
 }
 
-// HealthCheck verifies the PostgreSQL connection
+// HealthCheck verifies the PostgreSQL connection.
 func (pb *PostgresBackend) HealthCheck(ctx context.Context) error {
 	return pb.db.PingContext(ctx)
 }
 
-// highlightText adds simple highlighting to matched text
+// highlightText adds simple highlighting to matched text.
 func highlightText(text, query string) string {
 	words := strings.Fields(strings.ToLower(query))
 	result := text

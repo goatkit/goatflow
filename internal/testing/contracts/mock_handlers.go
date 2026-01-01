@@ -1,15 +1,16 @@
 package contracts
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
 )
 
-// MockHandlers provides mock implementations for contract testing
+// MockHandlers provides mock implementations for contract testing.
 type MockHandlers struct{}
 
-// Auth handlers
+// Auth handlers.
 func (m *MockHandlers) HandleLogin(c *gin.Context) {
 	var loginRequest struct {
 		Login    string `json:"login"`
@@ -94,7 +95,7 @@ func (m *MockHandlers) HandleLogout(c *gin.Context) {
 	})
 }
 
-// Ticket handlers
+// Ticket handlers.
 func (m *MockHandlers) HandleListTickets(c *gin.Context) {
 	// Check for auth header
 	if c.GetHeader("Authorization") == "" {
@@ -229,7 +230,7 @@ func (m *MockHandlers) HandleDeleteTicket(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// Ticket action handlers
+// Ticket action handlers.
 func (m *MockHandlers) HandleCloseTicket(c *gin.Context) {
 	id := c.Param("id")
 
@@ -340,7 +341,7 @@ func (m *MockHandlers) HandleAssignTicket(c *gin.Context) {
 	})
 }
 
-// User handlers
+// User handlers.
 func (m *MockHandlers) HandleListUsers(c *gin.Context) {
 	// Check for auth header
 	if c.GetHeader("Authorization") == "" {

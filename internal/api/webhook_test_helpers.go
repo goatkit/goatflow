@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 func insertWebhookRow(t *testing.T, query string, args ...interface{}) int {
@@ -22,7 +23,7 @@ func insertWebhookRow(t *testing.T, query string, args ...interface{}) int {
 		// Run inserts inside a transaction so LAST_INSERT_ID reads use the same session.
 		tx, txErr := db.Begin()
 		require.NoError(t, txErr)
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		execArgs := database.RemapArgsForMySQL(query, args)
 		result, execErr := tx.Exec(converted, execArgs...)

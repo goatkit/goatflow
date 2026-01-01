@@ -8,14 +8,14 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 )
 
-// SchemaRegistry manages JSON schemas for YAML validation
+// SchemaRegistry manages JSON schemas for YAML validation.
 type SchemaRegistry struct {
 	mu      sync.RWMutex
 	schemas map[YAMLKind]*Schema
 	loaders map[YAMLKind]gojsonschema.JSONLoader
 }
 
-// NewSchemaRegistry creates a new schema registry
+// NewSchemaRegistry creates a new schema registry.
 func NewSchemaRegistry() *SchemaRegistry {
 	sr := &SchemaRegistry{
 		schemas: make(map[YAMLKind]*Schema),
@@ -28,7 +28,7 @@ func NewSchemaRegistry() *SchemaRegistry {
 	return sr
 }
 
-// RegisterSchema registers a schema for a specific kind
+// RegisterSchema registers a schema for a specific kind.
 func (sr *SchemaRegistry) RegisterSchema(kind YAMLKind, schema *Schema) error {
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
@@ -48,7 +48,7 @@ func (sr *SchemaRegistry) RegisterSchema(kind YAMLKind, schema *Schema) error {
 	return nil
 }
 
-// GetSchema returns the schema for a specific kind
+// GetSchema returns the schema for a specific kind.
 func (sr *SchemaRegistry) GetSchema(kind YAMLKind) (*Schema, error) {
 	sr.mu.RLock()
 	defer sr.mu.RUnlock()
@@ -61,7 +61,7 @@ func (sr *SchemaRegistry) GetSchema(kind YAMLKind) (*Schema, error) {
 	return schema, nil
 }
 
-// Validate validates a document against its schema
+// Validate validates a document against its schema.
 func (sr *SchemaRegistry) Validate(doc *YAMLDocument) (*ValidationResult, error) {
 	sr.mu.RLock()
 	defer sr.mu.RUnlock()
@@ -105,7 +105,7 @@ func (sr *SchemaRegistry) Validate(doc *YAMLDocument) (*ValidationResult, error)
 	return validationResult, nil
 }
 
-// registerDefaultSchemas registers built-in schemas
+// registerDefaultSchemas registers built-in schemas.
 func (sr *SchemaRegistry) registerDefaultSchemas() {
 	// Route schema
 	sr.RegisterSchema(KindRoute, &Schema{

@@ -6,17 +6,18 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
 
-// InternalNoteHandlers manages internal note API endpoints
+// InternalNoteHandlers manages internal note API endpoints.
 type InternalNoteHandlers struct {
 	service *service.InternalNoteService
 }
 
-// NewInternalNoteHandlers creates a new internal note handlers instance
+// NewInternalNoteHandlers creates a new internal note handlers instance.
 func NewInternalNoteHandlers() *InternalNoteHandlers {
 	repo := repository.NewMemoryInternalNoteRepository()
 	srv := service.NewInternalNoteService(repo)
@@ -29,7 +30,7 @@ func NewInternalNoteHandlers() *InternalNoteHandlers {
 	}
 }
 
-// initializeDefaultNoteData creates default categories and templates
+// initializeDefaultNoteData creates default categories and templates.
 func initializeDefaultNoteData(srv *service.InternalNoteService) {
 	ctx := context.Background()
 
@@ -77,7 +78,7 @@ func initializeDefaultNoteData(srv *service.InternalNoteService) {
 	}
 }
 
-// CreateNote creates a new internal note
+// CreateNote creates a new internal note.
 func (h *InternalNoteHandlers) CreateNote(c *gin.Context) {
 	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -106,7 +107,7 @@ func (h *InternalNoteHandlers) CreateNote(c *gin.Context) {
 	c.JSON(http.StatusCreated, note)
 }
 
-// CreateNoteFromTemplate creates a note from a template
+// CreateNoteFromTemplate creates a note from a template.
 func (h *InternalNoteHandlers) CreateNoteFromTemplate(c *gin.Context) {
 	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -142,7 +143,7 @@ func (h *InternalNoteHandlers) CreateNoteFromTemplate(c *gin.Context) {
 	c.JSON(http.StatusCreated, note)
 }
 
-// GetNotes retrieves all notes for a ticket
+// GetNotes retrieves all notes for a ticket.
 func (h *InternalNoteHandlers) GetNotes(c *gin.Context) {
 	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -159,7 +160,7 @@ func (h *InternalNoteHandlers) GetNotes(c *gin.Context) {
 	c.JSON(http.StatusOK, notes)
 }
 
-// GetPinnedNotes retrieves pinned notes for a ticket
+// GetPinnedNotes retrieves pinned notes for a ticket.
 func (h *InternalNoteHandlers) GetPinnedNotes(c *gin.Context) {
 	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -176,7 +177,7 @@ func (h *InternalNoteHandlers) GetPinnedNotes(c *gin.Context) {
 	c.JSON(http.StatusOK, notes)
 }
 
-// GetImportantNotes retrieves important notes for a ticket
+// GetImportantNotes retrieves important notes for a ticket.
 func (h *InternalNoteHandlers) GetImportantNotes(c *gin.Context) {
 	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -193,7 +194,7 @@ func (h *InternalNoteHandlers) GetImportantNotes(c *gin.Context) {
 	c.JSON(http.StatusOK, notes)
 }
 
-// GetNoteByID retrieves a specific note
+// GetNoteByID retrieves a specific note.
 func (h *InternalNoteHandlers) GetNoteByID(c *gin.Context) {
 	noteID, err := strconv.ParseUint(c.Param("note_id"), 10, 32)
 	if err != nil {
@@ -217,7 +218,7 @@ func (h *InternalNoteHandlers) GetNoteByID(c *gin.Context) {
 	c.JSON(http.StatusOK, note)
 }
 
-// UpdateNote updates an existing note
+// UpdateNote updates an existing note.
 func (h *InternalNoteHandlers) UpdateNote(c *gin.Context) {
 	noteID, err := strconv.ParseUint(c.Param("note_id"), 10, 32)
 	if err != nil {
@@ -261,7 +262,7 @@ func (h *InternalNoteHandlers) UpdateNote(c *gin.Context) {
 	c.JSON(http.StatusOK, note)
 }
 
-// DeleteNote deletes a note
+// DeleteNote deletes a note.
 func (h *InternalNoteHandlers) DeleteNote(c *gin.Context) {
 	noteID, err := strconv.ParseUint(c.Param("note_id"), 10, 32)
 	if err != nil {
@@ -280,7 +281,7 @@ func (h *InternalNoteHandlers) DeleteNote(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Note deleted successfully"})
 }
 
-// PinNote pins or unpins a note
+// PinNote pins or unpins a note.
 func (h *InternalNoteHandlers) PinNote(c *gin.Context) {
 	noteID, err := strconv.ParseUint(c.Param("note_id"), 10, 32)
 	if err != nil {
@@ -299,7 +300,7 @@ func (h *InternalNoteHandlers) PinNote(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Note pin status updated"})
 }
 
-// MarkImportant marks or unmarks a note as important
+// MarkImportant marks or unmarks a note as important.
 func (h *InternalNoteHandlers) MarkImportant(c *gin.Context) {
 	noteID, err := strconv.ParseUint(c.Param("note_id"), 10, 32)
 	if err != nil {
@@ -327,7 +328,7 @@ func (h *InternalNoteHandlers) MarkImportant(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Note importance updated"})
 }
 
-// SearchNotes searches for notes
+// SearchNotes searches for notes.
 func (h *InternalNoteHandlers) SearchNotes(c *gin.Context) {
 	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -371,7 +372,7 @@ func (h *InternalNoteHandlers) SearchNotes(c *gin.Context) {
 	c.JSON(http.StatusOK, notes)
 }
 
-// GetEditHistory retrieves edit history for a note
+// GetEditHistory retrieves edit history for a note.
 func (h *InternalNoteHandlers) GetEditHistory(c *gin.Context) {
 	noteID, err := strconv.ParseUint(c.Param("note_id"), 10, 32)
 	if err != nil {
@@ -388,7 +389,7 @@ func (h *InternalNoteHandlers) GetEditHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, history)
 }
 
-// GetNoteStatistics retrieves statistics for notes
+// GetNoteStatistics retrieves statistics for notes.
 func (h *InternalNoteHandlers) GetNoteStatistics(c *gin.Context) {
 	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -405,7 +406,7 @@ func (h *InternalNoteHandlers) GetNoteStatistics(c *gin.Context) {
 	c.JSON(http.StatusOK, stats)
 }
 
-// GetRecentActivity retrieves recent activity
+// GetRecentActivity retrieves recent activity.
 func (h *InternalNoteHandlers) GetRecentActivity(c *gin.Context) {
 	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -429,7 +430,7 @@ func (h *InternalNoteHandlers) GetRecentActivity(c *gin.Context) {
 	c.JSON(http.StatusOK, activities)
 }
 
-// ExportNotes exports notes in various formats
+// ExportNotes exports notes in various formats.
 func (h *InternalNoteHandlers) ExportNotes(c *gin.Context) {
 	ticketID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -464,7 +465,7 @@ func (h *InternalNoteHandlers) ExportNotes(c *gin.Context) {
 	c.Data(http.StatusOK, contentType, data)
 }
 
-// GetTemplates retrieves all note templates
+// GetTemplates retrieves all note templates.
 func (h *InternalNoteHandlers) GetTemplates(c *gin.Context) {
 	templates, err := h.service.GetTemplates(c.Request.Context())
 	if err != nil {
@@ -475,7 +476,7 @@ func (h *InternalNoteHandlers) GetTemplates(c *gin.Context) {
 	c.JSON(http.StatusOK, templates)
 }
 
-// CreateTemplate creates a new template
+// CreateTemplate creates a new template.
 func (h *InternalNoteHandlers) CreateTemplate(c *gin.Context) {
 	var template models.NoteTemplate
 	if err := c.ShouldBindJSON(&template); err != nil {
@@ -494,7 +495,7 @@ func (h *InternalNoteHandlers) CreateTemplate(c *gin.Context) {
 	c.JSON(http.StatusCreated, template)
 }
 
-// UpdateTemplate updates a template
+// UpdateTemplate updates a template.
 func (h *InternalNoteHandlers) UpdateTemplate(c *gin.Context) {
 	templateID, err := strconv.ParseUint(c.Param("template_id"), 10, 32)
 	if err != nil {
@@ -518,7 +519,7 @@ func (h *InternalNoteHandlers) UpdateTemplate(c *gin.Context) {
 	c.JSON(http.StatusOK, template)
 }
 
-// DeleteTemplate deletes a template
+// DeleteTemplate deletes a template.
 func (h *InternalNoteHandlers) DeleteTemplate(c *gin.Context) {
 	templateID, err := strconv.ParseUint(c.Param("template_id"), 10, 32)
 	if err != nil {
@@ -534,7 +535,7 @@ func (h *InternalNoteHandlers) DeleteTemplate(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Template deleted successfully"})
 }
 
-// GetCategories retrieves all note categories
+// GetCategories retrieves all note categories.
 func (h *InternalNoteHandlers) GetCategories(c *gin.Context) {
 	categories, err := h.service.GetCategories(c.Request.Context())
 	if err != nil {

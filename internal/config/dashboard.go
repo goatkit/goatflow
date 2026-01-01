@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// DashboardConfig represents the complete YAML configuration for a dashboard
+// DashboardConfig represents the complete YAML configuration for a dashboard.
 type DashboardConfig struct {
 	APIVersion string `yaml:"apiVersion"`
 	Kind       string `yaml:"kind"`
@@ -21,14 +21,14 @@ type DashboardConfig struct {
 	Spec DashboardSpec `yaml:"spec"`
 }
 
-// DashboardSpec contains the actual dashboard configuration
+// DashboardSpec contains the actual dashboard configuration.
 type DashboardSpec struct {
 	Dashboard Dashboard              `yaml:"dashboard"`
 	Colors    map[string]ColorScheme `yaml:"colors"`
 	Icons     map[string]string      `yaml:"icons"`
 }
 
-// Dashboard represents the main dashboard configuration
+// Dashboard represents the main dashboard configuration.
 type Dashboard struct {
 	Title        string        `yaml:"title"`
 	Subtitle     string        `yaml:"subtitle"`
@@ -38,7 +38,7 @@ type Dashboard struct {
 	QuickActions []QuickAction `yaml:"quick_actions"`
 }
 
-// Stat represents a dashboard statistic
+// Stat represents a dashboard statistic.
 type Stat struct {
 	Name    string `yaml:"name"`
 	Query   string `yaml:"query,omitempty"`
@@ -49,7 +49,7 @@ type Stat struct {
 	Color   string `yaml:"color"`
 }
 
-// Tile represents a dashboard tile/tool
+// Tile represents a dashboard tile/tool.
 type Tile struct {
 	Name        string `yaml:"name"`
 	Description string `yaml:"description"`
@@ -60,7 +60,7 @@ type Tile struct {
 	Featured    bool   `yaml:"featured,omitempty"`
 }
 
-// QuickAction represents a quick action button
+// QuickAction represents a quick action button.
 type QuickAction struct {
 	Name     string `yaml:"name"`
 	Action   string `yaml:"action,omitempty"`
@@ -71,20 +71,20 @@ type QuickAction struct {
 	Confirm  string `yaml:"confirm,omitempty"`
 }
 
-// ColorScheme represents CSS classes for different color states
+// ColorScheme represents CSS classes for different color states.
 type ColorScheme struct {
 	Background string `yaml:"bg"`
 	Text       string `yaml:"text"`
 	Button     string `yaml:"button"`
 }
 
-// DashboardManager manages dashboard configurations
+// DashboardManager manages dashboard configurations.
 type DashboardManager struct {
 	configPath string
 	configs    map[string]*DashboardConfig
 }
 
-// NewDashboardManager creates a new dashboard manager
+// NewDashboardManager creates a new dashboard manager.
 func NewDashboardManager(configPath string) *DashboardManager {
 	return &DashboardManager{
 		configPath: configPath,
@@ -92,7 +92,7 @@ func NewDashboardManager(configPath string) *DashboardManager {
 	}
 }
 
-// LoadDashboard loads a dashboard configuration from YAML
+// LoadDashboard loads a dashboard configuration from YAML.
 func (dm *DashboardManager) LoadDashboard(name string) (*DashboardConfig, error) {
 	// Check if already loaded
 	if config, exists := dm.configs[name]; exists {
@@ -122,7 +122,7 @@ func (dm *DashboardManager) LoadDashboard(name string) (*DashboardConfig, error)
 	return &config, nil
 }
 
-// validateConfig performs basic validation on the dashboard configuration
+// validateConfig performs basic validation on the dashboard configuration.
 func (dm *DashboardManager) validateConfig(config *DashboardConfig) error {
 	if config.APIVersion == "" {
 		return fmt.Errorf("apiVersion is required")
@@ -165,7 +165,7 @@ func (dm *DashboardManager) validateConfig(config *DashboardConfig) error {
 	return nil
 }
 
-// GetColorScheme returns the CSS classes for a color
+// GetColorScheme returns the CSS classes for a color.
 func (dm *DashboardManager) GetColorScheme(config *DashboardConfig, color string) ColorScheme {
 	if scheme, exists := config.Spec.Colors[color]; exists {
 		return scheme
@@ -179,7 +179,7 @@ func (dm *DashboardManager) GetColorScheme(config *DashboardConfig, color string
 	}
 }
 
-// GetIconPath returns the SVG path for an icon
+// GetIconPath returns the SVG path for an icon.
 func (dm *DashboardManager) GetIconPath(config *DashboardConfig, icon string) string {
 	if path, exists := config.Spec.Icons[icon]; exists {
 		return path
@@ -189,14 +189,14 @@ func (dm *DashboardManager) GetIconPath(config *DashboardConfig, icon string) st
 	return "M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12V15.75z"
 }
 
-// ReloadDashboard forces a reload of a dashboard configuration
+// ReloadDashboard forces a reload of a dashboard configuration.
 func (dm *DashboardManager) ReloadDashboard(name string) error {
 	delete(dm.configs, name)
 	_, err := dm.LoadDashboard(name)
 	return err
 }
 
-// GetTilesByCategory returns tiles grouped by category
+// GetTilesByCategory returns tiles grouped by category.
 func (dm *DashboardManager) GetTilesByCategory(config *DashboardConfig) map[string][]Tile {
 	categories := make(map[string][]Tile)
 
@@ -211,10 +211,10 @@ func (dm *DashboardManager) GetTilesByCategory(config *DashboardConfig) map[stri
 	return categories
 }
 
-// Global dashboard manager instance
+// Global dashboard manager instance.
 var DefaultDashboardManager *DashboardManager
 
-// InitializeDashboardManager initializes the global dashboard manager
+// InitializeDashboardManager initializes the global dashboard manager.
 func InitializeDashboardManager(configPath string) {
 	DefaultDashboardManager = NewDashboardManager(configPath)
 }

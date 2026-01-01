@@ -1,3 +1,4 @@
+// Package v1 contains tests for the v1 API endpoints.
 package v1
 
 import (
@@ -9,10 +10,11 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	. "github.com/gotrs-io/gotrs-ce/internal/api"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	. "github.com/gotrs-io/gotrs-ce/internal/api"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 func TestAddArticle_BasicArticle(t *testing.T) {

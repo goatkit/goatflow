@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -12,10 +11,11 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
 func TestTicketHistoryFragmentRendersData(t *testing.T) {

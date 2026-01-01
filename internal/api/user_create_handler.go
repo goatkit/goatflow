@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// CreateUserRequest represents the request to create a new user
+// CreateUserRequest represents the request to create a new user.
 type CreateUserRequest struct {
 	Login     string `json:"login" binding:"required"`
 	Email     string `json:"email" binding:"required,email"`
@@ -22,7 +23,7 @@ type CreateUserRequest struct {
 	Groups    []int  `json:"groups"` // Optional group IDs to assign
 }
 
-// HandleCreateUserAPI handles POST /api/v1/users
+// HandleCreateUserAPI handles POST /api/v1/users.
 func HandleCreateUserAPI(c *gin.Context) {
 	// Check authentication
 	currentUserID, exists := c.Get("user_id")
@@ -114,7 +115,7 @@ func HandleCreateUserAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Insert user using adapter for cross-database compatibility
 	insertQuery := database.ConvertPlaceholders(`

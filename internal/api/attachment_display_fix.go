@@ -8,7 +8,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// GetArticleAttachments retrieves attachments for a specific article from the database
+// GetArticleAttachments retrieves attachments for a specific article from the database.
 func GetArticleAttachments(articleID int) ([]map[string]interface{}, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -24,7 +24,7 @@ func GetArticleAttachments(articleID int) ([]map[string]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query attachments: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	attachments := []map[string]interface{}{}
 	for rows.Next() {
@@ -72,7 +72,7 @@ func GetArticleAttachments(articleID int) ([]map[string]interface{}, error) {
 	return attachments, nil
 }
 
-// GetTicketAttachments retrieves all attachments for all articles in a ticket
+// GetTicketAttachments retrieves all attachments for all articles in a ticket.
 func GetTicketAttachments(ticketID int) (map[int][]map[string]interface{}, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -90,7 +90,7 @@ func GetTicketAttachments(ticketID int) (map[int][]map[string]interface{}, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to query ticket attachments: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	attachmentsByArticle := make(map[int][]map[string]interface{})
 

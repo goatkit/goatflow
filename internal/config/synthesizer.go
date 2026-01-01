@@ -154,7 +154,7 @@ func (s *Synthesizer) SynthesizeEnv(rotateOnly bool) error {
 	return nil
 }
 
-// SynthesizeTestData generates test data SQL and CSV files
+// SynthesizeTestData generates test data SQL and CSV files.
 func (s *Synthesizer) SynthesizeTestData() error {
 	generator := NewTestDataGenerator(s)
 
@@ -440,7 +440,7 @@ func (s *Synthesizer) writeEnvFile() error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	for _, v := range s.variables {
 		switch v.Type {

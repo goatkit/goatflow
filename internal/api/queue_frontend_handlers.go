@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// handleEditQueueForm returns a minimal HTMX edit form fragment
+// handleEditQueueForm returns a minimal HTMX edit form fragment.
 func handleEditQueueForm(c *gin.Context) {
 	id := c.Param("id")
 	if _, err := strconv.Atoi(id); err != nil {
@@ -43,7 +43,7 @@ func handleEditQueueForm(c *gin.Context) {
 	c.String(http.StatusOK, form)
 }
 
-// handleNewQueueForm returns a minimal create queue form fragment
+// handleNewQueueForm returns a minimal create queue form fragment.
 func handleNewQueueForm(c *gin.Context) {
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, `<form hx-post="/api/queues">
@@ -57,7 +57,7 @@ func handleNewQueueForm(c *gin.Context) {
 </form>`)
 }
 
-// handleDeleteQueueConfirmation returns a confirmation fragment
+// handleDeleteQueueConfirmation returns a confirmation fragment.
 func handleDeleteQueueConfirmation(c *gin.Context) {
 	id := c.Param("id")
 	if _, err := strconv.Atoi(id); err != nil {
@@ -79,7 +79,7 @@ func handleDeleteQueueConfirmation(c *gin.Context) {
 	c.String(http.StatusOK, fmt.Sprintf(`Are you sure you want to delete <strong>Misc</strong>? This action cannot be undone. <button hx-delete="/api/queues/%s">Delete Queue</button> <button>Cancel</button>`, id))
 }
 
-// handleCreateQueueWithHTMX handles form POST and returns HTMX headers
+// handleCreateQueueWithHTMX handles form POST and returns HTMX headers.
 func handleCreateQueueWithHTMX(c *gin.Context) {
 	name := c.PostForm("name")
 	if name == "" {
@@ -92,7 +92,7 @@ func handleCreateQueueWithHTMX(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"success": true})
 }
 
-// handleUpdateQueueWithHTMX handles form PUT and returns HTMX headers
+// handleUpdateQueueWithHTMX handles form PUT and returns HTMX headers.
 func handleUpdateQueueWithHTMX(c *gin.Context) {
 	if _, err := strconv.Atoi(c.Param("id")); err != nil {
 		c.String(http.StatusBadRequest, "invalid queue id")
@@ -103,7 +103,7 @@ func handleUpdateQueueWithHTMX(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
-// handleQueueTicketsWithHTMX returns a fragment of tickets with pagination markers
+// handleQueueTicketsWithHTMX returns a fragment of tickets with pagination markers.
 func handleQueueTicketsWithHTMX(c *gin.Context) {
 	page := c.DefaultQuery("page", "1")
 	c.Header("Content-Type", "text/html; charset=utf-8")
@@ -116,7 +116,7 @@ func handleQueueTicketsWithHTMX(c *gin.Context) {
 	c.String(http.StatusOK, `pagination page 2 TICKET-003 <a hx-get="?page=1&limit=1">Prev</a>`)
 }
 
-// handleQueueTickets returns tickets for a given queue in simple HTML
+// handleQueueTickets returns tickets for a given queue in simple HTML.
 func handleQueueTickets(c *gin.Context) {
 	id := c.Param("id")
 	c.Header("Content-Type", "text/html; charset=utf-8")
@@ -148,7 +148,7 @@ func handleQueueTickets(c *gin.Context) {
 	c.String(http.StatusOK, `No tickets in this queue`)
 }
 
-// handleClearQueueSearch clears any saved search params (test helper behavior)
+// handleClearQueueSearch clears any saved search params (test helper behavior).
 func handleClearQueueSearch(c *gin.Context) {
 	// Simulate clearing search: respond with full list (all queues)
 	c.Header("Content-Type", "text/html; charset=utf-8")

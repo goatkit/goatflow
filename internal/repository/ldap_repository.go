@@ -6,7 +6,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// LDAPRepository defines the interface for LDAP configuration and sync data
+// LDAPRepository defines the interface for LDAP configuration and sync data.
 type LDAPRepository interface {
 	// Configuration management
 	CreateConfig(config *models.LDAPConfiguration) error

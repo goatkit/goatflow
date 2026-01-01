@@ -9,11 +9,12 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/lib/pq"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// State represents a ticket state
+// State represents a ticket state.
 type State struct {
 	ID       int     `json:"id"`
 	Name     string  `json:"name"`
@@ -22,14 +23,14 @@ type State struct {
 	ValidID  *int    `json:"valid_id,omitempty"`
 }
 
-// StateType represents a ticket state type
+// StateType represents a ticket state type.
 type StateType struct {
 	ID       int     `json:"id"`
 	Name     string  `json:"name"`
 	Comments *string `json:"comments,omitempty"`
 }
 
-// StateWithType includes type information
+// StateWithType includes type information.
 type StateWithType struct {
 	ID          int     `json:"id"`
 	Name        string  `json:"name"`
@@ -40,7 +41,7 @@ type StateWithType struct {
 	TicketCount int     `json:"ticket_count"`
 }
 
-// handleAdminStates renders the admin states management page
+// handleAdminStates renders the admin states management page.
 func handleAdminStates(c *gin.Context) {
 	renderFallback := func() {
 		accept := c.GetHeader("Accept")
@@ -152,7 +153,7 @@ func handleAdminStates(c *gin.Context) {
 		renderFallback()
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var states []StateWithType
 	for rows.Next() {
@@ -221,7 +222,7 @@ func handleAdminStates(c *gin.Context) {
 	})
 }
 
-// handleAdminStateCreate creates a new state
+// handleAdminStateCreate creates a new state.
 func handleAdminStateCreate(c *gin.Context) {
 	var input struct {
 		Name     string  `json:"name" form:"name" binding:"required"`
@@ -323,7 +324,7 @@ func handleAdminStateCreate(c *gin.Context) {
 	})
 }
 
-// handleAdminStateUpdate updates an existing state
+// handleAdminStateUpdate updates an existing state.
 func handleAdminStateUpdate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -438,7 +439,7 @@ func handleAdminStateUpdate(c *gin.Context) {
 	})
 }
 
-// handleAdminStateDelete soft deletes a state
+// handleAdminStateDelete soft deletes a state.
 func handleAdminStateDelete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -506,7 +507,7 @@ func handleAdminStateDelete(c *gin.Context) {
 	})
 }
 
-// handleGetStateTypes returns all state types
+// handleGetStateTypes returns all state types.
 func handleGetStateTypes(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -527,7 +528,7 @@ func handleGetStateTypes(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var types []StateType
 	for rows.Next() {

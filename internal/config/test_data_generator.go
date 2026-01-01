@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// TestCredential represents a test user credential
+// TestCredential represents a test user credential.
 type TestCredential struct {
 	Username  string
 	Password  string
@@ -21,7 +21,7 @@ type TestCredential struct {
 	Type      string // "agent" or "customer"
 }
 
-// TestDataGenerator generates test data SQL and CSV files
+// TestDataGenerator generates test data SQL and CSV files.
 type TestDataGenerator struct {
 	credentials []TestCredential
 	synthesizer *Synthesizer
@@ -29,7 +29,7 @@ type TestDataGenerator struct {
 	csvPath     string
 }
 
-// NewTestDataGenerator creates a new test data generator
+// NewTestDataGenerator creates a new test data generator.
 func NewTestDataGenerator(synthesizer *Synthesizer) *TestDataGenerator {
 	return &TestDataGenerator{
 		synthesizer: synthesizer,
@@ -39,13 +39,13 @@ func NewTestDataGenerator(synthesizer *Synthesizer) *TestDataGenerator {
 	}
 }
 
-// SetPaths sets custom paths for output files
+// SetPaths sets custom paths for output files.
 func (g *TestDataGenerator) SetPaths(sqlPath, csvPath string) {
 	g.sqlPath = sqlPath
 	g.csvPath = csvPath
 }
 
-// Generate creates test data with secure passwords
+// Generate creates test data with secure passwords.
 func (g *TestDataGenerator) Generate() error {
 	// Generate credentials for test users
 	g.credentials = []TestCredential{
@@ -121,7 +121,7 @@ func (g *TestDataGenerator) Generate() error {
 	return nil
 }
 
-// generatePassword creates a secure password
+// generatePassword creates a secure password.
 func (g *TestDataGenerator) generatePassword() string {
 	// Generate a secure but memorable password
 	password, _ := g.synthesizer.GenerateSecret(SecretTypePassword, 16, "", "")
@@ -129,7 +129,7 @@ func (g *TestDataGenerator) generatePassword() string {
 	return password + "!1"
 }
 
-// hashPassword creates a bcrypt hash of the password
+// hashPassword creates a bcrypt hash of the password.
 func (g *TestDataGenerator) hashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
@@ -138,7 +138,7 @@ func (g *TestDataGenerator) hashPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
-// generateSQL creates the SQL migration file
+// generateSQL creates the SQL migration file.
 func (g *TestDataGenerator) generateSQL() error {
 	// Ensure migrations directory exists
 	dir := filepath.Dir(g.sqlPath)
@@ -150,7 +150,7 @@ func (g *TestDataGenerator) generateSQL() error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Write header
 	fmt.Fprintf(file, "-- Auto-generated test data - DO NOT COMMIT TO GIT\n")
@@ -268,20 +268,19 @@ ON CONFLICT DO NOTHING;
 	return nil
 }
 
-// generateCSV creates the CSV file with cleartext credentials
-// DEPRECATED: Use 'make show-dev-creds' to extract from SQL comments instead
+// DEPRECATED: Use 'make show-dev-creds' to extract from SQL comments instead.
 func (g *TestDataGenerator) generateCSV() error {
 	// No longer output CSV since credentials are in SQL comments
 	// Use: grep "^-- ||" migrations/postgres/000004_generated_test_data.up.sql
 	return nil
 }
 
-// GetCredentials returns the generated credentials
+// GetCredentials returns the generated credentials.
 func (g *TestDataGenerator) GetCredentials() []TestCredential {
 	return g.credentials
 }
 
-// GetCredentialByUsername returns a specific credential
+// GetCredentialByUsername returns a specific credential.
 func (g *TestDataGenerator) GetCredentialByUsername(username string) *TestCredential {
 	for _, cred := range g.credentials {
 		if cred.Username == username {

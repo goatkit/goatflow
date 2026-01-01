@@ -104,7 +104,7 @@ func analyzeSQLDump(sqlFile string, verbose bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to open SQL file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 	// Increase buffer size to handle very long SQL lines
@@ -309,7 +309,7 @@ func importSQLDump(sqlFile, dbURL string, verbose, dryRun bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to open SQL file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	scanner := bufio.NewScanner(file)
 	// Increase buffer size to handle very long SQL lines

@@ -15,8 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// RouteStore provides k8s-compatible route storage and management
-// Implementations can use files (docker-compose), etcd (k8s), or memory (testing)
+// Implementations can use files (docker-compose), etcd (k8s), or memory (testing).
 type RouteStore interface {
 	// CRUD Operations (kubectl-like API)
 	Apply(ctx context.Context, config *RouteConfig) error
@@ -32,7 +31,7 @@ type RouteStore interface {
 	Stop() error
 }
 
-// RouteEvent represents a change to a route configuration
+// RouteEvent represents a change to a route configuration.
 type RouteEvent struct {
 	Type      EventType    `json:"type"`
 	Object    *RouteConfig `json:"object"`
@@ -47,8 +46,7 @@ const (
 	EventTypeDeleted  EventType = "DELETED"
 )
 
-// FileRouteStore implements RouteStore using file system storage
-// This provides k8s-style API over YAML files for docker-compose deployments
+// This provides k8s-style API over YAML files for docker-compose deployments.
 type FileRouteStore struct {
 	mu               sync.RWMutex
 	routesDir        string
@@ -80,7 +78,7 @@ var (
 	}
 )
 
-// NewFileRouteStore creates a new file-based route store
+// NewFileRouteStore creates a new file-based route store.
 func NewFileRouteStore(routesDir string, router *gin.Engine, registry *HandlerRegistry) *FileRouteStore {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -108,7 +106,7 @@ func shouldRegisterYAMLAPIRoute(path string) bool {
 	return false
 }
 
-// Start initializes the file watcher and loads existing routes
+// Start initializes the file watcher and loads existing routes.
 func (s *FileRouteStore) Start(ctx context.Context) error {
 	log.Printf("Starting file route store, watching directory: %s", s.routesDir)
 
@@ -141,7 +139,7 @@ func (s *FileRouteStore) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop shuts down the file watcher
+// Stop shuts down the file watcher.
 func (s *FileRouteStore) Stop() error {
 	log.Println("Stopping file route store...")
 	s.cancel()
@@ -151,7 +149,7 @@ func (s *FileRouteStore) Stop() error {
 	return nil
 }
 
-// Apply creates or updates a route configuration by writing to file
+// Apply creates or updates a route configuration by writing to file.
 func (s *FileRouteStore) Apply(ctx context.Context, config *RouteConfig) error {
 	if err := config.Validate(); err != nil {
 		return fmt.Errorf("invalid route configuration: %w", err)
@@ -185,7 +183,7 @@ func (s *FileRouteStore) Apply(ctx context.Context, config *RouteConfig) error {
 	return nil
 }
 
-// Get retrieves a route configuration by namespace and name
+// Get retrieves a route configuration by namespace and name.
 func (s *FileRouteStore) Get(ctx context.Context, namespace, name string) (*RouteConfig, error) {
 	key := s.makeKey(namespace, name)
 
@@ -202,7 +200,7 @@ func (s *FileRouteStore) Get(ctx context.Context, namespace, name string) (*Rout
 	return &configCopy, nil
 }
 
-// List returns all route configurations in a namespace
+// List returns all route configurations in a namespace.
 func (s *FileRouteStore) List(ctx context.Context, namespace string) ([]*RouteConfig, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -220,7 +218,7 @@ func (s *FileRouteStore) List(ctx context.Context, namespace string) ([]*RouteCo
 	return configs, nil
 }
 
-// Delete removes a route configuration by deleting the file
+// Delete removes a route configuration by deleting the file.
 func (s *FileRouteStore) Delete(ctx context.Context, namespace, name string) error {
 	// Find and delete the file
 	if namespace == "" {
@@ -241,7 +239,7 @@ func (s *FileRouteStore) Delete(ctx context.Context, namespace, name string) err
 	return nil
 }
 
-// Watch returns a channel that receives route change events
+// Watch returns a channel that receives route change events.
 func (s *FileRouteStore) Watch(ctx context.Context, namespace string) (<-chan RouteEvent, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -280,7 +278,7 @@ func (s *FileRouteStore) Watch(ctx context.Context, namespace string) (<-chan Ro
 	return ch, nil
 }
 
-// loadAllRoutes scans the routes directory and loads all YAML files
+// loadAllRoutes scans the routes directory and loads all YAML files.
 func (s *FileRouteStore) loadAllRoutes() error {
 	return filepath.Walk(s.routesDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -296,7 +294,7 @@ func (s *FileRouteStore) loadAllRoutes() error {
 	})
 }
 
-// loadRouteFile loads a single YAML route file
+// loadRouteFile loads a single YAML route file.
 func (s *FileRouteStore) loadRouteFile(filePath string) error {
 	// Use Viper to load and parse the YAML file
 	v := viper.New()
@@ -343,7 +341,7 @@ func (s *FileRouteStore) loadRouteFile(filePath string) error {
 	return nil
 }
 
-// watchDirectory adds the directory and subdirectories to the file watcher
+// watchDirectory adds the directory and subdirectories to the file watcher.
 func (s *FileRouteStore) watchDirectory(dir string) error {
 	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -358,7 +356,7 @@ func (s *FileRouteStore) watchDirectory(dir string) error {
 	})
 }
 
-// handleFileEvents processes file system events
+// handleFileEvents processes file system events.
 func (s *FileRouteStore) handleFileEvents() {
 	for {
 		select {
@@ -381,7 +379,7 @@ func (s *FileRouteStore) handleFileEvents() {
 	}
 }
 
-// handleFileEvent processes a single file system event
+// handleFileEvent processes a single file system event.
 func (s *FileRouteStore) handleFileEvent(event fsnotify.Event) {
 	// Only process YAML files
 	if !strings.HasSuffix(event.Name, ".yaml") && !strings.HasSuffix(event.Name, ".yml") {
@@ -409,7 +407,7 @@ func (s *FileRouteStore) handleFileEvent(event fsnotify.Event) {
 	}
 }
 
-// handleFileDelete removes a route configuration when its file is deleted
+// handleFileDelete removes a route configuration when its file is deleted.
 func (s *FileRouteStore) handleFileDelete(filePath string) {
 	// Extract namespace and name from file path
 	relPath, err := filepath.Rel(s.routesDir, filePath)
@@ -444,7 +442,7 @@ func (s *FileRouteStore) handleFileDelete(filePath string) {
 	}
 }
 
-// reconcileRouter applies all current route configurations to the gin router
+// reconcileRouter applies all current route configurations to the gin router.
 func (s *FileRouteStore) reconcileRouter() error {
 	s.mu.RLock()
 	configs := make([]*RouteConfig, 0, len(s.routes))
@@ -467,7 +465,7 @@ func (s *FileRouteStore) reconcileRouter() error {
 	return nil
 }
 
-// applyRouteConfig registers the routes from a configuration with the gin router
+// applyRouteConfig registers the routes from a configuration with the gin router.
 func (s *FileRouteStore) applyRouteConfig(config *RouteConfig) error {
 	if !config.Metadata.Enabled {
 		return nil // Skip disabled configurations
@@ -503,7 +501,7 @@ func (s *FileRouteStore) applyRouteConfig(config *RouteConfig) error {
 	return nil
 }
 
-// isRouteRegistered checks if a route is already registered to avoid conflicts
+// isRouteRegistered checks if a route is already registered to avoid conflicts.
 func isRouteRegistered(group *gin.RouterGroup, method, path string) bool {
 	// Check our global registry first
 	key := method + ":" + path
@@ -528,18 +526,17 @@ func getRouteTree(engine *gin.Engine, method string) interface{} {
 	return nil
 }
 
-// Global registry of registered routes to prevent conflicts
+// Global registry of registered routes to prevent conflicts.
 var registeredRoutes = make(map[string]bool)
 
-// RegisterManualRoute allows manual route registration to be tracked
-// This should be called whenever routes are registered manually
+// This should be called whenever routes are registered manually.
 func RegisterManualRoute(method, path string) {
 	key := method + ":" + path
 	registeredRoutes[key] = true
 	log.Printf("📝 Manual route registered: %s %s", method, path)
 }
 
-// IsRouteRegistered checks if a route is already registered
+// IsRouteRegistered checks if a route is already registered.
 func IsRouteRegistered(method, path string) bool {
 	key := method + ":" + path
 	return registeredRoutes[key]
@@ -560,13 +557,13 @@ func getFullPath(group *gin.RouterGroup, path string) string {
 	return basePath + "/" + path
 }
 
-// markRouteRegistered marks a route as registered
+// markRouteRegistered marks a route as registered.
 func markRouteRegistered(method, path string) {
 	key := method + ":" + path
 	registeredRoutes[key] = true
 }
 
-// registerRoute registers a single route with the gin router
+// registerRoute registers a single route with the gin router.
 func (s *FileRouteStore) registerRoute(group *gin.RouterGroup, route *RouteDefinition) error {
 	// Get handler
 	var handler gin.HandlerFunc
@@ -717,12 +714,12 @@ func (s *FileRouteStore) notifyWatchers(namespace string, event RouteEvent) {
 	}
 }
 
-// SimpleRouteManager provides a simplified interface for using file-based routes
+// SimpleRouteManager provides a simplified interface for using file-based routes.
 type SimpleRouteManager struct {
 	store RouteStore
 }
 
-// NewSimpleRouteManager creates a route manager that uses file-based storage
+// NewSimpleRouteManager creates a route manager that uses file-based storage.
 func NewSimpleRouteManager(routesDir string, router *gin.Engine, registry *HandlerRegistry) *SimpleRouteManager {
 	store := NewFileRouteStore(routesDir, router, registry)
 
@@ -731,17 +728,17 @@ func NewSimpleRouteManager(routesDir string, router *gin.Engine, registry *Handl
 	}
 }
 
-// Start initializes the route manager
+// Start initializes the route manager.
 func (m *SimpleRouteManager) Start(ctx context.Context) error {
 	return m.store.Start(ctx)
 }
 
-// Stop shuts down the route manager
+// Stop shuts down the route manager.
 func (m *SimpleRouteManager) Stop() error {
 	return m.store.Stop()
 }
 
-// GetStore returns the underlying route store for advanced operations
+// GetStore returns the underlying route store for advanced operations.
 func (m *SimpleRouteManager) GetStore() RouteStore {
 	return m.store
 }

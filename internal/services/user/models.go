@@ -1,3 +1,4 @@
+// Package user provides user domain models and management.
 package user
 
 import (
@@ -5,7 +6,7 @@ import (
 	"time"
 )
 
-// User represents a system user
+// User represents a system user.
 type User struct {
 	ID             string                 `json:"id" db:"id"`
 	Email          string                 `json:"email" db:"email"`
@@ -32,7 +33,7 @@ type User struct {
 	Sessions    []Session    `json:"sessions,omitempty"`
 }
 
-// Group represents a user group
+// Group represents a user group.
 type Group struct {
 	ID          string                 `json:"id" db:"id"`
 	Name        string                 `json:"name" db:"name"`
@@ -43,7 +44,7 @@ type Group struct {
 	UpdatedAt   time.Time              `json:"updated_at" db:"updated_at"`
 }
 
-// Permission represents a system permission
+// Permission represents a system permission.
 type Permission struct {
 	ID          string    `json:"id" db:"id"`
 	Name        string    `json:"name" db:"name"`
@@ -53,7 +54,7 @@ type Permission struct {
 	CreatedAt   time.Time `json:"created_at" db:"created_at"`
 }
 
-// Session represents a user session
+// Session represents a user session.
 type Session struct {
 	ID         string                 `json:"id" db:"id"`
 	UserID     string                 `json:"user_id" db:"user_id"`
@@ -66,7 +67,7 @@ type Session struct {
 	Metadata   map[string]interface{} `json:"metadata" db:"metadata"`
 }
 
-// ListFilter represents user list filtering options
+// ListFilter represents user list filtering options.
 type ListFilter struct {
 	Role        string    `json:"role,omitempty"`
 	Department  string    `json:"department,omitempty"`
@@ -80,7 +81,7 @@ type ListFilter struct {
 	Offset      int       `json:"offset,omitempty"`
 }
 
-// Clone creates a deep copy of the user
+// Clone creates a deep copy of the user.
 func (u *User) Clone() *User {
 	clone := *u
 
@@ -111,7 +112,7 @@ func (u *User) Clone() *User {
 	return &clone
 }
 
-// ToProto converts the user to protobuf format
+// ToProto converts the user to protobuf format.
 func (u *User) ToProto() *UserProto {
 	proto := &UserProto{
 		Id:            u.ID,
@@ -140,7 +141,7 @@ func (u *User) ToProto() *UserProto {
 	return proto
 }
 
-// User roles
+// User roles.
 const (
 	RoleAdmin    = "Admin"
 	RoleAgent    = "Agent"
@@ -148,7 +149,7 @@ const (
 	RoleGuest    = "Guest"
 )
 
-// Permission actions
+// Permission actions.
 const (
 	ActionCreate = "create"
 	ActionRead   = "read"
@@ -158,7 +159,7 @@ const (
 	ActionManage = "manage"
 )
 
-// Permission resources
+// Permission resources.
 const (
 	ResourceTicket       = "ticket"
 	ResourceUser         = "user"
@@ -170,7 +171,7 @@ const (
 
 // Proto stub definitions
 
-// UserProto represents a user in protobuf format
+// UserProto represents a user in protobuf format.
 type UserProto struct {
 	Id             string `json:"id"`
 	Email          string `json:"email"`
@@ -249,7 +250,7 @@ type ListUsersResponse struct {
 	Total int32        `json:"total"`
 }
 
-// gRPC Server interface
+// gRPC Server interface.
 type UserServiceServer interface {
 	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
@@ -258,7 +259,7 @@ type UserServiceServer interface {
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 }
 
-// UnimplementedUserServiceServer can be embedded to have forward compatible implementations
+// UnimplementedUserServiceServer can be embedded to have forward compatible implementations.
 type UnimplementedUserServiceServer struct{}
 
 func (UnimplementedUserServiceServer) CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error) {
@@ -281,7 +282,7 @@ func (UnimplementedUserServiceServer) ListUsers(context.Context, *ListUsersReque
 	return nil, nil
 }
 
-// RegisterUserServiceServer registers the service with gRPC server
+// RegisterUserServiceServer registers the service with gRPC server.
 func RegisterUserServiceServer(s interface{}, srv UserServiceServer) {
 	// Stub implementation for compilation
 }

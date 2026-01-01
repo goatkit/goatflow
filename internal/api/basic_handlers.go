@@ -1,12 +1,13 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
-// HandleRedirect handles redirect routes
+// HandleRedirect handles redirect routes.
 func HandleRedirect(c *gin.Context) {
 	routeConfig, exists := c.Get("route_config")
 	if !exists {
@@ -28,7 +29,7 @@ func HandleRedirect(c *gin.Context) {
 	c.Redirect(redirectCode, redirectTo)
 }
 
-// HandleTemplate handles template rendering routes
+// HandleTemplate handles template rendering routes.
 func HandleTemplate(c *gin.Context) {
 	routeConfig, exists := c.Get("route_config")
 	if !exists {
@@ -58,7 +59,7 @@ func HandleTemplate(c *gin.Context) {
 	getPongo2Renderer().HTML(c, http.StatusOK, template, data)
 }
 
-// HandleStaticFiles serves static files from the static directory
+// HandleStaticFiles serves static files from the static directory.
 func HandleStaticFiles(c *gin.Context) {
 	// Get the full path from the request
 	requestPath := c.Request.URL.Path

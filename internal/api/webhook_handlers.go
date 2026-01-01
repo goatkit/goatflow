@@ -15,11 +15,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/webhooks"
 )
 
-// HandleRegisterWebhookAPI handles POST /api/v1/webhooks
+// HandleRegisterWebhookAPI handles POST /api/v1/webhooks.
 func HandleRegisterWebhookAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -149,7 +150,7 @@ func HandleRegisterWebhookAPI(c *gin.Context) {
 	})
 }
 
-// HandleListWebhooksAPI handles GET /api/v1/webhooks
+// HandleListWebhooksAPI handles GET /api/v1/webhooks.
 func HandleListWebhooksAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -189,7 +190,7 @@ func HandleListWebhooksAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch webhooks"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	webhookList := []gin.H{}
 	for rows.Next() {
@@ -234,7 +235,7 @@ func HandleListWebhooksAPI(c *gin.Context) {
 	})
 }
 
-// HandleGetWebhookAPI handles GET /api/v1/webhooks/:id
+// HandleGetWebhookAPI handles GET /api/v1/webhooks/:id.
 func HandleGetWebhookAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -311,7 +312,7 @@ func HandleGetWebhookAPI(c *gin.Context) {
 	})
 }
 
-// HandleUpdateWebhookAPI handles PUT /api/v1/webhooks/:id
+// HandleUpdateWebhookAPI handles PUT /api/v1/webhooks/:id.
 func HandleUpdateWebhookAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -430,7 +431,7 @@ func HandleUpdateWebhookAPI(c *gin.Context) {
 	})
 }
 
-// HandleDeleteWebhookAPI handles DELETE /api/v1/webhooks/:id
+// HandleDeleteWebhookAPI handles DELETE /api/v1/webhooks/:id.
 func HandleDeleteWebhookAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -458,7 +459,7 @@ func HandleDeleteWebhookAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Delete deliveries first
 	deleteDeliveriesQuery := database.ConvertPlaceholders(`
@@ -490,7 +491,7 @@ func HandleDeleteWebhookAPI(c *gin.Context) {
 	})
 }
 
-// HandleTestWebhookAPI handles POST /api/v1/webhooks/:id/test
+// HandleTestWebhookAPI handles POST /api/v1/webhooks/:id/test.
 func HandleTestWebhookAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -604,7 +605,7 @@ func HandleTestWebhookAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Read response body
 	responseBody, _ := io.ReadAll(resp.Body)
@@ -618,7 +619,7 @@ func HandleTestWebhookAPI(c *gin.Context) {
 	})
 }
 
-// HandleWebhookDeliveriesAPI handles GET /api/v1/webhooks/:id/deliveries
+// HandleWebhookDeliveriesAPI handles GET /api/v1/webhooks/:id/deliveries.
 func HandleWebhookDeliveriesAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -654,7 +655,7 @@ func HandleWebhookDeliveriesAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch deliveries"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	deliveries := []gin.H{}
 	for rows.Next() {
@@ -696,7 +697,7 @@ func HandleWebhookDeliveriesAPI(c *gin.Context) {
 	})
 }
 
-// HandleRetryWebhookDeliveryAPI handles POST /api/v1/webhooks/deliveries/:id/retry
+// HandleRetryWebhookDeliveryAPI handles POST /api/v1/webhooks/deliveries/:id/retry.
 func HandleRetryWebhookDeliveryAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository/memory"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestLDAPService_Configuration(t *testing.T) {
@@ -529,7 +530,7 @@ func TestLDAPService_AttributeMapping(t *testing.T) {
 	})
 }
 
-// Benchmark tests for performance
+// Benchmark tests for performance.
 func BenchmarkLDAPService_ValidateConfig(b *testing.B) {
 	userRepo := memory.NewUserRepository()
 	roleRepo := memory.NewRoleRepository()

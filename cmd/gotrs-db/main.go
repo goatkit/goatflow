@@ -1,3 +1,4 @@
+// Package main provides database utilities.
 package main
 
 import (

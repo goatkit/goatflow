@@ -6,7 +6,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// InternalNoteRepository defines the interface for internal note persistence
+// InternalNoteRepository defines the interface for internal note persistence.
 type InternalNoteRepository interface {
 	// Note CRUD operations
 	CreateNote(ctx context.Context, note *models.InternalNote) error

@@ -10,10 +10,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleAgentNewTicket displays the agent ticket creation form with necessary data
+// HandleAgentNewTicket displays the agent ticket creation form with necessary data.
 func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		skipDB := htmxHandlerSkipDB() || strings.TrimSpace(os.Getenv("SKIP_DB_WAIT")) == "1"
@@ -114,7 +115,7 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// getQueuesForAgent gets queues available for agent ticket creation
+// getQueuesForAgent gets queues available for agent ticket creation.
 func getQueuesForAgent(db *sql.DB) ([]gin.H, error) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, name 
@@ -125,7 +126,7 @@ func getQueuesForAgent(db *sql.DB) ([]gin.H, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var queues []gin.H
 	for rows.Next() {
@@ -139,7 +140,7 @@ func getQueuesForAgent(db *sql.DB) ([]gin.H, error) {
 	return queues, nil
 }
 
-// getTypesForAgent gets ticket types available for agent ticket creation
+// getTypesForAgent gets ticket types available for agent ticket creation.
 func getTypesForAgent(db *sql.DB) ([]gin.H, error) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, name 
@@ -150,7 +151,7 @@ func getTypesForAgent(db *sql.DB) ([]gin.H, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var types []gin.H
 	for rows.Next() {
@@ -164,7 +165,7 @@ func getTypesForAgent(db *sql.DB) ([]gin.H, error) {
 	return types, nil
 }
 
-// getPrioritiesForAgent gets priorities available for agent ticket creation
+// getPrioritiesForAgent gets priorities available for agent ticket creation.
 func getPrioritiesForAgent(db *sql.DB) ([]gin.H, error) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, name 
@@ -175,7 +176,7 @@ func getPrioritiesForAgent(db *sql.DB) ([]gin.H, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var priorities []gin.H
 	for rows.Next() {
@@ -190,7 +191,7 @@ func getPrioritiesForAgent(db *sql.DB) ([]gin.H, error) {
 	return priorities, nil
 }
 
-// getServicesForAgent gets services available for agent ticket creation
+// getServicesForAgent gets services available for agent ticket creation.
 func getServicesForAgent(db *sql.DB) ([]gin.H, error) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, name 
@@ -201,7 +202,7 @@ func getServicesForAgent(db *sql.DB) ([]gin.H, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var services []gin.H
 	for rows.Next() {
@@ -215,7 +216,7 @@ func getServicesForAgent(db *sql.DB) ([]gin.H, error) {
 	return services, nil
 }
 
-// getCustomerUsersForAgent gets customer users available for agent ticket creation
+// getCustomerUsersForAgent gets customer users available for agent ticket creation.
 func getCustomerUsersForAgent(db *sql.DB) ([]gin.H, error) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT login, email, first_name, last_name, customer_id
@@ -226,7 +227,7 @@ func getCustomerUsersForAgent(db *sql.DB) ([]gin.H, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type customerUserRecord struct {
 		Login      string
@@ -342,7 +343,7 @@ func loadPreferredQueuesForCustomers(db *sql.DB, customerIDs []string) (map[stri
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type rankedQueue struct {
 		preferredQueue
@@ -413,7 +414,7 @@ func loadPreferredQueuesForCustomerUsers(db *sql.DB, logins []string) (map[strin
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type rankedQueue struct {
 		preferredQueue

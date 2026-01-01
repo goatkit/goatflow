@@ -1,3 +1,4 @@
+// Package repository provides data access repositories for domain entities.
 package repository
 
 import (
@@ -12,7 +13,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// ArticleRepository handles database operations for articles
+// ArticleRepository handles database operations for articles.
 type ArticleRepository struct {
 	db                        *sql.DB
 	hasArticleTypeID          *bool
@@ -73,12 +74,12 @@ func (r *ArticleRepository) hasArticleColumn(column string) (bool, error) {
 	return has, nil
 }
 
-// NewArticleRepository creates a new article repository
+// NewArticleRepository creates a new article repository.
 func NewArticleRepository(db *sql.DB) *ArticleRepository {
 	return &ArticleRepository{db: db}
 }
 
-// Create creates a new article in the database (OTRS schema compatible)
+// Create creates a new article in the database (OTRS schema compatible).
 func (r *ArticleRepository) Create(article *models.Article) error {
 	now := time.Now()
 
@@ -107,7 +108,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Determine if schema has article_type_id; build INSERT accordingly
 	hasType, derr := r.ensureArticleTypeColumn()
@@ -261,7 +262,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	return tx.Commit()
 }
 
-// ensureArticleTypeColumn checks once whether article.article_type_id exists
+// ensureArticleTypeColumn checks once whether article.article_type_id exists.
 func (r *ArticleRepository) ensureArticleTypeColumn() (bool, error) {
 	if r.hasArticleTypeID != nil {
 		return *r.hasArticleTypeID, nil
@@ -274,7 +275,7 @@ func (r *ArticleRepository) ensureArticleTypeColumn() (bool, error) {
 	return has, nil
 }
 
-// ensureCommunicationChannelColumn checks once whether article.communication_channel_id exists
+// ensureCommunicationChannelColumn checks once whether article.communication_channel_id exists.
 func (r *ArticleRepository) ensureCommunicationChannelColumn() (bool, error) {
 	if r.hasCommunicationChannelID != nil {
 		return *r.hasCommunicationChannelID, nil
@@ -316,7 +317,7 @@ func deriveBodyMeta(contentType string) (string, string) {
 	return bodyType, charset
 }
 
-// GetByID retrieves an article by its ID (joins MIME content)
+// GetByID retrieves an article by its ID (joins MIME content).
 func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT 
@@ -371,7 +372,7 @@ func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
 	return &article, err
 }
 
-// GetHTMLBodyAttachmentID finds the HTML body attachment for an article (OTRS-style)
+// GetHTMLBodyAttachmentID finds the HTML body attachment for an article (OTRS-style).
 func (r *ArticleRepository) GetHTMLBodyAttachmentID(articleID uint) (*uint, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id FROM article_data_mime_attachment
@@ -393,7 +394,7 @@ func (r *ArticleRepository) GetHTMLBodyAttachmentID(articleID uint) (*uint, erro
 	return &attachmentID, nil
 }
 
-// GetHTMLBodyContent retrieves the HTML body content for an article
+// GetHTMLBodyContent retrieves the HTML body content for an article.
 func (r *ArticleRepository) GetHTMLBodyContent(articleID uint) (string, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT content FROM article_data_mime_attachment
@@ -413,7 +414,7 @@ func (r *ArticleRepository) GetHTMLBodyContent(articleID uint) (string, error) {
 	return string(content), nil
 }
 
-// GetByTicketID retrieves all articles for a specific ticket
+// GetByTicketID retrieves all articles for a specific ticket.
 func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) ([]models.Article, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT 
@@ -491,7 +492,7 @@ func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) (
 	return articles, nil
 }
 
-// Update updates an article in the database
+// Update updates an article in the database.
 func (r *ArticleRepository) Update(article *models.Article) error {
 	article.ChangeTime = time.Now()
 
@@ -555,7 +556,7 @@ func (r *ArticleRepository) Update(article *models.Article) error {
 	return err
 }
 
-// Delete soft deletes an article by setting valid_id to 0
+// Delete soft deletes an article by setting valid_id to 0.
 func (r *ArticleRepository) Delete(id uint, userID uint) error {
 	// First get the ticket ID for updating change_time
 	var ticketID uint
@@ -599,12 +600,12 @@ func (r *ArticleRepository) Delete(id uint, userID uint) error {
 	return err
 }
 
-// GetVisibleArticlesForCustomer retrieves all customer-visible articles for a ticket
+// GetVisibleArticlesForCustomer retrieves all customer-visible articles for a ticket.
 func (r *ArticleRepository) GetVisibleArticlesForCustomer(ticketID uint) ([]models.Article, error) {
 	return r.GetByTicketID(ticketID, false)
 }
 
-// GetLatestArticleForTicket retrieves the most recent article for a ticket
+// GetLatestArticleForTicket retrieves the most recent article for a ticket.
 func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Article, error) {
 	articleTypeExpr, commChannelExpr, err := r.articleColumnExpressions()
 	if err != nil {
@@ -683,7 +684,7 @@ func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Ar
 	return &article, nil
 }
 
-// GetLatestCustomerArticleForTicket gets the most recent customer article for a ticket
+// GetLatestCustomerArticleForTicket gets the most recent customer article for a ticket.
 func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*models.Article, error) {
 	articleTypeExpr, commChannelExpr, err := r.articleColumnExpressions()
 	if err != nil {
@@ -810,7 +811,7 @@ func (r *ArticleRepository) FindTicketByMessageID(ctx context.Context, messageID
 	return &models.Ticket{ID: id, TicketNumber: ticketNumber, QueueID: queueID}, nil
 }
 
-// CountArticlesForTicket counts the number of articles for a ticket
+// CountArticlesForTicket counts the number of articles for a ticket.
 func (r *ArticleRepository) CountArticlesForTicket(ticketID uint, includeInternal bool) (int, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT COUNT(*) 
@@ -826,7 +827,7 @@ func (r *ArticleRepository) CountArticlesForTicket(ticketID uint, includeInterna
 	return count, err
 }
 
-// CreateAttachment creates a new attachment for an article
+// CreateAttachment creates a new attachment for an article.
 func (r *ArticleRepository) CreateAttachment(attachment *models.Attachment) error {
 	attachment.CreateTime = time.Now()
 	attachment.ChangeTime = time.Now()
@@ -863,7 +864,7 @@ func (r *ArticleRepository) CreateAttachment(attachment *models.Attachment) erro
 	return err
 }
 
-// GetAttachmentsByArticleID retrieves all attachments for an article
+// GetAttachmentsByArticleID retrieves all attachments for an article.
 func (r *ArticleRepository) GetAttachmentsByArticleID(articleID uint) ([]models.Attachment, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT 
@@ -907,7 +908,7 @@ func (r *ArticleRepository) GetAttachmentsByArticleID(articleID uint) ([]models.
 	return attachments, nil
 }
 
-// GetAttachmentByID retrieves a specific attachment
+// GetAttachmentByID retrieves a specific attachment.
 func (r *ArticleRepository) GetAttachmentByID(id uint) (*models.Attachment, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT 
@@ -941,7 +942,7 @@ func (r *ArticleRepository) GetAttachmentByID(id uint) (*models.Attachment, erro
 	return &attachment, err
 }
 
-// DeleteAttachment removes an attachment
+// DeleteAttachment removes an attachment.
 func (r *ArticleRepository) DeleteAttachment(id uint) error {
 	query := database.ConvertPlaceholders(`DELETE FROM article_attachments WHERE id = $1`)
 	result, err := r.db.Exec(query, id)
@@ -961,7 +962,7 @@ func (r *ArticleRepository) DeleteAttachment(id uint) error {
 	return nil
 }
 
-// GetArticleWithAttachments retrieves an article with all its attachments
+// GetArticleWithAttachments retrieves an article with all its attachments.
 func (r *ArticleRepository) GetArticleWithAttachments(id uint) (*models.Article, error) {
 	article, err := r.GetByID(id)
 	if err != nil {

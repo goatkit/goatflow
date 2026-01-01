@@ -10,13 +10,14 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/sysconfig"
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
-// RegisterCustomerRoutes registers all customer portal routes
+// RegisterCustomerRoutes registers all customer portal routes.
 func RegisterCustomerRoutes(r *gin.RouterGroup, db *sql.DB) {
 	// Note: Routes are now handled via YAML configuration files
 	// See routes/customer/*.yaml for route definitions
@@ -92,7 +93,7 @@ func withPortalContext(ctx pongo2.Context, cfg sysconfig.CustomerPortalConfig) p
 	return ctx
 }
 
-// handleCustomerDashboard shows the customer's main dashboard
+// handleCustomerDashboard shows the customer's main dashboard.
 func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !requireCustomerAuth(c) {
@@ -104,12 +105,12 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 
 		// Get customer's statistics
 		stats := struct {
-			OpenTickets      int
-			ClosedTickets    int
-			TotalTickets     int
-			LastTicketDate   time.Time
-			HasLastTicket    bool
-			AvgResponseTime  string
+			OpenTickets     int
+			ClosedTickets   int
+			TotalTickets    int
+			LastTicketDate  time.Time
+			HasLastTicket   bool
+			AvgResponseTime string
 		}{}
 
 		// Count open tickets for this customer
@@ -168,7 +169,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		if err != nil {
 			log.Printf("handleCustomerDashboard: query error: %v", err)
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		recentTickets := []map[string]interface{}{}
 		for rows.Next() {
@@ -236,7 +237,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleCustomerTickets shows the customer's ticket list
+// handleCustomerTickets shows the customer's ticket list.
 func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !requireCustomerAuth(c) {
@@ -306,7 +307,7 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		tickets := []map[string]interface{}{}
 		for rows.Next() {
@@ -364,7 +365,7 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleCustomerNewTicket shows the new ticket form
+// handleCustomerNewTicket shows the new ticket form.
 func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !requireCustomerAuth(c) {
@@ -381,7 +382,7 @@ func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 			ORDER BY s.name
 		`)
 		rows, _ := db.Query(query, username)
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		services := []map[string]interface{}{}
 		for rows.Next() {
@@ -459,16 +460,16 @@ func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 		}
 
 		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/new_ticket.pongo2", withPortalContext(pongo2.Context{
-			"Title":               fmt.Sprintf("%s - Create New Ticket", cfg.Title),
-			"ActivePage":          "customer",
-			"Services":            services,
-			"Priorities":          priorities,
+			"Title":                 fmt.Sprintf("%s - Create New Ticket", cfg.Title),
+			"ActivePage":            "customer",
+			"Services":              services,
+			"Priorities":            priorities,
 			"CustomerDynamicFields": customerDynamicFields,
 		}, cfg))
 	}
 }
 
-// handleCustomerCreateTicket creates a new ticket
+// handleCustomerCreateTicket creates a new ticket.
 func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !requireCustomerAuth(c) {
@@ -575,7 +576,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Create first article (OTRS schema: subject/body are in article_data_mime)
 		var articleID int64
@@ -633,7 +634,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleCustomerTicketView displays a specific ticket with all its articles
+// handleCustomerTicketView displays a specific ticket with all its articles.
 func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !requireCustomerAuth(c) {
@@ -717,7 +718,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			  AND a.is_visible_for_customer = 1
 			ORDER BY a.create_time ASC
 		`), ticket.ID)
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		articles := []map[string]interface{}{}
 		for rows.Next() {
@@ -800,9 +801,9 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 				"updated_at_iso": ticket.ChangeTime.UTC().Format(time.RFC3339),
 				"can_close":      canClose,
 			},
-			"Articles":                   articles,
-			"DynamicFields":              dynamicFieldsDisplay,
-			"ReplyArticleDynamicFields":  replyArticleDynamicFields,
+			"Articles":                  articles,
+			"DynamicFields":             dynamicFieldsDisplay,
+			"ReplyArticleDynamicFields": replyArticleDynamicFields,
 		}, cfg))
 	}
 }

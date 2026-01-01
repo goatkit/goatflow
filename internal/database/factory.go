@@ -6,15 +6,15 @@ import (
 	"strings"
 )
 
-// DatabaseFactory implements IDatabaseFactory
+// DatabaseFactory implements IDatabaseFactory.
 type DatabaseFactory struct{}
 
-// NewDatabaseFactory creates a new database factory instance
+// NewDatabaseFactory creates a new database factory instance.
 func NewDatabaseFactory() IDatabaseFactory {
 	return &DatabaseFactory{}
 }
 
-// Create creates a database instance based on the configuration
+// Create creates a database instance based on the configuration.
 func (f *DatabaseFactory) Create(config DatabaseConfig) (IDatabase, error) {
 	if err := f.ValidateConfig(config); err != nil {
 		return nil, fmt.Errorf("invalid database configuration: %w", err)
@@ -34,12 +34,12 @@ func (f *DatabaseFactory) Create(config DatabaseConfig) (IDatabase, error) {
 	}
 }
 
-// GetSupportedTypes returns the list of supported database types
+// GetSupportedTypes returns the list of supported database types.
 func (f *DatabaseFactory) GetSupportedTypes() []DatabaseType {
 	return []DatabaseType{PostgreSQL, MySQL, Oracle, SQLServer}
 }
 
-// ValidateConfig validates the database configuration
+// ValidateConfig validates the database configuration.
 func (f *DatabaseFactory) ValidateConfig(config DatabaseConfig) error {
 	if config.Type == "" {
 		return fmt.Errorf("database type is required")
@@ -92,7 +92,7 @@ func (f *DatabaseFactory) ValidateConfig(config DatabaseConfig) error {
 	return nil
 }
 
-// GetDatabaseFeatures returns the features supported by a database type
+// GetDatabaseFeatures returns the features supported by a database type.
 func GetDatabaseFeatures(dbType DatabaseType) DatabaseFeatures {
 	switch dbType {
 	case PostgreSQL:
@@ -144,7 +144,7 @@ func GetDatabaseFeatures(dbType DatabaseType) DatabaseFeatures {
 	}
 }
 
-// Helper function to convert DatabaseType slice to string slice
+// Helper function to convert DatabaseType slice to string slice.
 func typeStrings(types []DatabaseType) []string {
 	strings := make([]string, len(types))
 	for i, t := range types {
@@ -153,7 +153,7 @@ func typeStrings(types []DatabaseType) []string {
 	return strings
 }
 
-// LoadConfigFromEnv loads database configuration from environment variables
+// LoadConfigFromEnv loads database configuration from environment variables.
 func LoadConfigFromEnv() DatabaseConfig {
 	config := DatabaseConfig{
 		Type:     PostgreSQL, // Default to PostgreSQL
@@ -181,7 +181,7 @@ func LoadConfigFromEnv() DatabaseConfig {
 	return config
 }
 
-// getEnvWithDefault gets environment variable with fallback default
+// getEnvWithDefault gets environment variable with fallback default.
 func getEnvWithDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

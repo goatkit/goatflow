@@ -9,13 +9,13 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
-// TicketTemplateService handles business logic for ticket templates
+// TicketTemplateService handles business logic for ticket templates.
 type TicketTemplateService struct {
 	repo          repository.TicketTemplateRepository
 	ticketService *SimpleTicketService
 }
 
-// NewTicketTemplateService creates a new ticket template service
+// NewTicketTemplateService creates a new ticket template service.
 func NewTicketTemplateService(repo repository.TicketTemplateRepository, ticketService *SimpleTicketService) *TicketTemplateService {
 	return &TicketTemplateService{
 		repo:          repo,
@@ -23,7 +23,7 @@ func NewTicketTemplateService(repo repository.TicketTemplateRepository, ticketSe
 	}
 }
 
-// CreateTemplate creates a new ticket template
+// CreateTemplate creates a new ticket template.
 func (s *TicketTemplateService) CreateTemplate(ctx context.Context, template *models.TicketTemplate) error {
 	// Validate template
 	if err := s.validateTemplate(template); err != nil {
@@ -36,22 +36,22 @@ func (s *TicketTemplateService) CreateTemplate(ctx context.Context, template *mo
 	return s.repo.CreateTemplate(ctx, template)
 }
 
-// GetTemplate retrieves a template by ID
+// GetTemplate retrieves a template by ID.
 func (s *TicketTemplateService) GetTemplate(ctx context.Context, id uint) (*models.TicketTemplate, error) {
 	return s.repo.GetTemplateByID(ctx, id)
 }
 
-// GetActiveTemplates retrieves all active templates
+// GetActiveTemplates retrieves all active templates.
 func (s *TicketTemplateService) GetActiveTemplates(ctx context.Context) ([]models.TicketTemplate, error) {
 	return s.repo.GetActiveTemplates(ctx)
 }
 
-// GetTemplatesByCategory retrieves templates by category
+// GetTemplatesByCategory retrieves templates by category.
 func (s *TicketTemplateService) GetTemplatesByCategory(ctx context.Context, category string) ([]models.TicketTemplate, error) {
 	return s.repo.GetTemplatesByCategory(ctx, category)
 }
 
-// UpdateTemplate updates an existing template
+// UpdateTemplate updates an existing template.
 func (s *TicketTemplateService) UpdateTemplate(ctx context.Context, template *models.TicketTemplate) error {
 	// Validate template
 	if err := s.validateTemplate(template); err != nil {
@@ -64,22 +64,22 @@ func (s *TicketTemplateService) UpdateTemplate(ctx context.Context, template *mo
 	return s.repo.UpdateTemplate(ctx, template)
 }
 
-// DeleteTemplate deletes a template
+// DeleteTemplate deletes a template.
 func (s *TicketTemplateService) DeleteTemplate(ctx context.Context, id uint) error {
 	return s.repo.DeleteTemplate(ctx, id)
 }
 
-// SearchTemplates searches for templates
+// SearchTemplates searches for templates.
 func (s *TicketTemplateService) SearchTemplates(ctx context.Context, query string) ([]models.TicketTemplate, error) {
 	return s.repo.SearchTemplates(ctx, query)
 }
 
-// GetCategories retrieves all template categories
+// GetCategories retrieves all template categories.
 func (s *TicketTemplateService) GetCategories(ctx context.Context) ([]models.TemplateCategory, error) {
 	return s.repo.GetCategories(ctx)
 }
 
-// ApplyTemplate creates a new ticket from a template
+// ApplyTemplate creates a new ticket from a template.
 func (s *TicketTemplateService) ApplyTemplate(ctx context.Context, application *models.TemplateApplication) (*models.Ticket, error) {
 	// Get the template
 	template, err := s.repo.GetTemplateByID(ctx, application.TemplateID)
@@ -120,7 +120,7 @@ func (s *TicketTemplateService) ApplyTemplate(ctx context.Context, application *
 	return ticket, nil
 }
 
-// validateTemplate validates a template before saving
+// validateTemplate validates a template before saving.
 func (s *TicketTemplateService) validateTemplate(template *models.TicketTemplate) error {
 	if template.Name == "" {
 		return fmt.Errorf("template name is required")
@@ -137,7 +137,7 @@ func (s *TicketTemplateService) validateTemplate(template *models.TicketTemplate
 	return nil
 }
 
-// extractVariables extracts variable placeholders from text
+// extractVariables extracts variable placeholders from text.
 func (s *TicketTemplateService) extractVariables(text string) []models.TemplateVariable {
 	variableMap := make(map[string]bool)
 	var variables []models.TemplateVariable
@@ -177,7 +177,7 @@ func (s *TicketTemplateService) extractVariables(text string) []models.TemplateV
 	return variables
 }
 
-// substituteVariables replaces variables in text with their values
+// substituteVariables replaces variables in text with their values.
 func (s *TicketTemplateService) substituteVariables(text string, variables map[string]string) string {
 	result := text
 
@@ -197,7 +197,7 @@ func (s *TicketTemplateService) substituteVariables(text string, variables map[s
 	return result
 }
 
-// GetPopularTemplates returns the most used templates
+// GetPopularTemplates returns the most used templates.
 func (s *TicketTemplateService) GetPopularTemplates(ctx context.Context, limit int) ([]models.TicketTemplate, error) {
 	templates, err := s.repo.GetActiveTemplates(ctx)
 	if err != nil {

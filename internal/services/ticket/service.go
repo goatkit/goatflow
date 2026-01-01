@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// TicketService handles all ticket-related operations as a microservice
+// TicketService handles all ticket-related operations as a microservice.
 type TicketService struct {
 	UnimplementedTicketServiceServer
 	repository TicketRepository
@@ -22,7 +22,7 @@ type TicketService struct {
 	metrics    MetricsCollector
 }
 
-// TicketRepository defines the interface for ticket data access
+// TicketRepository defines the interface for ticket data access.
 type TicketRepository interface {
 	Create(ctx context.Context, ticket *Ticket) error
 	GetByID(ctx context.Context, id string) (*Ticket, error)
@@ -32,7 +32,7 @@ type TicketRepository interface {
 	Search(ctx context.Context, query string) ([]*Ticket, error)
 }
 
-// CacheService defines the interface for caching
+// CacheService defines the interface for caching.
 type CacheService interface {
 	Get(ctx context.Context, key string) ([]byte, error)
 	Set(ctx context.Context, key string, value []byte, ttl time.Duration) error
@@ -40,20 +40,20 @@ type CacheService interface {
 	Invalidate(ctx context.Context, pattern string) error
 }
 
-// EventBus defines the interface for event publishing
+// EventBus defines the interface for event publishing.
 type EventBus interface {
 	Publish(ctx context.Context, event Event) error
 	Subscribe(ctx context.Context, topic string, handler EventHandler) error
 }
 
-// MetricsCollector defines the interface for metrics collection
+// MetricsCollector defines the interface for metrics collection.
 type MetricsCollector interface {
 	IncrementCounter(name string, labels map[string]string)
 	RecordDuration(name string, duration time.Duration, labels map[string]string)
 	SetGauge(name string, value float64, labels map[string]string)
 }
 
-// Event represents a domain event
+// Event represents a domain event.
 type Event struct {
 	ID        string                 `json:"id"`
 	Type      string                 `json:"type"`
@@ -63,10 +63,10 @@ type Event struct {
 	Version   string                 `json:"version"`
 }
 
-// EventHandler processes events
+// EventHandler processes events.
 type EventHandler func(ctx context.Context, event Event) error
 
-// NewTicketService creates a new ticket service instance
+// NewTicketService creates a new ticket service instance.
 func NewTicketService(repo TicketRepository, cache CacheService, events EventBus, metrics MetricsCollector) *TicketService {
 	return &TicketService{
 		repository: repo,
@@ -76,7 +76,7 @@ func NewTicketService(repo TicketRepository, cache CacheService, events EventBus
 	}
 }
 
-// CreateTicket creates a new ticket
+// CreateTicket creates a new ticket.
 func (s *TicketService) CreateTicket(ctx context.Context, req *CreateTicketRequest) (*CreateTicketResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -146,7 +146,7 @@ func (s *TicketService) CreateTicket(ctx context.Context, req *CreateTicketReque
 	}, nil
 }
 
-// GetTicket retrieves a ticket by ID
+// GetTicket retrieves a ticket by ID.
 func (s *TicketService) GetTicket(ctx context.Context, req *GetTicketRequest) (*GetTicketResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -184,7 +184,7 @@ func (s *TicketService) GetTicket(ctx context.Context, req *GetTicketRequest) (*
 	}, nil
 }
 
-// UpdateTicket updates an existing ticket
+// UpdateTicket updates an existing ticket.
 func (s *TicketService) UpdateTicket(ctx context.Context, req *UpdateTicketRequest) (*UpdateTicketResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -255,7 +255,7 @@ func (s *TicketService) UpdateTicket(ctx context.Context, req *UpdateTicketReque
 	}, nil
 }
 
-// ListTickets lists tickets with filtering
+// ListTickets lists tickets with filtering.
 func (s *TicketService) ListTickets(ctx context.Context, req *ListTicketsRequest) (*ListTicketsResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -300,7 +300,7 @@ func (s *TicketService) ListTickets(ctx context.Context, req *ListTicketsRequest
 	return s.buildListResponse(tickets), nil
 }
 
-// SearchTickets searches tickets
+// SearchTickets searches tickets.
 func (s *TicketService) SearchTickets(ctx context.Context, req *SearchTicketsRequest) (*SearchTicketsResponse, error) {
 	start := time.Now()
 	defer func() {
@@ -323,7 +323,7 @@ func (s *TicketService) SearchTickets(ctx context.Context, req *SearchTicketsReq
 	}, nil
 }
 
-// Start starts the gRPC server
+// Start starts the gRPC server.
 func (s *TicketService) Start(port int) error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
@@ -340,7 +340,7 @@ func (s *TicketService) Start(port int) error {
 	return grpcServer.Serve(lis)
 }
 
-// unaryInterceptor adds logging and metrics to all unary RPC calls
+// unaryInterceptor adds logging and metrics to all unary RPC calls.
 func (s *TicketService) unaryInterceptor(
 	ctx context.Context,
 	req interface{},

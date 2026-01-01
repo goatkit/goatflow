@@ -1,3 +1,4 @@
+// Package memory provides in-memory repository implementations for testing.
 package memory
 
 import (
@@ -8,20 +9,20 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// GroupRepository provides an in-memory implementation of the GroupRepository interface
+// GroupRepository provides an in-memory implementation of the GroupRepository interface.
 type GroupRepository struct {
 	groups map[string]*models.Group
 	mu     sync.RWMutex
 }
 
-// NewGroupRepository creates a new in-memory group repository
+// NewGroupRepository creates a new in-memory group repository.
 func NewGroupRepository() *GroupRepository {
 	return &GroupRepository{
 		groups: make(map[string]*models.Group),
 	}
 }
 
-// CreateGroup creates a new group
+// CreateGroup creates a new group.
 func (r *GroupRepository) CreateGroup(ctx context.Context, group *models.Group) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -50,7 +51,7 @@ func (r *GroupRepository) CreateGroup(ctx context.Context, group *models.Group) 
 	return nil
 }
 
-// GetGroup retrieves a group by ID
+// GetGroup retrieves a group by ID.
 func (r *GroupRepository) GetGroup(ctx context.Context, id string) (*models.Group, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -62,12 +63,12 @@ func (r *GroupRepository) GetGroup(ctx context.Context, id string) (*models.Grou
 	return group, nil
 }
 
-// GetGroupByName retrieves a group by name
+// GetGroupByName retrieves a group by name.
 func (r *GroupRepository) GetGroupByName(ctx context.Context, name string) (*models.Group, error) {
 	return r.GetByName(ctx, name)
 }
 
-// GetByName retrieves a group by name (alias for GetGroupByName)
+// GetByName retrieves a group by name (alias for GetGroupByName).
 func (r *GroupRepository) GetByName(ctx context.Context, name string) (*models.Group, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -80,7 +81,7 @@ func (r *GroupRepository) GetByName(ctx context.Context, name string) (*models.G
 	return nil, fmt.Errorf("group not found")
 }
 
-// UpdateGroup updates an existing group
+// UpdateGroup updates an existing group.
 func (r *GroupRepository) UpdateGroup(ctx context.Context, group *models.Group) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -103,7 +104,7 @@ func (r *GroupRepository) UpdateGroup(ctx context.Context, group *models.Group) 
 	return nil
 }
 
-// DeleteGroup deletes a group
+// DeleteGroup deletes a group.
 func (r *GroupRepository) DeleteGroup(ctx context.Context, id string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -115,7 +116,7 @@ func (r *GroupRepository) DeleteGroup(ctx context.Context, id string) error {
 	return nil
 }
 
-// ListGroups returns all groups
+// ListGroups returns all groups.
 func (r *GroupRepository) ListGroups(ctx context.Context) ([]models.Group, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -127,7 +128,7 @@ func (r *GroupRepository) ListGroups(ctx context.Context) ([]models.Group, error
 	return groups, nil
 }
 
-// AddUserToGroup adds a user to a group
+// AddUserToGroup adds a user to a group.
 func (r *GroupRepository) AddUserToGroup(ctx context.Context, groupID, userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -148,7 +149,7 @@ func (r *GroupRepository) AddUserToGroup(ctx context.Context, groupID, userID st
 	return nil
 }
 
-// RemoveUserFromGroup removes a user from a group
+// RemoveUserFromGroup removes a user from a group.
 func (r *GroupRepository) RemoveUserFromGroup(ctx context.Context, groupID, userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -168,7 +169,7 @@ func (r *GroupRepository) RemoveUserFromGroup(ctx context.Context, groupID, user
 	return fmt.Errorf("user not found in group")
 }
 
-// GetUserGroups returns all groups for a user
+// GetUserGroups returns all groups for a user.
 func (r *GroupRepository) GetUserGroups(ctx context.Context, userID string) ([]models.Group, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

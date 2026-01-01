@@ -62,13 +62,13 @@ func TestDynamicFieldIntegration(t *testing.T) {
 }
 
 type testDynamicFieldSet struct {
-	textField       *DynamicField
-	textAreaField   *DynamicField
-	checkboxField   *DynamicField
-	dropdownField   *DynamicField
+	textField        *DynamicField
+	textAreaField    *DynamicField
+	checkboxField    *DynamicField
+	dropdownField    *DynamicField
 	multiselectField *DynamicField
-	dateField       *DynamicField
-	dateTimeField   *DynamicField
+	dateField        *DynamicField
+	dateTimeField    *DynamicField
 }
 
 func setupTestDynamicFields(t *testing.T, db *sql.DB) *testDynamicFieldSet {
@@ -544,7 +544,7 @@ func TestGetDynamicFieldValuesForDisplayIntegration(t *testing.T) {
 	db.Exec(`DELETE FROM dynamic_field_value WHERE object_id = ?`, testObjectID)
 }
 
-// TestArticleDynamicFieldsIntegration tests Article-level dynamic fields
+// TestArticleDynamicFieldsIntegration tests Article-level dynamic fields.
 func TestArticleDynamicFieldsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
@@ -731,7 +731,7 @@ func setupIntegrationTestRouter(t *testing.T) *gin.Engine {
 	return router
 }
 
-// TestCustomerPortalDynamicFieldsIntegration tests dynamic field integration for customer portal ticket view
+// TestCustomerPortalDynamicFieldsIntegration tests dynamic field integration for customer portal ticket view.
 func TestCustomerPortalDynamicFieldsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")

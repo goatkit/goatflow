@@ -3,12 +3,13 @@ package auth
 import (
 	"context"
 	"database/sql"
-	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"os"
 	"testing"
+
+	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// test helper: capture registry then restore
+// test helper: capture registry then restore.
 func saveRegistry() map[string]ProviderFactory {
 	cp := map[string]ProviderFactory{}
 	for k, v := range providerRegistry {
@@ -25,7 +26,7 @@ func restoreRegistry(m map[string]ProviderFactory) {
 	}
 }
 
-// fake provider to test ordering without DB
+// fake provider to test ordering without DB.
 type fakeProvider struct {
 	n             string
 	pr            int

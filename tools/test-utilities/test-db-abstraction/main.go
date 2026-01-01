@@ -1,3 +1,4 @@
+// Package main provides test utilities for validating the database abstraction layer.
 package main
 
 import (
@@ -27,7 +28,7 @@ func main() {
 	if err := driver.Connect(ctx, ":memory:"); err != nil {
 		log.Fatal("Failed to connect to SQLite:", err)
 	}
-	defer driver.Close()
+	defer func() { _ = driver.Close() }()
 
 	// Load schemas
 	loader := schema.NewSchemaLoader("schemas")

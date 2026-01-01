@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// Role represents a user role in the system
+// Role represents a user role in the system.
 type Role struct {
 	ID          string            `json:"id"`
 	Name        string            `json:"name"`
@@ -15,7 +15,7 @@ type Role struct {
 	UpdatedAt   time.Time         `json:"updated_at"`
 }
 
-// Permission represents a system permission
+// Permission represents a system permission.
 type Permission struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -24,13 +24,13 @@ type Permission struct {
 	IsSystem    bool   `json:"is_system"`
 }
 
-// Additional role names (RoleAdmin and RoleAgent are defined in user.go)
+// Additional role names (RoleAdmin and RoleAgent are defined in user.go).
 const (
 	RoleUser  = "user"
 	RoleGuest = "guest"
 )
 
-// Common permissions
+// Common permissions.
 const (
 	PermissionViewTickets     = "view_tickets"
 	PermissionCreateTickets   = "create_tickets"

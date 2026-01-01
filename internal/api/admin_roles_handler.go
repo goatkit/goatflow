@@ -9,10 +9,11 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// Role represents a role in the system
+// Role represents a role in the system.
 type Role struct {
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`
@@ -29,7 +30,7 @@ type Role struct {
 	Permissions []string  `json:"permissions"` // Simple permissions list
 }
 
-// RoleUser represents a user assigned to a role
+// RoleUser represents a user assigned to a role.
 type RoleUser struct {
 	UserID    int    `json:"user_id"`
 	Login     string `json:"login"`
@@ -38,14 +39,14 @@ type RoleUser struct {
 	Email     string `json:"email"`
 }
 
-// RoleGroup represents group permissions for a role
+// RoleGroup represents group permissions for a role.
 type RoleGroupPermission struct {
 	GroupID     int             `json:"group_id"`
 	GroupName   string          `json:"group_name"`
 	Permissions map[string]bool `json:"permissions"`
 }
 
-// handleAdminRoles displays the admin roles management page
+// handleAdminRoles displays the admin roles management page.
 func handleAdminRoles(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -99,7 +100,7 @@ func handleAdminRoles(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to fetch roles: "+err.Error())
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var roles []Role
 	for rows.Next() {
@@ -139,7 +140,7 @@ func handleAdminRoles(c *gin.Context) {
 	})
 }
 
-// handleAdminRoleCreate creates a new role
+// handleAdminRoleCreate creates a new role.
 func handleAdminRoleCreate(c *gin.Context) {
 	var input struct {
 		Name     string `json:"name" binding:"required"`
@@ -219,7 +220,7 @@ func handleAdminRoleCreate(c *gin.Context) {
 	})
 }
 
-// handleAdminRoleGet retrieves a single role by ID
+// handleAdminRoleGet retrieves a single role by ID.
 func handleAdminRoleGet(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -285,7 +286,7 @@ func handleAdminRoleGet(c *gin.Context) {
 	})
 }
 
-// handleAdminRoleUpdate updates an existing role
+// handleAdminRoleUpdate updates an existing role.
 func handleAdminRoleUpdate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -327,7 +328,7 @@ func handleAdminRoleUpdate(c *gin.Context) {
 		commentsVal = nil
 	}
 
-	var validIDVal int = input.ValidID
+	var validIDVal = input.ValidID
 	if validIDVal == 0 {
 		validIDVal = 1 // Default to valid if not specified
 	}
@@ -367,7 +368,7 @@ func handleAdminRoleUpdate(c *gin.Context) {
 	})
 }
 
-// handleAdminRoleDelete soft deletes a role (sets valid_id = 2)
+// handleAdminRoleDelete soft deletes a role (sets valid_id = 2).
 func handleAdminRoleDelete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -418,7 +419,7 @@ func handleAdminRoleDelete(c *gin.Context) {
 	})
 }
 
-// handleAdminRoleUsers displays and manages users assigned to a role
+// handleAdminRoleUsers displays and manages users assigned to a role.
 func handleAdminRoleUsers(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -479,7 +480,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var users []RoleUser
 	for rows.Next() {
@@ -541,7 +542,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 	})
 }
 
-// handleAdminRoleUserAdd adds a user to a role
+// handleAdminRoleUserAdd adds a user to a role.
 func handleAdminRoleUserAdd(c *gin.Context) {
 	roleIDStr := c.Param("id")
 	roleID, err := strconv.Atoi(roleIDStr)
@@ -594,7 +595,7 @@ func handleAdminRoleUserAdd(c *gin.Context) {
 	})
 }
 
-// handleAdminRoleUserRemove removes a user from a role
+// handleAdminRoleUserRemove removes a user from a role.
 func handleAdminRoleUserRemove(c *gin.Context) {
 	roleIDStr := c.Param("id")
 	roleID, err := strconv.Atoi(roleIDStr)
@@ -654,7 +655,7 @@ func handleAdminRoleUserRemove(c *gin.Context) {
 	})
 }
 
-// handleAdminRolePermissions manages group permissions for a role
+// handleAdminRolePermissions manages group permissions for a role.
 func handleAdminRolePermissions(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -714,7 +715,7 @@ func handleAdminRolePermissions(c *gin.Context) {
 			c.String(http.StatusInternalServerError, "Failed to fetch permissions")
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		var groups []RoleGroupPermission
 		for rows.Next() {
@@ -770,7 +771,7 @@ func handleAdminRolePermissions(c *gin.Context) {
 			})
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Delete existing permissions for this role
 		_, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM group_role WHERE role_id = $1"), id)
@@ -822,7 +823,7 @@ func handleAdminRolePermissions(c *gin.Context) {
 	}
 }
 
-// handleAdminRolePermissionsUpdate updates role-group permissions
+// handleAdminRolePermissionsUpdate updates role-group permissions.
 func handleAdminRolePermissionsUpdate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -855,7 +856,7 @@ func handleAdminRolePermissionsUpdate(c *gin.Context) {
 		})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Delete existing permissions for this role
 	_, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM group_role WHERE role_id = $1"), id)

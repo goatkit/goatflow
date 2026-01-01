@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -17,15 +16,16 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
 // Note: getTestDB is defined in admin_customer_company_test.go (same package)
 
-// setupTemplateRenderer ensures templates are available for tests that render HTML
+// setupTemplateRenderer ensures templates are available for tests that render HTML.
 func setupTemplateRenderer(t *testing.T) {
 	_, file, _, ok := runtime.Caller(0)
 	require.True(t, ok)
@@ -37,7 +37,7 @@ func setupTemplateRenderer(t *testing.T) {
 	shared.SetGlobalRenderer(renderer)
 }
 
-// setupQueueTestRouter creates a minimal router with the admin queues handlers
+// setupQueueTestRouter creates a minimal router with the admin queues handlers.
 func setupQueueTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -58,7 +58,7 @@ func setupQueueTestRouter() *gin.Engine {
 	return router
 }
 
-// Helper function to create a test queue
+// Helper function to create a test queue.
 func createTestQueue(t *testing.T, db *sql.DB, name string) int64 {
 	var queueID int64
 
@@ -83,18 +83,18 @@ func createTestQueue(t *testing.T, db *sql.DB, name string) int64 {
 	return queueID
 }
 
-// Helper function to clean up test queue
+// Helper function to clean up test queue.
 func cleanupTestQueue(t *testing.T, db *sql.DB, queueID int64) {
 	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE id = $1"), queueID)
 	require.NoError(t, err, "Failed to cleanup test queue")
 }
 
-// Helper function to clean up test queue by name
+// Helper function to clean up test queue by name.
 func cleanupTestQueueByName(t *testing.T, db *sql.DB, name string) {
 	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE name = $1"), name)
 }
 
-// Helper function to verify queue was updated in database
+// Helper function to verify queue was updated in database.
 func verifyQueueUpdated(t *testing.T, db *sql.DB, queueID int64, expectedName string) {
 	var name string
 	err := db.QueryRow(database.ConvertPlaceholders(`
@@ -105,7 +105,7 @@ func verifyQueueUpdated(t *testing.T, db *sql.DB, queueID int64, expectedName st
 	assert.Equal(t, expectedName, name, "Queue name should be updated in database")
 }
 
-// Helper function to verify queue status in database
+// Helper function to verify queue status in database.
 func verifyQueueStatus(t *testing.T, db *sql.DB, queueID int64, expectedValidID int) {
 	var validID int
 	err := db.QueryRow(database.ConvertPlaceholders(`
@@ -496,7 +496,7 @@ func TestAdminQueuesDropdownsPopulated(t *testing.T) {
 	})
 }
 
-// TestAdminQueuesCreateValidation tests various validation scenarios for queue creation
+// TestAdminQueuesCreateValidation tests various validation scenarios for queue creation.
 func TestAdminQueuesCreateValidation(t *testing.T) {
 	router := setupQueueTestRouter()
 
@@ -550,7 +550,7 @@ func TestAdminQueuesCreateValidation(t *testing.T) {
 	}
 }
 
-// TestAdminQueuesUpdateValidation tests validation for queue updates
+// TestAdminQueuesUpdateValidation tests validation for queue updates.
 func TestAdminQueuesUpdateValidation(t *testing.T) {
 	router := setupQueueTestRouter()
 

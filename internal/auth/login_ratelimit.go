@@ -24,14 +24,10 @@ type attemptRecord struct {
 	blockedAt time.Time
 }
 
-// DefaultLoginRateLimiter is the global instance for login rate limiting
+// DefaultLoginRateLimiter is the global instance for login rate limiting.
 var DefaultLoginRateLimiter = NewLoginRateLimiter(5, 300, 2*time.Second, 60*time.Second)
 
-// NewLoginRateLimiter creates a new rate limiter.
-// maxAttempts: number of failures before blocking
-// windowSeconds: time window to count failures
-// baseBackoff: initial backoff duration after block
-// maxBackoff: maximum backoff duration
+// maxBackoff: maximum backoff duration.
 func NewLoginRateLimiter(maxAttempts, windowSeconds int, baseBackoff, maxBackoff time.Duration) *LoginRateLimiter {
 	rl := &LoginRateLimiter{
 		attempts:      make(map[string]*attemptRecord),
@@ -44,12 +40,12 @@ func NewLoginRateLimiter(maxAttempts, windowSeconds int, baseBackoff, maxBackoff
 	return rl
 }
 
-// key generates a composite key from IP and username
+// key generates a composite key from IP and username.
 func (rl *LoginRateLimiter) key(ip, username string) string {
 	return ip + ":" + username
 }
 
-// IsBlocked checks if an IP+username combination is currently blocked
+// IsBlocked checks if an IP+username combination is currently blocked.
 func (rl *LoginRateLimiter) IsBlocked(ip, username string) (bool, time.Duration) {
 	rl.mu.RLock()
 	defer rl.mu.RUnlock()
@@ -74,7 +70,7 @@ func (rl *LoginRateLimiter) IsBlocked(ip, username string) (bool, time.Duration)
 	return true, time.Until(unblockTime)
 }
 
-// RecordFailure records a failed login attempt
+// RecordFailure records a failed login attempt.
 func (rl *LoginRateLimiter) RecordFailure(ip, username string) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
@@ -103,7 +99,7 @@ func (rl *LoginRateLimiter) RecordFailure(ip, username string) {
 	}
 }
 
-// RecordSuccess clears the failure record for successful login
+// RecordSuccess clears the failure record for successful login.
 func (rl *LoginRateLimiter) RecordSuccess(ip, username string) {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
@@ -112,7 +108,7 @@ func (rl *LoginRateLimiter) RecordSuccess(ip, username string) {
 	delete(rl.attempts, k)
 }
 
-// calculateBackoff returns exponential backoff duration
+// calculateBackoff returns exponential backoff duration.
 func (rl *LoginRateLimiter) calculateBackoff(failures int) time.Duration {
 	if failures <= rl.maxAttempts {
 		return rl.baseBackoff
@@ -128,7 +124,7 @@ func (rl *LoginRateLimiter) calculateBackoff(failures int) time.Duration {
 	return backoff
 }
 
-// cleanup periodically removes stale entries
+// cleanup periodically removes stale entries.
 func (rl *LoginRateLimiter) cleanup() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
@@ -147,7 +143,7 @@ func (rl *LoginRateLimiter) cleanup() {
 	}
 }
 
-// Stats returns current rate limiter statistics (for monitoring)
+// Stats returns current rate limiter statistics (for monitoring).
 func (rl *LoginRateLimiter) Stats() map[string]interface{} {
 	rl.mu.RLock()
 	defer rl.mu.RUnlock()

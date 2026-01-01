@@ -1,9 +1,11 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
 // HandleDebugTicketNumber returns current ticket number generator info.

@@ -10,19 +10,20 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
-// DynamicFieldLoader is a function type for loading dynamic fields to avoid import cycles
+// DynamicFieldLoader is a function type for loading dynamic fields to avoid import cycles.
 type DynamicFieldLoader func(screenKey, objectType string) ([]interface{}, error)
 
-// dynamicFieldLoader is set externally by api package during init
+// dynamicFieldLoader is set externally by api package during init.
 var dynamicFieldLoader DynamicFieldLoader
 
-// wantsHTMLResponse returns true if the request expects HTML response (browser-like)
+// wantsHTMLResponse returns true if the request expects HTML response (browser-like).
 func wantsHTMLResponse(c *gin.Context) bool {
 	accept := strings.ToLower(c.GetHeader("Accept"))
 	if accept == "" {
@@ -31,12 +32,12 @@ func wantsHTMLResponse(c *gin.Context) bool {
 	return strings.Contains(accept, "text/html") || strings.Contains(accept, "*/*")
 }
 
-// SetDynamicFieldLoader sets the function used to load dynamic fields (called by api package)
+// SetDynamicFieldLoader sets the function used to load dynamic fields (called by api package).
 func SetDynamicFieldLoader(loader DynamicFieldLoader) {
 	dynamicFieldLoader = loader
 }
 
-// buildUserContext produces a consistent User map and admin flags
+// buildUserContext produces a consistent User map and admin flags.
 func buildUserContext(c *gin.Context) (gin.H, bool) {
 	user := shared.GetUserMapForTemplate(c)
 	isAdminGroup := false
@@ -53,7 +54,7 @@ func nullable(val sql.NullString) string {
 	return ""
 }
 
-// RegisterExistingHandlers registers existing handlers with the registry
+// RegisterExistingHandlers registers existing handlers with the registry.
 func RegisterExistingHandlers(registry *HandlerRegistry) {
 	// Register middleware only - all route handlers are now in YAML
 	middlewares := map[string]gin.HandlerFunc{
@@ -290,13 +291,13 @@ func testAuthBypassAllowed() bool {
 	return false
 }
 
-// RegisterAPIHandlers registers API handlers with the registry
+// RegisterAPIHandlers registers API handlers with the registry.
 func RegisterAPIHandlers(registry *HandlerRegistry, apiHandlers map[string]gin.HandlerFunc) {
 	// Override existing handlers with API handlers
 	registry.OverrideBatch(apiHandlers)
 }
 
-// HandleCustomerInfoPanel returns partial with customer details or unregistered notice
+// HandleCustomerInfoPanel returns partial with customer details or unregistered notice.
 func HandleCustomerInfoPanel(c *gin.Context) {
 	login := c.Param("login")
 	if strings.TrimSpace(login) == "" {
@@ -392,7 +393,7 @@ func HandleCustomerInfoPanel(c *gin.Context) {
 	shared.GetGlobalRenderer().HTML(c, http.StatusOK, "partials/tickets/customer_info.pongo2", gin.H{"user": tmplUser, "company": tmplCompany, "open": openCount})
 }
 
-// HandleAgentNewTicket renders the new ticket form with proper nav context
+// HandleAgentNewTicket renders the new ticket form with proper nav context.
 func HandleAgentNewTicket(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -547,8 +548,7 @@ func init() {
 	// This provides the function symbol so YAML can reference "HandleCustomerInfoPanel"
 }
 
-// SyncHandlersToGlobalMap syncs all handlers from the registry to GlobalHandlerMap
-// This ensures YAML routes can find handlers registered via RegisterAPIHandlers
+// This ensures YAML routes can find handlers registered via RegisterAPIHandlers.
 func SyncHandlersToGlobalMap(registry *HandlerRegistry) {
 	if registry == nil {
 		log.Printf("Warning: HandlerRegistry is nil, cannot sync to GlobalHandlerMap")

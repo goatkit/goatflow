@@ -8,11 +8,12 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
-// handleAdminCustomerUserServices renders the customer user services management page
+// handleAdminCustomerUserServices renders the customer user services management page.
 func handleAdminCustomerUserServices(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if db == nil {
@@ -56,7 +57,7 @@ func handleAdminCustomerUserServices(db *sql.DB) gin.HandlerFunc {
 
 		rows, err := db.Query(database.ConvertPlaceholders(customerQuery))
 		if err == nil {
-			defer rows.Close()
+			defer func() { _ = rows.Close() }()
 			for rows.Next() {
 				var login, firstName, lastName, email string
 				var customerID, companyName sql.NullString
@@ -124,7 +125,7 @@ func handleAdminCustomerUserServices(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminCustomerUserServicesAllocate shows service allocation for a specific customer user
+// handleAdminCustomerUserServicesAllocate shows service allocation for a specific customer user.
 func handleAdminCustomerUserServicesAllocate(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if db == nil {
@@ -168,7 +169,7 @@ func handleAdminCustomerUserServicesAllocate(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load services"})
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		services := []map[string]interface{}{}
 		for rows.Next() {
@@ -198,7 +199,7 @@ func handleAdminCustomerUserServicesAllocate(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminCustomerUserServicesUpdate updates service assignments for a customer user
+// handleAdminCustomerUserServicesUpdate updates service assignments for a customer user.
 func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if db == nil {
@@ -234,7 +235,7 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 			shared.SendToastResponse(c, false, "Transaction failed", "")
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Clear existing assignments
 		_, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE customer_user_login = $1"), customerUserLogin)
@@ -264,7 +265,7 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminServiceCustomerUsersAllocate shows customer user allocation for a specific service
+// handleAdminServiceCustomerUsersAllocate shows customer user allocation for a specific service.
 func handleAdminServiceCustomerUsersAllocate(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if db == nil {
@@ -307,7 +308,7 @@ func handleAdminServiceCustomerUsersAllocate(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load customer users"})
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		customerUsers := []map[string]interface{}{}
 		for rows.Next() {
@@ -338,7 +339,7 @@ func handleAdminServiceCustomerUsersAllocate(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminServiceCustomerUsersUpdate updates customer user assignments for a service
+// handleAdminServiceCustomerUsersUpdate updates customer user assignments for a service.
 func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if db == nil {
@@ -374,7 +375,7 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 			shared.SendToastResponse(c, false, "Transaction failed", "")
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Clear existing assignments for this service
 		_, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE service_id = $1"), serviceID)
@@ -404,7 +405,7 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// getDefaultServicesCount returns the count of default services configured
+// getDefaultServicesCount returns the count of default services configured.
 func getDefaultServicesCount(db *sql.DB) int {
 	var count int
 	db.QueryRow(database.ConvertPlaceholders(`
@@ -413,7 +414,7 @@ func getDefaultServicesCount(db *sql.DB) int {
 	return count
 }
 
-// handleAdminDefaultServices shows the default services allocation page
+// handleAdminDefaultServices shows the default services allocation page.
 func handleAdminDefaultServices(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if db == nil {
@@ -438,7 +439,7 @@ func handleAdminDefaultServices(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load services"})
 			return
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		services := []map[string]interface{}{}
 		for rows.Next() {
@@ -461,7 +462,7 @@ func handleAdminDefaultServices(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// handleAdminDefaultServicesUpdate updates default service assignments
+// handleAdminDefaultServicesUpdate updates default service assignments.
 func handleAdminDefaultServicesUpdate(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if db == nil {
@@ -495,7 +496,7 @@ func handleAdminDefaultServicesUpdate(db *sql.DB) gin.HandlerFunc {
 			shared.SendToastResponse(c, false, "Transaction failed", "")
 			return
 		}
-		defer tx.Rollback()
+		defer func() { _ = tx.Rollback() }()
 
 		// Clear existing default service assignments
 		_, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE customer_user_login = '<DEFAULT>'"))

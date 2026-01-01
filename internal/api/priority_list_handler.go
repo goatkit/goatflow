@@ -6,10 +6,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleListPrioritiesAPI handles GET /api/v1/priorities
+// HandleListPrioritiesAPI handles GET /api/v1/priorities.
 func HandleListPrioritiesAPI(c *gin.Context) {
 	// Require authentication similar to other admin lookups
 	if _, exists := c.Get("user_id"); !exists {
@@ -57,7 +58,7 @@ func HandleListPrioritiesAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch priorities"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []gin.H
 	for rows.Next() {

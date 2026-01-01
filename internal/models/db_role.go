@@ -2,8 +2,7 @@ package models
 
 import "time"
 
-// DBRole represents a role in the database (Znuny-compatible)
-// Maps to the `roles` table
+// Maps to the `roles` table.
 type DBRole struct {
 	ID         int       `json:"id"`
 	Name       string    `json:"name"`
@@ -15,13 +14,12 @@ type DBRole struct {
 	ChangeBy   int       `json:"change_by"`
 }
 
-// IsValid returns true if the role is active (valid_id = 1)
+// IsValid returns true if the role is active (valid_id = 1).
 func (r *DBRole) IsValid() bool {
 	return r.ValidID == 1
 }
 
-// DBRoleUser represents a user-role assignment
-// Maps to the `role_user` table
+// Maps to the `role_user` table.
 type DBRoleUser struct {
 	UserID     int       `json:"user_id"`
 	RoleID     int       `json:"role_id"`
@@ -31,8 +29,7 @@ type DBRoleUser struct {
 	ChangeBy   int       `json:"change_by"`
 }
 
-// DBGroupRole represents a role-group permission assignment
-// Maps to the `group_role` table
+// Maps to the `group_role` table.
 type DBGroupRole struct {
 	RoleID          int       `json:"role_id"`
 	GroupID         int       `json:"group_id"`
@@ -44,7 +41,7 @@ type DBGroupRole struct {
 	ChangeBy        int       `json:"change_by"`
 }
 
-// Permission types (Znuny-compatible)
+// Permission types (Znuny-compatible).
 var PermissionTypes = []string{
 	"ro",        // Read-only access
 	"move_into", // Move tickets into queue

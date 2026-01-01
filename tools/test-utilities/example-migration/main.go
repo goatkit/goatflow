@@ -1,3 +1,4 @@
+// Package main provides an example migration tool for testing schema migrations.
 package main
 
 import (
@@ -47,7 +48,7 @@ func main() {
 		if err := driver.Connect(ctx, ":memory:"); err != nil {
 			log.Fatal("Failed to connect:", err)
 		}
-		defer driver.Close()
+		defer func() { _ = driver.Close() }()
 	}
 
 	// Generate SQL for all schemas

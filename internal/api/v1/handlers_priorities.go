@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Priority handlers - basic stubs for now
+// Priority handlers - basic stubs for now.
 func (router *APIRouter) handleListPriorities(c *gin.Context) {
 	// TODO: Implement actual priority listing
 	priorities := []gin.H{

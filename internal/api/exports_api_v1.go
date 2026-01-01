@@ -10,7 +10,7 @@ import (
 
 // API v1 handler exports
 
-// Tickets API handlers
+// Tickets API handlers.
 var HandleAPIv1TicketsList = HandleListTicketsAPI
 
 var HandleAPIv1TicketGet = func(c *gin.Context) {
@@ -55,7 +55,7 @@ var HandleAPIv1TicketUpdate = HandleUpdateTicketAPI
 
 var HandleAPIv1TicketDelete = HandleDeleteTicketAPI
 
-// Users API handlers
+// Users API handlers.
 var HandleAPIv1UserMe = HandleUserMeAPI
 
 var HandleAPIv1UsersList = func(c *gin.Context) {
@@ -139,7 +139,7 @@ var HandleAPIv1UserDelete = func(c *gin.Context) {
 	c.JSON(http.StatusNoContent, gin.H{})
 }
 
-// Queues API handlers
+// Queues API handlers.
 var HandleAPIv1QueuesList = func(c *gin.Context) {
 	queueRepo := GetQueueRepository()
 	if queueRepo == nil {
@@ -230,7 +230,7 @@ var HandleAPIv1QueueDelete = func(c *gin.Context) {
 	c.JSON(http.StatusNoContent, gin.H{})
 }
 
-// Priorities API handlers
+// Priorities API handlers.
 var HandleAPIv1PrioritiesList = func(c *gin.Context) {
 	priorityRepo := GetPriorityRepository()
 	if priorityRepo == nil {
@@ -301,7 +301,7 @@ var HandleAPIv1PriorityGet = func(c *gin.Context) {
 	})
 }
 
-// Articles API handlers
+// Articles API handlers.
 var HandleAPIv1AddArticle = HandleCreateArticleAPI
 
 var HandleAPIv1GetTicketArticles = func(c *gin.Context) {
@@ -323,12 +323,12 @@ var HandleAPIv1GetTicketArticle = func(c *gin.Context) {
 	})
 }
 
-// Ticket action handlers
+// Ticket action handlers.
 var HandleAPIv1TicketClose = HandleCloseTicketAPI
 var HandleAPIv1TicketReopen = HandleReopenTicketAPI
 var HandleAPIv1TicketAssign = HandleAssignTicketAPI
 
-// Auth handlers
+// Auth handlers.
 var HandleAPIv1AuthLogin = HandleLoginAPI
 var HandleAPIv1AuthRefresh = HandleRefreshTokenAPI
 var HandleAPIv1AuthLogout = HandleLogoutAPI

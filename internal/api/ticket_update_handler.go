@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
@@ -97,7 +98,7 @@ func handleTicketUpdateTestFallback(c *gin.Context, ticketID int64, updateReques
 	return true
 }
 
-// HandleUpdateTicketAPI handles PUT /api/v1/tickets/:id
+// HandleUpdateTicketAPI handles PUT /api/v1/tickets/:id.
 func HandleUpdateTicketAPI(c *gin.Context) {
 	// Get ticket ID from URL
 	ticketIDStr := c.Param("id")

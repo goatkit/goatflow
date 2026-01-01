@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleGetQueueStatsAPI handles GET /api/v1/queues/:id/stats
+// HandleGetQueueStatsAPI handles GET /api/v1/queues/:id/stats.
 func HandleGetQueueStatsAPI(c *gin.Context) {
 	// Auth
 	if _, ok := c.Get("user_id"); !ok {

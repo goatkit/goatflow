@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleDeleteArticleAPI handles DELETE /api/v1/tickets/:ticket_id/articles/:id
+// HandleDeleteArticleAPI handles DELETE /api/v1/tickets/:ticket_id/articles/:id.
 func HandleDeleteArticleAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -62,7 +63,7 @@ func HandleDeleteArticleAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Delete attachments first
 	deleteAttachmentsQuery := database.ConvertPlaceholders(`

@@ -7,20 +7,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/repository/memory"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/gotrs-io/gotrs-ce/internal/repository/memory"
 )
 
-// LDAPIntegrationTestSuite runs integration tests against a real OpenLDAP server
+// LDAPIntegrationTestSuite runs integration tests against a real OpenLDAP server.
 type LDAPIntegrationTestSuite struct {
 	suite.Suite
 	ldapService *LDAPService
 	config      *LDAPConfig
 }
 
-// SetupSuite sets up the test suite
+// SetupSuite sets up the test suite.
 func (suite *LDAPIntegrationTestSuite) SetupSuite() {
 	// Skip integration tests unless explicitly enabled
 	if os.Getenv("LDAP_INTEGRATION_TESTS") != "true" {
@@ -75,13 +76,13 @@ func (suite *LDAPIntegrationTestSuite) SetupSuite() {
 	suite.waitForLDAPServer()
 }
 
-// TestConnection tests LDAP server connection
+// TestConnection tests LDAP server connection.
 func (suite *LDAPIntegrationTestSuite) TestConnection() {
 	err := suite.ldapService.TestConnection(suite.config)
 	require.NoError(suite.T(), err, "Should be able to connect to LDAP server")
 }
 
-// TestConfiguration tests LDAP configuration
+// TestConfiguration tests LDAP configuration.
 func (suite *LDAPIntegrationTestSuite) TestConfiguration() {
 	err := suite.ldapService.ConfigureLDAP(suite.config)
 	require.NoError(suite.T(), err, "Should be able to configure LDAP")
@@ -91,7 +92,7 @@ func (suite *LDAPIntegrationTestSuite) TestConfiguration() {
 	assert.True(suite.T(), status["auto_sync"].(bool))
 }
 
-// TestUserAuthentication tests user authentication against LDAP
+// TestUserAuthentication tests user authentication against LDAP.
 func (suite *LDAPIntegrationTestSuite) TestUserAuthentication() {
 	// Configure LDAP first
 	err := suite.ldapService.ConfigureLDAP(suite.config)
@@ -161,7 +162,7 @@ func (suite *LDAPIntegrationTestSuite) TestUserAuthentication() {
 	}
 }
 
-// TestUserLookup tests individual user lookup
+// TestUserLookup tests individual user lookup.
 func (suite *LDAPIntegrationTestSuite) TestUserLookup() {
 	// Configure LDAP first
 	err := suite.ldapService.ConfigureLDAP(suite.config)
@@ -214,7 +215,7 @@ func (suite *LDAPIntegrationTestSuite) TestUserLookup() {
 	}
 }
 
-// TestGroupLookup tests group retrieval
+// TestGroupLookup tests group retrieval.
 func (suite *LDAPIntegrationTestSuite) TestGroupLookup() {
 	// Configure LDAP first
 	err := suite.ldapService.ConfigureLDAP(suite.config)
@@ -254,7 +255,7 @@ func (suite *LDAPIntegrationTestSuite) TestGroupLookup() {
 	}
 }
 
-// TestUserSynchronization tests full user sync
+// TestUserSynchronization tests full user sync.
 func (suite *LDAPIntegrationTestSuite) TestUserSynchronization() {
 	// Configure LDAP first
 	err := suite.ldapService.ConfigureLDAP(suite.config)
@@ -282,7 +283,7 @@ func (suite *LDAPIntegrationTestSuite) TestUserSynchronization() {
 	}
 }
 
-// TestUserGroupMembership tests group membership resolution
+// TestUserGroupMembership tests group membership resolution.
 func (suite *LDAPIntegrationTestSuite) TestUserGroupMembership() {
 	// Configure LDAP first
 	err := suite.ldapService.ConfigureLDAP(suite.config)
@@ -342,7 +343,7 @@ func (suite *LDAPIntegrationTestSuite) TestUserGroupMembership() {
 	}
 }
 
-// TestLDAPPerformance tests LDAP performance with multiple operations
+// TestLDAPPerformance tests LDAP performance with multiple operations.
 func (suite *LDAPIntegrationTestSuite) TestLDAPPerformance() {
 	// Configure LDAP first
 	err := suite.ldapService.ConfigureLDAP(suite.config)
@@ -389,7 +390,7 @@ func (suite *LDAPIntegrationTestSuite) TestLDAPPerformance() {
 	})
 }
 
-// TestLDAPConnectionFailure tests connection failure scenarios
+// TestLDAPConnectionFailure tests connection failure scenarios.
 func (suite *LDAPIntegrationTestSuite) TestLDAPConnectionFailure() {
 	// Test with invalid host
 	badConfig := *suite.config
@@ -415,7 +416,7 @@ func (suite *LDAPIntegrationTestSuite) TestLDAPConnectionFailure() {
 
 // Helper functions
 
-// waitForLDAPServer waits for the LDAP server to be ready
+// waitForLDAPServer waits for the LDAP server to be ready.
 func (suite *LDAPIntegrationTestSuite) waitForLDAPServer() {
 	maxAttempts := 30
 	for i := 0; i < maxAttempts; i++ {
@@ -432,7 +433,7 @@ func (suite *LDAPIntegrationTestSuite) waitForLDAPServer() {
 	suite.T().Fatal("LDAP server did not become ready in time")
 }
 
-// getEnvOrDefault gets environment variable or returns default
+// getEnvOrDefault gets environment variable or returns default.
 func getEnvOrDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
@@ -440,14 +441,14 @@ func getEnvOrDefault(key, defaultValue string) string {
 	return defaultValue
 }
 
-// contains checks if a string contains a substring (case-insensitive)
+// contains checks if a string contains a substring (case-insensitive).
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr ||
 		len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
 			strings.Contains(strings.ToLower(s), strings.ToLower(substr))))
 }
 
-// TestLDAPIntegrationSuite runs the integration test suite
+// TestLDAPIntegrationSuite runs the integration test suite.
 func TestLDAPIntegrationSuite(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping LDAP integration tests in short mode")
@@ -456,7 +457,7 @@ func TestLDAPIntegrationSuite(t *testing.T) {
 	suite.Run(t, new(LDAPIntegrationTestSuite))
 }
 
-// TestLDAPServiceBenchmark provides benchmark tests for LDAP operations
+// TestLDAPServiceBenchmark provides benchmark tests for LDAP operations.
 func BenchmarkLDAPOperations(b *testing.B) {
 	if os.Getenv("LDAP_INTEGRATION_TESTS") != "true" {
 		b.Skip("LDAP integration tests disabled")

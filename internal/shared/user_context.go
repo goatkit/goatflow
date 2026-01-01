@@ -5,10 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// UserContext represents user information for templates
+// UserContext represents user information for templates.
 type UserContext struct {
 	ID              int    `json:"id"`
 	Login           string `json:"login"`
@@ -21,7 +22,7 @@ type UserContext struct {
 	CustomerCompany string `json:"customer_company"`
 }
 
-// GetUserMapForTemplate builds a user context map for template rendering
+// GetUserMapForTemplate builds a user context map for template rendering.
 func GetUserMapForTemplate(c *gin.Context) map[string]interface{} {
 	userMap := make(map[string]interface{})
 
@@ -90,7 +91,7 @@ func GetUserMapForTemplate(c *gin.Context) map[string]interface{} {
 	return userMap
 }
 
-// GetUserID extracts user ID from request context
+// GetUserID extracts user ID from request context.
 func GetUserID(c *gin.Context) int {
 	// Check cookie first
 	if cookie, err := c.Cookie("user_id"); err == nil {
@@ -111,12 +112,12 @@ func GetUserID(c *gin.Context) int {
 	return 0
 }
 
-// IsAuthenticated checks if user is authenticated
+// IsAuthenticated checks if user is authenticated.
 func IsAuthenticated(c *gin.Context) bool {
 	return GetUserID(c) > 0
 }
 
-// IsAdmin checks if current user is admin
+// IsAdmin checks if current user is admin.
 func IsAdmin(c *gin.Context) bool {
 	userMap := GetUserMapForTemplate(c)
 	if isAdmin, ok := userMap["IsInAdminGroup"].(bool); ok {

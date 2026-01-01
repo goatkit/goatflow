@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/core"
@@ -21,7 +22,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
-// HandleCreateArticleAPI handles POST /api/v1/tickets/:ticket_id/articles
+// HandleCreateArticleAPI handles POST /api/v1/tickets/:ticket_id/articles.
 func HandleCreateArticleAPI(c *gin.Context) {
 	// Get ticket ID from URL (accept :ticket_id or :id)
 	ticketIDStr := c.Param("ticket_id")
@@ -281,7 +282,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Insert article with adapter to support both DBs
 	insertArticleQuery := database.ConvertPlaceholders(`

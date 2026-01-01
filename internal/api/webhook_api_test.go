@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -11,10 +10,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 func TestWebhookAPI(t *testing.T) {

@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
 
-// Ticket edit form handler
+// Ticket edit form handler.
 func handleTicketEditForm(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -91,7 +92,7 @@ func handleTicketEditForm(c *gin.Context) {
 	}
 }
 
-// Update ticket handler (already exists but needs enhancement)
+// Update ticket handler (already exists but needs enhancement).
 func handleUpdateTicketEnhanced(c *gin.Context) {
 	ticketID := c.Param("id")
 
@@ -228,7 +229,7 @@ func handleUpdateTicketEnhanced(c *gin.Context) {
 			rows, _ := db.Query("SELECT DISTINCT name FROM ticket_state_type ORDER BY name")
 			var validTypes []string
 			if rows != nil {
-				defer rows.Close()
+				defer func() { _ = rows.Close() }()
 				for rows.Next() {
 					var name string
 					if rows.Scan(&name) == nil {
@@ -314,7 +315,7 @@ func handleUpdateTicketEnhanced(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// Bulk update tickets handler
+// Bulk update tickets handler.
 func handleBulkUpdateTickets(c *gin.Context) {
 	var req struct {
 		TicketIDs  string `form:"ticket_ids"`

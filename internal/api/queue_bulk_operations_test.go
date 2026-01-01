@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -501,7 +500,7 @@ func TestQueueBulkOperationsEdgeCases(t *testing.T) {
 	}
 }
 
-// Helper function to generate many queue IDs for testing limits
+// Helper function to generate many queue IDs for testing limits.
 func generateManyQueueIDs(count int) string {
 	var ids []string
 	for i := 1; i <= count; i++ {

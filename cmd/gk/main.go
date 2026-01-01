@@ -1,3 +1,4 @@
+// Package main provides the GK command-line tool.
 package main
 
 import (
@@ -7,8 +8,9 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 	"gopkg.in/yaml.v3"
+
+	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 )
 
 const goatASCII = `

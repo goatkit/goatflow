@@ -7,7 +7,7 @@ import (
 // Proto stub definitions until we generate from .proto files
 // This allows the service to compile without protoc
 
-// TicketProto represents a ticket in protobuf format
+// TicketProto represents a ticket in protobuf format.
 type TicketProto struct {
 	Id              string   `json:"id"`
 	Number          string   `json:"number"`
@@ -98,7 +98,7 @@ type SearchTicketsResponse struct {
 	Total   int32          `json:"total"`
 }
 
-// gRPC Server interface
+// gRPC Server interface.
 type TicketServiceServer interface {
 	CreateTicket(context.Context, *CreateTicketRequest) (*CreateTicketResponse, error)
 	GetTicket(context.Context, *GetTicketRequest) (*GetTicketResponse, error)
@@ -108,7 +108,7 @@ type TicketServiceServer interface {
 	SearchTickets(context.Context, *SearchTicketsRequest) (*SearchTicketsResponse, error)
 }
 
-// UnimplementedTicketServiceServer can be embedded to have forward compatible implementations
+// UnimplementedTicketServiceServer can be embedded to have forward compatible implementations.
 type UnimplementedTicketServiceServer struct{}
 
 func (UnimplementedTicketServiceServer) CreateTicket(context.Context, *CreateTicketRequest) (*CreateTicketResponse, error) {
@@ -135,7 +135,7 @@ func (UnimplementedTicketServiceServer) SearchTickets(context.Context, *SearchTi
 	return nil, nil
 }
 
-// RegisterTicketServiceServer registers the service with gRPC server
+// RegisterTicketServiceServer registers the service with gRPC server.
 func RegisterTicketServiceServer(s interface{}, srv TicketServiceServer) {
 	// Stub implementation for compilation
 }

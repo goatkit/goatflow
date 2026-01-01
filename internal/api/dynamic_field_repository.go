@@ -9,7 +9,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// getDynamicFieldsWithDB retrieves dynamic fields with optional filters
+// getDynamicFieldsWithDB retrieves dynamic fields with optional filters.
 func getDynamicFieldsWithDB(db *sql.DB, objectType, fieldType string) ([]DynamicField, error) {
 	query := `
 		SELECT id, internal_field, name, label, field_order,
@@ -48,12 +48,12 @@ func getDynamicFieldsWithDB(db *sql.DB, objectType, fieldType string) ([]Dynamic
 	if err != nil {
 		return nil, fmt.Errorf("failed to query dynamic fields: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return scanDynamicFields(rows)
 }
 
-// GetDynamicFields retrieves all dynamic fields
+// GetDynamicFields retrieves all dynamic fields.
 func GetDynamicFields(objectType, fieldType string) ([]DynamicField, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -62,7 +62,7 @@ func GetDynamicFields(objectType, fieldType string) ([]DynamicField, error) {
 	return getDynamicFieldsWithDB(db, objectType, fieldType)
 }
 
-// getDynamicFieldWithDB retrieves a single dynamic field by ID
+// getDynamicFieldWithDB retrieves a single dynamic field by ID.
 func getDynamicFieldWithDB(db *sql.DB, id int) (*DynamicField, error) {
 	query := `
 		SELECT id, internal_field, name, label, field_order,
@@ -77,7 +77,7 @@ func getDynamicFieldWithDB(db *sql.DB, id int) (*DynamicField, error) {
 	return scanDynamicField(row)
 }
 
-// GetDynamicField retrieves a single dynamic field by ID
+// GetDynamicField retrieves a single dynamic field by ID.
 func GetDynamicField(id int) (*DynamicField, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -86,7 +86,7 @@ func GetDynamicField(id int) (*DynamicField, error) {
 	return getDynamicFieldWithDB(db, id)
 }
 
-// getDynamicFieldByNameWithDB retrieves a single dynamic field by name
+// getDynamicFieldByNameWithDB retrieves a single dynamic field by name.
 func getDynamicFieldByNameWithDB(db *sql.DB, name string) (*DynamicField, error) {
 	query := `
 		SELECT id, internal_field, name, label, field_order,
@@ -101,7 +101,7 @@ func getDynamicFieldByNameWithDB(db *sql.DB, name string) (*DynamicField, error)
 	return scanDynamicField(row)
 }
 
-// GetDynamicFieldByName retrieves a single dynamic field by name
+// GetDynamicFieldByName retrieves a single dynamic field by name.
 func GetDynamicFieldByName(name string) (*DynamicField, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -110,7 +110,7 @@ func GetDynamicFieldByName(name string) (*DynamicField, error) {
 	return getDynamicFieldByNameWithDB(db, name)
 }
 
-// createDynamicFieldWithDB creates a new dynamic field
+// createDynamicFieldWithDB creates a new dynamic field.
 func createDynamicFieldWithDB(db *sql.DB, field *DynamicField, userID int) (int64, error) {
 	if err := field.SerializeConfig(); err != nil {
 		return 0, fmt.Errorf("failed to serialize config: %w", err)
@@ -147,7 +147,7 @@ func createDynamicFieldWithDB(db *sql.DB, field *DynamicField, userID int) (int6
 	return result.LastInsertId()
 }
 
-// CreateDynamicField creates a new dynamic field
+// CreateDynamicField creates a new dynamic field.
 func CreateDynamicField(field *DynamicField, userID int) (int64, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -156,7 +156,7 @@ func CreateDynamicField(field *DynamicField, userID int) (int64, error) {
 	return createDynamicFieldWithDB(db, field, userID)
 }
 
-// updateDynamicFieldWithDB updates an existing dynamic field
+// updateDynamicFieldWithDB updates an existing dynamic field.
 func updateDynamicFieldWithDB(db *sql.DB, field *DynamicField, userID int) error {
 	if err := field.SerializeConfig(); err != nil {
 		return fmt.Errorf("failed to serialize config: %w", err)
@@ -197,7 +197,7 @@ func updateDynamicFieldWithDB(db *sql.DB, field *DynamicField, userID int) error
 	return nil
 }
 
-// UpdateDynamicField updates an existing dynamic field
+// UpdateDynamicField updates an existing dynamic field.
 func UpdateDynamicField(field *DynamicField, userID int) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -206,7 +206,7 @@ func UpdateDynamicField(field *DynamicField, userID int) error {
 	return updateDynamicFieldWithDB(db, field, userID)
 }
 
-// deleteDynamicFieldWithDB deletes a dynamic field and its values
+// deleteDynamicFieldWithDB deletes a dynamic field and its values.
 func deleteDynamicFieldWithDB(db *sql.DB, id int) error {
 	// First delete all values for this field
 	valueQuery := database.ConvertPlaceholders("DELETE FROM dynamic_field_value WHERE field_id = ?")
@@ -225,7 +225,7 @@ func deleteDynamicFieldWithDB(db *sql.DB, id int) error {
 	return nil
 }
 
-// DeleteDynamicField deletes a dynamic field and its values
+// DeleteDynamicField deletes a dynamic field and its values.
 func DeleteDynamicField(id int) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -234,7 +234,7 @@ func DeleteDynamicField(id int) error {
 	return deleteDynamicFieldWithDB(db, id)
 }
 
-// checkDynamicFieldNameExistsWithDB checks if a field name already exists
+// checkDynamicFieldNameExistsWithDB checks if a field name already exists.
 func checkDynamicFieldNameExistsWithDB(db *sql.DB, name string, excludeID int) (bool, error) {
 	query := `
 		SELECT COUNT(*) FROM dynamic_field 
@@ -251,7 +251,7 @@ func checkDynamicFieldNameExistsWithDB(db *sql.DB, name string, excludeID int) (
 	return count > 0, nil
 }
 
-// CheckDynamicFieldNameExists checks if a field name already exists
+// CheckDynamicFieldNameExists checks if a field name already exists.
 func CheckDynamicFieldNameExists(name string, excludeID int) (bool, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -262,7 +262,7 @@ func CheckDynamicFieldNameExists(name string, excludeID int) (bool, error) {
 
 // Value operations
 
-// getDynamicFieldValuesWithDB retrieves all values for an object
+// getDynamicFieldValuesWithDB retrieves all values for an object.
 func getDynamicFieldValuesWithDB(db *sql.DB, objectID int64) ([]DynamicFieldValue, error) {
 	query := `
 		SELECT id, field_id, object_id, value_text, value_date, value_int
@@ -276,7 +276,7 @@ func getDynamicFieldValuesWithDB(db *sql.DB, objectID int64) ([]DynamicFieldValu
 	if err != nil {
 		return nil, fmt.Errorf("failed to query dynamic field values: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var values []DynamicFieldValue
 	for rows.Next() {
@@ -291,7 +291,7 @@ func getDynamicFieldValuesWithDB(db *sql.DB, objectID int64) ([]DynamicFieldValu
 	return values, nil
 }
 
-// GetDynamicFieldValues retrieves all values for an object
+// GetDynamicFieldValues retrieves all values for an object.
 func GetDynamicFieldValues(objectID int64) ([]DynamicFieldValue, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -300,7 +300,7 @@ func GetDynamicFieldValues(objectID int64) ([]DynamicFieldValue, error) {
 	return getDynamicFieldValuesWithDB(db, objectID)
 }
 
-// setDynamicFieldValueWithDB sets a value for a dynamic field on an object
+// setDynamicFieldValueWithDB sets a value for a dynamic field on an object.
 func setDynamicFieldValueWithDB(db *sql.DB, value *DynamicFieldValue) error {
 	// Delete existing value first
 	delQuery := database.ConvertPlaceholders("DELETE FROM dynamic_field_value WHERE field_id = ? AND object_id = ?")
@@ -324,7 +324,7 @@ func setDynamicFieldValueWithDB(db *sql.DB, value *DynamicFieldValue) error {
 	return nil
 }
 
-// SetDynamicFieldValue sets a value for a dynamic field on an object
+// SetDynamicFieldValue sets a value for a dynamic field on an object.
 func SetDynamicFieldValue(value *DynamicFieldValue) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -374,7 +374,7 @@ func scanDynamicField(row *sql.Row) (*DynamicField, error) {
 	return &f, nil
 }
 
-// GetDynamicFieldsGroupedByObjectType returns fields grouped by object type for admin display
+// GetDynamicFieldsGroupedByObjectType returns fields grouped by object type for admin display.
 func GetDynamicFieldsGroupedByObjectType() (map[string][]DynamicField, error) {
 	fields, err := GetDynamicFields("", "")
 	if err != nil {
@@ -393,17 +393,14 @@ func GetDynamicFieldsGroupedByObjectType() (map[string][]DynamicField, error) {
 	return grouped, nil
 }
 
-// DynamicFieldDisplay represents a dynamic field with its value for display purposes
+// DynamicFieldDisplay represents a dynamic field with its value for display purposes.
 type DynamicFieldDisplay struct {
 	Field        DynamicField
 	Value        interface{} // The raw value (string, int, time, etc.)
 	DisplayValue string      // Human-readable display value
 }
 
-// GetDynamicFieldValuesForDisplay returns dynamic field values formatted for display
-// objectID is the ticket/article ID
-// objectType is "Ticket" or "Article"
-// screenKey is the screen (e.g., "AgentTicketZoom") - if empty, returns all enabled fields
+// screenKey is the screen (e.g., "AgentTicketZoom") - if empty, returns all enabled fields.
 func GetDynamicFieldValuesForDisplay(objectID int, objectType string, screenKey string) ([]DynamicFieldDisplay, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -539,11 +536,7 @@ func GetDynamicFieldValuesForDisplay(objectID int, objectType string, screenKey 
 	return result, nil
 }
 
-// ProcessDynamicFieldsFromForm extracts and saves dynamic field values from form data
-// formValues is a map of form field names to values (e.g., from c.Request.PostForm)
-// objectID is the ID of the object the fields are being attached to (e.g., ticket ID)
-// objectType should be "Ticket", "Article", etc.
-// screenKey is the screen being used (e.g., "AgentTicketPhone")
+// screenKey is the screen being used (e.g., "AgentTicketPhone").
 func ProcessDynamicFieldsFromForm(formValues map[string][]string, objectID int, objectType, screenKey string) error {
 	db, err := database.GetDB()
 	if err != nil {
@@ -624,8 +617,7 @@ func ProcessDynamicFieldsFromForm(formValues map[string][]string, objectID int, 
 	return nil
 }
 
-// ProcessArticleDynamicFieldsFromForm extracts and saves Article dynamic field values
-// Similar to ProcessDynamicFieldsFromForm but uses "ArticleDynamicField_" prefix
+// Similar to ProcessDynamicFieldsFromForm but uses "ArticleDynamicField_" prefix.
 func ProcessArticleDynamicFieldsFromForm(formValues map[string][]string, articleID int, screenKey string) error {
 	db, err := database.GetDB()
 	if err != nil {

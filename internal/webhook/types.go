@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// WebhookEvent represents the type of event that triggers a webhook
+// WebhookEvent represents the type of event that triggers a webhook.
 type WebhookEvent string
 
 const (
@@ -38,7 +38,7 @@ const (
 	EventSystemAlert       WebhookEvent = "system.alert"
 )
 
-// WebhookStatus represents the status of a webhook endpoint
+// WebhookStatus represents the status of a webhook endpoint.
 type WebhookStatus string
 
 const (
@@ -48,7 +48,7 @@ const (
 	StatusDisabled WebhookStatus = "disabled"
 )
 
-// WebhookDeliveryStatus represents the status of a webhook delivery attempt
+// WebhookDeliveryStatus represents the status of a webhook delivery attempt.
 type WebhookDeliveryStatus string
 
 const (
@@ -59,7 +59,7 @@ const (
 	DeliveryExpired  WebhookDeliveryStatus = "expired"
 )
 
-// Webhook represents a webhook endpoint configuration
+// Webhook represents a webhook endpoint configuration.
 type Webhook struct {
 	ID          uint           `json:"id" db:"id"`
 	Name        string         `json:"name" db:"name"`
@@ -94,7 +94,7 @@ type Webhook struct {
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
-// WebhookFilters defines conditions for when webhooks should be triggered
+// WebhookFilters defines conditions for when webhooks should be triggered.
 type WebhookFilters struct {
 	// Queue filters - only trigger for specific queues
 	QueueIDs []int `json:"queue_ids,omitempty"`
@@ -112,7 +112,7 @@ type WebhookFilters struct {
 	CustomFields map[string]interface{} `json:"custom_fields,omitempty"`
 }
 
-// WebhookDelivery represents a webhook delivery attempt
+// WebhookDelivery represents a webhook delivery attempt.
 type WebhookDelivery struct {
 	ID        uint                  `json:"id" db:"id"`
 	WebhookID uint                  `json:"webhook_id" db:"webhook_id"`
@@ -143,7 +143,7 @@ type WebhookDelivery struct {
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
-// WebhookPayload represents the structure of webhook payloads sent to external systems
+// WebhookPayload represents the structure of webhook payloads sent to external systems.
 type WebhookPayload struct {
 	// Event information
 	Event     WebhookEvent `json:"event"`
@@ -164,7 +164,7 @@ type WebhookPayload struct {
 	PreviousData interface{} `json:"previous_data,omitempty"`
 }
 
-// TicketWebhookData represents ticket data in webhook payloads
+// TicketWebhookData represents ticket data in webhook payloads.
 type TicketWebhookData struct {
 	ID            int        `json:"id"`
 	Number        string     `json:"number"`
@@ -184,7 +184,7 @@ type TicketWebhookData struct {
 	SLADue        *time.Time `json:"sla_due,omitempty"`
 }
 
-// ArticleWebhookData represents article data in webhook payloads
+// ArticleWebhookData represents article data in webhook payloads.
 type ArticleWebhookData struct {
 	ID        int       `json:"id"`
 	TicketID  int       `json:"ticket_id"`
@@ -197,7 +197,7 @@ type ArticleWebhookData struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// UserWebhookData represents user data in webhook payloads
+// UserWebhookData represents user data in webhook payloads.
 type UserWebhookData struct {
 	ID        int       `json:"id"`
 	Email     string    `json:"email"`
@@ -209,7 +209,7 @@ type UserWebhookData struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// QueueWebhookData represents queue data in webhook payloads
+// QueueWebhookData represents queue data in webhook payloads.
 type QueueWebhookData struct {
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`
@@ -220,7 +220,7 @@ type QueueWebhookData struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// WebhookRequest represents a request to create or update a webhook
+// WebhookRequest represents a request to create or update a webhook.
 type WebhookRequest struct {
 	Name        string            `json:"name" binding:"required"`
 	URL         string            `json:"url" binding:"required,url"`
@@ -236,7 +236,7 @@ type WebhookRequest struct {
 	Timeout       int `json:"timeout"`        // seconds
 }
 
-// WebhookStatistics represents webhook usage statistics
+// WebhookStatistics represents webhook usage statistics.
 type WebhookStatistics struct {
 	WebhookID            uint       `json:"webhook_id"`
 	TotalDeliveries      int        `json:"total_deliveries"`
@@ -249,7 +249,7 @@ type WebhookStatistics struct {
 	LastFailureAt        *time.Time `json:"last_failure_at"`
 }
 
-// WebhookTestResult represents the result of testing a webhook
+// WebhookTestResult represents the result of testing a webhook.
 type WebhookTestResult struct {
 	Success      bool          `json:"success"`
 	StatusCode   int           `json:"status_code"`

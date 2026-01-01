@@ -1,3 +1,4 @@
+// Package tasks provides background task implementations for the runner.
 package tasks
 
 import (
@@ -20,13 +21,13 @@ import (
 )
 
 const (
-	// MaxRetries is the maximum number of retry attempts for failed emails
+	// MaxRetries is the maximum number of retry attempts for failed emails.
 	MaxRetries = 5
-	// RetryDelayBase is the base delay for exponential backoff (in minutes)
+	// RetryDelayBase is the base delay for exponential backoff (in minutes).
 	RetryDelayBase = 5
 )
 
-// EmailQueueTask processes emails from the mail queue
+// EmailQueueTask processes emails from the mail queue.
 type EmailQueueTask struct {
 	repo   *mailqueue.MailQueueRepository
 	cfg    *config.EmailConfig
@@ -46,7 +47,7 @@ func (e *sendError) Unwrap() error {
 	return e.err
 }
 
-// NewEmailQueueTask creates a new email queue task
+// NewEmailQueueTask creates a new email queue task.
 func NewEmailQueueTask(db *sql.DB, cfg *config.EmailConfig) runner.Task {
 	return &EmailQueueTask{
 		repo:   mailqueue.NewMailQueueRepository(db),
@@ -55,22 +56,22 @@ func NewEmailQueueTask(db *sql.DB, cfg *config.EmailConfig) runner.Task {
 	}
 }
 
-// Name returns the task name
+// Name returns the task name.
 func (t *EmailQueueTask) Name() string {
 	return "email-queue-processor"
 }
 
-// Schedule returns the cron schedule (every 30 seconds)
+// Schedule returns the cron schedule (every 30 seconds).
 func (t *EmailQueueTask) Schedule() string {
 	return "*/30 * * * * *"
 }
 
-// Timeout returns the task timeout (5 minutes)
+// Timeout returns the task timeout (5 minutes).
 func (t *EmailQueueTask) Timeout() time.Duration {
 	return 5 * time.Minute
 }
 
-// Run processes pending emails from the queue
+// Run processes pending emails from the queue.
 func (t *EmailQueueTask) Run(ctx context.Context) error {
 	if !t.cfg.Enabled {
 		t.logger.Println("Email notifications disabled, skipping queue processing")
@@ -135,7 +136,7 @@ func (t *EmailQueueTask) Run(ctx context.Context) error {
 	return firstErr
 }
 
-// processEmail attempts to send a single email
+// processEmail attempts to send a single email.
 func (t *EmailQueueTask) processEmail(ctx context.Context, email *mailqueue.MailQueueItem) error {
 	// Send the email
 	smtpCode, smtpMessage, err := t.sendEmail(ctx, email)
@@ -157,7 +158,7 @@ func (t *EmailQueueTask) processEmail(ctx context.Context, email *mailqueue.Mail
 	return t.repo.Delete(ctx, email.ID)
 }
 
-// sendEmail sends an email using SMTP
+// sendEmail sends an email using SMTP.
 func (t *EmailQueueTask) sendEmail(ctx context.Context, email *mailqueue.MailQueueItem) (*int, *string, error) {
 	client, err := dialSMTPClient(t.cfg)
 	if err != nil {
@@ -230,7 +231,7 @@ func (t *EmailQueueTask) sendEmail(ctx context.Context, email *mailqueue.MailQue
 	return nil, nil, nil // Success
 }
 
-// calculateNextRetryTime calculates the next retry time using exponential backoff
+// calculateNextRetryTime calculates the next retry time using exponential backoff.
 func (t *EmailQueueTask) calculateNextRetryTime(attempts int) *time.Time {
 	if attempts >= MaxRetries {
 		// Don't schedule further retries
@@ -247,7 +248,7 @@ func (t *EmailQueueTask) calculateNextRetryTime(attempts int) *time.Time {
 	return &nextTime
 }
 
-// cleanupFailedEmails removes old failed emails from the queue
+// cleanupFailedEmails removes old failed emails from the queue.
 func (t *EmailQueueTask) cleanupFailedEmails(ctx context.Context) error {
 	failedEmails, err := t.repo.GetFailed(ctx, MaxRetries, 100)
 	if err != nil {
@@ -272,7 +273,7 @@ func (t *EmailQueueTask) cleanupFailedEmails(ctx context.Context) error {
 	return nil
 }
 
-// stringPtr returns a pointer to a string
+// stringPtr returns a pointer to a string.
 func stringPtr(s string) *string {
 	return &s
 }
@@ -326,7 +327,7 @@ func dialSMTPClient(cfg *config.EmailConfig) (*smtp.Client, error) {
 	}
 }
 
-// loginAuth implements SMTP LOGIN authentication
+// loginAuth implements SMTP LOGIN authentication.
 type loginAuth struct {
 	username, password string
 }

@@ -10,17 +10,17 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// GroupSQLRepository handles database operations for groups
+// GroupSQLRepository handles database operations for groups.
 type GroupSQLRepository struct {
 	db *sql.DB
 }
 
-// NewGroupRepository creates a new group repository
+// NewGroupRepository creates a new group repository.
 func NewGroupRepository(db *sql.DB) *GroupSQLRepository {
 	return &GroupSQLRepository{db: db}
 }
 
-// List retrieves all groups (both active and inactive)
+// List retrieves all groups (both active and inactive).
 func (r *GroupSQLRepository) List() ([]*models.Group, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
@@ -59,7 +59,7 @@ func (r *GroupSQLRepository) List() ([]*models.Group, error) {
 	return groups, nil
 }
 
-// GetUserGroups retrieves group names for a user
+// GetUserGroups retrieves group names for a user.
 func (r *GroupSQLRepository) GetUserGroups(userID uint) ([]string, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT g.name 
@@ -86,7 +86,7 @@ func (r *GroupSQLRepository) GetUserGroups(userID uint) ([]string, error) {
 	return groups, nil
 }
 
-// GetByID retrieves a group by ID
+// GetByID retrieves a group by ID.
 func (r *GroupSQLRepository) GetByID(id uint) (*models.Group, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
@@ -117,7 +117,7 @@ func (r *GroupSQLRepository) GetByID(id uint) (*models.Group, error) {
 	return &group, err
 }
 
-// AddUserToGroup adds a user to a group
+// AddUserToGroup adds a user to a group.
 func (r *GroupSQLRepository) AddUserToGroup(userID uint, groupID uint) error {
 	// Check if the relationship already exists
 	var exists bool
@@ -143,7 +143,7 @@ func (r *GroupSQLRepository) AddUserToGroup(userID uint, groupID uint) error {
 	return nil
 }
 
-// RemoveUserFromGroup removes a user from a group
+// RemoveUserFromGroup removes a user from a group.
 func (r *GroupSQLRepository) RemoveUserFromGroup(userID uint, groupID uint) error {
 	query := database.ConvertPlaceholders(`DELETE FROM group_user WHERE user_id = $1 AND group_id = $2`)
 	result, err := r.db.Exec(query, userID, groupID)
@@ -163,7 +163,7 @@ func (r *GroupSQLRepository) RemoveUserFromGroup(userID uint, groupID uint) erro
 	return nil
 }
 
-// Create creates a new group
+// Create creates a new group.
 func (r *GroupSQLRepository) Create(group *models.Group) error {
 	if group == nil {
 		return errors.New("group is required")
@@ -193,7 +193,7 @@ func (r *GroupSQLRepository) Create(group *models.Group) error {
 	return nil
 }
 
-// Update updates an existing group
+// Update updates an existing group.
 func (r *GroupSQLRepository) Update(group *models.Group) error {
 	query := database.ConvertPlaceholders(`
 		UPDATE groups 
@@ -225,7 +225,7 @@ func (r *GroupSQLRepository) Update(group *models.Group) error {
 	return nil
 }
 
-// Delete permanently deletes a group and removes all member associations
+// Delete permanently deletes a group and removes all member associations.
 func (r *GroupSQLRepository) Delete(id uint) error {
 	// First, remove all group members
 	_, err := r.db.Exec(database.ConvertPlaceholders(`DELETE FROM group_user WHERE group_id = $1`), id)
@@ -253,7 +253,7 @@ func (r *GroupSQLRepository) Delete(id uint) error {
 	return nil
 }
 
-// GetByName retrieves a group by name
+// GetByName retrieves a group by name.
 func (r *GroupSQLRepository) GetByName(name string) (*models.Group, error) {
 	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
@@ -296,7 +296,7 @@ func (r *GroupSQLRepository) GetByName(name string) (*models.Group, error) {
 	return &group, err
 }
 
-// GetGroupMembers retrieves all users in a group
+// GetGroupMembers retrieves all users in a group.
 func (r *GroupSQLRepository) GetGroupMembers(groupID uint) ([]*models.User, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT u.id, u.login, u.first_name, u.last_name, u.valid_id

@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Ticket event management
+// Ticket event management.
 var ticketEventClients = struct {
 	sync.RWMutex
 	clients map[chan string]bool
@@ -65,7 +65,7 @@ func handleTicketEvents(c *gin.Context) {
 	}
 }
 
-// BroadcastTicketUpdate sends an update to all connected clients
+// BroadcastTicketUpdate sends an update to all connected clients.
 func BroadcastTicketUpdate(eventType string, ticketData interface{}) {
 	ticketEventClients.RLock()
 	defer ticketEventClients.RUnlock()

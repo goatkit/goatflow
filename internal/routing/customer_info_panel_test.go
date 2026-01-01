@@ -10,9 +10,10 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
-	"github.com/stretchr/testify/require"
 )
 
 func TestHandleCustomerInfoPanel_RendersCustomerDetails(t *testing.T) {

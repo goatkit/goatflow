@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
@@ -27,7 +28,7 @@ type queueUpdateRequest struct {
 	GroupAccess     *[]int  `json:"group_access"`
 }
 
-// HandleUpdateQueueAPI handles PUT /api/v1/queues/:id
+// HandleUpdateQueueAPI handles PUT /api/v1/queues/:id.
 func HandleUpdateQueueAPI(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -252,7 +253,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if updateRequired {
 		updateQuery := database.ConvertPlaceholders(`
@@ -346,7 +347,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 	`)
 	rows, err := db.Query(groupQuery, queueID)
 	if err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		var groups []int
 		for rows.Next() {
 			var gid int

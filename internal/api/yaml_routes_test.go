@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -6,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestYAMLRoutesBasicAvailability ensures newly YAML-registered UI routes exist
+// TestYAMLRoutesBasicAvailability ensures newly YAML-registered UI routes exist.
 func TestYAMLRoutesBasicAvailability(t *testing.T) {
 	// Force test mode to exercise fallback routes
 	t.Setenv("APP_ENV", "test")

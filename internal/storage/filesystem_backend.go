@@ -7,20 +7,21 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// FilesystemBackend implements article storage on the filesystem (OTRS ArticleStorageFS)
+// FilesystemBackend implements article storage on the filesystem (OTRS ArticleStorageFS).
 type FilesystemBackend struct {
 	basePath string
 	db       *sql.DB // For storing metadata
 }
 
-// NewFilesystemBackend creates a new filesystem storage backend
+// NewFilesystemBackend creates a new filesystem storage backend.
 func NewFilesystemBackend(basePath string, db *sql.DB) (*FilesystemBackend, error) {
 	// Ensure base path exists
 	if err := os.MkdirAll(basePath, 0755); err != nil {
@@ -33,7 +34,7 @@ func NewFilesystemBackend(basePath string, db *sql.DB) (*FilesystemBackend, erro
 	}, nil
 }
 
-// Store saves article content to the filesystem
+// Store saves article content to the filesystem.
 func (f *FilesystemBackend) Store(ctx context.Context, articleID int64, content *ArticleContent) (*StorageReference, error) {
 	// Calculate checksum
 	hash := sha256.Sum256(content.Content)
@@ -107,7 +108,7 @@ func (f *FilesystemBackend) Store(ctx context.Context, articleID int64, content 
 	return ref, nil
 }
 
-// Retrieve gets article content from the filesystem
+// Retrieve gets article content from the filesystem.
 func (f *FilesystemBackend) Retrieve(ctx context.Context, ref *StorageReference) (*ArticleContent, error) {
 	// Read content from file
 	contentBytes, err := os.ReadFile(ref.Location)
@@ -155,7 +156,7 @@ func (f *FilesystemBackend) Retrieve(ctx context.Context, ref *StorageReference)
 	return content, nil
 }
 
-// Delete removes article content from the filesystem
+// Delete removes article content from the filesystem.
 func (f *FilesystemBackend) Delete(ctx context.Context, ref *StorageReference) error {
 	// Remove file
 	if err := os.Remove(ref.Location); err != nil && !os.IsNotExist(err) {
@@ -180,7 +181,7 @@ func (f *FilesystemBackend) Delete(ctx context.Context, ref *StorageReference) e
 	return nil
 }
 
-// Exists checks if article content exists on the filesystem
+// Exists checks if article content exists on the filesystem.
 func (f *FilesystemBackend) Exists(ctx context.Context, ref *StorageReference) (bool, error) {
 	_, err := os.Stat(ref.Location)
 	if err != nil {
@@ -192,7 +193,7 @@ func (f *FilesystemBackend) Exists(ctx context.Context, ref *StorageReference) (
 	return true, nil
 }
 
-// List returns all storage references for an article
+// List returns all storage references for an article.
 func (f *FilesystemBackend) List(ctx context.Context, articleID int64) ([]*StorageReference, error) {
 	// Get references from database
 	refs, err := f.getReferences(ctx, articleID)
@@ -211,7 +212,7 @@ func (f *FilesystemBackend) List(ctx context.Context, articleID int64) ([]*Stora
 	return validRefs, nil
 }
 
-// Migrate moves content to another backend
+// Migrate moves content to another backend.
 func (f *FilesystemBackend) Migrate(ctx context.Context, ref *StorageReference, target Backend) (*StorageReference, error) {
 	// Retrieve content
 	content, err := f.Retrieve(ctx, ref)
@@ -228,7 +229,7 @@ func (f *FilesystemBackend) Migrate(ctx context.Context, ref *StorageReference, 
 	return newRef, nil
 }
 
-// GetInfo returns backend information
+// GetInfo returns backend information.
 func (f *FilesystemBackend) GetInfo() *BackendInfo {
 	stats := &BackendStats{}
 
@@ -271,7 +272,7 @@ func (f *FilesystemBackend) GetInfo() *BackendInfo {
 	}
 }
 
-// HealthCheck verifies the filesystem is accessible
+// HealthCheck verifies the filesystem is accessible.
 func (f *FilesystemBackend) HealthCheck(ctx context.Context) error {
 	// Check if base path is accessible
 	testFile := filepath.Join(f.basePath, ".health_check")
@@ -475,7 +476,7 @@ func (f *FilesystemBackend) deleteReference(ctx context.Context, ref *StorageRef
 	return err
 }
 
-// Register the filesystem backend with the factory
+// Register the filesystem backend with the factory.
 func init() {
 	DefaultFactory.Register("FS", func(config map[string]interface{}) (Backend, error) {
 		basePath, ok := config["base_path"].(string)

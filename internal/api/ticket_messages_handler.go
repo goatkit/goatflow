@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
 
-// handleGetTicketMessages retrieves all messages/articles for a ticket
-// This replaces the underConstructionAPI("/tickets/:id/messages") call
+// This replaces the underConstructionAPI("/tickets/:id/messages") call.
 func handleGetTicketMessages(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -82,8 +82,7 @@ func handleGetTicketMessages(c *gin.Context) {
 	})
 }
 
-// handleAddTicketMessage creates a new message/article for a ticket
-// This handles POST requests to add comments
+// This handles POST requests to add comments.
 func handleAddTicketMessage(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -199,7 +198,7 @@ func handleAddTicketMessage(c *gin.Context) {
 
 // Helper functions
 
-// getCurrentUser extracts user info from gin context
+// getCurrentUser extracts user info from gin context.
 func getCurrentUser(c *gin.Context) (uint, string, string, bool) {
 	userID, idExists := c.Get("user_id")
 	email, emailExists := c.Get("user_email")
@@ -227,8 +226,7 @@ func getCurrentUser(c *gin.Context) (uint, string, string, bool) {
 	return id, emailStr, roleStr, true
 }
 
-// renderMessagesHTML renders the message list as HTML for HTMX
-// renderSimpleMessagesHTML renders SimpleTicketMessage objects as HTML
+// renderSimpleMessagesHTML renders SimpleTicketMessage objects as HTML.
 func renderSimpleMessagesHTML(messages []*service.SimpleTicketMessage) string {
 	if len(messages) == 0 {
 		return `<div class="text-gray-500 text-center py-8">No messages found.</div>`
@@ -243,7 +241,7 @@ func renderSimpleMessagesHTML(messages []*service.SimpleTicketMessage) string {
 	return html
 }
 
-// renderSimpleMessageHTML renders a single SimpleTicketMessage as HTML
+// renderSimpleMessageHTML renders a single SimpleTicketMessage as HTML.
 func renderSimpleMessageHTML(msg *service.SimpleTicketMessage) string {
 	internalBadge := ""
 	if msg.IsInternal {
@@ -389,7 +387,7 @@ func renderMessagesHTML(messages []models.Article) string {
 	return html
 }
 
-// renderSingleMessageHTML renders a single message as HTML
+// renderSingleMessageHTML renders a single message as HTML.
 func renderSingleMessageHTML(msg models.Article) string {
 	internalBadge := ""
 	if msg.IsVisibleForCustomer == 0 {
@@ -448,7 +446,7 @@ func renderSingleMessageHTML(msg models.Article) string {
 		formatMessageBody(bodyStr))
 }
 
-// getInitials extracts initials from a name
+// getInitials extracts initials from a name.
 func getInitials(name string) string {
 	if name == "" {
 		return "?"
@@ -466,7 +464,7 @@ func getInitials(name string) string {
 	return strings.ToUpper(parts[0][:1] + parts[len(parts)-1][:1])
 }
 
-// formatMessageBody formats the message body for HTML display
+// formatMessageBody formats the message body for HTML display.
 func formatMessageBody(body string) string {
 	// Basic HTML escaping and line break conversion
 	body = strings.ReplaceAll(body, "&", "&amp;")
@@ -476,7 +474,7 @@ func formatMessageBody(body string) string {
 	return body
 }
 
-// getAttachmentIcon returns an appropriate icon SVG based on content type
+// getAttachmentIcon returns an appropriate icon SVG based on content type.
 func getAttachmentIcon(contentType string) string {
 	if strings.HasPrefix(contentType, "image/") {
 		return `<svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -517,7 +515,7 @@ func getAttachmentIcon(contentType string) string {
 	</svg>`
 }
 
-// extractAttachmentID extracts the attachment ID from a URL like /api/attachments/123/download
+// extractAttachmentID extracts the attachment ID from a URL like /api/attachments/123/download.
 func extractAttachmentID(url string) string {
 	re := regexp.MustCompile(`/attachments/(\d+)/`)
 	matches := re.FindStringSubmatch(url)

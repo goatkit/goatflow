@@ -1,3 +1,4 @@
+// Package main provides a tool for adding translations.
 package main
 
 import (

@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AdminRouteDefinition defines a single admin route for both production and testing
+// AdminRouteDefinition defines a single admin route for both production and testing.
 type AdminRouteDefinition struct {
 	Method  string
 	Path    string
@@ -132,7 +132,7 @@ func GetAdminDynamicFieldsRoutes() []AdminRouteDefinition {
 	}
 }
 
-// RegisterAdminRoutes registers routes from definitions onto a router group
+// RegisterAdminRoutes registers routes from definitions onto a router group.
 func RegisterAdminRoutes(group *gin.RouterGroup, routes []AdminRouteDefinition) {
 	for _, r := range routes {
 		switch r.Method {

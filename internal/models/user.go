@@ -19,7 +19,7 @@ type User struct {
 	CreateBy         int        `json:"create_by" db:"create_by"`
 	ChangeTime       time.Time  `json:"change_time" db:"change_time"`
 	ChangeBy         int        `json:"change_by" db:"change_by"`
-	Role             string     `json:"role"` // Admin, Agent, Customer
+	Role             string     `json:"role"`                        // Admin, Agent, Customer
 	IsInAdminGroup   bool       `json:"is_in_admin_group,omitempty"` // User is in admin group (for nav display)
 	TenantID         uint       `json:"tenant_id,omitempty"`
 	LastLogin        *time.Time `json:"last_login,omitempty"`
@@ -28,7 +28,7 @@ type User struct {
 	Groups           []string   `json:"groups,omitempty"` // Group names for the user
 }
 
-// IsActive returns true if the user is active (valid_id = 1 in OTRS)
+// IsActive returns true if the user is active (valid_id = 1 in OTRS).
 func (u *User) IsActive() bool {
 	return u.ValidID == 1
 }

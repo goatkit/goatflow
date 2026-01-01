@@ -15,7 +15,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// LookupService provides lookup data for forms and dropdowns
+// LookupService provides lookup data for forms and dropdowns.
 type LookupService struct {
 	mu        sync.RWMutex
 	cache     map[string]*models.TicketFormData // Cache per language
@@ -26,7 +26,7 @@ type LookupService struct {
 	i18n      *i18n.I18n
 }
 
-// NewLookupService creates a new lookup service
+// NewLookupService creates a new lookup service.
 func NewLookupService() *LookupService {
 	s := &LookupService{
 		cache:     make(map[string]*models.TicketFormData),
@@ -52,12 +52,12 @@ func NewLookupService() *LookupService {
 	return s
 }
 
-// GetTicketFormData returns all data needed for ticket forms (defaults to English)
+// GetTicketFormData returns all data needed for ticket forms (defaults to English).
 func (s *LookupService) GetTicketFormData() *models.TicketFormData {
 	return s.GetTicketFormDataWithLang("en")
 }
 
-// GetTicketFormDataWithLang returns all data needed for ticket forms with translation
+// GetTicketFormDataWithLang returns all data needed for ticket forms with translation.
 func (s *LookupService) GetTicketFormDataWithLang(lang string) *models.TicketFormData {
 	if lang == "" {
 		lang = "en"
@@ -85,12 +85,12 @@ func (s *LookupService) GetTicketFormDataWithLang(lang string) *models.TicketFor
 	return s.cache[lang]
 }
 
-// buildFormData creates the form data structure (backward compatibility)
+// buildFormData creates the form data structure (backward compatibility).
 func (s *LookupService) buildFormData() *models.TicketFormData {
 	return s.buildFormDataWithLang("en")
 }
 
-// buildFormDataWithLang creates form data with translations
+// buildFormDataWithLang creates form data with translations.
 func (s *LookupService) buildFormDataWithLang(lang string) *models.TicketFormData {
 	// Initialize with defaults that will be overridden if database is available
 	result := &models.TicketFormData{
@@ -191,7 +191,7 @@ func (s *LookupService) buildFormDataWithLang(lang string) *models.TicketFormDat
 	return result
 }
 
-// normalizeStatuses reduces a potentially large OTRS state list to the common 5-state workflow
+// normalizeStatuses reduces a potentially large OTRS state list to the common 5-state workflow.
 func (s *LookupService) normalizeStatuses(states []models.LookupItem) []models.LookupItem {
 	if len(states) <= 5 {
 		return states
@@ -222,31 +222,31 @@ func (s *LookupService) normalizePriorities(priorities []models.LookupItem) []mo
 	return priorities
 }
 
-// GetQueues returns available queues
+// GetQueues returns available queues.
 func (s *LookupService) GetQueues() []models.QueueInfo {
 	data := s.GetTicketFormData()
 	return data.Queues
 }
 
-// GetPriorities returns available priorities
+// GetPriorities returns available priorities.
 func (s *LookupService) GetPriorities() []models.LookupItem {
 	data := s.GetTicketFormData()
 	return data.Priorities
 }
 
-// GetTypes returns available ticket types
+// GetTypes returns available ticket types.
 func (s *LookupService) GetTypes() []models.LookupItem {
 	data := s.GetTicketFormData()
 	return data.Types
 }
 
-// GetStatuses returns available ticket statuses
+// GetStatuses returns available ticket statuses.
 func (s *LookupService) GetStatuses() []models.LookupItem {
 	data := s.GetTicketFormData()
 	return data.Statuses
 }
 
-// InvalidateCache forces a cache refresh on next request
+// InvalidateCache forces a cache refresh on next request.
 func (s *LookupService) InvalidateCache() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -254,7 +254,7 @@ func (s *LookupService) InvalidateCache() {
 	s.cacheTime = make(map[string]time.Time)
 }
 
-// GetQueueByID returns a specific queue by ID
+// GetQueueByID returns a specific queue by ID.
 func (s *LookupService) GetQueueByID(id int) (*models.QueueInfo, bool) {
 	queues := s.GetQueues()
 	for i := range queues {
@@ -265,7 +265,7 @@ func (s *LookupService) GetQueueByID(id int) (*models.QueueInfo, bool) {
 	return nil, false
 }
 
-// GetPriorityByValue returns a priority by its value
+// GetPriorityByValue returns a priority by its value.
 func (s *LookupService) GetPriorityByValue(value string) (*models.LookupItem, bool) {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -297,7 +297,7 @@ func (s *LookupService) GetPriorityByValue(value string) (*models.LookupItem, bo
 	return nil, false
 }
 
-// GetTypeByID returns a ticket type by ID
+// GetTypeByID returns a ticket type by ID.
 func (s *LookupService) GetTypeByID(id int) (*models.LookupItem, bool) {
 	types := s.GetTypes()
 	for i := range types {
@@ -308,7 +308,7 @@ func (s *LookupService) GetTypeByID(id int) (*models.LookupItem, bool) {
 	return nil, false
 }
 
-// GetStatusByValue returns a status by its value
+// GetStatusByValue returns a status by its value.
 func (s *LookupService) GetStatusByValue(value string) (*models.LookupItem, bool) {
 	statuses := s.GetStatuses()
 	for i := range statuses {
@@ -319,7 +319,7 @@ func (s *LookupService) GetStatusByValue(value string) (*models.LookupItem, bool
 	return nil, false
 }
 
-// getTranslation gets a translation for a lookup value
+// getTranslation gets a translation for a lookup value.
 func (s *LookupService) getTranslation(tableName, fieldValue, lang string) string {
 	// First try database translation if available
 	if s.repo != nil {
@@ -378,7 +378,7 @@ func normalizePriorityValue(value string) string {
 	return strings.TrimSpace(value[i:])
 }
 
-// getDefaultTypes returns default ticket types with translations
+// getDefaultTypes returns default ticket types with translations.
 func (s *LookupService) getDefaultTypes(lang string) []models.LookupItem {
 	types := []models.LookupItem{
 		{ID: 1, Value: "incident", Label: "Incident", Order: 1, Active: true},

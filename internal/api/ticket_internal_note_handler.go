@@ -18,7 +18,7 @@ import (
 	"github.com/yuin/goldmark/renderer/html"
 )
 
-// InternalNote represents an internal note on a ticket
+// InternalNote represents an internal note on a ticket.
 type InternalNote struct {
 	ID               int        `json:"id"`
 	TicketID         int        `json:"ticket_id"`
@@ -40,7 +40,7 @@ type InternalNote struct {
 	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
-// NoteHistory represents edit history for a note
+// NoteHistory represents edit history for a note.
 type NoteHistory struct {
 	ID       int       `json:"id"`
 	NoteID   int       `json:"note_id"`
@@ -50,7 +50,7 @@ type NoteHistory struct {
 	Version  int       `json:"version"`
 }
 
-// Mock data for development
+// Mock data for development.
 var internalNotes = map[int]map[int]*InternalNote{
 	1: { // Ticket ID 1
 		1: {
@@ -108,16 +108,15 @@ var noteHistories = map[int][]NoteHistory{
 	},
 }
 
-// Mock tickets for validation
+// Mock tickets for validation.
 var mockTickets = map[int]bool{
 	1: true,
 	2: true,
 	3: true,
 }
 
-// RenderMarkdown converts markdown content to HTML with Tailwind styling
+// RenderMarkdown converts markdown content to HTML with Tailwind styling.
 func RenderMarkdown(content string) string {
-
 	// Create a Goldmark instance with extensions
 	md := goldmark.New(
 		goldmark.WithExtensions(
@@ -148,7 +147,7 @@ func RenderMarkdown(content string) string {
 	return htmlContent
 }
 
-// addTailwindClasses adds Tailwind CSS classes to HTML elements for consistent styling
+// addTailwindClasses adds Tailwind CSS classes to HTML elements for consistent styling.
 func addTailwindClasses(html string) string {
 	// Headers
 	html = strings.ReplaceAll(html, "<h1>", `<h1 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">`)
@@ -185,7 +184,7 @@ func addTailwindClasses(html string) string {
 	return html
 }
 
-// HandleCreateInternalNote creates a new internal note
+// HandleCreateInternalNote creates a new internal note.
 func HandleCreateInternalNote(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	ticketID, err := strconv.Atoi(ticketIDStr)
@@ -292,7 +291,7 @@ func HandleCreateInternalNote(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-// HandleGetInternalNotes returns internal notes for a ticket
+// HandleGetInternalNotes returns internal notes for a ticket.
 func HandleGetInternalNotes(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	ticketID, err := strconv.Atoi(ticketIDStr)
@@ -345,7 +344,7 @@ func HandleGetInternalNotes(c *gin.Context) {
 	})
 }
 
-// HandleUpdateInternalNote updates an existing internal note
+// HandleUpdateInternalNote updates an existing internal note.
 func HandleUpdateInternalNote(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	ticketID, err := strconv.Atoi(ticketIDStr)
@@ -426,7 +425,7 @@ func HandleUpdateInternalNote(c *gin.Context) {
 	})
 }
 
-// HandleDeleteInternalNote deletes an internal note
+// HandleDeleteInternalNote deletes an internal note.
 func HandleDeleteInternalNote(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	ticketID, err := strconv.Atoi(ticketIDStr)
@@ -471,7 +470,7 @@ func HandleDeleteInternalNote(c *gin.Context) {
 	})
 }
 
-// handleGetInternalNoteHistory returns edit history for a note
+// handleGetInternalNoteHistory returns edit history for a note.
 func handleGetInternalNoteHistory(c *gin.Context) {
 	noteIDStr := c.Param("note_id")
 	noteID, err := strconv.Atoi(noteIDStr)
@@ -491,7 +490,7 @@ func handleGetInternalNoteHistory(c *gin.Context) {
 	})
 }
 
-// handleGetInternalNoteStats returns statistics for internal notes
+// handleGetInternalNoteStats returns statistics for internal notes.
 func handleGetInternalNoteStats(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	ticketID, err := strconv.Atoi(ticketIDStr)
@@ -543,7 +542,7 @@ func handleGetInternalNoteStats(c *gin.Context) {
 	})
 }
 
-// handleExportInternalNotes exports internal notes in various formats
+// handleExportInternalNotes exports internal notes in various formats.
 func handleExportInternalNotes(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	ticketID, err := strconv.Atoi(ticketIDStr)
@@ -607,7 +606,7 @@ func handleExportInternalNotes(c *gin.Context) {
 	}
 }
 
-// handleCreateNoteFromTemplate creates a note from a template
+// handleCreateNoteFromTemplate creates a note from a template.
 func handleCreateNoteFromTemplate(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	ticketID, err := strconv.Atoi(ticketIDStr)

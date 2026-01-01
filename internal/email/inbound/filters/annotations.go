@@ -1,3 +1,4 @@
+// Package filters provides email filter annotations and processing rules.
 package filters
 
 const (

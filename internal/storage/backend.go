@@ -1,3 +1,4 @@
+// Package storage provides article attachment storage backends.
 package storage
 
 import (
@@ -7,7 +8,7 @@ import (
 	"time"
 )
 
-// Backend defines the interface for article storage backends
+// Backend defines the interface for article storage backends.
 type Backend interface {
 	// Store saves article content and returns a storage reference
 	Store(ctx context.Context, articleID int64, content *ArticleContent) (*StorageReference, error)
@@ -34,7 +35,7 @@ type Backend interface {
 	HealthCheck(ctx context.Context) error
 }
 
-// ArticleContent represents the content to be stored
+// ArticleContent represents the content to be stored.
 type ArticleContent struct {
 	ArticleID   int64
 	ContentType string
@@ -46,7 +47,7 @@ type ArticleContent struct {
 	CreatedBy   int
 }
 
-// StorageReference points to stored content
+// StorageReference points to stored content.
 type StorageReference struct {
 	ID           int64
 	ArticleID    int64
@@ -60,7 +61,7 @@ type StorageReference struct {
 	AccessedTime time.Time
 }
 
-// BackendInfo provides information about a storage backend
+// BackendInfo provides information about a storage backend.
 type BackendInfo struct {
 	Name         string
 	Type         string
@@ -69,7 +70,7 @@ type BackendInfo struct {
 	Statistics   *BackendStats
 }
 
-// BackendStats contains usage statistics
+// BackendStats contains usage statistics.
 type BackendStats struct {
 	TotalFiles   int64
 	TotalSize    int64
@@ -78,7 +79,7 @@ type BackendStats struct {
 	WriteLatency time.Duration
 }
 
-// Factory creates storage backends based on configuration
+// Factory creates storage backends based on configuration.
 type Factory interface {
 	// Create instantiates a storage backend
 	Create(backendType string, config map[string]interface{}) (Backend, error)
@@ -90,25 +91,25 @@ type Factory interface {
 	List() []string
 }
 
-// BackendConstructor creates a new backend instance
+// BackendConstructor creates a new backend instance.
 type BackendConstructor func(config map[string]interface{}) (Backend, error)
 
-// DefaultFactory is the global storage backend factory
+// DefaultFactory is the global storage backend factory.
 var DefaultFactory Factory = NewStorageFactory()
 
-// StorageFactory implements the Factory interface
+// StorageFactory implements the Factory interface.
 type StorageFactory struct {
 	constructors map[string]BackendConstructor
 }
 
-// NewStorageFactory creates a new storage factory
+// NewStorageFactory creates a new storage factory.
 func NewStorageFactory() *StorageFactory {
 	return &StorageFactory{
 		constructors: make(map[string]BackendConstructor),
 	}
 }
 
-// Create instantiates a storage backend
+// Create instantiates a storage backend.
 func (f *StorageFactory) Create(backendType string, config map[string]interface{}) (Backend, error) {
 	constructor, exists := f.constructors[backendType]
 	if !exists {
@@ -118,12 +119,12 @@ func (f *StorageFactory) Create(backendType string, config map[string]interface{
 	return constructor(config)
 }
 
-// Register adds a new backend type
+// Register adds a new backend type.
 func (f *StorageFactory) Register(backendType string, constructor BackendConstructor) {
 	f.constructors[backendType] = constructor
 }
 
-// List returns available backend types
+// List returns available backend types.
 func (f *StorageFactory) List() []string {
 	types := make([]string, 0, len(f.constructors))
 	for t := range f.constructors {
@@ -132,13 +133,13 @@ func (f *StorageFactory) List() []string {
 	return types
 }
 
-// MixedModeBackend supports reading from multiple backends
+// MixedModeBackend supports reading from multiple backends.
 type MixedModeBackend struct {
 	primary   Backend
 	fallbacks []Backend
 }
 
-// NewMixedModeBackend creates a backend that checks multiple storage locations
+// NewMixedModeBackend creates a backend that checks multiple storage locations.
 func NewMixedModeBackend(primary Backend, fallbacks ...Backend) *MixedModeBackend {
 	return &MixedModeBackend{
 		primary:   primary,
@@ -146,12 +147,12 @@ func NewMixedModeBackend(primary Backend, fallbacks ...Backend) *MixedModeBacken
 	}
 }
 
-// Store saves to the primary backend
+// Store saves to the primary backend.
 func (m *MixedModeBackend) Store(ctx context.Context, articleID int64, content *ArticleContent) (*StorageReference, error) {
 	return m.primary.Store(ctx, articleID, content)
 }
 
-// Retrieve tries primary first, then fallbacks
+// Retrieve tries primary first, then fallbacks.
 func (m *MixedModeBackend) Retrieve(ctx context.Context, ref *StorageReference) (*ArticleContent, error) {
 	// Try primary backend first
 	content, err := m.primary.Retrieve(ctx, ref)
@@ -170,7 +171,7 @@ func (m *MixedModeBackend) Retrieve(ctx context.Context, ref *StorageReference) 
 	return nil, fmt.Errorf("content not found in any backend")
 }
 
-// Delete removes from all backends
+// Delete removes from all backends.
 func (m *MixedModeBackend) Delete(ctx context.Context, ref *StorageReference) error {
 	var lastErr error
 
@@ -189,7 +190,7 @@ func (m *MixedModeBackend) Delete(ctx context.Context, ref *StorageReference) er
 	return lastErr
 }
 
-// Exists checks all backends
+// Exists checks all backends.
 func (m *MixedModeBackend) Exists(ctx context.Context, ref *StorageReference) (bool, error) {
 	// Check primary
 	if exists, err := m.primary.Exists(ctx, ref); err == nil && exists {
@@ -206,7 +207,7 @@ func (m *MixedModeBackend) Exists(ctx context.Context, ref *StorageReference) (b
 	return false, nil
 }
 
-// List combines results from all backends
+// List combines results from all backends.
 func (m *MixedModeBackend) List(ctx context.Context, articleID int64) ([]*StorageReference, error) {
 	refs := make([]*StorageReference, 0)
 	seen := make(map[string]bool)
@@ -238,7 +239,7 @@ func (m *MixedModeBackend) List(ctx context.Context, articleID int64) ([]*Storag
 	return refs, nil
 }
 
-// Migrate moves content to target backend
+// Migrate moves content to target backend.
 func (m *MixedModeBackend) Migrate(ctx context.Context, ref *StorageReference, target Backend) (*StorageReference, error) {
 	// Retrieve from any backend
 	content, err := m.Retrieve(ctx, ref)
@@ -258,7 +259,7 @@ func (m *MixedModeBackend) Migrate(ctx context.Context, ref *StorageReference, t
 	return newRef, nil
 }
 
-// GetInfo returns mixed mode backend information
+// GetInfo returns mixed mode backend information.
 func (m *MixedModeBackend) GetInfo() *BackendInfo {
 	return &BackendInfo{
 		Name: "MixedMode",
@@ -272,7 +273,7 @@ func (m *MixedModeBackend) GetInfo() *BackendInfo {
 	}
 }
 
-// HealthCheck verifies all backends are operational
+// HealthCheck verifies all backends are operational.
 func (m *MixedModeBackend) HealthCheck(ctx context.Context) error {
 	// Check primary
 	if err := m.primary.HealthCheck(ctx); err != nil {
@@ -290,7 +291,7 @@ func (m *MixedModeBackend) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-// StreamingBackend extends Backend with streaming capabilities
+// StreamingBackend extends Backend with streaming capabilities.
 type StreamingBackend interface {
 	Backend
 

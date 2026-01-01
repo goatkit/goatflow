@@ -1,3 +1,4 @@
+// Package oauth2 provides OAuth2 authentication provider implementations.
 package oauth2
 
 import (
@@ -13,7 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// GrantType represents OAuth2 grant types
+// GrantType represents OAuth2 grant types.
 type GrantType string
 
 const (
@@ -22,7 +23,7 @@ const (
 	GrantTypeRefreshToken      GrantType = "refresh_token"
 )
 
-// ResponseType represents OAuth2 response types
+// ResponseType represents OAuth2 response types.
 type ResponseType string
 
 const (
@@ -30,14 +31,14 @@ const (
 	ResponseTypeToken ResponseType = "token"
 )
 
-// TokenType represents OAuth2 token types
+// TokenType represents OAuth2 token types.
 type TokenType string
 
 const (
 	TokenTypeBearer TokenType = "Bearer"
 )
 
-// Client represents an OAuth2 client application
+// Client represents an OAuth2 client application.
 type Client struct {
 	ID             string      `json:"id" db:"id"`
 	Secret         string      `json:"secret,omitempty" db:"secret"`
@@ -56,7 +57,7 @@ type Client struct {
 	LastUsed  *time.Time `json:"last_used,omitempty" db:"last_used"`
 }
 
-// AuthorizationCode represents an OAuth2 authorization code
+// AuthorizationCode represents an OAuth2 authorization code.
 type AuthorizationCode struct {
 	Code                string    `json:"code" db:"code"`
 	ClientID            string    `json:"client_id" db:"client_id"`
@@ -70,7 +71,7 @@ type AuthorizationCode struct {
 	CreatedAt           time.Time `json:"created_at" db:"created_at"`
 }
 
-// AccessToken represents an OAuth2 access token
+// AccessToken represents an OAuth2 access token.
 type AccessToken struct {
 	Token     string     `json:"token" db:"token"`
 	ClientID  string     `json:"client_id" db:"client_id"`
@@ -82,7 +83,7 @@ type AccessToken struct {
 	IsActive  bool       `json:"is_active" db:"is_active"`
 }
 
-// RefreshToken represents an OAuth2 refresh token
+// RefreshToken represents an OAuth2 refresh token.
 type RefreshToken struct {
 	Token         string    `json:"token" db:"token"`
 	AccessTokenID string    `json:"access_token_id" db:"access_token_id"`
@@ -94,7 +95,7 @@ type RefreshToken struct {
 	Used          bool      `json:"used" db:"used"`
 }
 
-// TokenResponse represents an OAuth2 token response
+// TokenResponse represents an OAuth2 token response.
 type TokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	TokenType    string `json:"token_type"`
@@ -103,7 +104,7 @@ type TokenResponse struct {
 	Scope        string `json:"scope,omitempty"`
 }
 
-// ErrorResponse represents an OAuth2 error response
+// ErrorResponse represents an OAuth2 error response.
 type ErrorResponse struct {
 	Error            string `json:"error"`
 	ErrorDescription string `json:"error_description,omitempty"`
@@ -111,7 +112,7 @@ type ErrorResponse struct {
 	State            string `json:"state,omitempty"`
 }
 
-// Scope represents OAuth2 scopes
+// Scope represents OAuth2 scopes.
 type Scope string
 
 const (
@@ -128,7 +129,7 @@ const (
 	ScopeOfflineAccess Scope = "offline_access" // for refresh tokens
 )
 
-// Provider implements OAuth2 authorization server
+// Provider implements OAuth2 authorization server.
 type Provider struct {
 	clientRepo       ClientRepository
 	codeRepo         AuthorizationCodeRepository
@@ -148,7 +149,7 @@ type Provider struct {
 	authorizationCodeTTL time.Duration
 }
 
-// Repository interfaces
+// Repository interfaces.
 type ClientRepository interface {
 	Create(client *Client) error
 	GetByID(id string) (*Client, error)
@@ -180,7 +181,7 @@ type RefreshTokenRepository interface {
 	CleanupExpired() error
 }
 
-// NewProvider creates a new OAuth2 provider
+// NewProvider creates a new OAuth2 provider.
 func NewProvider(
 	clientRepo ClientRepository,
 	codeRepo AuthorizationCodeRepository,
@@ -204,7 +205,7 @@ func NewProvider(
 	}
 }
 
-// SetupOAuth2Routes sets up OAuth2 endpoints
+// SetupOAuth2Routes sets up OAuth2 endpoints.
 func (p *Provider) SetupOAuth2Routes(r *gin.Engine) {
 	oauth2 := r.Group("/oauth2")
 	{
@@ -241,7 +242,7 @@ func (p *Provider) SetupOAuth2Routes(r *gin.Engine) {
 	}
 }
 
-// handleAuthorize handles the authorization endpoint
+// handleAuthorize handles the authorization endpoint.
 func (p *Provider) handleAuthorize(c *gin.Context) {
 	// Parse parameters
 	clientID := c.Query("client_id")
@@ -299,7 +300,7 @@ func (p *Provider) handleAuthorize(c *gin.Context) {
 	p.handleAuthorizePost(c)
 }
 
-// handleAuthorizePost handles consent form submission
+// handleAuthorizePost handles consent form submission.
 func (p *Provider) handleAuthorizePost(c *gin.Context) {
 	clientID := c.Query("client_id")
 	redirectURI := c.Query("redirect_uri")
@@ -346,7 +347,7 @@ func (p *Provider) handleAuthorizePost(c *gin.Context) {
 	c.Redirect(http.StatusSeeOther, redirectURL.String())
 }
 
-// handleToken handles the token endpoint
+// handleToken handles the token endpoint.
 func (p *Provider) handleToken(c *gin.Context) {
 	grantType := c.PostForm("grant_type")
 
@@ -365,7 +366,7 @@ func (p *Provider) handleToken(c *gin.Context) {
 	}
 }
 
-// handleAuthorizationCodeGrant handles authorization code grant
+// handleAuthorizationCodeGrant handles authorization code grant.
 func (p *Provider) handleAuthorizationCodeGrant(c *gin.Context) {
 	code := c.PostForm("code")
 	clientID := c.PostForm("client_id")
@@ -471,7 +472,7 @@ func (p *Provider) handleAuthorizationCodeGrant(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// handleClientCredentialsGrant handles client credentials grant
+// handleClientCredentialsGrant handles client credentials grant.
 func (p *Provider) handleClientCredentialsGrant(c *gin.Context) {
 	clientID := c.PostForm("client_id")
 	clientSecret := c.PostForm("client_secret")
@@ -529,7 +530,7 @@ func (p *Provider) handleClientCredentialsGrant(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// handleRefreshTokenGrant handles refresh token grant
+// handleRefreshTokenGrant handles refresh token grant.
 func (p *Provider) handleRefreshTokenGrant(c *gin.Context) {
 	refreshTokenStr := c.PostForm("refresh_token")
 	clientID := c.PostForm("client_id")

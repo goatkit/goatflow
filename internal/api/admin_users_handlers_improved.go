@@ -7,12 +7,13 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"golang.org/x/crypto/bcrypt"
 )
 
-// ImprovedHandleAdminUserGet handles GET /admin/users/:id with enhanced error handling and logging
+// ImprovedHandleAdminUserGet handles GET /admin/users/:id with enhanced error handling and logging.
 func ImprovedHandleAdminUserGet(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.Atoi(userID)
@@ -78,7 +79,7 @@ func ImprovedHandleAdminUserGet(c *gin.Context) {
 		// Don't fail completely, just return empty groups
 		user.Groups = []string{}
 	} else {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		var groupNames []string
 
 		for rows.Next() {
@@ -121,7 +122,7 @@ func ImprovedHandleAdminUserGet(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// ImprovedHandleAdminUserUpdate handles PUT /admin/users/:id with enhanced group handling
+// ImprovedHandleAdminUserUpdate handles PUT /admin/users/:id with enhanced group handling.
 func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.Atoi(userID)
@@ -180,7 +181,7 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 		})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Update user basic info
 	if req.Password != "" {
@@ -240,7 +241,7 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 		JOIN group_user gu ON g.id = gu.group_id 
 		WHERE gu.user_id = $1 AND g.valid_id = 1`), id)
 	if err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var groupName string
 			if err := rows.Scan(&groupName); err == nil {
@@ -312,7 +313,7 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 		WHERE gu.user_id = $1 AND g.valid_id = 1
 		ORDER BY g.name`), id)
 	if err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var groupName string
 			if rows.Scan(&groupName) == nil {

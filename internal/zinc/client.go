@@ -1,3 +1,4 @@
+// Package zinc provides the ZincSearch client for full-text search.
 package zinc
 
 import (
@@ -12,7 +13,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// Client interface for Zinc search operations
+// Client interface for Zinc search operations.
 type Client interface {
 	// Index operations
 	CreateIndex(ctx context.Context, name string, mapping map[string]interface{}) error
@@ -32,7 +33,7 @@ type Client interface {
 	Suggest(ctx context.Context, index string, text string, field string) ([]string, error)
 }
 
-// ZincClient implements the Client interface for Zinc
+// ZincClient implements the Client interface for Zinc.
 type ZincClient struct {
 	baseURL  string
 	username string
@@ -40,7 +41,7 @@ type ZincClient struct {
 	client   *http.Client
 }
 
-// NewZincClient creates a new Zinc client
+// NewZincClient creates a new Zinc client.
 func NewZincClient(baseURL, username, password string) *ZincClient {
 	return &ZincClient{
 		baseURL:  baseURL,
@@ -52,7 +53,7 @@ func NewZincClient(baseURL, username, password string) *ZincClient {
 	}
 }
 
-// CreateIndex creates a new index with optional mapping
+// CreateIndex creates a new index with optional mapping.
 func (c *ZincClient) CreateIndex(ctx context.Context, name string, mapping map[string]interface{}) error {
 	url := fmt.Sprintf("%s/api/%s", c.baseURL, name)
 
@@ -66,13 +67,13 @@ func (c *ZincClient) CreateIndex(ctx context.Context, name string, mapping map[s
 	return c.doRequest(ctx, "PUT", url, body, nil)
 }
 
-// DeleteIndex deletes an index
+// DeleteIndex deletes an index.
 func (c *ZincClient) DeleteIndex(ctx context.Context, name string) error {
 	url := fmt.Sprintf("%s/api/index/%s", c.baseURL, name)
 	return c.doRequest(ctx, "DELETE", url, nil, nil)
 }
 
-// IndexExists checks if an index exists
+// IndexExists checks if an index exists.
 func (c *ZincClient) IndexExists(ctx context.Context, name string) (bool, error) {
 	url := fmt.Sprintf("%s/api/index", c.baseURL)
 
@@ -95,7 +96,7 @@ func (c *ZincClient) IndexExists(ctx context.Context, name string) (bool, error)
 	return false, nil
 }
 
-// GetIndexStats retrieves statistics for an index
+// GetIndexStats retrieves statistics for an index.
 func (c *ZincClient) GetIndexStats(ctx context.Context, name string) (*models.IndexStats, error) {
 	url := fmt.Sprintf("%s/api/index/%s/stats", c.baseURL, name)
 
@@ -118,13 +119,13 @@ func (c *ZincClient) GetIndexStats(ctx context.Context, name string) (*models.In
 	}, nil
 }
 
-// IndexDocument indexes a single document
+// IndexDocument indexes a single document.
 func (c *ZincClient) IndexDocument(ctx context.Context, index string, id string, doc interface{}) error {
 	url := fmt.Sprintf("%s/api/%s/_doc/%s", c.baseURL, index, id)
 	return c.doRequest(ctx, "PUT", url, doc, nil)
 }
 
-// UpdateDocument updates a document
+// UpdateDocument updates a document.
 func (c *ZincClient) UpdateDocument(ctx context.Context, index string, id string, updates map[string]interface{}) error {
 	url := fmt.Sprintf("%s/api/%s/_update/%s", c.baseURL, index, id)
 
@@ -135,13 +136,13 @@ func (c *ZincClient) UpdateDocument(ctx context.Context, index string, id string
 	return c.doRequest(ctx, "POST", url, body, nil)
 }
 
-// DeleteDocument deletes a document
+// DeleteDocument deletes a document.
 func (c *ZincClient) DeleteDocument(ctx context.Context, index string, id string) error {
 	url := fmt.Sprintf("%s/api/%s/_doc/%s", c.baseURL, index, id)
 	return c.doRequest(ctx, "DELETE", url, nil, nil)
 }
 
-// GetDocument retrieves a document
+// GetDocument retrieves a document.
 func (c *ZincClient) GetDocument(ctx context.Context, index string, id string) (map[string]interface{}, error) {
 	url := fmt.Sprintf("%s/api/%s/_doc/%s", c.baseURL, index, id)
 
@@ -156,7 +157,7 @@ func (c *ZincClient) GetDocument(ctx context.Context, index string, id string) (
 	return response.Source, nil
 }
 
-// BulkIndex indexes multiple documents
+// BulkIndex indexes multiple documents.
 func (c *ZincClient) BulkIndex(ctx context.Context, index string, docs []interface{}) error {
 	url := fmt.Sprintf("%s/api/%s/_bulk", c.baseURL, index)
 
@@ -196,7 +197,7 @@ func (c *ZincClient) BulkIndex(ctx context.Context, index string, docs []interfa
 	return c.doRequest(ctx, "POST", url, buffer.Bytes(), nil)
 }
 
-// Search performs a search query
+// Search performs a search query.
 func (c *ZincClient) Search(ctx context.Context, index string, query *models.SearchRequest) (*models.SearchResult, error) {
 	url := fmt.Sprintf("%s/api/%s/_search", c.baseURL, index)
 
@@ -261,7 +262,7 @@ func (c *ZincClient) Search(ctx context.Context, index string, query *models.Sea
 	return result, nil
 }
 
-// Suggest provides search suggestions
+// Suggest provides search suggestions.
 func (c *ZincClient) Suggest(ctx context.Context, index string, text string, field string) ([]string, error) {
 	url := fmt.Sprintf("%s/api/%s/_search", c.baseURL, index)
 
@@ -298,7 +299,7 @@ func (c *ZincClient) Suggest(ctx context.Context, index string, text string, fie
 	return suggestions, nil
 }
 
-// buildZincQuery builds a Zinc query from SearchRequest
+// buildZincQuery builds a Zinc query from SearchRequest.
 func (c *ZincClient) buildZincQuery(req *models.SearchRequest) map[string]interface{} {
 	query := map[string]interface{}{
 		"from": (req.Page - 1) * req.PageSize,
@@ -364,7 +365,7 @@ func (c *ZincClient) buildZincQuery(req *models.SearchRequest) map[string]interf
 	return query
 }
 
-// doRequest performs an HTTP request
+// doRequest performs an HTTP request.
 func (c *ZincClient) doRequest(ctx context.Context, method, url string, body interface{}, response interface{}) error {
 	var reqBody io.Reader
 
@@ -393,7 +394,7 @@ func (c *ZincClient) doRequest(ctx context.Context, method, url string, body int
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		bodyBytes, _ := io.ReadAll(resp.Body)

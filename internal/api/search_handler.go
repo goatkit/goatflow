@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/search"
 )
 
@@ -53,7 +54,7 @@ func init() {
 	}
 }
 
-// HandleSearchAPI handles POST /api/v1/search
+// HandleSearchAPI handles POST /api/v1/search.
 func HandleSearchAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -117,7 +118,7 @@ func HandleSearchAPI(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
-// HandleSearchSuggestionsAPI handles GET /api/v1/search/suggestions
+// HandleSearchSuggestionsAPI handles GET /api/v1/search/suggestions.
 func HandleSearchSuggestionsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -152,7 +153,7 @@ func HandleSearchSuggestionsAPI(c *gin.Context) {
 	})
 }
 
-// HandleReindexAPI handles POST /api/v1/search/reindex
+// HandleReindexAPI handles POST /api/v1/search/reindex.
 func HandleReindexAPI(c *gin.Context) {
 	// Check authentication and admin permissions
 	userID, exists := c.Get("user_id")
@@ -203,7 +204,7 @@ func HandleReindexAPI(c *gin.Context) {
 	})
 }
 
-// HandleSearchHealthAPI handles GET /api/v1/search/health
+// HandleSearchHealthAPI handles GET /api/v1/search/health.
 func HandleSearchHealthAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

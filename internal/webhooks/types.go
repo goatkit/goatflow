@@ -1,14 +1,15 @@
+// Package webhooks provides webhook event types and payload definitions.
 package webhooks
 
 import (
 	"time"
 )
 
-// EventType represents the type of event that triggers a webhook
+// EventType represents the type of event that triggers a webhook.
 type EventType string
 
 const (
-	// Ticket events
+	// Ticket events.
 	EventTicketCreated   EventType = "ticket.created"
 	EventTicketUpdated   EventType = "ticket.updated"
 	EventTicketClosed    EventType = "ticket.closed"
@@ -16,24 +17,24 @@ const (
 	EventTicketAssigned  EventType = "ticket.assigned"
 	EventTicketEscalated EventType = "ticket.escalated"
 
-	// Article events
+	// Article events.
 	EventArticleCreated EventType = "article.created"
 	EventArticleUpdated EventType = "article.updated"
 	EventArticleDeleted EventType = "article.deleted"
 
-	// Customer events
+	// Customer events.
 	EventCustomerCreated EventType = "customer.created"
 	EventCustomerUpdated EventType = "customer.updated"
 
-	// SLA events
+	// SLA events.
 	EventSLABreached EventType = "sla.breached"
 	EventSLAWarning  EventType = "sla.warning"
 
-	// Queue events
+	// Queue events.
 	EventQueueThreshold EventType = "queue.threshold"
 )
 
-// AllEventTypes returns all available event types
+// AllEventTypes returns all available event types.
 func AllEventTypes() []EventType {
 	return []EventType{
 		EventTicketCreated, EventTicketUpdated, EventTicketClosed,
@@ -45,7 +46,7 @@ func AllEventTypes() []EventType {
 	}
 }
 
-// Event represents an event that can trigger webhooks
+// Event represents an event that can trigger webhooks.
 type Event struct {
 	Type      EventType              `json:"event_type"`
 	Timestamp time.Time              `json:"timestamp"`
@@ -54,7 +55,7 @@ type Event struct {
 	Source    string                 `json:"source"`
 }
 
-// Webhook represents a configured webhook endpoint
+// Webhook represents a configured webhook endpoint.
 type Webhook struct {
 	ID             int               `json:"id"`
 	Name           string            `json:"name"`
@@ -71,7 +72,7 @@ type Webhook struct {
 	ChangeBy       int               `json:"change_by"`
 }
 
-// WebhookDelivery represents a webhook delivery attempt
+// WebhookDelivery represents a webhook delivery attempt.
 type WebhookDelivery struct {
 	ID          int        `json:"id"`
 	WebhookID   int        `json:"webhook_id"`
@@ -86,7 +87,7 @@ type WebhookDelivery struct {
 	Success     bool       `json:"success"`
 }
 
-// WebhookPayload represents the payload sent to webhook endpoints
+// WebhookPayload represents the payload sent to webhook endpoints.
 type WebhookPayload struct {
 	Event     EventType              `json:"event"`
 	Timestamp time.Time              `json:"timestamp"`

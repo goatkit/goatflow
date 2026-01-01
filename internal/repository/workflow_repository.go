@@ -6,7 +6,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// WorkflowRepository defines the interface for workflow data operations
+// WorkflowRepository defines the interface for workflow data operations.
 type WorkflowRepository interface {
 	// Workflow CRUD operations
 	Create(workflow *models.Workflow) error

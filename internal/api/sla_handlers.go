@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
@@ -45,7 +46,7 @@ func resolveUserID(raw interface{}) int {
 	return 1
 }
 
-// HandleListSLAsAPI handles GET /api/v1/slas
+// HandleListSLAsAPI handles GET /api/v1/slas.
 func HandleListSLAsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -89,7 +90,7 @@ func HandleListSLAsAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch SLAs"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	slas := []gin.H{}
 	for rows.Next() {
@@ -148,7 +149,7 @@ func HandleListSLAsAPI(c *gin.Context) {
 	})
 }
 
-// HandleGetSLAAPI handles GET /api/v1/slas/:id
+// HandleGetSLAAPI handles GET /api/v1/slas/:id.
 func HandleGetSLAAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -232,7 +233,7 @@ func HandleGetSLAAPI(c *gin.Context) {
 	})
 }
 
-// HandleCreateSLAAPI handles POST /api/v1/slas
+// HandleCreateSLAAPI handles POST /api/v1/slas.
 func HandleCreateSLAAPI(c *gin.Context) {
 	// Check authentication
 	rawUserID, exists := c.Get("user_id")
@@ -376,7 +377,7 @@ func HandleCreateSLAAPI(c *gin.Context) {
 	})
 }
 
-// HandleUpdateSLAAPI handles PUT /api/v1/slas/:id
+// HandleUpdateSLAAPI handles PUT /api/v1/slas/:id.
 func HandleUpdateSLAAPI(c *gin.Context) {
 	// Check authentication
 	rawUserID, exists := c.Get("user_id")
@@ -485,7 +486,7 @@ func HandleUpdateSLAAPI(c *gin.Context) {
 	})
 }
 
-// HandleDeleteSLAAPI handles DELETE /api/v1/slas/:id
+// HandleDeleteSLAAPI handles DELETE /api/v1/slas/:id.
 func HandleDeleteSLAAPI(c *gin.Context) {
 	// Check authentication
 	rawUserID, exists := c.Get("user_id")
@@ -561,7 +562,7 @@ func HandleDeleteSLAAPI(c *gin.Context) {
 	})
 }
 
-// HandleSLAMetricsAPI handles GET /api/v1/slas/:id/metrics
+// HandleSLAMetricsAPI handles GET /api/v1/slas/:id/metrics.
 func HandleSLAMetricsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

@@ -6,10 +6,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// SignatureForAgent represents a signature available to agents
+// SignatureForAgent represents a signature available to agents.
 type SignatureForAgent struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
@@ -17,7 +18,7 @@ type SignatureForAgent struct {
 	ContentType string `json:"content_type"`
 }
 
-// GetQueueSignature returns the signature assigned to a specific queue
+// GetQueueSignature returns the signature assigned to a specific queue.
 func GetQueueSignature(queueID int) (*SignatureForAgent, error) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -50,8 +51,7 @@ func GetQueueSignature(queueID int) (*SignatureForAgent, error) {
 	return &sig, nil
 }
 
-// handleGetQueueSignature returns the signature for a specific queue with variable substitution
-// GET /agent/api/signatures/queue/:queue_id?ticket_id=X
+// GET /agent/api/signatures/queue/:queue_id?ticket_id=X.
 func handleGetQueueSignature(c *gin.Context) {
 	queueIDStr := c.Param("queue_id")
 	queueID, err := strconv.Atoi(queueIDStr)

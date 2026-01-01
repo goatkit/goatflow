@@ -1,3 +1,4 @@
+// Package yamlmgmt provides YAML configuration file management.
 package yamlmgmt
 
 import (
@@ -9,19 +10,19 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ConfigAdapter adapts the existing Config.yaml format to our unified system
+// ConfigAdapter adapts the existing Config.yaml format to our unified system.
 type ConfigAdapter struct {
 	versionMgr *VersionManager
 }
 
-// NewConfigAdapter creates a new config adapter
+// NewConfigAdapter creates a new config adapter.
 func NewConfigAdapter(versionMgr *VersionManager) *ConfigAdapter {
 	return &ConfigAdapter{
 		versionMgr: versionMgr,
 	}
 }
 
-// ImportConfigYAML imports the existing Config.yaml into the version management system
+// ImportConfigYAML imports the existing Config.yaml into the version management system.
 func (ca *ConfigAdapter) ImportConfigYAML(filename string) error {
 	// Read the file
 	data, err := os.ReadFile(filename)
@@ -80,7 +81,7 @@ func (ca *ConfigAdapter) ImportConfigYAML(filename string) error {
 	return nil
 }
 
-// ApplyConfigChanges applies a specific configuration setting
+// ApplyConfigChanges applies a specific configuration setting.
 func (ca *ConfigAdapter) ApplyConfigChanges(settingName string, value interface{}) error {
 	// Get current config
 	currentDoc, err := ca.versionMgr.GetCurrent(KindConfig, "system-config")
@@ -120,7 +121,7 @@ func (ca *ConfigAdapter) ApplyConfigChanges(settingName string, value interface{
 	return nil
 }
 
-// GetConfigValue retrieves a specific configuration value
+// GetConfigValue retrieves a specific configuration value.
 func (ca *ConfigAdapter) GetConfigValue(settingName string) (interface{}, error) {
 	// Get current config
 	currentDoc, err := ca.versionMgr.GetCurrent(KindConfig, "system-config")
@@ -155,7 +156,7 @@ func (ca *ConfigAdapter) GetConfigValue(settingName string) (interface{}, error)
 	return nil, fmt.Errorf("setting '%s' not found", settingName)
 }
 
-// ExportToConfigYAML exports the current config back to Config.yaml format
+// ExportToConfigYAML exports the current config back to Config.yaml format.
 func (ca *ConfigAdapter) ExportToConfigYAML(filename string) error {
 	// Get current config
 	currentDoc, err := ca.versionMgr.GetCurrent(KindConfig, "system-config")
@@ -177,14 +178,14 @@ func (ca *ConfigAdapter) ExportToConfigYAML(filename string) error {
 	return nil
 }
 
-// WatchConfigFile sets up hot reload for Config.yaml
+// WatchConfigFile sets up hot reload for Config.yaml.
 func (ca *ConfigAdapter) WatchConfigFile(filename string, reloadHandler ReloadHandler) error {
 	// This would be integrated with the HotReloadManager
 	// For now, return a simple implementation
 	return fmt.Errorf("not implemented - use HotReloadManager.WatchDirectory instead")
 }
 
-// GetConfigSettings returns all configuration settings
+// GetConfigSettings returns all configuration settings.
 func (ca *ConfigAdapter) GetConfigSettings() ([]map[string]interface{}, error) {
 	// Get current config
 	currentDoc, err := ca.versionMgr.GetCurrent(KindConfig, "system-config")
@@ -213,7 +214,7 @@ func (ca *ConfigAdapter) GetConfigSettings() ([]map[string]interface{}, error) {
 	return result, nil
 }
 
-// GetConfigGroups returns all configuration groups
+// GetConfigGroups returns all configuration groups.
 func (ca *ConfigAdapter) GetConfigGroups() ([]map[string]interface{}, error) {
 	// Get current config
 	currentDoc, err := ca.versionMgr.GetCurrent(KindConfig, "system-config")

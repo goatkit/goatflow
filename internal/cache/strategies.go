@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-// WriteThroughStrategy writes to both local and Redis synchronously
+// WriteThroughStrategy writes to both local and Redis synchronously.
 type WriteThroughStrategy struct {
 	local *LocalCache
 	redis *RedisCache
 }
 
-// Get retrieves from local first, then Redis
+// Get retrieves from local first, then Redis.
 func (s *WriteThroughStrategy) Get(ctx context.Context, key string) (interface{}, error) {
 	// Check local cache first
 	if s.local != nil {
@@ -38,7 +38,7 @@ func (s *WriteThroughStrategy) Get(ctx context.Context, key string) (interface{}
 	return nil, nil
 }
 
-// Set writes to both caches
+// Set writes to both caches.
 func (s *WriteThroughStrategy) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	// Write to local cache
 	if s.local != nil {
@@ -53,7 +53,7 @@ func (s *WriteThroughStrategy) Set(ctx context.Context, key string, value interf
 	return nil
 }
 
-// Delete removes from both caches
+// Delete removes from both caches.
 func (s *WriteThroughStrategy) Delete(ctx context.Context, key string) error {
 	// Delete from local
 	if s.local != nil {
@@ -68,7 +68,7 @@ func (s *WriteThroughStrategy) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// Clear removes all matching keys
+// Clear removes all matching keys.
 func (s *WriteThroughStrategy) Clear(ctx context.Context, pattern string) error {
 	// Clear local cache
 	if s.local != nil {
@@ -83,7 +83,7 @@ func (s *WriteThroughStrategy) Clear(ctx context.Context, pattern string) error 
 	return nil
 }
 
-// GetMulti retrieves multiple keys
+// GetMulti retrieves multiple keys.
 func (s *WriteThroughStrategy) GetMulti(ctx context.Context, keys []string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	missingKeys := []string{}
@@ -120,7 +120,7 @@ func (s *WriteThroughStrategy) GetMulti(ctx context.Context, keys []string) (map
 	return result, nil
 }
 
-// SetMulti sets multiple keys
+// SetMulti sets multiple keys.
 func (s *WriteThroughStrategy) SetMulti(ctx context.Context, items map[string]interface{}, ttl time.Duration) error {
 	// Set in local cache
 	if s.local != nil {
@@ -137,14 +137,14 @@ func (s *WriteThroughStrategy) SetMulti(ctx context.Context, items map[string]in
 	return nil
 }
 
-// WriteBehindStrategy writes to local immediately, Redis asynchronously
+// WriteBehindStrategy writes to local immediately, Redis asynchronously.
 type WriteBehindStrategy struct {
 	local *LocalCache
 	redis *RedisCache
 	queue chan *CacheItem
 }
 
-// Get retrieves from local first, then Redis
+// Get retrieves from local first, then Redis.
 func (s *WriteBehindStrategy) Get(ctx context.Context, key string) (interface{}, error) {
 	// Same as write-through for reads
 	if s.local != nil {
@@ -169,7 +169,7 @@ func (s *WriteBehindStrategy) Get(ctx context.Context, key string) (interface{},
 	return nil, nil
 }
 
-// Set writes to local immediately, queues for Redis
+// Set writes to local immediately, queues for Redis.
 func (s *WriteBehindStrategy) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	// Write to local cache immediately
 	if s.local != nil {
@@ -194,7 +194,7 @@ func (s *WriteBehindStrategy) Set(ctx context.Context, key string, value interfa
 	return nil
 }
 
-// Delete removes from local immediately, queues for Redis
+// Delete removes from local immediately, queues for Redis.
 func (s *WriteBehindStrategy) Delete(ctx context.Context, key string) error {
 	// Delete from local immediately
 	if s.local != nil {
@@ -218,7 +218,7 @@ func (s *WriteBehindStrategy) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// Clear removes all matching keys
+// Clear removes all matching keys.
 func (s *WriteBehindStrategy) Clear(ctx context.Context, pattern string) error {
 	if s.local != nil {
 		s.local.Clear()
@@ -231,13 +231,13 @@ func (s *WriteBehindStrategy) Clear(ctx context.Context, pattern string) error {
 	return nil
 }
 
-// GetMulti retrieves multiple keys
+// GetMulti retrieves multiple keys.
 func (s *WriteBehindStrategy) GetMulti(ctx context.Context, keys []string) (map[string]interface{}, error) {
 	// Same as write-through
 	return (&WriteThroughStrategy{local: s.local, redis: s.redis}).GetMulti(ctx, keys)
 }
 
-// SetMulti sets multiple keys
+// SetMulti sets multiple keys.
 func (s *WriteBehindStrategy) SetMulti(ctx context.Context, items map[string]interface{}, ttl time.Duration) error {
 	// Set in local cache immediately
 	if s.local != nil {
@@ -266,7 +266,7 @@ func (s *WriteBehindStrategy) SetMulti(ctx context.Context, items map[string]int
 	return nil
 }
 
-// Start starts the background writer
+// Start starts the background writer.
 func (s *WriteBehindStrategy) Start(ctx context.Context) {
 	go func() {
 		for {
@@ -286,20 +286,20 @@ func (s *WriteBehindStrategy) Start(ctx context.Context) {
 	}()
 }
 
-// ReadThroughStrategy reads from cache, fetches from source on miss
+// ReadThroughStrategy reads from cache, fetches from source on miss.
 type ReadThroughStrategy struct {
 	local  *LocalCache
 	redis  *RedisCache
 	loader DataLoader
 }
 
-// DataLoader fetches data from the source
+// DataLoader fetches data from the source.
 type DataLoader interface {
 	Load(ctx context.Context, key string) (interface{}, error)
 	LoadMulti(ctx context.Context, keys []string) (map[string]interface{}, error)
 }
 
-// Get retrieves from cache or loads from source
+// Get retrieves from cache or loads from source.
 func (s *ReadThroughStrategy) Get(ctx context.Context, key string) (interface{}, error) {
 	// Check local cache
 	if s.local != nil {
@@ -341,7 +341,7 @@ func (s *ReadThroughStrategy) Get(ctx context.Context, key string) (interface{},
 	return nil, nil
 }
 
-// Set stores in cache
+// Set stores in cache.
 func (s *ReadThroughStrategy) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	if s.local != nil {
 		s.local.Set(key, value, ttl)
@@ -354,7 +354,7 @@ func (s *ReadThroughStrategy) Set(ctx context.Context, key string, value interfa
 	return nil
 }
 
-// Delete removes from cache
+// Delete removes from cache.
 func (s *ReadThroughStrategy) Delete(ctx context.Context, key string) error {
 	if s.local != nil {
 		s.local.Delete(key)
@@ -367,7 +367,7 @@ func (s *ReadThroughStrategy) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// Clear removes all matching keys
+// Clear removes all matching keys.
 func (s *ReadThroughStrategy) Clear(ctx context.Context, pattern string) error {
 	if s.local != nil {
 		s.local.Clear()
@@ -380,7 +380,7 @@ func (s *ReadThroughStrategy) Clear(ctx context.Context, pattern string) error {
 	return nil
 }
 
-// GetMulti retrieves multiple keys
+// GetMulti retrieves multiple keys.
 func (s *ReadThroughStrategy) GetMulti(ctx context.Context, keys []string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	missingKeys := []string{}
@@ -439,7 +439,7 @@ func (s *ReadThroughStrategy) GetMulti(ctx context.Context, keys []string) (map[
 	return result, nil
 }
 
-// SetMulti sets multiple keys
+// SetMulti sets multiple keys.
 func (s *ReadThroughStrategy) SetMulti(ctx context.Context, items map[string]interface{}, ttl time.Duration) error {
 	if s.local != nil {
 		for key, val := range items {
@@ -454,13 +454,13 @@ func (s *ReadThroughStrategy) SetMulti(ctx context.Context, items map[string]int
 	return nil
 }
 
-// CacheAsideStrategy leaves cache management to the application
+// CacheAsideStrategy leaves cache management to the application.
 type CacheAsideStrategy struct {
 	local *LocalCache
 	redis *RedisCache
 }
 
-// Get retrieves from cache only
+// Get retrieves from cache only.
 func (s *CacheAsideStrategy) Get(ctx context.Context, key string) (interface{}, error) {
 	// Check local cache
 	if s.local != nil {
@@ -477,7 +477,7 @@ func (s *CacheAsideStrategy) Get(ctx context.Context, key string) (interface{}, 
 	return nil, nil
 }
 
-// Set stores in cache
+// Set stores in cache.
 func (s *CacheAsideStrategy) Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
 	if s.local != nil {
 		s.local.Set(key, value, ttl)
@@ -490,7 +490,7 @@ func (s *CacheAsideStrategy) Set(ctx context.Context, key string, value interfac
 	return nil
 }
 
-// Delete removes from cache
+// Delete removes from cache.
 func (s *CacheAsideStrategy) Delete(ctx context.Context, key string) error {
 	if s.local != nil {
 		s.local.Delete(key)
@@ -503,7 +503,7 @@ func (s *CacheAsideStrategy) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// Clear removes all matching keys
+// Clear removes all matching keys.
 func (s *CacheAsideStrategy) Clear(ctx context.Context, pattern string) error {
 	if s.local != nil {
 		s.local.Clear()
@@ -516,7 +516,7 @@ func (s *CacheAsideStrategy) Clear(ctx context.Context, pattern string) error {
 	return nil
 }
 
-// GetMulti retrieves multiple keys
+// GetMulti retrieves multiple keys.
 func (s *CacheAsideStrategy) GetMulti(ctx context.Context, keys []string) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	missingKeys := []string{}
@@ -553,7 +553,7 @@ func (s *CacheAsideStrategy) GetMulti(ctx context.Context, keys []string) (map[s
 	return result, nil
 }
 
-// SetMulti sets multiple keys
+// SetMulti sets multiple keys.
 func (s *CacheAsideStrategy) SetMulti(ctx context.Context, items map[string]interface{}, ttl time.Duration) error {
 	if s.local != nil {
 		for key, val := range items {

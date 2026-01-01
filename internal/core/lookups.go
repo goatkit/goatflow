@@ -10,7 +10,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 )
 
-// LookupOption represents a single option in a dropdown/select field
+// LookupOption represents a single option in a dropdown/select field.
 type LookupOption struct {
 	ID          int    `json:"id"`
 	Value       string `json:"value"`        // Internal database value
@@ -20,7 +20,7 @@ type LookupOption struct {
 	IsActive    bool   `json:"is_active"`
 }
 
-// LookupService provides translated lookup values for dropdowns
+// LookupService provides translated lookup values for dropdowns.
 type LookupService struct {
 	repo  *data.LookupsRepository
 	i18n  *i18n.I18n
@@ -28,7 +28,7 @@ type LookupService struct {
 	mu    sync.RWMutex
 }
 
-// NewLookupService creates a new lookup service
+// NewLookupService creates a new lookup service.
 func NewLookupService(repo *data.LookupsRepository) *LookupService {
 	return &LookupService{
 		repo:  repo,
@@ -37,7 +37,7 @@ func NewLookupService(repo *data.LookupsRepository) *LookupService {
 	}
 }
 
-// GetTicketStates returns all available ticket states with translations
+// GetTicketStates returns all available ticket states with translations.
 func (s *LookupService) GetTicketStates(ctx context.Context, lang string) ([]LookupOption, error) {
 	cacheKey := fmt.Sprintf("ticket_states_%s", lang)
 
@@ -84,7 +84,7 @@ func (s *LookupService) GetTicketStates(ctx context.Context, lang string) ([]Loo
 	return options, nil
 }
 
-// GetTicketPriorities returns all available ticket priorities with translations
+// GetTicketPriorities returns all available ticket priorities with translations.
 func (s *LookupService) GetTicketPriorities(ctx context.Context, lang string) ([]LookupOption, error) {
 	cacheKey := fmt.Sprintf("ticket_priorities_%s", lang)
 
@@ -131,7 +131,7 @@ func (s *LookupService) GetTicketPriorities(ctx context.Context, lang string) ([
 	return options, nil
 }
 
-// GetQueues returns all available queues with optional translations
+// GetQueues returns all available queues with optional translations.
 func (s *LookupService) GetQueues(ctx context.Context, lang string) ([]LookupOption, error) {
 	cacheKey := fmt.Sprintf("queues_%s", lang)
 
@@ -184,7 +184,7 @@ func (s *LookupService) GetQueues(ctx context.Context, lang string) ([]LookupOpt
 	return options, nil
 }
 
-// GetTicketTypes returns all available ticket types with translations
+// GetTicketTypes returns all available ticket types with translations.
 func (s *LookupService) GetTicketTypes(ctx context.Context, lang string) ([]LookupOption, error) {
 	cacheKey := fmt.Sprintf("ticket_types_%s", lang)
 
@@ -231,7 +231,7 @@ func (s *LookupService) GetTicketTypes(ctx context.Context, lang string) ([]Look
 	return options, nil
 }
 
-// getTranslation attempts to get a translation from the database or i18n files
+// getTranslation attempts to get a translation from the database or i18n files.
 func (s *LookupService) getTranslation(tableName, fieldValue, lang string) string {
 	// First, try to get translation from database
 	if translation, err := s.repo.GetTranslation(context.Background(), tableName, fieldValue, lang); err == nil && translation != "" {
@@ -263,14 +263,14 @@ func (s *LookupService) getTranslation(tableName, fieldValue, lang string) strin
 	return fieldValue
 }
 
-// ClearCache clears the lookup cache
+// ClearCache clears the lookup cache.
 func (s *LookupService) ClearCache() {
 	s.mu.Lock()
 	s.cache = make(map[string][]LookupOption)
 	s.mu.Unlock()
 }
 
-// AddCustomTranslation allows admins to add translations for custom values
+// AddCustomTranslation allows admins to add translations for custom values.
 func (s *LookupService) AddCustomTranslation(ctx context.Context, tableName, fieldValue, lang, translation string) error {
 	err := s.repo.AddTranslation(ctx, tableName, fieldValue, lang, translation, false)
 	if err != nil {

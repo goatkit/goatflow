@@ -7,10 +7,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleGetQueueAPI handles GET /api/v1/queues/:id
+// HandleGetQueueAPI handles GET /api/v1/queues/:id.
 func HandleGetQueueAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -33,7 +34,7 @@ func HandleGetQueueAPI(c *gin.Context) {
 	HandleAPIQueueGet(c)
 }
 
-// HandleGetQueueAgentsAPI handles GET /api/v1/queues/:id/agents
+// HandleGetQueueAgentsAPI handles GET /api/v1/queues/:id/agents.
 func HandleGetQueueAgentsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -71,7 +72,7 @@ func HandleGetQueueAgentsAPI(c *gin.Context) {
 	})
 }
 
-// getAgentsForQueue gets agents with permissions for a specific queue
+// getAgentsForQueue gets agents with permissions for a specific queue.
 func getAgentsForQueue(db *sql.DB, queueID int) ([]gin.H, error) {
 	log.Printf("DEBUG: getAgentsForQueue called for queueID %d", queueID)
 	rows, err := db.Query(database.ConvertPlaceholders(`
@@ -88,7 +89,7 @@ func getAgentsForQueue(db *sql.DB, queueID int) ([]gin.H, error) {
 		log.Printf("DEBUG: getAgentsForQueue query error: %v", err)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var agents []gin.H
 	for rows.Next() {

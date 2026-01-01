@@ -1,3 +1,4 @@
+// Package main provides lookup testing utilities.
 package main
 
 import (

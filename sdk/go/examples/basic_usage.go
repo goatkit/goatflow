@@ -6,7 +6,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/sdk/go"
 	"github.com/gotrs-io/gotrs-ce/sdk/go/types"
 )
 

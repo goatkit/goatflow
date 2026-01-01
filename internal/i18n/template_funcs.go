@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// TemplateFuncs returns template functions for i18n
+// TemplateFuncs returns template functions for i18n.
 func TemplateFuncs(lang string) template.FuncMap {
 	return template.FuncMap{
 		"t":              createTranslateFunc(lang),
@@ -23,14 +23,14 @@ func TemplateFuncs(lang string) template.FuncMap {
 	}
 }
 
-// createTranslateFunc creates a translate function for templates
+// createTranslateFunc creates a translate function for templates.
 func createTranslateFunc(lang string) func(key string, args ...interface{}) string {
 	return func(key string, args ...interface{}) string {
 		return GetInstance().T(lang, key, args...)
 	}
 }
 
-// createTimeAgoFunc creates a time ago function for templates
+// createTimeAgoFunc creates a time ago function for templates.
 func createTimeAgoFunc(lang string) func(t time.Time) string {
 	return func(t time.Time) string {
 		now := time.Now()
@@ -79,7 +79,7 @@ func createTimeAgoFunc(lang string) func(t time.Time) string {
 	}
 }
 
-// createFormatDateFunc creates a date formatting function for templates
+// createFormatDateFunc creates a date formatting function for templates.
 func createFormatDateFunc(lang string) func(t time.Time) string {
 	return func(t time.Time) string {
 		// Format based on language
@@ -104,7 +104,7 @@ func createFormatDateFunc(lang string) func(t time.Time) string {
 	}
 }
 
-// createFormatTimeFunc creates a time formatting function for templates
+// createFormatTimeFunc creates a time formatting function for templates.
 func createFormatTimeFunc(lang string) func(t time.Time) string {
 	return func(t time.Time) string {
 		// Format based on language
@@ -121,7 +121,7 @@ func createFormatTimeFunc(lang string) func(t time.Time) string {
 	}
 }
 
-// createFormatDateTimeFunc creates a datetime formatting function for templates
+// createFormatDateTimeFunc creates a datetime formatting function for templates.
 func createFormatDateTimeFunc(lang string) func(t time.Time) string {
 	dateFunc := createFormatDateFunc(lang)
 	timeFunc := createFormatTimeFunc(lang)
@@ -131,7 +131,7 @@ func createFormatDateTimeFunc(lang string) func(t time.Time) string {
 	}
 }
 
-// createPluralizeFunc creates a pluralization function for templates
+// createPluralizeFunc creates a pluralization function for templates.
 func createPluralizeFunc(lang string) func(count int, singular, plural string) string {
 	return func(count int, singular, plural string) string {
 		if count == 1 {
@@ -141,7 +141,7 @@ func createPluralizeFunc(lang string) func(count int, singular, plural string) s
 	}
 }
 
-// createCurrencyFunc creates a currency formatting function for templates
+// createCurrencyFunc creates a currency formatting function for templates.
 func createCurrencyFunc(lang string) func(amount float64) string {
 	return func(amount float64) string {
 		// Simple currency formatting based on language
@@ -166,7 +166,7 @@ func createCurrencyFunc(lang string) func(amount float64) string {
 	}
 }
 
-// createNumberFunc creates a number formatting function for templates
+// createNumberFunc creates a number formatting function for templates.
 func createNumberFunc(lang string) func(n interface{}) string {
 	return func(n interface{}) string {
 		// Convert to float64
@@ -188,14 +188,14 @@ func createNumberFunc(lang string) func(n interface{}) string {
 	}
 }
 
-// createPercentFunc creates a percentage formatting function for templates
+// createPercentFunc creates a percentage formatting function for templates.
 func createPercentFunc(lang string) func(n float64) string {
 	return func(n float64) string {
 		return formatNumber(n*100, 1) + "%"
 	}
 }
 
-// formatNumber formats a number with the specified decimal places
+// formatNumber formats a number with the specified decimal places.
 func formatNumber(n float64, decimals int) string {
 	// Simple number formatting
 	format := "%."
@@ -209,7 +209,7 @@ func formatNumber(n float64, decimals int) string {
 	return sprintf(format, n)
 }
 
-// sprintf is a simple sprintf implementation
+// sprintf is a simple sprintf implementation.
 func sprintf(format string, args ...interface{}) string {
 	// This would use fmt.Sprintf in a real implementation
 	// Simplified for demonstration

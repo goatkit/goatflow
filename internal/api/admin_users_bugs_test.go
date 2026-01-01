@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -11,12 +10,13 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// TestGroupAssignmentNotPersisting tests Bug #1: Group assignment not persisting to database
+// TestGroupAssignmentNotPersisting tests Bug #1: Group assignment not persisting to database.
 func TestGroupAssignmentNotPersisting(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -68,7 +68,7 @@ func TestGroupAssignmentNotPersisting(t *testing.T) {
 			JOIN group_user gu ON g.id = gu.group_id 
 			WHERE gu.user_id = 15 AND g.valid_id = 1`)
 		require.NoError(t, err)
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		for rows.Next() {
 			var groupName string
@@ -81,7 +81,7 @@ func TestGroupAssignmentNotPersisting(t *testing.T) {
 	})
 }
 
-// TestXlatsNotWorking tests Bug #2: Translation/localization not functioning
+// TestXlatsNotWorking tests Bug #2: Translation/localization not functioning.
 func TestXlatsNotWorking(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -118,7 +118,7 @@ func TestXlatsNotWorking(t *testing.T) {
 	})
 }
 
-// TestNoWayToRemoveUserFromAllGroups tests Bug #3: Missing functionality to remove user from all groups
+// TestNoWayToRemoveUserFromAllGroups tests Bug #3: Missing functionality to remove user from all groups.
 func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -213,7 +213,7 @@ func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
 	})
 }
 
-// TestUserWorkflowEndToEnd tests the complete user edit workflow that the user reported failing
+// TestUserWorkflowEndToEnd tests the complete user edit workflow that the user reported failing.
 func TestUserWorkflowEndToEnd(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -297,7 +297,7 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 
 		rows, err := db.Query(groupQuery)
 		require.NoError(t, err)
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		for rows.Next() {
 			var groupName string
@@ -368,7 +368,7 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 	})
 }
 
-// TestFormDataBindingIssues tests potential issues with form data binding vs JSON
+// TestFormDataBindingIssues tests potential issues with form data binding vs JSON.
 func TestFormDataBindingIssues(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

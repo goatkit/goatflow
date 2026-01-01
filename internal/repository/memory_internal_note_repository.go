@@ -12,7 +12,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// MemoryInternalNoteRepository is an in-memory implementation of InternalNoteRepository
+// MemoryInternalNoteRepository is an in-memory implementation of InternalNoteRepository.
 type MemoryInternalNoteRepository struct {
 	mu             sync.RWMutex
 	notes          map[uint]*models.InternalNote
@@ -29,7 +29,7 @@ type MemoryInternalNoteRepository struct {
 	nextActivityID uint
 }
 
-// NewMemoryInternalNoteRepository creates a new in-memory internal note repository
+// NewMemoryInternalNoteRepository creates a new in-memory internal note repository.
 func NewMemoryInternalNoteRepository() *MemoryInternalNoteRepository {
 	return &MemoryInternalNoteRepository{
 		notes:          make(map[uint]*models.InternalNote),
@@ -47,7 +47,7 @@ func NewMemoryInternalNoteRepository() *MemoryInternalNoteRepository {
 	}
 }
 
-// CreateNote creates a new internal note
+// CreateNote creates a new internal note.
 func (r *MemoryInternalNoteRepository) CreateNote(ctx context.Context, note *models.InternalNote) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -68,7 +68,7 @@ func (r *MemoryInternalNoteRepository) CreateNote(ctx context.Context, note *mod
 	return nil
 }
 
-// GetNoteByID retrieves a note by ID
+// GetNoteByID retrieves a note by ID.
 func (r *MemoryInternalNoteRepository) GetNoteByID(ctx context.Context, id uint) (*models.InternalNote, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -83,7 +83,7 @@ func (r *MemoryInternalNoteRepository) GetNoteByID(ctx context.Context, id uint)
 	return &result, nil
 }
 
-// GetNotesByTicket retrieves all notes for a ticket
+// GetNotesByTicket retrieves all notes for a ticket.
 func (r *MemoryInternalNoteRepository) GetNotesByTicket(ctx context.Context, ticketID uint) ([]models.InternalNote, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -103,7 +103,7 @@ func (r *MemoryInternalNoteRepository) GetNotesByTicket(ctx context.Context, tic
 	return notes, nil
 }
 
-// GetPinnedNotes retrieves pinned notes for a ticket
+// GetPinnedNotes retrieves pinned notes for a ticket.
 func (r *MemoryInternalNoteRepository) GetPinnedNotes(ctx context.Context, ticketID uint) ([]models.InternalNote, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -123,7 +123,7 @@ func (r *MemoryInternalNoteRepository) GetPinnedNotes(ctx context.Context, ticke
 	return notes, nil
 }
 
-// GetImportantNotes retrieves important notes for a ticket
+// GetImportantNotes retrieves important notes for a ticket.
 func (r *MemoryInternalNoteRepository) GetImportantNotes(ctx context.Context, ticketID uint) ([]models.InternalNote, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -143,7 +143,7 @@ func (r *MemoryInternalNoteRepository) GetImportantNotes(ctx context.Context, ti
 	return notes, nil
 }
 
-// UpdateNote updates an existing note
+// UpdateNote updates an existing note.
 func (r *MemoryInternalNoteRepository) UpdateNote(ctx context.Context, note *models.InternalNote) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -188,7 +188,7 @@ func (r *MemoryInternalNoteRepository) UpdateNote(ctx context.Context, note *mod
 	return nil
 }
 
-// DeleteNote deletes a note
+// DeleteNote deletes a note.
 func (r *MemoryInternalNoteRepository) DeleteNote(ctx context.Context, id uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -206,7 +206,7 @@ func (r *MemoryInternalNoteRepository) DeleteNote(ctx context.Context, id uint) 
 	return nil
 }
 
-// SearchNotes searches notes based on filter criteria
+// SearchNotes searches notes based on filter criteria.
 func (r *MemoryInternalNoteRepository) SearchNotes(ctx context.Context, filter *models.NoteFilter) ([]models.InternalNote, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -268,7 +268,6 @@ func (r *MemoryInternalNoteRepository) SearchNotes(ctx context.Context, filter *
 		if query != "" {
 			if !strings.Contains(strings.ToLower(note.Content), query) &&
 				!strings.Contains(strings.ToLower(note.Category), query) {
-
 				// Check in tags
 				tagMatch := false
 				for _, tag := range note.Tags {
@@ -323,7 +322,7 @@ func (r *MemoryInternalNoteRepository) SearchNotes(ctx context.Context, filter *
 	return results, nil
 }
 
-// GetNotesByAuthor retrieves notes by author
+// GetNotesByAuthor retrieves notes by author.
 func (r *MemoryInternalNoteRepository) GetNotesByAuthor(ctx context.Context, authorID uint) ([]models.InternalNote, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -343,7 +342,7 @@ func (r *MemoryInternalNoteRepository) GetNotesByAuthor(ctx context.Context, aut
 	return notes, nil
 }
 
-// GetNotesByCategory retrieves notes by category
+// GetNotesByCategory retrieves notes by category.
 func (r *MemoryInternalNoteRepository) GetNotesByCategory(ctx context.Context, category string) ([]models.InternalNote, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -363,7 +362,7 @@ func (r *MemoryInternalNoteRepository) GetNotesByCategory(ctx context.Context, c
 	return notes, nil
 }
 
-// GetNotesByTags retrieves notes by tags
+// GetNotesByTags retrieves notes by tags.
 func (r *MemoryInternalNoteRepository) GetNotesByTags(ctx context.Context, tags []string) ([]models.InternalNote, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -389,7 +388,7 @@ func (r *MemoryInternalNoteRepository) GetNotesByTags(ctx context.Context, tags 
 	return notes, nil
 }
 
-// AddEditHistory adds an edit history entry
+// AddEditHistory adds an edit history entry.
 func (r *MemoryInternalNoteRepository) AddEditHistory(ctx context.Context, edit *models.NoteEdit) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -406,7 +405,7 @@ func (r *MemoryInternalNoteRepository) AddEditHistory(ctx context.Context, edit 
 	return nil
 }
 
-// GetEditHistory retrieves edit history for a note
+// GetEditHistory retrieves edit history for a note.
 func (r *MemoryInternalNoteRepository) GetEditHistory(ctx context.Context, noteID uint) ([]models.NoteEdit, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -428,7 +427,7 @@ func (r *MemoryInternalNoteRepository) GetEditHistory(ctx context.Context, noteI
 	return result, nil
 }
 
-// GetNoteStatistics retrieves statistics for notes
+// GetNoteStatistics retrieves statistics for notes.
 func (r *MemoryInternalNoteRepository) GetNoteStatistics(ctx context.Context, ticketID uint) (*models.NoteStatistics, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -482,7 +481,7 @@ func (r *MemoryInternalNoteRepository) GetNoteStatistics(ctx context.Context, ti
 	return stats, nil
 }
 
-// GetCategories retrieves all unique categories
+// GetCategories retrieves all unique categories.
 func (r *MemoryInternalNoteRepository) GetCategories(ctx context.Context) ([]models.NoteCategory, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -540,7 +539,7 @@ func (r *MemoryInternalNoteRepository) GetCategories(ctx context.Context) ([]mod
 	return categories, nil
 }
 
-// CreateCategory creates a new category
+// CreateCategory creates a new category.
 func (r *MemoryInternalNoteRepository) CreateCategory(ctx context.Context, category *models.NoteCategory) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -554,7 +553,7 @@ func (r *MemoryInternalNoteRepository) CreateCategory(ctx context.Context, categ
 	return nil
 }
 
-// UpdateCategory updates a category
+// UpdateCategory updates a category.
 func (r *MemoryInternalNoteRepository) UpdateCategory(ctx context.Context, category *models.NoteCategory) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -569,7 +568,7 @@ func (r *MemoryInternalNoteRepository) UpdateCategory(ctx context.Context, categ
 	return nil
 }
 
-// DeleteCategory deletes a category
+// DeleteCategory deletes a category.
 func (r *MemoryInternalNoteRepository) DeleteCategory(ctx context.Context, id uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -582,7 +581,7 @@ func (r *MemoryInternalNoteRepository) DeleteCategory(ctx context.Context, id ui
 	return nil
 }
 
-// CreateTemplate creates a new template
+// CreateTemplate creates a new template.
 func (r *MemoryInternalNoteRepository) CreateTemplate(ctx context.Context, template *models.NoteTemplate) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -597,7 +596,7 @@ func (r *MemoryInternalNoteRepository) CreateTemplate(ctx context.Context, templ
 	return nil
 }
 
-// GetTemplates retrieves all templates
+// GetTemplates retrieves all templates.
 func (r *MemoryInternalNoteRepository) GetTemplates(ctx context.Context) ([]models.NoteTemplate, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -618,7 +617,7 @@ func (r *MemoryInternalNoteRepository) GetTemplates(ctx context.Context) ([]mode
 	return templates, nil
 }
 
-// GetTemplateByID retrieves a template by ID
+// GetTemplateByID retrieves a template by ID.
 func (r *MemoryInternalNoteRepository) GetTemplateByID(ctx context.Context, id uint) (*models.NoteTemplate, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -632,7 +631,7 @@ func (r *MemoryInternalNoteRepository) GetTemplateByID(ctx context.Context, id u
 	return &result, nil
 }
 
-// UpdateTemplate updates a template
+// UpdateTemplate updates a template.
 func (r *MemoryInternalNoteRepository) UpdateTemplate(ctx context.Context, template *models.NoteTemplate) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -647,7 +646,7 @@ func (r *MemoryInternalNoteRepository) UpdateTemplate(ctx context.Context, templ
 	return nil
 }
 
-// DeleteTemplate deletes a template
+// DeleteTemplate deletes a template.
 func (r *MemoryInternalNoteRepository) DeleteTemplate(ctx context.Context, id uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -660,7 +659,7 @@ func (r *MemoryInternalNoteRepository) DeleteTemplate(ctx context.Context, id ui
 	return nil
 }
 
-// IncrementTemplateUsage increments the usage count of a template
+// IncrementTemplateUsage increments the usage count of a template.
 func (r *MemoryInternalNoteRepository) IncrementTemplateUsage(ctx context.Context, id uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -674,7 +673,7 @@ func (r *MemoryInternalNoteRepository) IncrementTemplateUsage(ctx context.Contex
 	return nil
 }
 
-// CreateMention creates a new mention
+// CreateMention creates a new mention.
 func (r *MemoryInternalNoteRepository) CreateMention(ctx context.Context, mention *models.NoteMention) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -688,7 +687,7 @@ func (r *MemoryInternalNoteRepository) CreateMention(ctx context.Context, mentio
 	return nil
 }
 
-// GetMentionsByUser retrieves mentions for a user
+// GetMentionsByUser retrieves mentions for a user.
 func (r *MemoryInternalNoteRepository) GetMentionsByUser(ctx context.Context, userID uint) ([]models.NoteMention, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -703,7 +702,7 @@ func (r *MemoryInternalNoteRepository) GetMentionsByUser(ctx context.Context, us
 	return mentions, nil
 }
 
-// MarkMentionAsRead marks a mention as read
+// MarkMentionAsRead marks a mention as read.
 func (r *MemoryInternalNoteRepository) MarkMentionAsRead(ctx context.Context, mentionID uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -720,7 +719,7 @@ func (r *MemoryInternalNoteRepository) MarkMentionAsRead(ctx context.Context, me
 	return nil
 }
 
-// LogActivity logs an activity
+// LogActivity logs an activity.
 func (r *MemoryInternalNoteRepository) LogActivity(ctx context.Context, activity *models.NoteActivity) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -734,7 +733,7 @@ func (r *MemoryInternalNoteRepository) LogActivity(ctx context.Context, activity
 	return nil
 }
 
-// GetActivityLog retrieves activity log for a ticket
+// GetActivityLog retrieves activity log for a ticket.
 func (r *MemoryInternalNoteRepository) GetActivityLog(ctx context.Context, ticketID uint, limit int) ([]models.NoteActivity, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -759,7 +758,7 @@ func (r *MemoryInternalNoteRepository) GetActivityLog(ctx context.Context, ticke
 	return activities, nil
 }
 
-// logActivityInternal is a helper to log activity internally
+// logActivityInternal is a helper to log activity internally.
 func (r *MemoryInternalNoteRepository) logActivityInternal(activityType string, noteID, ticketID, userID uint, userName string) {
 	activity := models.NoteActivity{
 		ID:           r.nextActivityID,

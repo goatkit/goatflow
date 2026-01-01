@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -296,7 +295,7 @@ func TestGetScreenDefinitions(t *testing.T) {
 	assert.GreaterOrEqual(t, len(screens), 8)
 
 	// Check some key screens exist
-	var found map[string]bool = make(map[string]bool)
+	var found = make(map[string]bool)
 	for _, s := range screens {
 		found[s.Key] = true
 	}

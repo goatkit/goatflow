@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Manager handles system configuration loading and deployment
+// Manager handles system configuration loading and deployment.
 type Manager struct {
 	db       *sql.DB
 	settings map[string]*Setting
@@ -22,7 +22,7 @@ type Manager struct {
 	deployed bool
 }
 
-// Setting represents a configuration setting
+// Setting represents a configuration setting.
 type Setting struct {
 	ID                       int       `json:"id"`
 	Name                     string    `json:"name"`
@@ -55,13 +55,13 @@ type Setting struct {
 	DependsValue string      `json:"depends_value,omitempty"`
 }
 
-// Option represents a select option
+// Option represents a select option.
 type Option struct {
 	Value string `json:"value"`
 	Label string `json:"label"`
 }
 
-// DeployedConfig represents the deployed configuration file structure
+// DeployedConfig represents the deployed configuration file structure.
 type DeployedConfig struct {
 	Version   string                 `yaml:"version"`
 	Timestamp time.Time              `yaml:"timestamp"`
@@ -69,7 +69,7 @@ type DeployedConfig struct {
 	Metadata  map[string]interface{} `yaml:"metadata"`
 }
 
-// NewManager creates a new configuration manager
+// NewManager creates a new configuration manager.
 func NewManager(db *sql.DB) *Manager {
 	return &Manager{
 		db:       db,
@@ -77,7 +77,7 @@ func NewManager(db *sql.DB) *Manager {
 	}
 }
 
-// Load loads all configuration settings from the database
+// Load loads all configuration settings from the database.
 func (m *Manager) Load() error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -132,7 +132,7 @@ func (m *Manager) Load() error {
 	return nil
 }
 
-// parseSettingConfig parses the JSON configuration from xml_content_parsed
+// parseSettingConfig parses the JSON configuration from xml_content_parsed.
 func (m *Manager) parseSettingConfig(setting *Setting) error {
 	if setting.XMLContentParsed == "" {
 		return nil
@@ -195,7 +195,7 @@ func (m *Manager) parseSettingConfig(setting *Setting) error {
 	return nil
 }
 
-// Get retrieves a configuration value
+// Get retrieves a configuration value.
 func (m *Manager) Get(name string) (interface{}, error) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -218,7 +218,7 @@ func (m *Manager) Get(name string) (interface{}, error) {
 	return m.parseValue(setting.EffectiveValue, setting.Type), nil
 }
 
-// GetString retrieves a string configuration value
+// GetString retrieves a string configuration value.
 func (m *Manager) GetString(name string) string {
 	val, err := m.Get(name)
 	if err != nil {
@@ -230,7 +230,7 @@ func (m *Manager) GetString(name string) string {
 	return fmt.Sprintf("%v", val)
 }
 
-// GetInt retrieves an integer configuration value
+// GetInt retrieves an integer configuration value.
 func (m *Manager) GetInt(name string) int {
 	val, err := m.Get(name)
 	if err != nil {
@@ -247,7 +247,7 @@ func (m *Manager) GetInt(name string) int {
 	return 0
 }
 
-// GetBool retrieves a boolean configuration value
+// GetBool retrieves a boolean configuration value.
 func (m *Manager) GetBool(name string) bool {
 	val, err := m.Get(name)
 	if err != nil {
@@ -262,7 +262,7 @@ func (m *Manager) GetBool(name string) bool {
 	return false
 }
 
-// GetArray retrieves an array configuration value
+// GetArray retrieves an array configuration value.
 func (m *Manager) GetArray(name string) []string {
 	val, err := m.Get(name)
 	if err != nil {
@@ -282,7 +282,7 @@ func (m *Manager) GetArray(name string) []string {
 	return nil
 }
 
-// parseValue converts string values to appropriate types
+// parseValue converts string values to appropriate types.
 func (m *Manager) parseValue(value, valueType string) interface{} {
 	switch valueType {
 	case "boolean":
@@ -303,7 +303,7 @@ func (m *Manager) parseValue(value, valueType string) interface{} {
 	}
 }
 
-// getModifiedValue checks for user-modified values
+// getModifiedValue checks for user-modified values.
 func (m *Manager) getModifiedValue(name string) (interface{}, error) {
 	query := `
 		SELECT effective_value 
@@ -329,7 +329,7 @@ func (m *Manager) getModifiedValue(name string) (interface{}, error) {
 	return value.String, nil
 }
 
-// Set updates a configuration value
+// Set updates a configuration value.
 func (m *Manager) Set(name, value string, userID int) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -369,7 +369,7 @@ func (m *Manager) Set(name, value string, userID int) error {
 	return nil
 }
 
-// validateValue validates a configuration value
+// validateValue validates a configuration value.
 func (m *Manager) validateValue(setting *Setting, value string) error {
 	switch setting.Type {
 	case "integer":
@@ -410,7 +410,7 @@ func (m *Manager) validateValue(setting *Setting, value string) error {
 	return nil
 }
 
-// Deploy generates configuration files from database settings
+// Deploy generates configuration files from database settings.
 func (m *Manager) Deploy(outputPath string) error {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -461,7 +461,7 @@ func (m *Manager) Deploy(outputPath string) error {
 	return nil
 }
 
-// GetSettings returns all settings for UI display
+// GetSettings returns all settings for UI display.
 func (m *Manager) GetSettings() map[string]*Setting {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -474,7 +474,7 @@ func (m *Manager) GetSettings() map[string]*Setting {
 	return result
 }
 
-// Reset resets a setting to its default value
+// Reset resets a setting to its default value.
 func (m *Manager) Reset(name string, userID int) error {
 	query := `
 		DELETE FROM sysconfig_modified 

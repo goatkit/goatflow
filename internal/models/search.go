@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// SearchRequest represents a search query
+// SearchRequest represents a search query.
 type SearchRequest struct {
 	Query     string            `json:"query" binding:"required"`
 	Type      string            `json:"type,omitempty"` // tickets, notes, customers
@@ -19,7 +19,7 @@ type SearchRequest struct {
 	Facets    []string          `json:"facets,omitempty"`
 }
 
-// SearchResult represents search results
+// SearchResult represents search results.
 type SearchResult struct {
 	Query       string             `json:"query"`
 	TotalHits   int64              `json:"total_hits"`
@@ -32,7 +32,7 @@ type SearchResult struct {
 	Suggestions []string           `json:"suggestions,omitempty"`
 }
 
-// SearchHit represents a single search result
+// SearchHit represents a single search result.
 type SearchHit struct {
 	ID         string                 `json:"id"`
 	Type       string                 `json:"type"`
@@ -42,13 +42,13 @@ type SearchHit struct {
 	Timestamp  time.Time              `json:"timestamp"`
 }
 
-// Facet represents a search facet
+// Facet represents a search facet.
 type Facet struct {
 	Value string `json:"value"`
 	Count int64  `json:"count"`
 }
 
-// TicketSearchDocument represents a ticket in the search index
+// TicketSearchDocument represents a ticket in the search index.
 type TicketSearchDocument struct {
 	ID            string     `json:"id"`
 	TicketNumber  string     `json:"ticket_number"`
@@ -72,7 +72,7 @@ type TicketSearchDocument struct {
 	Attachments   []string `json:"attachment_names"`
 }
 
-// SearchFilter represents advanced search filters
+// SearchFilter represents advanced search filters.
 type SearchFilter struct {
 	// Text search
 	Query          string   `json:"query,omitempty"`
@@ -108,7 +108,7 @@ type SearchFilter struct {
 	IsOverdue        *bool `json:"is_overdue,omitempty"`
 }
 
-// SavedSearch represents a saved search query
+// SavedSearch represents a saved search query.
 type SavedSearch struct {
 	ID          uint         `json:"id"`
 	UserID      uint         `json:"user_id"`
@@ -122,7 +122,7 @@ type SavedSearch struct {
 	UpdatedAt   time.Time    `json:"updated_at"`
 }
 
-// SearchHistory represents a user's search history
+// SearchHistory represents a user's search history.
 type SearchHistory struct {
 	ID         uint         `json:"id"`
 	UserID     uint         `json:"user_id"`
@@ -132,7 +132,7 @@ type SearchHistory struct {
 	SearchedAt time.Time    `json:"searched_at"`
 }
 
-// SearchSuggestion represents a search suggestion
+// SearchSuggestion represents a search suggestion.
 type SearchSuggestion struct {
 	Text      string  `json:"text"`
 	Score     float64 `json:"score"`
@@ -140,7 +140,7 @@ type SearchSuggestion struct {
 	Type      string  `json:"type"` // query, field, value
 }
 
-// IndexStats represents search index statistics
+// IndexStats represents search index statistics.
 type IndexStats struct {
 	Name          string    `json:"name"`
 	DocumentCount int64     `json:"document_count"`
@@ -149,7 +149,7 @@ type IndexStats struct {
 	Status        string    `json:"status"`
 }
 
-// SearchAnalytics represents search usage analytics
+// SearchAnalytics represents search usage analytics.
 type SearchAnalytics struct {
 	TotalSearches     int64          `json:"total_searches"`
 	UniqueUsers       int            `json:"unique_users"`
@@ -160,7 +160,7 @@ type SearchAnalytics struct {
 	ZeroResultQueries []string       `json:"zero_result_queries"`
 }
 
-// QueryStats represents statistics for a specific query
+// QueryStats represents statistics for a specific query.
 type QueryStats struct {
 	Query      string  `json:"query"`
 	Count      int     `json:"count"`
@@ -168,7 +168,7 @@ type QueryStats struct {
 	ClickRate  float64 `json:"click_rate"`
 }
 
-// TrendPoint represents a point in a trend graph
+// TrendPoint represents a point in a trend graph.
 type TrendPoint struct {
 	Time  time.Time `json:"time"`
 	Value int       `json:"value"`

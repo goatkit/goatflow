@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// CannedResponse represents a pre-written response for quick replies
+// CannedResponse represents a pre-written response for quick replies.
 type CannedResponse struct {
 	ID          uint      `json:"id"`
 	Name        string    `json:"name" binding:"required"`     // Display name for the response
@@ -34,7 +34,7 @@ type CannedResponse struct {
 	AttachmentURLs []string `json:"attachment_urls,omitempty"`
 }
 
-// ResponseVariable represents a placeholder in the canned response
+// ResponseVariable represents a placeholder in the canned response.
 type ResponseVariable struct {
 	Name         string   `json:"name"`              // e.g., "{{agent_name}}"
 	Description  string   `json:"description"`       // Help text
@@ -44,7 +44,7 @@ type ResponseVariable struct {
 	AutoFill     string   `json:"auto_fill,omitempty"` // Auto-fill from context (agent_name, ticket_number, etc.)
 }
 
-// CannedResponseCategory represents a category for organizing responses
+// CannedResponseCategory represents a category for organizing responses.
 type CannedResponseCategory struct {
 	ID          uint   `json:"id"`
 	Name        string `json:"name"`
@@ -55,7 +55,7 @@ type CannedResponseCategory struct {
 	Active      bool   `json:"active"`
 }
 
-// CannedResponseUsage tracks when and where a response was used
+// CannedResponseUsage tracks when and where a response was used.
 type CannedResponseUsage struct {
 	ID             uint      `json:"id"`
 	ResponseID     uint      `json:"response_id"`
@@ -65,7 +65,7 @@ type CannedResponseUsage struct {
 	ModifiedBefore bool      `json:"modified_before_use"` // Track if agent modified before sending
 }
 
-// CannedResponseFilter for searching/filtering responses
+// CannedResponseFilter for searching/filtering responses.
 type CannedResponseFilter struct {
 	Query      string   `json:"query,omitempty"`
 	Category   string   `json:"category,omitempty"`
@@ -78,7 +78,7 @@ type CannedResponseFilter struct {
 	Offset     int      `json:"offset,omitempty"`
 }
 
-// CannedResponseApplication for applying a response to a ticket
+// CannedResponseApplication for applying a response to a ticket.
 type CannedResponseApplication struct {
 	ResponseID uint              `json:"response_id" binding:"required"`
 	TicketID   uint              `json:"ticket_id" binding:"required"`
@@ -86,7 +86,7 @@ type CannedResponseApplication struct {
 	AsInternal bool              `json:"as_internal"` // Send as internal note vs customer reply
 }
 
-// AppliedResponse represents the result of applying a canned response
+// AppliedResponse represents the result of applying a canned response.
 type AppliedResponse struct {
 	Subject     string   `json:"subject"`
 	Content     string   `json:"content"`
@@ -95,7 +95,7 @@ type AppliedResponse struct {
 	AsInternal  bool     `json:"as_internal"`
 }
 
-// AutoFillContext provides context for auto-filling variables
+// AutoFillContext provides context for auto-filling variables.
 type AutoFillContext struct {
 	AgentName     string `json:"agent_name,omitempty"`
 	AgentEmail    string `json:"agent_email,omitempty"`

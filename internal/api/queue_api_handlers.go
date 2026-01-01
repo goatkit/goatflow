@@ -6,10 +6,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleAPIQueueGet handles GET /api/queues/:id
+// HandleAPIQueueGet handles GET /api/queues/:id.
 func HandleAPIQueueGet(c *gin.Context) {
 	queueID := c.Param("id")
 	id, err := strconv.Atoi(queueID)
@@ -107,7 +108,7 @@ func HandleAPIQueueGet(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": response})
 }
 
-// HandleAPIQueueDetails handles GET /api/queues/:id/details
+// HandleAPIQueueDetails handles GET /api/queues/:id/details.
 func HandleAPIQueueDetails(c *gin.Context) {
 	queueID := c.Param("id")
 	id, err := strconv.Atoi(queueID)
@@ -189,7 +190,7 @@ func HandleAPIQueueDetails(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": response})
 }
 
-// HandleAPIQueueStatus handles PUT /api/queues/:id/status
+// HandleAPIQueueStatus handles PUT /api/queues/:id/status.
 func HandleAPIQueueStatus(c *gin.Context) {
 	queueID := c.Param("id")
 	id, err := strconv.Atoi(queueID)

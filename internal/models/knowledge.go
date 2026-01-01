@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// ArticleStatus represents the status of a knowledge article
+// ArticleStatus represents the status of a knowledge article.
 type ArticleStatus string
 
 const (
@@ -16,7 +16,7 @@ const (
 	ArticleStatusRetired   ArticleStatus = "retired"
 )
 
-// ArticleType represents the type of knowledge article
+// ArticleType represents the type of knowledge article.
 type ArticleType string
 
 const (
@@ -30,7 +30,7 @@ const (
 	ArticleTypeKnownError      ArticleType = "known_error"
 )
 
-// ArticleVisibility represents who can see the article
+// ArticleVisibility represents who can see the article.
 type ArticleVisibility string
 
 const (
@@ -39,7 +39,7 @@ const (
 	VisibilityRestricted ArticleVisibility = "restricted" // Specific groups only
 )
 
-// KnowledgeArticle represents a knowledge base article
+// KnowledgeArticle represents a knowledge base article.
 type KnowledgeArticle struct {
 	ID            uint              `json:"id" gorm:"primaryKey"`
 	ArticleNumber string            `json:"article_number" gorm:"uniqueIndex;not null"`
@@ -135,7 +135,7 @@ type KnowledgeArticle struct {
 	LastModifiedBy   *User      `json:"last_modified_by,omitempty" gorm:"foreignKey:LastModifiedByID"`
 }
 
-// KnowledgeCategory represents a category in the knowledge base
+// KnowledgeCategory represents a category in the knowledge base.
 type KnowledgeCategory struct {
 	ID           uint                `json:"id" gorm:"primaryKey"`
 	Name         string              `json:"name" gorm:"not null;uniqueIndex"`
@@ -153,7 +153,7 @@ type KnowledgeCategory struct {
 	UpdatedAt    time.Time           `json:"updated_at"`
 }
 
-// ArticleComment represents a comment on a knowledge article
+// ArticleComment represents a comment on a knowledge article.
 type ArticleComment struct {
 	ID        uint              `json:"id" gorm:"primaryKey"`
 	ArticleID uint              `json:"article_id" gorm:"not null"`
@@ -170,7 +170,7 @@ type ArticleComment struct {
 	UpdatedAt time.Time         `json:"updated_at"`
 }
 
-// KnowledgeArticleAttachment represents a file attached to an article
+// KnowledgeArticleAttachment represents a file attached to an article.
 type KnowledgeArticleAttachment struct {
 	ID            uint              `json:"id" gorm:"primaryKey"`
 	ArticleID     uint              `json:"article_id" gorm:"not null"`
@@ -187,7 +187,7 @@ type KnowledgeArticleAttachment struct {
 	CreatedAt     time.Time         `json:"created_at"`
 }
 
-// ArticleFeedback represents user feedback on an article
+// ArticleFeedback represents user feedback on an article.
 type ArticleFeedback struct {
 	ID         uint              `json:"id" gorm:"primaryKey"`
 	ArticleID  uint              `json:"article_id" gorm:"not null"`
@@ -202,7 +202,7 @@ type ArticleFeedback struct {
 	UpdatedAt  time.Time         `json:"updated_at"`
 }
 
-// ArticleHistory tracks changes to articles
+// ArticleHistory tracks changes to articles.
 type ArticleHistory struct {
 	ID          uint              `json:"id" gorm:"primaryKey"`
 	ArticleID   uint              `json:"article_id" gorm:"not null"`
@@ -218,7 +218,7 @@ type ArticleHistory struct {
 	CreatedAt   time.Time         `json:"created_at"`
 }
 
-// ArticleView tracks article views for analytics
+// ArticleView tracks article views for analytics.
 type ArticleView struct {
 	ID           uint              `json:"id" gorm:"primaryKey"`
 	ArticleID    uint              `json:"article_id" gorm:"not null;index"`
@@ -234,7 +234,7 @@ type ArticleView struct {
 	CreatedAt    time.Time         `json:"created_at"`
 }
 
-// KnowledgeSearchRequest represents a search request for articles
+// KnowledgeSearchRequest represents a search request for articles.
 type KnowledgeSearchRequest struct {
 	Query      string            `json:"query" form:"query"`
 	Type       ArticleType       `json:"type" form:"type"`
@@ -250,7 +250,7 @@ type KnowledgeSearchRequest struct {
 	SortOrder  string            `json:"sort_order" form:"sort_order"`
 }
 
-// KnowledgeSearchResponse represents search results
+// KnowledgeSearchResponse represents search results.
 type KnowledgeSearchResponse struct {
 	Articles   []*KnowledgeArticle `json:"articles"`
 	Total      int64               `json:"total"`

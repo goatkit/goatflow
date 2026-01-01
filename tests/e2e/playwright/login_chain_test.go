@@ -3,10 +3,11 @@
 package playwright
 
 import (
-	"github.com/gotrs-io/gotrs-ce/tests/e2e/config"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/gotrs-io/gotrs-ce/tests/e2e/config"
 )
 
 func TestLoginRedirectChain(t *testing.T) {

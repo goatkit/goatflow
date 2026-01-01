@@ -17,8 +17,7 @@ var (
 	jwtOnce          sync.Once
 )
 
-// GetJWTManager returns the singleton JWT manager instance
-// This ensures auth service and middleware use the same JWT configuration
+// This ensures auth service and middleware use the same JWT configuration.
 func GetJWTManager() *auth.JWTManager {
 	jwtOnce.Do(func() {
 		cfg := config.Get()

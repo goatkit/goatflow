@@ -9,7 +9,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// SLARepository defines the interface for SLA operations
+// SLARepository defines the interface for SLA operations.
 type SLARepository interface {
 	// SLA management
 	CreateSLA(ctx context.Context, sla *models.SLA) error
@@ -44,7 +44,7 @@ type SLARepository interface {
 	GetSLAReport(ctx context.Context, from, to time.Time) (*models.SLAReport, error)
 }
 
-// MemorySLARepository is an in-memory implementation of SLARepository
+// MemorySLARepository is an in-memory implementation of SLARepository.
 type MemorySLARepository struct {
 	slas             map[uint]*models.SLA
 	ticketSLAs       map[uint]*models.TicketSLA // key is ticketID
@@ -61,7 +61,7 @@ type MemorySLARepository struct {
 	nextPauseID      uint
 }
 
-// NewMemorySLARepository creates a new in-memory SLA repository
+// NewMemorySLARepository creates a new in-memory SLA repository.
 func NewMemorySLARepository() *MemorySLARepository {
 	return &MemorySLARepository{
 		slas:             make(map[uint]*models.SLA),
@@ -79,7 +79,7 @@ func NewMemorySLARepository() *MemorySLARepository {
 	}
 }
 
-// CreateSLA creates a new SLA
+// CreateSLA creates a new SLA.
 func (r *MemorySLARepository) CreateSLA(ctx context.Context, sla *models.SLA) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -96,7 +96,7 @@ func (r *MemorySLARepository) CreateSLA(ctx context.Context, sla *models.SLA) er
 	return nil
 }
 
-// GetSLA retrieves an SLA by ID
+// GetSLA retrieves an SLA by ID.
 func (r *MemorySLARepository) GetSLA(ctx context.Context, id uint) (*models.SLA, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -111,7 +111,7 @@ func (r *MemorySLARepository) GetSLA(ctx context.Context, id uint) (*models.SLA,
 	return &result, nil
 }
 
-// GetAllSLAs retrieves all SLAs
+// GetAllSLAs retrieves all SLAs.
 func (r *MemorySLARepository) GetAllSLAs(ctx context.Context, activeOnly bool) ([]models.SLA, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -126,7 +126,7 @@ func (r *MemorySLARepository) GetAllSLAs(ctx context.Context, activeOnly bool) (
 	return slas, nil
 }
 
-// UpdateSLA updates an existing SLA
+// UpdateSLA updates an existing SLA.
 func (r *MemorySLARepository) UpdateSLA(ctx context.Context, sla *models.SLA) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -142,7 +142,7 @@ func (r *MemorySLARepository) UpdateSLA(ctx context.Context, sla *models.SLA) er
 	return nil
 }
 
-// DeleteSLA deletes an SLA
+// DeleteSLA deletes an SLA.
 func (r *MemorySLARepository) DeleteSLA(ctx context.Context, id uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -155,7 +155,7 @@ func (r *MemorySLARepository) DeleteSLA(ctx context.Context, id uint) error {
 	return nil
 }
 
-// FindApplicableSLA finds the best matching SLA for given conditions
+// FindApplicableSLA finds the best matching SLA for given conditions.
 func (r *MemorySLARepository) FindApplicableSLA(ctx context.Context, queueID uint, priority int, ticketType string, tags []string) (*models.SLA, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -188,7 +188,7 @@ func (r *MemorySLARepository) FindApplicableSLA(ctx context.Context, queueID uin
 	return bestSLA, nil
 }
 
-// matchesConditions checks if ticket matches SLA conditions
+// matchesConditions checks if ticket matches SLA conditions.
 func (r *MemorySLARepository) matchesConditions(sla *models.SLA, queueID uint, priority int, ticketType string, tags []string) bool {
 	conditions := sla.Conditions
 
@@ -253,7 +253,7 @@ func (r *MemorySLARepository) matchesConditions(sla *models.SLA, queueID uint, p
 	return true
 }
 
-// CreateTicketSLA creates a new ticket SLA tracking record
+// CreateTicketSLA creates a new ticket SLA tracking record.
 func (r *MemorySLARepository) CreateTicketSLA(ctx context.Context, ticketSLA *models.TicketSLA) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -270,7 +270,7 @@ func (r *MemorySLARepository) CreateTicketSLA(ctx context.Context, ticketSLA *mo
 	return nil
 }
 
-// GetTicketSLA retrieves ticket SLA by ticket ID
+// GetTicketSLA retrieves ticket SLA by ticket ID.
 func (r *MemorySLARepository) GetTicketSLA(ctx context.Context, ticketID uint) (*models.TicketSLA, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -285,7 +285,7 @@ func (r *MemorySLARepository) GetTicketSLA(ctx context.Context, ticketID uint) (
 	return &result, nil
 }
 
-// UpdateTicketSLA updates a ticket SLA record
+// UpdateTicketSLA updates a ticket SLA record.
 func (r *MemorySLARepository) UpdateTicketSLA(ctx context.Context, ticketSLA *models.TicketSLA) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -301,7 +301,7 @@ func (r *MemorySLARepository) UpdateTicketSLA(ctx context.Context, ticketSLA *mo
 	return nil
 }
 
-// GetSLAMetrics calculates SLA metrics for a specific SLA
+// GetSLAMetrics calculates SLA metrics for a specific SLA.
 func (r *MemorySLARepository) GetSLAMetrics(ctx context.Context, slaID uint, from, to time.Time) (*models.SLAMetrics, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -352,7 +352,7 @@ func (r *MemorySLARepository) GetSLAMetrics(ctx context.Context, slaID uint, fro
 	return metrics, nil
 }
 
-// CreateBusinessCalendar creates a new business calendar
+// CreateBusinessCalendar creates a new business calendar.
 func (r *MemorySLARepository) CreateBusinessCalendar(ctx context.Context, calendar *models.BusinessCalendar) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -369,7 +369,7 @@ func (r *MemorySLARepository) CreateBusinessCalendar(ctx context.Context, calend
 	return nil
 }
 
-// GetBusinessCalendar retrieves a business calendar
+// GetBusinessCalendar retrieves a business calendar.
 func (r *MemorySLARepository) GetBusinessCalendar(ctx context.Context, id uint) (*models.BusinessCalendar, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -384,7 +384,7 @@ func (r *MemorySLARepository) GetBusinessCalendar(ctx context.Context, id uint) 
 	return &result, nil
 }
 
-// UpdateBusinessCalendar updates a business calendar
+// UpdateBusinessCalendar updates a business calendar.
 func (r *MemorySLARepository) UpdateBusinessCalendar(ctx context.Context, calendar *models.BusinessCalendar) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -400,7 +400,7 @@ func (r *MemorySLARepository) UpdateBusinessCalendar(ctx context.Context, calend
 	return nil
 }
 
-// AddHoliday adds a holiday to a calendar
+// AddHoliday adds a holiday to a calendar.
 func (r *MemorySLARepository) AddHoliday(ctx context.Context, holiday *models.SLAHoliday) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -415,7 +415,7 @@ func (r *MemorySLARepository) AddHoliday(ctx context.Context, holiday *models.SL
 	return nil
 }
 
-// GetHolidays gets holidays for a calendar
+// GetHolidays gets holidays for a calendar.
 func (r *MemorySLARepository) GetHolidays(ctx context.Context, calendarID uint) ([]models.SLAHoliday, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -430,7 +430,7 @@ func (r *MemorySLARepository) GetHolidays(ctx context.Context, calendarID uint) 
 	return holidays, nil
 }
 
-// RecordEscalation records an escalation event
+// RecordEscalation records an escalation event.
 func (r *MemorySLARepository) RecordEscalation(ctx context.Context, escalation *models.SLAEscalationHistory) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -453,7 +453,7 @@ func (r *MemorySLARepository) RecordEscalation(ctx context.Context, escalation *
 	return nil
 }
 
-// GetEscalationHistory gets escalation history for a ticket SLA
+// GetEscalationHistory gets escalation history for a ticket SLA.
 func (r *MemorySLARepository) GetEscalationHistory(ctx context.Context, ticketSLAID uint) ([]models.SLAEscalationHistory, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -468,7 +468,7 @@ func (r *MemorySLARepository) GetEscalationHistory(ctx context.Context, ticketSL
 	return history, nil
 }
 
-// PauseSLA pauses SLA tracking
+// PauseSLA pauses SLA tracking.
 func (r *MemorySLARepository) PauseSLA(ctx context.Context, pauseReason *models.SLAPauseReason) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -490,7 +490,7 @@ func (r *MemorySLARepository) PauseSLA(ctx context.Context, pauseReason *models.
 	return nil
 }
 
-// ResumeSLA resumes SLA tracking
+// ResumeSLA resumes SLA tracking.
 func (r *MemorySLARepository) ResumeSLA(ctx context.Context, ticketSLAID uint) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -530,7 +530,7 @@ func (r *MemorySLARepository) ResumeSLA(ctx context.Context, ticketSLAID uint) e
 	return nil
 }
 
-// GetSLAReport generates an SLA report
+// GetSLAReport generates an SLA report.
 func (r *MemorySLARepository) GetSLAReport(ctx context.Context, from, to time.Time) (*models.SLAReport, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

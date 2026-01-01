@@ -10,12 +10,13 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
+	"github.com/lib/pq"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
-	"github.com/lib/pq"
 )
 
-// TicketType represents a ticket type
+// TicketType represents a ticket type.
 type TicketType struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
@@ -25,7 +26,7 @@ type TicketType struct {
 	TicketCount int    `json:"ticket_count"`
 }
 
-// handleAdminTypes handles the ticket types management page
+// handleAdminTypes handles the ticket types management page.
 func handleAdminTypes(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -123,7 +124,7 @@ func handleAdminTypes(c *gin.Context) {
 </html>`)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var types []TicketType
 	for rows.Next() {
@@ -170,7 +171,7 @@ func handleAdminTypes(c *gin.Context) {
 	})
 }
 
-// handleAdminTypeCreate creates a new ticket type
+// handleAdminTypeCreate creates a new ticket type.
 func handleAdminTypeCreate(c *gin.Context) {
 	var input struct {
 		Name    string `json:"name" form:"name" binding:"required"`
@@ -251,7 +252,7 @@ func handleAdminTypeCreate(c *gin.Context) {
 	respondSuccess(http.StatusCreated, "Type created successfully")
 }
 
-// handleAdminTypeUpdate updates an existing ticket type
+// handleAdminTypeUpdate updates an existing ticket type.
 func handleAdminTypeUpdate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -349,7 +350,7 @@ func handleAdminTypeUpdate(c *gin.Context) {
 	respondSuccess("Type updated successfully")
 }
 
-// handleAdminTypeDelete soft-deletes a ticket type
+// handleAdminTypeDelete soft-deletes a ticket type.
 func handleAdminTypeDelete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)

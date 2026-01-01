@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// VersionManager manages versions for all YAML configuration types
+// VersionManager manages versions for all YAML configuration types.
 type VersionManager struct {
 	mu          sync.RWMutex
 	storageDir  string
@@ -29,7 +29,7 @@ var globalVersionManager *VersionManager
 // GetVersionManager returns the last created version manager (best-effort singleton).
 func GetVersionManager() *VersionManager { return globalVersionManager }
 
-// NewVersionManager creates a new version manager
+// NewVersionManager creates a new version manager.
 func NewVersionManager(storageDir string) *VersionManager {
 	vm := &VersionManager{
 		storageDir:  storageDir,
@@ -49,7 +49,7 @@ func NewVersionManager(storageDir string) *VersionManager {
 	return vm
 }
 
-// CreateVersion creates a new version for a YAML document
+// CreateVersion creates a new version for a YAML document.
 func (vm *VersionManager) CreateVersion(kind YAMLKind, name string, doc *YAMLDocument, message string) (*Version, error) {
 	vm.mu.Lock()
 	defer vm.mu.Unlock()
@@ -119,7 +119,7 @@ func (vm *VersionManager) CreateVersion(kind YAMLKind, name string, doc *YAMLDoc
 	return version, nil
 }
 
-// GetVersion retrieves a specific version
+// GetVersion retrieves a specific version.
 func (vm *VersionManager) GetVersion(kind YAMLKind, name string, versionID string) (*Version, error) {
 	vm.mu.RLock()
 	defer vm.mu.RUnlock()
@@ -138,7 +138,7 @@ func (vm *VersionManager) GetVersion(kind YAMLKind, name string, versionID strin
 	return nil, fmt.Errorf("version %s not found for %s/%s", versionID, kind, name)
 }
 
-// ListVersions returns all versions for a document
+// ListVersions returns all versions for a document.
 func (vm *VersionManager) ListVersions(kind YAMLKind, name string) ([]*Version, error) {
 	vm.mu.RLock()
 	defer vm.mu.RUnlock()
@@ -158,7 +158,7 @@ func (vm *VersionManager) ListVersions(kind YAMLKind, name string) ([]*Version, 
 	return sorted, nil
 }
 
-// GetCurrent returns the current version of a document
+// GetCurrent returns the current version of a document.
 func (vm *VersionManager) GetCurrent(kind YAMLKind, name string) (*YAMLDocument, error) {
 	vm.mu.RLock()
 	defer vm.mu.RUnlock()
@@ -171,7 +171,7 @@ func (vm *VersionManager) GetCurrent(kind YAMLKind, name string) (*YAMLDocument,
 	return current.Document, nil
 }
 
-// Rollback rolls back to a specific version
+// Rollback rolls back to a specific version.
 func (vm *VersionManager) Rollback(kind YAMLKind, name string, versionID string) error {
 	// Get the target version
 	targetVersion, err := vm.GetVersion(kind, name, versionID)
@@ -194,7 +194,7 @@ func (vm *VersionManager) Rollback(kind YAMLKind, name string, versionID string)
 	return nil
 }
 
-// DiffVersions compares two versions
+// DiffVersions compares two versions.
 func (vm *VersionManager) DiffVersions(kind YAMLKind, name string, fromID, toID string) ([]Change, error) {
 	fromVersion, err := vm.GetVersion(kind, name, fromID)
 	if err != nil {
@@ -209,7 +209,7 @@ func (vm *VersionManager) DiffVersions(kind YAMLKind, name string, fromID, toID 
 	return vm.calculateChanges(fromVersion.Document, toVersion.Document), nil
 }
 
-// ListAll returns all current documents of a specific kind
+// ListAll returns all current documents of a specific kind.
 func (vm *VersionManager) ListAll(kind YAMLKind) ([]*YAMLDocument, error) {
 	vm.mu.RLock()
 	defer vm.mu.RUnlock()

@@ -9,17 +9,17 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// UserRepository handles database operations for users
+// UserRepository handles database operations for users.
 type UserRepository struct {
 	db *sql.DB
 }
 
-// NewUserRepository creates a new user repository
+// NewUserRepository creates a new user repository.
 func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-// GetByID retrieves a user by ID
+// GetByID retrieves a user by ID.
 func (r *UserRepository) GetByID(id uint) (*models.User, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, login, pw, title, first_name, last_name,
@@ -67,14 +67,14 @@ func (r *UserRepository) GetByID(id uint) (*models.User, error) {
 	return &user, err
 }
 
-// GetByEmail retrieves a user by email
+// GetByEmail retrieves a user by email.
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	// OTRS schema doesn't have email in users table for agents
 	// Agents use login only
 	return nil, fmt.Errorf("email lookup not supported for agents")
 }
 
-// GetByLogin retrieves a user by login username
+// GetByLogin retrieves a user by login username.
 func (r *UserRepository) GetByLogin(login string) (*models.User, error) {
 	fmt.Printf("UserRepository.GetByLogin: Looking for user '%s'\n", login)
 	query := database.ConvertPlaceholders(`
@@ -158,7 +158,7 @@ func (r *UserRepository) GetByLogin(login string) (*models.User, error) {
 	return &user, nil
 }
 
-// Create creates a new user
+// Create creates a new user.
 func (r *UserRepository) Create(user *models.User) error {
 	// Truncate title to fit varchar(50) limit
 	if len(user.Title) > 50 {
@@ -206,7 +206,7 @@ func (r *UserRepository) Create(user *models.User) error {
 	return r.db.QueryRow(query, args...).Scan(&user.ID)
 }
 
-// Update updates a user
+// Update updates a user.
 func (r *UserRepository) Update(user *models.User) error {
 	// Truncate title to fit varchar(50) limit
 	if len(user.Title) > 50 {
@@ -254,7 +254,7 @@ func (r *UserRepository) Update(user *models.User) error {
 	return nil
 }
 
-// SetValidID updates only the validity status metadata for a user
+// SetValidID updates only the validity status metadata for a user.
 func (r *UserRepository) SetValidID(id uint, validID int, changeBy uint, changeTime time.Time) error {
 	query := database.ConvertPlaceholders(`
 		UPDATE users SET
@@ -280,7 +280,7 @@ func (r *UserRepository) SetValidID(id uint, validID int, changeBy uint, changeT
 	return nil
 }
 
-// ListWithGroups retrieves all users with their associated groups
+// ListWithGroups retrieves all users with their associated groups.
 func (r *UserRepository) ListWithGroups() ([]*models.User, error) {
 	users, err := r.List()
 	if err != nil {
@@ -301,7 +301,7 @@ func (r *UserRepository) ListWithGroups() ([]*models.User, error) {
 	return users, nil
 }
 
-// GetUserGroups retrieves the group names for a specific user
+// GetUserGroups retrieves the group names for a specific user.
 func (r *UserRepository) GetUserGroups(userID uint) ([]string, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT g.name 
@@ -329,7 +329,7 @@ func (r *UserRepository) GetUserGroups(userID uint) ([]string, error) {
 	return groups, nil
 }
 
-// List retrieves all users (both active and inactive)
+// List retrieves all users (both active and inactive).
 func (r *UserRepository) List() ([]*models.User, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, login, pw, title, first_name, last_name,
@@ -384,7 +384,7 @@ func (r *UserRepository) List() ([]*models.User, error) {
 	return users, nil
 }
 
-// Delete deletes a user by ID
+// Delete deletes a user by ID.
 func (r *UserRepository) Delete(id uint) error {
 	query := database.ConvertPlaceholders(`DELETE FROM users WHERE id = $1`)
 	result, err := r.db.Exec(query, id)

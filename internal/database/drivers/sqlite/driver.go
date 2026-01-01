@@ -1,3 +1,4 @@
+// Package sqlite provides the SQLite database driver implementation.
 package sqlite
 
 import (
@@ -6,21 +7,22 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	_ "github.com/mattn/go-sqlite3"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// SQLiteDriver implements the DatabaseDriver interface for SQLite
+// SQLiteDriver implements the DatabaseDriver interface for SQLite.
 type SQLiteDriver struct {
 	db *sql.DB
 }
 
-// NewSQLiteDriver creates a new SQLite driver
+// NewSQLiteDriver creates a new SQLite driver.
 func NewSQLiteDriver() database.DatabaseDriver {
 	return &SQLiteDriver{}
 }
 
-// Connect establishes a connection to SQLite
+// Connect establishes a connection to SQLite.
 func (d *SQLiteDriver) Connect(ctx context.Context, dsn string) error {
 	// For in-memory database, use ":memory:"
 	// For file database, use file path
@@ -44,7 +46,7 @@ func (d *SQLiteDriver) Connect(ctx context.Context, dsn string) error {
 	return nil
 }
 
-// Close closes the database connection
+// Close closes the database connection.
 func (d *SQLiteDriver) Close() error {
 	if d.db != nil {
 		return d.db.Close()
@@ -52,7 +54,7 @@ func (d *SQLiteDriver) Close() error {
 	return nil
 }
 
-// Ping checks if the connection is alive
+// Ping checks if the connection is alive.
 func (d *SQLiteDriver) Ping(ctx context.Context) error {
 	if d.db == nil {
 		return sql.ErrConnDone
@@ -60,7 +62,7 @@ func (d *SQLiteDriver) Ping(ctx context.Context) error {
 	return d.db.PingContext(ctx)
 }
 
-// CreateTable generates and returns a CREATE TABLE query for SQLite
+// CreateTable generates and returns a CREATE TABLE query for SQLite.
 func (d *SQLiteDriver) CreateTable(schema database.TableSchema) (database.Query, error) {
 	var parts []string
 
@@ -135,7 +137,7 @@ func (d *SQLiteDriver) CreateTable(schema database.TableSchema) (database.Query,
 	return database.Query{SQL: sql, Args: nil}, nil
 }
 
-// DropTable generates a DROP TABLE query
+// DropTable generates a DROP TABLE query.
 func (d *SQLiteDriver) DropTable(tableName string) (database.Query, error) {
 	return database.Query{
 		SQL:  fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName),
@@ -143,7 +145,7 @@ func (d *SQLiteDriver) DropTable(tableName string) (database.Query, error) {
 	}, nil
 }
 
-// TableExists checks if a table exists
+// TableExists checks if a table exists.
 func (d *SQLiteDriver) TableExists(tableName string) (bool, error) {
 	query := `
 		SELECT COUNT(*) > 0
@@ -156,7 +158,7 @@ func (d *SQLiteDriver) TableExists(tableName string) (bool, error) {
 	return exists, err
 }
 
-// Insert generates an INSERT query with RETURNING support (SQLite 3.35+)
+// Insert generates an INSERT query with RETURNING support (SQLite 3.35+).
 func (d *SQLiteDriver) Insert(table string, data map[string]interface{}) (database.Query, error) {
 	columns := make([]string, 0, len(data))
 	placeholders := make([]string, 0, len(data))
@@ -177,7 +179,7 @@ func (d *SQLiteDriver) Insert(table string, data map[string]interface{}) (databa
 	return database.Query{SQL: sql, Args: values}, nil
 }
 
-// Update generates an UPDATE query
+// Update generates an UPDATE query.
 func (d *SQLiteDriver) Update(table string, data map[string]interface{}, where string, whereArgs ...interface{}) (database.Query, error) {
 	setClauses := make([]string, 0, len(data))
 	values := make([]interface{}, 0, len(data)+len(whereArgs))
@@ -199,13 +201,13 @@ func (d *SQLiteDriver) Update(table string, data map[string]interface{}, where s
 	return database.Query{SQL: sql, Args: values}, nil
 }
 
-// Delete generates a DELETE query
+// Delete generates a DELETE query.
 func (d *SQLiteDriver) Delete(table string, where string, whereArgs ...interface{}) (database.Query, error) {
 	sql := fmt.Sprintf("DELETE FROM %s WHERE %s", table, where)
 	return database.Query{SQL: sql, Args: whereArgs}, nil
 }
 
-// Select generates a SELECT query
+// Select generates a SELECT query.
 func (d *SQLiteDriver) Select(table string, columns []string, where string, whereArgs ...interface{}) (database.Query, error) {
 	cols := "*"
 	if len(columns) > 0 {
@@ -220,7 +222,7 @@ func (d *SQLiteDriver) Select(table string, columns []string, where string, wher
 	return database.Query{SQL: sql, Args: whereArgs}, nil
 }
 
-// MapType maps schema types to SQLite types
+// MapType maps schema types to SQLite types.
 func (d *SQLiteDriver) MapType(schemaType string) string {
 	// SQLite has a very simple type system
 	schemaType = strings.ToLower(schemaType)
@@ -252,7 +254,7 @@ func (d *SQLiteDriver) MapType(schemaType string) string {
 	}
 }
 
-// SupportsReturning returns true for SQLite 3.35+
+// SupportsReturning returns true for SQLite 3.35+.
 func (d *SQLiteDriver) SupportsReturning() bool {
 	// Check SQLite version to determine RETURNING support
 	var version string
@@ -275,17 +277,17 @@ func (d *SQLiteDriver) SupportsReturning() bool {
 	return false
 }
 
-// SupportsLastInsertId returns true for SQLite
+// SupportsLastInsertId returns true for SQLite.
 func (d *SQLiteDriver) SupportsLastInsertId() bool {
 	return true
 }
 
-// SupportsArrays returns false for SQLite
+// SupportsArrays returns false for SQLite.
 func (d *SQLiteDriver) SupportsArrays() bool {
 	return false
 }
 
-// BeginTx starts a new transaction
+// BeginTx starts a new transaction.
 func (d *SQLiteDriver) BeginTx(ctx context.Context) (database.Transaction, error) {
 	if d.db == nil {
 		return nil, sql.ErrConnDone
@@ -299,7 +301,7 @@ func (d *SQLiteDriver) BeginTx(ctx context.Context) (database.Transaction, error
 	return &sqliteTransaction{tx: tx}, nil
 }
 
-// Exec executes a query without returning rows
+// Exec executes a query without returning rows.
 func (d *SQLiteDriver) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	if d.db == nil {
 		return nil, sql.ErrConnDone
@@ -307,7 +309,7 @@ func (d *SQLiteDriver) Exec(ctx context.Context, query string, args ...interface
 	return d.db.ExecContext(ctx, query, args...)
 }
 
-// Query executes a query that returns rows
+// Query executes a query that returns rows.
 func (d *SQLiteDriver) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	if d.db == nil {
 		return nil, sql.ErrConnDone
@@ -315,7 +317,7 @@ func (d *SQLiteDriver) Query(ctx context.Context, query string, args ...interfac
 	return d.db.QueryContext(ctx, query, args...)
 }
 
-// QueryRow executes a query that returns at most one row
+// QueryRow executes a query that returns at most one row.
 func (d *SQLiteDriver) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	if d.db == nil {
 		return nil
@@ -323,7 +325,7 @@ func (d *SQLiteDriver) QueryRow(ctx context.Context, query string, args ...inter
 	return d.db.QueryRowContext(ctx, query, args...)
 }
 
-// sqliteTransaction wraps sql.Tx to implement Transaction interface
+// sqliteTransaction wraps sql.Tx to implement Transaction interface.
 type sqliteTransaction struct {
 	tx *sql.Tx
 }

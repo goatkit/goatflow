@@ -1,3 +1,4 @@
+// Package dashboard provides real-time dashboard components and handlers.
 package dashboard
 
 import (
@@ -13,7 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// MetricsCollector collects and broadcasts real-time metrics
+// MetricsCollector collects and broadcasts real-time metrics.
 type MetricsCollector struct {
 	db         interface{}
 	clients    map[*Client]bool
@@ -27,7 +28,7 @@ type MetricsCollector struct {
 	updateRate time.Duration
 }
 
-// Client represents a WebSocket client
+// Client represents a WebSocket client.
 type Client struct {
 	ID        string
 	conn      *websocket.Conn
@@ -37,7 +38,7 @@ type Client struct {
 	role      string   // User role for access control
 }
 
-// SystemMetrics holds all system metrics
+// SystemMetrics holds all system metrics.
 type SystemMetrics struct {
 	Timestamp     time.Time              `json:"timestamp"`
 	System        SystemStats            `json:"system"`
@@ -51,7 +52,7 @@ type SystemMetrics struct {
 	CustomMetrics map[string]interface{} `json:"custom"`
 }
 
-// SystemStats represents system-level statistics
+// SystemStats represents system-level statistics.
 type SystemStats struct {
 	Uptime         time.Duration `json:"uptime"`
 	DatabaseStatus string        `json:"database_status"`
@@ -64,7 +65,7 @@ type SystemStats struct {
 	RequestsPerSec float64       `json:"requests_per_sec"`
 }
 
-// TicketMetrics represents ticket-related metrics
+// TicketMetrics represents ticket-related metrics.
 type TicketMetrics struct {
 	TotalOpen         int     `json:"total_open"`
 	TotalClosed       int     `json:"total_closed"`
@@ -78,7 +79,7 @@ type TicketMetrics struct {
 	UnassignedCount   int     `json:"unassigned_count"`
 }
 
-// UserMetrics represents user-related metrics
+// UserMetrics represents user-related metrics.
 type UserMetrics struct {
 	TotalUsers       int     `json:"total_users"`
 	ActiveUsers      int     `json:"active_users"`
@@ -90,7 +91,7 @@ type UserMetrics struct {
 	AvgSessionLength float64 `json:"avg_session_length_minutes"`
 }
 
-// QueueMetrics represents metrics for a specific queue
+// QueueMetrics represents metrics for a specific queue.
 type QueueMetrics struct {
 	QueueID         int     `json:"queue_id"`
 	QueueName       string  `json:"queue_name"`
@@ -101,7 +102,7 @@ type QueueMetrics struct {
 	ProcessingRate  float64 `json:"processing_rate_per_hour"`
 }
 
-// PerformanceMetrics represents system performance metrics
+// PerformanceMetrics represents system performance metrics.
 type PerformanceMetrics struct {
 	AvgResponseTime float64            `json:"avg_response_time_ms"`
 	P95ResponseTime float64            `json:"p95_response_time_ms"`
@@ -113,7 +114,7 @@ type PerformanceMetrics struct {
 	EndpointMetrics map[string]float64 `json:"endpoint_metrics"`
 }
 
-// SLAMetrics represents SLA compliance metrics
+// SLAMetrics represents SLA compliance metrics.
 type SLAMetrics struct {
 	ComplianceRate  float64              `json:"compliance_rate_percent"`
 	BreachedTickets int                  `json:"breached_tickets"`
@@ -123,7 +124,7 @@ type SLAMetrics struct {
 	ByPriority      map[string]SLAStatus `json:"by_priority"`
 }
 
-// SLAStatus represents SLA status for a priority level
+// SLAStatus represents SLA status for a priority level.
 type SLAStatus struct {
 	Priority       string  `json:"priority"`
 	ComplianceRate float64 `json:"compliance_rate"`
@@ -131,7 +132,7 @@ type SLAStatus struct {
 	TargetTime     float64 `json:"target_time_hours"`
 }
 
-// TrendMetrics represents trend analysis
+// TrendMetrics represents trend analysis.
 type TrendMetrics struct {
 	TicketTrend       Trend `json:"ticket_trend"` // up, down, stable
 	ResponseTrend     Trend `json:"response_trend"`
@@ -140,7 +141,7 @@ type TrendMetrics struct {
 	SatisfactionTrend Trend `json:"satisfaction_trend"`
 }
 
-// Trend represents a metric trend
+// Trend represents a metric trend.
 type Trend struct {
 	Direction    string  `json:"direction"` // up, down, stable
 	Change       float64 `json:"change_percent"`
@@ -149,7 +150,7 @@ type Trend struct {
 	Period       string  `json:"period"` // hour, day, week, month
 }
 
-// Alert represents a system alert
+// Alert represents a system alert.
 type Alert struct {
 	ID           string    `json:"id"`
 	Level        string    `json:"level"` // info, warning, error, critical
@@ -160,7 +161,7 @@ type Alert struct {
 	Action       string    `json:"action_required"`
 }
 
-// MetricUpdate represents a real-time metric update
+// MetricUpdate represents a real-time metric update.
 type MetricUpdate struct {
 	Type      string      `json:"type"`
 	Metric    string      `json:"metric"`
@@ -169,7 +170,7 @@ type MetricUpdate struct {
 	Delta     interface{} `json:"delta,omitempty"`
 }
 
-// CollectorFunc is a function that collects specific metrics
+// CollectorFunc is a function that collects specific metrics.
 type CollectorFunc func(context.Context) (interface{}, error)
 
 var upgrader = websocket.Upgrader{
@@ -178,7 +179,7 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// NewMetricsCollector creates a new metrics collector
+// NewMetricsCollector creates a new metrics collector.
 func NewMetricsCollector(db interface{}) *MetricsCollector {
 	mc := &MetricsCollector{
 		db:         db,
@@ -197,13 +198,13 @@ func NewMetricsCollector(db interface{}) *MetricsCollector {
 	return mc
 }
 
-// Start starts the metrics collector
+// Start starts the metrics collector.
 func (mc *MetricsCollector) Start(ctx context.Context) {
 	go mc.run(ctx)
 	go mc.collectMetrics(ctx)
 }
 
-// run handles client connections and broadcasts
+// run handles client connections and broadcasts.
 func (mc *MetricsCollector) run(ctx context.Context) {
 	ticker := time.NewTicker(mc.updateRate)
 	defer ticker.Stop()
@@ -242,7 +243,7 @@ func (mc *MetricsCollector) run(ctx context.Context) {
 	}
 }
 
-// collectMetrics continuously collects metrics
+// collectMetrics continuously collects metrics.
 func (mc *MetricsCollector) collectMetrics(ctx context.Context) {
 	ticker := time.NewTicker(mc.updateRate)
 	defer ticker.Stop()
@@ -257,7 +258,7 @@ func (mc *MetricsCollector) collectMetrics(ctx context.Context) {
 	}
 }
 
-// updateAllMetrics updates all metrics
+// updateAllMetrics updates all metrics.
 func (mc *MetricsCollector) updateAllMetrics(ctx context.Context) {
 	mc.metricsMu.Lock()
 	defer mc.metricsMu.Unlock()
@@ -312,7 +313,7 @@ func (mc *MetricsCollector) updateAllMetrics(ctx context.Context) {
 	}
 }
 
-// broadcastUpdate sends a metric update to all clients
+// broadcastUpdate sends a metric update to all clients.
 func (mc *MetricsCollector) broadcastUpdate(update MetricUpdate) {
 	message, err := json.Marshal(update)
 	if err != nil {
@@ -336,7 +337,7 @@ func (mc *MetricsCollector) broadcastUpdate(update MetricUpdate) {
 	}
 }
 
-// broadcastFullMetrics sends full metrics to all clients
+// broadcastFullMetrics sends full metrics to all clients.
 func (mc *MetricsCollector) broadcastFullMetrics() {
 	mc.metricsMu.RLock()
 	message, err := json.Marshal(mc.metrics)
@@ -361,7 +362,7 @@ func (mc *MetricsCollector) broadcastFullMetrics() {
 	}
 }
 
-// sendInitialMetrics sends initial metrics to a new client
+// sendInitialMetrics sends initial metrics to a new client.
 func (mc *MetricsCollector) sendInitialMetrics(client *Client) {
 	mc.metricsMu.RLock()
 	message, err := json.Marshal(mc.metrics)
@@ -379,7 +380,7 @@ func (mc *MetricsCollector) sendInitialMetrics(client *Client) {
 	}
 }
 
-// shouldSendToClient checks if a metric should be sent to a client
+// shouldSendToClient checks if a metric should be sent to a client.
 func (mc *MetricsCollector) shouldSendToClient(client *Client, metricType string) bool {
 	// Check if client has filters
 	if len(client.filters) == 0 {
@@ -396,12 +397,12 @@ func (mc *MetricsCollector) shouldSendToClient(client *Client, metricType string
 	return false
 }
 
-// RegisterCollector registers a custom metric collector
+// RegisterCollector registers a custom metric collector.
 func (mc *MetricsCollector) RegisterCollector(name string, collector CollectorFunc) {
 	mc.collectors[name] = collector
 }
 
-// registerDefaultCollectors registers the default metric collectors
+// registerDefaultCollectors registers the default metric collectors.
 func (mc *MetricsCollector) registerDefaultCollectors() {
 	// System metrics collector
 	mc.collectors["system"] = func(ctx context.Context) (interface{}, error) {
@@ -454,7 +455,7 @@ func (mc *MetricsCollector) registerDefaultCollectors() {
 	// Add more default collectors...
 }
 
-// HandleWebSocket handles WebSocket connections
+// HandleWebSocket handles WebSocket connections.
 func (mc *MetricsCollector) HandleWebSocket(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -478,7 +479,7 @@ func (mc *MetricsCollector) HandleWebSocket(c *gin.Context) {
 	go client.writePump()
 }
 
-// readPump pumps messages from the WebSocket connection
+// readPump pumps messages from the WebSocket connection.
 func (c *Client) readPump() {
 	defer func() {
 		c.collector.unregister <- c
@@ -505,7 +506,7 @@ func (c *Client) readPump() {
 	}
 }
 
-// writePump pumps messages to the WebSocket connection
+// writePump pumps messages to the WebSocket connection.
 func (c *Client) writePump() {
 	ticker := time.NewTicker(54 * time.Second)
 	defer func() {
@@ -548,7 +549,7 @@ func (c *Client) writePump() {
 	}
 }
 
-// handleMessage handles messages from the client
+// handleMessage handles messages from the client.
 func (c *Client) handleMessage(message []byte) {
 	var msg map[string]interface{}
 	if err := json.Unmarshal(message, &msg); err != nil {

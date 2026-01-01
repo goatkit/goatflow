@@ -2,10 +2,11 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// AgentHandlerExports provides exported handler functions for agent routes
+// AgentHandlerExports provides exported handler functions for agent routes.
 var AgentHandlerExports = struct {
 	HandleAgentTickets         gin.HandlerFunc
 	HandleAgentTicketReply     gin.HandlerFunc
@@ -110,7 +111,7 @@ var AgentHandlerExports = struct {
 	},
 }
 
-// Provide package-level handler variables for tests and direct routing
+// Provide package-level handler variables for tests and direct routing.
 var (
 	HandleAgentTickets        = AgentHandlerExports.HandleAgentTickets
 	HandleAgentTicketReply    = AgentHandlerExports.HandleAgentTicketReply
@@ -124,7 +125,7 @@ var (
 	HandleAgentTicketDraft    = AgentHandlerExports.HandleAgentTicketDraft
 )
 
-// RegisterAgentHandlers registers agent handlers for YAML routing
+// RegisterAgentHandlers registers agent handlers for YAML routing.
 func RegisterAgentHandlers() {
 	// RegisterAgentHandlers registers agent handlers for YAML routing
 	// TODO: Register handlers in GlobalHandlerMap for YAML routing

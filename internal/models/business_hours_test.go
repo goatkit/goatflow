@@ -531,45 +531,45 @@ func TestBusinessHoursCalculator_isTimeInRange(t *testing.T) {
 	baseDate := time.Date(2025, 12, 22, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name      string
-		testTime  time.Time
-		startStr  string
-		endStr    string
+		name        string
+		testTime    time.Time
+		startStr    string
+		endStr      string
 		wantInRange bool
 	}{
 		{
-			name:      "within range",
-			testTime:  baseDate.Add(10 * time.Hour), // 10:00
-			startStr:  "09:00",
-			endStr:    "17:00",
+			name:        "within range",
+			testTime:    baseDate.Add(10 * time.Hour), // 10:00
+			startStr:    "09:00",
+			endStr:      "17:00",
 			wantInRange: true,
 		},
 		{
-			name:      "at start",
-			testTime:  baseDate.Add(9 * time.Hour), // 09:00
-			startStr:  "09:00",
-			endStr:    "17:00",
+			name:        "at start",
+			testTime:    baseDate.Add(9 * time.Hour), // 09:00
+			startStr:    "09:00",
+			endStr:      "17:00",
 			wantInRange: true,
 		},
 		{
-			name:      "before start",
-			testTime:  baseDate.Add(8 * time.Hour), // 08:00
-			startStr:  "09:00",
-			endStr:    "17:00",
+			name:        "before start",
+			testTime:    baseDate.Add(8 * time.Hour), // 08:00
+			startStr:    "09:00",
+			endStr:      "17:00",
 			wantInRange: false,
 		},
 		{
-			name:      "at end (exclusive)",
-			testTime:  baseDate.Add(17 * time.Hour), // 17:00
-			startStr:  "09:00",
-			endStr:    "17:00",
+			name:        "at end (exclusive)",
+			testTime:    baseDate.Add(17 * time.Hour), // 17:00
+			startStr:    "09:00",
+			endStr:      "17:00",
 			wantInRange: false,
 		},
 		{
-			name:      "after end",
-			testTime:  baseDate.Add(18 * time.Hour), // 18:00
-			startStr:  "09:00",
-			endStr:    "17:00",
+			name:        "after end",
+			testTime:    baseDate.Add(18 * time.Hour), // 18:00
+			startStr:    "09:00",
+			endStr:      "17:00",
 			wantInRange: false,
 		},
 	}
@@ -578,7 +578,7 @@ func TestBusinessHoursCalculator_isTimeInRange(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := calc.isTimeInRange(tt.testTime, tt.startStr, tt.endStr)
 			if got != tt.wantInRange {
-				t.Errorf("isTimeInRange(%v, %s, %s) = %v, want %v", 
+				t.Errorf("isTimeInRange(%v, %s, %s) = %v, want %v",
 					tt.testTime.Format("15:04"), tt.startStr, tt.endStr, got, tt.wantInRange)
 			}
 		})

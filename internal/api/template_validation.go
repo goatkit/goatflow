@@ -8,7 +8,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 )
 
-// ValidateAllTemplates walks templatesDir, parses every .pongo2 file, and returns a list of failures
+// ValidateAllTemplates walks templatesDir, parses every .pongo2 file, and returns a list of failures.
 func ValidateAllTemplates(templatesDir string) ([]string, error) {
 	loader, err := pongo2.NewLocalFileSystemLoader(templatesDir)
 	if err != nil {

@@ -91,10 +91,10 @@ func TestParseDynamicFieldFiltersFromQuery(t *testing.T) {
 		{
 			name: "multiple filters",
 			query: map[string][]string{
-				"df_Type":           {"bug"},
-				"df_Severity_gt":    {"3"},
-				"df_Assignee":       {"john"},
-				"status":            {"open"}, // should be ignored
+				"df_Type":        {"bug"},
+				"df_Severity_gt": {"3"},
+				"df_Assignee":    {"john"},
+				"status":         {"open"}, // should be ignored
 			},
 			expected: []DynamicFieldFilter{
 				{FieldName: "Type", Operator: "eq", Value: "bug"},
@@ -107,21 +107,21 @@ func TestParseDynamicFieldFiltersFromQuery(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ParseDynamicFieldFiltersFromQuery(tt.query)
-			
+
 			if tt.expected == nil {
 				assert.Empty(t, result)
 				return
 			}
 
 			assert.Equal(t, len(tt.expected), len(result), "expected %d filters, got %d", len(tt.expected), len(result))
-			
+
 			// Check each expected filter is present (order may vary due to map iteration)
 			for _, expected := range tt.expected {
 				found := false
 				for _, actual := range result {
-					if actual.FieldName == expected.FieldName && 
-					   actual.Operator == expected.Operator && 
-					   actual.Value == expected.Value {
+					if actual.FieldName == expected.FieldName &&
+						actual.Operator == expected.Operator &&
+						actual.Value == expected.Value {
 						found = true
 						break
 					}
@@ -160,7 +160,7 @@ func TestSearchableDynamicField_Options(t *testing.T) {
 	}
 
 	sdf := SearchableDynamicField{DynamicField: df}
-	
+
 	// Simulate the option population from GetFieldsForSearch
 	if df.FieldType == DFTypeDropdown || df.FieldType == DFTypeMultiselect {
 		if df.Config != nil && df.Config.PossibleValues != nil {
@@ -174,7 +174,7 @@ func TestSearchableDynamicField_Options(t *testing.T) {
 	}
 
 	assert.Equal(t, 3, len(sdf.Options))
-	
+
 	// Verify options contain expected values
 	keys := make(map[string]bool)
 	for _, opt := range sdf.Options {

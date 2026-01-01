@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -461,7 +460,7 @@ func TestQueueSortingWithPagination(t *testing.T) {
 	}
 }
 
-// Helper function to find index of a substring
+// Helper function to find index of a substring.
 func indexOf(s, substr string) int {
 	index := -1
 	if i := strings.Index(s, substr); i >= 0 {
@@ -470,7 +469,7 @@ func indexOf(s, substr string) int {
 	return index
 }
 
-// Helper function to count occurrences of a substring
+// Helper function to count occurrences of a substring.
 func countOccurrences(s, substr string) int {
 	return strings.Count(s, substr)
 }

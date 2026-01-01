@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -609,7 +608,7 @@ func TestHealthCheck(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-// Benchmark tests
+// Benchmark tests.
 func BenchmarkDashboardPage(b *testing.B) {
 	router := setupTestRouter()
 

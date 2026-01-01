@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -12,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// helper to perform requests
+// helper to perform requests.
 func performRequest(r http.Handler, method, path string, body *strings.Reader, headers map[string]string) *httptest.ResponseRecorder {
 	if body == nil {
 		empty := strings.NewReader("")

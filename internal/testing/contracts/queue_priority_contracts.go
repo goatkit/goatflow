@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-// QueueContracts defines the API contracts for queue endpoints
+// QueueContracts defines the API contracts for queue endpoints.
 var QueueContracts = []Contract{
 	{
 		Name:        "ListQueues",
@@ -110,7 +110,7 @@ var QueueContracts = []Contract{
 	},
 }
 
-// PriorityContracts defines the API contracts for priority endpoints
+// PriorityContracts defines the API contracts for priority endpoints.
 var PriorityContracts = []Contract{
 	{
 		Name:        "ListPriorities",
@@ -209,7 +209,7 @@ var PriorityContracts = []Contract{
 	},
 }
 
-// RegisterQueuePriorityContracts registers queue and priority contracts for testing
+// RegisterQueuePriorityContracts registers queue and priority contracts for testing.
 func RegisterQueuePriorityContracts() {
 	// No-op registrar kept for backward compatibility
 }

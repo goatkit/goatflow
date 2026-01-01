@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// RouteVersion represents a version of route configuration
+// RouteVersion represents a version of route configuration.
 type RouteVersion struct {
 	Version    string                  `json:"version"`
 	Timestamp  time.Time               `json:"timestamp"`
@@ -24,7 +24,7 @@ type RouteVersion struct {
 	ParentHash string                  `json:"parent_hash,omitempty"`
 }
 
-// VersionStats contains statistics about a route version
+// VersionStats contains statistics about a route version.
 type VersionStats struct {
 	TotalRoutes     int            `json:"total_routes"`
 	TotalEndpoints  int            `json:"total_endpoints"`
@@ -34,7 +34,7 @@ type VersionStats struct {
 	DisabledRoutes  int            `json:"disabled_routes"`
 }
 
-// VersionDiff represents changes between versions
+// VersionDiff represents changes between versions.
 type VersionDiff struct {
 	FromVersion string              `json:"from_version"`
 	ToVersion   string              `json:"to_version"`
@@ -44,7 +44,7 @@ type VersionDiff struct {
 	Changes     map[string][]string `json:"changes"`
 }
 
-// RouteVersionManager manages route configuration versions
+// RouteVersionManager manages route configuration versions.
 type RouteVersionManager struct {
 	mu          sync.RWMutex
 	storageDir  string
@@ -54,7 +54,7 @@ type RouteVersionManager struct {
 	autoCommit  bool
 }
 
-// NewRouteVersionManager creates a new version manager
+// NewRouteVersionManager creates a new version manager.
 func NewRouteVersionManager(storageDir string) *RouteVersionManager {
 	vm := &RouteVersionManager{
 		storageDir:  storageDir,
@@ -73,7 +73,7 @@ func NewRouteVersionManager(storageDir string) *RouteVersionManager {
 	return vm
 }
 
-// CreateVersion creates a new version from current routes
+// CreateVersion creates a new version from current routes.
 func (vm *RouteVersionManager) CreateVersion(routes map[string]*RouteConfig, message string) (*RouteVersion, error) {
 	vm.mu.Lock()
 	defer vm.mu.Unlock()
@@ -129,7 +129,7 @@ func (vm *RouteVersionManager) CreateVersion(routes map[string]*RouteConfig, mes
 	return v, nil
 }
 
-// GetVersion retrieves a specific version
+// GetVersion retrieves a specific version.
 func (vm *RouteVersionManager) GetVersion(versionOrHash string) (*RouteVersion, error) {
 	vm.mu.RLock()
 	defer vm.mu.RUnlock()
@@ -149,7 +149,7 @@ func (vm *RouteVersionManager) GetVersion(versionOrHash string) (*RouteVersion, 
 	return nil, fmt.Errorf("version not found: %s", versionOrHash)
 }
 
-// ListVersions returns all versions sorted by timestamp
+// ListVersions returns all versions sorted by timestamp.
 func (vm *RouteVersionManager) ListVersions() []*RouteVersion {
 	vm.mu.RLock()
 	defer vm.mu.RUnlock()
@@ -167,7 +167,7 @@ func (vm *RouteVersionManager) ListVersions() []*RouteVersion {
 	return versions
 }
 
-// Rollback rolls back to a specific version
+// Rollback rolls back to a specific version.
 func (vm *RouteVersionManager) Rollback(versionOrHash string) error {
 	vm.mu.Lock()
 	defer vm.mu.Unlock()
@@ -219,7 +219,7 @@ func (vm *RouteVersionManager) Rollback(versionOrHash string) error {
 	return nil
 }
 
-// DiffVersions compares two versions
+// DiffVersions compares two versions.
 func (vm *RouteVersionManager) DiffVersions(fromVersion, toVersion string) (*VersionDiff, error) {
 	vm.mu.RLock()
 	defer vm.mu.RUnlock()
@@ -267,7 +267,7 @@ func (vm *RouteVersionManager) DiffVersions(fromVersion, toVersion string) (*Ver
 	return diff, nil
 }
 
-// AutoCommit enables or disables automatic version creation
+// AutoCommit enables or disables automatic version creation.
 func (vm *RouteVersionManager) SetAutoCommit(enabled bool) {
 	vm.mu.Lock()
 	defer vm.mu.Unlock()
@@ -473,7 +473,7 @@ func (vm *RouteVersionManager) detectChanges(from, to *RouteConfig) []string {
 	return changes
 }
 
-// marshalRouteToYAML converts RouteConfig to YAML
+// marshalRouteToYAML converts RouteConfig to YAML.
 func marshalRouteToYAML(route *RouteConfig) ([]byte, error) {
 	// Use yaml.v3 for marshaling
 	// This is a simplified version - you'd want to use the actual YAML library

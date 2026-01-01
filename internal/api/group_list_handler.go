@@ -7,10 +7,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleListGroupsAPI handles GET /api/v1/groups
+// HandleListGroupsAPI handles GET /api/v1/groups.
 func HandleListGroupsAPI(c *gin.Context) {
 	if _, ok := c.Get("user_id"); !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})
@@ -54,7 +55,7 @@ func HandleListGroupsAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to fetch groups"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type groupRow struct {
 		ID         int

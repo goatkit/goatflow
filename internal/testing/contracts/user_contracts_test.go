@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TestUserContracts tests all user endpoint contracts
+// TestUserContracts tests all user endpoint contracts.
 func TestUserContracts(t *testing.T) {
 	// Set up router
 	gin.SetMode(gin.TestMode)

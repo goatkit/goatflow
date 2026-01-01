@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -15,9 +14,10 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
+
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/stretchr/testify/require"
 )
 
 func TestHandleAgentTicketNotePendingReminderPersistsPendingUntil(t *testing.T) {

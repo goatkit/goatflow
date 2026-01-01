@@ -1,16 +1,16 @@
 package i18n
 
-// LanguageDirection represents text direction
+// LanguageDirection represents text direction.
 type LanguageDirection string
 
 const (
-	// LTR represents left-to-right text direction
+	// LTR represents left-to-right text direction.
 	LTR LanguageDirection = "ltr"
-	// RTL represents right-to-left text direction
+	// RTL represents right-to-left text direction.
 	RTL LanguageDirection = "rtl"
 )
 
-// LanguageConfig contains configuration for each language
+// LanguageConfig contains configuration for each language.
 type LanguageConfig struct {
 	Code         string            `json:"code"`
 	Name         string            `json:"name"`
@@ -23,14 +23,14 @@ type LanguageConfig struct {
 	Enabled      bool              `json:"enabled"`
 }
 
-// NumberFormat represents number formatting configuration
+// NumberFormat represents number formatting configuration.
 type NumberFormat struct {
 	DecimalSeparator  string `json:"decimal_separator"`
 	ThousandSeparator string `json:"thousand_separator"`
 	Digits            string `json:"digits"` // For languages with different digit systems
 }
 
-// CurrencyFormat represents currency formatting configuration
+// CurrencyFormat represents currency formatting configuration.
 type CurrencyFormat struct {
 	Symbol           string `json:"symbol"`
 	Code             string `json:"code"`
@@ -39,7 +39,7 @@ type CurrencyFormat struct {
 	SpaceAfterSymbol bool   `json:"space_after_symbol"`
 }
 
-// SupportedLanguages contains configuration for all supported languages
+// SupportedLanguages contains configuration for all supported languages.
 var SupportedLanguages = map[string]LanguageConfig{
 	"en": {
 		Code:       "en",
@@ -295,13 +295,13 @@ var SupportedLanguages = map[string]LanguageConfig{
 	},
 }
 
-// GetLanguageConfig returns configuration for a language
+// GetLanguageConfig returns configuration for a language.
 func GetLanguageConfig(code string) (LanguageConfig, bool) {
 	config, exists := SupportedLanguages[code]
 	return config, exists
 }
 
-// IsRTL checks if a language is right-to-left
+// IsRTL checks if a language is right-to-left.
 func IsRTL(code string) bool {
 	if config, exists := SupportedLanguages[code]; exists {
 		return config.Direction == RTL
@@ -309,7 +309,7 @@ func IsRTL(code string) bool {
 	return false
 }
 
-// GetDirection returns the text direction for a language
+// GetDirection returns the text direction for a language.
 func GetDirection(code string) LanguageDirection {
 	if config, exists := SupportedLanguages[code]; exists {
 		return config.Direction
@@ -317,7 +317,7 @@ func GetDirection(code string) LanguageDirection {
 	return LTR
 }
 
-// GetEnabledLanguages returns only enabled languages
+// GetEnabledLanguages returns only enabled languages.
 func GetEnabledLanguages() []LanguageConfig {
 	var enabled []LanguageConfig
 	for _, config := range SupportedLanguages {
@@ -328,7 +328,7 @@ func GetEnabledLanguages() []LanguageConfig {
 	return enabled
 }
 
-// ConvertDigits converts Western digits to locale-specific digits
+// ConvertDigits converts Western digits to locale-specific digits.
 func ConvertDigits(number string, lang string) string {
 	config, exists := SupportedLanguages[lang]
 	if !exists || config.NumberFormat.Digits == "0123456789" {
@@ -349,7 +349,7 @@ func ConvertDigits(number string, lang string) string {
 	return result
 }
 
-// FormatNumber formats a number according to language configuration
+// FormatNumber formats a number according to language configuration.
 func FormatNumber(value float64, lang string, decimals int) string {
 	_, exists := SupportedLanguages[lang]
 	if !exists {
@@ -365,7 +365,7 @@ func FormatNumber(value float64, lang string, decimals int) string {
 	return ConvertDigits("formatted_number", lang)
 }
 
-// FormatCurrency formats currency according to language configuration
+// FormatCurrency formats currency according to language configuration.
 func FormatCurrency(amount float64, lang string) string {
 	config, exists := SupportedLanguages[lang]
 	if !exists {
@@ -389,7 +389,7 @@ func FormatCurrency(amount float64, lang string) string {
 	}
 }
 
-// GetCSSClass returns CSS classes for language-specific styling
+// GetCSSClass returns CSS classes for language-specific styling.
 func GetCSSClass(lang string) string {
 	config, exists := SupportedLanguages[lang]
 	if !exists {
@@ -406,7 +406,7 @@ func GetCSSClass(lang string) string {
 	return classes
 }
 
-// GetHTMLAttributes returns HTML attributes for language support
+// GetHTMLAttributes returns HTML attributes for language support.
 func GetHTMLAttributes(lang string) map[string]string {
 	config, exists := SupportedLanguages[lang]
 	if !exists {

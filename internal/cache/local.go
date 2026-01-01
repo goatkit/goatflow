@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// LocalCache provides an in-memory cache with TTL support
+// LocalCache provides an in-memory cache with TTL support.
 type LocalCache struct {
 	mu      sync.RWMutex
 	items   map[string]*LocalCacheItem
@@ -15,7 +15,7 @@ type LocalCache struct {
 	config  *LocalCacheConfig
 }
 
-// LocalCacheItem represents a cached item
+// LocalCacheItem represents a cached item.
 type LocalCacheItem struct {
 	Value      interface{}
 	ExpiresAt  time.Time
@@ -24,7 +24,7 @@ type LocalCacheItem struct {
 	Size       int64
 }
 
-// LocalCacheStats tracks local cache statistics
+// LocalCacheStats tracks local cache statistics.
 type LocalCacheStats struct {
 	Hits      int64
 	Misses    int64
@@ -34,7 +34,7 @@ type LocalCacheStats struct {
 	Size      int64
 }
 
-// NewLocalCache creates a new local cache
+// NewLocalCache creates a new local cache.
 func NewLocalCache(config *LocalCacheConfig) *LocalCache {
 	lc := &LocalCache{
 		items:   make(map[string]*LocalCacheItem),
@@ -50,7 +50,7 @@ func NewLocalCache(config *LocalCacheConfig) *LocalCache {
 	return lc
 }
 
-// Get retrieves an item from local cache
+// Get retrieves an item from local cache.
 func (lc *LocalCache) Get(key string) (interface{}, bool) {
 	lc.mu.RLock()
 	defer lc.mu.RUnlock()
@@ -72,7 +72,7 @@ func (lc *LocalCache) Get(key string) (interface{}, bool) {
 	return item.Value, true
 }
 
-// Set stores an item in local cache
+// Set stores an item in local cache.
 func (lc *LocalCache) Set(key string, value interface{}, ttl time.Duration) {
 	lc.mu.Lock()
 	defer lc.mu.Unlock()
@@ -99,7 +99,7 @@ func (lc *LocalCache) Set(key string, value interface{}, ttl time.Duration) {
 	lc.stats.Size = int64(len(lc.items))
 }
 
-// Delete removes an item from local cache
+// Delete removes an item from local cache.
 func (lc *LocalCache) Delete(key string) {
 	lc.mu.Lock()
 	defer lc.mu.Unlock()
@@ -111,7 +111,7 @@ func (lc *LocalCache) Delete(key string) {
 	}
 }
 
-// Clear removes all items from local cache
+// Clear removes all items from local cache.
 func (lc *LocalCache) Clear() {
 	lc.mu.Lock()
 	defer lc.mu.Unlock()
@@ -120,7 +120,7 @@ func (lc *LocalCache) Clear() {
 	lc.stats.Size = 0
 }
 
-// GetStats returns cache statistics
+// GetStats returns cache statistics.
 func (lc *LocalCache) GetStats() *LocalCacheStats {
 	lc.mu.RLock()
 	defer lc.mu.RUnlock()
@@ -135,7 +135,7 @@ func (lc *LocalCache) GetStats() *LocalCacheStats {
 	}
 }
 
-// evictLRU removes the least recently used item
+// evictLRU removes the least recently used item.
 func (lc *LocalCache) evictLRU() {
 	var oldestKey string
 	var oldestTime time.Time
@@ -153,7 +153,7 @@ func (lc *LocalCache) evictLRU() {
 	}
 }
 
-// cleanupLoop periodically removes expired items
+// cleanupLoop periodically removes expired items.
 func (lc *LocalCache) cleanupLoop(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -168,7 +168,7 @@ func (lc *LocalCache) cleanupLoop(interval time.Duration) {
 	}
 }
 
-// cleanup removes expired items
+// cleanup removes expired items.
 func (lc *LocalCache) cleanup() {
 	lc.mu.Lock()
 	defer lc.mu.Unlock()
@@ -184,7 +184,7 @@ func (lc *LocalCache) cleanup() {
 	lc.stats.Size = int64(len(lc.items))
 }
 
-// Stop stops the cleanup goroutine
+// Stop stops the cleanup goroutine.
 func (lc *LocalCache) Stop() {
 	close(lc.stopCh)
 }

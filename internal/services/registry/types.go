@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// ServiceType represents the type of service
+// ServiceType represents the type of service.
 type ServiceType string
 
 const (
@@ -22,7 +22,7 @@ const (
 	ServiceTypeRouter     ServiceType = "router"
 )
 
-// ServiceStatus represents the current status of a service
+// ServiceStatus represents the current status of a service.
 type ServiceStatus string
 
 const (
@@ -33,38 +33,38 @@ const (
 	StatusUnknown      ServiceStatus = "unknown"
 )
 
-// ServiceProvider represents a backend provider (e.g., postgres, mysql, redis)
+// ServiceProvider represents a backend provider (e.g., postgres, mysql, redis).
 type ServiceProvider string
 
 const (
-	// Database providers
+	// Database providers.
 	ProviderPostgres  ServiceProvider = "postgres"
 	ProviderMySQL     ServiceProvider = "mysql"
 	ProviderSQLite    ServiceProvider = "sqlite"
 	ProviderMongoDB   ServiceProvider = "mongodb"
 	ProviderCockroach ServiceProvider = "cockroachdb"
 
-	// Cache providers
+	// Cache providers.
 	ProviderRedis     ServiceProvider = "redis"
 	ProviderValkey    ServiceProvider = "valkey"
 	ProviderMemcache  ServiceProvider = "memcache"
 	ProviderHazelcast ServiceProvider = "hazelcast"
 
-	// Queue providers
+	// Queue providers.
 	ProviderRabbitMQ ServiceProvider = "rabbitmq"
 	ProviderKafka    ServiceProvider = "kafka"
 	ProviderNATS     ServiceProvider = "nats"
 	ProviderSQS      ServiceProvider = "aws-sqs"
 	ProviderPubSub   ServiceProvider = "gcp-pubsub"
 
-	// Storage providers
+	// Storage providers.
 	ProviderS3        ServiceProvider = "s3"
 	ProviderGCS       ServiceProvider = "gcs"
 	ProviderAzureBlob ServiceProvider = "azure-blob"
 	ProviderMinIO     ServiceProvider = "minio"
 	ProviderLocal     ServiceProvider = "local-fs"
 
-	// Search providers
+	// Search providers.
 	ProviderElasticsearch ServiceProvider = "elasticsearch"
 	ProviderOpenSearch    ServiceProvider = "opensearch"
 	ProviderZinc          ServiceProvider = "zinc"
@@ -72,7 +72,7 @@ const (
 	ProviderTypesense     ServiceProvider = "typesense"
 )
 
-// ServiceConfig holds the configuration for a service instance
+// ServiceConfig holds the configuration for a service instance.
 type ServiceConfig struct {
 	// Basic identification
 	ID       string          `yaml:"id" json:"id"`
@@ -102,7 +102,7 @@ type ServiceConfig struct {
 	Annotations map[string]string `yaml:"annotations,omitempty" json:"annotations,omitempty"`
 }
 
-// ServiceBinding represents a binding between an application and a service
+// ServiceBinding represents a binding between an application and a service.
 type ServiceBinding struct {
 	ID        string    `yaml:"id" json:"id"`
 	AppID     string    `yaml:"app_id" json:"app_id"`
@@ -114,7 +114,7 @@ type ServiceBinding struct {
 	UpdatedAt time.Time `yaml:"updated_at" json:"updated_at"`
 }
 
-// ServiceHealth represents the health status of a service
+// ServiceHealth represents the health status of a service.
 type ServiceHealth struct {
 	ServiceID   string                 `json:"service_id"`
 	Status      ServiceStatus          `json:"status"`
@@ -124,7 +124,7 @@ type ServiceHealth struct {
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// ServiceMetrics represents metrics for a service
+// ServiceMetrics represents metrics for a service.
 type ServiceMetrics struct {
 	ServiceID     string                 `json:"service_id"`
 	Connections   int                    `json:"connections"`
@@ -135,7 +135,7 @@ type ServiceMetrics struct {
 	CustomMetrics map[string]interface{} `json:"custom_metrics,omitempty"`
 }
 
-// ServiceInterface defines the common interface all services must implement
+// ServiceInterface defines the common interface all services must implement.
 type ServiceInterface interface {
 	// Lifecycle methods
 	Connect(ctx context.Context) error
@@ -156,13 +156,13 @@ type ServiceInterface interface {
 	ID() string
 }
 
-// ServiceFactory creates service instances based on configuration
+// ServiceFactory creates service instances based on configuration.
 type ServiceFactory interface {
 	CreateService(config *ServiceConfig) (ServiceInterface, error)
 	SupportedProviders() []ServiceProvider
 }
 
-// MigrationStrategy defines how to migrate between services
+// MigrationStrategy defines how to migrate between services.
 type MigrationStrategy string
 
 const (
@@ -172,7 +172,7 @@ const (
 	MigrationImmediate MigrationStrategy = "immediate"
 )
 
-// ServiceMigration represents a migration from one service to another
+// ServiceMigration represents a migration from one service to another.
 type ServiceMigration struct {
 	ID          string            `json:"id"`
 	FromService string            `json:"from_service"`

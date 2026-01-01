@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// GetDBDriver returns the current database driver
+// GetDBDriver returns the current database driver.
 func GetDBDriver() string {
 	// In test mode, prefer TEST_ prefixed environment variables
 	driver := os.Getenv("TEST_DB_DRIVER")
@@ -21,13 +21,13 @@ func GetDBDriver() string {
 	return strings.ToLower(driver)
 }
 
-// IsMySQL returns true if using MySQL/MariaDB
+// IsMySQL returns true if using MySQL/MariaDB.
 func IsMySQL() bool {
 	driver := GetDBDriver()
 	return driver == "mysql" || driver == "mariadb"
 }
 
-// IsPostgreSQL returns true if using PostgreSQL
+// IsPostgreSQL returns true if using PostgreSQL.
 func IsPostgreSQL() bool {
 	return GetDBDriver() == "postgres"
 }
@@ -46,8 +46,7 @@ func QualifiedTicketTypeColumn(alias string) string {
 	return fmt.Sprintf("%s.%s", alias, col)
 }
 
-// ConvertPlaceholders converts PostgreSQL placeholders ($1, $2) to MySQL placeholders (?)
-// This allows us to write queries in PostgreSQL format and auto-convert for MySQL
+// This allows us to write queries in PostgreSQL format and auto-convert for MySQL.
 func ConvertPlaceholders(query string) string {
 	if !IsMySQL() {
 		return query // No conversion needed for PostgreSQL
@@ -72,9 +71,7 @@ func ConvertPlaceholders(query string) string {
 	return result
 }
 
-// ConvertReturning handles RETURNING clause differences
-// PostgreSQL: INSERT ... RETURNING *
-// MySQL: Use LastInsertId() after insert
+// MySQL: Use LastInsertId() after insert.
 func ConvertReturning(query string) (string, bool) {
 	if !IsMySQL() {
 		return query, strings.Contains(strings.ToUpper(query), "RETURNING")
@@ -91,7 +88,7 @@ func ConvertReturning(query string) (string, bool) {
 	return query, false
 }
 
-// QuoteIdentifier quotes table/column names based on database
+// QuoteIdentifier quotes table/column names based on database.
 func QuoteIdentifier(name string) string {
 	if IsMySQL() {
 		return fmt.Sprintf("`%s`", name)
@@ -101,7 +98,7 @@ func QuoteIdentifier(name string) string {
 	return name
 }
 
-// BuildInsertQuery builds an INSERT query compatible with the current database
+// BuildInsertQuery builds an INSERT query compatible with the current database.
 func BuildInsertQuery(table string, columns []string, returning bool) string {
 	quotedTable := QuoteIdentifier(table)
 	quotedColumns := make([]string, len(columns))
@@ -128,7 +125,7 @@ func BuildInsertQuery(table string, columns []string, returning bool) string {
 	return query
 }
 
-// BuildUpdateQuery builds an UPDATE query compatible with the current database
+// BuildUpdateQuery builds an UPDATE query compatible with the current database.
 func BuildUpdateQuery(table string, setColumns []string, whereClause string) string {
 	quotedTable := QuoteIdentifier(table)
 	setClauses := make([]string, len(setColumns))
@@ -158,7 +155,7 @@ func BuildUpdateQuery(table string, setColumns []string, whereClause string) str
 	return query
 }
 
-// adjustPlaceholderNumbers updates $1, $2 to start from the given offset
+// adjustPlaceholderNumbers updates $1, $2 to start from the given offset.
 func adjustPlaceholderNumbers(clause string, offset int) string {
 	re := regexp.MustCompile(`\$(\d+)`)
 	return re.ReplaceAllStringFunc(clause, func(match string) string {

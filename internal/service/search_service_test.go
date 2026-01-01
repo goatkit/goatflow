@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/zinc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/zinc"
 )
 
 func TestSearchService(t *testing.T) {
@@ -333,7 +334,7 @@ func TestSearchService(t *testing.T) {
 	})
 }
 
-// Helper functions for tests
+// Helper functions for tests.
 func stringPtr(s string) *string {
 	return &s
 }

@@ -1,9 +1,11 @@
+// Package main provides translation testing utilities.
 package main
 
 import (
 	"fmt"
-	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"strings"
+
+	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 )
 
 func main() {

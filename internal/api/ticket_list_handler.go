@@ -7,10 +7,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// TicketListResponse represents the response for ticket list API
+// TicketListResponse represents the response for ticket list API.
 type TicketListResponse struct {
 	Success    bool                     `json:"success"`
 	Data       []map[string]interface{} `json:"data"`
@@ -18,7 +19,7 @@ type TicketListResponse struct {
 	Error      string                   `json:"error,omitempty"`
 }
 
-// PaginationInfo contains pagination metadata
+// PaginationInfo contains pagination metadata.
 type PaginationInfo struct {
 	Page       int  `json:"page"`
 	PerPage    int  `json:"per_page"`
@@ -28,7 +29,7 @@ type PaginationInfo struct {
 	HasPrev    bool `json:"has_prev"`
 }
 
-// HandleListTicketsAPI handles GET /api/v1/tickets
+// HandleListTicketsAPI handles GET /api/v1/tickets.
 func HandleListTicketsAPI(c *gin.Context) {
 	// Check authentication (temporarily relaxed for testing)
 	_, exists := c.Get("user_id")
@@ -296,7 +297,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	// Process results
 	tickets := []map[string]interface{}{}

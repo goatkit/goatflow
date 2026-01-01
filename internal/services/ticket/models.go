@@ -1,3 +1,4 @@
+// Package ticket provides ticket domain models and business logic.
 package ticket
 
 import (
@@ -7,7 +8,7 @@ import (
 	"time"
 )
 
-// Ticket represents a support ticket
+// Ticket represents a support ticket.
 type Ticket struct {
 	ID              string                 `json:"id" db:"id"`
 	Number          string                 `json:"number" db:"number"`
@@ -33,7 +34,7 @@ type Ticket struct {
 	History     []HistoryItem `json:"history,omitempty"`
 }
 
-// Article represents a ticket article/message
+// Article represents a ticket article/message.
 type Article struct {
 	ID          string                 `json:"id" db:"id"`
 	TicketID    string                 `json:"ticket_id" db:"ticket_id"`
@@ -49,7 +50,7 @@ type Article struct {
 	Metadata    map[string]interface{} `json:"metadata" db:"metadata"`
 }
 
-// Attachment represents a file attachment
+// Attachment represents a file attachment.
 type Attachment struct {
 	ID          string    `json:"id" db:"id"`
 	TicketID    string    `json:"ticket_id" db:"ticket_id"`
@@ -63,7 +64,7 @@ type Attachment struct {
 	Checksum    string    `json:"checksum" db:"checksum"`
 }
 
-// HistoryItem represents a ticket history entry
+// HistoryItem represents a ticket history entry.
 type HistoryItem struct {
 	ID        string                 `json:"id" db:"id"`
 	TicketID  string                 `json:"ticket_id" db:"ticket_id"`
@@ -77,7 +78,7 @@ type HistoryItem struct {
 	Metadata  map[string]interface{} `json:"metadata" db:"metadata"`
 }
 
-// ListFilter represents ticket list filtering options
+// ListFilter represents ticket list filtering options.
 type ListFilter struct {
 	Status      string    `json:"status,omitempty"`
 	Priority    string    `json:"priority,omitempty"`
@@ -95,7 +96,7 @@ type ListFilter struct {
 	Offset      int       `json:"offset,omitempty"`
 }
 
-// Clone creates a deep copy of the ticket
+// Clone creates a deep copy of the ticket.
 func (t *Ticket) Clone() *Ticket {
 	clone := *t
 
@@ -132,7 +133,7 @@ func (t *Ticket) Clone() *Ticket {
 	return &clone
 }
 
-// ToProto converts the ticket to protobuf format
+// ToProto converts the ticket to protobuf format.
 func (t *Ticket) ToProto() *TicketProto {
 	proto := &TicketProto{
 		Id:          t.ID,
@@ -174,7 +175,7 @@ func (t *Ticket) ToProto() *TicketProto {
 	return proto
 }
 
-// Hash generates a hash of the filter for caching
+// Hash generates a hash of the filter for caching.
 func (f *ListFilter) Hash() string {
 	str := fmt.Sprintf("%s-%s-%s-%s-%s-%v-%v-%v-%v-%v-%s-%s-%d-%d",
 		f.Status,
@@ -197,7 +198,7 @@ func (f *ListFilter) Hash() string {
 	return hex.EncodeToString(hash[:])
 }
 
-// Priority levels
+// Priority levels.
 const (
 	PriorityLow      = "low"
 	PriorityNormal   = "normal"
@@ -206,7 +207,7 @@ const (
 	PriorityCritical = "critical"
 )
 
-// Status values
+// Status values.
 const (
 	StatusOpen       = "open"
 	StatusPending    = "pending"
@@ -217,7 +218,7 @@ const (
 	StatusCancelled  = "cancelled"
 )
 
-// Article types
+// Article types.
 const (
 	ArticleTypeEmail = "email"
 	ArticleTypeNote  = "note"
@@ -226,7 +227,7 @@ const (
 	ArticleTypeWeb   = "web"
 )
 
-// History actions
+// History actions.
 const (
 	ActionCreated         = "created"
 	ActionUpdated         = "updated"

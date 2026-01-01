@@ -13,7 +13,7 @@ import (
 //go:embed translations/*.json
 var translationsFS embed.FS
 
-// I18n handles internationalization
+// I18n handles internationalization.
 type I18n struct {
 	translations   map[string]map[string]interface{}
 	defaultLang    string
@@ -21,17 +21,17 @@ type I18n struct {
 	mu             sync.RWMutex
 }
 
-// Config represents i18n configuration
+// Config represents i18n configuration.
 type Config struct {
 	DefaultLanguage    string
 	SupportedLanguages []string
 }
 
-// Instance is the global i18n instance
+// Instance is the global i18n instance.
 var Instance *I18n
 var once sync.Once
 
-// Initialize initializes the i18n system
+// Initialize initializes the i18n system.
 func Initialize(config *Config) error {
 	var initErr error
 	once.Do(func() {
@@ -47,7 +47,7 @@ func Initialize(config *Config) error {
 	return initErr
 }
 
-// GetInstance returns the global i18n instance
+// GetInstance returns the global i18n instance.
 func GetInstance() *I18n {
 	if Instance == nil {
 		// Initialize with defaults if not already done
@@ -59,7 +59,7 @@ func GetInstance() *I18n {
 	return Instance
 }
 
-// loadTranslations loads all translation files from embedded filesystem
+// loadTranslations loads all translation files from embedded filesystem.
 func (i *I18n) loadTranslations() error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
@@ -106,7 +106,7 @@ func (i *I18n) loadTranslations() error {
 	return err
 }
 
-// T translates a key to the specified language
+// T translates a key to the specified language.
 func (i *I18n) T(lang, key string, args ...interface{}) string {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
@@ -153,12 +153,12 @@ func (i *I18n) T(lang, key string, args ...interface{}) string {
 	return key
 }
 
-// Translate is an alias for T
+// Translate is an alias for T.
 func (i *I18n) Translate(lang, key string, args ...interface{}) string {
 	return i.T(lang, key, args...)
 }
 
-// getNestedValue retrieves a nested value from a map using dot notation
+// getNestedValue retrieves a nested value from a map using dot notation.
 func (i *I18n) getNestedValue(m map[string]interface{}, key string) interface{} {
 	keys := strings.Split(key, ".")
 	var current interface{} = m
@@ -177,7 +177,7 @@ func (i *I18n) getNestedValue(m map[string]interface{}, key string) interface{} 
 	return current
 }
 
-// isSupported checks if a language is supported
+// isSupported checks if a language is supported.
 func (i *I18n) isSupported(lang string) bool {
 	for _, supported := range i.supportedLangs {
 		if supported == lang {
@@ -187,17 +187,17 @@ func (i *I18n) isSupported(lang string) bool {
 	return false
 }
 
-// GetSupportedLanguages returns the list of supported languages
+// GetSupportedLanguages returns the list of supported languages.
 func (i *I18n) GetSupportedLanguages() []string {
 	return i.supportedLangs
 }
 
-// GetDefaultLanguage returns the default language
+// GetDefaultLanguage returns the default language.
 func (i *I18n) GetDefaultLanguage() string {
 	return i.defaultLang
 }
 
-// SetDefaultLanguage sets the default language
+// SetDefaultLanguage sets the default language.
 func (i *I18n) SetDefaultLanguage(lang string) error {
 	if !i.isSupported(lang) {
 		return fmt.Errorf("language %s is not supported", lang)
@@ -208,7 +208,7 @@ func (i *I18n) SetDefaultLanguage(lang string) error {
 	return nil
 }
 
-// AddTranslation adds or updates a translation
+// AddTranslation adds or updates a translation.
 func (i *I18n) AddTranslation(lang, key, value string) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
@@ -238,7 +238,7 @@ func (i *I18n) AddTranslation(lang, key, value string) {
 	}
 }
 
-// LoadCustomTranslations loads custom translations from a JSON string
+// LoadCustomTranslations loads custom translations from a JSON string.
 func (i *I18n) LoadCustomTranslations(lang string, jsonData string) error {
 	var translations map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonData), &translations); err != nil {
@@ -259,7 +259,7 @@ func (i *I18n) LoadCustomTranslations(lang string, jsonData string) error {
 	return nil
 }
 
-// mergeTranslations recursively merges source into target
+// mergeTranslations recursively merges source into target.
 func (i *I18n) mergeTranslations(target, source map[string]interface{}) {
 	for key, value := range source {
 		if targetValue, exists := target[key]; exists {
@@ -276,7 +276,7 @@ func (i *I18n) mergeTranslations(target, source map[string]interface{}) {
 	}
 }
 
-// GetTranslations returns all translations for a language
+// GetTranslations returns all translations for a language.
 func (i *I18n) GetTranslations(lang string) map[string]interface{} {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
@@ -284,7 +284,7 @@ func (i *I18n) GetTranslations(lang string) map[string]interface{} {
 	return i.translations[lang]
 }
 
-// GetAllKeys returns all translation keys for a language in dot notation
+// GetAllKeys returns all translation keys for a language in dot notation.
 func (i *I18n) GetAllKeys(lang string) []string {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
@@ -299,7 +299,7 @@ func (i *I18n) GetAllKeys(lang string) []string {
 	return keys
 }
 
-// extractKeys recursively extracts all keys from nested maps
+// extractKeys recursively extracts all keys from nested maps.
 func (i *I18n) extractKeys(m map[string]interface{}, prefix string, keys *[]string) {
 	for key, value := range m {
 		fullKey := key
@@ -319,32 +319,32 @@ func (i *I18n) extractKeys(m map[string]interface{}, prefix string, keys *[]stri
 
 // Helper functions for common translations
 
-// Error returns a translated error message
+// Error returns a translated error message.
 func Error(lang, key string, args ...interface{}) string {
 	return GetInstance().T(lang, "errors."+key, args...)
 }
 
-// Success returns a translated success message
+// Success returns a translated success message.
 func Success(lang, key string, args ...interface{}) string {
 	return GetInstance().T(lang, "success."+key, args...)
 }
 
-// Label returns a translated label
+// Label returns a translated label.
 func Label(lang, key string, args ...interface{}) string {
 	return GetInstance().T(lang, "labels."+key, args...)
 }
 
-// Button returns a translated button text
+// Button returns a translated button text.
 func Button(lang, key string, args ...interface{}) string {
 	return GetInstance().T(lang, "buttons."+key, args...)
 }
 
-// Message returns a translated message
+// Message returns a translated message.
 func Message(lang, key string, args ...interface{}) string {
 	return GetInstance().T(lang, "messages."+key, args...)
 }
 
-// Validation returns a translated validation message
+// Validation returns a translated validation message.
 func Validation(lang, key string, args ...interface{}) string {
 	return GetInstance().T(lang, "validation."+key, args...)
 }

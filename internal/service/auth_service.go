@@ -1,3 +1,4 @@
+// Package service provides business logic services for the application.
 package service
 
 import (
@@ -12,14 +13,14 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/yamlmgmt"
 )
 
-// AuthService handles authentication and authorization
+// AuthService handles authentication and authorization.
 type AuthService struct {
 	authenticator *auth.Authenticator
 	jwtManager    *auth.JWTManager
 	db            *sql.DB
 }
 
-// NewAuthService creates a new authentication service with a JWT manager
+// NewAuthService creates a new authentication service with a JWT manager.
 func NewAuthService(db *sql.DB, jwtManager *auth.JWTManager) *AuthService {
 	providers := []auth.AuthProvider{}
 	order := getConfiguredProviderOrder()
@@ -44,7 +45,7 @@ func NewAuthService(db *sql.DB, jwtManager *auth.JWTManager) *AuthService {
 	return &AuthService{authenticator: authenticator, jwtManager: jwtManager, db: db}
 }
 
-// global accessor injected from main to avoid import cycles
+// global accessor injected from main to avoid import cycles.
 var globalConfigAdapter *yamlmgmt.ConfigAdapter
 
 func SetConfigAdapter(ca *yamlmgmt.ConfigAdapter) { globalConfigAdapter = ca }
@@ -81,7 +82,7 @@ func getConfiguredProviderOrder() []string {
 	return []string{"database"}
 }
 
-// Login authenticates a user and returns JWT tokens
+// Login authenticates a user and returns JWT tokens.
 func (s *AuthService) Login(ctx context.Context, username, password string) (*models.User, string, string, error) {
 	// Authenticate user
 	user, err := s.authenticator.Authenticate(ctx, username, password)
@@ -106,7 +107,7 @@ func (s *AuthService) Login(ctx context.Context, username, password string) (*mo
 	return user, accessToken, refreshToken, nil
 }
 
-// checkAdminGroup checks if user is in admin group
+// checkAdminGroup checks if user is in admin group.
 func (s *AuthService) checkAdminGroup(userID uint) bool {
 	if s.db == nil {
 		return false
@@ -125,7 +126,7 @@ func (s *AuthService) checkAdminGroup(userID uint) bool {
 	return isAdmin
 }
 
-// ValidateToken validates a JWT token and returns the user
+// ValidateToken validates a JWT token and returns the user.
 func (s *AuthService) ValidateToken(tokenString string) (*models.User, error) {
 	// Validate token using JWT manager
 	claims, err := s.jwtManager.ValidateToken(tokenString)
@@ -144,7 +145,7 @@ func (s *AuthService) ValidateToken(tokenString string) (*models.User, error) {
 	return user, nil
 }
 
-// RefreshToken generates a new access token from a refresh token
+// RefreshToken generates a new access token from a refresh token.
 func (s *AuthService) RefreshToken(refreshToken string) (string, error) {
 	// Validate refresh token using JWT manager
 	claims, err := s.jwtManager.ValidateRefreshToken(refreshToken)
@@ -159,7 +160,7 @@ func (s *AuthService) RefreshToken(refreshToken string) (string, error) {
 
 // Token generation methods removed - now using JWTManager
 
-// GetUser retrieves user information by identifier
+// GetUser retrieves user information by identifier.
 func (s *AuthService) GetUser(ctx context.Context, identifier string) (*models.User, error) {
 	return s.authenticator.GetUser(ctx, identifier)
 }

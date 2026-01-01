@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/core"
@@ -25,7 +26,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
-// HandleAgentCreateTicket creates a new ticket from the agent interface
+// HandleAgentCreateTicket creates a new ticket from the agent interface.
 func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Ensure multipart form is parsed (for attachments)
@@ -494,7 +495,7 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 	}
 }
 
-// detectTicketContentType determines the MIME type based on content analysis
+// detectTicketContentType determines the MIME type based on content analysis.
 func detectTicketContentType(content string) string {
 	// Check for HTML tags
 	if strings.Contains(content, "<") && strings.Contains(content, ">") {

@@ -5,9 +5,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
 func TestMemoryTicketTemplateRepository(t *testing.T) {
@@ -362,7 +363,7 @@ func TestTemplateVariableSubstitution(t *testing.T) {
 	}
 }
 
-// Helper function for variable substitution
+// Helper function for variable substitution.
 func substituteVariables(template string, variables map[string]string) string {
 	result := template
 	for key, value := range variables {

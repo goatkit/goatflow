@@ -1,3 +1,4 @@
+// Package template contains tests for template rendering functionality.
 package template
 
 import (
@@ -366,7 +367,7 @@ func TestAdminAPIPathsUseCorrectPrefix(t *testing.T) {
 				ctx["IsNew"] = true
 				ctx["Field"] = map[string]interface{}{
 					"ID": 0, "Name": "", "Label": "", "FieldType": "Text",
-					"Config": map[string]interface{}{"DefaultValue": "", "MaxLength": 0},
+					"Config":  map[string]interface{}{"DefaultValue": "", "MaxLength": 0},
 					"ValidID": 1,
 				}
 				ctx["FieldTypes"] = []string{"Text"}
@@ -424,14 +425,14 @@ var testedFormTemplates = map[string]bool{
 	"pages/customer/login.pongo2": true,
 
 	// Tickets
-	"pages/tickets/new.pongo2":         true,
-	"pages/tickets/detail.pongo2":      true,
-	"pages/ticket_detail.pongo2":       true,
-	"pages/customer/new_ticket.pongo2": true,
+	"pages/tickets/new.pongo2":          true,
+	"pages/tickets/detail.pongo2":       true,
+	"pages/ticket_detail.pongo2":        true,
+	"pages/customer/new_ticket.pongo2":  true,
 	"pages/customer/ticket_view.pongo2": true,
 
 	// Admin
-	"pages/admin/attachment.pongo2":              true,
+	"pages/admin/attachment.pongo2":               true,
 	"pages/admin/dynamic_field_form.pongo2":       true,
 	"pages/admin/dynamic_fields.pongo2":           true,
 	"pages/admin/dynamic_field_screens.pongo2":    true,

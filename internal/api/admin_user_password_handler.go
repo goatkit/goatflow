@@ -5,11 +5,12 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleAdminUserResetPassword handles password reset for a user by admin
+// HandleAdminUserResetPassword handles password reset for a user by admin.
 func HandleAdminUserResetPassword(c *gin.Context) {
 	userID := c.Param("id")
 	id, err := strconv.Atoi(userID)
@@ -82,7 +83,7 @@ func HandleAdminUserResetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// generateRandomPassword generates a secure random password
+// generateRandomPassword generates a secure random password.
 func generateRandomPassword() string {
 	// Simple implementation - in production, use a more secure method
 	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%"

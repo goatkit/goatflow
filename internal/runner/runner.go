@@ -1,3 +1,4 @@
+// Package runner provides background task runner and lifecycle management.
 package runner
 
 import (
@@ -13,7 +14,7 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-// Runner manages and executes scheduled background tasks
+// Runner manages and executes scheduled background tasks.
 type Runner struct {
 	cron     *cron.Cron
 	registry *TaskRegistry
@@ -21,7 +22,7 @@ type Runner struct {
 	wg       sync.WaitGroup
 }
 
-// NewRunner creates a new task runner
+// NewRunner creates a new task runner.
 func NewRunner(registry *TaskRegistry) *Runner {
 	return &Runner{
 		cron:     cron.New(cron.WithSeconds()),
@@ -30,7 +31,7 @@ func NewRunner(registry *TaskRegistry) *Runner {
 	}
 }
 
-// Start begins executing scheduled tasks
+// Start begins executing scheduled tasks.
 func (r *Runner) Start(ctx context.Context) error {
 	r.logger.Println("Starting task runner...")
 
@@ -54,7 +55,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	return r.waitForShutdown(ctx)
 }
 
-// executeTask runs a single task with timeout and error handling
+// executeTask runs a single task with timeout and error handling.
 func (r *Runner) executeTask(ctx context.Context, task Task) {
 	r.wg.Add(1)
 	defer r.wg.Done()
@@ -75,7 +76,7 @@ func (r *Runner) executeTask(ctx context.Context, task Task) {
 	}
 }
 
-// Stop gracefully shuts down the runner
+// Stop gracefully shuts down the runner.
 func (r *Runner) Stop() {
 	r.logger.Println("Stopping task runner...")
 
@@ -89,7 +90,7 @@ func (r *Runner) Stop() {
 	<-ctx.Done()
 }
 
-// waitForShutdown waits for termination signals
+// waitForShutdown waits for termination signals.
 func (r *Runner) waitForShutdown(ctx context.Context) error {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)

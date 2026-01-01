@@ -3,8 +3,9 @@ package auth
 import (
 	"testing"
 
-	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
 func TestRBAC(t *testing.T) {

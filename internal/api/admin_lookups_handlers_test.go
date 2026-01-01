@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -13,16 +12,17 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
 func init() {
 	os.Setenv("APP_ENV", "test")
 }
 
-// setupLookupsTestRouter creates a minimal router with admin lookup handlers
+// setupLookupsTestRouter creates a minimal router with admin lookup handlers.
 func setupLookupsTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

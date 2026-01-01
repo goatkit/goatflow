@@ -1,3 +1,4 @@
+// Package scheduler provides task scheduling and job management.
 package scheduler
 
 import (

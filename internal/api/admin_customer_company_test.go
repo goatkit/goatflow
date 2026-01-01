@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -13,13 +12,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// Helper function to get test database connection
-// Uses database.InitTestDB() for consistency with other admin tests
+// Uses database.InitTestDB() for consistency with other admin tests.
 func getTestDB(t *testing.T) *sql.DB {
 	if err := database.InitTestDB(); err != nil {
 		t.Fatalf("Test database not available: %v. Run: make test-db-up", err)
@@ -32,7 +31,7 @@ func getTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-// Helper function to create a test customer company
+// Helper function to create a test customer company.
 func createTestCustomerCompany(t *testing.T, db *sql.DB, customerID string) {
 	name := "Test Company " + customerID
 	street := "123 Test St"
@@ -67,13 +66,13 @@ func createTestCustomerCompany(t *testing.T, db *sql.DB, customerID string) {
 	require.NoError(t, err, "Failed to create test customer company")
 }
 
-// Helper function to clean up test customer company
+// Helper function to clean up test customer company.
 func cleanupTestCustomerCompany(t *testing.T, db *sql.DB, customerID string) {
 	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM customer_company WHERE customer_id = $1"), customerID)
 	require.NoError(t, err, "Failed to cleanup test customer company")
 }
 
-// Helper function to verify customer company was updated in database
+// Helper function to verify customer company was updated in database.
 func verifyCustomerCompanyUpdated(t *testing.T, db *sql.DB, customerID, expectedName, expectedStreet, expectedCity, expectedCountry string) {
 	var name, street, city, country string
 	err := db.QueryRow(database.ConvertPlaceholders(`
@@ -89,7 +88,7 @@ func verifyCustomerCompanyUpdated(t *testing.T, db *sql.DB, customerID, expected
 	assert.Equal(t, expectedCountry, country, "Company country should be updated in database")
 }
 
-// Helper function to verify customer company status in database
+// Helper function to verify customer company status in database.
 func verifyCustomerCompanyStatus(t *testing.T, db *sql.DB, customerID string, expectedValidID int) {
 	var validID int
 	err := db.QueryRow(database.ConvertPlaceholders(`

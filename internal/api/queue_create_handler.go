@@ -6,10 +6,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleCreateQueueAPI handles POST /api/v1/queues
+// HandleCreateQueueAPI handles POST /api/v1/queues.
 func HandleCreateQueueAPI(c *gin.Context) {
 	// Check authentication and admin permissions
 	userID, exists := c.Get("user_id")
@@ -61,7 +62,7 @@ func HandleCreateQueueAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to start transaction"})
 		return
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Defaults mirror baseline bootstrap data (schema/baseline/required_lookups.sql)
 	if req.GroupID == 0 {

@@ -8,13 +8,14 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
 
 // handleAdminLookups is already defined in htmx_routes.go for templates
 
-// HandleGetQueues returns list of queues as JSON or HTML options for HTMX
+// HandleGetQueues returns list of queues as JSON or HTML options for HTMX.
 func HandleGetQueues(c *gin.Context) {
 	isHTMX := c.GetHeader("HX-Request") == "true"
 
@@ -37,7 +38,7 @@ func HandleGetQueues(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": queues})
 }
 
-// HandleGetPriorities returns list of priorities as JSON or HTML options for HTMX
+// HandleGetPriorities returns list of priorities as JSON or HTML options for HTMX.
 func HandleGetPriorities(c *gin.Context) {
 	isHTMX := c.GetHeader("HX-Request") == "true"
 
@@ -98,7 +99,7 @@ func HandleGetTypes(c *gin.Context) {
 	if db, err := database.GetDB(); err == nil && db != nil {
 		rows, qerr := db.Query(database.ConvertPlaceholders(`SELECT id, name, comments, valid_id FROM ticket_type WHERE valid_id = 1 ORDER BY name`))
 		if qerr == nil {
-			defer rows.Close()
+			defer func() { _ = rows.Close() }()
 
 			if isHTMX {
 				var builder strings.Builder
@@ -167,7 +168,7 @@ func HandleGetTypes(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": formData.Types})
 }
 
-// Minimal helpers to avoid adding a new import in this file
+// Minimal helpers to avoid adding a new import in this file.
 type sqlRowScanner interface {
 	Scan(dest ...interface{}) error
 }
@@ -200,7 +201,7 @@ func scanTypeRow(scanner sqlRowScanner, id *int, name *string, comments *sqlNull
 	return scanner.Scan(id, name, comments, validID)
 }
 
-// HandleGetStatuses returns list of ticket statuses as JSON
+// HandleGetStatuses returns list of ticket statuses as JSON.
 func HandleGetStatuses(c *gin.Context) {
 	lookupService := GetLookupService()
 	lang := middleware.GetLanguage(c)
@@ -210,7 +211,7 @@ func HandleGetStatuses(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": statuses})
 }
 
-// HandleGetFormData returns form data for ticket creation as JSON
+// HandleGetFormData returns form data for ticket creation as JSON.
 func HandleGetFormData(c *gin.Context) {
 	lookupService := GetLookupService()
 	lang := middleware.GetLanguage(c)
@@ -222,7 +223,7 @@ func HandleGetFormData(c *gin.Context) {
 	})
 }
 
-// HandleInvalidateLookupCache forces a refresh of the lookup cache
+// HandleInvalidateLookupCache forces a refresh of the lookup cache.
 func HandleInvalidateLookupCache(c *gin.Context) {
 	userRole := c.GetString("user_role")
 	if userRole != "Admin" {

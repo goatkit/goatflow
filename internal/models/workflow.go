@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// WorkflowStatus represents the status of a workflow
+// WorkflowStatus represents the status of a workflow.
 type WorkflowStatus string
 
 const (
@@ -15,7 +15,7 @@ const (
 	WorkflowStatusArchived WorkflowStatus = "archived"
 )
 
-// TriggerType represents the type of trigger for a workflow
+// TriggerType represents the type of trigger for a workflow.
 type TriggerType string
 
 const (
@@ -31,7 +31,7 @@ const (
 	TriggerTypeWebhook         TriggerType = "webhook"
 )
 
-// ActionType represents the type of action in a workflow
+// ActionType represents the type of action in a workflow.
 type ActionType string
 
 const (
@@ -52,7 +52,7 @@ const (
 	ActionTypeUpdateCustomField ActionType = "update_custom_field"
 )
 
-// ConditionOperator represents logical operators for conditions
+// ConditionOperator represents logical operators for conditions.
 type ConditionOperator string
 
 const (
@@ -73,7 +73,7 @@ const (
 	OperatorMatchesRegex   ConditionOperator = "matches_regex"
 )
 
-// Workflow represents an automation workflow
+// Workflow represents an automation workflow.
 type Workflow struct {
 	ID          int            `json:"id"`
 	Name        string         `json:"name"`
@@ -93,7 +93,7 @@ type Workflow struct {
 	Tags        []string       `json:"tags"`
 }
 
-// Trigger represents a workflow trigger
+// Trigger represents a workflow trigger.
 type Trigger struct {
 	ID         int             `json:"id"`
 	WorkflowID int             `json:"workflow_id"`
@@ -102,7 +102,7 @@ type Trigger struct {
 	IsActive   bool            `json:"is_active"`
 }
 
-// Condition represents a workflow condition
+// Condition represents a workflow condition.
 type Condition struct {
 	ID         int               `json:"id"`
 	WorkflowID int               `json:"workflow_id"`
@@ -113,7 +113,7 @@ type Condition struct {
 	GroupID    int               `json:"group_id"`   // For grouping conditions
 }
 
-// Action represents a workflow action
+// Action represents a workflow action.
 type Action struct {
 	ID            int             `json:"id"`
 	WorkflowID    int             `json:"workflow_id"`
@@ -124,7 +124,7 @@ type Action struct {
 	DelaySeconds  int             `json:"delay_seconds"` // Delay before executing
 }
 
-// WorkflowExecution represents a single execution of a workflow
+// WorkflowExecution represents a single execution of a workflow.
 type WorkflowExecution struct {
 	ID            int                      `json:"id"`
 	WorkflowID    int                      `json:"workflow_id"`
@@ -140,7 +140,7 @@ type WorkflowExecution struct {
 	ErrorMessage  string                   `json:"error_message,omitempty"`
 }
 
-// WorkflowExecutionEntry represents a single step in workflow execution
+// WorkflowExecutionEntry represents a single step in workflow execution.
 type WorkflowExecutionEntry struct {
 	Timestamp  time.Time  `json:"timestamp"`
 	ActionType ActionType `json:"action_type"`
@@ -152,7 +152,7 @@ type WorkflowExecutionEntry struct {
 	RetryCount int        `json:"retry_count"`
 }
 
-// WorkflowSchedule represents a scheduled workflow
+// WorkflowSchedule represents a scheduled workflow.
 type WorkflowSchedule struct {
 	ID         int        `json:"id"`
 	WorkflowID int        `json:"workflow_id"`
@@ -164,7 +164,7 @@ type WorkflowSchedule struct {
 	CreatedAt  time.Time  `json:"created_at"`
 }
 
-// WorkflowTemplate represents a pre-built workflow template
+// WorkflowTemplate represents a pre-built workflow template.
 type WorkflowTemplate struct {
 	ID          int       `json:"id"`
 	Name        string    `json:"name"`
@@ -177,7 +177,7 @@ type WorkflowTemplate struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-// TriggerConfig represents trigger-specific configuration
+// TriggerConfig represents trigger-specific configuration.
 type TriggerConfig struct {
 	// For time-based triggers
 	DelayMinutes      int  `json:"delay_minutes,omitempty"`
@@ -199,7 +199,7 @@ type TriggerConfig struct {
 	ScheduleExpr string `json:"schedule_expr,omitempty"`
 }
 
-// ActionConfig represents action-specific configuration
+// ActionConfig represents action-specific configuration.
 type ActionConfig struct {
 	// For assignment actions
 	AssignToUserID   int    `json:"assign_to_user_id,omitempty"`
@@ -245,13 +245,13 @@ type ActionConfig struct {
 	CustomFieldValue interface{} `json:"custom_field_value,omitempty"`
 }
 
-// WorkflowValidation performs validation on a workflow
+// WorkflowValidation performs validation on a workflow.
 func (w *Workflow) Validate() error {
 	// Validation logic here
 	return nil
 }
 
-// IsTriggeredBy checks if workflow should be triggered by given event
+// IsTriggeredBy checks if workflow should be triggered by given event.
 func (w *Workflow) IsTriggeredBy(triggerType TriggerType, context map[string]interface{}) bool {
 	for _, trigger := range w.Triggers {
 		if trigger.Type == triggerType && trigger.IsActive {
@@ -264,7 +264,7 @@ func (w *Workflow) IsTriggeredBy(triggerType TriggerType, context map[string]int
 	return false
 }
 
-// EvaluateConditions evaluates all conditions for the workflow
+// EvaluateConditions evaluates all conditions for the workflow.
 func (w *Workflow) EvaluateConditions(context map[string]interface{}) bool {
 	if len(w.Conditions) == 0 {
 		return true // No conditions means always execute

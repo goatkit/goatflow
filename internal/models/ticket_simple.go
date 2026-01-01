@@ -2,8 +2,7 @@ package models
 
 import "time"
 
-// SimpleTicket is a simplified ticket model for easier handling in business logic
-// It maps to the OTRS-compatible Ticket model but with more intuitive field names
+// It maps to the OTRS-compatible Ticket model but with more intuitive field names.
 type SimpleTicket struct {
 	ID            uint      `json:"id"`
 	TicketNumber  string    `json:"ticket_number"`
@@ -20,7 +19,7 @@ type SimpleTicket struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
-// ToORTSTicket converts SimpleTicket to OTRS-compatible Ticket model
+// ToORTSTicket converts SimpleTicket to OTRS-compatible Ticket model.
 func (st *SimpleTicket) ToORTSTicket() *Ticket {
 	// Map priority string to ID
 	priorityMap := map[string]int{
@@ -81,7 +80,7 @@ func (st *SimpleTicket) ToORTSTicket() *Ticket {
 	}
 }
 
-// FromORTSTicket creates a SimpleTicket from OTRS Ticket model
+// FromORTSTicket creates a SimpleTicket from OTRS Ticket model.
 func FromORTSTicket(t *Ticket) *SimpleTicket {
 	// Map priority ID to string
 	priorityMap := map[int]string{

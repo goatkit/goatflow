@@ -6,7 +6,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// TicketTemplateRepository defines the interface for ticket template persistence
+// TicketTemplateRepository defines the interface for ticket template persistence.
 type TicketTemplateRepository interface {
 	// Template CRUD operations
 	CreateTemplate(ctx context.Context, template *models.TicketTemplate) error

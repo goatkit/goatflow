@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// YAMLKind represents the type of YAML configuration
+// YAMLKind represents the type of YAML configuration.
 type YAMLKind string
 
 const (
@@ -15,7 +15,7 @@ const (
 	KindService   YAMLKind = "Service"
 )
 
-// YAMLDocument represents any YAML configuration document
+// YAMLDocument represents any YAML configuration document.
 type YAMLDocument struct {
 	APIVersion string                 `yaml:"apiVersion" json:"apiVersion"`
 	Kind       string                 `yaml:"kind" json:"kind"`
@@ -24,7 +24,7 @@ type YAMLDocument struct {
 	Data       map[string]interface{} `yaml:"data,omitempty" json:"data,omitempty"`
 }
 
-// Metadata contains common metadata for all YAML types
+// Metadata contains common metadata for all YAML types.
 type Metadata struct {
 	Name        string            `yaml:"name" json:"name"`
 	Namespace   string            `yaml:"namespace,omitempty" json:"namespace,omitempty"`
@@ -37,7 +37,7 @@ type Metadata struct {
 	Author      string            `yaml:"author,omitempty" json:"author,omitempty"`
 }
 
-// Version represents a version of any YAML configuration
+// Version represents a version of any YAML configuration.
 type Version struct {
 	ID         string        `json:"id"`
 	Number     string        `json:"number"`
@@ -53,7 +53,7 @@ type Version struct {
 	Stats      *VersionStats `json:"stats,omitempty"`
 }
 
-// Change represents a change between versions
+// Change represents a change between versions.
 type Change struct {
 	Type        ChangeType  `json:"type"`
 	Path        string      `json:"path"`
@@ -62,7 +62,7 @@ type Change struct {
 	Description string      `json:"description,omitempty"`
 }
 
-// ChangeType represents the type of change
+// ChangeType represents the type of change.
 type ChangeType string
 
 const (
@@ -71,7 +71,7 @@ const (
 	ChangeTypeDelete ChangeType = "delete"
 )
 
-// VersionStats contains statistics about a version
+// VersionStats contains statistics about a version.
 type VersionStats struct {
 	TotalFields   int            `json:"total_fields"`
 	ChangedFields int            `json:"changed_fields"`
@@ -80,28 +80,28 @@ type VersionStats struct {
 	CustomStats   map[string]int `json:"custom_stats,omitempty"`
 }
 
-// ValidationResult represents the result of validation
+// ValidationResult represents the result of validation.
 type ValidationResult struct {
 	Valid    bool                `json:"valid"`
 	Errors   []ValidationError   `json:"errors,omitempty"`
 	Warnings []ValidationWarning `json:"warnings,omitempty"`
 }
 
-// ValidationError represents a validation error
+// ValidationError represents a validation error.
 type ValidationError struct {
 	Path    string `json:"path"`
 	Message string `json:"message"`
 	Code    string `json:"code"`
 }
 
-// ValidationWarning represents a validation warning
+// ValidationWarning represents a validation warning.
 type ValidationWarning struct {
 	Path    string `json:"path"`
 	Message string `json:"message"`
 	Code    string `json:"code"`
 }
 
-// Schema represents a JSON schema for validation
+// Schema represents a JSON schema for validation.
 type Schema struct {
 	ID          string                 `json:"$id,omitempty"`
 	Schema      string                 `json:"$schema,omitempty"`
@@ -113,7 +113,7 @@ type Schema struct {
 	Additional  interface{}            `json:"additionalProperties,omitempty"`
 }
 
-// ConfigEvent represents a configuration change event
+// ConfigEvent represents a configuration change event.
 type ConfigEvent struct {
 	Type      EventType `json:"type"`
 	Kind      YAMLKind  `json:"kind"`
@@ -123,7 +123,7 @@ type ConfigEvent struct {
 	Error     string    `json:"error,omitempty"`
 }
 
-// EventType represents the type of configuration event
+// EventType represents the type of configuration event.
 type EventType string
 
 const (
@@ -135,10 +135,10 @@ const (
 	EventTypeError    EventType = "error"
 )
 
-// ReloadHandler is a function that handles configuration reloads
+// ReloadHandler is a function that handles configuration reloads.
 type ReloadHandler func(document *YAMLDocument) error
 
-// ConfigStore interface for storing and retrieving configurations
+// ConfigStore interface for storing and retrieving configurations.
 type ConfigStore interface {
 	// Version management
 	CreateVersion(kind YAMLKind, name string, doc *YAMLDocument, message string) (*Version, error)
@@ -157,19 +157,19 @@ type ConfigStore interface {
 	StopWatch(kind YAMLKind)
 }
 
-// Validator interface for validating YAML documents
+// Validator interface for validating YAML documents.
 type Validator interface {
 	Validate(doc *YAMLDocument) (*ValidationResult, error)
 	GetSchema(kind YAMLKind) (*Schema, error)
 }
 
-// Linter interface for linting YAML documents
+// Linter interface for linting YAML documents.
 type Linter interface {
 	Lint(doc *YAMLDocument) ([]LintIssue, error)
 	GetRules(kind YAMLKind) []LintRule
 }
 
-// LintIssue represents a linting issue
+// LintIssue represents a linting issue.
 type LintIssue struct {
 	Severity string `json:"severity"`
 	Rule     string `json:"rule"`
@@ -178,7 +178,7 @@ type LintIssue struct {
 	Line     int    `json:"line,omitempty"`
 }
 
-// LintRule represents a linting rule
+// LintRule represents a linting rule.
 type LintRule struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`

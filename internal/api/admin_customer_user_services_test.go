@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -11,12 +10,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// setupCustomerUserServicesTestRouter creates a minimal router with the customer user services handlers
+// setupCustomerUserServicesTestRouter creates a minimal router with the customer user services handlers.
 func setupCustomerUserServicesTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -40,7 +40,7 @@ func setupCustomerUserServicesTestRouter() *gin.Engine {
 	return router
 }
 
-// createTestServiceForCustomerUser creates a test service in the database
+// createTestServiceForCustomerUser creates a test service in the database.
 func createTestServiceForCustomerUser(t *testing.T, name string) (int, bool) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -83,7 +83,7 @@ func createTestServiceForCustomerUser(t *testing.T, name string) (int, bool) {
 	return id, true
 }
 
-// createTestCustomerUser creates a test customer user in the database
+// createTestCustomerUser creates a test customer user in the database.
 func createTestCustomerUser(t *testing.T, login string) bool {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -121,7 +121,7 @@ func createTestCustomerUser(t *testing.T, login string) bool {
 	return true
 }
 
-// cleanupDefaultServices removes all default service assignments
+// cleanupDefaultServices removes all default service assignments.
 func cleanupDefaultServices(t *testing.T) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -561,7 +561,7 @@ func TestDefaultServicesFallbackLogic(t *testing.T) {
 			ORDER BY s.name
 		`), testLogin)
 		require.NoError(t, err)
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 
 		var services []int
 		for rows.Next() {

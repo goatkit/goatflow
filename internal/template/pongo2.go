@@ -8,12 +8,13 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// Pongo2Renderer is a custom Gin renderer using Pongo2
+// Pongo2Renderer is a custom Gin renderer using Pongo2.
 type Pongo2Renderer struct {
 	Debug       bool
 	TemplateDir string
@@ -21,7 +22,7 @@ type Pongo2Renderer struct {
 	cache       map[string]*pongo2.Template
 }
 
-// NewPongo2Renderer creates a new Pongo2 renderer
+// NewPongo2Renderer creates a new Pongo2 renderer.
 func NewPongo2Renderer(templateDir string, debug bool) *Pongo2Renderer {
 	return &Pongo2Renderer{
 		Debug:       debug,
@@ -30,7 +31,7 @@ func NewPongo2Renderer(templateDir string, debug bool) *Pongo2Renderer {
 	}
 }
 
-// Instance returns a Pongo2 template instance, using cache if not in debug mode
+// Instance returns a Pongo2 template instance, using cache if not in debug mode.
 func (r *Pongo2Renderer) Instance(name string, data interface{}) *pongo2.Template {
 	var tmpl *pongo2.Template
 	var err error
@@ -73,7 +74,7 @@ func (r *Pongo2Renderer) Instance(name string, data interface{}) *pongo2.Templat
 	return tmpl
 }
 
-// Render renders a Pongo2 template
+// Render renders a Pongo2 template.
 func (r *Pongo2Renderer) Render(c *gin.Context, code int, name string, data interface{}) error {
 	// Get language from context
 	lang := middleware.GetLanguage(c)
@@ -171,14 +172,14 @@ func (r *Pongo2Renderer) Render(c *gin.Context, code int, name string, data inte
 	return tmpl.ExecuteWriter(ctx, c.Writer)
 }
 
-// HTML renders an HTML template
+// HTML renders an HTML template.
 func (r *Pongo2Renderer) HTML(c *gin.Context, code int, name string, data interface{}) {
 	if err := r.Render(c, code, name, data); err != nil {
 		c.String(http.StatusInternalServerError, "Template error: %v", err)
 	}
 }
 
-// getUserFromContext extracts the user from gin context (set by JWT middleware)
+// getUserFromContext extracts the user from gin context (set by JWT middleware).
 func (r *Pongo2Renderer) getUserFromContext(c *gin.Context) *models.User {
 	// Try direct user object first
 	userInterface, exists := c.Get("user")

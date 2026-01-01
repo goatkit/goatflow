@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestDynamicFieldFormCreate tests the create form uses hx-post
+// TestDynamicFieldFormCreate tests the create form uses hx-post.
 func TestDynamicFieldFormCreate(t *testing.T) {
 	helper := NewTemplateTestHelper(t)
 
@@ -49,7 +49,7 @@ func TestDynamicFieldFormCreate(t *testing.T) {
 	asserter.Contains("Create Dynamic Field")
 }
 
-// TestDynamicFieldFormEdit tests the edit form uses hx-put
+// TestDynamicFieldFormEdit tests the edit form uses hx-put.
 func TestDynamicFieldFormEdit(t *testing.T) {
 	helper := NewTemplateTestHelper(t)
 
@@ -91,7 +91,7 @@ func TestDynamicFieldFormEdit(t *testing.T) {
 	asserter.Contains("Edit Dynamic Field")
 }
 
-// TestDynamicFieldsListDeletePath tests delete buttons use correct API path
+// TestDynamicFieldsListDeletePath tests delete buttons use correct API path.
 func TestDynamicFieldsListDeletePath(t *testing.T) {
 	helper := NewTemplateTestHelper(t)
 
@@ -119,7 +119,7 @@ func TestDynamicFieldsListDeletePath(t *testing.T) {
 	asserter.Contains("/admin/api/dynamic-fields/")
 }
 
-// TestDynamicFieldScreensAPIPath tests screen config uses correct API path
+// TestDynamicFieldScreensAPIPath tests screen config uses correct API path.
 func TestDynamicFieldScreensAPIPath(t *testing.T) {
 	helper := NewTemplateTestHelper(t)
 

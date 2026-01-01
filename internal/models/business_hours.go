@@ -1,10 +1,11 @@
+// Package models provides domain models and data structures.
 package models
 
 import (
 	"time"
 )
 
-// DayOfWeek represents a day of the week
+// DayOfWeek represents a day of the week.
 type DayOfWeek int
 
 const (
@@ -17,7 +18,7 @@ const (
 	Saturday
 )
 
-// BusinessHoursConfig represents business hours configuration
+// BusinessHoursConfig represents business hours configuration.
 type BusinessHoursConfig struct {
 	ID          int                 `json:"id"`
 	Name        string              `json:"name"`
@@ -32,14 +33,14 @@ type BusinessHoursConfig struct {
 	UpdatedAt   time.Time           `json:"updated_at"`
 }
 
-// WorkingDay defines working hours for a specific day
+// WorkingDay defines working hours for a specific day.
 type WorkingDay struct {
 	Day       DayOfWeek   `json:"day"`
 	IsWorking bool        `json:"is_working"`
 	Shifts    []TimeShift `json:"shifts"` // Multiple shifts per day support
 }
 
-// TimeShift represents a working shift
+// TimeShift represents a working shift.
 type TimeShift struct {
 	StartTime  string `json:"start_time"`            // Format: "09:00"
 	EndTime    string `json:"end_time"`              // Format: "17:00"
@@ -47,7 +48,7 @@ type TimeShift struct {
 	BreakEnd   string `json:"break_end,omitempty"`
 }
 
-// Holiday represents a non-working holiday
+// Holiday represents a non-working holiday.
 type Holiday struct {
 	ID           int       `json:"id"`
 	ConfigID     int       `json:"config_id"`
@@ -58,7 +59,7 @@ type Holiday struct {
 	FloatingRule string    `json:"floating_rule,omitempty"` // Rule for floating holidays
 }
 
-// BusinessException represents an exception to normal business hours
+// BusinessException represents an exception to normal business hours.
 type BusinessException struct {
 	ID        int       `json:"id"`
 	ConfigID  int       `json:"config_id"`
@@ -70,7 +71,7 @@ type BusinessException struct {
 	Reason    string    `json:"reason"`
 }
 
-// BusinessHoursCalculator provides business hours calculations
+// BusinessHoursCalculator provides business hours calculations.
 type BusinessHoursCalculator struct {
 	Config          *BusinessHoursConfig
 	locationCache   *time.Location
@@ -78,7 +79,7 @@ type BusinessHoursCalculator struct {
 	workingDayCache map[DayOfWeek]*WorkingDay
 }
 
-// NewBusinessHoursCalculator creates a new business hours calculator
+// NewBusinessHoursCalculator creates a new business hours calculator.
 func NewBusinessHoursCalculator(config *BusinessHoursConfig) (*BusinessHoursCalculator, error) {
 	loc, err := time.LoadLocation(config.Timezone)
 	if err != nil {
@@ -107,7 +108,7 @@ func NewBusinessHoursCalculator(config *BusinessHoursConfig) (*BusinessHoursCalc
 	return bc, nil
 }
 
-// IsBusinessDay checks if a given date is a business day
+// IsBusinessDay checks if a given date is a business day.
 func (bc *BusinessHoursCalculator) IsBusinessDay(date time.Time) bool {
 	// Convert to calendar timezone
 	localDate := date.In(bc.locationCache)
@@ -134,7 +135,7 @@ func (bc *BusinessHoursCalculator) IsBusinessDay(date time.Time) bool {
 	return false
 }
 
-// IsWithinBusinessHours checks if a given time is within business hours
+// IsWithinBusinessHours checks if a given time is within business hours.
 func (bc *BusinessHoursCalculator) IsWithinBusinessHours(t time.Time) bool {
 	if !bc.IsBusinessDay(t) {
 		return false
@@ -165,7 +166,7 @@ func (bc *BusinessHoursCalculator) IsWithinBusinessHours(t time.Time) bool {
 	return false
 }
 
-// GetNextBusinessDay returns the next business day from the given date
+// GetNextBusinessDay returns the next business day from the given date.
 func (bc *BusinessHoursCalculator) GetNextBusinessDay(from time.Time) time.Time {
 	next := from.In(bc.locationCache).AddDate(0, 0, 1)
 	next = time.Date(next.Year(), next.Month(), next.Day(), 0, 0, 0, 0, bc.locationCache)
@@ -177,7 +178,7 @@ func (bc *BusinessHoursCalculator) GetNextBusinessDay(from time.Time) time.Time 
 	return next
 }
 
-// GetNextBusinessHour returns the next business hour from the given time
+// GetNextBusinessHour returns the next business hour from the given time.
 func (bc *BusinessHoursCalculator) GetNextBusinessHour(from time.Time) time.Time {
 	localTime := from.In(bc.locationCache)
 
@@ -207,7 +208,7 @@ func (bc *BusinessHoursCalculator) GetNextBusinessHour(from time.Time) time.Time
 	return nextDay
 }
 
-// AddBusinessHours adds business hours to a given time
+// AddBusinessHours adds business hours to a given time.
 func (bc *BusinessHoursCalculator) AddBusinessHours(from time.Time, hours float64) time.Time {
 	if hours == 0 {
 		return from
@@ -237,7 +238,7 @@ func (bc *BusinessHoursCalculator) AddBusinessHours(from time.Time, hours float6
 	return current
 }
 
-// GetBusinessHoursBetween calculates business hours between two times
+// GetBusinessHoursBetween calculates business hours between two times.
 func (bc *BusinessHoursCalculator) GetBusinessHoursBetween(start, end time.Time) float64 {
 	if end.Before(start) {
 		return 0
@@ -272,7 +273,7 @@ func (bc *BusinessHoursCalculator) GetBusinessHoursBetween(start, end time.Time)
 
 // Helper methods
 
-// isTimeInRange checks if a time falls within a time range
+// isTimeInRange checks if a time falls within a time range.
 func (bc *BusinessHoursCalculator) isTimeInRange(t time.Time, startStr, endStr string) bool {
 	start := bc.parseTimeOnDate(t, startStr)
 	end := bc.parseTimeOnDate(t, endStr)
@@ -285,7 +286,7 @@ func (bc *BusinessHoursCalculator) isTimeInRange(t time.Time, startStr, endStr s
 	return (t.Equal(start) || t.After(start)) && t.Before(end)
 }
 
-// isTimeInShift checks if a time falls within a shift
+// isTimeInShift checks if a time falls within a shift.
 func (bc *BusinessHoursCalculator) isTimeInShift(t time.Time, shift TimeShift) bool {
 	inWorkTime := bc.isTimeInRange(t, shift.StartTime, shift.EndTime)
 	if !inWorkTime {
@@ -301,7 +302,7 @@ func (bc *BusinessHoursCalculator) isTimeInShift(t time.Time, shift TimeShift) b
 	return true
 }
 
-// parseTimeOnDate parses a time string on a specific date
+// parseTimeOnDate parses a time string on a specific date.
 func (bc *BusinessHoursCalculator) parseTimeOnDate(date time.Time, timeStr string) time.Time {
 	t, err := time.Parse("15:04", timeStr)
 	if err != nil {
@@ -315,7 +316,7 @@ func (bc *BusinessHoursCalculator) parseTimeOnDate(date time.Time, timeStr strin
 	)
 }
 
-// getEndOfBusinessPeriod gets the end of the current business period
+// getEndOfBusinessPeriod gets the end of the current business period.
 func (bc *BusinessHoursCalculator) getEndOfBusinessPeriod(t time.Time) time.Time {
 	localTime := t.In(bc.locationCache)
 	dow := DayOfWeek(localTime.Weekday())
@@ -349,7 +350,7 @@ func (bc *BusinessHoursCalculator) getEndOfBusinessPeriod(t time.Time) time.Time
 	return localTime
 }
 
-// GetDefaultBusinessHours returns a default business hours configuration
+// GetDefaultBusinessHours returns a default business hours configuration.
 func GetDefaultBusinessHours() *BusinessHoursConfig {
 	return &BusinessHoursConfig{
 		Name:        "Default Business Hours",
@@ -373,7 +374,7 @@ func GetDefaultBusinessHours() *BusinessHoursConfig {
 	}
 }
 
-// Get24x7BusinessHours returns a 24x7 business hours configuration
+// Get24x7BusinessHours returns a 24x7 business hours configuration.
 func Get24x7BusinessHours() *BusinessHoursConfig {
 	shifts := []TimeShift{{StartTime: "00:00", EndTime: "23:59"}}
 	return &BusinessHoursConfig{

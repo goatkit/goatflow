@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -577,7 +576,7 @@ func TestHTMXIntegration(t *testing.T) {
 	}{
 		{
 			name:  "Pages include HTMX attributes",
-			route: "/tickets/new",  // Use ticket creation form which has HTMX
+			route: "/tickets/new", // Use ticket creation form which has HTMX
 			checkHTMX: []string{
 				"hx-get",
 				"hx-post",

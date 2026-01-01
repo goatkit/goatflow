@@ -1,10 +1,11 @@
 package validator_tests
 
 import (
-	api "github.com/gotrs-io/gotrs-ce/internal/api"
 	"mime/multipart"
 	"net/textproto"
 	"testing"
+
+	api "github.com/gotrs-io/gotrs-ce/internal/api"
 )
 
 func TestValidateFile_AllowsWebP(t *testing.T) {

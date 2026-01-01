@@ -3,22 +3,23 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// TicketStateRepository handles database operations for ticket states
+// TicketStateRepository handles database operations for ticket states.
 type TicketStateRepository struct {
 	db *sql.DB
 }
 
-// NewTicketStateRepository creates a new ticket state repository
+// NewTicketStateRepository creates a new ticket state repository.
 func NewTicketStateRepository(db *sql.DB) *TicketStateRepository {
 	return &TicketStateRepository{db: db}
 }
 
-// GetByID retrieves a ticket state by ID
+// GetByID retrieves a ticket state by ID.
 func (r *TicketStateRepository) GetByID(id uint) (*models.TicketState, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, comments, valid_id,
@@ -46,7 +47,7 @@ func (r *TicketStateRepository) GetByID(id uint) (*models.TicketState, error) {
 	return &state, err
 }
 
-// GetByName retrieves a ticket state by name
+// GetByName retrieves a ticket state by name.
 func (r *TicketStateRepository) GetByName(name string) (*models.TicketState, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, comments, valid_id,
@@ -74,7 +75,7 @@ func (r *TicketStateRepository) GetByName(name string) (*models.TicketState, err
 	return &state, err
 }
 
-// GetByTypeID retrieves all ticket states for a specific type
+// GetByTypeID retrieves all ticket states for a specific type.
 func (r *TicketStateRepository) GetByTypeID(typeID uint) ([]*models.TicketState, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, comments, valid_id,
@@ -112,7 +113,7 @@ func (r *TicketStateRepository) GetByTypeID(typeID uint) ([]*models.TicketState,
 	return states, nil
 }
 
-// List retrieves all active ticket states
+// List retrieves all active ticket states.
 func (r *TicketStateRepository) List() ([]*models.TicketState, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, comments, valid_id,
@@ -150,7 +151,7 @@ func (r *TicketStateRepository) List() ([]*models.TicketState, error) {
 	return states, nil
 }
 
-// Create creates a new ticket state
+// Create creates a new ticket state.
 func (r *TicketStateRepository) Create(state *models.TicketState) error {
 	query := database.ConvertPlaceholders(`
 		INSERT INTO ticket_state (
@@ -175,7 +176,7 @@ func (r *TicketStateRepository) Create(state *models.TicketState) error {
 	return err
 }
 
-// Update updates a ticket state
+// Update updates a ticket state.
 func (r *TicketStateRepository) Update(state *models.TicketState) error {
 	query := database.ConvertPlaceholders(`
 		UPDATE ticket_state SET
@@ -214,7 +215,7 @@ func (r *TicketStateRepository) Update(state *models.TicketState) error {
 	return nil
 }
 
-// GetOpenStates returns all ticket states that are considered "open"
+// GetOpenStates returns all ticket states that are considered "open".
 func (r *TicketStateRepository) GetOpenStates() ([]*models.TicketState, error) {
 	// Type IDs: 1=new, 2=open, 3=pending reminder, 4=pending auto
 	openTypeIDs := []int{1, 2, 3, 4}
@@ -255,7 +256,7 @@ func (r *TicketStateRepository) GetOpenStates() ([]*models.TicketState, error) {
 	return states, nil
 }
 
-// GetClosedStates returns all ticket states that are considered "closed"
+// GetClosedStates returns all ticket states that are considered "closed".
 func (r *TicketStateRepository) GetClosedStates() ([]*models.TicketState, error) {
 	// Type IDs: 5=closed successful, 6=closed unsuccessful, 9=merged
 	closedTypeIDs := []int{5, 6, 9}

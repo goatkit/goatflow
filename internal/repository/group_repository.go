@@ -2,10 +2,11 @@ package repository
 
 import (
 	"context"
+
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// GroupRepository defines the interface for group operations
+// GroupRepository defines the interface for group operations.
 type GroupRepository interface {
 	CreateGroup(ctx context.Context, group *models.Group) error
 	GetGroup(ctx context.Context, id string) (*models.Group, error)

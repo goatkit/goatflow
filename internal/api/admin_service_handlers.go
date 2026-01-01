@@ -11,9 +11,10 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
-	"github.com/lib/pq"
 ) // Service represents a service in OTRS
 type Service struct {
 	ID         int       `json:"id"`
@@ -26,14 +27,14 @@ type Service struct {
 	ChangeBy   int       `json:"change_by"`
 }
 
-// ServiceWithStats includes additional statistics
+// ServiceWithStats includes additional statistics.
 type ServiceWithStats struct {
 	Service
 	TicketCount int `json:"ticket_count"`
 	SLACount    int `json:"sla_count"`
 }
 
-// handleAdminServices renders the admin services management page
+// handleAdminServices renders the admin services management page.
 func handleAdminServices(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -119,7 +120,7 @@ func handleAdminServices(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to fetch services")
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var services []ServiceWithStats
 	for rows.Next() {
@@ -160,7 +161,7 @@ func handleAdminServices(c *gin.Context) {
 	})
 }
 
-// handleAdminServiceCreate creates a new service
+// handleAdminServiceCreate creates a new service.
 func handleAdminServiceCreate(c *gin.Context) {
 	var input struct {
 		Name     string  `json:"name" form:"name"`
@@ -256,7 +257,7 @@ func handleAdminServiceCreate(c *gin.Context) {
 	shared.SendToastResponse(c, true, "Service created successfully", "/admin/services")
 }
 
-// handleAdminServiceUpdate updates an existing service
+// handleAdminServiceUpdate updates an existing service.
 func handleAdminServiceUpdate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -332,7 +333,7 @@ func handleAdminServiceUpdate(c *gin.Context) {
 	shared.SendToastResponse(c, true, "Service updated successfully", "")
 }
 
-// handleAdminServiceDelete soft deletes a service (sets valid_id = 2)
+// handleAdminServiceDelete soft deletes a service (sets valid_id = 2).
 func handleAdminServiceDelete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)

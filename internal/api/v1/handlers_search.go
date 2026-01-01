@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Search handlers - basic stubs for now
+// Search handlers - basic stubs for now.
 func (router *APIRouter) handleGlobalSearch(c *gin.Context) {
 	query := c.Query("q")
 	if query == "" {
@@ -99,7 +99,7 @@ func (router *APIRouter) handleSearchSuggestions(c *gin.Context) {
 	})
 }
 
-// Saved search handlers
+// Saved search handlers.
 func (router *APIRouter) handleGetSavedSearches(c *gin.Context) {
 	// TODO: Implement actual saved searches fetching
 	searches := []gin.H{

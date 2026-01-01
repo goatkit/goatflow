@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleDeleteUserAPI handles DELETE /api/v1/users/:id
-// This performs a soft delete by setting valid_id = 2 (OTRS pattern)
+// This performs a soft delete by setting valid_id = 2 (OTRS pattern).
 func HandleDeleteUserAPI(c *gin.Context) {
 	// Check authentication
 	currentUserID, exists := c.Get("user_id")
@@ -116,7 +116,7 @@ func HandleDeleteUserAPI(c *gin.Context) {
 
 // Additional helper handlers for user groups
 
-// HandleGetUserGroupsAPI handles GET /api/v1/users/:id/groups
+// HandleGetUserGroupsAPI handles GET /api/v1/users/:id/groups.
 func HandleGetUserGroupsAPI(c *gin.Context) {
 	// Check authentication
 	_, exists := c.Get("user_id")
@@ -170,7 +170,7 @@ func HandleGetUserGroupsAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	groups := []map[string]interface{}{}
 	for rows.Next() {
@@ -203,7 +203,7 @@ func HandleGetUserGroupsAPI(c *gin.Context) {
 	})
 }
 
-// HandleAddUserToGroupAPI handles POST /api/v1/users/:id/groups
+// HandleAddUserToGroupAPI handles POST /api/v1/users/:id/groups.
 func HandleAddUserToGroupAPI(c *gin.Context) {
 	// Check authentication
 	currentUserID, exists := c.Get("user_id")
@@ -301,7 +301,7 @@ func HandleAddUserToGroupAPI(c *gin.Context) {
 	})
 }
 
-// HandleRemoveUserFromGroupAPI handles DELETE /api/v1/users/:id/groups/:group_id
+// HandleRemoveUserFromGroupAPI handles DELETE /api/v1/users/:id/groups/:group_id.
 func HandleRemoveUserFromGroupAPI(c *gin.Context) {
 	// Check authentication
 	_, exists := c.Get("user_id")

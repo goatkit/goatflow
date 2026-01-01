@@ -10,13 +10,13 @@ import (
 	"github.com/go-ldap/ldap/v3"
 )
 
-// Provider implements LDAP/Active Directory authentication
+// Provider implements LDAP/Active Directory authentication.
 type Provider struct {
 	config *Config
 	conn   *ldap.Conn
 }
 
-// Config holds LDAP configuration
+// Config holds LDAP configuration.
 type Config struct {
 	// Connection settings
 	Host    string `json:"host"`
@@ -55,7 +55,7 @@ type Config struct {
 	Domain            string `json:"domain"` // For AD, e.g., "company.com"
 }
 
-// User represents an LDAP user
+// User represents an LDAP user.
 type User struct {
 	DN          string   `json:"dn"`
 	Username    string   `json:"username"`
@@ -67,14 +67,14 @@ type User struct {
 	Role        string   `json:"role"` // Admin, Agent, Customer
 }
 
-// AuthResult represents authentication result
+// AuthResult represents authentication result.
 type AuthResult struct {
 	Success      bool   `json:"success"`
 	User         *User  `json:"user,omitempty"`
 	ErrorMessage string `json:"error_message,omitempty"`
 }
 
-// DefaultConfigs provides common LDAP configurations
+// DefaultConfigs provides common LDAP configurations.
 var DefaultConfigs = map[string]*Config{
 	"active_directory": {
 		Port:                 389,
@@ -120,14 +120,14 @@ var DefaultConfigs = map[string]*Config{
 	},
 }
 
-// NewProvider creates a new LDAP provider
+// NewProvider creates a new LDAP provider.
 func NewProvider(config *Config) *Provider {
 	return &Provider{
 		config: config,
 	}
 }
 
-// Connect establishes connection to LDAP server
+// Connect establishes connection to LDAP server.
 func (p *Provider) Connect() error {
 	var err error
 	// Prefer DialURL over raw Dial/DialTLS (deprecated)
@@ -175,7 +175,7 @@ func (p *Provider) Connect() error {
 	return nil
 }
 
-// Close closes the LDAP connection
+// Close closes the LDAP connection.
 func (p *Provider) Close() {
 	if p.conn != nil {
 		p.conn.Close()
@@ -183,7 +183,7 @@ func (p *Provider) Close() {
 	}
 }
 
-// Authenticate authenticates a user with username and password
+// Authenticate authenticates a user with username and password.
 func (p *Provider) Authenticate(username, password string) *AuthResult {
 	if p.conn == nil {
 		if err := p.Connect(); err != nil {
@@ -246,7 +246,7 @@ func (p *Provider) Authenticate(username, password string) *AuthResult {
 	}
 }
 
-// findUser searches for a user in LDAP
+// findUser searches for a user in LDAP.
 func (p *Provider) findUser(username string) (*User, error) {
 	searchBaseDN := p.config.UserBaseDN
 	if searchBaseDN == "" {
@@ -325,7 +325,7 @@ func (p *Provider) findUser(username string) (*User, error) {
 	return user, nil
 }
 
-// getUserGroups retrieves groups for a user
+// getUserGroups retrieves groups for a user.
 func (p *Provider) getUserGroups(userDN string) ([]string, error) {
 	if p.config.GroupBaseDN == "" || p.config.GroupFilter == "" {
 		return []string{}, nil
@@ -362,7 +362,7 @@ func (p *Provider) getUserGroups(userDN string) ([]string, error) {
 	return groups, nil
 }
 
-// determineRole determines user role based on group membership
+// determineRole determines user role based on group membership.
 func (p *Provider) determineRole(groups []string) string {
 	// Check for admin role first
 	for _, group := range groups {
@@ -386,7 +386,7 @@ func (p *Provider) determineRole(groups []string) string {
 	return "Customer"
 }
 
-// TestConnection tests LDAP connection and authentication
+// TestConnection tests LDAP connection and authentication.
 func (p *Provider) TestConnection() error {
 	err := p.Connect()
 	if err != nil {
@@ -415,7 +415,7 @@ func (p *Provider) TestConnection() error {
 	return nil
 }
 
-// ValidateConfig validates LDAP configuration
+// ValidateConfig validates LDAP configuration.
 func ValidateConfig(config *Config) []string {
 	var errors []string
 
@@ -459,7 +459,7 @@ func ValidateConfig(config *Config) []string {
 	return errors
 }
 
-// GetConfigTemplate returns a configuration template for a specific LDAP type
+// GetConfigTemplate returns a configuration template for a specific LDAP type.
 func GetConfigTemplate(ldapType string) (*Config, error) {
 	template, exists := DefaultConfigs[ldapType]
 	if !exists {

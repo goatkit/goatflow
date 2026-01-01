@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// ProblemStatus represents the current status of a problem
+// ProblemStatus represents the current status of a problem.
 type ProblemStatus string
 
 const (
@@ -18,7 +18,7 @@ const (
 	ProblemStatusClosed     ProblemStatus = "closed"
 )
 
-// ProblemPriority represents the priority of a problem
+// ProblemPriority represents the priority of a problem.
 type ProblemPriority string
 
 const (
@@ -29,7 +29,7 @@ const (
 	ProblemPriorityPlanning ProblemPriority = "planning"
 )
 
-// Problem represents an ITSM problem record
+// Problem represents an ITSM problem record.
 type Problem struct {
 	ID            uint            `json:"id" gorm:"primaryKey"`
 	ProblemNumber string          `json:"problem_number" gorm:"uniqueIndex;not null"`
@@ -128,7 +128,7 @@ type Problem struct {
 	LastModifiedBy   *User     `json:"last_modified_by,omitempty" gorm:"foreignKey:LastModifiedByID"`
 }
 
-// ProblemComment represents a comment on a problem
+// ProblemComment represents a comment on a problem.
 type ProblemComment struct {
 	ID         uint      `json:"id" gorm:"primaryKey"`
 	ProblemID  uint      `json:"problem_id" gorm:"not null"`
@@ -142,7 +142,7 @@ type ProblemComment struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-// ProblemAttachment represents a file attached to a problem
+// ProblemAttachment represents a file attached to a problem.
 type ProblemAttachment struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
 	ProblemID    uint      `json:"problem_id" gorm:"not null"`
@@ -156,7 +156,7 @@ type ProblemAttachment struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// ProblemHistory tracks changes to a problem
+// ProblemHistory tracks changes to a problem.
 type ProblemHistory struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
 	ProblemID    uint      `json:"problem_id" gorm:"not null"`
@@ -170,7 +170,7 @@ type ProblemHistory struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// ProblemListRequest represents a request to list problems
+// ProblemListRequest represents a request to list problems.
 type ProblemListRequest struct {
 	Page         int             `json:"page" form:"page"`
 	PerPage      int             `json:"per_page" form:"per_page"`
@@ -187,7 +187,7 @@ type ProblemListRequest struct {
 	ToDate       *time.Time      `json:"to_date" form:"to_date"`
 }
 
-// ProblemListResponse represents a response containing a list of problems
+// ProblemListResponse represents a response containing a list of problems.
 type ProblemListResponse struct {
 	Problems   []*Problem `json:"problems"`
 	Total      int64      `json:"total"`

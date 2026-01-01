@@ -10,14 +10,14 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// MockZincClient is a mock implementation of the Client interface for testing
+// MockZincClient is a mock implementation of the Client interface for testing.
 type MockZincClient struct {
 	mu        sync.RWMutex
 	indices   map[string]map[string]interface{} // index -> document ID -> document
 	indexInfo map[string]*models.IndexStats
 }
 
-// NewMockZincClient creates a new mock Zinc client
+// NewMockZincClient creates a new mock Zinc client.
 func NewMockZincClient() *MockZincClient {
 	return &MockZincClient{
 		indices:   make(map[string]map[string]interface{}),
@@ -25,7 +25,7 @@ func NewMockZincClient() *MockZincClient {
 	}
 }
 
-// CreateIndex creates a new index
+// CreateIndex creates a new index.
 func (c *MockZincClient) CreateIndex(ctx context.Context, name string, mapping map[string]interface{}) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -46,7 +46,7 @@ func (c *MockZincClient) CreateIndex(ctx context.Context, name string, mapping m
 	return nil
 }
 
-// DeleteIndex deletes an index
+// DeleteIndex deletes an index.
 func (c *MockZincClient) DeleteIndex(ctx context.Context, name string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -60,7 +60,7 @@ func (c *MockZincClient) DeleteIndex(ctx context.Context, name string) error {
 	return nil
 }
 
-// IndexExists checks if an index exists
+// IndexExists checks if an index exists.
 func (c *MockZincClient) IndexExists(ctx context.Context, name string) (bool, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -69,7 +69,7 @@ func (c *MockZincClient) IndexExists(ctx context.Context, name string) (bool, er
 	return exists, nil
 }
 
-// GetIndexStats retrieves statistics for an index
+// GetIndexStats retrieves statistics for an index.
 func (c *MockZincClient) GetIndexStats(ctx context.Context, name string) (*models.IndexStats, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -88,7 +88,7 @@ func (c *MockZincClient) GetIndexStats(ctx context.Context, name string) (*model
 	return stats, nil
 }
 
-// IndexDocument indexes a single document
+// IndexDocument indexes a single document.
 func (c *MockZincClient) IndexDocument(ctx context.Context, index string, id string, doc interface{}) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -108,7 +108,7 @@ func (c *MockZincClient) IndexDocument(ctx context.Context, index string, id str
 	return nil
 }
 
-// UpdateDocument updates a document
+// UpdateDocument updates a document.
 func (c *MockZincClient) UpdateDocument(ctx context.Context, index string, id string, updates map[string]interface{}) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -152,7 +152,7 @@ func (c *MockZincClient) UpdateDocument(ctx context.Context, index string, id st
 	return nil
 }
 
-// DeleteDocument deletes a document
+// DeleteDocument deletes a document.
 func (c *MockZincClient) DeleteDocument(ctx context.Context, index string, id string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -173,7 +173,7 @@ func (c *MockZincClient) DeleteDocument(ctx context.Context, index string, id st
 	return nil
 }
 
-// GetDocument retrieves a document
+// GetDocument retrieves a document.
 func (c *MockZincClient) GetDocument(ctx context.Context, index string, id string) (map[string]interface{}, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -227,7 +227,7 @@ func (c *MockZincClient) GetDocument(ctx context.Context, index string, id strin
 	return result, nil
 }
 
-// BulkIndex indexes multiple documents
+// BulkIndex indexes multiple documents.
 func (c *MockZincClient) BulkIndex(ctx context.Context, index string, docs []interface{}) error {
 	for _, doc := range docs {
 		// Extract ID from document
@@ -255,7 +255,7 @@ func (c *MockZincClient) BulkIndex(ctx context.Context, index string, docs []int
 	return nil
 }
 
-// Search performs a search query
+// Search performs a search query.
 func (c *MockZincClient) Search(ctx context.Context, index string, query *models.SearchRequest) (*models.SearchResult, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -412,7 +412,7 @@ func (c *MockZincClient) Search(ctx context.Context, index string, query *models
 	return result, nil
 }
 
-// Suggest provides search suggestions
+// Suggest provides search suggestions.
 func (c *MockZincClient) Suggest(ctx context.Context, index string, text string, field string) ([]string, error) {
 	// Simple mock implementation
 	suggestions := []string{}

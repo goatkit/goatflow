@@ -6,11 +6,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// formatFileSize formats a file size in bytes to a human-readable string
+// formatFileSize formats a file size in bytes to a human-readable string.
 func formatFileSize(size int64) string {
 	const (
 		KB = 1024
@@ -55,7 +56,7 @@ func getUserIDFromContext(c *gin.Context) int {
 	return 1 // Default to admin user
 }
 
-// getUserFromContext gets the user from the gin context
+// getUserFromContext gets the user from the gin context.
 func getUserFromContext(c *gin.Context) *models.User {
 	userInterface, exists := c.Get("user")
 	if !exists {
@@ -125,7 +126,7 @@ func getUserFromContext(c *gin.Context) *models.User {
 	}
 }
 
-// sendGuruMeditation sends a detailed error response (similar to VirtualBox's Guru Meditation)
+// sendGuruMeditation sends a detailed error response (similar to VirtualBox's Guru Meditation).
 func sendGuruMeditation(c *gin.Context, err error, message string) {
 	// Log the full error for debugging
 	if err != nil {
@@ -140,7 +141,7 @@ func sendGuruMeditation(c *gin.Context, err error, message string) {
 	})
 }
 
-// getStateID converts a state string to its database ID
+// getStateID converts a state string to its database ID.
 func getStateID(state string) int {
 	db, err := database.GetDB()
 	if err != nil {
@@ -156,7 +157,7 @@ func getStateID(state string) int {
 	return 1 // Default to "new" state
 }
 
-// getPriorityID converts a priority string to its database ID
+// getPriorityID converts a priority string to its database ID.
 func getPriorityID(priority string) int {
 	db, err := database.GetDB()
 	if err != nil {
@@ -177,7 +178,7 @@ func getPriorityID(priority string) int {
 	return 2 // Ultimate fallback
 }
 
-// loadTemplate loads and parses HTML template files
+// loadTemplate loads and parses HTML template files.
 func loadTemplate(files ...string) (*template.Template, error) {
 	if len(files) == 0 {
 		return nil, fmt.Errorf("no template files provided")

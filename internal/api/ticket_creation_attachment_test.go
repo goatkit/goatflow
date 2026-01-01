@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -328,7 +327,7 @@ func TestTicketCreationWithAttachmentsErrorHandling(t *testing.T) {
 	})
 }
 
-// Test to verify the exact 500 error user reported is fixed
+// Test to verify the exact 500 error user reported is fixed.
 func TestTicketCreation500Fix(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

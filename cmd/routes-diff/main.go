@@ -1,3 +1,4 @@
+// Package main provides route diff utilities.
 package main
 
 import (

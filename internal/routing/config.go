@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// RouteConfig represents a complete route configuration file
+// RouteConfig represents a complete route configuration file.
 type RouteConfig struct {
 	APIVersion string        `yaml:"apiVersion"`
 	Kind       string        `yaml:"kind"`
@@ -13,7 +13,7 @@ type RouteConfig struct {
 	Spec       RouteSpec     `yaml:"spec"`
 }
 
-// RouteMetadata contains metadata about the route group
+// RouteMetadata contains metadata about the route group.
 type RouteMetadata struct {
 	Name        string            `yaml:"name"`
 	Description string            `yaml:"description"`
@@ -24,7 +24,7 @@ type RouteMetadata struct {
 	Tenants     []string          `yaml:"tenants"`
 }
 
-// RouteSpec defines the actual routes and their configuration
+// RouteSpec defines the actual routes and their configuration.
 type RouteSpec struct {
 	Prefix     string            `yaml:"prefix"`
 	Middleware []string          `yaml:"middleware"`
@@ -32,7 +32,7 @@ type RouteSpec struct {
 	RateLimit  *RateLimitConfig  `yaml:"rateLimit"`
 }
 
-// RouteDefinition represents a single route
+// RouteDefinition represents a single route.
 type RouteDefinition struct {
 	Path        string                 `yaml:"path"`
 	Method      interface{}            `yaml:"method"` // Can be string or []string
@@ -50,14 +50,14 @@ type RouteDefinition struct {
 	Params      map[string]ParamConfig `yaml:"params"`
 }
 
-// RateLimitConfig defines rate limiting settings
+// RateLimitConfig defines rate limiting settings.
 type RateLimitConfig struct {
 	Requests int           `yaml:"requests"`
 	Period   time.Duration `yaml:"period"`
 	Key      string        `yaml:"key"` // ip, user, api_key
 }
 
-// OpenAPISpec contains OpenAPI documentation for the route
+// OpenAPISpec contains OpenAPI documentation for the route.
 type OpenAPISpec struct {
 	Summary     string                 `yaml:"summary"`
 	Description string                 `yaml:"description"`
@@ -68,7 +68,7 @@ type OpenAPISpec struct {
 	Security    []map[string][]string  `yaml:"security"`
 }
 
-// OpenAPIParameter defines an OpenAPI parameter
+// OpenAPIParameter defines an OpenAPI parameter.
 type OpenAPIParameter struct {
 	Name        string                 `yaml:"name"`
 	In          string                 `yaml:"in"` // path, query, header, cookie
@@ -77,7 +77,7 @@ type OpenAPIParameter struct {
 	Schema      map[string]interface{} `yaml:"schema"`
 }
 
-// RouteTestCase defines a test case for a route
+// RouteTestCase defines a test case for a route.
 type RouteTestCase struct {
 	Name        string                 `yaml:"name"`
 	Input       map[string]interface{} `yaml:"input"`
@@ -87,7 +87,7 @@ type RouteTestCase struct {
 	Description string                 `yaml:"description"`
 }
 
-// ParamConfig defines parameter validation and transformation
+// ParamConfig defines parameter validation and transformation.
 type ParamConfig struct {
 	Type        string   `yaml:"type"` // int, string, uuid, email
 	Required    bool     `yaml:"required"`
@@ -100,7 +100,7 @@ type ParamConfig struct {
 	Description string   `yaml:"description"`
 }
 
-// Validate checks if the route configuration is valid
+// Validate checks if the route configuration is valid.
 func (rc *RouteConfig) Validate() error {
 	if rc.APIVersion == "" {
 		return fmt.Errorf("apiVersion is required")
@@ -114,7 +114,7 @@ func (rc *RouteConfig) Validate() error {
 	return nil
 }
 
-// GetMethods returns the HTTP methods for a route definition as a slice
+// GetMethods returns the HTTP methods for a route definition as a slice.
 func (rd *RouteDefinition) GetMethods() []string {
 	switch v := rd.Method.(type) {
 	case string:
@@ -134,14 +134,14 @@ func (rd *RouteDefinition) GetMethods() []string {
 	}
 }
 
-// MiddlewareConfig defines middleware configuration
+// MiddlewareConfig defines middleware configuration.
 type MiddlewareConfig struct {
 	Name    string                 `yaml:"name"`
 	Enabled bool                   `yaml:"enabled"`
 	Config  map[string]interface{} `yaml:"config"`
 }
 
-// FeatureFlag represents a feature flag configuration
+// FeatureFlag represents a feature flag configuration.
 type FeatureFlag struct {
 	Name        string    `yaml:"name"`
 	Enabled     bool      `yaml:"enabled"`
@@ -152,7 +152,7 @@ type FeatureFlag struct {
 	EndDate     time.Time `yaml:"endDate"`
 }
 
-// RouteGroup represents a logical grouping of routes
+// RouteGroup represents a logical grouping of routes.
 type RouteGroup struct {
 	Name       string   `yaml:"name"`
 	Prefix     string   `yaml:"prefix"`

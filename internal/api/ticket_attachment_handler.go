@@ -14,25 +14,29 @@ import (
 	"strings"
 	"time"
 
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
-	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-	// Register additional decoders for thumbnails
+
+	// Register additional decoders for thumbnails.
 	"bytes"
+	"image/png"
+	"log"
+
 	_ "golang.org/x/image/bmp"
 	_ "golang.org/x/image/tiff"
 	_ "golang.org/x/image/webp"
-	"image/png"
-	"log"
 )
 
-// Attachment represents a file attached to a ticket
+// Attachment represents a file attached to a ticket.
 type Attachment struct {
 	ID          int       `json:"id"`
 	TicketID    int       `json:"ticket_id"`
@@ -48,7 +52,7 @@ type Attachment struct {
 	Downloaded  int       `json:"download_count"`
 }
 
-// Mock storage for attachments (in production, this would be in database/filesystem)
+// Mock storage for attachments (in production, this would be in database/filesystem).
 var attachments = map[int]*Attachment{
 	1: {
 		ID:          1,
@@ -93,20 +97,20 @@ var attachmentsByTicket = map[int][]int{
 	126: {},
 }
 
-// File upload limits
+// File upload limits.
 const (
 	MaxFileSize    = 10 * 1024 * 1024 // 10MB per file
 	MaxTotalSize   = 50 * 1024 * 1024 // 50MB total per ticket
 	MaxAttachments = 20               // Max 20 attachments per ticket
 )
 
-// Blocked file extensions
+// Blocked file extensions.
 var blockedExtensions = []string{
 	".exe", ".com", ".bat", ".cmd", ".ps1", ".sh", ".vbs", ".js",
 	".jar", ".app", ".deb", ".rpm", ".msi", ".dll", ".so",
 }
 
-// Allowed MIME types
+// Allowed MIME types.
 var allowedMimeTypes = map[string]bool{
 	"text/plain":               true,
 	"text/html":                true,
@@ -162,7 +166,7 @@ func attachmentsDB() *sql.DB {
 	return db
 }
 
-// normalizeMimeType maps common aliases and strips parameters; returns lowercased canonical type
+// normalizeMimeType maps common aliases and strips parameters; returns lowercased canonical type.
 func normalizeMimeType(ct string) string {
 	if ct == "" {
 		return ct
@@ -191,7 +195,7 @@ func normalizeMimeType(ct string) string {
 	return ct
 }
 
-// resolveTicketID resolves the :id path param which can be a numeric TN or a DB ID
+// resolveTicketID resolves the :id path param which can be a numeric TN or a DB ID.
 func resolveTicketID(idStr string) (int, error) {
 	// Prefer resolving by TN if DB is available (handles numeric TNs)
 	if db := attachmentsDB(); db != nil {
@@ -218,7 +222,7 @@ func resolveTicketID(idStr string) (int, error) {
 	return 0, fmt.Errorf("invalid ticket id")
 }
 
-// handleUploadAttachment handles file upload to a ticket
+// handleUploadAttachment handles file upload to a ticket.
 func handleUploadAttachment(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	ticketID, err := resolveTicketID(ticketIDStr)
@@ -248,7 +252,7 @@ func handleUploadAttachment(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No file provided"})
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Validate file
 	if err := validateFile(header); err != nil {
@@ -491,7 +495,7 @@ func handleUploadAttachment(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-// handleGetAttachments returns list of attachments for a ticket
+// handleGetAttachments returns list of attachments for a ticket.
 func handleGetAttachments(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	// Resolve TN or ID (handles numeric-looking TNs)
@@ -547,7 +551,7 @@ func handleGetAttachments(c *gin.Context) {
 		sendGuruMeditation(c, err, "Failed to query attachments")
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	result := []gin.H{}
 	for rows.Next() {
@@ -596,7 +600,7 @@ func handleGetAttachments(c *gin.Context) {
 	}
 }
 
-// handleDownloadAttachment serves the attachment file
+// handleDownloadAttachment serves the attachment file.
 func handleDownloadAttachment(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	attachmentIDStr := c.Param("attachment_id")
@@ -739,7 +743,7 @@ func handleDownloadAttachment(c *gin.Context) {
 	}
 }
 
-// handleDeleteAttachment deletes an attachment
+// handleDeleteAttachment deletes an attachment.
 func handleDeleteAttachment(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	attachmentIDStr := c.Param("attachment_id")
@@ -836,7 +840,7 @@ func handleDeleteAttachment(c *gin.Context) {
 	})
 }
 
-// handleViewAttachment renders common types inline: images, text, markdown, html, pdf
+// handleViewAttachment renders common types inline: images, text, markdown, html, pdf.
 func handleViewAttachment(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	attachmentIDStr := c.Param("attachment_id")
@@ -1062,7 +1066,7 @@ func handleViewAttachment(c *gin.Context) {
 	return
 }
 
-// serveAttachmentInlineRaw serves the original inline content for /view?raw=1 and internal use
+// serveAttachmentInlineRaw serves the original inline content for /view?raw=1 and internal use.
 func serveAttachmentInlineRaw(c *gin.Context, ticketIDStr string, ticketID int, attID int) {
 	// DB path first
 	if db := attachmentsDB(); db != nil {
@@ -1366,7 +1370,7 @@ func findLocalStoredAttachmentBytes(ticketID int, filename string) ([]byte, bool
 	return nil, false
 }
 
-// Minimal copy of service.sanitizeFilename for matching purposes
+// Minimal copy of service.sanitizeFilename for matching purposes.
 func sanitizeFilenameForMatch(name string) string {
 	repl := strings.NewReplacer(
 		" ", "_",
@@ -1399,7 +1403,7 @@ func sanitizeFilenameForMatch(name string) string {
 	return safe
 }
 
-// detectContentType attempts to detect the content type from filename and content
+// detectContentType attempts to detect the content type from filename and content.
 func detectContentType(filename string, content []byte) string {
 	// First try by file extension
 	ext := strings.ToLower(filepath.Ext(filename))
@@ -1488,10 +1492,10 @@ func detectContentType(filename string, content []byte) string {
 	return "application/octet-stream"
 }
 
-// htmlEscape safely escapes text for embedding in HTML context
+// htmlEscape safely escapes text for embedding in HTML context.
 func htmlEscape(s string) string { return html.EscapeString(s) }
 
-// handleGetThumbnail serves a thumbnail version of an image attachment
+// handleGetThumbnail serves a thumbnail version of an image attachment.
 func handleGetThumbnail(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	attachmentIDStr := c.Param("attachment_id")
@@ -1681,7 +1685,7 @@ func handleGetThumbnail(c *gin.Context) {
 	c.JSON(404, gin.H{"error": "Attachment not found"})
 }
 
-// validateFile validates uploaded file
+// validateFile validates uploaded file.
 func validateFile(header *multipart.FileHeader) error {
 	filename := header.Filename
 
@@ -1718,7 +1722,7 @@ func ValidateUploadedFile(header *multipart.FileHeader) error {
 	return validateFile(header)
 }
 
-// renderAttachmentListHTML renders attachment list as HTML for HTMX
+// renderAttachmentListHTML renders attachment list as HTML for HTMX.
 func renderAttachmentListHTML(attachments []gin.H) string {
 	if len(attachments) == 0 {
 		return `<div class="text-center py-4 text-sm text-gray-500 dark:text-gray-400">No attachments found</div>`

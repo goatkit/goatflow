@@ -6,20 +6,21 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
 
-// CannedResponseHandlers manages canned response API endpoints
+// CannedResponseHandlers manages canned response API endpoints.
 type CannedResponseHandlers struct {
 	service *service.CannedResponseService
 }
 
-// CannedResponseHandlerExports provides singleton access for YAML route registration
+// CannedResponseHandlerExports provides singleton access for YAML route registration.
 var CannedResponseHandlerExports = NewCannedResponseHandlers()
 
-// NewCannedResponseHandlers creates a new canned response handlers instance
+// NewCannedResponseHandlers creates a new canned response handlers instance.
 func NewCannedResponseHandlers() *CannedResponseHandlers {
 	repo := repository.NewMemoryCannedResponseRepository()
 	srv := service.NewCannedResponseService(repo)
@@ -32,7 +33,7 @@ func NewCannedResponseHandlers() *CannedResponseHandlers {
 	}
 }
 
-// initializeDefaultResponses creates some default canned responses
+// initializeDefaultResponses creates some default canned responses.
 func initializeDefaultResponses(srv *service.CannedResponseService) {
 	defaults := []models.CannedResponse{
 		{
@@ -97,7 +98,7 @@ func initializeDefaultResponses(srv *service.CannedResponseService) {
 	}
 }
 
-// GetResponses retrieves all active canned responses
+// GetResponses retrieves all active canned responses.
 func (h *CannedResponseHandlers) GetResponses(c *gin.Context) {
 	responses, err := h.service.GetActiveResponses(c.Request.Context())
 	if err != nil {
@@ -108,7 +109,7 @@ func (h *CannedResponseHandlers) GetResponses(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
-// GetResponseByID retrieves a specific canned response
+// GetResponseByID retrieves a specific canned response.
 func (h *CannedResponseHandlers) GetResponseByID(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -125,7 +126,7 @@ func (h *CannedResponseHandlers) GetResponseByID(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// GetResponsesByCategory retrieves responses by category
+// GetResponsesByCategory retrieves responses by category.
 func (h *CannedResponseHandlers) GetResponsesByCategory(c *gin.Context) {
 	category := c.Param("category")
 
@@ -138,7 +139,7 @@ func (h *CannedResponseHandlers) GetResponsesByCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
-// GetQuickResponses retrieves responses with shortcuts
+// GetQuickResponses retrieves responses with shortcuts.
 func (h *CannedResponseHandlers) GetQuickResponses(c *gin.Context) {
 	responses, err := h.service.GetQuickResponses(c.Request.Context())
 	if err != nil {
@@ -149,7 +150,7 @@ func (h *CannedResponseHandlers) GetQuickResponses(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
-// GetResponsesForUser retrieves responses accessible to the current user
+// GetResponsesForUser retrieves responses accessible to the current user.
 func (h *CannedResponseHandlers) GetResponsesForUser(c *gin.Context) {
 	// TODO: Get actual user ID from session/auth
 	userID := uint(1)
@@ -163,7 +164,7 @@ func (h *CannedResponseHandlers) GetResponsesForUser(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
-// SearchResponses searches for canned responses
+// SearchResponses searches for canned responses.
 func (h *CannedResponseHandlers) SearchResponses(c *gin.Context) {
 	var filter models.CannedResponseFilter
 	if err := c.ShouldBindJSON(&filter); err != nil {
@@ -191,7 +192,7 @@ func (h *CannedResponseHandlers) SearchResponses(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
-// GetPopularResponses retrieves the most used responses
+// GetPopularResponses retrieves the most used responses.
 func (h *CannedResponseHandlers) GetPopularResponses(c *gin.Context) {
 	limit := 10
 	if limitStr := c.Query("limit"); limitStr != "" {
@@ -209,7 +210,7 @@ func (h *CannedResponseHandlers) GetPopularResponses(c *gin.Context) {
 	c.JSON(http.StatusOK, responses)
 }
 
-// GetCategories retrieves all canned response categories
+// GetCategories retrieves all canned response categories.
 func (h *CannedResponseHandlers) GetCategories(c *gin.Context) {
 	categories, err := h.service.GetCategories(c.Request.Context())
 	if err != nil {
@@ -220,7 +221,7 @@ func (h *CannedResponseHandlers) GetCategories(c *gin.Context) {
 	c.JSON(http.StatusOK, categories)
 }
 
-// CreateResponse creates a new canned response
+// CreateResponse creates a new canned response.
 func (h *CannedResponseHandlers) CreateResponse(c *gin.Context) {
 	var response models.CannedResponse
 	if err := c.ShouldBindJSON(&response); err != nil {
@@ -240,7 +241,7 @@ func (h *CannedResponseHandlers) CreateResponse(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-// UpdateResponse updates an existing canned response
+// UpdateResponse updates an existing canned response.
 func (h *CannedResponseHandlers) UpdateResponse(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -265,7 +266,7 @@ func (h *CannedResponseHandlers) UpdateResponse(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// DeleteResponse deletes a canned response
+// DeleteResponse deletes a canned response.
 func (h *CannedResponseHandlers) DeleteResponse(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -283,7 +284,7 @@ func (h *CannedResponseHandlers) DeleteResponse(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Response deleted successfully"})
 }
 
-// ApplyResponse applies a canned response to a ticket
+// ApplyResponse applies a canned response to a ticket.
 func (h *CannedResponseHandlers) ApplyResponse(c *gin.Context) {
 	var application models.CannedResponseApplication
 	if err := c.ShouldBindJSON(&application); err != nil {
@@ -319,7 +320,7 @@ func (h *CannedResponseHandlers) ApplyResponse(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// ExportResponses exports all canned responses as JSON
+// ExportResponses exports all canned responses as JSON.
 func (h *CannedResponseHandlers) ExportResponses(c *gin.Context) {
 	data, err := h.service.ExportResponses(c.Request.Context())
 	if err != nil {
@@ -332,7 +333,7 @@ func (h *CannedResponseHandlers) ExportResponses(c *gin.Context) {
 	c.Data(http.StatusOK, "application/json", data)
 }
 
-// ImportResponses imports canned responses from JSON
+// ImportResponses imports canned responses from JSON.
 func (h *CannedResponseHandlers) ImportResponses(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {

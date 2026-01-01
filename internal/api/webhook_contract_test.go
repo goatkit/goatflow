@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -8,18 +7,20 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/auth"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/webhooks"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/webhooks"
 )
 
-// TestWebhookAPIContract verifies the webhook API meets its contract requirements
+// TestWebhookAPIContract verifies the webhook API meets its contract requirements.
 func TestWebhookAPIContract(t *testing.T) {
 	// Initialize test database
 	database.InitTestDB()

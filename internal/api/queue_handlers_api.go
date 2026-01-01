@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
@@ -27,7 +28,7 @@ func queueSQL(query string) string {
 	return database.ConvertPlaceholders(query)
 }
 
-// handleGetQueuesAPI returns all queues for API consumers
+// handleGetQueuesAPI returns all queues for API consumers.
 func handleGetQueuesAPI(c *gin.Context) {
 	type queueItem struct {
 		ID          int
@@ -133,7 +134,7 @@ func handleGetQueuesAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch queues"})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []queueItem
 	for rows.Next() {
@@ -173,10 +174,10 @@ func handleGetQueuesAPI(c *gin.Context) {
 	respond(items)
 }
 
-// handleQueuesAPI is an alias expected by tests; routes to handleGetQueuesAPI
+// handleQueuesAPI is an alias expected by tests; routes to handleGetQueuesAPI.
 func handleQueuesAPI(c *gin.Context) { handleGetQueuesAPI(c) }
 
-// handleCreateQueueWrapper wraps handleCreateQueue with form-to-JSON conversion for YAML routes
+// handleCreateQueueWrapper wraps handleCreateQueue with form-to-JSON conversion for YAML routes.
 func handleCreateQueueWrapper(c *gin.Context) {
 	if strings.Contains(strings.ToLower(c.GetHeader("Content-Type")), "application/x-www-form-urlencoded") {
 		name := c.PostForm("name")
@@ -196,7 +197,7 @@ func handleCreateQueueWrapper(c *gin.Context) {
 	handleCreateQueue(c)
 }
 
-// handleCreateQueue creates a new queue (API)
+// handleCreateQueue creates a new queue (API).
 func handleCreateQueue(c *gin.Context) {
 	var input struct {
 		Name              string  `json:"name"`
@@ -339,7 +340,7 @@ func handleCreateQueue(c *gin.Context) {
 	})
 }
 
-// handleUpdateQueue updates an existing queue (API)
+// handleUpdateQueue updates an existing queue (API).
 func handleUpdateQueue(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -421,7 +422,7 @@ func handleUpdateQueue(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": resp})
 }
 
-// handleDeleteQueue soft deletes a queue (API)
+// handleDeleteQueue soft deletes a queue (API).
 func handleDeleteQueue(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -471,7 +472,7 @@ func handleDeleteQueue(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Queue deleted successfully"})
 }
 
-// handleGetQueueDetails returns detailed queue info and stats (API)
+// handleGetQueueDetails returns detailed queue info and stats (API).
 func handleGetQueueDetails(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)

@@ -13,7 +13,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-// getTestDB returns a database connection for testing
+// getTestDB returns a database connection for testing.
 func getTestDB() (*sql.DB, error) {
 	driver := currentDriver()
 
@@ -36,7 +36,7 @@ func getTestDB() (*sql.DB, error) {
 	}
 }
 
-// TestRequiredQueueExists verifies that a required queue exists in the database after OTRS import
+// TestRequiredQueueExists verifies that a required queue exists in the database after OTRS import.
 func TestRequiredQueueExists(t *testing.T) {
 	// This test verifies that a required OTRS-compatible queue is present
 	// The queue name is parameterized via environment variable
@@ -82,7 +82,7 @@ func TestRequiredQueueExists(t *testing.T) {
 	}
 }
 
-// TestEssentialQueuesExist verifies that all essential OTRS queues exist
+// TestEssentialQueuesExist verifies that all essential OTRS queues exist.
 func TestEssentialQueuesExist(t *testing.T) {
 	essentialQueues := []string{
 		"Postmaster",

@@ -8,14 +8,14 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
-// PermissionService handles business logic for permissions
+// PermissionService handles business logic for permissions.
 type PermissionService struct {
 	permRepo  *repository.PermissionRepository
 	userRepo  *repository.UserRepository
 	groupRepo *repository.GroupSQLRepository
 }
 
-// NewPermissionService creates a new permission service
+// NewPermissionService creates a new permission service.
 func NewPermissionService(db *sql.DB) *PermissionService {
 	return &PermissionService{
 		permRepo:  repository.NewPermissionRepository(db),
@@ -24,19 +24,19 @@ func NewPermissionService(db *sql.DB) *PermissionService {
 	}
 }
 
-// PermissionMatrix represents a user's permissions across all groups
+// PermissionMatrix represents a user's permissions across all groups.
 type PermissionMatrix struct {
 	User   *models.User
 	Groups []*GroupPermissions
 }
 
-// GroupPermissions represents permissions for a single group
+// GroupPermissions represents permissions for a single group.
 type GroupPermissions struct {
 	Group       *models.Group
 	Permissions map[string]bool
 }
 
-// GetUserPermissionMatrix gets complete permission matrix for a user
+// GetUserPermissionMatrix gets complete permission matrix for a user.
 func (s *PermissionService) GetUserPermissionMatrix(userID uint) (*PermissionMatrix, error) {
 	// Get user
 	user, err := s.userRepo.GetByID(userID)
@@ -57,7 +57,6 @@ func (s *PermissionService) GetUserPermissionMatrix(userID uint) (*PermissionMat
 
 	// Get permissions for each group
 	for _, group := range groups {
-
 		// Convert group.ID to uint
 		var groupID uint
 		switch v := group.ID.(type) {
@@ -88,7 +87,7 @@ func (s *PermissionService) GetUserPermissionMatrix(userID uint) (*PermissionMat
 	return matrix, nil
 }
 
-// UpdateUserPermissions updates all permissions for a user
+// UpdateUserPermissions updates all permissions for a user.
 func (s *PermissionService) UpdateUserPermissions(userID uint, permissions map[uint]map[string]bool) error {
 	// Validate user exists
 	_, err := s.userRepo.GetByID(userID)
@@ -123,7 +122,7 @@ func (s *PermissionService) UpdateUserPermissions(userID uint, permissions map[u
 	return nil
 }
 
-// applyPermissionRules applies business rules to permissions
+// applyPermissionRules applies business rules to permissions.
 func (s *PermissionService) applyPermissionRules(perms map[string]bool) map[string]bool {
 	// If RW is set, all other permissions should be true
 	if perms["rw"] {
@@ -148,19 +147,19 @@ func (s *PermissionService) applyPermissionRules(perms map[string]bool) map[stri
 	return perms
 }
 
-// GroupUserMatrix represents permissions for all users in a group
+// GroupUserMatrix represents permissions for all users in a group.
 type GroupUserMatrix struct {
 	Group *models.Group
 	Users []*UserPermissions
 }
 
-// UserPermissions represents a user's permissions in a group
+// UserPermissions represents a user's permissions in a group.
 type UserPermissions struct {
 	User        *models.User
 	Permissions map[string]bool
 }
 
-// GetGroupPermissionMatrix gets all users and their permissions for a group
+// GetGroupPermissionMatrix gets all users and their permissions for a group.
 func (s *PermissionService) GetGroupPermissionMatrix(groupID uint) (*GroupUserMatrix, error) {
 	// Get group
 	group, err := s.groupRepo.GetByID(groupID)
@@ -206,7 +205,7 @@ func (s *PermissionService) GetGroupPermissionMatrix(groupID uint) (*GroupUserMa
 	return matrix, nil
 }
 
-// CloneUserPermissions copies all permissions from one user to another
+// CloneUserPermissions copies all permissions from one user to another.
 func (s *PermissionService) CloneUserPermissions(sourceUserID, targetUserID uint) error {
 	// Get source user permissions
 	permissions, err := s.permRepo.GetUserPermissions(sourceUserID)
@@ -227,7 +226,7 @@ func (s *PermissionService) CloneUserPermissions(sourceUserID, targetUserID uint
 	return nil
 }
 
-// RemoveAllUserPermissions removes all permissions for a user
+// RemoveAllUserPermissions removes all permissions for a user.
 func (s *PermissionService) RemoveAllUserPermissions(userID uint) error {
 	// Get all groups
 	groups, err := s.groupRepo.List()
@@ -262,7 +261,7 @@ func (s *PermissionService) RemoveAllUserPermissions(userID uint) error {
 	return nil
 }
 
-// ValidatePermissions checks if a user has specific permissions for a group
+// ValidatePermissions checks if a user has specific permissions for a group.
 func (s *PermissionService) ValidatePermissions(userID, groupID uint, requiredPerms []string) (bool, error) {
 	perms, err := s.permRepo.GetUserGroupMatrix(userID, groupID)
 	if err != nil {
@@ -279,7 +278,7 @@ func (s *PermissionService) ValidatePermissions(userID, groupID uint, requiredPe
 	return true, nil
 }
 
-// GetEffectivePermissions calculates effective permissions considering inheritance
+// GetEffectivePermissions calculates effective permissions considering inheritance.
 func (s *PermissionService) GetEffectivePermissions(userID, groupID uint) (map[string]bool, error) {
 	perms, err := s.permRepo.GetUserGroupMatrix(userID, groupID)
 	if err != nil {

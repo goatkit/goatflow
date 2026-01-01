@@ -1,3 +1,4 @@
+// Package schema provides database schema discovery and introspection.
 package schema
 
 import (
@@ -8,13 +9,13 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// Discovery handles database schema discovery
+// Discovery handles database schema discovery.
 type Discovery struct {
 	db      *sql.DB
 	verbose bool
 }
 
-// TableInfo contains information about a database table
+// TableInfo contains information about a database table.
 type TableInfo struct {
 	Name        string
 	Columns     []ColumnInfo
@@ -25,7 +26,7 @@ type TableInfo struct {
 	HasDeleted  bool
 }
 
-// ColumnInfo contains information about a table column
+// ColumnInfo contains information about a table column.
 type ColumnInfo struct {
 	Name         string
 	DataType     string
@@ -38,21 +39,21 @@ type ColumnInfo struct {
 	Comment      sql.NullString
 }
 
-// ForeignKeyInfo contains foreign key relationship information
+// ForeignKeyInfo contains foreign key relationship information.
 type ForeignKeyInfo struct {
 	Column           string
 	ReferencedTable  string
 	ReferencedColumn string
 }
 
-// IndexInfo contains index information
+// IndexInfo contains index information.
 type IndexInfo struct {
 	Name     string
 	Columns  []string
 	IsUnique bool
 }
 
-// ModuleConfig represents the generated module configuration
+// ModuleConfig represents the generated module configuration.
 type ModuleConfig struct {
 	Module struct {
 		Name        string `yaml:"name"`
@@ -66,7 +67,7 @@ type ModuleConfig struct {
 	Filters        []Filter        `yaml:"filters,omitempty"`
 }
 
-// Field represents a module field
+// Field represents a module field.
 type Field struct {
 	Name          string `yaml:"name"`
 	Type          string `yaml:"type"`
@@ -83,7 +84,7 @@ type Field struct {
 	Format        string `yaml:"format,omitempty"`
 }
 
-// ComputedField represents a computed field with lambda function
+// ComputedField represents a computed field with lambda function.
 type ComputedField struct {
 	Name       string `yaml:"name"`
 	Label      string `yaml:"label"`
@@ -91,7 +92,7 @@ type ComputedField struct {
 	Lambda     string `yaml:"lambda"`
 }
 
-// Features represents module features
+// Features represents module features.
 type Features struct {
 	Search      bool `yaml:"search"`
 	ExportCSV   bool `yaml:"export_csv"`
@@ -100,7 +101,7 @@ type Features struct {
 	BulkActions bool `yaml:"bulk_actions"`
 }
 
-// Filter represents a module filter
+// Filter represents a module filter.
 type Filter struct {
 	Field   string   `yaml:"field"`
 	Type    string   `yaml:"type"`
@@ -110,13 +111,13 @@ type Filter struct {
 	Options []Option `yaml:"options,omitempty"`
 }
 
-// Option represents a filter option
+// Option represents a filter option.
 type Option struct {
 	Value string `yaml:"value"`
 	Label string `yaml:"label"`
 }
 
-// NewDiscovery creates a new Discovery instance
+// NewDiscovery creates a new Discovery instance.
 func NewDiscovery(db *sql.DB, verbose bool) *Discovery {
 	return &Discovery{
 		db:      db,
@@ -124,7 +125,7 @@ func NewDiscovery(db *sql.DB, verbose bool) *Discovery {
 	}
 }
 
-// GetTables returns all user tables in the database
+// GetTables returns all user tables in the database.
 func (d *Discovery) GetTables() ([]string, error) {
 	query := `
         SELECT table_name 
@@ -152,7 +153,7 @@ func (d *Discovery) GetTables() ([]string, error) {
 	return tables, nil
 }
 
-// GetTableInfo retrieves detailed information about a table
+// GetTableInfo retrieves detailed information about a table.
 func (d *Discovery) GetTableInfo(tableName string) (*TableInfo, error) {
 	info := &TableInfo{
 		Name: tableName,
@@ -195,7 +196,7 @@ func (d *Discovery) GetTableInfo(tableName string) (*TableInfo, error) {
 	return info, nil
 }
 
-// getColumns retrieves column information for a table
+// getColumns retrieves column information for a table.
 func (d *Discovery) getColumns(tableName string) ([]ColumnInfo, error) {
 	query := `
 		SELECT 
@@ -271,7 +272,7 @@ func (d *Discovery) getColumns(tableName string) ([]ColumnInfo, error) {
 	return columns, nil
 }
 
-// getForeignKeys retrieves foreign key information for a table
+// getForeignKeys retrieves foreign key information for a table.
 func (d *Discovery) getForeignKeys(tableName string) ([]ForeignKeyInfo, error) {
 	query := `
 		SELECT
@@ -305,7 +306,7 @@ func (d *Discovery) getForeignKeys(tableName string) ([]ForeignKeyInfo, error) {
 	return foreignKeys, nil
 }
 
-// getIndexes retrieves index information for a table
+// getIndexes retrieves index information for a table.
 func (d *Discovery) getIndexes(tableName string) ([]IndexInfo, error) {
 	query := `
 		SELECT 
@@ -338,7 +339,7 @@ func (d *Discovery) getIndexes(tableName string) ([]IndexInfo, error) {
 	return indexes, nil
 }
 
-// GenerateModule generates a module configuration from table info
+// GenerateModule generates a module configuration from table info.
 func (d *Discovery) GenerateModule(tableName string) (*ModuleConfig, error) {
 	// Get table information
 	tableInfo, err := d.GetTableInfo(tableName)
@@ -374,7 +375,7 @@ func (d *Discovery) GenerateModule(tableName string) (*ModuleConfig, error) {
 	return module, nil
 }
 
-// generateFields generates field configurations from table info
+// generateFields generates field configurations from table info.
 func (d *Discovery) generateFields(info *TableInfo) []Field {
 	var fields []Field
 
@@ -431,7 +432,7 @@ func (d *Discovery) generateFields(info *TableInfo) []Field {
 	return fields
 }
 
-// generateComputedFields generates computed fields with lambda functions
+// generateComputedFields generates computed fields with lambda functions.
 func (d *Discovery) generateComputedFields(info *TableInfo) []ComputedField {
 	var computed []ComputedField
 
@@ -481,7 +482,7 @@ func (d *Discovery) generateComputedFields(info *TableInfo) []ComputedField {
 	return computed
 }
 
-// generateFilters generates filter configurations
+// generateFilters generates filter configurations.
 func (d *Discovery) generateFilters(info *TableInfo) []Filter {
 	var filters []Filter
 

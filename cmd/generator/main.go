@@ -1,3 +1,4 @@
+// Package main provides code generation utilities.
 package main
 
 import (
@@ -13,7 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ModuleConfig represents the YAML configuration for a module
+// ModuleConfig represents the YAML configuration for a module.
 type ModuleConfig struct {
 	Module struct {
 		Name        string `yaml:"name"`
@@ -43,7 +44,7 @@ type ModuleConfig struct {
 	} `yaml:"validation"`
 }
 
-// Field represents a field in the module
+// Field represents a field in the module.
 type Field struct {
 	Name       string      `yaml:"name"`
 	Type       string      `yaml:"type"`
@@ -60,7 +61,7 @@ type Field struct {
 	Help       string      `yaml:"help"`
 }
 
-// Option represents an option for select fields
+// Option represents an option for select fields.
 type Option struct {
 	Value string `yaml:"value"`
 	Label string `yaml:"label"`
@@ -408,13 +409,15 @@ func (h *Admin{{.Module.Singular}}Handler) Search(c *gin.Context) {
 
 	// Create output file
 	handlerPath := filepath.Join(outputDir, "internal", "api", fmt.Sprintf("admin_%s_handler.go", config.Module.Name))
-	os.MkdirAll(filepath.Dir(handlerPath), 0755)
+	if err := os.MkdirAll(filepath.Dir(handlerPath), 0755); err != nil {
+		return err
+	}
 
 	file, err := os.Create(handlerPath)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return tmpl.Execute(file, config)
 }

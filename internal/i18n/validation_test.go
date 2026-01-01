@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// TestTranslationCompleteness validates that all languages have complete translations
+// TestTranslationCompleteness validates that all languages have complete translations.
 func TestTranslationCompleteness(t *testing.T) {
 	i18n := GetInstance()
 
@@ -107,11 +107,11 @@ func TestTranslationCompleteness(t *testing.T) {
 
 			// Set minimum coverage requirements
 			minCoverage := map[string]float64{
-				"en": 100.0, // Base language
-				"de": 80.0,  // German
-				"es": 80.0,  // Spanish
-				"fr": 80.0,  // French
-				"ar": 80.0,  // Arabic
+				"en":  100.0, // Base language
+				"de":  80.0,  // German
+				"es":  80.0,  // Spanish
+				"fr":  80.0,  // French
+				"ar":  80.0,  // Arabic
 				"tlh": 80.0,  // Klingon
 				// Other languages may have lower coverage initially
 			}
@@ -126,7 +126,7 @@ func TestTranslationCompleteness(t *testing.T) {
 	}
 }
 
-// TestCriticalTranslations ensures critical UI keys are translated in all languages
+// TestCriticalTranslations ensures critical UI keys are translated in all languages.
 func TestCriticalTranslations(t *testing.T) {
 	i18n := GetInstance()
 
@@ -171,7 +171,7 @@ func TestCriticalTranslations(t *testing.T) {
 	}
 }
 
-// TestTranslationConsistency checks for consistent formatting across languages
+// TestTranslationConsistency checks for consistent formatting across languages.
 func TestTranslationConsistency(t *testing.T) {
 	i18n := GetInstance()
 
@@ -208,7 +208,7 @@ func TestTranslationConsistency(t *testing.T) {
 	}
 }
 
-// Helper function
+// Helper function.
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) &&
 		(s == substr ||

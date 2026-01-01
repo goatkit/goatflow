@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-// XMLSchema represents the root schema definition (inspired by OTRS XML schema format)
+// XMLSchema represents the root schema definition (inspired by OTRS XML schema format).
 type XMLSchema struct {
 	XMLName xml.Name   `xml:"database"`
 	Name    string     `xml:"Name,attr"`
@@ -15,7 +15,7 @@ type XMLSchema struct {
 	Tables  []XMLTable `xml:"Table"`
 }
 
-// XMLTable represents a database table in XML format
+// XMLTable represents a database table in XML format.
 type XMLTable struct {
 	XMLName     xml.Name        `xml:"Table"`
 	Name        string          `xml:"Name,attr"`
@@ -24,7 +24,7 @@ type XMLTable struct {
 	ForeignKeys []XMLForeignKey `xml:"ForeignKey,omitempty"`
 }
 
-// XMLColumn represents a table column in XML format
+// XMLColumn represents a table column in XML format.
 type XMLColumn struct {
 	XMLName       xml.Name `xml:"Column"`
 	Name          string   `xml:"Name,attr"`
@@ -36,7 +36,7 @@ type XMLColumn struct {
 	Default       *string  `xml:"Default,attr,omitempty"`
 }
 
-// XMLIndex represents a table index in XML format
+// XMLIndex represents a table index in XML format.
 type XMLIndex struct {
 	XMLName xml.Name         `xml:"Index"`
 	Name    string           `xml:"Name,attr"`
@@ -44,13 +44,13 @@ type XMLIndex struct {
 	Columns []XMLIndexColumn `xml:"Column"`
 }
 
-// XMLIndexColumn represents an index column
+// XMLIndexColumn represents an index column.
 type XMLIndexColumn struct {
 	XMLName xml.Name `xml:"Column"`
 	Name    string   `xml:"Name,attr"`
 }
 
-// XMLForeignKey represents a foreign key constraint
+// XMLForeignKey represents a foreign key constraint.
 type XMLForeignKey struct {
 	XMLName      xml.Name `xml:"ForeignKey"`
 	Name         string   `xml:"Name,attr"`
@@ -61,17 +61,17 @@ type XMLForeignKey struct {
 	OnUpdate     *string  `xml:"OnUpdate,attr,omitempty"`
 }
 
-// SchemaConverter converts between different schema formats
+// SchemaConverter converts between different schema formats.
 type SchemaConverter struct {
 	sourceDB IDatabase
 }
 
-// NewSchemaConverter creates a new schema converter
+// NewSchemaConverter creates a new schema converter.
 func NewSchemaConverter(db IDatabase) *SchemaConverter {
 	return &SchemaConverter{sourceDB: db}
 }
 
-// ExportToXML exports the current database schema to XML format
+// ExportToXML exports the current database schema to XML format.
 func (c *SchemaConverter) ExportToXML(outputPath string) error {
 	schema := &XMLSchema{
 		Name:    "gotrs_otrs_schema",
@@ -106,7 +106,7 @@ func (c *SchemaConverter) ExportToXML(outputPath string) error {
 	return os.WriteFile(outputPath, xmlContent, 0644)
 }
 
-// ImportFromXML creates database tables from XML schema definition
+// ImportFromXML creates database tables from XML schema definition.
 func (c *SchemaConverter) ImportFromXML(xmlPath string) error {
 	// Read XML file
 	xmlData, err := os.ReadFile(xmlPath)
@@ -131,7 +131,7 @@ func (c *SchemaConverter) ImportFromXML(xmlPath string) error {
 	return nil
 }
 
-// getTableList returns list of tables in the database (stub implementation)
+// getTableList returns list of tables in the database (stub implementation).
 func (c *SchemaConverter) getTableList() ([]string, error) {
 	// This is a simplified version - in practice, we'd query the database
 	// for actual table names from information_schema
@@ -143,7 +143,7 @@ func (c *SchemaConverter) getTableList() ([]string, error) {
 	}, nil
 }
 
-// convertTableToXML converts a database table to XML format
+// convertTableToXML converts a database table to XML format.
 func (c *SchemaConverter) convertTableToXML(tableName string) (XMLTable, error) {
 	xmlTable := XMLTable{Name: tableName}
 
@@ -177,7 +177,7 @@ func (c *SchemaConverter) convertTableToXML(tableName string) (XMLTable, error) 
 	return xmlTable, nil
 }
 
-// convertXMLToTableDefinition converts XML table to TableDefinition
+// convertXMLToTableDefinition converts XML table to TableDefinition.
 func (c *SchemaConverter) convertXMLToTableDefinition(xmlTable XMLTable) TableDefinition {
 	tableDef := TableDefinition{
 		Name: xmlTable.Name,
@@ -233,7 +233,7 @@ func (c *SchemaConverter) convertXMLToTableDefinition(xmlTable XMLTable) TableDe
 	return tableDef
 }
 
-// convertDataType converts database-specific data type to XML data type
+// convertDataType converts database-specific data type to XML data type.
 func (c *SchemaConverter) convertDataType(dbType string) string {
 	// Mapping of database-specific types to XML standard types
 	typeMap := map[string]string{
@@ -265,7 +265,7 @@ func (c *SchemaConverter) convertDataType(dbType string) string {
 	return dbType // Return as-is if no mapping found
 }
 
-// convertXMLDataType converts XML data type to database-specific data type
+// convertXMLDataType converts XML data type to database-specific data type.
 func (c *SchemaConverter) convertXMLDataType(xmlType string) string {
 	// This would need to be database-specific
 	// For now, assume PostgreSQL mappings
@@ -283,7 +283,7 @@ func (c *SchemaConverter) convertXMLDataType(xmlType string) string {
 	}
 }
 
-// convertXMLToPostgreSQL converts XML type to PostgreSQL type
+// convertXMLToPostgreSQL converts XML type to PostgreSQL type.
 func (c *SchemaConverter) convertXMLToPostgreSQL(xmlType string) string {
 	typeMap := map[string]string{
 		"INTEGER":   "INTEGER",
@@ -308,7 +308,7 @@ func (c *SchemaConverter) convertXMLToPostgreSQL(xmlType string) string {
 	return xmlType
 }
 
-// convertXMLToMySQL converts XML type to MySQL type
+// convertXMLToMySQL converts XML type to MySQL type.
 func (c *SchemaConverter) convertXMLToMySQL(xmlType string) string {
 	typeMap := map[string]string{
 		"INTEGER":   "INT",
@@ -333,7 +333,7 @@ func (c *SchemaConverter) convertXMLToMySQL(xmlType string) string {
 	return xmlType
 }
 
-// convertXMLToOracle converts XML type to Oracle type
+// convertXMLToOracle converts XML type to Oracle type.
 func (c *SchemaConverter) convertXMLToOracle(xmlType string) string {
 	typeMap := map[string]string{
 		"INTEGER":   "NUMBER",
@@ -358,7 +358,7 @@ func (c *SchemaConverter) convertXMLToOracle(xmlType string) string {
 	return xmlType
 }
 
-// convertXMLToSQLServer converts XML type to SQL Server type
+// convertXMLToSQLServer converts XML type to SQL Server type.
 func (c *SchemaConverter) convertXMLToSQLServer(xmlType string) string {
 	typeMap := map[string]string{
 		"INTEGER":   "INT",

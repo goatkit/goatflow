@@ -308,7 +308,7 @@ func TestFormatNumber(t *testing.T) {
 	}
 }
 
-// Helper function
+// Helper function.
 func containsStr(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > 0 && findSubstr(s, substr))
 }

@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -14,10 +13,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestAdminGroupManagement(t *testing.T) {
@@ -467,7 +467,7 @@ func TestGroupSessionState(t *testing.T) {
 	})
 }
 
-// Helper function for group name validation
+// Helper function for group name validation.
 func validateGroupName(name string) bool {
 	if len(name) < 2 || len(name) > 100 {
 		return false

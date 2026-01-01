@@ -10,11 +10,12 @@ import (
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/lib/pq"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// SLADefinition represents a Service Level Agreement configuration
+// SLADefinition represents a Service Level Agreement configuration.
 type SLADefinition struct {
 	ID                  int       `json:"id"`
 	Name                string    `json:"name"`
@@ -33,13 +34,13 @@ type SLADefinition struct {
 	ChangeBy            int       `json:"change_by"`
 }
 
-// SLAWithStats includes additional statistics
+// SLAWithStats includes additional statistics.
 type SLAWithStats struct {
 	SLADefinition
 	TicketCount int `json:"ticket_count"`
 }
 
-// handleAdminSLA renders the admin SLA management page
+// handleAdminSLA renders the admin SLA management page.
 func handleAdminSLA(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
@@ -114,7 +115,7 @@ func handleAdminSLA(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to fetch SLAs")
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var slas []SLAWithStats
 	for rows.Next() {
@@ -198,7 +199,7 @@ func handleAdminSLA(c *gin.Context) {
 	})
 }
 
-// handleAdminSLACreate creates a new SLA
+// handleAdminSLACreate creates a new SLA.
 func handleAdminSLACreate(c *gin.Context) {
 	var input struct {
 		Name                string  `json:"name" form:"name" binding:"required"`
@@ -333,7 +334,7 @@ func handleAdminSLACreate(c *gin.Context) {
 	})
 }
 
-// handleAdminSLAUpdate updates an existing SLA
+// handleAdminSLAUpdate updates an existing SLA.
 func handleAdminSLAUpdate(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -475,7 +476,7 @@ func handleAdminSLAUpdate(c *gin.Context) {
 	})
 }
 
-// handleAdminSLADelete soft deletes an SLA (sets valid_id = 2)
+// handleAdminSLADelete soft deletes an SLA (sets valid_id = 2).
 func handleAdminSLADelete(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)

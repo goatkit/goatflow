@@ -1,3 +1,4 @@
+// Package schema provides database schema loading and management.
 package schema
 
 import (
@@ -6,16 +7,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"gopkg.in/yaml.v3"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// YAMLSchema represents the structure of a YAML schema file
+// YAMLSchema represents the structure of a YAML schema file.
 type YAMLSchema struct {
 	Tables map[string]YAMLTable `yaml:",inline"`
 }
 
-// YAMLTable represents a single table definition in YAML
+// YAMLTable represents a single table definition in YAML.
 type YAMLTable struct {
 	PK         string                 `yaml:"pk"`
 	Columns    map[string]YAMLColumn  `yaml:"columns"`
@@ -25,7 +27,7 @@ type YAMLTable struct {
 	Meta       map[string]interface{} `yaml:"meta"`
 }
 
-// YAMLColumn represents a column definition in YAML
+// YAMLColumn represents a column definition in YAML.
 type YAMLColumn struct {
 	Type     string      `yaml:"type"`
 	Required bool        `yaml:"required"`
@@ -34,13 +36,13 @@ type YAMLColumn struct {
 	Index    bool        `yaml:"index"`
 }
 
-// SchemaLoader loads YAML schema definitions
+// SchemaLoader loads YAML schema definitions.
 type SchemaLoader struct {
 	schemaDir string
 	schemas   map[string]database.TableSchema
 }
 
-// NewSchemaLoader creates a new schema loader
+// NewSchemaLoader creates a new schema loader.
 func NewSchemaLoader(schemaDir string) *SchemaLoader {
 	return &SchemaLoader{
 		schemaDir: schemaDir,
@@ -48,7 +50,7 @@ func NewSchemaLoader(schemaDir string) *SchemaLoader {
 	}
 }
 
-// LoadAll loads all YAML schema files from the schema directory
+// LoadAll loads all YAML schema files from the schema directory.
 func (l *SchemaLoader) LoadAll() error {
 	files, err := os.ReadDir(l.schemaDir)
 	if err != nil {
@@ -68,7 +70,7 @@ func (l *SchemaLoader) LoadAll() error {
 	return nil
 }
 
-// LoadFile loads a single YAML schema file
+// LoadFile loads a single YAML schema file.
 func (l *SchemaLoader) LoadFile(filename string) error {
 	path := filepath.Join(l.schemaDir, filename)
 	data, err := os.ReadFile(path)
@@ -90,7 +92,7 @@ func (l *SchemaLoader) LoadFile(filename string) error {
 	return nil
 }
 
-// LoadFromString loads schema from a YAML string (useful for testing)
+// LoadFromString loads schema from a YAML string (useful for testing).
 func (l *SchemaLoader) LoadFromString(yamlContent string) error {
 	var yamlSchema map[string]YAMLTable
 	if err := yaml.Unmarshal([]byte(yamlContent), &yamlSchema); err != nil {
@@ -106,7 +108,7 @@ func (l *SchemaLoader) LoadFromString(yamlContent string) error {
 	return nil
 }
 
-// convertToTableSchema converts a YAML table definition to database.TableSchema
+// convertToTableSchema converts a YAML table definition to database.TableSchema.
 func (l *SchemaLoader) convertToTableSchema(name string, table YAMLTable) database.TableSchema {
 	columns := make(map[string]database.ColumnDef)
 
@@ -179,18 +181,18 @@ func (l *SchemaLoader) convertToTableSchema(name string, table YAMLTable) databa
 	}
 }
 
-// GetSchema returns a schema by table name
+// GetSchema returns a schema by table name.
 func (l *SchemaLoader) GetSchema(tableName string) (database.TableSchema, bool) {
 	schema, ok := l.schemas[tableName]
 	return schema, ok
 }
 
-// GetAllSchemas returns all loaded schemas
+// GetAllSchemas returns all loaded schemas.
 func (l *SchemaLoader) GetAllSchemas() map[string]database.TableSchema {
 	return l.schemas
 }
 
-// GenerateSQL generates SQL for all schemas using the specified driver
+// GenerateSQL generates SQL for all schemas using the specified driver.
 func (l *SchemaLoader) GenerateSQL(driver database.DatabaseDriver) ([]string, error) {
 	var queries []string
 

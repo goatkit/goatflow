@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// TicketState represents the state of a ticket
+// TicketState represents the state of a ticket.
 type TicketState struct {
 	ID         uint      `json:"id" db:"id"`
 	Name       string    `json:"name" db:"name"`
@@ -18,7 +18,7 @@ type TicketState struct {
 	ChangeBy   uint      `json:"change_by" db:"change_by"`
 }
 
-// TicketPriority represents the priority level of a ticket
+// TicketPriority represents the priority level of a ticket.
 type TicketPriority struct {
 	ID         uint      `json:"id" db:"id"`
 	Name       string    `json:"name" db:"name"`
@@ -30,7 +30,7 @@ type TicketPriority struct {
 	ChangeBy   uint      `json:"change_by" db:"change_by"`
 }
 
-// Queue represents a ticket queue
+// Queue represents a ticket queue.
 type Queue struct {
 	ID              uint      `json:"id" db:"id"`
 	Name            string    `json:"name" db:"name"`
@@ -50,7 +50,7 @@ type Queue struct {
 	ChangeBy        uint      `json:"change_by" db:"change_by"`
 }
 
-// Ticket represents a support ticket
+// Ticket represents a support ticket.
 type Ticket struct {
 	ID                     int       `json:"id" db:"id"`
 	TicketNumber           string    `json:"tn" db:"tn"` // Ticket Number (tn field for compatibility)
@@ -99,7 +99,7 @@ type PendingReminder struct {
 	StateName         string    `json:"state_name"`
 }
 
-// Article represents a message/comment within a ticket
+// Article represents a message/comment within a ticket.
 type Article struct {
 	ID                     int         `json:"id" db:"id"`
 	TicketID               int         `json:"ticket_id" db:"ticket_id"`
@@ -129,7 +129,7 @@ type Article struct {
 	Attachments []Attachment `json:"attachments,omitempty"`
 }
 
-// Attachment represents a file attachment to an article
+// Attachment represents a file attachment to an article.
 type Attachment struct {
 	ID                 uint      `json:"id" db:"id"`
 	ArticleID          uint      `json:"article_id" db:"article_id"`
@@ -146,7 +146,7 @@ type Attachment struct {
 	ChangeBy           uint      `json:"change_by" db:"change_by"`
 }
 
-// TicketCreateRequest represents a request to create a new ticket
+// TicketCreateRequest represents a request to create a new ticket.
 type TicketCreateRequest struct {
 	Title          string   `json:"title" binding:"required,min=1,max=255"`
 	QueueID        uint     `json:"queue_id" binding:"required"`
@@ -160,7 +160,7 @@ type TicketCreateRequest struct {
 	Attachments    []string `json:"attachments,omitempty"` // Base64 encoded files
 }
 
-// TicketUpdateRequest represents a request to update a ticket
+// TicketUpdateRequest represents a request to update a ticket.
 type TicketUpdateRequest struct {
 	Title             *string `json:"title,omitempty" binding:"omitempty,min=1,max=255"`
 	QueueID           *uint   `json:"queue_id,omitempty"`
@@ -173,7 +173,7 @@ type TicketUpdateRequest struct {
 	TicketLockID      *int    `json:"ticket_lock_id,omitempty"`
 }
 
-// ArticleCreateRequest represents a request to add an article to a ticket
+// ArticleCreateRequest represents a request to add an article to a ticket.
 type ArticleCreateRequest struct {
 	TicketID             uint     `json:"ticket_id" binding:"required"`
 	ArticleTypeID        int      `json:"article_type_id,omitempty"` // defaults to note-internal
@@ -185,7 +185,7 @@ type ArticleCreateRequest struct {
 	Attachments          []string `json:"attachments,omitempty"` // Base64 encoded files
 }
 
-// TicketListRequest represents query parameters for listing tickets
+// TicketListRequest represents query parameters for listing tickets.
 type TicketListRequest struct {
 	Page                int     `json:"page,omitempty" form:"page"`
 	PerPage             int     `json:"per_page,omitempty" form:"per_page"`
@@ -203,7 +203,7 @@ type TicketListRequest struct {
 	ExcludeClosedStates bool    `json:"-"`
 }
 
-// TicketListResponse represents a paginated list of tickets
+// TicketListResponse represents a paginated list of tickets.
 type TicketListResponse struct {
 	Tickets    []Ticket `json:"tickets"`
 	Total      int      `json:"total"`
@@ -212,7 +212,7 @@ type TicketListResponse struct {
 	TotalPages int      `json:"total_pages"`
 }
 
-// Constants for ticket states
+// Constants for ticket states.
 const (
 	TicketStateNew     = 1
 	TicketStateOpen    = 2
@@ -221,14 +221,14 @@ const (
 	TicketStatePending = 5
 )
 
-// Constants for ticket lock states
+// Constants for ticket lock states.
 const (
 	TicketUnlocked  = 1
 	TicketLocked    = 2
 	TicketTmpLocked = 3
 )
 
-// Constants for article types
+// Constants for article types.
 const (
 	ArticleTypeEmailExternal = 1
 	ArticleTypeEmailInternal = 2
@@ -240,7 +240,7 @@ const (
 	ArticleTypeNoteExternal  = 8
 )
 
-// Constants for sender types
+// Constants for sender types.
 const (
 	SenderTypeAgent    = 1
 	SenderTypeSystem   = 2
@@ -249,22 +249,22 @@ const (
 
 // Helper methods
 
-// IsLocked returns true if the ticket is locked
+// IsLocked returns true if the ticket is locked.
 func (t *Ticket) IsLocked() bool {
 	return t.TicketLockID != TicketUnlocked
 }
 
-// IsClosed returns true if the ticket is in a closed state
+// IsClosed returns true if the ticket is in a closed state.
 func (t *Ticket) IsClosed() bool {
 	return t.State != nil && t.State.TypeID == TicketStateClosed
 }
 
-// IsArchived returns true if the ticket is archived
+// IsArchived returns true if the ticket is archived.
 func (t *Ticket) IsArchived() bool {
 	return t.ArchiveFlag == 1
 }
 
-// CanBeEditedBy checks if a user can edit this ticket
+// CanBeEditedBy checks if a user can edit this ticket.
 func (t *Ticket) CanBeEditedBy(userID int, role string) bool {
 	// Admins can always edit
 	if role == "Admin" {
@@ -296,7 +296,7 @@ func (t *Ticket) CanBeEditedBy(userID int, role string) bool {
 	return false
 }
 
-// NullableUint converts a uint to a nullable uint for database operations
+// NullableUint converts a uint to a nullable uint for database operations.
 func NullableUint(v uint) *uint {
 	if v == 0 {
 		return nil
@@ -304,7 +304,7 @@ func NullableUint(v uint) *uint {
 	return &v
 }
 
-// NullableString converts a string to a nullable string for database operations
+// NullableString converts a string to a nullable string for database operations.
 func NullableString(v string) *string {
 	if v == "" {
 		return nil
@@ -312,7 +312,7 @@ func NullableString(v string) *string {
 	return &v
 }
 
-// DerefUint safely dereferences a uint pointer
+// DerefUint safely dereferences a uint pointer.
 func DerefUint(p *uint) uint {
 	if p == nil {
 		return 0
@@ -320,7 +320,7 @@ func DerefUint(p *uint) uint {
 	return *p
 }
 
-// DerefString safely dereferences a string pointer
+// DerefString safely dereferences a string pointer.
 func DerefString(p *string) string {
 	if p == nil {
 		return ""
@@ -328,27 +328,27 @@ func DerefString(p *string) string {
 	return *p
 }
 
-// ValidateTicketState validates that a state ID is valid
+// ValidateTicketState validates that a state ID is valid.
 func ValidateTicketState(stateID uint) bool {
 	return stateID >= TicketStateNew && stateID <= TicketStatePending
 }
 
-// ValidateTicketLock validates that a lock ID is valid
+// ValidateTicketLock validates that a lock ID is valid.
 func ValidateTicketLock(lockID int) bool {
 	return lockID >= TicketUnlocked && lockID <= TicketTmpLocked
 }
 
-// ValidateArticleType validates that an article type ID is valid
+// ValidateArticleType validates that an article type ID is valid.
 func ValidateArticleType(typeID int) bool {
 	return typeID >= ArticleTypeEmailExternal && typeID <= ArticleTypeNoteExternal
 }
 
-// ValidateSenderType validates that a sender type ID is valid
+// ValidateSenderType validates that a sender type ID is valid.
 func ValidateSenderType(typeID int) bool {
 	return typeID >= SenderTypeAgent && typeID <= SenderTypeCustomer
 }
 
-// ScanTicket is a helper to scan a ticket row from the database
+// ScanTicket is a helper to scan a ticket row from the database.
 func ScanTicket(rows *sql.Rows) (*Ticket, error) {
 	var t Ticket
 	err := rows.Scan(

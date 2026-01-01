@@ -6,8 +6,9 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 	_ "github.com/lib/pq"
+
+	"github.com/gotrs-io/gotrs-ce/internal/services/adapter"
 )
 
 // GetDB returns the database connection singleton from the service registry.

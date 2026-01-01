@@ -9,19 +9,19 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
-// TicketMergeService handles ticket merging and splitting operations
+// TicketMergeService handles ticket merging and splitting operations.
 type TicketMergeService struct {
 	repo repository.TicketMergeRepository
 }
 
-// NewTicketMergeService creates a new ticket merge service
+// NewTicketMergeService creates a new ticket merge service.
 func NewTicketMergeService(repo repository.TicketMergeRepository) *TicketMergeService {
 	return &TicketMergeService{
 		repo: repo,
 	}
 }
 
-// MergeTree represents a hierarchical view of merged tickets
+// MergeTree represents a hierarchical view of merged tickets.
 type MergeTree struct {
 	ParentID      uint        `json:"parent_id"`
 	Children      []MergeNode `json:"children"`
@@ -29,7 +29,7 @@ type MergeTree struct {
 	Depth         int         `json:"depth"`
 }
 
-// MergeNode represents a node in the merge tree
+// MergeNode represents a node in the merge tree.
 type MergeNode struct {
 	TicketID uint      `json:"ticket_id"`
 	MergedAt time.Time `json:"merged_at"`
@@ -38,7 +38,7 @@ type MergeNode struct {
 	IsActive bool      `json:"is_active"`
 }
 
-// MergeTickets merges multiple child tickets into a parent ticket
+// MergeTickets merges multiple child tickets into a parent ticket.
 func (s *TicketMergeService) MergeTickets(ctx context.Context, request *models.MergeRequest, userID uint) ([]uint, error) {
 	// Validate the merge request first
 	validation, err := s.ValidateMerge(ctx, request)
@@ -80,7 +80,7 @@ func (s *TicketMergeService) MergeTickets(ctx context.Context, request *models.M
 	return mergeIDs, nil
 }
 
-// ValidateMerge validates if tickets can be merged
+// ValidateMerge validates if tickets can be merged.
 func (s *TicketMergeService) ValidateMerge(ctx context.Context, request *models.MergeRequest) (*models.MergeValidation, error) {
 	validation := &models.MergeValidation{
 		CanMerge:    true,
@@ -140,7 +140,7 @@ func (s *TicketMergeService) ValidateMerge(ctx context.Context, request *models.
 	return validation, nil
 }
 
-// UnmergeTicket unmerges a previously merged ticket
+// UnmergeTicket unmerges a previously merged ticket.
 func (s *TicketMergeService) UnmergeTicket(ctx context.Context, request *models.UnmergeRequest, userID uint) error {
 	// Find the merge record for this child ticket
 	merge, err := s.repo.GetMergeByChild(ctx, request.TicketID)
@@ -162,7 +162,7 @@ func (s *TicketMergeService) UnmergeTicket(ctx context.Context, request *models.
 	return nil
 }
 
-// SplitTicket splits messages from one ticket into a new ticket
+// SplitTicket splits messages from one ticket into a new ticket.
 func (s *TicketMergeService) SplitTicket(ctx context.Context, request *models.SplitRequest, userID uint) *models.SplitResult {
 	result := &models.SplitResult{
 		Success: false,
@@ -197,7 +197,7 @@ func (s *TicketMergeService) SplitTicket(ctx context.Context, request *models.Sp
 	return result
 }
 
-// GetMergeTree returns a hierarchical view of merged tickets
+// GetMergeTree returns a hierarchical view of merged tickets.
 func (s *TicketMergeService) GetMergeTree(ctx context.Context, parentID uint) (*MergeTree, error) {
 	tree := &MergeTree{
 		ParentID: parentID,
@@ -227,27 +227,27 @@ func (s *TicketMergeService) GetMergeTree(ctx context.Context, parentID uint) (*
 	return tree, nil
 }
 
-// IsTicketMerged checks if a ticket is currently merged
+// IsTicketMerged checks if a ticket is currently merged.
 func (s *TicketMergeService) IsTicketMerged(ctx context.Context, ticketID uint) (bool, error) {
 	return s.repo.IsMerged(ctx, ticketID)
 }
 
-// GetChildTickets returns all child ticket IDs for a parent
+// GetChildTickets returns all child ticket IDs for a parent.
 func (s *TicketMergeService) GetChildTickets(ctx context.Context, parentID uint) ([]uint, error) {
 	return s.repo.GetAllChildren(ctx, parentID)
 }
 
-// GetMergeHistory returns the merge history for a ticket
+// GetMergeHistory returns the merge history for a ticket.
 func (s *TicketMergeService) GetMergeHistory(ctx context.Context, ticketID uint) ([]models.TicketMerge, error) {
 	return s.repo.GetMergeHistory(ctx, ticketID)
 }
 
-// GetMergeStatistics returns merge statistics for a time period
+// GetMergeStatistics returns merge statistics for a time period.
 func (s *TicketMergeService) GetMergeStatistics(ctx context.Context, from, to time.Time) (*models.MergeStatistics, error) {
 	return s.repo.GetMergeStatistics(ctx, from, to)
 }
 
-// CreateTicketRelation creates a relation between two tickets
+// CreateTicketRelation creates a relation between two tickets.
 func (s *TicketMergeService) CreateTicketRelation(ctx context.Context, relation *models.TicketRelation) error {
 	// Validate relation type
 	validTypes := map[string]bool{
@@ -271,17 +271,17 @@ func (s *TicketMergeService) CreateTicketRelation(ctx context.Context, relation 
 	return s.repo.CreateTicketRelation(ctx, relation)
 }
 
-// GetTicketRelations returns all relations for a ticket
+// GetTicketRelations returns all relations for a ticket.
 func (s *TicketMergeService) GetTicketRelations(ctx context.Context, ticketID uint) ([]models.TicketRelation, error) {
 	return s.repo.GetTicketRelations(ctx, ticketID)
 }
 
-// DeleteTicketRelation removes a ticket relation
+// DeleteTicketRelation removes a ticket relation.
 func (s *TicketMergeService) DeleteTicketRelation(ctx context.Context, relationID uint) error {
 	return s.repo.DeleteTicketRelation(ctx, relationID)
 }
 
-// GetRelatedTickets returns all tickets related to a given ticket
+// GetRelatedTickets returns all tickets related to a given ticket.
 func (s *TicketMergeService) GetRelatedTickets(ctx context.Context, ticketID uint) (map[string][]uint, error) {
 	relations, err := s.repo.GetTicketRelations(ctx, ticketID)
 	if err != nil {
@@ -303,7 +303,7 @@ func (s *TicketMergeService) GetRelatedTickets(ctx context.Context, ticketID uin
 	return related, nil
 }
 
-// BulkUnmerge unmerges multiple tickets at once
+// BulkUnmerge unmerges multiple tickets at once.
 func (s *TicketMergeService) BulkUnmerge(ctx context.Context, ticketIDs []uint, reason string, userID uint) (int, error) {
 	unmerged := 0
 
@@ -322,7 +322,7 @@ func (s *TicketMergeService) BulkUnmerge(ctx context.Context, ticketIDs []uint, 
 	return unmerged, nil
 }
 
-// FindDuplicates suggests potential duplicate tickets
+// FindDuplicates suggests potential duplicate tickets.
 func (s *TicketMergeService) FindDuplicates(ctx context.Context, ticketID uint) ([]uint, error) {
 	// This is a placeholder for duplicate detection logic
 	// In a real implementation, this would:
@@ -334,7 +334,7 @@ func (s *TicketMergeService) FindDuplicates(ctx context.Context, ticketID uint) 
 	return []uint{}, nil
 }
 
-// AutoMergeByRules applies automatic merge rules
+// AutoMergeByRules applies automatic merge rules.
 func (s *TicketMergeService) AutoMergeByRules(ctx context.Context, rules []MergeRule) (int, error) {
 	// This would implement automatic merging based on predefined rules
 	// For example: merge all tickets from same customer within 1 hour with same subject
@@ -345,7 +345,7 @@ func (s *TicketMergeService) AutoMergeByRules(ctx context.Context, rules []Merge
 	return merged, nil
 }
 
-// MergeRule defines a rule for automatic merging
+// MergeRule defines a rule for automatic merging.
 type MergeRule struct {
 	Name       string `json:"name"`
 	Condition  string `json:"condition"`

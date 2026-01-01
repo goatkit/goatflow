@@ -27,7 +27,7 @@ type EmailAccount struct {
 	Queue               *Queue    `json:"queue,omitempty"`
 }
 
-// EmailTemplate represents an email template for automated responses
+// EmailTemplate represents an email template for automated responses.
 type EmailTemplate struct {
 	ID              int       `json:"id" db:"id"`
 	TemplateName    string    `json:"template_name" db:"template_name"`
@@ -41,7 +41,7 @@ type EmailTemplate struct {
 	UpdatedBy       int       `json:"updated_by" db:"updated_by"`
 }
 
-// Organization represents a customer organization
+// Organization represents a customer organization.
 type Organization struct {
 	ID            string    `json:"id" db:"id"`
 	Name          string    `json:"name" db:"name"`
@@ -60,7 +60,7 @@ type Organization struct {
 	UpdatedBy     int       `json:"updated_by" db:"updated_by"`
 }
 
-// CustomerAccount represents a customer account
+// CustomerAccount represents a customer account.
 type CustomerAccount struct {
 	ID             int       `json:"id" db:"id"`
 	Username       string    `json:"username" db:"username"`
@@ -80,7 +80,7 @@ type CustomerAccount struct {
 	Organization *Organization `json:"organization,omitempty"`
 }
 
-// TicketCategory represents a category for ticket classification
+// TicketCategory represents a category for ticket classification.
 type TicketCategory struct {
 	ID               int       `json:"id" db:"id"`
 	Name             string    `json:"name" db:"name"`
@@ -97,7 +97,7 @@ type TicketCategory struct {
 	SubCategories  []*TicketCategory `json:"sub_categories,omitempty"`
 }
 
-// ArticleAttachment represents a file attachment to an article
+// ArticleAttachment represents a file attachment to an article.
 type ArticleAttachment struct {
 	ID                 int       `json:"id" db:"id"`
 	ArticleID          int       `json:"article_id" db:"article_id"`
@@ -114,7 +114,7 @@ type ArticleAttachment struct {
 	ChangeBy           int       `json:"change_by" db:"change_by"`
 }
 
-// Template types
+// Template types.
 const (
 	TemplateTypeGreeting       = "greeting"
 	TemplateTypeSignature      = "signature"

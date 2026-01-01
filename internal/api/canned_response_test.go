@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -728,7 +727,7 @@ func TestCannedResponseImportExport(t *testing.T) {
 	})
 }
 
-// resetCannedResponsesTestData resets the mock data to its initial state for test isolation
+// resetCannedResponsesTestData resets the mock data to its initial state for test isolation.
 func resetCannedResponsesTestData() {
 	cannedResponses = map[int]*CannedResponse{
 		1: {

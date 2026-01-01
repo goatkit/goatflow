@@ -7,7 +7,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
 
-// LookupRepository defines the interface for lookup data persistence
+// LookupRepository defines the interface for lookup data persistence.
 type LookupRepository interface {
 	// Queue operations
 	GetQueues(ctx context.Context) ([]models.QueueInfo, error)
@@ -42,7 +42,7 @@ type LookupRepository interface {
 	ImportConfiguration(ctx context.Context, config *LookupConfiguration) error
 }
 
-// LookupAuditLog represents an audit log entry for lookup changes
+// LookupAuditLog represents an audit log entry for lookup changes.
 type LookupAuditLog struct {
 	ID         int       `json:"id"`
 	EntityType string    `json:"entity_type"` // queue, priority, type, status
@@ -56,7 +56,7 @@ type LookupAuditLog struct {
 	IPAddress  string    `json:"ip_address"`
 }
 
-// LookupConfiguration represents exportable/importable configuration
+// LookupConfiguration represents exportable/importable configuration.
 type LookupConfiguration struct {
 	Version    string              `json:"version"`
 	ExportedAt time.Time           `json:"exported_at"`

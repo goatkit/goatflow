@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// IncidentSeverity represents the severity level of an incident
+// IncidentSeverity represents the severity level of an incident.
 type IncidentSeverity string
 
 const (
@@ -14,7 +14,7 @@ const (
 	SeverityLow      IncidentSeverity = "low"      // Minor impact
 )
 
-// IncidentStatus represents the current status of an incident
+// IncidentStatus represents the current status of an incident.
 type IncidentStatus string
 
 const (
@@ -26,7 +26,7 @@ const (
 	IncidentStatusClosed     IncidentStatus = "closed"
 )
 
-// IncidentCategory represents the category of an incident
+// IncidentCategory represents the category of an incident.
 type IncidentCategory string
 
 const (
@@ -39,7 +39,7 @@ const (
 	CategoryOther       IncidentCategory = "other"
 )
 
-// Incident represents an ITSM incident
+// Incident represents an ITSM incident.
 type Incident struct {
 	ID             uint             `json:"id" gorm:"primaryKey"`
 	IncidentNumber string           `json:"incident_number" gorm:"uniqueIndex;not null"`
@@ -124,7 +124,7 @@ type Incident struct {
 	LastModifiedBy   *User     `json:"last_modified_by,omitempty" gorm:"foreignKey:LastModifiedByID"`
 }
 
-// IncidentComment represents a comment on an incident
+// IncidentComment represents a comment on an incident.
 type IncidentComment struct {
 	ID         uint      `json:"id" gorm:"primaryKey"`
 	IncidentID uint      `json:"incident_id" gorm:"not null"`
@@ -138,7 +138,7 @@ type IncidentComment struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-// IncidentAttachment represents a file attached to an incident
+// IncidentAttachment represents a file attached to an incident.
 type IncidentAttachment struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
 	IncidentID   uint      `json:"incident_id" gorm:"not null"`
@@ -152,7 +152,7 @@ type IncidentAttachment struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// IncidentHistory tracks changes to an incident
+// IncidentHistory tracks changes to an incident.
 type IncidentHistory struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
 	IncidentID   uint      `json:"incident_id" gorm:"not null"`
@@ -166,7 +166,7 @@ type IncidentHistory struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// IncidentRelation represents relationships between incidents
+// IncidentRelation represents relationships between incidents.
 type IncidentRelation struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
 	IncidentID   uint      `json:"incident_id" gorm:"not null"`
@@ -177,7 +177,7 @@ type IncidentRelation struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-// IncidentListRequest represents a request to list incidents
+// IncidentListRequest represents a request to list incidents.
 type IncidentListRequest struct {
 	Page            int              `json:"page" form:"page"`
 	PerPage         int              `json:"per_page" form:"per_page"`
@@ -194,7 +194,7 @@ type IncidentListRequest struct {
 	ToDate          *time.Time       `json:"to_date" form:"to_date"`
 }
 
-// IncidentListResponse represents a response containing a list of incidents
+// IncidentListResponse represents a response containing a list of incidents.
 type IncidentListResponse struct {
 	Incidents  []*Incident `json:"incidents"`
 	Total      int64       `json:"total"`
@@ -203,7 +203,7 @@ type IncidentListResponse struct {
 	TotalPages int         `json:"total_pages"`
 }
 
-// CalculatePriority calculates priority based on impact and urgency matrix
+// CalculatePriority calculates priority based on impact and urgency matrix.
 func (i *Incident) CalculatePriority() {
 	// Priority matrix (ITIL standard)
 	// Impact/Urgency: 1=Critical, 2=High, 3=Medium, 4=Low, 5=Planning
@@ -231,7 +231,7 @@ func (i *Incident) CalculatePriority() {
 	i.Priority = matrix[i.Impact][i.Urgency]
 }
 
-// GetTimeToRespond calculates time to respond in minutes
+// GetTimeToRespond calculates time to respond in minutes.
 func (i *Incident) GetTimeToRespond() int {
 	if i.AssignedAt == nil || i.ReportedAt.IsZero() {
 		return 0
@@ -239,7 +239,7 @@ func (i *Incident) GetTimeToRespond() int {
 	return int(i.AssignedAt.Sub(i.ReportedAt).Minutes())
 }
 
-// GetTimeToResolve calculates time to resolve in minutes
+// GetTimeToResolve calculates time to resolve in minutes.
 func (i *Incident) GetTimeToResolve() int {
 	if i.ResolvedAt == nil || i.ReportedAt.IsZero() {
 		return 0

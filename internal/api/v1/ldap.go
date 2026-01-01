@@ -6,23 +6,23 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
 
-// LDAPHandler handles LDAP-related API endpoints
+// LDAPHandler handles LDAP-related API endpoints.
 type LDAPHandler struct {
 	ldapService *service.LDAPService
 }
 
-// NewLDAPHandler creates a new LDAP handler
+// NewLDAPHandler creates a new LDAP handler.
 func NewLDAPHandler(ldapService *service.LDAPService) *LDAPHandler {
 	return &LDAPHandler{
 		ldapService: ldapService,
 	}
 }
 
-// ConfigureLDAP configures LDAP integration
-// POST /api/v1/ldap/configure
+// POST /api/v1/ldap/configure.
 func (h *LDAPHandler) ConfigureLDAP(c *gin.Context) {
 	var config service.LDAPConfig
 	if err := c.ShouldBindJSON(&config); err != nil {
@@ -47,8 +47,7 @@ func (h *LDAPHandler) ConfigureLDAP(c *gin.Context) {
 	})
 }
 
-// TestConnection tests LDAP connection
-// POST /api/v1/ldap/test
+// POST /api/v1/ldap/test.
 func (h *LDAPHandler) TestConnection(c *gin.Context) {
 	var config service.LDAPConfig
 	if err := c.ShouldBindJSON(&config); err != nil {
@@ -79,8 +78,7 @@ func (h *LDAPHandler) TestConnection(c *gin.Context) {
 	})
 }
 
-// AuthenticateUser authenticates a user against LDAP
-// POST /api/v1/ldap/authenticate
+// POST /api/v1/ldap/authenticate.
 func (h *LDAPHandler) AuthenticateUser(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`
@@ -110,8 +108,7 @@ func (h *LDAPHandler) AuthenticateUser(c *gin.Context) {
 	})
 }
 
-// GetUser retrieves a user from LDAP
-// GET /api/v1/ldap/users/:username
+// GET /api/v1/ldap/users/:username.
 func (h *LDAPHandler) GetUser(c *gin.Context) {
 	username := c.Param("username")
 	if username == "" {
@@ -137,8 +134,7 @@ func (h *LDAPHandler) GetUser(c *gin.Context) {
 	})
 }
 
-// GetGroups retrieves groups from LDAP
-// GET /api/v1/ldap/groups
+// GET /api/v1/ldap/groups.
 func (h *LDAPHandler) GetGroups(c *gin.Context) {
 	groups, err := h.ldapService.GetGroups()
 	if err != nil {
@@ -156,8 +152,7 @@ func (h *LDAPHandler) GetGroups(c *gin.Context) {
 	})
 }
 
-// SyncUsers synchronizes users from LDAP
-// POST /api/v1/ldap/sync/users
+// POST /api/v1/ldap/sync/users.
 func (h *LDAPHandler) SyncUsers(c *gin.Context) {
 	result, err := h.ldapService.SyncUsers()
 	if err != nil {
@@ -174,8 +169,7 @@ func (h *LDAPHandler) SyncUsers(c *gin.Context) {
 	})
 }
 
-// GetSyncStatus returns the status of LDAP sync
-// GET /api/v1/ldap/sync/status
+// GET /api/v1/ldap/sync/status.
 func (h *LDAPHandler) GetSyncStatus(c *gin.Context) {
 	status := h.ldapService.GetSyncStatus()
 	c.JSON(http.StatusOK, gin.H{
@@ -184,8 +178,7 @@ func (h *LDAPHandler) GetSyncStatus(c *gin.Context) {
 	})
 }
 
-// SearchUsers searches for users in LDAP with filters
-// GET /api/v1/ldap/users/search
+// GET /api/v1/ldap/users/search.
 func (h *LDAPHandler) SearchUsers(c *gin.Context) {
 	query := c.Query("q")
 	limitStr := c.DefaultQuery("limit", "50")
@@ -206,8 +199,7 @@ func (h *LDAPHandler) SearchUsers(c *gin.Context) {
 	})
 }
 
-// GetConfiguration returns current LDAP configuration (masked)
-// GET /api/v1/ldap/config
+// GET /api/v1/ldap/config.
 func (h *LDAPHandler) GetConfiguration(c *gin.Context) {
 	status := h.ldapService.GetSyncStatus()
 
@@ -225,8 +217,7 @@ func (h *LDAPHandler) GetConfiguration(c *gin.Context) {
 	})
 }
 
-// ImportUsers imports specific users from LDAP
-// POST /api/v1/ldap/import/users
+// POST /api/v1/ldap/import/users.
 func (h *LDAPHandler) ImportUsers(c *gin.Context) {
 	var req struct {
 		Usernames []string `json:"usernames" binding:"required"`
@@ -294,8 +285,7 @@ func (h *LDAPHandler) ImportUsers(c *gin.Context) {
 	})
 }
 
-// GetUserMappings returns LDAP to GOTRS user mappings
-// GET /api/v1/ldap/mappings/users
+// GET /api/v1/ldap/mappings/users.
 func (h *LDAPHandler) GetUserMappings(c *gin.Context) {
 	// This would query the mapping repository in real implementation
 	c.JSON(http.StatusOK, gin.H{
@@ -305,8 +295,7 @@ func (h *LDAPHandler) GetUserMappings(c *gin.Context) {
 	})
 }
 
-// GetGroupMappings returns LDAP to GOTRS group mappings
-// GET /api/v1/ldap/mappings/groups
+// GET /api/v1/ldap/mappings/groups.
 func (h *LDAPHandler) GetGroupMappings(c *gin.Context) {
 	// This would query the mapping repository in real implementation
 	c.JSON(http.StatusOK, gin.H{
@@ -316,8 +305,7 @@ func (h *LDAPHandler) GetGroupMappings(c *gin.Context) {
 	})
 }
 
-// GetAuthenticationLogs returns LDAP authentication logs
-// GET /api/v1/ldap/logs/auth
+// GET /api/v1/ldap/logs/auth.
 func (h *LDAPHandler) GetAuthenticationLogs(c *gin.Context) {
 	limitStr := c.DefaultQuery("limit", "100")
 	username := c.Query("username")
@@ -337,8 +325,7 @@ func (h *LDAPHandler) GetAuthenticationLogs(c *gin.Context) {
 	})
 }
 
-// DisableLDAP disables LDAP integration
-// POST /api/v1/ldap/disable
+// POST /api/v1/ldap/disable.
 func (h *LDAPHandler) DisableLDAP(c *gin.Context) {
 	// Stop the LDAP service
 	h.ldapService.Stop()
@@ -349,7 +336,7 @@ func (h *LDAPHandler) DisableLDAP(c *gin.Context) {
 	})
 }
 
-// RegisterRoutes registers LDAP routes
+// RegisterRoutes registers LDAP routes.
 func (h *LDAPHandler) RegisterRoutes(r *gin.RouterGroup) {
 	ldap := r.Group("/ldap")
 	{

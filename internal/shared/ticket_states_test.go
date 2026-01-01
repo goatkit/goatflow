@@ -173,7 +173,7 @@ func TestAcceptsJSONResponse(t *testing.T) {
 	}
 }
 
-// acceptsJSONFromHeader is a helper for testing the logic without gin.Context
+// acceptsJSONFromHeader is a helper for testing the logic without gin.Context.
 func acceptsJSONFromHeader(accept string) bool {
 	if accept == "" {
 		return false

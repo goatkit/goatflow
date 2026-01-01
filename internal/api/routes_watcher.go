@@ -1,13 +1,14 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sync/atomic"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 // hotReloadableEngine holds an *gin.Engine atomically swapped during hot reload.
@@ -87,7 +88,7 @@ func startRoutesWatcher() {
 	log.Println("[routes-watcher] enabled (poll mode)")
 }
 
-// registerYAMLRoutesManifestOnly rebuilds the manifest without re-registering routes
+// registerYAMLRoutesManifestOnly rebuilds the manifest without re-registering routes.
 func registerYAMLRoutesManifestOnly() {
 	docs, err := loadYAMLRouteGroups("./routes")
 	if err != nil {

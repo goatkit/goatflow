@@ -1,4 +1,3 @@
-
 package api
 
 import (
@@ -13,9 +12,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // setupRoleTestRouter creates a test router using the canonical route definitions.
@@ -24,7 +24,7 @@ func setupRoleTestRouter() *gin.Engine {
 	return SetupTestRouterWithRoutes(GetAdminRolesRoutes())
 }
 
-// createTestRole creates a test role in the database and returns its ID
+// createTestRole creates a test role in the database and returns its ID.
 func createTestRole(t *testing.T, name string) (int, bool) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -50,7 +50,7 @@ func createTestRole(t *testing.T, name string) (int, bool) {
 	return id, true
 }
 
-// cleanupTestRoleByName removes a test role by name
+// cleanupTestRoleByName removes a test role by name.
 func cleanupTestRoleByName(t *testing.T, name string) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
@@ -59,7 +59,7 @@ func cleanupTestRoleByName(t *testing.T, name string) {
 	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM roles WHERE name = $1`), name)
 }
 
-// createTestUser creates a test user for role assignment tests
+// createTestUser creates a test user for role assignment tests.
 func createTestUserForRole(t *testing.T, login string) (int, bool) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {

@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// TestTemplateTranslationKeys verifies that all translation keys used in templates exist
+// TestTemplateTranslationKeys verifies that all translation keys used in templates exist.
 func TestTemplateTranslationKeys(t *testing.T) {
 	// Initialize i18n
 	if err := Initialize(&Config{
@@ -92,7 +92,7 @@ func TestTemplateTranslationKeys(t *testing.T) {
 	}
 }
 
-// suggestCorrectKey tries to find a similar key that exists
+// suggestCorrectKey tries to find a similar key that exists.
 func suggestCorrectKey(i18n *I18n, wrongKey string) string {
 	// Common mistakes: using common.X when it should be buttons.X
 	replacements := map[string]string{
@@ -127,7 +127,7 @@ func suggestCorrectKey(i18n *I18n, wrongKey string) string {
 	return ""
 }
 
-// TestTranslationKeyConsistency ensures consistent key usage across the codebase
+// TestTranslationKeyConsistency ensures consistent key usage across the codebase.
 func TestTranslationKeyConsistency(t *testing.T) {
 	// Initialize i18n
 	if err := Initialize(&Config{

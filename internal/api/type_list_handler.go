@@ -4,10 +4,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// HandleListTypesAPI handles GET /api/v1/types
+// HandleListTypesAPI handles GET /api/v1/types.
 func HandleListTypesAPI(c *gin.Context) {
 	// Optional auth for now (treat as public list if no token)
 	db, err := database.GetDB()
@@ -29,7 +30,7 @@ func HandleListTypesAPI(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "data": []interface{}{}})
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var items []gin.H
 	for rows.Next() {
