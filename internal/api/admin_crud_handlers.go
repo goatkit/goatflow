@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -58,7 +59,8 @@ func HandleAdminUsersCreate(c *gin.Context) {
 
 	// Check for existing user with same login
 	var exists bool
-	if err := db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)"), login).Scan(&exists); err == nil && exists {
+	existsQuery := "SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)"
+	if err := db.QueryRow(database.ConvertPlaceholders(existsQuery), login).Scan(&exists); err == nil && exists {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User already exists"})
 		return
 	}
@@ -102,14 +104,24 @@ func HandleAdminUsersCreate(c *gin.Context) {
 			}
 			groupID, convErr := strconv.Atoi(idStr)
 			if convErr != nil {
-				db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), user.ID)
-				db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = $1"), user.ID)
+				// Cleanup on error - log but don't fail on cleanup errors
+				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), user.ID); err != nil {
+					log.Printf("cleanup error: %v", err)
+				}
+				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = $1"), user.ID); err != nil {
+					log.Printf("cleanup error: %v", err)
+				}
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
 				return
 			}
 			if err := groupRepo.AddUserToGroup(user.ID, uint(groupID)); err != nil {
-				db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), user.ID)
-				db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = $1"), user.ID)
+				// Cleanup on error - log but don't fail on cleanup errors
+				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), user.ID); err != nil {
+					log.Printf("cleanup error: %v", err)
+				}
+				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = $1"), user.ID); err != nil {
+					log.Printf("cleanup error: %v", err)
+				}
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign groups"})
 				return
 			}
@@ -199,7 +211,7 @@ func HandleAdminUsersList(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var users []gin.H
 	for rows.Next() {
@@ -340,7 +352,7 @@ func HandleAdminGroupsUsers(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var users []gin.H
 	for rows.Next() {
@@ -371,6 +383,8 @@ func HandleAdminGroupsUsers(c *gin.Context) {
 }
 
 // HandleAdminGroupsAddUser handles POST /admin/groups/:id/users.
+//
+//nolint:dupl // Similar boilerplate to queue_api_handlers.HandleAPIQueueStatus but different logic
 func HandleAdminGroupsAddUser(c *gin.Context) {
 	groupID := c.Param("id")
 	id, err := strconv.Atoi(groupID)

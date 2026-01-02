@@ -1880,21 +1880,15 @@ type simpleDatabaseWrapper struct {
 }
 
 func (w *simpleDatabaseWrapper) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	remapped := database.RemapArgsForMySQL(query, args)
-	converted := database.ConvertPlaceholders(query)
-	return w.db.QueryRow(converted, remapped...)
+	return database.GetAdapter().QueryRow(w.db, query, args...)
 }
 
 func (w *simpleDatabaseWrapper) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	remapped := database.RemapArgsForMySQL(query, args)
-	converted := database.ConvertPlaceholders(query)
-	return w.db.Query(converted, remapped...)
+	return database.GetAdapter().Query(w.db, query, args...)
 }
 
 func (w *simpleDatabaseWrapper) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	remapped := database.RemapArgsForMySQL(query, args)
-	converted := database.ConvertPlaceholders(query)
-	return w.db.Exec(converted, remapped...)
+	return database.GetAdapter().Exec(w.db, query, args...)
 }
 
 // Implement the required interface methods (minimal implementation for lambda use).
@@ -2204,29 +2198,23 @@ func (h *DynamicModuleHandler) generateCSVResponse(c *gin.Context, config *Modul
 
 // query executes SQL with driver-compatible placeholders.
 func (h *DynamicModuleHandler) query(query string, args ...interface{}) (*sql.Rows, error) {
-	remappedArgs := database.RemapArgsForMySQL(query, args)
-	converted := database.ConvertPlaceholders(query)
-	rows, err := h.db.Query(converted, remappedArgs...)
+	rows, err := database.GetAdapter().Query(h.db, query, args...)
 	if err != nil {
-		fmt.Printf("Dynamic module query failed: %s (args=%v): %v\n", converted, remappedArgs, err)
+		fmt.Printf("Dynamic module query failed: %s (args=%v): %v\n", query, args, err)
 	}
 	return rows, err
 }
 
 // queryRow mirrors query but returns a single row handle.
 func (h *DynamicModuleHandler) queryRow(query string, args ...interface{}) *sql.Row {
-	remappedArgs := database.RemapArgsForMySQL(query, args)
-	converted := database.ConvertPlaceholders(query)
-	return h.db.QueryRow(converted, remappedArgs...)
+	return database.GetAdapter().QueryRow(h.db, query, args...)
 }
 
 // exec runs statements with automatic placeholder conversion.
 func (h *DynamicModuleHandler) exec(query string, args ...interface{}) (sql.Result, error) {
-	remappedArgs := database.RemapArgsForMySQL(query, args)
-	converted := database.ConvertPlaceholders(query)
-	res, err := h.db.Exec(converted, remappedArgs...)
+	res, err := database.GetAdapter().Exec(h.db, query, args...)
 	if err != nil {
-		fmt.Printf("Dynamic module exec failed: %s (args=%v): %v\n", converted, remappedArgs, err)
+		fmt.Printf("Dynamic module exec failed: %s (args=%v): %v\n", query, args, err)
 	}
 	return res, err
 }

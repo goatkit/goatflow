@@ -561,7 +561,7 @@ func TestDefaultServicesFallbackLogic(t *testing.T) {
 			ORDER BY s.name
 		`), testLogin)
 		require.NoError(t, err)
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		var services []int
 		for rows.Next() {

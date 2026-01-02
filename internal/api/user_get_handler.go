@@ -135,7 +135,7 @@ func HandleGetUserAPI(c *gin.Context) {
 
 	rows, err := db.Query(groupQuery, userID)
 	if err == nil {
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		groups := []map[string]interface{}{}
 		for rows.Next() {
@@ -161,7 +161,7 @@ func HandleGetUserAPI(c *gin.Context) {
 				groups = append(groups, group)
 			}
 		}
-		_ = rows.Err() // Check for iteration errors
+		_ = rows.Err() //nolint:errcheck // Check for iteration errors
 		response["groups"] = groups
 	} else {
 		// Even if groups query fails, return empty array
@@ -188,7 +188,7 @@ func HandleGetUserAPI(c *gin.Context) {
 				preferences[key] = value
 			}
 		}
-		_ = prefRows.Err() // Check for iteration errors
+		_ = prefRows.Err() //nolint:errcheck // Check for iteration errors
 		if len(preferences) > 0 {
 			response["preferences"] = preferences
 		}

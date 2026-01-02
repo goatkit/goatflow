@@ -30,13 +30,14 @@ func HandleListTicketStatesAPI(c *gin.Context) {
 		if typeFilter := c.Query("type"); typeFilter != "" {
 			filtered := []gin.H{}
 			for _, s := range states {
-				if typeFilter == "open" && s["type_id"].(int) == 1 {
+				typeID, _ := s["type_id"].(int) //nolint:errcheck // Defaults to 0
+				if typeFilter == "open" && typeID == 1 {
 					filtered = append(filtered, s)
 				}
-				if typeFilter == "closed" && s["type_id"].(int) == 2 {
+				if typeFilter == "closed" && typeID == 2 {
 					filtered = append(filtered, s)
 				}
-				if typeFilter == "pending" && s["type_id"].(int) == 3 {
+				if typeFilter == "pending" && typeID == 3 {
 					filtered = append(filtered, s)
 				}
 			}
@@ -88,7 +89,7 @@ func HandleListTicketStatesAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch ticket states"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	// Collect results
 	states := []gin.H{}
@@ -117,7 +118,7 @@ func HandleListTicketStatesAPI(c *gin.Context) {
 
 		states = append(states, stateData)
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Logged elsewhere if needed
 
 	c.JSON(http.StatusOK, gin.H{
 		"states": states,

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -61,7 +62,7 @@ func HandleUpdateArticleAPI(c *gin.Context) {
 		SELECT 1 FROM article
 		WHERE id = $1 AND ticket_id = $2
 	`)
-	db.QueryRow(checkQuery, articleID, ticketID).Scan(&count)
+	_ = db.QueryRow(checkQuery, articleID, ticketID).Scan(&count) //nolint:errcheck // Defaults to 0
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
 		return
@@ -93,7 +94,9 @@ func HandleUpdateArticleAPI(c *gin.Context) {
 		WHERE id = $2
 	`)
 	// Argument order already matches placeholders left-to-right for MySQL
-	db.Exec(updateTicketQuery, userID, ticketID)
+	if _, err := db.Exec(updateTicketQuery, userID, ticketID); err != nil {
+		log.Printf("Failed to update ticket change time: %v", err)
+	}
 
 	// Return updated article
 	response := gin.H{

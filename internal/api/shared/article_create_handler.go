@@ -125,14 +125,16 @@ func HandleCreateArticleAPI(c *gin.Context) {
 	}
 
 	// Check permissions for customer users
-	if isCustomer, _ := c.Get("is_customer"); isCustomer == true {
-		customerEmail, _ := c.Get("customer_email")
-		if !customerUserID.Valid || customerUserID.String != customerEmail.(string) {
-			c.JSON(http.StatusForbidden, gin.H{
-				"success": false,
-				"error":   "Access denied",
-			})
-			return
+	if isCustomer, _ := c.Get("is_customer"); isCustomer == true { //nolint:errcheck // Defaults to nil
+		customerEmail, _ := c.Get("customer_email") //nolint:errcheck // Defaults to nil
+		if emailStr, ok := customerEmail.(string); ok {
+			if !customerUserID.Valid || customerUserID.String != emailStr {
+				c.JSON(http.StatusForbidden, gin.H{
+					"success": false,
+					"error":   "Access denied",
+				})
+				return
+			}
 		}
 	}
 

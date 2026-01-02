@@ -10,6 +10,16 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
 
+// getContextUserID extracts user_id from context safely.
+func getContextUserID(c *gin.Context) int {
+	if val, exists := c.Get("user_id"); exists {
+		if id, ok := val.(int); ok {
+			return id
+		}
+	}
+	return 1 // Default for testing
+}
+
 // APIRouter manages all v1 API routes.
 type APIRouter struct {
 	rbac         *auth.RBAC
@@ -152,10 +162,16 @@ func (router *APIRouter) setupTicketRoutes(protected *gin.RouterGroup) {
 
 	// Basic CRUD
 	tickets.GET("", router.handleListTickets)
-	tickets.POST("", middleware.RequireAnyPermission(router.rbac, auth.PermissionTicketCreate, auth.PermissionOwnTicketCreate), router.HandleCreateTicket)
+	tickets.POST("",
+		middleware.RequireAnyPermission(router.rbac, auth.PermissionTicketCreate, auth.PermissionOwnTicketCreate),
+		router.HandleCreateTicket)
 	tickets.GET("/:id", middleware.RequireTicketAccess(router.rbac), router.handleGetTicket)
-	tickets.PUT("/:id", middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate), router.handleUpdateTicket)
-	tickets.DELETE("/:id", middleware.RequirePermission(router.rbac, auth.PermissionTicketDelete), router.HandleDeleteTicket)
+	tickets.PUT("/:id",
+		middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate),
+		router.handleUpdateTicket)
+	tickets.DELETE("/:id",
+		middleware.RequirePermission(router.rbac, auth.PermissionTicketDelete),
+		router.HandleDeleteTicket)
 
 	// Ticket actions
 	tickets.POST("/:id/assign", middleware.RequirePermission(router.rbac, auth.PermissionTicketAssign), router.HandleAssignTicket)
@@ -171,9 +187,13 @@ func (router *APIRouter) setupTicketRoutes(protected *gin.RouterGroup) {
 
 	// TODO: Implement attachment handlers
 	// tickets.GET("/:id/attachments", router.handleGetTicketAttachments)
-	// tickets.POST("/:id/attachments", middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate), router.handleUploadTicketAttachment)
+	// tickets.POST("/:id/attachments",
+	//     middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate),
+	//     router.handleUploadTicketAttachment)
 	// tickets.GET("/:id/attachments/:attachment_id", router.handleDownloadTicketAttachment)
-	// tickets.DELETE("/:id/attachments/:attachment_id", middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate), router.handleDeleteTicketAttachment)
+	// tickets.DELETE("/:id/attachments/:attachment_id",
+	//     middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate),
+	//     router.handleDeleteTicketAttachment)
 
 	// TODO: Implement history/timeline handler
 	// tickets.GET("/:id/history", router.handleGetTicketHistory)
@@ -227,8 +247,12 @@ func (router *APIRouter) setupSearchRoutes(protected *gin.RouterGroup) {
 	search := protected.Group("/search")
 	{
 		search.GET("", router.handleGlobalSearch)
-		search.GET("/tickets", middleware.RequireAnyPermission(router.rbac, auth.PermissionTicketRead, auth.PermissionOwnTicketRead), router.handleSearchTickets)
-		search.GET("/users", middleware.RequirePermission(router.rbac, auth.PermissionUserRead), router.handleSearchUsers)
+		search.GET("/tickets",
+			middleware.RequireAnyPermission(router.rbac, auth.PermissionTicketRead, auth.PermissionOwnTicketRead),
+			router.handleSearchTickets)
+		search.GET("/users",
+			middleware.RequirePermission(router.rbac, auth.PermissionUserRead),
+			router.handleSearchUsers)
 		search.GET("/suggestions", router.handleSearchSuggestions)
 
 		// Saved searches

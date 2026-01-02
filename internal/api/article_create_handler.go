@@ -1,10 +1,8 @@
 package api
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,14 +10,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/core"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
-	"github.com/gotrs-io/gotrs-ce/internal/mailqueue"
-	"github.com/gotrs-io/gotrs-ce/internal/notifications"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
 // HandleCreateArticleAPI handles POST /api/v1/tickets/:ticket_id/articles.
@@ -131,14 +124,16 @@ func HandleCreateArticleAPI(c *gin.Context) {
 	}
 
 	// Check permissions for customer users
-	if isCustomer, _ := c.Get("is_customer"); isCustomer == true {
-		customerEmail, _ := c.Get("customer_email")
-		if !customerUserID.Valid || customerUserID.String != customerEmail.(string) {
-			c.JSON(http.StatusForbidden, gin.H{
-				"success": false,
-				"error":   "Access denied",
-			})
-			return
+	if isCustomer, _ := c.Get("is_customer"); isCustomer == true { //nolint:errcheck // Defaults to nil
+		customerEmail, _ := c.Get("customer_email") //nolint:errcheck // Defaults to nil
+		if emailStr, ok := customerEmail.(string); ok {
+			if !customerUserID.Valid || customerUserID.String != emailStr {
+				c.JSON(http.StatusForbidden, gin.H{
+					"success": false,
+					"error":   "Access denied",
+				})
+				return
+			}
 		}
 		// Customer users use system user for create_by (FK to users table)
 		userID = 1
@@ -243,7 +238,8 @@ func HandleCreateArticleAPI(c *gin.Context) {
 	// Validate sender_type_id exists
 	if req.ArticleSenderTypeID != 0 {
 		var senderTypeExists bool
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM article_sender_type WHERE id = $1)"), req.ArticleSenderTypeID).Scan(&senderTypeExists)
+		senderTypeQuery := "SELECT EXISTS(SELECT 1 FROM article_sender_type WHERE id = $1)"
+		err = db.QueryRow(database.ConvertPlaceholders(senderTypeQuery), req.ArticleSenderTypeID).Scan(&senderTypeExists)
 		if err != nil || !senderTypeExists {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -256,7 +252,8 @@ func HandleCreateArticleAPI(c *gin.Context) {
 	// Validate communication_channel_id exists
 	if req.CommunicationChannelID != 0 {
 		var channelExists bool
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM communication_channel WHERE id = $1)"), req.CommunicationChannelID).Scan(&channelExists)
+		channelQuery := "SELECT EXISTS(SELECT 1 FROM communication_channel WHERE id = $1)"
+		err = db.QueryRow(database.ConvertPlaceholders(channelQuery), req.CommunicationChannelID).Scan(&channelExists)
 		if err != nil || !channelExists {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -413,91 +410,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 
 	// Queue email notification for new article if visible to customer
 	if isVisibleForCustomer == 1 && customerUserID.Valid && customerUserID.String != "" {
-		go func() {
-			// Look up customer's email address
-			var customerEmail string
-			err := db.QueryRow(database.ConvertPlaceholders(`
-				SELECT cu.email
-				FROM customer_user cu
-				WHERE cu.login = $1
-			`), customerUserID.String).Scan(&customerEmail)
-
-			if err != nil || customerEmail == "" {
-				log.Printf("Failed to find email for customer user %s: %v", customerUserID.String, err)
-				return
-			}
-
-			var (
-				queueID      int
-				ticketNumber sql.NullString
-			)
-			if err := db.QueryRow(database.ConvertPlaceholders(`SELECT queue_id, tn FROM ticket WHERE id = $1`), ticketID).Scan(&queueID, &ticketNumber); err != nil {
-				log.Printf("Failed to load ticket metadata for article %d: %v", ticketID, err)
-			}
-
-			articleRepo := repository.NewArticleRepository(db)
-			latestCustomerArticle, err := articleRepo.GetLatestCustomerArticleForTicket(uint(ticketID))
-			inReplyTo := ""
-			references := ""
-			if err == nil && latestCustomerArticle != nil && latestCustomerArticle.MessageID != "" {
-				inReplyTo = latestCustomerArticle.MessageID
-				references = latestCustomerArticle.MessageID
-				if latestCustomerArticle.References != "" {
-					references = latestCustomerArticle.References + " " + latestCustomerArticle.MessageID
-				}
-			}
-
-			subject := "Update on Ticket"
-			if ticketNumber.Valid && ticketNumber.String != "" {
-				subject = fmt.Sprintf("Update on Ticket %s", ticketNumber.String)
-			}
-			body := fmt.Sprintf("A new update has been added to your ticket.\n\n%s\n\nBest regards,\nGOTRS Support Team", req.Body)
-
-			// Queue the email for processing by EmailQueueTask
-			queueRepo := mailqueue.NewMailQueueRepository(db)
-			var emailCfg *config.EmailConfig
-			if cfg := config.Get(); cfg != nil {
-				emailCfg = &cfg.Email
-			}
-			renderCtx := notifications.BuildRenderContext(context.Background(), db, customerUserID.String, userID)
-			branding, brandErr := notifications.PrepareQueueEmail(
-				context.Background(),
-				db,
-				queueID,
-				body,
-				utils.IsHTML(body),
-				emailCfg,
-				renderCtx,
-			)
-			if brandErr != nil {
-				log.Printf("Queue identity lookup failed for ticket %d: %v", ticketID, brandErr)
-			}
-			senderEmail := branding.EnvelopeFrom
-			queueItem := &mailqueue.MailQueueItem{
-				Sender:     &senderEmail,
-				Recipient:  customerEmail,
-				RawMessage: mailqueue.BuildEmailMessageWithThreading(branding.HeaderFrom, customerEmail, subject, branding.Body, branding.Domain, inReplyTo, references),
-				Attempts:   0,
-				CreateTime: time.Now(),
-			}
-
-			if err := queueRepo.Insert(context.Background(), queueItem); err != nil {
-				log.Printf("Failed to queue article notification email for %s: %v", customerEmail, err)
-			} else {
-				log.Printf("Queued article notification email for %s", customerEmail)
-				messageID := mailqueue.ExtractMessageIDFromRawMessage(queueItem.RawMessage)
-				if messageID != "" {
-					if _, err := db.Exec(database.ConvertPlaceholders(`
-						UPDATE article_data_mime
-						SET a_message_id = $1, a_in_reply_to = $2, a_references = $3,
-						    change_time = CURRENT_TIMESTAMP, change_by = $4
-						WHERE article_id = $5
-					`), messageID, inReplyTo, references, userID, articleID); err != nil {
-						log.Printf("Failed to store threading headers for article %d: %v", articleID, err)
-					}
-				}
-			}
-		}()
+		go queueArticleNotificationEmail(db, int(ticketID), articleID, customerUserID.String, userID, req.Body)
 	}
 
 	// Fetch the created article for response (join mime data)

@@ -85,7 +85,9 @@ func JoinTemplateTypes(types []string) string {
 // Repository functions
 
 // ListStandardTemplates returns all templates with optional filters.
-func ListStandardTemplates(search string, validFilter string, typeFilter string, sortBy string, sortOrder string) ([]StandardTemplateWithStats, error) {
+func ListStandardTemplates(
+	search string, validFilter string, typeFilter string, sortBy string, sortOrder string,
+) ([]StandardTemplateWithStats, error) {
 	db, err := database.GetDB()
 	if err != nil {
 		return nil, err
@@ -152,7 +154,7 @@ func ListStandardTemplates(search string, validFilter string, typeFilter string,
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var templates []StandardTemplateWithStats
 	for rows.Next() {
@@ -387,7 +389,7 @@ func GetTemplateQueues(templateID int) ([]int, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var queueIDs []int
 	for rows.Next() {
@@ -458,7 +460,7 @@ func ListStandardAttachments() ([]StandardAttachment, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var attachments []StandardAttachment
 	for rows.Next() {
@@ -489,7 +491,7 @@ func GetTemplateAttachments(templateID int) ([]int, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var attachmentIDs []int
 	for rows.Next() {
@@ -582,7 +584,7 @@ func ExportTemplate(id int) (*TemplateExport, error) {
 	// Get queue names
 	queueIDs, err := GetTemplateQueues(id)
 	if err == nil && len(queueIDs) > 0 {
-		db, _ := database.GetDB()
+		db, _ := database.GetDB() //nolint:errcheck // Graceful degradation
 		for _, qid := range queueIDs {
 			var queueName string
 			err := db.QueryRow(database.ConvertPlaceholders(
@@ -597,7 +599,7 @@ func ExportTemplate(id int) (*TemplateExport, error) {
 	// Get attachment names
 	attachmentIDs, err := GetTemplateAttachments(id)
 	if err == nil && len(attachmentIDs) > 0 {
-		db, _ := database.GetDB()
+		db, _ := database.GetDB() //nolint:errcheck // Graceful degradation
 		for _, aid := range attachmentIDs {
 			var attachmentName string
 			err := db.QueryRow(database.ConvertPlaceholders(
@@ -724,7 +726,7 @@ func ImportTemplates(data []byte, overwrite bool, userID int) (imported int, ski
 				}
 			}
 			if len(queueIDs) > 0 {
-				SetTemplateQueues(templateID, queueIDs, userID)
+				_ = SetTemplateQueues(templateID, queueIDs, userID) //nolint:errcheck // Best-effort queue assignment
 			}
 		}
 
@@ -741,7 +743,7 @@ func ImportTemplates(data []byte, overwrite bool, userID int) (imported int, ski
 				}
 			}
 			if len(attachmentIDs) > 0 {
-				SetTemplateAttachments(templateID, attachmentIDs, userID)
+				_ = SetTemplateAttachments(templateID, attachmentIDs, userID) //nolint:errcheck // Best-effort attachment assignment
 			}
 		}
 
@@ -1006,7 +1008,7 @@ func handleAdminStandardTemplateQueues(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load queues"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	type QueueOption struct {
 		ID       int
@@ -1048,8 +1050,13 @@ func handleAdminStandardTemplateQueues(c *gin.Context) {
 	})
 }
 
-// handleUpdateStandardTemplateQueues handles PUT to update queue assignments.
-func handleUpdateStandardTemplateQueues(c *gin.Context) {
+// handleUpdateTemplateAssociations is a generic handler for updating template associations.
+func handleUpdateTemplateAssociations(
+	c *gin.Context,
+	formKey string,
+	setFunc func(templateID int, ids []int, userID int) error,
+	entityName string,
+) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -1067,19 +1074,18 @@ func handleUpdateStandardTemplateQueues(c *gin.Context) {
 		return
 	}
 
-	// Parse queue IDs from form
-	var queueIDs []int
+	var ids []int
 	if err := c.Request.ParseForm(); err == nil {
-		for _, idStr := range c.Request.Form["queue_ids"] {
-			if qid, err := strconv.Atoi(idStr); err == nil {
-				queueIDs = append(queueIDs, qid)
+		for _, idStr := range c.Request.Form[formKey] {
+			if aid, err := strconv.Atoi(idStr); err == nil {
+				ids = append(ids, aid)
 			}
 		}
 	}
 
 	userID := getUserID(c)
-	if err := SetTemplateQueues(id, queueIDs, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update queue assignments"})
+	if err := setFunc(id, ids, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update " + entityName + " assignments"})
 		return
 	}
 
@@ -1090,6 +1096,11 @@ func handleUpdateStandardTemplateQueues(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// handleUpdateStandardTemplateQueues handles PUT to update queue assignments.
+func handleUpdateStandardTemplateQueues(c *gin.Context) {
+	handleUpdateTemplateAssociations(c, "queue_ids", SetTemplateQueues, "queue")
 }
 
 // handleAdminStandardTemplateAttachments renders the template attachment assignment page.
@@ -1171,46 +1182,7 @@ func handleAdminStandardTemplateAttachments(c *gin.Context) {
 
 // handleUpdateStandardTemplateAttachments handles PUT to update attachment assignments.
 func handleUpdateStandardTemplateAttachments(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid template ID"})
-		return
-	}
-
-	existing, err := GetStandardTemplate(id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load template"})
-		return
-	}
-	if existing == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Template not found"})
-		return
-	}
-
-	// Parse attachment IDs from form
-	var attachmentIDs []int
-	if err := c.Request.ParseForm(); err == nil {
-		for _, idStr := range c.Request.Form["attachment_ids"] {
-			if aid, err := strconv.Atoi(idStr); err == nil {
-				attachmentIDs = append(attachmentIDs, aid)
-			}
-		}
-	}
-
-	userID := getUserID(c)
-	if err := SetTemplateAttachments(id, attachmentIDs, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update attachment assignments"})
-		return
-	}
-
-	if isHTMXRequest(c) {
-		c.Header("HX-Redirect", "/admin/templates")
-		c.Status(http.StatusOK)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"success": true})
+	handleUpdateTemplateAssociations(c, "attachment_ids", SetTemplateAttachments, "attachment")
 }
 
 // parseTemplateForm extracts template data from form submission.
@@ -1359,7 +1331,9 @@ func handleImportStandardTemplates(c *gin.Context) {
 		if len(errors) > 0 {
 			c.Header("HX-Trigger", `{"showToast": {"message": "Import completed with errors", "type": "warning"}}`)
 		} else {
-			c.Header("HX-Trigger", fmt.Sprintf(`{"showToast": {"message": "Imported %d templates, skipped %d", "type": "success"}}`, imported, skipped))
+			c.Header("HX-Trigger", fmt.Sprintf(
+				`{"showToast": {"message": "Imported %d templates, skipped %d", "type": "success"}}`,
+				imported, skipped))
 		}
 		c.Header("HX-Redirect", "/admin/templates")
 		c.Status(http.StatusOK)

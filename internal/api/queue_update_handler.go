@@ -245,7 +245,9 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 		validID = *req.ValidID
 	}
 
-	updateRequired := nameProvided || groupProvided || systemAddressProvided || salutationProvided || signatureProvided || unlockProvided || followUpProvided || followLockProvided || commentsProvided || validProvided
+	updateRequired := nameProvided || groupProvided || systemAddressProvided ||
+		salutationProvided || signatureProvided || unlockProvided ||
+		followUpProvided || followLockProvided || commentsProvided || validProvided
 	changeBy := normalizeUserID(userID)
 
 	tx, err := db.Begin()
@@ -347,7 +349,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 	`)
 	rows, err := db.Query(groupQuery, queueID)
 	if err == nil {
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 		var groups []int
 		for rows.Next() {
 			var gid int
@@ -355,7 +357,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 				groups = append(groups, gid)
 			}
 		}
-		_ = rows.Err() // Check for iteration errors
+		_ = rows.Err() //nolint:errcheck // Check for iteration errors
 		resp["group_access"] = groups
 	}
 

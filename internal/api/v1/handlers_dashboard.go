@@ -25,21 +25,24 @@ func (router *APIRouter) handleGetDashboardStats(c *gin.Context) {
 	var totalTickets, openTickets, closedToday int
 
 	// Total tickets
-	db.QueryRow("SELECT COUNT(*) FROM ticket").Scan(&totalTickets)
+	row1 := db.QueryRow("SELECT COUNT(*) FROM ticket")
+	_ = row1.Scan(&totalTickets) //nolint:errcheck // Defaults to 0
 
 	// Open tickets (state types: new=1, open=2, pending reminder=4, pending auto=5)
-	db.QueryRow(`
+	row2 := db.QueryRow(`
 		SELECT COUNT(*) FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		WHERE ts.type_id IN (1, 2, 4, 5)
-	`).Scan(&openTickets)
+	`)
+	_ = row2.Scan(&openTickets) //nolint:errcheck // Defaults to 0
 
 	// Closed today (state type 3 = closed)
-	db.QueryRow(database.ConvertPlaceholders(`
+	row3 := db.QueryRow(database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		WHERE ts.type_id = 3 AND DATE(t.change_time) = CURRENT_DATE
-	`)).Scan(&closedToday)
+	`))
+	_ = row3.Scan(&closedToday) //nolint:errcheck // Defaults to 0
 
 	stats := gin.H{
 		"total_tickets":         totalTickets,
@@ -55,120 +58,77 @@ func (router *APIRouter) handleGetDashboardStats(c *gin.Context) {
 	})
 }
 
+// fetchChartData executes a query expecting (name, count) rows and returns labels/data for charts.
+func fetchChartData(db *sql.DB, query string) ([]string, []int, error) {
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	var labels []string
+	var data []int
+	for rows.Next() {
+		var name string
+		var count int
+		if err := rows.Scan(&name, &count); err != nil {
+			continue
+		}
+		labels = append(labels, name)
+		data = append(data, count)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	return labels, data, nil
+}
+
 func (router *APIRouter) handleGetTicketsByStatusChart(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse{
-			Success: false,
-			Error:   "Database unavailable",
-		})
+		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Database unavailable"})
 		return
 	}
 
-	// Get ticket counts grouped by state type from database
-	rows, err := db.Query(`
+	query := `
 		SELECT tst.name, COUNT(t.id) as count
 		FROM ticket_state_type tst
 		LEFT JOIN ticket_state ts ON ts.type_id = tst.id
 		LEFT JOIN ticket t ON t.ticket_state_id = ts.id
 		GROUP BY tst.id, tst.name
 		ORDER BY tst.id
-	`)
+	`
+	labels, data, err := fetchChartData(db, query)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse{
-			Success: false,
-			Error:   "Failed to query ticket states",
-		})
-		return
-	}
-	defer func() { _ = rows.Close() }()
-
-	var labels []string
-	var data []int
-	for rows.Next() {
-		var name string
-		var count int
-		if err := rows.Scan(&name, &count); err != nil {
-			continue
-		}
-		labels = append(labels, name)
-		data = append(data, count)
-	}
-	if err := rows.Err(); err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse{
-			Success: false,
-			Error:   "Error iterating ticket states",
-		})
+		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Failed to query ticket states"})
 		return
 	}
 
-	chartData := gin.H{
-		"labels": labels,
-		"data":   data,
-	}
-
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Data:    chartData,
-	})
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: gin.H{"labels": labels, "data": data}})
 }
 
 func (router *APIRouter) handleGetTicketsByPriorityChart(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse{
-			Success: false,
-			Error:   "Database unavailable",
-		})
+		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Database unavailable"})
 		return
 	}
 
-	// Get ticket counts grouped by priority from database
-	rows, err := db.Query(`
+	query := `
 		SELECT tp.name, COUNT(t.id) as count
 		FROM ticket_priority tp
 		LEFT JOIN ticket t ON t.ticket_priority_id = tp.id
 		WHERE tp.valid_id = 1
 		GROUP BY tp.id, tp.name
 		ORDER BY tp.id
-	`)
+	`
+	labels, data, err := fetchChartData(db, query)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse{
-			Success: false,
-			Error:   "Failed to query ticket priorities",
-		})
-		return
-	}
-	defer func() { _ = rows.Close() }()
-
-	var labels []string
-	var data []int
-	for rows.Next() {
-		var name string
-		var count int
-		if err := rows.Scan(&name, &count); err != nil {
-			continue
-		}
-		labels = append(labels, name)
-		data = append(data, count)
-	}
-	if err := rows.Err(); err != nil {
-		c.JSON(http.StatusInternalServerError, APIResponse{
-			Success: false,
-			Error:   "Error iterating ticket priorities",
-		})
+		c.JSON(http.StatusInternalServerError, APIResponse{Success: false, Error: "Failed to query ticket priorities"})
 		return
 	}
 
-	chartData := gin.H{
-		"labels": labels,
-		"data":   data,
-	}
-
-	c.JSON(http.StatusOK, APIResponse{
-		Success: true,
-		Data:    chartData,
-	})
+	c.JSON(http.StatusOK, APIResponse{Success: true, Data: gin.H{"labels": labels, "data": data}})
 }
 
 func (router *APIRouter) handleGetTicketsOverTimeChart(c *gin.Context) {
@@ -198,7 +158,7 @@ func (router *APIRouter) handleGetTicketsOverTimeChart(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	dateCreated := make(map[string]int)
 	for rows.Next() {
@@ -229,7 +189,7 @@ func (router *APIRouter) handleGetTicketsOverTimeChart(c *gin.Context) {
 		ORDER BY date
 	`))
 	if err == nil {
-		defer func() { _ = closedRows.Close() }()
+		defer closedRows.Close()
 	}
 
 	dateClosed := make(map[string]int)
@@ -309,7 +269,7 @@ func (router *APIRouter) handleGetRecentActivity(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var activities []gin.H
 	for rows.Next() {
@@ -389,7 +349,7 @@ func (router *APIRouter) handleGetMyTickets(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var tickets []gin.H
 	for rows.Next() {

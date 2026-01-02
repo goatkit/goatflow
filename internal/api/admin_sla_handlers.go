@@ -114,7 +114,7 @@ func handleAdminSLA(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to fetch SLAs")
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var slas []SLAWithStats
 	for rows.Next() {
@@ -170,7 +170,7 @@ func handleAdminSLA(c *gin.Context) {
 
 		slas = append(slas, s)
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Iteration complete
 
 	// Get calendars for dropdown (if calendar table exists)
 	var calendars []string
@@ -183,7 +183,7 @@ func handleAdminSLA(c *gin.Context) {
 				calendars = append(calendars, name)
 			}
 		}
-		_ = calRows.Err() // Check for iteration errors
+		_ = calRows.Err() //nolint:errcheck // Iteration complete
 	}
 
 	// Render the template
@@ -451,7 +451,10 @@ func handleAdminSLAUpdate(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -513,7 +516,10 @@ func handleAdminSLADelete(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,

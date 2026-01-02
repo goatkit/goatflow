@@ -4,12 +4,41 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
+
+// mimeByExtension maps file extensions to MIME types.
+var mimeByExtension = map[string]string{
+	".pdf":  "application/pdf",
+	".png":  "image/png",
+	".jpg":  "image/jpeg",
+	".jpeg": "image/jpeg",
+	".gif":  "image/gif",
+	".txt":  "text/plain",
+	".html": "text/html",
+	".csv":  "text/csv",
+	".json": "application/json",
+	".xml":  "application/xml",
+	".zip":  "application/zip",
+	".doc":  "application/msword",
+	".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+	".xls":  "application/vnd.ms-excel",
+	".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+
+// detectMimeType returns the MIME type for a filename based on extension.
+func detectMimeType(filename string) string {
+	ext := strings.ToLower(filepath.Ext(filename))
+	if mime, ok := mimeByExtension[ext]; ok {
+		return mime
+	}
+	return "application/octet-stream"
+}
 
 // handleServeFile serves files from storage with authorization checks.
 func handleServeFile(c *gin.Context) {
@@ -77,38 +106,8 @@ func handleServeFile(c *gin.Context) {
 	}
 	defer fileReader.Close()
 
-	// Detect content type from filename
-	contentType := "application/octet-stream"
 	filename := metadata.OriginalName
-	if strings.HasSuffix(filename, ".pdf") {
-		contentType = "application/pdf"
-	} else if strings.HasSuffix(filename, ".png") {
-		contentType = "image/png"
-	} else if strings.HasSuffix(filename, ".jpg") || strings.HasSuffix(filename, ".jpeg") {
-		contentType = "image/jpeg"
-	} else if strings.HasSuffix(filename, ".gif") {
-		contentType = "image/gif"
-	} else if strings.HasSuffix(filename, ".txt") {
-		contentType = "text/plain"
-	} else if strings.HasSuffix(filename, ".html") {
-		contentType = "text/html"
-	} else if strings.HasSuffix(filename, ".csv") {
-		contentType = "text/csv"
-	} else if strings.HasSuffix(filename, ".json") {
-		contentType = "application/json"
-	} else if strings.HasSuffix(filename, ".xml") {
-		contentType = "application/xml"
-	} else if strings.HasSuffix(filename, ".zip") {
-		contentType = "application/zip"
-	} else if strings.HasSuffix(filename, ".doc") {
-		contentType = "application/msword"
-	} else if strings.HasSuffix(filename, ".docx") {
-		contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-	} else if strings.HasSuffix(filename, ".xls") {
-		contentType = "application/vnd.ms-excel"
-	} else if strings.HasSuffix(filename, ".xlsx") {
-		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-	}
+	contentType := detectMimeType(filename)
 
 	// Set headers
 	disposition := "inline"
@@ -122,7 +121,6 @@ func handleServeFile(c *gin.Context) {
 	// Stream file to response
 	c.Status(http.StatusOK)
 	if _, err := io.Copy(c.Writer, fileReader); err != nil {
-		// Error already started writing, can't send JSON error
 		c.Abort()
 		return
 	}

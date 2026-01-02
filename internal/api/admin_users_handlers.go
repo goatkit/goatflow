@@ -27,7 +27,7 @@ func HandleAdminUsers(c *gin.Context) {
 		return
 	}
 
-	db, _ := database.GetDB()
+	db, _ := database.GetDB() //nolint:errcheck // Graceful degradation if DB unavailable
 	users := make([]gin.H, 0)
 	groups := make([]gin.H, 0)
 
@@ -38,7 +38,7 @@ func HandleAdminUsers(c *gin.Context) {
 			FROM users
 			ORDER BY last_name, first_name, id`))
 		if err == nil {
-			defer func() { _ = rows.Close() }()
+			defer rows.Close()
 			type urow struct {
 				id                   int
 				login, title, fn, ln string
@@ -51,7 +51,7 @@ func HandleAdminUsers(c *gin.Context) {
 					list = append(list, r)
 				}
 			}
-			_ = rows.Err() // Check for iteration errors
+			_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 			// Prefetch group memberships for all users
 			gm := map[int][]string{}
 			if gr, gerr := db.Query(database.ConvertPlaceholders(`
@@ -67,7 +67,7 @@ func HandleAdminUsers(c *gin.Context) {
 						gm[uid] = append(gm[uid], gname)
 					}
 				}
-				_ = gr.Err() // Check for iteration errors
+				_ = gr.Err() //nolint:errcheck // Iteration errors don't affect UI
 			}
 			for _, r := range list {
 				users = append(users, gin.H{
@@ -92,7 +92,7 @@ func HandleAdminUsers(c *gin.Context) {
 					groups = append(groups, gin.H{"ID": id, "Name": name})
 				}
 			}
-			_ = gr.Err() // Check for iteration errors
+			_ = gr.Err() //nolint:errcheck // Iteration errors don't affect UI
 		}
 	}
 
@@ -209,7 +209,7 @@ func HandleAdminUserGet(c *gin.Context) {
 	groupNames := make([]string, 0)
 	rows, err := db.Query(groupQuery, id)
 	if err == nil {
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 		for rows.Next() {
 			var gid int
 			var gname string
@@ -217,7 +217,7 @@ func HandleAdminUserGet(c *gin.Context) {
 				groupNames = append(groupNames, gname)
 			}
 		}
-		_ = rows.Err() // Check for iteration errors
+		_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 	}
 	user.Groups = groupNames
 
@@ -327,50 +327,22 @@ func HandleAdminUserCreate(c *gin.Context) {
 		hashedPassword = string(hash)
 	}
 
-	// Create user (handle RETURNING differences between Postgres and MySQL)
-	rawInsert := `
+	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO users (login, pw, title, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW(), 1, NOW(), 1)
-		RETURNING id`
-
-	insertQuery := database.ConvertPlaceholders(rawInsert)
-	insertQuery, useLastInsert := database.ConvertReturning(insertQuery)
-
+		RETURNING id
+	`)
 	args := []interface{}{req.Login, hashedPassword, req.Title, req.FirstName, req.LastName, req.ValidID}
 
-	var userID int
-	if useLastInsert && database.IsMySQL() {
-		// MySQL: Exec and use LastInsertId
-		res, execErr := db.Exec(insertQuery, args...)
-		if execErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   fmt.Sprintf("Failed to create user: %v", execErr),
-			})
-			return
-		}
-		lastID, idErr := res.LastInsertId()
-		if idErr != nil {
-			var fallbackID int64
-			if scanErr := db.QueryRow("SELECT LAST_INSERT_ID()").Scan(&fallbackID); scanErr != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"success": false,
-					"error":   "Failed to determine user ID",
-				})
-				return
-			}
-			lastID = fallbackID
-		}
-		userID = int(lastID)
-	} else {
-		if err := db.QueryRow(insertQuery, args...).Scan(&userID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   fmt.Sprintf("Failed to create user: %v", err),
-			})
-			return
-		}
+	userID64, err := database.GetAdapter().InsertWithReturning(db, insertQuery, args...)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("Failed to create user: %v", err),
+		})
+		return
 	}
+	userID := int(userID64)
 
 	// Add user to groups (accept IDs or names)
 	for _, token := range req.Groups {
@@ -381,24 +353,28 @@ func HandleAdminUserCreate(c *gin.Context) {
 		var groupID int
 		if n, convErr := strconv.Atoi(token); convErr == nil {
 			// Token is an ID; verify existence
-			if err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE id = $1 AND valid_id = 1"), n).Scan(&groupID); err != nil {
+			query := database.ConvertPlaceholders("SELECT id FROM groups WHERE id = $1 AND valid_id = 1")
+			if err := db.QueryRow(query, n).Scan(&groupID); err != nil {
 				continue
 			}
 		} else {
 			// Token is a name; ensure exists
-			if err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1 AND valid_id = 1"), token).Scan(&groupID); err != nil {
+			query := database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1 AND valid_id = 1")
+			if err := db.QueryRow(query, token).Scan(&groupID); err != nil {
 				// Create if missing (test-friendly)
-				_, _ = db.Exec(database.ConvertPlaceholders(`
+				insertQuery := database.ConvertPlaceholders(`
 					INSERT INTO groups (name, comments, valid_id, create_time, create_by, change_time, change_by)
 					SELECT $1, '', 1, NOW(), 1, NOW(), 1
-					WHERE NOT EXISTS (SELECT 1 FROM groups WHERE name = $1)`), token)
-				_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1 AND valid_id = 1"), token).Scan(&groupID)
+					WHERE NOT EXISTS (SELECT 1 FROM groups WHERE name = $1)`)
+				_, _ = db.Exec(insertQuery, token)           //nolint:errcheck // Best-effort group creation
+				_ = db.QueryRow(query, token).Scan(&groupID) //nolint:errcheck // Group may not exist
 				if groupID == 0 {
 					continue
 				}
 			}
 		}
-		db.Exec(database.ConvertPlaceholders(`
+		//nolint:errcheck // Best-effort group association
+		_, _ = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
 			SELECT $1, $2, 'rw', NOW(), 1, NOW(), 1
 			WHERE NOT EXISTS (
@@ -579,7 +555,8 @@ func HandleAdminUserUpdate(c *gin.Context) {
 		}
 		defer func() { _ = tx.Rollback() }()
 
-		if _, err := tx.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1 AND permission_key = 'rw'"), id); err != nil {
+		delQuery := database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1 AND permission_key = 'rw'")
+		if _, err := tx.Exec(delQuery, id); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"success": false,
 				"error":   fmt.Sprintf("Failed to clear existing groups: %v", err),
@@ -630,10 +607,12 @@ func HandleAdminUserUpdate(c *gin.Context) {
 
 func ensureAuditUserID(db *sql.DB) (int, error) {
 	var id int
-	if err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM users WHERE id = $1 AND valid_id = 1"), 1).Scan(&id); err == nil {
+	query := database.ConvertPlaceholders("SELECT id FROM users WHERE id = $1 AND valid_id = 1")
+	if err := db.QueryRow(query, 1).Scan(&id); err == nil {
 		return id, nil
 	}
-	if err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM users WHERE valid_id = 1 ORDER BY id LIMIT 1")).Scan(&id); err == nil {
+	query = database.ConvertPlaceholders("SELECT id FROM users WHERE valid_id = 1 ORDER BY id LIMIT 1")
+	if err := db.QueryRow(query).Scan(&id); err == nil {
 		return id, nil
 	}
 	return 0, fmt.Errorf("no valid audit user")
@@ -642,7 +621,8 @@ func ensureAuditUserID(db *sql.DB) (int, error) {
 func ensureGroupID(tx *sql.Tx, auditID int, token string) (int, error) {
 	if n, err := strconv.Atoi(token); err == nil {
 		var groupID int
-		if err := tx.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE id = $1 AND valid_id = 1"), n).Scan(&groupID); err != nil {
+		query := database.ConvertPlaceholders("SELECT id FROM groups WHERE id = $1 AND valid_id = 1")
+		if err := tx.QueryRow(query, n).Scan(&groupID); err != nil {
 			return 0, err
 		}
 		return groupID, nil
@@ -650,19 +630,16 @@ func ensureGroupID(tx *sql.Tx, auditID int, token string) (int, error) {
 
 	var groupID int
 	var validID int
-	err := tx.QueryRow(database.ConvertPlaceholders("SELECT id, valid_id FROM groups WHERE name = $1"), token).Scan(&groupID, &validID)
+	query := database.ConvertPlaceholders("SELECT id, valid_id FROM groups WHERE name = $1")
+	err := tx.QueryRow(query, token).Scan(&groupID, &validID)
 	if err == nil {
 		if validID != 1 {
-			rawReactivate := `
+			reactivateQuery := `
 				UPDATE groups
 				SET valid_id = 1, change_time = NOW(), change_by = $2
 				WHERE id = $1`
-			reactivateQuery := database.ConvertPlaceholders(rawReactivate)
-			reactivateArgs := []interface{}{groupID, auditID}
-			if database.IsMySQL() {
-				reactivateArgs = database.RemapArgsForMySQL(rawReactivate, reactivateArgs)
-			}
-			if _, updErr := tx.Exec(reactivateQuery, reactivateArgs...); updErr != nil {
+			// Adapter handles placeholder conversion
+			if _, updErr := database.GetAdapter().ExecTx(tx, reactivateQuery, groupID, auditID); updErr != nil {
 				return 0, updErr
 			}
 		}
@@ -747,7 +724,7 @@ func HandleAdminUserGroups(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var groups []gin.H
 	for rows.Next() {

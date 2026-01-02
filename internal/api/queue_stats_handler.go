@@ -31,7 +31,8 @@ func HandleGetQueueStatsAPI(c *gin.Context) {
 
 	// Verify queue exists
 	var exists int
-	db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue WHERE id = $1`), queueID).Scan(&exists)
+	row := db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue WHERE id = $1`), queueID)
+	_ = row.Scan(&exists) //nolint:errcheck // Defaults to 0
 	if exists != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Queue not found"})
 		return

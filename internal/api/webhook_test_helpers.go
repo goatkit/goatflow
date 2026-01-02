@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,49 +15,10 @@ func insertWebhookRow(t *testing.T, query string, args ...interface{}) int {
 	require.NoError(t, err)
 	require.NotNil(t, db)
 
-	placeholderQuery := database.ConvertPlaceholders(query)
-	converted, needsLastInsert := database.ConvertReturning(placeholderQuery)
-
-	if database.IsMySQL() {
-		// Run inserts inside a transaction so LAST_INSERT_ID reads use the same session.
-		tx, txErr := db.Begin()
-		require.NoError(t, txErr)
-		defer func() { _ = tx.Rollback() }()
-
-		execArgs := database.RemapArgsForMySQL(query, args)
-		result, execErr := tx.Exec(converted, execArgs...)
-		require.NoError(t, execErr)
-
-		id := lastInsertID(t, tx, result)
-		require.NoError(t, tx.Commit())
-		return id
-	}
-
-	if needsLastInsert {
-		var id int
-		require.NoError(t, db.QueryRow(converted, args...).Scan(&id))
-		return id
-	}
-
-	_, execErr := db.Exec(converted, args...)
-	require.NoError(t, execErr)
-	return 0
-}
-
-func lastInsertID(t *testing.T, querier interface {
-	QueryRow(query string, args ...interface{}) *sql.Row
-}, result sql.Result) int {
-	t.Helper()
-
-	id, err := result.LastInsertId()
-	if err == nil && id != 0 {
-		return int(id)
-	}
-
-	var fallback int64
-	require.NoError(t, querier.QueryRow("SELECT LAST_INSERT_ID()").Scan(&fallback))
-	require.NotZero(t, fallback)
-	return int(fallback)
+	// Use adapter which handles placeholder conversion, arg remapping, and RETURNING
+	id64, err := database.GetAdapter().InsertWithReturning(db, query, args...)
+	require.NoError(t, err)
+	return int(id64)
 }
 
 func ensureWebhookTables(t *testing.T) {

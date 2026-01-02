@@ -35,11 +35,11 @@ func handleQueuesList(c *gin.Context) {
 		perPageStr = "100"
 	}
 
-	page, _ := strconv.Atoi(pageStr)
+	page, _ := strconv.Atoi(pageStr) //nolint:errcheck // Defaults to 0
 	if page < 1 {
 		page = 1
 	}
-	perPage, _ := strconv.Atoi(perPageStr)
+	perPage, _ := strconv.Atoi(perPageStr) //nolint:errcheck // Defaults to 0
 	if perPage <= 0 {
 		perPage = 10
 	}
@@ -113,7 +113,10 @@ func handleQueuesList(c *gin.Context) {
 		// No items on this page
 	} else {
 		for _, q := range filtered[start:end] {
-			listHTML.WriteString(fmt.Sprintf("    <li>%s <button class=\"inline-flex items-center\" hx-get=\"/queues/%d/edit\">Edit</button> <button class=\"inline-flex items-center\" hx-get=\"/queues/%d/delete\">Delete</button></li>\n", q.Name, q.ID, q.ID))
+			listHTML.WriteString(fmt.Sprintf(
+				"    <li>%s <button class=\"inline-flex items-center\" hx-get=\"/queues/%d/edit\">Edit</button> "+
+					"<button class=\"inline-flex items-center\" hx-get=\"/queues/%d/delete\">Delete</button></li>\n",
+				q.Name, q.ID, q.ID))
 			// Include description/comment text to satisfy tests
 			if q.Comment != "" {
 				listHTML.WriteString(fmt.Sprintf("    <!-- desc -->%s\n", q.Comment))
@@ -197,11 +200,13 @@ func handleQueuesList(c *gin.Context) {
 	html.WriteString(">Inactive</option>\n")
 	html.WriteString("    </select>\n")
 	// Clear search button
-	html.WriteString("    <button id=\"clear-search\" hx-get=\"/queues/clear-search\" hx-target=\"#queue-list-container\">Clear</button>\n")
+	html.WriteString("    <button id=\"clear-search\" hx-get=\"/queues/clear-search\" " +
+		"hx-target=\"#queue-list-container\">Clear</button>\n")
 	html.WriteString("  </div>\n")
 	html.WriteString("  <div id=\"queue-sort-controls\">\n")
 	html.WriteString("    <label for=\"queue-sort\">Sort by</label>\n")
-	html.WriteString("    <select id=\"queue-sort\" name=\"sort\" hx-get=\"/queues\" hx-trigger=\"change\" hx-target=\"#queue-list-container\">\n")
+	html.WriteString("    <select id=\"queue-sort\" name=\"sort\" hx-get=\"/queues\" hx-trigger=\"change\" " +
+		"hx-target=\"#queue-list-container\">\n")
 	html.WriteString("      <option value=\"name_asc\">Name (A-Z)</option>\n")
 	html.WriteString("      <option value=\"name_desc\">Name (Z-A)</option>\n")
 	html.WriteString("      <option value=\"tickets_asc\">Tickets (Low to High)</option>\n")
@@ -221,8 +226,10 @@ func handleQueuesList(c *gin.Context) {
 	html.WriteString("      if (selected > 0) { toolbar.style.display = 'block'; } else { toolbar.style.display = 'none'; }\n")
 	html.WriteString("    }\n")
 	html.WriteString("    document.addEventListener('DOMContentLoaded', () => {\n")
-	html.WriteString("      document.getElementById('select-all-queues')?.addEventListener('change', (e) => selectAllQueues(e.target.checked));\n")
-	html.WriteString("      document.querySelectorAll('input[name=\"queue-select\"]').forEach(cb => { cb.addEventListener('change', updateBulkToolbar); });\n")
+	html.WriteString("      document.getElementById('select-all-queues')?.addEventListener" +
+		"('change', (e) => selectAllQueues(e.target.checked));\n")
+	html.WriteString("      document.querySelectorAll('input[name=\"queue-select\"]').forEach" +
+		"(cb => { cb.addEventListener('change', updateBulkToolbar); });\n")
 	html.WriteString("    });\n")
 	html.WriteString("  </script>\n")
 	html.WriteString("  <input type=\"checkbox\" id=\"select-all-queues\"> Select All\n")
@@ -272,7 +279,9 @@ func handleBulkActionsToolbar(c *gin.Context) {
 		count = "0"
 	}
 	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, count+" queues selected\n<button>Activate Selected</button><button>Deactivate Selected</button><button class=\"bg-red-600\">Delete Selected</button><button>Cancel Selection</button>")
+	c.String(http.StatusOK, count+" queues selected\n"+
+		"<button>Activate Selected</button><button>Deactivate Selected</button>"+
+		"<button class=\"bg-red-600\">Delete Selected</button><button>Cancel Selection</button>")
 }
 
 // handleBulkQueueAction processes activate/deactivate/delete actions for selected queues.
@@ -283,7 +292,7 @@ func handleBulkQueueAction(c *gin.Context) {
 		return
 	}
 	// Parse selected IDs
-	_ = c.Request.ParseForm()
+	_ = c.Request.ParseForm() //nolint:errcheck // Form parsing best effort
 	ids := c.Request.PostForm["queue_ids"]
 	if len(ids) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No queues selected"})
@@ -316,7 +325,7 @@ func handleBulkQueueDelete(c *gin.Context) {
 	confirm := c.Request.URL.Query().Get("confirm")
 
 	// Read raw body for DELETE (ParseForm doesn't parse body for DELETE)
-	bodyBytes, _ := io.ReadAll(c.Request.Body)
+	bodyBytes, _ := io.ReadAll(c.Request.Body) //nolint:errcheck // Best effort body read
 	if len(bodyBytes) > 0 {
 		// Restore body in case anything else needs it later
 		c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
@@ -428,7 +437,8 @@ func handleQueueDetailJSON(c *gin.Context) {
 			return
 		}
 		c.Header("Content-Type", "text/html; charset=utf-8")
-		c.String(http.StatusOK, "<html><head></head><body>Raw <span>2</span> tickets <div>All new tickets are placed in this queue by default</div></body></html>")
+		c.String(http.StatusOK, "<html><head></head><body>Raw <span>2</span> tickets "+
+			"<div>All new tickets are placed in this queue by default</div></body></html>")
 		return
 	}
 	if c.GetHeader("HX-Request") != "" {
@@ -437,7 +447,8 @@ func handleQueueDetailJSON(c *gin.Context) {
 		return
 	}
 	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, "<html><head></head><body>Misc <span>0</span> tickets <div>No tickets in this queue</div></body></html>")
+	c.String(http.StatusOK, "<html><head></head><body>Misc <span>0</span> tickets "+
+		"<div>No tickets in this queue</div></body></html>")
 }
 
 // Note: Frontend HTMX handlers (forms/confirmations) are implemented in queue_frontend_handlers.go

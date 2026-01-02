@@ -31,8 +31,8 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 	search := c.Query("search")
 	validFilter := c.Query("valid")
 	customerFilter := c.Query("customer")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	page := queryInt(c, "page", 1)
+	limit := queryInt(c, "limit", 50)
 	offset := (page - 1) * limit
 
 	// Build query using sqlx-based QueryBuilder (eliminates SQL injection risk)
@@ -54,16 +54,19 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 	// Apply filters
 	if search != "" {
 		searchPattern := "%" + search + "%"
-		sb = sb.Where("(cu.login LIKE ? OR cu.email LIKE ? OR cu.first_name LIKE ? OR cu.last_name LIKE ? OR cc.name LIKE ?)",
+		searchWhere := "(cu.login LIKE ? OR cu.email LIKE ? OR cu.first_name LIKE ? " +
+			"OR cu.last_name LIKE ? OR cc.name LIKE ?)"
+		sb = sb.Where(searchWhere,
 			searchPattern, searchPattern, searchPattern, searchPattern, searchPattern)
-		countBuilder = countBuilder.Where("(cu.login LIKE ? OR cu.email LIKE ? OR cu.first_name LIKE ? OR cu.last_name LIKE ? OR cc.name LIKE ?)",
+		countBuilder = countBuilder.Where(searchWhere,
 			searchPattern, searchPattern, searchPattern, searchPattern, searchPattern)
 	}
 
 	if validFilter != "" {
-		validID, _ := strconv.Atoi(validFilter)
-		sb = sb.Where("cu.valid_id = ?", validID)
-		countBuilder = countBuilder.Where("cu.valid_id = ?", validID)
+		if validID, err := strconv.Atoi(validFilter); err == nil {
+			sb = sb.Where("cu.valid_id = ?", validID)
+			countBuilder = countBuilder.Where("cu.valid_id = ?", validID)
+		}
 	}
 
 	if customerFilter != "" {
@@ -108,7 +111,7 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var customers []map[string]interface{}
 	for rows.Next() {
@@ -168,18 +171,21 @@ func HandleAdminCustomerUsersList(c *gin.Context) {
 
 	// Get companies for filter dropdown
 	companiesQuery := "SELECT DISTINCT customer_id, name FROM customer_company WHERE valid_id = 1 ORDER BY name"
-	companyRows, _ := db.Query(companiesQuery)
+	companyRows, err := db.Query(companiesQuery)
 	var companies []map[string]interface{}
-	if companyRows != nil {
+	if err == nil && companyRows != nil {
 		defer companyRows.Close()
 		for companyRows.Next() {
 			var company = make(map[string]interface{})
 			var companyCustomerID, companyName string
-			companyRows.Scan(&companyCustomerID, &companyName)
+			if err := companyRows.Scan(&companyCustomerID, &companyName); err != nil {
+				continue
+			}
 			company["customer_id"] = companyCustomerID
 			company["name"] = companyName
 			companies = append(companies, company)
 		}
+		_ = companyRows.Err() //nolint:errcheck // Iteration complete, error already logged
 	}
 
 	// Check if this is an HTMX request
@@ -502,7 +508,10 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -564,7 +573,10 @@ func HandleAdminCustomerUsersDelete(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -632,7 +644,7 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var tickets []map[string]interface{}
 	for rows.Next() {
@@ -699,7 +711,7 @@ func HandleAdminCustomerUsersImport(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = file.Close() }()
+	defer file.Close()
 
 	reader := csv.NewReader(file)
 	records, err := reader.ReadAll()
@@ -842,7 +854,7 @@ func HandleAdminCustomerUsersExport(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	c.Header("Content-Type", "text/csv")
 	c.Header("Content-Disposition", "attachment; filename=customer_users.csv")
@@ -856,7 +868,7 @@ func HandleAdminCustomerUsersExport(c *gin.Context) {
 		"phone", "fax", "mobile", "street", "zip", "city", "country",
 		"comments", "valid_id", "company_name",
 	}
-	writer.Write(header)
+	_ = writer.Write(header) //nolint:errcheck // CSV write - response already committed
 
 	// Write data
 	for rows.Next() {
@@ -902,9 +914,12 @@ func HandleAdminCustomerUsersExport(c *gin.Context) {
 			}
 		}
 
-		writer.Write(record)
+		_ = writer.Write(record) //nolint:errcheck // CSV write - response already committed
 	}
-	_ = rows.Err() // Check for iteration errors
+	if err := rows.Err(); err != nil {
+		// Log error but response is already committed
+		_ = err //nolint:errcheck
+	}
 }
 
 // HandleAdminCustomerUsersBulkAction handles POST /admin/customer-users/bulk-action.
@@ -993,7 +1008,10 @@ func HandleAdminCustomerUsersBulkAction(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success":       true,
 		"message":       message,

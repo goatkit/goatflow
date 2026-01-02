@@ -29,7 +29,7 @@ func HandleGetQueues(c *gin.Context) {
 		c.String(http.StatusOK, `<option value="">Select queue</option>`)
 		for _, queue := range queues {
 			if queue.Active {
-				c.Writer.WriteString(fmt.Sprintf(`<option value="%d">%s</option>`, queue.ID, queue.Name))
+				_, _ = c.Writer.WriteString(fmt.Sprintf(`<option value="%d">%s</option>`, queue.ID, queue.Name)) //nolint:errcheck // Best-effort HTML write
 			}
 		}
 		return
@@ -75,7 +75,7 @@ func HandleGetPriorities(c *gin.Context) {
 				if priority.Value == "normal" {
 					selected = " selected"
 				}
-				c.Writer.WriteString(fmt.Sprintf(`<option value="%s"%s>%s</option>`, priority.Value, selected, priority.Label))
+				_, _ = c.Writer.WriteString(fmt.Sprintf(`<option value="%s"%s>%s</option>`, priority.Value, selected, priority.Label)) //nolint:errcheck // Best-effort HTML write
 			}
 		}
 		return
@@ -97,9 +97,10 @@ func HandleGetTypes(c *gin.Context) {
 	isHTMX := c.GetHeader("HX-Request") == "true"
 
 	if db, err := database.GetDB(); err == nil && db != nil {
-		rows, qerr := db.Query(database.ConvertPlaceholders(`SELECT id, name, comments, valid_id FROM ticket_type WHERE valid_id = 1 ORDER BY name`))
+		typeQuery := `SELECT id, name, comments, valid_id FROM ticket_type WHERE valid_id = 1 ORDER BY name`
+		rows, qerr := db.Query(database.ConvertPlaceholders(typeQuery))
 		if qerr == nil {
-			defer func() { _ = rows.Close() }()
+			defer rows.Close()
 
 			if isHTMX {
 				var builder strings.Builder
@@ -117,7 +118,7 @@ func HandleGetTypes(c *gin.Context) {
 					builder.WriteString(fmt.Sprintf(`<option value="%d">%s</option>`, id, name))
 					wroteOption = true
 				}
-				if wroteOption {
+				if err := rows.Err(); err == nil && wroteOption {
 					c.Header("Content-Type", "text/html")
 					c.String(http.StatusOK, builder.String())
 					return
@@ -141,7 +142,7 @@ func HandleGetTypes(c *gin.Context) {
 					"valid_id": validID,
 				})
 			}
-			if len(data) > 0 {
+			if err := rows.Err(); err == nil && len(data) > 0 {
 				c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
 				return
 			}
@@ -159,7 +160,7 @@ func HandleGetTypes(c *gin.Context) {
 		c.String(http.StatusOK, `<option value="">Select type</option>`)
 		for _, item := range formData.Types {
 			if item.Active {
-				c.Writer.WriteString(fmt.Sprintf(`<option value="%s">%s</option>`, item.Value, item.Label))
+				_, _ = c.Writer.WriteString(fmt.Sprintf(`<option value="%s">%s</option>`, item.Value, item.Label)) //nolint:errcheck // Best-effort HTML write
 			}
 		}
 		return

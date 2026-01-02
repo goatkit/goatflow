@@ -88,13 +88,19 @@ func handleGetQueueSignature(c *gin.Context) {
 			vars := GetTicketTemplateVariables(ticketID)
 			// Add agent context from session
 			if agentName, exists := c.Get("agent_fullname"); exists {
-				vars["CURRENT_UserFullname"] = agentName.(string)
+				if name, ok := agentName.(string); ok {
+					vars["CURRENT_UserFullname"] = name
+				}
 			}
 			if agentFirst, exists := c.Get("agent_firstname"); exists {
-				vars["CURRENT_UserFirstname"] = agentFirst.(string)
+				if first, ok := agentFirst.(string); ok {
+					vars["CURRENT_UserFirstname"] = first
+				}
 			}
 			if agentLast, exists := c.Get("agent_lastname"); exists {
-				vars["CURRENT_UserLastname"] = agentLast.(string)
+				if last, ok := agentLast.(string); ok {
+					vars["CURRENT_UserLastname"] = last
+				}
 			}
 			signature.Text = SubstituteTemplateVariables(signature.Text, vars)
 		}

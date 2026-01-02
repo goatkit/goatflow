@@ -37,54 +37,72 @@ func NewCannedResponseHandlers() *CannedResponseHandlers {
 func initializeDefaultResponses(srv *service.CannedResponseService) {
 	defaults := []models.CannedResponse{
 		{
-			Name:        "Welcome Message",
-			Shortcut:    "/welcome",
-			Category:    "Greetings",
-			Subject:     "Welcome to our support",
-			Content:     "Hello {{customer_name}},\n\nWelcome to our support system. We're here to help you with any questions or issues you may have.\n\nBest regards,\n{{agent_name}}",
+			Name:     "Welcome Message",
+			Shortcut: "/welcome",
+			Category: "Greetings",
+			Subject:  "Welcome to our support",
+			Content: "Hello {{customer_name}},\n\n" +
+				"Welcome to our support system. We're here to help you with any questions or issues you may have.\n\n" +
+				"Best regards,\n{{agent_name}}",
 			ContentType: "text/plain",
 			Tags:        []string{"greeting", "welcome", "new"},
 			IsPublic:    true,
 			IsActive:    true,
 		},
 		{
-			Name:        "Request More Information",
-			Shortcut:    "/info",
-			Category:    "Information",
-			Content:     "Hello {{customer_name}},\n\nTo better assist you with your request, could you please provide the following information:\n\n1. {{info_needed}}\n2. Any error messages you're seeing\n3. Steps to reproduce the issue\n\nThank you,\n{{agent_name}}",
+			Name:     "Request More Information",
+			Shortcut: "/info",
+			Category: "Information",
+			Content: "Hello {{customer_name}},\n\n" +
+				"To better assist you with your request, could you please provide the following information:\n\n" +
+				"1. {{info_needed}}\n2. Any error messages you're seeing\n3. Steps to reproduce the issue\n\n" +
+				"Thank you,\n{{agent_name}}",
 			ContentType: "text/plain",
 			Tags:        []string{"information", "request", "details"},
 			IsPublic:    true,
 			IsActive:    true,
 		},
 		{
-			Name:        "Password Reset Instructions",
-			Shortcut:    "/password",
-			Category:    "Account",
-			Subject:     "Password Reset Instructions",
-			Content:     "Hello {{customer_name}},\n\nTo reset your password, please follow these steps:\n\n1. Click on the 'Forgot Password' link on the login page\n2. Enter your email address\n3. Check your email for the reset link\n4. Follow the link to create a new password\n\nIf you continue to have issues, please let us know.\n\nBest regards,\n{{agent_name}}",
+			Name:     "Password Reset Instructions",
+			Shortcut: "/password",
+			Category: "Account",
+			Subject:  "Password Reset Instructions",
+			Content: "Hello {{customer_name}},\n\n" +
+				"To reset your password, please follow these steps:\n\n" +
+				"1. Click on the 'Forgot Password' link on the login page\n" +
+				"2. Enter your email address\n" +
+				"3. Check your email for the reset link\n" +
+				"4. Follow the link to create a new password\n\n" +
+				"If you continue to have issues, please let us know.\n\n" +
+				"Best regards,\n{{agent_name}}",
 			ContentType: "text/plain",
 			Tags:        []string{"password", "account", "reset", "security"},
 			IsPublic:    true,
 			IsActive:    true,
 		},
 		{
-			Name:        "Ticket Resolved",
-			Shortcut:    "/resolved",
-			Category:    "Resolution",
-			Subject:     "Ticket Resolved - {{ticket_number}}",
-			Content:     "Hello {{customer_name}},\n\nWe're pleased to inform you that your ticket {{ticket_number}} has been resolved.\n\nIf you have any further questions or if the issue persists, please don't hesitate to contact us.\n\nThank you for your patience.\n\nBest regards,\n{{agent_name}}",
+			Name:     "Ticket Resolved",
+			Shortcut: "/resolved",
+			Category: "Resolution",
+			Subject:  "Ticket Resolved - {{ticket_number}}",
+			Content: "Hello {{customer_name}},\n\n" +
+				"We're pleased to inform you that your ticket {{ticket_number}} has been resolved.\n\n" +
+				"If you have any further questions or if the issue persists, please don't hesitate to contact us.\n\n" +
+				"Thank you for your patience.\n\nBest regards,\n{{agent_name}}",
 			ContentType: "text/plain",
 			Tags:        []string{"resolved", "closed", "complete"},
 			IsPublic:    true,
 			IsActive:    true,
 		},
 		{
-			Name:        "Escalation Notice",
-			Shortcut:    "/escalate",
-			Category:    "Escalation",
-			Subject:     "Ticket Escalated - {{ticket_number}}",
-			Content:     "Hello {{customer_name}},\n\nYour ticket {{ticket_number}} has been escalated to our senior support team for further investigation.\n\nWe will update you as soon as we have more information.\n\nThank you for your patience.\n\nBest regards,\n{{agent_name}}",
+			Name:     "Escalation Notice",
+			Shortcut: "/escalate",
+			Category: "Escalation",
+			Subject:  "Ticket Escalated - {{ticket_number}}",
+			Content: "Hello {{customer_name}},\n\n" +
+				"Your ticket {{ticket_number}} has been escalated to our senior support team for further investigation.\n\n" +
+				"We will update you as soon as we have more information.\n\n" +
+				"Thank you for your patience.\n\nBest regards,\n{{agent_name}}",
 			ContentType: "text/plain",
 			Tags:        []string{"escalation", "priority", "urgent"},
 			IsPublic:    true,
@@ -94,7 +112,7 @@ func initializeDefaultResponses(srv *service.CannedResponseService) {
 
 	ctx := context.Background()
 	for _, resp := range defaults {
-		srv.CreateResponse(ctx, &resp)
+		_ = srv.CreateResponse(ctx, &resp) //nolint:errcheck // Best-effort seed
 	}
 }
 

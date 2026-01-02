@@ -26,8 +26,8 @@ func (router *APIRouter) HandleUpdateTicket(c *gin.Context) { api.HandleUpdateTi
 
 // handleListTickets returns a paginated list of tickets.
 func (router *APIRouter) handleListTickets(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "25"))
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))         //nolint:errcheck // Defaults to 0
+	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "25")) //nolint:errcheck // Defaults to 0
 	status := c.Query("status")
 	priority := c.Query("priority")
 	// assignedTo := c.Query("assigned_to") // Not used currently
@@ -188,7 +188,8 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 
 	// Validate queue exists
 	var queueExists bool
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM queue WHERE id = $1 AND valid_id = 1)"), ticketRequest.QueueID).Scan(&queueExists)
+	queueExistsQuery := "SELECT EXISTS(SELECT 1 FROM queue WHERE id = $1 AND valid_id = 1)"
+	err = db.QueryRow(database.ConvertPlaceholders(queueExistsQuery), ticketRequest.QueueID).Scan(&queueExists)
 	if err != nil || !queueExists {
 		sendError(c, http.StatusBadRequest, "Invalid queue_id")
 		return
@@ -269,9 +270,9 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 
 	// Create initial article if provided
 	if ticketRequest.Article != nil {
-		subject, _ := ticketRequest.Article["subject"].(string)
-		body, _ := ticketRequest.Article["body"].(string)
-		contentType, _ := ticketRequest.Article["content_type"].(string)
+		subject, _ := ticketRequest.Article["subject"].(string)          //nolint:errcheck // Defaults to empty
+		body, _ := ticketRequest.Article["body"].(string)                //nolint:errcheck // Defaults to empty
+		contentType, _ := ticketRequest.Article["content_type"].(string) //nolint:errcheck // Defaults to empty
 		if contentType == "" {
 			contentType = "text/plain"
 		}
@@ -468,10 +469,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 	}
 
 	// Get user ID
-	userID := 1 // Default for testing
-	if id, exists := c.Get("user_id"); exists {
-		userID = id.(int)
-	}
+	userID := getContextUserID(c)
 
 	// Get database connection
 	db, err := database.GetDB()
@@ -498,7 +496,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 	// Check permissions for customer users
 	if isCustomer, _ := c.Get("is_customer"); isCustomer == true {
 		customerEmail, _ := c.Get("customer_email")
-		if customerUserID != customerEmail.(string) {
+		if email, ok := customerEmail.(string); ok && customerUserID != email {
 			sendError(c, http.StatusForbidden, "Access denied")
 			return
 		}
@@ -514,7 +512,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 	// Validate referenced IDs exist
 	if updateRequest.QueueID != nil {
 		var exists bool
-		db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM queue WHERE id = $1)"), *updateRequest.QueueID).Scan(&exists)
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM queue WHERE id = $1)"), *updateRequest.QueueID).Scan(&exists) //nolint:errcheck // Defaults to false
 		if !exists {
 			sendError(c, http.StatusBadRequest, "Invalid queue ID")
 			return
@@ -523,7 +521,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 
 	if updateRequest.StateID != nil {
 		var exists bool
-		db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_state WHERE id = $1)"), *updateRequest.StateID).Scan(&exists)
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_state WHERE id = $1)"), *updateRequest.StateID).Scan(&exists) //nolint:errcheck // Defaults to false
 		if !exists {
 			sendError(c, http.StatusBadRequest, "Invalid state ID")
 			return
@@ -532,7 +530,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 
 	if updateRequest.PriorityID != nil {
 		var exists bool
-		db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_priority WHERE id = $1)"), *updateRequest.PriorityID).Scan(&exists)
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_priority WHERE id = $1)"), *updateRequest.PriorityID).Scan(&exists) //nolint:errcheck // Defaults to false
 		if !exists {
 			sendError(c, http.StatusBadRequest, "Invalid priority ID")
 			return
@@ -617,7 +615,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, _ := result.RowsAffected() //nolint:errcheck // Defaults to 0
 	if rowsAffected == 0 {
 		sendError(c, http.StatusNotFound, "Ticket not found")
 		return
@@ -663,10 +661,7 @@ func (router *APIRouter) HandleDeleteTicket(c *gin.Context) {
 	}
 
 	// Get user ID
-	userID := 1 // Default for testing
-	if id, exists := c.Get("user_id"); exists {
-		userID = id.(int)
-	}
+	userID := getContextUserID(c)
 
 	// Get database connection
 	db, err := database.GetDB()
@@ -722,7 +717,7 @@ func (router *APIRouter) HandleDeleteTicket(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, _ := result.RowsAffected() //nolint:errcheck // Defaults to 0
 	if rowsAffected == 0 {
 		sendError(c, http.StatusNotFound, "Ticket not found")
 		return
@@ -747,7 +742,7 @@ func (router *APIRouter) HandleDeleteTicket(c *gin.Context) {
 
 	articleResult, err := db.Exec(insertArticleQuery, ticketID, userID, userID)
 	if err == nil {
-		articleID, _ := articleResult.LastInsertId()
+		articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
 
 		// Insert article content
 		insertMimeQuery := database.ConvertPlaceholders(`
@@ -767,7 +762,7 @@ func (router *APIRouter) HandleDeleteTicket(c *gin.Context) {
 			)
 		`)
 
-		db.Exec(insertMimeQuery, articleID, time.Now().Unix(), userID, userID)
+		_, _ = db.Exec(insertMimeQuery, articleID, time.Now().Unix(), userID, userID) //nolint:errcheck // Best effort
 	}
 
 	sendSuccess(c, gin.H{
@@ -804,10 +799,7 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 	}
 
 	// Get user ID from context
-	userID := 1 // Default for testing
-	if id, exists := c.Get("user_id"); exists {
-		userID = id.(int)
-	}
+	userID := getContextUserID(c)
 
 	// Get database connection
 	db, err := database.GetDB()
@@ -890,12 +882,12 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 
 		articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
 		if err == nil {
-			articleID, _ := articleResult.LastInsertId()
+			articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
 
 			// Build assignment message
 			var previousAssignee string
 			if currentResponsibleID.Valid {
-				db.QueryRow(database.ConvertPlaceholders(
+				_ = db.QueryRow(database.ConvertPlaceholders( //nolint:errcheck // Defaults to empty
 					"SELECT login FROM users WHERE id = $1",
 				), currentResponsibleID.Int32).Scan(&previousAssignee)
 			}
@@ -929,7 +921,7 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 				)
 			`)
 
-			tx.Exec(insertMimeQuery, articleID, body, time.Now().Unix(), userID, userID)
+			_, _ = tx.Exec(insertMimeQuery, articleID, body, time.Now().Unix(), userID, userID) //nolint:errcheck // Best effort
 		}
 	}
 
@@ -974,10 +966,7 @@ func (router *APIRouter) HandleCloseTicket(c *gin.Context) {
 	}
 
 	// Get user ID from context
-	userID := 1 // Default for testing
-	if id, exists := c.Get("user_id"); exists {
-		userID = id.(int)
-	}
+	userID := getContextUserID(c)
 
 	// Get database connection
 	db, err := database.GetDB()
@@ -1061,7 +1050,7 @@ func (router *APIRouter) HandleCloseTicket(c *gin.Context) {
 
 		articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
 		if err == nil {
-			articleID, _ := articleResult.LastInsertId()
+			articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
 
 			// Insert article content
 			subject := fmt.Sprintf("Ticket Closed: %s", closeRequest.Resolution)
@@ -1087,7 +1076,7 @@ func (router *APIRouter) HandleCloseTicket(c *gin.Context) {
 				)
 			`)
 
-			tx.Exec(insertMimeQuery, articleID, subject, body, time.Now().Unix(), userID, userID)
+			_, _ = tx.Exec(insertMimeQuery, articleID, subject, body, time.Now().Unix(), userID, userID) //nolint:errcheck // Best effort
 		}
 	}
 
@@ -1137,10 +1126,7 @@ func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 	}
 
 	// Get user ID from context
-	userID := 1 // Default for testing
-	if id, exists := c.Get("user_id"); exists {
-		userID = id.(int)
-	}
+	userID := getContextUserID(c)
 
 	// Get database connection
 	db, err := database.GetDB()
@@ -1214,7 +1200,7 @@ func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 
 	articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
 	if err == nil {
-		articleID, _ := articleResult.LastInsertId()
+		articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
 
 		// Insert article content
 		insertMimeQuery := database.ConvertPlaceholders(`
@@ -1235,7 +1221,7 @@ func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 		`)
 
 		body := fmt.Sprintf("Ticket has been reopened. Reason: %s", reopenRequest.Reason)
-		tx.Exec(insertMimeQuery, articleID, body, time.Now().Unix(), userID, userID)
+		_, _ = tx.Exec(insertMimeQuery, articleID, body, time.Now().Unix(), userID, userID) //nolint:errcheck // Best effort
 	}
 
 	// Commit transaction

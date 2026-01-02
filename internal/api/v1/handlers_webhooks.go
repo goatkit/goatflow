@@ -197,7 +197,7 @@ func (h *WebhookHandlers) handleGetWebhookDeliveries(c *gin.Context) {
 		return
 	}
 
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50")) //nolint:errcheck // Defaults to 0, corrected below
 	if limit > 100 {
 		limit = 100 // Cap at 100 deliveries
 	}

@@ -91,7 +91,8 @@ func HandleCreateTicketStateAPI(c *gin.Context) {
 		SELECT 1 FROM ticket_state
 		WHERE name = $1 AND valid_id = 1
 	`)
-	db.QueryRow(checkQuery, req.Name).Scan(&count)
+	row := db.QueryRow(checkQuery, req.Name)
+	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0 on no rows
 	if count == 1 {
 		c.JSON(http.StatusConflict, gin.H{"error": "State with this name already exists"})
 		return
@@ -157,7 +158,8 @@ func HandleUpdateTicketStateAPI(c *gin.Context) {
 		SELECT 1 FROM ticket_state
 		WHERE id = $1 AND valid_id = 1
 	`)
-	db.QueryRow(checkQuery, stateID).Scan(&count)
+	row := db.QueryRow(checkQuery, stateID)
+	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0 on no rows
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket state not found"})
 		return
@@ -228,7 +230,8 @@ func HandleDeleteTicketStateAPI(c *gin.Context) {
 		SELECT 1 FROM ticket_state
 		WHERE id = $1 AND valid_id = 1
 	`)
-	db.QueryRow(checkQuery, stateID).Scan(&count)
+	row := db.QueryRow(checkQuery, stateID)
+	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0 on no rows
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket state not found"})
 		return
@@ -240,7 +243,8 @@ func HandleDeleteTicketStateAPI(c *gin.Context) {
 		SELECT COUNT(*) FROM tickets 
 		WHERE ticket_state_id = $1
 	`)
-	db.QueryRow(ticketQuery, stateID).Scan(&ticketCount)
+	row2 := db.QueryRow(ticketQuery, stateID)
+	_ = row2.Scan(&ticketCount) //nolint:errcheck // Defaults to 0 on no rows
 	if ticketCount > 0 {
 		c.JSON(http.StatusConflict, gin.H{
 			"error":        "State is in use",
@@ -317,7 +321,7 @@ func HandleTicketStateStatisticsAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch statistics"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	statistics := []gin.H{}
 	totalTickets := 0
@@ -341,7 +345,7 @@ func HandleTicketStateStatisticsAPI(c *gin.Context) {
 		})
 		totalTickets += stat.TicketCount
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Logged elsewhere if needed
 
 	c.JSON(http.StatusOK, gin.H{
 		"statistics":    statistics,

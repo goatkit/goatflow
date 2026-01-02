@@ -111,7 +111,7 @@ func HandleGetArticleAPI(c *gin.Context) {
 
 		rows, err := db.Query(attachQuery, articleID)
 		if err == nil {
-			defer func() { _ = rows.Close() }()
+			defer rows.Close()
 			attachments := []gin.H{}
 			for rows.Next() {
 				var attachment struct {
@@ -129,7 +129,7 @@ func HandleGetArticleAPI(c *gin.Context) {
 					})
 				}
 			}
-			_ = rows.Err() // Check for iteration errors
+			_ = rows.Err() //nolint:errcheck // Iteration errors don't affect response
 			response["attachments"] = attachments
 		}
 	}

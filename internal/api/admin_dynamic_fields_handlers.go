@@ -273,12 +273,12 @@ func parseDynamicFieldForm(c *gin.Context) (*DynamicField, error) {
 		return nil, fmt.Errorf("invalid object type: %s", objectType)
 	}
 
-	fieldOrder, _ := strconv.Atoi(c.PostForm("field_order"))
+	fieldOrder, _ := strconv.Atoi(c.PostForm("field_order")) //nolint:errcheck // Defaults to 1
 	if fieldOrder < 1 {
 		fieldOrder = 1
 	}
 
-	validID, _ := strconv.Atoi(c.PostForm("valid_id"))
+	validID, _ := strconv.Atoi(c.PostForm("valid_id")) //nolint:errcheck // Defaults to 1
 	if validID < 1 {
 		validID = 1
 	}
@@ -314,8 +314,8 @@ func parseDynamicFieldForm(c *gin.Context) (*DynamicField, error) {
 		}
 
 	case DFTypeDate, DFTypeDateTime:
-		config.YearsInPast, _ = strconv.Atoi(c.PostForm("years_in_past"))
-		config.YearsInFuture, _ = strconv.Atoi(c.PostForm("years_in_future"))
+		config.YearsInPast, _ = strconv.Atoi(c.PostForm("years_in_past"))     //nolint:errcheck // Defaults to 0
+		config.YearsInFuture, _ = strconv.Atoi(c.PostForm("years_in_future")) //nolint:errcheck // Defaults to 0
 		config.DateRestriction = c.PostForm("date_restriction")
 
 	case DFTypeText:
@@ -326,10 +326,10 @@ func parseDynamicFieldForm(c *gin.Context) (*DynamicField, error) {
 
 	case DFTypeTextArea:
 		if rows := c.PostForm("rows"); rows != "" {
-			config.Rows, _ = strconv.Atoi(rows)
+			config.Rows, _ = strconv.Atoi(rows) //nolint:errcheck // Defaults to 0
 		}
 		if cols := c.PostForm("cols"); cols != "" {
-			config.Cols, _ = strconv.Atoi(cols)
+			config.Cols, _ = strconv.Atoi(cols) //nolint:errcheck // Defaults to 0
 		}
 	}
 
@@ -403,7 +403,7 @@ func GetDynamicFieldsForScreen(objectType, screenKey string) ([]DynamicField, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to query screen fields: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var fields []DynamicField
 	for rows.Next() {

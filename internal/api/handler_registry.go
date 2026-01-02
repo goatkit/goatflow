@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"os"
@@ -54,6 +55,16 @@ func ListHandlers() []string {
 	return out
 }
 
+// mustGetDB retrieves the database connection, returning an error response if unavailable.
+func mustGetDB(c *gin.Context) (*sql.DB, bool) {
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
+		return nil, false
+	}
+	return db, true
+}
+
 // ensureCoreHandlers pre-registers known legacy handlers still referenced in YAML.
 // Called from registerYAMLRoutes early so existing YAML works without scattering init()s.
 func ensureCoreHandlers() {
@@ -75,8 +86,10 @@ func ensureCoreHandlers() {
 			handleCreateTicketWithAttachments(c)
 		},
 		"HandleAgentNewTicket": func(c *gin.Context) {
-			// Resolve DB if available, else pass nil (agent handler supports test/nil)
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			HandleAgentNewTicket(db)(c)
 		},
 		// Attachment handlers exposed for API routes
@@ -129,67 +142,115 @@ func ensureCoreHandlers() {
 			handleCustomerLogin(shared.GetJWTManager())(c)
 		},
 		"handleCustomerDashboard": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerDashboard(db)(c)
 		},
 		"handleCustomerTickets": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerTickets(db)(c)
 		},
 		"handleCustomerNewTicket": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerNewTicket(db)(c)
 		},
 		"handleCustomerCreateTicket": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerCreateTicket(db)(c)
 		},
 		"handleCustomerTicketView": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerTicketView(db)(c)
 		},
 		"handleCustomerTicketReply": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerTicketReply(db)(c)
 		},
 		"handleCustomerCloseTicket": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerCloseTicket(db)(c)
 		},
 		"handleCustomerProfile": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerProfile(db)(c)
 		},
 		"handleCustomerUpdateProfile": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerUpdateProfile(db)(c)
 		},
 		"handleCustomerPasswordForm": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerPasswordForm(db)(c)
 		},
 		"handleCustomerChangePassword": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerChangePassword(db)(c)
 		},
 		"handleCustomerKnowledgeBase": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerKnowledgeBase(db)(c)
 		},
 		"handleCustomerKBSearch": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerKBSearch(db)(c)
 		},
 		"handleCustomerKBArticle": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerKBArticle(db)(c)
 		},
 		"handleCustomerCompanyInfo": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerCompanyInfo(db)(c)
 		},
 		"handleCustomerCompanyUsers": func(c *gin.Context) {
-			db, _ := database.GetDB()
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
 			handleCustomerCompanyUsers(db)(c)
 		},
 		"handleLogoutRedirect": func(c *gin.Context) {
@@ -211,7 +272,10 @@ func ensureCoreHandlers() {
 		// Health and metrics (lightweight for tests/dev)
 		"handleHealthCheck": func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "healthy"}) },
 		"handleDetailedHealthCheck": func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"status": "healthy", "components": gin.H{"database": "unknown", "cache": "healthy", "queue": "healthy"}})
+			c.JSON(http.StatusOK, gin.H{
+				"status":     "healthy",
+				"components": gin.H{"database": "unknown", "cache": "healthy", "queue": "healthy"},
+			})
 		},
 		"handleMetrics": func(c *gin.Context) {
 			c.String(http.StatusOK, "# HELP gotrs_up GOTRS is up\n# TYPE gotrs_up gauge\ngotrs_up 1\n")

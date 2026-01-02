@@ -55,7 +55,7 @@ func HandleListGroupsAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to fetch groups"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	type groupRow struct {
 		ID         int

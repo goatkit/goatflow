@@ -267,8 +267,8 @@ func handleGetMergeHistory(c *gin.Context) {
 
 // validateMerge validates if tickets can be merged.
 func validateMerge(primaryTicket map[string]interface{}, mergeTickets []map[string]interface{}) (bool, error) {
-	primaryCustomer := primaryTicket["customer"].(string)
-	primaryStatus := primaryTicket["status"].(string)
+	primaryCustomer := safeString(primaryTicket["customer"])
+	primaryStatus := safeString(primaryTicket["status"])
 
 	// Check if primary ticket is closed
 	if primaryStatus == "closed" {
@@ -277,18 +277,18 @@ func validateMerge(primaryTicket map[string]interface{}, mergeTickets []map[stri
 
 	for _, ticket := range mergeTickets {
 		// Check customer match
-		if ticket["customer"].(string) != primaryCustomer {
+		if safeString(ticket["customer"]) != primaryCustomer {
 			return false, fmt.Errorf("cannot merge tickets from different customers")
 		}
 
 		// Check if ticket is closed
-		if ticket["status"].(string) == "closed" {
+		if safeString(ticket["status"]) == "closed" {
 			return false, fmt.Errorf("cannot merge closed tickets")
 		}
 
 		// Check if ticket is already merged
 		if mergedInto, ok := ticket["merged_into"]; ok && mergedInto != nil {
-			ticketID := ticket["id"].(int)
+			ticketID, _ := ticket["id"].(int) //nolint:errcheck // Defaults to 0
 			return false, fmt.Errorf("ticket %d is already merged", ticketID)
 		}
 	}

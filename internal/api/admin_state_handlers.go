@@ -152,7 +152,7 @@ func handleAdminStates(c *gin.Context) {
 		renderFallback()
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var states []StateWithType
 	for rows.Next() {
@@ -171,7 +171,7 @@ func handleAdminStates(c *gin.Context) {
 
 		states = append(states, s)
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Iteration complete
 
 	// Get state types for dropdown
 	typeRows, err := db.Query(database.ConvertPlaceholders("SELECT id, name, comments FROM ticket_state_type ORDER BY id"))
@@ -197,11 +197,11 @@ func handleAdminStates(c *gin.Context) {
 
 		stateTypes = append(stateTypes, st)
 	}
-	_ = typeRows.Err() // Check for iteration errors
+	_ = typeRows.Err() //nolint:errcheck // Iteration complete
 	// Convert typeFilter to int for template comparison
 	var typeFilterInt int
 	if typeFilter != "" {
-		typeFilterInt, _ = strconv.Atoi(typeFilter)
+		typeFilterInt, _ = strconv.Atoi(typeFilter) //nolint:errcheck // Defaults to 0 on error
 	}
 
 	// Render the template or fallback if renderer not initialized
@@ -270,7 +270,8 @@ func handleAdminStateCreate(c *gin.Context) {
 
 	// Validate type_id exists
 	var typeExists bool
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = $1)"), input.TypeID).Scan(&typeExists)
+	typeExistsQuery := "SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = $1)"
+	err = db.QueryRow(database.ConvertPlaceholders(typeExistsQuery), input.TypeID).Scan(&typeExists)
 	if err != nil || !typeExists {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -366,7 +367,8 @@ func handleAdminStateUpdate(c *gin.Context) {
 	// Validate type_id if provided
 	if input.TypeID != nil {
 		var typeExists bool
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = $1)"), *input.TypeID).Scan(&typeExists)
+		typeExistsQuery := "SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = $1)"
+		err = db.QueryRow(database.ConvertPlaceholders(typeExistsQuery), *input.TypeID).Scan(&typeExists)
 		if err != nil || !typeExists {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
@@ -424,7 +426,10 @@ func handleAdminStateUpdate(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -492,7 +497,10 @@ func handleAdminStateDelete(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -528,7 +536,7 @@ func handleGetStateTypes(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var types []StateType
 	for rows.Next() {
@@ -546,7 +554,7 @@ func handleGetStateTypes(c *gin.Context) {
 
 		types = append(types, st)
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

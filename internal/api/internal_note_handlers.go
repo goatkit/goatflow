@@ -74,7 +74,7 @@ func initializeDefaultNoteData(srv *service.InternalNoteService) {
 	}
 
 	for _, tmpl := range templates {
-		srv.CreateTemplate(ctx, &tmpl)
+		_ = srv.CreateTemplate(ctx, &tmpl) //nolint:errcheck // Best-effort seed
 	}
 }
 
@@ -209,7 +209,7 @@ func (h *InternalNoteHandlers) GetNoteByID(c *gin.Context) {
 	}
 
 	// Verify the note belongs to the ticket
-	ticketID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	ticketID, _ := strconv.ParseUint(c.Param("id"), 10, 32) //nolint:errcheck // Defaults to 0
 	if note.TicketID != uint(ticketID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Note does not belong to this ticket"})
 		return
@@ -244,7 +244,7 @@ func (h *InternalNoteHandlers) UpdateNote(c *gin.Context) {
 	}
 
 	// Verify the note belongs to the ticket
-	ticketID, _ := strconv.ParseUint(c.Param("id"), 10, 32)
+	ticketID, _ := strconv.ParseUint(c.Param("id"), 10, 32) //nolint:errcheck // Defaults to 0
 	if note.TicketID != uint(ticketID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Note does not belong to this ticket"})
 		return

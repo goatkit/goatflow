@@ -23,6 +23,12 @@ linters-settings:
       - io/ioutil.ReadFile
       - io.Copy(*bytes.Buffer)
       - io.Copy(os.Stdout)
+      # tx.Rollback in defer is intentionally unchecked - rollback after commit is a no-op
+      - (*database/sql.Tx).Rollback
+      # Close errors in defer are typically not actionable
+      - (*database/sql.Rows).Close
+      - (*os.File).Close
+      - (io.Closer).Close
 
   gosec:
     severity: medium

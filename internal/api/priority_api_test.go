@@ -287,18 +287,20 @@ func TestPriorityAPI(t *testing.T) {
 		})
 		router.DELETE("/api/v1/priorities/:id", HandleDeletePriorityAPI)
 
-		// Create a test priority
+		// Create a test priority using adapter for MySQL compatibility
 		db, _ := database.GetDB()
-		var priorityID int
+		adapter := database.GetAdapter()
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_priority (name, valid_id, color, create_time, create_by, change_time, change_by)
 			VALUES ($1, 1, $2, NOW(), 1, NOW(), 1)
-			RETURNING id
 		`)
-		db.QueryRow(query, "Delete Test Priority", "#654321").Scan(&priorityID)
+		priorityID, err := adapter.InsertWithReturning(db, query, "Delete Test Priority", "#654321")
+		if err != nil {
+			t.Fatalf("Failed to create test priority: %v", err)
+		}
 
 		// Test soft deleting priority
-		req := httptest.NewRequest("DELETE", "/api/v1/priorities/"+strconv.Itoa(priorityID), nil)
+		req := httptest.NewRequest("DELETE", "/api/v1/priorities/"+strconv.Itoa(int(priorityID)), nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 		w := httptest.NewRecorder()
 
@@ -311,7 +313,8 @@ func TestPriorityAPI(t *testing.T) {
 		checkQuery := database.ConvertPlaceholders(`
 			SELECT valid_id FROM ticket_priority WHERE id = $1
 		`)
-		db.QueryRow(checkQuery, priorityID).Scan(&validID)
+		err = db.QueryRow(checkQuery, priorityID).Scan(&validID)
+		require.NoError(t, err)
 		assert.Equal(t, 2, validID)
 
 		// Test deleting non-existent priority

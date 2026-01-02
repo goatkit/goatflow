@@ -223,7 +223,7 @@ func cleanupGroupAssignmentTestUser(t *testing.T, db *sql.DB, userID int) {
 func verifyTestGroups(t *testing.T, db *sql.DB) []TestGroup {
 	rows, err := db.Query("SELECT id, name FROM groups WHERE valid_id = 1 ORDER BY name LIMIT 5")
 	require.NoError(t, err, "Failed to query groups")
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var groups []TestGroup
 	for rows.Next() {
@@ -246,7 +246,7 @@ func getUserGroupsFromDB(t *testing.T, db *sql.DB, userID int) []string {
         ORDER BY g.name`)
 	rows, err := db.Query(sqlQuery, userID)
 	require.NoError(t, err, "Failed to query user groups")
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var groups []string
 	for rows.Next() {

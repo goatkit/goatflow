@@ -43,8 +43,8 @@ func handleCreateType(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return
 	}
-	name, _ := body["name"].(string)
-	comments, _ := body["comments"].(string)
+	name, _ := body["name"].(string)         //nolint:errcheck // Defaults to empty
+	comments, _ := body["comments"].(string) //nolint:errcheck // Defaults to empty
 	validID := 1
 	if v, ok := body["valid_id"].(float64); ok {
 		validID = int(v)
@@ -131,7 +131,8 @@ func handleUpdateType(c *gin.Context) {
 				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update type"})
 				return
 			}
-			if rows, _ := res.RowsAffected(); rows == 0 {
+			rows, _ := res.RowsAffected() //nolint:errcheck // Error unlikely and rows default to 0
+			if rows == 0 {
 				c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Type not found"})
 				return
 			}
@@ -153,7 +154,8 @@ func handleUpdateType(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update type"})
 			return
 		}
-		if rows, _ := res.RowsAffected(); rows == 0 {
+		rows, _ := res.RowsAffected() //nolint:errcheck // Error unlikely and rows default to 0
+		if rows == 0 {
 			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Type not found"})
 			return
 		}
@@ -207,7 +209,8 @@ func handleDeleteType(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete type"})
 			return
 		}
-		if rows, _ := res.RowsAffected(); rows == 0 {
+		rows, _ := res.RowsAffected() //nolint:errcheck // Error unlikely and rows default to 0
+		if rows == 0 {
 			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Type not found"})
 			return
 		}

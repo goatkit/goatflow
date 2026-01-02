@@ -84,7 +84,7 @@ func HandleListQueuesAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	queues := []map[string]interface{}{}
 	for rows.Next() {
@@ -194,6 +194,7 @@ func HandleListQueuesAPI(c *gin.Context) {
 
 		groupRows, err := db.Query(groupQuery, queue.ID)
 		if err == nil {
+			defer groupRows.Close()
 			groups := []map[string]interface{}{}
 			for groupRows.Next() {
 				var groupID int
@@ -205,8 +206,7 @@ func HandleListQueuesAPI(c *gin.Context) {
 					})
 				}
 			}
-			_ = groupRows.Err() // Check for iteration errors
-			groupRows.Close()
+			_ = groupRows.Err() //nolint:errcheck // Check for iteration errors
 			queueMap["groups"] = groups
 		} else {
 			queueMap["groups"] = []interface{}{}
@@ -214,7 +214,7 @@ func HandleListQueuesAPI(c *gin.Context) {
 
 		queues = append(queues, queueMap)
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Check for iteration errors
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

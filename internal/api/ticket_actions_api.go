@@ -49,7 +49,9 @@ func HandleCloseTicketAPI(c *gin.Context) {
 	// Get user ID from context
 	userID := 1 // Default for testing
 	if id, exists := c.Get("user_id"); exists {
-		userID = id.(int)
+		if intID, ok := id.(int); ok {
+			userID = intID
+		}
 	}
 
 	// Get database connection
@@ -152,7 +154,7 @@ func HandleCloseTicketAPI(c *gin.Context) {
 
 		articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
 		if err == nil {
-			articleID, _ := articleResult.LastInsertId()
+			articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
 
 			// Insert article content
 			subject := fmt.Sprintf("Ticket Closed: %s", closeRequest.Resolution)
@@ -178,7 +180,7 @@ func HandleCloseTicketAPI(c *gin.Context) {
 				)
 			`)
 
-			tx.Exec(insertMimeQuery, articleID, subject, body, time.Now().Unix(), userID, userID)
+			_, _ = tx.Exec(insertMimeQuery, articleID, subject, body, time.Now().Unix(), userID, userID) //nolint:errcheck // Best effort
 		}
 	}
 
@@ -243,7 +245,9 @@ func HandleReopenTicketAPI(c *gin.Context) {
 	// Get user ID from context
 	userID := 1 // Default for testing
 	if id, exists := c.Get("user_id"); exists {
-		userID = id.(int)
+		if intID, ok := id.(int); ok {
+			userID = intID
+		}
 	}
 
 	// Get database connection
@@ -336,7 +340,7 @@ func HandleReopenTicketAPI(c *gin.Context) {
 
 	articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
 	if err == nil {
-		articleID, _ := articleResult.LastInsertId()
+		articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
 
 		// Insert article content
 		insertMimeQuery := database.ConvertPlaceholders(`
@@ -357,7 +361,7 @@ func HandleReopenTicketAPI(c *gin.Context) {
 		`)
 
 		body := fmt.Sprintf("Ticket has been reopened. Reason: %s", reopenRequest.Reason)
-		tx.Exec(insertMimeQuery, articleID, body, time.Now().Unix(), userID, userID)
+		_, _ = tx.Exec(insertMimeQuery, articleID, body, time.Now().Unix(), userID, userID) //nolint:errcheck // Best effort
 	}
 
 	// Commit transaction
@@ -416,7 +420,9 @@ func HandleAssignTicketAPI(c *gin.Context) {
 	// Get user ID from context
 	userID := 1 // Default for testing
 	if id, exists := c.Get("user_id"); exists {
-		userID = id.(int)
+		if intID, ok := id.(int); ok {
+			userID = intID
+		}
 	}
 
 	// Get database connection
@@ -521,12 +527,12 @@ func HandleAssignTicketAPI(c *gin.Context) {
 
 		articleResult, err := tx.Exec(insertArticleQuery, ticketID, userID, userID)
 		if err == nil {
-			articleID, _ := articleResult.LastInsertId()
+			articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort
 
 			// Build assignment message
 			var previousAssignee string
 			if currentResponsibleID.Valid {
-				db.QueryRow(database.ConvertPlaceholders(
+				_ = db.QueryRow(database.ConvertPlaceholders( //nolint:errcheck // Defaults to empty
 					"SELECT login FROM users WHERE id = $1",
 				), currentResponsibleID.Int32).Scan(&previousAssignee)
 			}
@@ -560,7 +566,7 @@ func HandleAssignTicketAPI(c *gin.Context) {
 				)
 			`)
 
-			tx.Exec(insertMimeQuery, articleID, body, time.Now().Unix(), userID, userID)
+			_, _ = tx.Exec(insertMimeQuery, articleID, body, time.Now().Unix(), userID, userID) //nolint:errcheck // Best effort
 		}
 	}
 

@@ -71,7 +71,7 @@ func BroadcastTicketUpdate(eventType string, ticketData interface{}) {
 	defer ticketEventClients.RUnlock()
 
 	// Create JSON message
-	data, _ := json.Marshal(map[string]interface{}{
+	data, _ := json.Marshal(map[string]interface{}{ //nolint:errcheck // Best effort broadcast
 		"type":      eventType,
 		"data":      ticketData,
 		"timestamp": time.Now().Unix(),

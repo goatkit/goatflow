@@ -170,7 +170,7 @@ func HandleGetUserGroupsAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	groups := []map[string]interface{}{}
 	for rows.Next() {
@@ -196,7 +196,7 @@ func HandleGetUserGroupsAPI(c *gin.Context) {
 
 		groups = append(groups, group)
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Check for iteration errors
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -261,7 +261,8 @@ func HandleAddUserToGroupAPI(c *gin.Context) {
 		SELECT 1 FROM user_groups 
 		WHERE user_id = $1 AND group_id = $2
 	`)
-	db.QueryRow(checkQuery, userID, req.GroupID).Scan(&associationExists)
+	row := db.QueryRow(checkQuery, userID, req.GroupID)
+	_ = row.Scan(&associationExists) //nolint:errcheck // Defaults to 0
 
 	if associationExists == 1 {
 		// Update existing association

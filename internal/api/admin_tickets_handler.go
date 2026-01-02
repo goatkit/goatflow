@@ -25,7 +25,7 @@ func HandleAdminTickets(c *gin.Context) {
 	statusFilter := c.Query("status")
 	queueFilter := c.Query("queue")
 	searchQuery := c.Query("search")
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	page := queryInt(c, "page", 1)
 	limit := 20
 	offset := (page - 1) * limit
 
@@ -115,7 +115,7 @@ func HandleAdminTickets(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	// Collect tickets
 	var tickets []map[string]interface{}
@@ -156,28 +156,28 @@ func HandleAdminTickets(c *gin.Context) {
 			"assigned_to": ticket.AssignedTo,
 		})
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 
 	// Get available states for filter
-	stateRows, _ := db.Query(database.ConvertPlaceholders("SELECT DISTINCT name FROM ticket_state WHERE valid_id = 1 ORDER BY name"))
+	stateRows, _ := db.Query(database.ConvertPlaceholders("SELECT DISTINCT name FROM ticket_state WHERE valid_id = 1 ORDER BY name")) //nolint:errcheck // Filter data defaults to empty
 	var states []string
 	if stateRows != nil {
 		defer stateRows.Close()
 		for stateRows.Next() {
 			var state string
-			stateRows.Scan(&state)
+			_ = stateRows.Scan(&state) //nolint:errcheck // Scan errors skipped for optional filter
 			states = append(states, state)
 		}
 	}
 
 	// Get available queues for filter
-	queueRows, _ := db.Query(database.ConvertPlaceholders("SELECT DISTINCT name FROM queue WHERE valid_id = 1 ORDER BY name"))
+	queueRows, _ := db.Query(database.ConvertPlaceholders("SELECT DISTINCT name FROM queue WHERE valid_id = 1 ORDER BY name")) //nolint:errcheck // Filter data defaults to empty
 	var queues []string
 	if queueRows != nil {
 		defer queueRows.Close()
 		for queueRows.Next() {
 			var queue string
-			queueRows.Scan(&queue)
+			_ = queueRows.Scan(&queue) //nolint:errcheck // Scan errors skipped for optional filter
 			queues = append(queues, queue)
 		}
 	}

@@ -50,7 +50,8 @@ func HandleCreateQueueAPI(c *gin.Context) {
         SELECT 1 FROM queue
         WHERE name = $1 AND valid_id = 1
     `)
-	db.QueryRow(checkQuery, req.Name).Scan(&count)
+	row := db.QueryRow(checkQuery, req.Name)
+	_ = row.Scan(&count) //nolint:errcheck // Count defaults to 0
 	if count == 1 {
 		c.JSON(http.StatusConflict, gin.H{"success": false, "error": "Queue with this name already exists"})
 		return
@@ -112,77 +113,40 @@ func HandleCreateQueueAPI(c *gin.Context) {
 		createdBy = 1
 	}
 
-	// Create queue (match our actual schema columns exactly)
-	// Columns inserted: name, group_id, system_address_id, salutation_id, signature_id,
-	//                   unlock_timeout, follow_up_id, follow_up_lock, comments, create_by, change_by
-	// Note: valid_id defaults to 1, create_time/change_time default to CURRENT_TIMESTAMP
-	var queueID int
+	// Create queue - adapter handles MySQL vs PostgreSQL differences
+	// Note: $10 is used for both create_by and change_by (repeated placeholder)
+	insertQuery := `
+		INSERT INTO queue (
+			name, group_id, system_address_id, salutation_id, signature_id,
+			unlock_timeout, follow_up_id, follow_up_lock, comments, valid_id,
+			create_time, create_by, change_time, change_by
+		) VALUES (
+			$1, $2, $3, $4, $5,
+			$6, $7, $8, $9, 1,
+			NOW(), $10, NOW(), $10
+		) RETURNING id`
 
-	driver := database.GetDBDriver()
-	if database.IsMySQL() {
-		// MySQL/MariaDB variant (explicit '?' placeholders, no RETURNING)
-		insertNoRet := `
-            INSERT INTO queue (
-                name, group_id, system_address_id, salutation_id, signature_id,
-                unlock_timeout, follow_up_id, follow_up_lock, comments, valid_id,
-                create_time, create_by, change_time, change_by
-            ) VALUES (
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, 1,
-                NOW(), ?, NOW(), ?
-            )`
-		res, errExec := tx.Exec(
-			insertNoRet,
-			req.Name,
-			req.GroupID,
-			req.SystemAddressID,
-			req.SalutationID,
-			req.SignatureID,
-			req.UnlockTimeout,
-			req.FollowUpID,
-			req.FollowUpLock,
-			req.Comments,
-			createdBy,
-			createdBy,
-		)
-		if errExec != nil {
-			_ = tx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": fmt.Sprintf("Queue insert failed (driver=%s mysql-path): %v", driver, errExec)})
-			return
-		}
-		lid, _ := res.LastInsertId()
-		queueID = int(lid)
-	} else {
-		// PostgreSQL variant with RETURNING id
-		insertRet := database.ConvertPlaceholders(`
-            INSERT INTO queue (
-                name, group_id, system_address_id, salutation_id, signature_id,
-                unlock_timeout, follow_up_id, follow_up_lock, comments, valid_id,
-                create_time, create_by, change_time, change_by
-            ) VALUES (
-                $1, $2, $3, $4, $5,
-                $6, $7, $8, $9, 1,
-                NOW(), $10, NOW(), $11
-            ) RETURNING id`)
-		if err := tx.QueryRow(
-			insertRet,
-			req.Name,
-			req.GroupID,
-			req.SystemAddressID,
-			req.SalutationID,
-			req.SignatureID,
-			req.UnlockTimeout,
-			req.FollowUpID,
-			req.FollowUpLock,
-			req.Comments,
-			createdBy,
-			createdBy,
-		).Scan(&queueID); err != nil {
-			_ = tx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": fmt.Sprintf("Queue insert failed (driver=%s pg-path): %v", driver, err)})
-			return
-		}
+	queueID64, err := database.GetAdapter().InsertWithReturningTx(tx, insertQuery,
+		req.Name,
+		req.GroupID,
+		req.SystemAddressID,
+		req.SalutationID,
+		req.SignatureID,
+		req.UnlockTimeout,
+		req.FollowUpID,
+		req.FollowUpLock,
+		req.Comments,
+		createdBy,
+	)
+	if err != nil {
+		_ = tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   fmt.Sprintf("Queue insert failed: %v", err),
+		})
+		return
 	}
+	queueID := int(queueID64)
 
 	// Add group access if specified
 	if len(req.GroupAccess) > 0 {

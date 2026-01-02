@@ -47,11 +47,12 @@ var templates = map[int]*TicketTemplate{
 		UpdatedAt:   time.Now().Add(-30 * 24 * time.Hour),
 	},
 	2: {
-		ID:           2,
-		Name:         "New Employee Onboarding",
-		Description:  "Template for onboarding new employees",
-		Subject:      "New Employee Setup - {{EMPLOYEE_NAME}}",
-		Body:         "Please set up accounts for:\nName: {{EMPLOYEE_NAME}}\nDepartment: {{DEPARTMENT}}\nStart Date: {{START_DATE}}\nManager: {{MANAGER_NAME}}",
+		ID:          2,
+		Name:        "New Employee Onboarding",
+		Description: "Template for onboarding new employees",
+		Subject:     "New Employee Setup - {{EMPLOYEE_NAME}}",
+		Body: "Please set up accounts for:\nName: {{EMPLOYEE_NAME}}\nDepartment: {{DEPARTMENT}}\n" +
+			"Start Date: {{START_DATE}}\nManager: {{MANAGER_NAME}}",
 		Priority:     "4 high",
 		QueueID:      2,
 		TypeID:       2,
@@ -201,7 +202,7 @@ func handleGetTicketTemplates(c *gin.Context) {
 	for _, tmpl := range templates {
 		// Filter by queue if specified
 		if queueIDStr != "" {
-			queueID, _ := strconv.Atoi(queueIDStr)
+			queueID, _ := strconv.Atoi(queueIDStr) //nolint:errcheck // Defaults to 0
 			if tmpl.QueueID != queueID {
 				continue
 			}

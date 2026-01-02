@@ -45,7 +45,7 @@ func startRoutesWatcher() {
 		dir := "./routes"
 		for {
 			changed := false
-			filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error { //nolint:errcheck // Best effort file watching
 				if err != nil || info == nil {
 					return nil //nolint:nilerr // continue walking on error
 				}
@@ -89,6 +89,10 @@ func startRoutesWatcher() {
 }
 
 // registerYAMLRoutesManifestOnly rebuilds the manifest without re-registering routes.
+// NOTE: This function is a stub for hot-reload manifest regeneration.
+// Currently the manifest is only written during initial route registration.
+//
+//nolint:staticcheck // SA4010: manifest variable intentionally unused in stub
 func registerYAMLRoutesManifestOnly() {
 	docs, err := loadYAMLRouteGroups("./routes")
 	if err != nil {
@@ -119,10 +123,17 @@ func registerYAMLRoutesManifestOnly() {
 			if len(fullPath) == 0 || fullPath[0] != '/' {
 				fullPath = "/" + fullPath
 			}
-			manifest = append(manifest, manifestRoute{Group: doc.Metadata.Name, Method: method, Path: fullPath, Handler: rt.HandlerName, RedirectTo: rt.RedirectTo, Status: rt.Status, Websocket: rt.Websocket, Middleware: append(doc.Spec.Middleware, rt.Middleware...)})
+			manifest = append(manifest, manifestRoute{
+				Group:      doc.Metadata.Name,
+				Method:     method,
+				Path:       fullPath,
+				Handler:    rt.HandlerName,
+				RedirectTo: rt.RedirectTo,
+				Status:     rt.Status,
+				Websocket:  rt.Websocket,
+				Middleware: append(doc.Spec.Middleware, rt.Middleware...),
+			})
 		}
 	}
-	// Use existing manifest writer by calling registerYAMLRoutes with nil (it will write manifest), or duplicate logic:
-	// Simpler: call registerYAMLRoutes again but it will attempt re-register (ignored). For safety we just reuse minimal manifest writer.
-	// NOTE: Keeping simple to avoid duplication; could refactor writer to shared function.
+	_ = manifest // Stub: would write manifest here
 }

@@ -123,7 +123,7 @@ func handleAdminTypes(c *gin.Context) {
 </html>`)
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var types []TicketType
 	for rows.Next() {
@@ -134,7 +134,7 @@ func handleAdminTypes(c *gin.Context) {
 		}
 		types = append(types, t)
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 
 	// Render template or fallback if renderer not initialized
 	if getPongo2Renderer() == nil {
@@ -341,7 +341,10 @@ func handleAdminTypeUpdate(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		respondError(http.StatusNotFound, "Type not found")
 		return
@@ -411,7 +414,10 @@ func handleAdminTypeDelete(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		respondError(http.StatusNotFound, "Type not found")
 		return

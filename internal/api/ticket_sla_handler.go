@@ -146,9 +146,11 @@ func handleGetTicketSLA(c *gin.Context) {
 	}
 
 	// Calculate SLA
+	priority, _ := ticketData["priority"].(string)       //nolint:errcheck // Defaults to empty
+	createdAt, _ := ticketData["created_at"].(time.Time) //nolint:errcheck // Zero time on error
 	sla := calculateSLA(
-		ticketData["priority"].(string),
-		ticketData["created_at"].(time.Time),
+		priority,
+		createdAt,
 		time.Now(),
 	)
 
@@ -262,8 +264,8 @@ func checkAutoEscalation(ticketData map[string]interface{}) EscalationResult {
 		return EscalationResult{ShouldEscalate: false}
 	}
 
-	priority := ticketData["priority"].(string)
-	createdAt := ticketData["created_at"].(time.Time)
+	priority, _ := ticketData["priority"].(string)       //nolint:errcheck // Defaults to empty
+	createdAt, _ := ticketData["created_at"].(time.Time) //nolint:errcheck // Zero time on error
 
 	// Calculate SLA
 	sla := calculateSLA(priority, createdAt, time.Now())

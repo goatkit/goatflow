@@ -28,7 +28,7 @@ func readFormFile(c *gin.Context, fieldName string) ([]byte, *multipart.FileHead
 	if err != nil {
 		return nil, nil, err
 	}
-	defer func() { _ = file.Close() }()
+	defer file.Close()
 
 	content, err := io.ReadAll(file)
 	if err != nil {
@@ -105,7 +105,7 @@ func handleAdminAttachment(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to fetch attachments")
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var attachments []StandardAttachment
 	for rows.Next() {

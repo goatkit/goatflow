@@ -58,72 +58,56 @@ func getUserIDFromContext(c *gin.Context) int {
 
 // getUserFromContext gets the user from the gin context.
 func getUserFromContext(c *gin.Context) *models.User {
+	role := getContextRole(c)
+
 	userInterface, exists := c.Get("user")
 	if !exists {
-		// Create user from context values
-		userID, _ := c.Get("user_id")
-		userEmail, _ := c.Get("user_email")
-		userRole, _ := c.Get("user_role")
-
-		user := &models.User{
-			ID:    1,
-			Login: "admin",
-			Email: "root@localhost",
-			Role:  "Admin", // Default role
-		}
-
-		// Set values from context if available
-		if id, ok := userID.(int); ok {
-			user.ID = uint(id)
-		}
-		if email, ok := userEmail.(string); ok {
-			user.Email = email
-			if user.Login == "admin" && email != "" {
-				user.Login = email
-			}
-		}
-		if role, ok := userRole.(string); ok {
-			user.Role = role
-		}
-
-		return user
+		return buildUserFromContext(c, role)
 	}
 
-	// Try to cast to *models.User
 	if user, ok := userInterface.(*models.User); ok {
-		// Also check for role in context
-		if userRole, exists := c.Get("user_role"); exists {
-			if role, ok := userRole.(string); ok {
-				user.Role = role
-			}
-		}
+		user.Role = role
 		return user
 	}
 
-	// Try to cast to models.User
 	if user, ok := userInterface.(models.User); ok {
-		// Also check for role in context
-		if userRole, exists := c.Get("user_role"); exists {
-			if role, ok := userRole.(string); ok {
-				user.Role = role
-			}
-		}
+		user.Role = role
 		return &user
 	}
 
-	// Return default user with role from context
-	userRole, _ := c.Get("user_role")
-	role := "Admin"
-	if r, ok := userRole.(string); ok {
-		role = r
-	}
+	return &models.User{ID: 1, Login: "admin", Email: "root@localhost", Role: role}
+}
 
-	return &models.User{
+func getContextRole(c *gin.Context) string {
+	if userRole, exists := c.Get("user_role"); exists {
+		if role, ok := userRole.(string); ok {
+			return role
+		}
+	}
+	return "Admin"
+}
+
+func buildUserFromContext(c *gin.Context, role string) *models.User {
+	user := &models.User{
 		ID:    1,
 		Login: "admin",
 		Email: "root@localhost",
 		Role:  role,
 	}
+
+	if id, ok := c.Get("user_id"); ok {
+		if idInt, ok := id.(int); ok {
+			user.ID = uint(idInt)
+		}
+	}
+	if email, ok := c.Get("user_email"); ok {
+		if emailStr, ok := email.(string); ok && emailStr != "" {
+			user.Email = emailStr
+			user.Login = emailStr
+		}
+	}
+
+	return user
 }
 
 // sendGuruMeditation sends a detailed error response (similar to VirtualBox's Guru Meditation).
@@ -150,7 +134,8 @@ func getStateID(state string) int {
 	var stateRow struct {
 		ID int
 	}
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = $1 AND valid_id = 1"), state).Scan(&stateRow.ID)
+	stateQuery := "SELECT id FROM ticket_state WHERE name = $1 AND valid_id = 1"
+	err = db.QueryRow(database.ConvertPlaceholders(stateQuery), state).Scan(&stateRow.ID)
 	if err == nil {
 		return stateRow.ID
 	}
@@ -166,12 +151,14 @@ func getPriorityID(priority string) int {
 	var priorityRow struct {
 		ID int
 	}
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_priority WHERE name = $1 AND valid_id = 1"), priority).Scan(&priorityRow.ID)
+	priorityQuery := "SELECT id FROM ticket_priority WHERE name = $1 AND valid_id = 1"
+	err = db.QueryRow(database.ConvertPlaceholders(priorityQuery), priority).Scan(&priorityRow.ID)
 	if err == nil {
 		return priorityRow.ID
 	}
 	// Fallback to default priority (normal/medium)
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM ticket_priority WHERE name IN ('normal', 'medium') AND valid_id = 1 LIMIT 1")).Scan(&priorityRow.ID)
+	fallbackQuery := "SELECT id FROM ticket_priority WHERE name IN ('normal', 'medium') AND valid_id = 1 LIMIT 1"
+	err = db.QueryRow(database.ConvertPlaceholders(fallbackQuery)).Scan(&priorityRow.ID)
 	if err == nil {
 		return priorityRow.ID
 	}

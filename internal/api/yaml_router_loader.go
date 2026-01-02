@@ -103,7 +103,12 @@ func BuildRoutesManifest() ([]byte, error) {
 				continue
 			}
 			fullPath := combineRoutePath(prefix, rt.Path)
-			mr := manifestRoute{Group: doc.Metadata.Name, Method: strings.ToUpper(rt.Method), Path: fullPath, Middleware: append(doc.Spec.Middleware, rt.Middleware...)}
+			mr := manifestRoute{
+				Group:      doc.Metadata.Name,
+				Method:     strings.ToUpper(rt.Method),
+				Path:       fullPath,
+				Middleware: append(doc.Spec.Middleware, rt.Middleware...),
+			}
 			if rt.RedirectTo != "" {
 				mr.RedirectTo = rt.RedirectTo
 				if rt.Status != 0 {
@@ -134,7 +139,7 @@ func loadYAMLRouteGroups(dir string) ([]topRouteDoc, error) {
 	}
 	var docs []topRouteDoc
 	entries := []string{}
-	filepath.WalkDir(resolved, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(resolved, func(path string, d fs.DirEntry, err error) error { //nolint:errcheck // Best effort directory walk
 		if err != nil {
 			return nil //nolint:nilerr // continue walking on error
 		}
@@ -269,7 +274,14 @@ func registerYAMLRoutes(r *gin.Engine, authMW interface{}) {
 				} else {
 					registerOneWithChain(base, method, cleanRoutePath, append(routeMws, h)...)
 				}
-				manifest = append(manifest, manifestRoute{Group: doc.Metadata.Name, Method: method, Path: fullPath, RedirectTo: rt.RedirectTo, Status: status, Middleware: append(doc.Spec.Middleware, rt.Middleware...)})
+				manifest = append(manifest, manifestRoute{
+					Group:      doc.Metadata.Name,
+					Method:     method,
+					Path:       fullPath,
+					RedirectTo: rt.RedirectTo,
+					Status:     status,
+					Middleware: append(doc.Spec.Middleware, rt.Middleware...),
+				})
 				continue
 			}
 			if rt.Websocket {
@@ -279,7 +291,14 @@ func registerYAMLRoutes(r *gin.Engine, authMW interface{}) {
 					} else {
 						registerOneWithChain(base, method, cleanRoutePath, append(routeMws, h)...)
 					}
-					manifest = append(manifest, manifestRoute{Group: doc.Metadata.Name, Method: method, Path: fullPath, Handler: rt.HandlerName, Websocket: true, Middleware: append(doc.Spec.Middleware, rt.Middleware...)})
+					manifest = append(manifest, manifestRoute{
+						Group:      doc.Metadata.Name,
+						Method:     method,
+						Path:       fullPath,
+						Handler:    rt.HandlerName,
+						Websocket:  true,
+						Middleware: append(doc.Spec.Middleware, rt.Middleware...),
+					})
 				} else {
 					log.Printf("missing websocket handler %s", rt.HandlerName)
 				}
@@ -291,7 +310,13 @@ func registerYAMLRoutes(r *gin.Engine, authMW interface{}) {
 				} else {
 					registerOneWithChain(base, method, cleanRoutePath, append(routeMws, h)...)
 				}
-				manifest = append(manifest, manifestRoute{Group: doc.Metadata.Name, Method: method, Path: fullPath, Handler: rt.HandlerName, Middleware: append(doc.Spec.Middleware, rt.Middleware...)})
+				manifest = append(manifest, manifestRoute{
+					Group:      doc.Metadata.Name,
+					Method:     method,
+					Path:       fullPath,
+					Handler:    rt.HandlerName,
+					Middleware: append(doc.Spec.Middleware, rt.Middleware...),
+				})
 			} else if rt.HandlerName != "" {
 				log.Printf("No handler mapped for %s (%s %s)", rt.HandlerName, method, fullPath)
 			}
@@ -418,44 +443,53 @@ func fallbackAuthGuard() gin.HandlerFunc {
 			return
 		}
 
-		if allowBypass {
-			if _, err := c.Cookie("access_token"); err == nil {
-				// Populate a minimal user context for downstream handlers when we explicitly allow bypass
-				if _, exists := c.Get("user_id"); !exists {
-					c.Set("user_id", uint(1))
-				}
-				if _, exists := c.Get("user_email"); !exists {
-					c.Set("user_email", "demo@example.com")
-				}
-				if _, exists := c.Get("user_role"); !exists {
-					c.Set("user_role", "Admin")
-				}
-				if _, exists := c.Get("user_name"); !exists {
-					c.Set("user_name", "Demo User")
-				}
-				c.Next()
-				return
-			}
+		if allowBypass && hasCookieToken(c) {
+			setDefaultUserContext(c)
+			c.Next()
+			return
 		}
-		accept := c.GetHeader("Accept")
-		if strings.Contains(accept, "text/html") {
-			// Prevent redirect loop: if already requesting /login just serve page; likewise treat root as login
-			p := c.Request.URL.Path
-			if p == "/login" || p == "/" {
-				// Use existing login page renderer if available; otherwise simple placeholder string
-				if getPongo2Renderer() != nil {
-					handleLoginPage(c)
-				} else {
-					c.String(http.StatusOK, "login")
-				}
+
+		handleUnauthenticatedRequest(c)
+	}
+}
+
+func hasCookieToken(c *gin.Context) bool {
+	_, err := c.Cookie("access_token")
+	return err == nil
+}
+
+func setDefaultUserContext(c *gin.Context) {
+	if _, exists := c.Get("user_id"); !exists {
+		c.Set("user_id", uint(1))
+	}
+	if _, exists := c.Get("user_email"); !exists {
+		c.Set("user_email", "demo@example.com")
+	}
+	if _, exists := c.Get("user_role"); !exists {
+		c.Set("user_role", "Admin")
+	}
+	if _, exists := c.Get("user_name"); !exists {
+		c.Set("user_name", "Demo User")
+	}
+}
+
+func handleUnauthenticatedRequest(c *gin.Context) {
+	accept := c.GetHeader("Accept")
+	if strings.Contains(accept, "text/html") {
+		p := c.Request.URL.Path
+		if p == "/login" || p == "/" {
+			if getPongo2Renderer() != nil {
+				handleLoginPage(c)
 			} else {
-				c.Redirect(http.StatusFound, "/login")
+				c.String(http.StatusOK, "login")
 			}
 		} else {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+			c.Redirect(http.StatusFound, "/login")
 		}
-		c.Abort()
+	} else {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 	}
+	c.Abort()
 }
 
 func ensureTestAuthContext(c *gin.Context) bool {
@@ -463,18 +497,7 @@ func ensureTestAuthContext(c *gin.Context) bool {
 		return false
 	}
 	if gin.Mode() == gin.TestMode || isTestLikeEnvironment() {
-		if _, exists := c.Get("user_id"); !exists {
-			c.Set("user_id", uint(1))
-		}
-		if _, exists := c.Get("user_email"); !exists {
-			c.Set("user_email", "demo@example.com")
-		}
-		if _, exists := c.Get("user_role"); !exists {
-			c.Set("user_role", "Admin")
-		}
-		if _, exists := c.Get("user_name"); !exists {
-			c.Set("user_name", "Demo User")
-		}
+		setDefaultUserContext(c)
 		return true
 	}
 	return false

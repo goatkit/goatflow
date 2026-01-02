@@ -24,7 +24,7 @@ func GetArticleAttachments(articleID int) ([]map[string]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query attachments: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	attachments := []map[string]interface{}{}
 	for rows.Next() {
@@ -93,7 +93,7 @@ func GetTicketAttachments(ticketID int) (map[int][]map[string]interface{}, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to query ticket attachments: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	attachmentsByArticle := make(map[int][]map[string]interface{})
 

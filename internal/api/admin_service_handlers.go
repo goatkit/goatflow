@@ -119,7 +119,7 @@ func handleAdminServices(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to fetch services")
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var services []ServiceWithStats
 	for rows.Next() {
@@ -141,7 +141,7 @@ func handleAdminServices(c *gin.Context) {
 
 		services = append(services, s)
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Iteration complete, data already collected
 
 	// Render the template or fallback if renderer not initialized
 	if getPongo2Renderer() == nil {
@@ -215,32 +215,12 @@ func handleAdminServiceCreate(c *gin.Context) {
 		return
 	}
 
-	// Insert the new service
-	insertQuery := `
+	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO service (name, comments, valid_id, create_time, create_by, change_time, change_by)
 		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 		RETURNING id
-	`
-	convertedQuery, useLastInsert := database.ConvertReturning(insertQuery)
-	convertedQuery = database.ConvertPlaceholders(convertedQuery)
-
-	var id int
-	if database.IsMySQL() && useLastInsert {
-		result, execErr := db.Exec(convertedQuery, input.Name, input.Comments, input.ValidID)
-		if execErr != nil {
-			err = execErr
-		} else {
-			lastID, lastErr := result.LastInsertId()
-			if lastErr != nil {
-				err = lastErr
-			} else {
-				id = int(lastID)
-			}
-		}
-	} else {
-		err = db.QueryRow(convertedQuery, input.Name, input.Comments, input.ValidID).Scan(&id)
-	}
-
+	`)
+	id64, err := database.GetAdapter().InsertWithReturning(db, insertQuery, input.Name, input.Comments, input.ValidID)
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			shared.SendToastResponse(c, false, "Service with this name already exists", "")
@@ -253,6 +233,7 @@ func handleAdminServiceCreate(c *gin.Context) {
 		shared.SendToastResponse(c, false, "Failed to create service", "")
 		return
 	}
+	_ = id64 // ID available if needed
 
 	shared.SendToastResponse(c, true, "Service created successfully", "/admin/services")
 }
@@ -324,7 +305,10 @@ func handleAdminServiceUpdate(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "message": "Service not found"})
 		return
@@ -370,7 +354,10 @@ func handleAdminServiceDelete(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		shared.SendToastResponse(c, false, "Service not found", "")
 		return

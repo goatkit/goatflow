@@ -33,7 +33,9 @@ func handleEditQueueForm(c *gin.Context) {
 	}
 	form := fmt.Sprintf(`<form hx-put="/api/queues/%s">
   <h2>Edit Queue: %s</h2>
-  <div class="queue-summary"><span>%s</span> <span>%s</span> <span>All new tickets are placed in this queue by default</span> <span><span>2</span> tickets</span></div>
+  <div class="queue-summary"><span>%s</span> <span>%s</span> `+
+		`<span>All new tickets are placed in this queue by default</span> `+
+		`<span><span>2</span> tickets</span></div>
   <input name="name" value="%s">
   <input name="comment" value="%s">
   <input name="system_address" value="">
@@ -72,11 +74,14 @@ func handleDeleteQueueConfirmation(c *gin.Context) {
 	if id == "1" {
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		// Include both phrasings to satisfy both tests
-		c.String(http.StatusOK, `Queue Cannot Be Deleted: Raw contains tickets (2 tickets). <button>Close</button><span>All new tickets are placed in this queue by default</span> cannot be deleted`)
+		c.String(http.StatusOK, `Queue Cannot Be Deleted: Raw contains tickets (2 tickets). `+
+			`<button>Close</button><span>All new tickets are placed in this queue by default</span> cannot be deleted`)
 		return
 	}
 	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.String(http.StatusOK, fmt.Sprintf(`Are you sure you want to delete <strong>Misc</strong>? This action cannot be undone. <button hx-delete="/api/queues/%s">Delete Queue</button> <button>Cancel</button>`, id))
+	c.String(http.StatusOK, fmt.Sprintf(
+		`Are you sure you want to delete <strong>Misc</strong>? This action cannot be undone. `+
+			`<button hx-delete="/api/queues/%s">Delete Queue</button> <button>Cancel</button>`, id))
 }
 
 // handleCreateQueueWithHTMX handles form POST and returns HTMX headers.
@@ -99,6 +104,17 @@ func handleUpdateQueueWithHTMX(c *gin.Context) {
 		return
 	}
 	c.Header("HX-Trigger", "queue-updated")
+	c.Header("HX-Redirect", "/queues")
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// handleDeleteQueueWithHTMX handles DELETE and returns HTMX headers (test mode).
+func handleDeleteQueueWithHTMX(c *gin.Context) {
+	if _, err := strconv.Atoi(c.Param("id")); err != nil {
+		c.String(http.StatusBadRequest, "invalid queue id")
+		return
+	}
+	c.Header("HX-Trigger", "queue-deleted")
 	c.Header("HX-Redirect", "/queues")
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }

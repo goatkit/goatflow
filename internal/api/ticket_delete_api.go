@@ -121,7 +121,10 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -149,7 +152,7 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 
 	articleResult, err := db.Exec(insertArticleQuery, ticketID, userID, userID)
 	if err == nil {
-		articleID, _ := articleResult.LastInsertId()
+		articleID, _ := articleResult.LastInsertId() //nolint:errcheck // Best effort article creation
 
 		// Insert article content
 		insertMimeQuery := database.ConvertPlaceholders(`
@@ -169,7 +172,7 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 			)
 		`)
 
-		db.Exec(insertMimeQuery, articleID, time.Now().Unix(), userID, userID)
+		_, _ = db.Exec(insertMimeQuery, articleID, time.Now().Unix(), userID, userID) //nolint:errcheck // Best effort
 	}
 
 	// Return 204 No Content as per RESTful standards

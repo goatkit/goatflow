@@ -119,6 +119,16 @@ func handleUpdateTicketEnhanced(c *gin.Context) {
 	userRoleVal, _ := c.Get("user_role")
 	userIDVal, _ := c.Get("user_id")
 
+	// Safe type assertions
+	userRole := ""
+	if r, ok := userRoleVal.(string); ok {
+		userRole = strings.ToLower(r)
+	}
+	userID := 0
+	if id, ok := userIDVal.(int); ok {
+		userID = id
+	}
+
 	// Get ticket assignment (mock). Tests inject a custom context key type; fall back to
 	// deterministic mapping by ticket ID so permissions work without relying on that key type.
 	var assignedTo int
@@ -139,13 +149,13 @@ func handleUpdateTicketEnhanced(c *gin.Context) {
 	}
 
 	// Check permissions
-	if userRoleVal != nil && strings.ToLower(userRoleVal.(string)) != "admin" {
-		if strings.ToLower(userRoleVal.(string)) == "customer" {
+	if userRole != "" && userRole != "admin" {
+		if userRole == "customer" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Customers are not authorized to edit tickets"})
 			return
 		}
-		if strings.ToLower(userRoleVal.(string)) == "agent" {
-			if assignedTo == 0 || (userIDVal != nil && userIDVal.(int) != assignedTo) {
+		if userRole == "agent" {
+			if assignedTo == 0 || userID != assignedTo {
 				c.JSON(http.StatusForbidden, gin.H{"error": "You are not authorized to edit this ticket"})
 				return
 			}
@@ -226,16 +236,17 @@ func handleUpdateTicketEnhanced(c *gin.Context) {
 		`), updateReq.Status).Scan(&exists)
 		if err != nil || !exists {
 			// Get valid state types for error message
-			rows, _ := db.Query("SELECT DISTINCT name FROM ticket_state_type ORDER BY name")
+			rows, qErr := db.Query("SELECT DISTINCT name FROM ticket_state_type ORDER BY name")
 			var validTypes []string
-			if rows != nil {
-				defer func() { _ = rows.Close() }()
+			if qErr == nil && rows != nil {
+				defer rows.Close()
 				for rows.Next() {
 					var name string
 					if rows.Scan(&name) == nil {
 						validTypes = append(validTypes, name)
 					}
 				}
+				_ = rows.Err() //nolint:errcheck // Best effort error check
 			}
 			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid status. Must be one of: %s", strings.Join(validTypes, ", "))})
 			return
@@ -253,12 +264,12 @@ func handleUpdateTicketEnhanced(c *gin.Context) {
 	// Convert IDs
 	queueID := 1
 	if updateReq.QueueID != "" {
-		queueID, _ = strconv.Atoi(updateReq.QueueID)
+		queueID, _ = strconv.Atoi(updateReq.QueueID) //nolint:errcheck // Defaults to 1
 	}
 
 	typeID := 1
 	if updateReq.TypeID != "" {
-		typeID, _ = strconv.Atoi(updateReq.TypeID)
+		typeID, _ = strconv.Atoi(updateReq.TypeID) //nolint:errcheck // Defaults to 1
 	}
 
 	// Create history entry for changes

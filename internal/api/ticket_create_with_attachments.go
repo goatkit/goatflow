@@ -299,16 +299,16 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 			}
 			// Ensure we close after processing this iteration
 			func() {
-				defer func() { _ = file.Close() }()
+				defer file.Close()
 
 				// Determine content type (fallback using simple detection)
 				contentType := fileHeader.Header.Get("Content-Type")
 				if contentType == "" || contentType == "application/octet-stream" {
 					buf := make([]byte, 512)
-					if n, _ := file.Read(buf); n > 0 {
+					if n, _ := file.Read(buf); n > 0 { //nolint:errcheck // Best effort content type detection
 						contentType = detectContentType(fileHeader.Filename, buf[:n])
 					}
-					file.Seek(0, 0)
+					_, _ = file.Seek(0, 0) //nolint:errcheck // Best effort seek back
 				}
 
 				// Enforce config limits/types if set
@@ -401,7 +401,8 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 						"saved":        true,
 					})
 					c.Header("HX-Trigger", "attachments-updated")
-					log.Printf("Successfully saved attachment: %s (%d bytes) for ticket %d", fileHeader.Filename, fileHeader.Size, ticket.ID)
+					log.Printf("Successfully saved attachment: %s (%d bytes) for ticket %d",
+						fileHeader.Filename, fileHeader.Size, ticket.ID)
 				} else {
 					log.Printf("WARNING: No article available for attachments on ticket %d", ticket.ID)
 				}
@@ -478,7 +479,8 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 				articleIDPtr = &aid
 			}
 			message := fmt.Sprintf("Ticket created (%s)", historyTicket.TicketNumber)
-			if err := recorder.Record(c.Request.Context(), nil, historyTicket, articleIDPtr, history.TypeNewTicket, message, actorID); err != nil {
+			if err := recorder.Record(
+				c.Request.Context(), nil, historyTicket, articleIDPtr, history.TypeNewTicket, message, actorID); err != nil {
 				log.Printf("history record (ticket create) failed: %v", err)
 			}
 		}
@@ -491,7 +493,9 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 		log.Printf("DEBUG: Queuing email for customerEmail='%s', ticketNumber='%s'", customerEmail, ticket.TicketNumber)
 		go func() {
 			subject := fmt.Sprintf("Ticket Created: %s", ticket.TicketNumber)
-			body := fmt.Sprintf("Your ticket has been created successfully.\n\nTicket Number: %s\nTitle: %s\n\nMessage:\n%s\n\nYou can view your ticket at: /tickets/%d\n\nBest regards,\nGOTRS Support Team",
+			body := fmt.Sprintf(
+				"Your ticket has been created successfully.\n\nTicket Number: %s\nTitle: %s\n\n"+
+					"Message:\n%s\n\nYou can view your ticket at: /tickets/%d\n\nBest regards,\nGOTRS Support Team",
 				ticket.TicketNumber, ticket.Title, req.Body, ticket.ID)
 
 			// Queue the email for processing by EmailQueueTask
@@ -520,10 +524,11 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 				articleID64 = &id
 			}
 			queueItem := &mailqueue.MailQueueItem{
-				ArticleID:  articleID64,
-				Sender:     &senderEmail,
-				Recipient:  customerEmail,
-				RawMessage: mailqueue.BuildEmailMessageWithThreading(branding.HeaderFrom, customerEmail, subject, branding.Body, branding.Domain, "", ""),
+				ArticleID: articleID64,
+				Sender:    &senderEmail,
+				Recipient: customerEmail,
+				RawMessage: mailqueue.BuildEmailMessageWithThreading(
+					branding.HeaderFrom, customerEmail, subject, branding.Body, branding.Domain, "", ""),
 				Attempts:   0,
 				CreateTime: time.Now(),
 			}

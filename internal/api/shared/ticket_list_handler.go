@@ -133,11 +133,13 @@ func HandleListTicketsAPI(c *gin.Context) {
 	}
 
 	// Check if user is a customer (limit to their tickets only)
-	isCustomer, _ := c.Get("is_customer")
+	isCustomer, _ := c.Get("is_customer") //nolint:errcheck // Boolean defaults to false
 	if isCustomer == true {
 		// Customers can only see their own tickets
 		if email, exists := c.Get("user_email"); exists {
-			filters["customer_user_id"] = email.(string)
+			if emailStr, ok := email.(string); ok {
+				filters["customer_user_id"] = emailStr
+			}
 		}
 	}
 
@@ -297,7 +299,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	// Process results
 	tickets := []map[string]interface{}{}
@@ -421,7 +423,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 
 		tickets = append(tickets, ticketMap)
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Check for iteration errors
 
 	// Calculate pagination info
 	totalPages := (total + perPage - 1) / perPage

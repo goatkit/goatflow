@@ -57,7 +57,7 @@ func handleAdminCustomerUserServices(db *sql.DB) gin.HandlerFunc {
 
 		rows, err := db.Query(database.ConvertPlaceholders(customerQuery))
 		if err == nil {
-			defer func() { _ = rows.Close() }()
+			defer rows.Close()
 			for rows.Next() {
 				var login, firstName, lastName, email string
 				var customerID, companyName sql.NullString
@@ -74,7 +74,10 @@ func handleAdminCustomerUserServices(db *sql.DB) gin.HandlerFunc {
 					})
 				}
 			}
-			_ = rows.Err() // Check for errors during iteration
+			if err := rows.Err(); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating customer users"})
+				return
+			}
 		}
 
 		// Get services with customer count
@@ -102,7 +105,10 @@ func handleAdminCustomerUserServices(db *sql.DB) gin.HandlerFunc {
 					})
 				}
 			}
-			_ = sRows.Err() // Check for errors during iteration
+			if err := sRows.Err(); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating services"})
+				return
+			}
 		}
 
 		if getPongo2Renderer() == nil {
@@ -152,7 +158,9 @@ func handleAdminCustomerUserServicesAllocate(db *sql.DB) gin.HandlerFunc {
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT login, first_name, last_name, email, customer_id
 			FROM customer_user WHERE login = $1
-		`), customerUserLogin).Scan(&customerUser.Login, &customerUser.FirstName, &customerUser.LastName, &customerUser.Email, &customerUser.CustomerID)
+		`), customerUserLogin).Scan(
+			&customerUser.Login, &customerUser.FirstName, &customerUser.LastName,
+			&customerUser.Email, &customerUser.CustomerID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Customer user not found"})
 			return
@@ -171,7 +179,7 @@ func handleAdminCustomerUserServicesAllocate(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load services"})
 			return
 		}
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		services := []map[string]interface{}{}
 		for rows.Next() {
@@ -244,7 +252,8 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 		defer func() { _ = tx.Rollback() }()
 
 		// Clear existing assignments
-		_, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE customer_user_login = $1"), customerUserLogin)
+		deleteQuery := "DELETE FROM service_customer_user WHERE customer_user_login = $1"
+		_, err = tx.Exec(database.ConvertPlaceholders(deleteQuery), customerUserLogin)
 		if err != nil {
 			shared.SendToastResponse(c, false, "Failed to clear existing services", "")
 			return
@@ -314,7 +323,7 @@ func handleAdminServiceCustomerUsersAllocate(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load customer users"})
 			return
 		}
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		customerUsers := []map[string]interface{}{}
 		for rows.Next() {
@@ -418,9 +427,10 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 // getDefaultServicesCount returns the count of default services configured.
 func getDefaultServicesCount(db *sql.DB) int {
 	var count int
-	db.QueryRow(database.ConvertPlaceholders(`
+	row := db.QueryRow(database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM service_customer_user WHERE customer_user_login = '<DEFAULT>'
-	`)).Scan(&count)
+	`))
+	_ = row.Scan(&count) //nolint:errcheck // Count defaults to 0 on error
 	return count
 }
 
@@ -449,7 +459,7 @@ func handleAdminDefaultServices(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load services"})
 			return
 		}
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		services := []map[string]interface{}{}
 		for rows.Next() {

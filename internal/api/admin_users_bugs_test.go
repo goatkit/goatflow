@@ -68,7 +68,7 @@ func TestGroupAssignmentNotPersisting(t *testing.T) {
 			JOIN group_user gu ON g.id = gu.group_id 
 			WHERE gu.user_id = 15 AND g.valid_id = 1`)
 		require.NoError(t, err)
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		for rows.Next() {
 			var groupName string
@@ -298,7 +298,7 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 
 		rows, err := db.Query(groupQuery)
 		require.NoError(t, err)
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		for rows.Next() {
 			var groupName string

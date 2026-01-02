@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 	"strconv"
 
@@ -8,6 +9,35 @@ import (
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
+
+// loadArticleAttachments fetches attachments for an article and returns them as a slice of maps.
+func loadArticleAttachments(db *sql.DB, articleID int) []gin.H {
+	query := database.ConvertPlaceholders(`
+		SELECT id, filename, content_type, content_size
+		FROM article_attachment
+		WHERE article_id = $1
+	`)
+	rows, err := db.Query(query, articleID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var attachments []gin.H
+	for rows.Next() {
+		var id, size int
+		var filename, contentType string
+		if err := rows.Scan(&id, &filename, &contentType, &size); err == nil {
+			attachments = append(attachments, gin.H{
+				"id": id, "filename": filename, "content_type": contentType, "size": size,
+			})
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil
+	}
+	return attachments
+}
 
 // HandleListArticlesAPI handles GET /api/v1/tickets/:ticket_id/articles.
 func HandleListArticlesAPI(c *gin.Context) {
@@ -41,7 +71,7 @@ func HandleListArticlesAPI(c *gin.Context) {
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT 1 FROM ticket WHERE id = $1
 	`)
-	db.QueryRow(checkQuery, ticketID).Scan(&ticketExists)
+	_ = db.QueryRow(checkQuery, ticketID).Scan(&ticketExists) //nolint:errcheck // Defaults to 0
 	if ticketExists != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
 		return
@@ -65,7 +95,7 @@ func HandleListArticlesAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch articles"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	articles := []gin.H{}
 	for rows.Next() {
@@ -119,43 +149,15 @@ func HandleListArticlesAPI(c *gin.Context) {
 			articleData["sender_type"] = *article.SenderType
 		}
 
-		// Check for attachments if requested
 		if c.Query("include_attachments") == "true" {
-			attachQuery := database.ConvertPlaceholders(`
-                SELECT id, filename, content_type, content_size
-                FROM article_attachment
-				WHERE article_id = $1
-			`)
-			attachRows, err := db.Query(attachQuery, article.ID)
-			if err == nil {
-				defer attachRows.Close()
-				attachments := []gin.H{}
-				for attachRows.Next() {
-					var attachment struct {
-						ID          int
-						Filename    string
-						ContentType string
-						Size        int
-					}
-					if err := attachRows.Scan(&attachment.ID, &attachment.Filename, &attachment.ContentType, &attachment.Size); err == nil {
-						attachments = append(attachments, gin.H{
-							"id":           attachment.ID,
-							"filename":     attachment.Filename,
-							"content_type": attachment.ContentType,
-							"size":         attachment.Size,
-						})
-					}
-				}
-				_ = attachRows.Err() // Check for iteration errors
-				if len(attachments) > 0 {
-					articleData["attachments"] = attachments
-				}
+			if attachments := loadArticleAttachments(db, article.ID); len(attachments) > 0 {
+				articleData["attachments"] = attachments
 			}
 		}
 
 		articles = append(articles, articleData)
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Iteration errors don't affect response
 
 	c.JSON(http.StatusOK, gin.H{
 		"articles": articles,

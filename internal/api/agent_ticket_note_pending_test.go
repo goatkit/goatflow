@@ -156,9 +156,9 @@ func TestHandleAgentTicketNotePendingReminderPersistsPendingUntil(t *testing.T) 
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(555))
 
 	articleMime := database.ConvertPlaceholders(`INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body, a_content_type, incoming_time, create_time, create_by, change_time, change_by)
-		VALUES ($1, 'Agent', $2, $3, $4, $5, CURRENT_TIMESTAMP, $6, CURRENT_TIMESTAMP, $6)`)
+		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, $7, CURRENT_TIMESTAMP, $7)`)
 	mock.ExpectExec(regexp.QuoteMeta(articleMime)).
-		WithArgs(int64(555), "Internal Note", "Pending reminder set", "text/plain", sqlmock.AnyArg(), sqlmock.AnyArg()).
+		WithArgs(int64(555), "Agent", "Internal Note", "Pending reminder set", "text/plain", sqlmock.AnyArg(), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	updateTicket := database.ConvertPlaceholders(`UPDATE ticket

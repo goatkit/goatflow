@@ -279,7 +279,7 @@ func TestQueueListRefreshAfterActions(t *testing.T) {
 			// Register the handlers
 			router.POST("/api/queues", handleCreateQueueWithHTMX)
 			router.PUT("/api/queues/:id", handleUpdateQueueWithHTMX)
-			router.DELETE("/api/queues/:id", handleDeleteQueue)
+			router.DELETE("/api/queues/:id", handleDeleteQueueWithHTMX)
 
 			var req *http.Request
 			if tt.formData != "" {

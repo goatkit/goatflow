@@ -22,7 +22,8 @@ type systemAddressDTO struct {
 	ValidID     int    `json:"valid_id"`
 }
 
-type salutationDTO struct {
+// textEntityDTO is the common structure for salutations and signatures.
+type textEntityDTO struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	Text        string `json:"text"`
@@ -31,14 +32,8 @@ type salutationDTO struct {
 	ValidID     int    `json:"valid_id"`
 }
 
-type signatureDTO struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Text        string `json:"text"`
-	ContentType string `json:"content_type"`
-	Comments    string `json:"comments"`
-	ValidID     int    `json:"valid_id"`
-}
+type salutationDTO = textEntityDTO
+type signatureDTO = textEntityDTO
 
 type queueOptionDTO struct {
 	ID   int    `json:"id"`
@@ -53,7 +48,8 @@ type systemAddressPayload struct {
 	ValidID     int    `json:"valid_id"`
 }
 
-type salutationPayload struct {
+// textEntityPayload is the common payload for salutations and signatures.
+type textEntityPayload struct {
 	Name        string `json:"name"`
 	Text        string `json:"text"`
 	ContentType string `json:"content_type"`
@@ -61,12 +57,40 @@ type salutationPayload struct {
 	ValidID     int    `json:"valid_id"`
 }
 
-type signaturePayload struct {
-	Name        string `json:"name"`
-	Text        string `json:"text"`
-	ContentType string `json:"content_type"`
-	Comments    string `json:"comments"`
-	ValidID     int    `json:"valid_id"`
+type salutationPayload = textEntityPayload
+type signaturePayload = textEntityPayload
+
+// handleTextEntityUpdate handles common validation and delegation for salutation/signature updates.
+func handleTextEntityUpdate(c *gin.Context, tableName, entityName string) {
+	userID := resolveContextUserID(c)
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid " + entityName + " ID"})
+		return
+	}
+
+	var payload textEntityPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid payload"})
+		return
+	}
+
+	payload.Name = strings.TrimSpace(payload.Name)
+	payload.Text = strings.TrimSpace(payload.Text)
+	payload.Comments = strings.TrimSpace(payload.Comments)
+	payload.ContentType = normalizeContentType(payload.ContentType)
+	payload.ValidID = sanitizeValidID(payload.ValidID)
+
+	if payload.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Name is required"})
+		return
+	}
+	if payload.Text == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Text is required"})
+		return
+	}
+
+	updateTextEntity(c, tableName, entityName, id, userID, payload)
 }
 
 func handleAdminEmailIdentities(c *gin.Context) {
@@ -179,7 +203,8 @@ func HandleCreateSystemAddressAPI(c *gin.Context) {
 		comments = sql.NullString{String: payload.Comments, Valid: true}
 	}
 
-	newID64, err := adapter.InsertWithReturning(db, insert, payload.Email, payload.DisplayName, payload.QueueID, comments, payload.ValidID, userID, userID)
+	newID64, err := adapter.InsertWithReturning(
+		db, insert, payload.Email, payload.DisplayName, payload.QueueID, comments, payload.ValidID, userID, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create system address"})
 		return
@@ -325,7 +350,8 @@ func HandleCreateSalutationAPI(c *gin.Context) {
         RETURNING id
     `)
 
-	newID64, err := adapter.InsertWithReturning(db, insert, payload.Name, payload.Text, payload.ContentType, comments, payload.ValidID, userID, userID)
+	newID64, err := adapter.InsertWithReturning(
+		db, insert, payload.Name, payload.Text, payload.ContentType, comments, payload.ValidID, userID, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create salutation"})
 		return
@@ -345,67 +371,7 @@ func HandleCreateSalutationAPI(c *gin.Context) {
 }
 
 func HandleUpdateSalutationAPI(c *gin.Context) {
-	userID := resolveContextUserID(c)
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid salutation ID"})
-		return
-	}
-
-	var payload salutationPayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid payload"})
-		return
-	}
-
-	payload.Name = strings.TrimSpace(payload.Name)
-	payload.Text = strings.TrimSpace(payload.Text)
-	payload.Comments = strings.TrimSpace(payload.Comments)
-	payload.ContentType = normalizeContentType(payload.ContentType)
-	payload.ValidID = sanitizeValidID(payload.ValidID)
-
-	if payload.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Name is required"})
-		return
-	}
-	if payload.Text == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Text is required"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
-		return
-	}
-
-	var comments sql.NullString
-	if payload.Comments != "" {
-		comments = sql.NullString{String: payload.Comments, Valid: true}
-	}
-
-	update := database.ConvertPlaceholders(`
-        UPDATE salutation
-        SET name = $1, text = $2, content_type = $3, comments = $4, valid_id = $5, change_time = NOW(), change_by = $6
-        WHERE id = $7
-    `)
-
-	if _, err := db.Exec(update, payload.Name, payload.Text, payload.ContentType, comments, payload.ValidID, userID, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update salutation"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data": salutationDTO{
-			ID:          id,
-			Name:        payload.Name,
-			Text:        payload.Text,
-			ContentType: payload.ContentType,
-			Comments:    payload.Comments,
-			ValidID:     payload.ValidID,
-		},
-	})
+	handleTextEntityUpdate(c, "salutation", "salutation")
 }
 
 func HandleListSignaturesAPI(c *gin.Context) {
@@ -466,7 +432,8 @@ func HandleCreateSignatureAPI(c *gin.Context) {
     `)
 
 	adapter := database.GetAdapter()
-	newID64, err := adapter.InsertWithReturning(db, insert, payload.Name, payload.Text, payload.ContentType, comments, payload.ValidID, userID, userID)
+	newID64, err := adapter.InsertWithReturning(
+		db, insert, payload.Name, payload.Text, payload.ContentType, comments, payload.ValidID, userID, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create signature"})
 		return
@@ -486,67 +453,7 @@ func HandleCreateSignatureAPI(c *gin.Context) {
 }
 
 func HandleUpdateSignatureAPI(c *gin.Context) {
-	userID := resolveContextUserID(c)
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil || id <= 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid signature ID"})
-		return
-	}
-
-	var payload signaturePayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid payload"})
-		return
-	}
-
-	payload.Name = strings.TrimSpace(payload.Name)
-	payload.Text = strings.TrimSpace(payload.Text)
-	payload.Comments = strings.TrimSpace(payload.Comments)
-	payload.ContentType = normalizeContentType(payload.ContentType)
-	payload.ValidID = sanitizeValidID(payload.ValidID)
-
-	if payload.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Name is required"})
-		return
-	}
-	if payload.Text == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Text is required"})
-		return
-	}
-
-	db, err := database.GetDB()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
-		return
-	}
-
-	var comments sql.NullString
-	if payload.Comments != "" {
-		comments = sql.NullString{String: payload.Comments, Valid: true}
-	}
-
-	update := database.ConvertPlaceholders(`
-        UPDATE signature
-        SET name = $1, text = $2, content_type = $3, comments = $4, valid_id = $5, change_time = NOW(), change_by = $6
-        WHERE id = $7
-    `)
-
-	if _, err := db.Exec(update, payload.Name, payload.Text, payload.ContentType, comments, payload.ValidID, userID, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update signature"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"data": signatureDTO{
-			ID:          id,
-			Name:        payload.Name,
-			Text:        payload.Text,
-			ContentType: payload.ContentType,
-			Comments:    payload.Comments,
-			ValidID:     payload.ValidID,
-		},
-	})
+	handleTextEntityUpdate(c, "signature", "signature")
 }
 
 func fetchSystemAddresses(db *sql.DB) ([]systemAddressDTO, error) {
@@ -561,7 +468,7 @@ func fetchSystemAddresses(db *sql.DB) ([]systemAddressDTO, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var items []systemAddressDTO
 	for rows.Next() {
@@ -590,10 +497,11 @@ func fetchSystemAddresses(db *sql.DB) ([]systemAddressDTO, error) {
 	return items, rows.Err()
 }
 
-func fetchSalutations(db *sql.DB) ([]salutationDTO, error) {
+// fetchTextEntities retrieves salutations or signatures from the specified table.
+func fetchTextEntities(db *sql.DB, tableName string) ([]textEntityDTO, error) {
 	query := database.ConvertPlaceholders(`
         SELECT id, name, text, content_type, comments, valid_id
-        FROM salutation
+        FROM ` + tableName + `
         ORDER BY name
     `)
 
@@ -601,11 +509,11 @@ func fetchSalutations(db *sql.DB) ([]salutationDTO, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
-	var items []salutationDTO
+	var items []textEntityDTO
 	for rows.Next() {
-		var item salutationDTO
+		var item textEntityDTO
 		var contentType sql.NullString
 		var comments sql.NullString
 
@@ -628,42 +536,55 @@ func fetchSalutations(db *sql.DB) ([]salutationDTO, error) {
 	return items, rows.Err()
 }
 
-func fetchSignatures(db *sql.DB) ([]signatureDTO, error) {
-	query := database.ConvertPlaceholders(`
-        SELECT id, name, text, content_type, comments, valid_id
-        FROM signature
-        ORDER BY name
+// updateTextEntity updates a salutation or signature in the database.
+func updateTextEntity(
+	c *gin.Context, tableName, entityName string, id, userID int, payload textEntityPayload,
+) {
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
+		return
+	}
+
+	var comments sql.NullString
+	if payload.Comments != "" {
+		comments = sql.NullString{String: payload.Comments, Valid: true}
+	}
+
+	update := database.ConvertPlaceholders(`
+        UPDATE ` + tableName + `
+        SET name = $1, text = $2, content_type = $3, comments = $4, valid_id = $5, change_time = NOW(), change_by = $6
+        WHERE id = $7
     `)
 
-	rows, err := db.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	var items []signatureDTO
-	for rows.Next() {
-		var item signatureDTO
-		var contentType sql.NullString
-		var comments sql.NullString
-
-		if err := rows.Scan(&item.ID, &item.Name, &item.Text, &contentType, &comments, &item.ValidID); err != nil {
-			return nil, err
-		}
-
-		if contentType.Valid {
-			item.ContentType = contentType.String
-		} else {
-			item.ContentType = "text/plain"
-		}
-		if comments.Valid {
-			item.Comments = comments.String
-		}
-
-		items = append(items, item)
+	if _, err := db.Exec(
+		update, payload.Name, payload.Text, payload.ContentType, comments, payload.ValidID, userID, id,
+	); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false, "error": "Failed to update " + entityName,
+		})
+		return
 	}
 
-	return items, rows.Err()
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": textEntityDTO{
+			ID:          id,
+			Name:        payload.Name,
+			Text:        payload.Text,
+			ContentType: payload.ContentType,
+			Comments:    payload.Comments,
+			ValidID:     payload.ValidID,
+		},
+	})
+}
+
+func fetchSalutations(db *sql.DB) ([]salutationDTO, error) {
+	return fetchTextEntities(db, "salutation")
+}
+
+func fetchSignatures(db *sql.DB) ([]signatureDTO, error) {
+	return fetchTextEntities(db, "signature")
 }
 
 func fetchQueueOptions(db *sql.DB) ([]queueOptionDTO, error) {
@@ -671,7 +592,7 @@ func fetchQueueOptions(db *sql.DB) ([]queueOptionDTO, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var items []queueOptionDTO
 	for rows.Next() {

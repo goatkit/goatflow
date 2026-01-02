@@ -89,7 +89,7 @@ func getAgentsForQueue(db *sql.DB, queueID int) ([]gin.H, error) {
 		log.Printf("DEBUG: getAgentsForQueue query error: %v", err)
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var agents []gin.H
 	for rows.Next() {

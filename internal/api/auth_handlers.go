@@ -60,7 +60,8 @@ var HandleAuthLogin = func(c *gin.Context) {
 		if strings.Contains(contentType, "application/json") {
 			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "username and password required"})
 		} else {
-			getPongo2Renderer().HTML(c, http.StatusBadRequest, "components/error.pongo2", pongo2.Context{"error": "Username and password are required"})
+			getPongo2Renderer().HTML(c, http.StatusBadRequest, "components/error.pongo2",
+				pongo2.Context{"error": "Username and password are required"})
 		}
 		return
 	}
@@ -96,7 +97,9 @@ var HandleAuthLogin = func(c *gin.Context) {
 		if strings.Contains(contentType, "application/json") {
 			adminUser := strings.TrimSpace(os.Getenv("ADMIN_USER"))
 			adminPass := strings.TrimSpace(os.Getenv("ADMIN_PASSWORD"))
-			if adminUser != "" && adminPass != "" && (username == adminUser || (adminUser == "admin@example.com" && username == "root@localhost")) && password == adminPass {
+			isAdminMatch := adminUser != "" && adminPass != "" && password == adminPass &&
+				(username == adminUser || (adminUser == "admin@example.com" && username == "root@localhost"))
+			if isAdminMatch {
 				// Issue minimal token via shared JWT manager
 				jwtm := shared.GetJWTManager()
 				if jwtm == nil {
@@ -109,7 +112,10 @@ var HandleAuthLogin = func(c *gin.Context) {
 					c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "token generation failed"})
 					return
 				}
-				c.JSON(http.StatusOK, gin.H{"success": true, "access_token": tok, "token_type": "Bearer", "user": gin.H{"id": 1, "login": username, "role": "Admin"}})
+				c.JSON(http.StatusOK, gin.H{
+					"success": true, "access_token": tok, "token_type": "Bearer",
+					"user": gin.H{"id": 1, "login": username, "role": "Admin"},
+				})
 				return
 			}
 		}
@@ -185,7 +191,10 @@ var HandleAuthLogin = func(c *gin.Context) {
 	}
 
 	if strings.Contains(contentType, "application/json") {
-		c.JSON(http.StatusOK, gin.H{"success": true, "access_token": accessToken, "refresh_token": refreshToken, "token_type": "Bearer", "redirect": redirectTarget})
+		c.JSON(http.StatusOK, gin.H{
+			"success": true, "access_token": accessToken, "refresh_token": refreshToken,
+			"token_type": "Bearer", "redirect": redirectTarget,
+		})
 		return
 	}
 	if c.GetHeader("HX-Request") == "true" {

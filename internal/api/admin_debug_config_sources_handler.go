@@ -23,7 +23,7 @@ func HandleDebugConfigSources(c *gin.Context) {
 	}
 	result := make([]gin.H, 0, len(settings))
 	for _, s := range settings {
-		name, _ := s["name"].(string)
+		name, _ := s["name"].(string) //nolint:errcheck // Type assertion defaults to empty
 		defVal := s["default"]
 		val, hasVal := s["value"]
 		effective := defVal

@@ -51,7 +51,7 @@ func HandleDeleteArticleAPI(c *gin.Context) {
 		SELECT 1 FROM article
 		WHERE id = $1 AND ticket_id = $2
 	`)
-	db.QueryRow(checkQuery, articleID, ticketID).Scan(&count)
+	_ = db.QueryRow(checkQuery, articleID, ticketID).Scan(&count) //nolint:errcheck // Defaults to 0
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
 		return
@@ -104,7 +104,7 @@ func HandleDeleteArticleAPI(c *gin.Context) {
         SET change_time = NOW(), change_by = $1
         WHERE id = $2
     `)
-	db.Exec(updateTicketQuery, userID, ticketID)
+	_, _ = db.Exec(updateTicketQuery, userID, ticketID) //nolint:errcheck // Best-effort timestamp update
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Article deleted successfully",

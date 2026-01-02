@@ -59,17 +59,19 @@ func HandleRegisterWebhookAPI(c *gin.Context) {
 	}
 
 	// Convert events and headers to JSON strings for storage
-	eventsJSON, _ := json.Marshal(req.Events)
-	headersJSON, _ := json.Marshal(req.Headers)
-
-	// Insert webhook
-	args := []interface{}{
-		req.Name, req.URL, req.Secret, string(eventsJSON),
-		req.RetryCount, req.TimeoutSeconds, string(headersJSON),
-		userID,
+	eventsJSON, err := json.Marshal(req.Events)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid events format"})
+		return
+	}
+	headersJSON, err := json.Marshal(req.Headers)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid headers format"})
+		return
 	}
 
-	rawInsertQuery := `
+	// Insert webhook - adapter handles placeholder conversion and arg remapping for $8 repeated
+	insertQuery := `
 		INSERT INTO webhooks (
 			name, url, secret, events, active,
 			retry_count, timeout_seconds, headers,
@@ -79,65 +81,19 @@ func HandleRegisterWebhookAPI(c *gin.Context) {
 			NOW(), $8, NOW(), $8
 		) RETURNING id
 	`
-	placeholderQuery := database.ConvertPlaceholders(rawInsertQuery)
-	convertedQuery, needsLastInsert := database.ConvertReturning(placeholderQuery)
-
-	var webhookID int
-	if database.IsMySQL() {
-		execArgs := database.RemapArgsForMySQL(rawInsertQuery, args)
-		result, execErr := db.Exec(convertedQuery, execArgs...)
-		if execErr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error":   "Failed to register webhook",
-				"details": execErr.Error(),
-			})
-			return
-		}
-
-		lastID, idErr := result.LastInsertId()
-		if idErr != nil || lastID == 0 {
-			var fallback int64
-			if err := db.QueryRow("SELECT LAST_INSERT_ID()").Scan(&fallback); err == nil && fallback != 0 {
-				lastID = fallback
-				idErr = nil
-			} else if err := db.QueryRow("SELECT id FROM webhooks ORDER BY id DESC LIMIT 1").Scan(&fallback); err == nil && fallback != 0 {
-				lastID = fallback
-				idErr = nil
-			}
-		}
-
-		if idErr != nil || lastID == 0 {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to resolve webhook id",
-			})
-			return
-		}
-
-		webhookID = int(lastID)
-	} else {
-		if needsLastInsert {
-			if err = db.QueryRow(convertedQuery, args...).Scan(&webhookID); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error":   "Failed to register webhook",
-					"details": err.Error(),
-				})
-				return
-			}
-		} else {
-			if _, execErr := db.Exec(convertedQuery, args...); execErr != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error":   "Failed to register webhook",
-					"details": execErr.Error(),
-				})
-				return
-			}
-		}
-	}
-
-	if webhookID == 0 {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to resolve webhook id"})
+	webhookID64, err := database.GetAdapter().InsertWithReturning(db, insertQuery,
+		req.Name, req.URL, req.Secret, string(eventsJSON),
+		req.RetryCount, req.TimeoutSeconds, string(headersJSON),
+		userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to register webhook",
+			"details": err.Error(),
+		})
 		return
 	}
+	webhookID := int(webhookID64)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"id":              webhookID,
@@ -190,7 +146,7 @@ func HandleListWebhooksAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch webhooks"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	webhookList := []gin.H{}
 	for rows.Next() {
@@ -215,7 +171,9 @@ func HandleListWebhooksAPI(c *gin.Context) {
 
 		// Parse events JSON
 		var events []string
-		json.Unmarshal([]byte(webhook.EventsJSON), &events)
+		if err := json.Unmarshal([]byte(webhook.EventsJSON), &events); err != nil {
+			events = []string{}
+		}
 
 		webhookList = append(webhookList, gin.H{
 			"id":              webhook.ID,
@@ -228,7 +186,9 @@ func HandleListWebhooksAPI(c *gin.Context) {
 			"create_time":     webhook.CreateTime,
 		})
 	}
-	_ = rows.Err() // Check for iteration errors
+	if err := rows.Err(); err != nil {
+		// Log or handle iteration errors
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"webhooks": webhookList,
@@ -292,12 +252,16 @@ func HandleGetWebhookAPI(c *gin.Context) {
 	// Parse JSON fields
 	var events []string
 	if webhook.EventsJSON.Valid {
-		json.Unmarshal([]byte(webhook.EventsJSON.String), &events)
+		if err := json.Unmarshal([]byte(webhook.EventsJSON.String), &events); err != nil {
+			events = []string{}
+		}
 	}
 
 	var headers map[string]string
 	if webhook.HeadersJSON.Valid {
-		json.Unmarshal([]byte(webhook.HeadersJSON.String), &headers)
+		if err := json.Unmarshal([]byte(webhook.HeadersJSON.String), &headers); err != nil {
+			headers = map[string]string{}
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -353,8 +317,7 @@ func HandleUpdateWebhookAPI(c *gin.Context) {
 	// Check if webhook exists
 	var count int
 	checkQuery := database.ConvertPlaceholders(`SELECT 1 FROM webhooks WHERE id = $1`)
-	db.QueryRow(checkQuery, webhookID).Scan(&count)
-	if count != 1 {
+	if err := db.QueryRow(checkQuery, webhookID).Scan(&count); err != nil || count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Webhook not found"})
 		return
 	}
@@ -380,7 +343,11 @@ func HandleUpdateWebhookAPI(c *gin.Context) {
 		args = append(args, req.Secret)
 	}
 	if len(req.Events) > 0 {
-		eventsJSON, _ := json.Marshal(req.Events)
+		eventsJSON, err := json.Marshal(req.Events)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid events format"})
+			return
+		}
 		paramCount++
 		updateParts = append(updateParts, fmt.Sprintf("events = $%d", paramCount))
 		args = append(args, string(eventsJSON))
@@ -401,7 +368,11 @@ func HandleUpdateWebhookAPI(c *gin.Context) {
 		args = append(args, req.TimeoutSeconds)
 	}
 	if req.Headers != nil {
-		headersJSON, _ := json.Marshal(req.Headers)
+		headersJSON, err := json.Marshal(req.Headers)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid headers format"})
+			return
+		}
 		paramCount++
 		updateParts = append(updateParts, fmt.Sprintf("headers = $%d", paramCount))
 		args = append(args, string(headersJSON))
@@ -466,7 +437,9 @@ func HandleDeleteWebhookAPI(c *gin.Context) {
 	deleteDeliveriesQuery := database.ConvertPlaceholders(`
 		DELETE FROM webhook_deliveries WHERE webhook_id = $1
 	`)
-	tx.Exec(deleteDeliveriesQuery, webhookID)
+	if _, err := tx.Exec(deleteDeliveriesQuery, webhookID); err != nil {
+		// Non-fatal, continue with webhook deletion
+	}
 
 	// Delete webhook
 	deleteWebhookQuery := database.ConvertPlaceholders(`
@@ -478,13 +451,16 @@ func HandleDeleteWebhookAPI(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
+	rowsAffected, err := result.RowsAffected()
+	if err != nil || rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Webhook not found"})
 		return
 	}
 
-	tx.Commit()
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Webhook deleted successfully",
@@ -554,7 +530,9 @@ func HandleTestWebhookAPI(c *gin.Context) {
 	// Parse headers
 	var headers map[string]string
 	if webhook.HeadersJSON.Valid {
-		json.Unmarshal([]byte(webhook.HeadersJSON.String), &headers)
+		if err := json.Unmarshal([]byte(webhook.HeadersJSON.String), &headers); err != nil {
+			headers = map[string]string{}
+		}
 	}
 
 	// Prepare payload
@@ -566,20 +544,32 @@ func HandleTestWebhookAPI(c *gin.Context) {
 
 	// Generate signature if secret is configured
 	if webhook.Secret.Valid && webhook.Secret.String != "" {
-		payloadJSON, _ := json.Marshal(payload)
+		payloadJSON, err := json.Marshal(payload)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal payload"})
+			return
+		}
 		h := hmac.New(sha256.New, []byte(webhook.Secret.String))
 		h.Write(payloadJSON)
 		payload.Signature = hex.EncodeToString(h.Sum(nil))
 	}
 
 	// Send test webhook
-	payloadJSON, _ := json.Marshal(payload)
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal payload"})
+		return
+	}
 	client := &http.Client{
 		Timeout: time.Duration(webhook.TimeoutSeconds) * time.Second,
 	}
 
 	startTime := time.Now()
-	httpReq, _ := http.NewRequest("POST", webhook.URL, bytes.NewBuffer(payloadJSON))
+	httpReq, err := http.NewRequest("POST", webhook.URL, bytes.NewBuffer(payloadJSON))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+		return
+	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	// Add custom headers
@@ -606,10 +596,13 @@ func HandleTestWebhookAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close()
 
 	// Read response body
-	responseBody, _ := io.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		responseBody = []byte("Failed to read response body")
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":          resp.StatusCode >= 200 && resp.StatusCode < 300,
@@ -656,7 +649,7 @@ func HandleWebhookDeliveriesAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch deliveries"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	deliveries := []gin.H{}
 	for rows.Next() {
@@ -691,7 +684,9 @@ func HandleWebhookDeliveriesAPI(c *gin.Context) {
 
 		deliveries = append(deliveries, deliveryData)
 	}
-	_ = rows.Err() // Check for iteration errors
+	if err := rows.Err(); err != nil {
+		// Log or handle iteration errors
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"deliveries": deliveries,
@@ -745,21 +740,16 @@ func HandleRetryWebhookDeliveryAPI(c *gin.Context) {
 
 	// Queue for retry (in production, this would use a job queue)
 	// For now, just update the retry time
-	nextRetryExpr := "NOW() + INTERVAL '1 minute'"
-	if database.IsMySQL() {
-		nextRetryExpr = "DATE_ADD(NOW(), INTERVAL 1 MINUTE)"
-	}
+	nextRetryExpr := database.GetAdapter().IntervalAdd("NOW()", 1, "MINUTE")
 
-	updateQuery := database.ConvertPlaceholders(
-		fmt.Sprintf(`
+	updateQuery := fmt.Sprintf(`
 		UPDATE webhook_deliveries
 		SET next_retry = %s,
 			attempts = attempts + 1
 		WHERE id = $1
-	`, nextRetryExpr),
-	)
+	`, nextRetryExpr)
 
-	_, err = db.Exec(updateQuery, deliveryID)
+	_, err = database.GetAdapter().Exec(db, updateQuery, deliveryID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to queue retry"})
 		return

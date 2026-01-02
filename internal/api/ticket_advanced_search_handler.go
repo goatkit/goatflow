@@ -127,8 +127,14 @@ func handleAdvancedTicketSearch(c *gin.Context) {
 	// Pagination
 	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "20")
-	page, _ := strconv.Atoi(pageStr)
-	limit, _ := strconv.Atoi(limitStr)
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = 20
+	}
 
 	// Sorting
 	sortBy := c.DefaultQuery("sort", "relevance")
@@ -204,32 +210,34 @@ func handleAdvancedTicketSearch(c *gin.Context) {
 		}
 
 		if queueStr != "" {
-			queueID, _ := strconv.Atoi(queueStr)
-			if ticket.QueueID != queueID {
+			queueID, err := strconv.Atoi(queueStr)
+			if err != nil || ticket.QueueID != queueID {
 				continue
 			}
 		}
 
 		if assigneeStr != "" {
-			assigneeID, _ := strconv.Atoi(assigneeStr)
-			if ticket.AssigneeID != assigneeID {
+			assigneeID, err := strconv.Atoi(assigneeStr)
+			if err != nil || ticket.AssigneeID != assigneeID {
 				continue
 			}
 		}
 
 		// Date range filter
 		if createdFrom != "" {
-			fromDate, _ := time.Parse("2006-01-02", createdFrom)
-			if ticket.CreatedAt.Before(fromDate) {
+			fromDate, err := time.Parse("2006-01-02", createdFrom)
+			if err == nil && ticket.CreatedAt.Before(fromDate) {
 				continue
 			}
 		}
 
 		if createdTo != "" {
-			toDate, _ := time.Parse("2006-01-02", createdTo)
-			toDate = toDate.Add(24 * time.Hour) // Include the entire day
-			if ticket.CreatedAt.After(toDate) {
-				continue
+			toDate, err := time.Parse("2006-01-02", createdTo)
+			if err == nil {
+				toDate = toDate.Add(24 * time.Hour) // Include the entire day
+				if ticket.CreatedAt.After(toDate) {
+					continue
+				}
 			}
 		}
 
@@ -346,7 +354,7 @@ func handleSearchSuggestions(c *gin.Context) {
 
 // handleSaveSearchHistory saves a search to user's history.
 func handleSaveSearchHistory(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	userID := getUserID(c)
 	query := c.Query("q")
 	name := c.Query("name")
 
@@ -357,7 +365,7 @@ func handleSaveSearchHistory(c *gin.Context) {
 
 	history := SearchHistory{
 		ID:        nextHistoryID,
-		UserID:    userID.(int),
+		UserID:    userID,
 		Query:     query,
 		Name:      name,
 		Results:   10, // Mock result count
@@ -375,11 +383,11 @@ func handleSaveSearchHistory(c *gin.Context) {
 
 // handleGetSearchHistory returns user's search history.
 func handleGetSearchHistory(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	userID := getUserID(c)
 
 	var userHistory []SearchHistory
 	for _, h := range searchHistory {
-		if h.UserID == userID.(int) {
+		if h.UserID == userID {
 			userHistory = append(userHistory, h)
 		}
 	}
@@ -398,13 +406,13 @@ func handleDeleteSearchHistory(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	userID := getUserID(c)
 
 	// Remove from history
 	newHistory := make([]SearchHistory, 0, len(searchHistory))
 	found := false
 	for _, h := range searchHistory {
-		if h.ID == id && h.UserID == userID.(int) {
+		if h.ID == id && h.UserID == userID {
 			found = true
 			continue
 		}
@@ -425,7 +433,7 @@ func handleDeleteSearchHistory(c *gin.Context) {
 
 // handleCreateSavedSearch creates a new saved search.
 func handleCreateSavedSearch(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	userID := getUserID(c)
 	name := c.Query("name")
 	query := c.Query("q")
 
@@ -436,7 +444,7 @@ func handleCreateSavedSearch(c *gin.Context) {
 
 	search := &SavedSearch{
 		ID:        nextSavedSearchID,
-		UserID:    userID.(int),
+		UserID:    userID,
 		Name:      name,
 		Query:     query,
 		CreatedAt: time.Now(),
@@ -454,11 +462,11 @@ func handleCreateSavedSearch(c *gin.Context) {
 
 // handleGetSavedSearches returns user's saved searches.
 func handleGetSavedSearches(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	userID := getUserID(c)
 
 	var userSearches []SavedSearch
 	for _, s := range savedSearches {
-		if s.UserID == userID.(int) {
+		if s.UserID == userID {
 			userSearches = append(userSearches, *s)
 		}
 	}
@@ -477,10 +485,10 @@ func handleExecuteSavedSearch(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	userID := getUserID(c)
 
 	search, exists := savedSearches[id]
-	if !exists || search.UserID != userID.(int) {
+	if !exists || search.UserID != userID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Saved search not found"})
 		return
 	}
@@ -514,12 +522,12 @@ func handleUpdateSavedSearch(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	userID := getUserID(c)
 	name := c.Query("name")
 	query := c.Query("q")
 
 	search, exists := savedSearches[id]
-	if !exists || search.UserID != userID.(int) {
+	if !exists || search.UserID != userID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Saved search not found"})
 		return
 	}
@@ -546,10 +554,10 @@ func handleDeleteSavedSearch(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	userID := getUserID(c)
 
 	search, exists := savedSearches[id]
-	if !exists || search.UserID != userID.(int) {
+	if !exists || search.UserID != userID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Saved search not found"})
 		return
 	}
@@ -584,11 +592,11 @@ func handleExportSearchResults(c *gin.Context) {
 
 		writer := csv.NewWriter(c.Writer)
 		// Write headers
-		writer.Write([]string{"ID", "Subject", "Status", "Priority", "Queue", "Assignee", "Created"})
+		_ = writer.Write([]string{"ID", "Subject", "Status", "Priority", "Queue", "Assignee", "Created"}) //nolint:errcheck // Best effort CSV write
 
 		// Write data
 		for _, ticket := range results {
-			writer.Write([]string{
+			_ = writer.Write([]string{ //nolint:errcheck // Best effort CSV write
 				strconv.Itoa(ticket.ID),
 				ticket.Subject,
 				ticket.Status,

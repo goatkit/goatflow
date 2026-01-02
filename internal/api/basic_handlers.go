@@ -15,8 +15,8 @@ func HandleRedirect(c *gin.Context) {
 		return
 	}
 
-	config := routeConfig.(map[string]interface{})
-	redirectTo := "/login" // default
+	config := routeConfig.(map[string]interface{}) //nolint:errcheck // Type asserted from context
+	redirectTo := "/login"                         // default
 	if to, ok := config["redirect_to"].(string); ok {
 		redirectTo = to
 	}
@@ -37,8 +37,8 @@ func HandleTemplate(c *gin.Context) {
 		return
 	}
 
-	config := routeConfig.(map[string]interface{})
-	template := "pages/login.pongo2" // default
+	config := routeConfig.(map[string]interface{}) //nolint:errcheck // Type asserted from context
+	template := "pages/login.pongo2"               // default
 	if tmpl, ok := config["template"].(string); ok {
 		template = tmpl
 	}

@@ -36,7 +36,7 @@ func getScreenConfigForFieldWithDB(db *sql.DB, fieldID int) ([]DynamicFieldScree
 	if err != nil {
 		return nil, fmt.Errorf("failed to query screen configs: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	return scanScreenConfigs(rows)
 }
@@ -63,7 +63,7 @@ func getScreenConfigForScreenWithDB(db *sql.DB, screenKey string) ([]DynamicFiel
 	if err != nil {
 		return nil, fmt.Errorf("failed to query screen configs: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	return scanScreenConfigs(rows)
 }
@@ -173,7 +173,7 @@ func getFieldsForScreenWithConfigWithDB(db *sql.DB, screenKey, objectType string
 	if err != nil {
 		return nil, fmt.Errorf("failed to query fields for screen: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var results []FieldWithScreenConfig
 	for rows.Next() {

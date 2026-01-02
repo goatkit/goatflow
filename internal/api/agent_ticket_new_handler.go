@@ -126,7 +126,7 @@ func getQueuesForAgent(db *sql.DB) ([]gin.H, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var queues []gin.H
 	for rows.Next() {
@@ -154,7 +154,7 @@ func getTypesForAgent(db *sql.DB) ([]gin.H, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var types []gin.H
 	for rows.Next() {
@@ -182,7 +182,7 @@ func getPrioritiesForAgent(db *sql.DB) ([]gin.H, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var priorities []gin.H
 	for rows.Next() {
@@ -211,7 +211,7 @@ func getServicesForAgent(db *sql.DB) ([]gin.H, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var services []gin.H
 	for rows.Next() {
@@ -239,7 +239,7 @@ func getCustomerUsersForAgent(db *sql.DB) ([]gin.H, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	type customerUserRecord struct {
 		Login      string
@@ -316,10 +316,11 @@ type preferredQueue struct {
 	Name string
 }
 
-func loadPreferredQueuesForCustomers(db *sql.DB, customerIDs []string) (map[string]preferredQueue, error) {
-	uniqueIDs := make([]string, 0, len(customerIDs))
-	seen := make(map[string]struct{}, len(customerIDs))
-	for _, id := range customerIDs {
+// loadPreferredQueuesInternal is the shared implementation for loading preferred queues.
+func loadPreferredQueuesInternal(db *sql.DB, identifiers []string, tableName, idColumn string) (map[string]preferredQueue, error) {
+	uniqueIDs := make([]string, 0, len(identifiers))
+	seen := make(map[string]struct{}, len(identifiers))
+	for _, id := range identifiers {
 		trimmed := strings.TrimSpace(id)
 		if trimmed == "" {
 			continue
@@ -343,19 +344,19 @@ func loadPreferredQueuesForCustomers(db *sql.DB, customerIDs []string) (map[stri
 	}
 
 	query := fmt.Sprintf(`
-		SELECT gc.customer_id, q.id, q.name, gc.permission_key
-		FROM group_customer gc
-		JOIN queue q ON q.group_id = gc.group_id
-		WHERE gc.permission_value = 1
+		SELECT t.%s, q.id, q.name, t.permission_key
+		FROM %s t
+		JOIN queue q ON q.group_id = t.group_id
+		WHERE t.permission_value = 1
 		  AND q.valid_id = 1
-		  AND gc.customer_id IN (%s)
-	`, strings.Join(placeholders, ","))
+		  AND t.%s IN (%s)
+	`, idColumn, tableName, idColumn, strings.Join(placeholders, ","))
 
 	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	type rankedQueue struct {
 		preferredQueue
@@ -364,15 +365,15 @@ func loadPreferredQueuesForCustomers(db *sql.DB, customerIDs []string) (map[stri
 
 	ranked := make(map[string]rankedQueue, len(uniqueIDs))
 	for rows.Next() {
-		var customerID, queueName, permissionKey string
+		var identifier, queueName, permissionKey string
 		var queueID int
-		if err := rows.Scan(&customerID, &queueID, &queueName, &permissionKey); err != nil {
+		if err := rows.Scan(&identifier, &queueID, &queueName, &permissionKey); err != nil {
 			return nil, err
 		}
 		rank := queuePermissionRank(permissionKey)
-		existing, ok := ranked[customerID]
+		existing, ok := ranked[identifier]
 		if !ok || rank < existing.rank || (rank == existing.rank && queueID < existing.ID) {
-			ranked[customerID] = rankedQueue{preferredQueue: preferredQueue{ID: queueID, Name: queueName}, rank: rank}
+			ranked[identifier] = rankedQueue{preferredQueue: preferredQueue{ID: queueID, Name: queueName}, rank: rank}
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -380,82 +381,19 @@ func loadPreferredQueuesForCustomers(db *sql.DB, customerIDs []string) (map[stri
 	}
 
 	result := make(map[string]preferredQueue, len(ranked))
-	for customerID, entry := range ranked {
-		result[customerID] = entry.preferredQueue
+	for identifier, entry := range ranked {
+		result[identifier] = entry.preferredQueue
 	}
 
 	return result, nil
 }
 
+func loadPreferredQueuesForCustomers(db *sql.DB, customerIDs []string) (map[string]preferredQueue, error) {
+	return loadPreferredQueuesInternal(db, customerIDs, "group_customer", "customer_id")
+}
+
 func loadPreferredQueuesForCustomerUsers(db *sql.DB, logins []string) (map[string]preferredQueue, error) {
-	uniqueLogins := make([]string, 0, len(logins))
-	seen := make(map[string]struct{}, len(logins))
-	for _, login := range logins {
-		trimmed := strings.TrimSpace(login)
-		if trimmed == "" {
-			continue
-		}
-		if _, exists := seen[trimmed]; exists {
-			continue
-		}
-		seen[trimmed] = struct{}{}
-		uniqueLogins = append(uniqueLogins, trimmed)
-	}
-
-	if len(uniqueLogins) == 0 {
-		return map[string]preferredQueue{}, nil
-	}
-
-	placeholders := make([]string, len(uniqueLogins))
-	args := make([]interface{}, len(uniqueLogins))
-	for i, login := range uniqueLogins {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
-		args[i] = login
-	}
-
-	query := fmt.Sprintf(`
-		SELECT gcu.user_id, q.id, q.name, gcu.permission_key
-		FROM group_customer_user gcu
-		JOIN queue q ON q.group_id = gcu.group_id
-		WHERE gcu.permission_value = 1
-		  AND q.valid_id = 1
-		  AND gcu.user_id IN (%s)
-	`, strings.Join(placeholders, ","))
-
-	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	type rankedQueue struct {
-		preferredQueue
-		rank int
-	}
-
-	ranked := make(map[string]rankedQueue, len(uniqueLogins))
-	for rows.Next() {
-		var login, queueName, permissionKey string
-		var queueID int
-		if err := rows.Scan(&login, &queueID, &queueName, &permissionKey); err != nil {
-			return nil, err
-		}
-		rank := queuePermissionRank(permissionKey)
-		existing, ok := ranked[login]
-		if !ok || rank < existing.rank || (rank == existing.rank && queueID < existing.ID) {
-			ranked[login] = rankedQueue{preferredQueue: preferredQueue{ID: queueID, Name: queueName}, rank: rank}
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	result := make(map[string]preferredQueue, len(ranked))
-	for login, entry := range ranked {
-		result[login] = entry.preferredQueue
-	}
-
-	return result, nil
+	return loadPreferredQueuesInternal(db, logins, "group_customer_user", "user_id")
 }
 
 func queuePermissionRank(key string) int {

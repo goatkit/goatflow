@@ -90,7 +90,7 @@ func HandleListSLAsAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch SLAs"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	slas := []gin.H{}
 	for rows.Next() {
@@ -142,7 +142,7 @@ func HandleListSLAsAPI(c *gin.Context) {
 			"comments":              comments,
 		})
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Logged elsewhere if needed
 
 	c.JSON(http.StatusOK, gin.H{
 		"slas":  slas,
@@ -308,8 +308,6 @@ func HandleCreateSLAAPI(c *gin.Context) {
 		comments.Valid = true
 	}
 
-	// Create SLA
-	var slaID int
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO sla (
 			name, calendar_name,
@@ -322,7 +320,6 @@ func HandleCreateSLAAPI(c *gin.Context) {
 			1, $9, NOW(), $10, NOW(), $11
 		) RETURNING id
 	`)
-	insertQuery, useLastInsert := database.ConvertReturning(insertQuery)
 	args := []interface{}{
 		req.Name, calendarName,
 		req.FirstResponseTime, req.FirstResponseNotify,
@@ -331,37 +328,13 @@ func HandleCreateSLAAPI(c *gin.Context) {
 		comments, userID, userID,
 	}
 
-	if useLastInsert && database.IsMySQL() {
-		res, execErr := db.Exec(insertQuery, args...)
-		if execErr != nil {
-			log.Printf("HandleCreateSLAAPI: insert exec failed: %v", execErr)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create SLA"})
-			return
-		}
-		lastID, idErr := res.LastInsertId()
-		if idErr != nil {
-			log.Printf("HandleCreateSLAAPI: last insert id failed: %v", idErr)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to determine SLA ID"})
-			return
-		}
-		if lastID == 0 {
-			var fallbackID int64
-			if scanErr := db.QueryRow("SELECT LAST_INSERT_ID()").Scan(&fallbackID); scanErr != nil {
-				log.Printf("HandleCreateSLAAPI: fallback last insert id failed: %v", scanErr)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to determine SLA ID"})
-				return
-			}
-			lastID = fallbackID
-		}
-		slaID = int(lastID)
-	} else {
-		err = db.QueryRow(insertQuery, args...).Scan(&slaID)
-		if err != nil {
-			log.Printf("HandleCreateSLAAPI: insert queryrow failed: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create SLA"})
-			return
-		}
+	slaID64, err := database.GetAdapter().InsertWithReturning(db, insertQuery, args...)
+	if err != nil {
+		log.Printf("HandleCreateSLAAPI: insert failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create SLA"})
+		return
 	}
+	slaID := int(slaID64)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"id":                    slaID,
@@ -424,7 +397,8 @@ func HandleUpdateSLAAPI(c *gin.Context) {
 		SELECT 1 FROM sla
 		WHERE id = $1 AND valid_id = 1
 	`)
-	db.QueryRow(checkQuery, slaID).Scan(&count)
+	row := db.QueryRow(checkQuery, slaID)
+	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "SLA not found"})
 		return
@@ -516,7 +490,8 @@ func HandleDeleteSLAAPI(c *gin.Context) {
 		SELECT 1 FROM sla
 		WHERE id = $1 AND valid_id = 1
 	`)
-	db.QueryRow(checkQuery, slaID).Scan(&count)
+	row := db.QueryRow(checkQuery, slaID)
+	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "SLA not found"})
 		return
@@ -528,7 +503,8 @@ func HandleDeleteSLAAPI(c *gin.Context) {
 		SELECT COUNT(*) FROM tickets 
 		WHERE sla_id = $1
 	`)
-	db.QueryRow(ticketQuery, slaID).Scan(&ticketCount)
+	row2 := db.QueryRow(ticketQuery, slaID)
+	_ = row2.Scan(&ticketCount) //nolint:errcheck // Defaults to 0
 	if ticketCount > 0 {
 		c.JSON(http.StatusConflict, gin.H{
 			"error":        "SLA is in use",

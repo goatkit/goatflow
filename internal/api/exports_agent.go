@@ -1,10 +1,25 @@
 package api
 
 import (
+	"database/sql"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
+
+// wrapDBHandler wraps a handler factory that requires a database connection.
+func wrapDBHandler(handlerFactory func(*sql.DB) gin.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		db, err := database.GetDB()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
+			return
+		}
+		handlerFactory(db)(c)
+	}
+}
 
 // AgentHandlerExports provides exported handler functions for agent routes.
 var AgentHandlerExports = struct {
@@ -29,86 +44,26 @@ var AgentHandlerExports = struct {
 	HandleAgentQueueLock       gin.HandlerFunc
 	HandleAgentCustomers       gin.HandlerFunc
 }{
-	HandleAgentTickets: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentTickets(db)(c)
-	},
-	HandleAgentTicketReply: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentTicketReply(db)(c)
-	},
-	HandleAgentTicketNote: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentTicketNote(db)(c)
-	},
-	HandleAgentTicketPhone: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentTicketPhone(db)(c)
-	},
-	HandleAgentTicketStatus: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentTicketStatus(db)(c)
-	},
-	HandleAgentTicketAssign: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentTicketAssign(db)(c)
-	},
-	HandleAgentTicketPriority: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentTicketPriority(db)(c)
-	},
-	HandleAgentTicketQueue: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentTicketQueue(db)(c)
-	},
-	HandleAgentTicketMerge: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentTicketMerge(db)(c)
-	},
-	HandleAgentTicketDraft: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentTicketDraft(db)(c)
-	},
-	HandleAgentCustomerTickets: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentCustomerTickets(db)(c)
-	},
-	HandleAgentCustomerView: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentCustomerView(db)(c)
-	},
-	HandleAgentSearch: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentSearch(db)(c)
-	},
-	HandleAgentSearchResults: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentSearchResults(db)(c)
-	},
-	HandleAgentNewTicket: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		HandleAgentNewTicket(db)(c)
-	},
-	HandleAgentCreateTicket: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		HandleAgentCreateTicket(db)(c)
-	},
-	HandleAgentQueues: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentQueues(db)(c)
-	},
-	HandleAgentQueueView: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentQueueView(db)(c)
-	},
-	HandleAgentQueueLock: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentQueueLock(db)(c)
-	},
-	HandleAgentCustomers: func(c *gin.Context) {
-		db, _ := database.GetDB()
-		handleAgentCustomers(db)(c)
-	},
+	HandleAgentTickets:         wrapDBHandler(handleAgentTickets),
+	HandleAgentTicketReply:     wrapDBHandler(handleAgentTicketReply),
+	HandleAgentTicketNote:      wrapDBHandler(handleAgentTicketNote),
+	HandleAgentTicketPhone:     wrapDBHandler(handleAgentTicketPhone),
+	HandleAgentTicketStatus:    wrapDBHandler(handleAgentTicketStatus),
+	HandleAgentTicketAssign:    wrapDBHandler(handleAgentTicketAssign),
+	HandleAgentTicketPriority:  wrapDBHandler(handleAgentTicketPriority),
+	HandleAgentTicketQueue:     wrapDBHandler(handleAgentTicketQueue),
+	HandleAgentTicketMerge:     wrapDBHandler(handleAgentTicketMerge),
+	HandleAgentTicketDraft:     wrapDBHandler(handleAgentTicketDraft),
+	HandleAgentCustomerTickets: wrapDBHandler(handleAgentCustomerTickets),
+	HandleAgentCustomerView:    wrapDBHandler(handleAgentCustomerView),
+	HandleAgentSearch:          wrapDBHandler(handleAgentSearch),
+	HandleAgentSearchResults:   wrapDBHandler(handleAgentSearchResults),
+	HandleAgentNewTicket:       wrapDBHandler(HandleAgentNewTicket),
+	HandleAgentCreateTicket:    wrapDBHandler(HandleAgentCreateTicket),
+	HandleAgentQueues:          wrapDBHandler(handleAgentQueues),
+	HandleAgentQueueView:       wrapDBHandler(handleAgentQueueView),
+	HandleAgentQueueLock:       wrapDBHandler(handleAgentQueueLock),
+	HandleAgentCustomers:       wrapDBHandler(handleAgentCustomers),
 }
 
 // Provide package-level handler variables for tests and direct routing.

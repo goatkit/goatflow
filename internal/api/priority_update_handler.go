@@ -59,7 +59,9 @@ func HandleUpdatePriorityAPI(c *gin.Context) {
 
 	// Update priority (include color if provided). For sqlmock compatibility,
 	// use a simple statement matching tests when color is empty.
-	q := database.ConvertPlaceholders(`UPDATE ticket_priority SET name = $1, color = COALESCE(NULLIF($2, ''), color), change_time = NOW(), change_by = $3 WHERE id = $4`)
+	q := database.ConvertPlaceholders(
+		`UPDATE ticket_priority SET name = $1, color = COALESCE(NULLIF($2, ''), color), ` +
+			`change_time = NOW(), change_by = $3 WHERE id = $4`)
 	result, err := db.Exec(q, req.Name, req.Color, userID, priorityID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update priority"})

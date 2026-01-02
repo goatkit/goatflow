@@ -79,7 +79,7 @@ func ImprovedHandleAdminUserGet(c *gin.Context) {
 		// Don't fail completely, just return empty groups
 		user.Groups = []string{}
 	} else {
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 		var groupNames []string
 
 		for rows.Next() {
@@ -94,7 +94,7 @@ func ImprovedHandleAdminUserGet(c *gin.Context) {
 					id, gname, gid, permKey, permValue)
 			}
 		}
-		_ = rows.Err() // Check for iteration errors
+		_ = rows.Err() //nolint:errcheck // Iteration errors don't affect response
 
 		user.Groups = groupNames
 		fmt.Printf("INFO: User %d total groups: %d (%v)\n", id, len(groupNames), groupNames)
@@ -242,14 +242,14 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 		JOIN group_user gu ON g.id = gu.group_id 
 		WHERE gu.user_id = $1 AND g.valid_id = 1`), id)
 	if err == nil {
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 		for rows.Next() {
 			var groupName string
 			if err := rows.Scan(&groupName); err == nil {
 				currentGroups = append(currentGroups, groupName)
 			}
 		}
-		_ = rows.Err() // Check for iteration errors
+		_ = rows.Err() //nolint:errcheck // Iteration errors don't affect response
 	}
 	fmt.Printf("INFO: User %d current groups: %v\n", id, currentGroups)
 
@@ -275,7 +275,8 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 		}
 
 		var groupID int
-		if err := tx.QueryRow(database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1 AND valid_id = 1"), groupName).Scan(&groupID); err != nil {
+		groupQuery := "SELECT id FROM groups WHERE name = $1 AND valid_id = 1"
+		if err := tx.QueryRow(database.ConvertPlaceholders(groupQuery), groupName).Scan(&groupID); err != nil {
 			fmt.Printf("WARNING: Group '%s' not found or invalid\n", groupName)
 			failedGroups = append(failedGroups, groupName)
 			continue
@@ -315,14 +316,14 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 		WHERE gu.user_id = $1 AND g.valid_id = 1
 		ORDER BY g.name`), id)
 	if err == nil {
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 		for rows.Next() {
 			var groupName string
 			if rows.Scan(&groupName) == nil {
 				finalGroups = append(finalGroups, groupName)
 			}
 		}
-		_ = rows.Err() // Check for iteration errors
+		_ = rows.Err() //nolint:errcheck // Iteration errors don't affect response
 	}
 
 	fmt.Printf("FINAL VERIFICATION: User %d now has groups: %v\n", id, finalGroups)

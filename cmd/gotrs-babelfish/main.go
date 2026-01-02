@@ -146,30 +146,50 @@ func showCoverage(i18n *i18n.I18n, format string, verbose bool) {
 
 	switch format {
 	case "json":
-		output, _ := json.MarshalIndent(coverages, "", "  ")
+		output, err := json.MarshalIndent(coverages, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
+			os.Exit(1)
+		}
 		fmt.Println(string(output))
 	case "csv":
 		w := csv.NewWriter(os.Stdout)
-		w.Write([]string{"Language", "Code", "Total Keys", "Translated", "Missing", "Coverage %"})
+		if err := w.Write([]string{"Language", "Code", "Total Keys", "Translated", "Missing", "Coverage %"}); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing CSV header: %v\n", err)
+			os.Exit(1)
+		}
 		for _, c := range coverages {
-			w.Write([]string{
+			if err := w.Write([]string{
 				c.Language,
 				c.Code,
 				fmt.Sprintf("%d", c.TotalKeys),
 				fmt.Sprintf("%d", c.TranslatedKeys),
 				fmt.Sprintf("%d", c.MissingKeys),
 				fmt.Sprintf("%.1f", c.Coverage),
-			})
+			}); err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing CSV row: %v\n", err)
+				os.Exit(1)
+			}
 		}
 		w.Flush()
+		if err := w.Error(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error flushing CSV: %v\n", err)
+			os.Exit(1)
+		}
 	default:
 		fmt.Println("Translation Coverage Report")
 		fmt.Println("===========================")
 		fmt.Printf("Total Keys: %d\n\n", totalKeys)
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "Language\tCode\tTranslated\tMissing\tCoverage")
-		fmt.Fprintln(w, "--------\t----\t----------\t-------\t--------")
+		if _, err := fmt.Fprintln(w, "Language\tCode\tTranslated\tMissing\tCoverage"); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing output: %v\n", err)
+			os.Exit(1)
+		}
+		if _, err := fmt.Fprintln(w, "--------\t----\t----------\t-------\t--------"); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing output: %v\n", err)
+			os.Exit(1)
+		}
 
 		for _, c := range coverages {
 			status := "✅"
@@ -179,10 +199,16 @@ func showCoverage(i18n *i18n.I18n, format string, verbose bool) {
 			if c.Coverage < 50 {
 				status = "⚠️"
 			}
-			fmt.Fprintf(w, "%s\t%s\t%d\t%d\t%.1f%% %s\n",
-				c.Language, c.Code, c.TranslatedKeys, c.MissingKeys, c.Coverage, status)
+			if _, err := fmt.Fprintf(w, "%s\t%s\t%d\t%d\t%.1f%% %s\n",
+				c.Language, c.Code, c.TranslatedKeys, c.MissingKeys, c.Coverage, status); err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing output: %v\n", err)
+				os.Exit(1)
+			}
 		}
-		w.Flush()
+		if err := w.Flush(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error flushing output: %v\n", err)
+			os.Exit(1)
+		}
 	}
 }
 
@@ -212,22 +238,36 @@ func showMissing(i18n *i18n.I18n, lang string, format string, verbose bool) {
 			Key   string `json:"key"`
 			Value string `json:"english_value"`
 		}
-		var missingKeys []MissingKey
+		missingKeys := make([]MissingKey, 0, len(missing))
 		for _, key := range missing {
 			missingKeys = append(missingKeys, MissingKey{
 				Key:   key,
 				Value: i18n.T("en", key),
 			})
 		}
-		output, _ := json.MarshalIndent(missingKeys, "", "  ")
+		output, err := json.MarshalIndent(missingKeys, "", "  ")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
+			os.Exit(1)
+		}
 		fmt.Println(string(output))
 	case "csv":
 		w := csv.NewWriter(os.Stdout)
-		w.Write([]string{"Key", "English Value"})
+		if err := w.Write([]string{"Key", "English Value"}); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing CSV header: %v\n", err)
+			os.Exit(1)
+		}
 		for _, key := range missing {
-			w.Write([]string{key, i18n.T("en", key)})
+			if err := w.Write([]string{key, i18n.T("en", key)}); err != nil {
+				fmt.Fprintf(os.Stderr, "Error writing CSV row: %v\n", err)
+				os.Exit(1)
+			}
 		}
 		w.Flush()
+		if err := w.Error(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error flushing CSV: %v\n", err)
+			os.Exit(1)
+		}
 	default:
 		fmt.Printf("Missing Translations for %s (%s)\n", getLanguageName(lang), lang)
 		fmt.Println("=====================================")
@@ -340,14 +380,28 @@ func exportTranslations(i18n *i18n.I18n, lang string, filePath string, format st
 		fmt.Fprintf(os.Stderr, "Error creating file: %v\n", err)
 		os.Exit(1)
 	}
-	defer func() { _ = file.Close() }()
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			fmt.Fprintf(os.Stderr, "Error closing file: %v\n", cerr)
+		}
+	}()
 
 	switch format {
 	case "csv":
 		w := csv.NewWriter(file)
-		w.Write([]string{"key", "value"})
-		exportToCSV(translations, "", w)
+		if err := w.Write([]string{"key", "value"}); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing CSV header: %v\n", err)
+			os.Exit(1)
+		}
+		if err := exportToCSV(translations, "", w); err != nil {
+			fmt.Fprintf(os.Stderr, "Error writing CSV: %v\n", err)
+			os.Exit(1)
+		}
 		w.Flush()
+		if err := w.Error(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error flushing CSV: %v\n", err)
+			os.Exit(1)
+		}
 		fmt.Printf("Exported %s translations to %s (CSV format)\n", lang, filePath)
 	default:
 		encoder := json.NewEncoder(file)
@@ -360,7 +414,7 @@ func exportTranslations(i18n *i18n.I18n, lang string, filePath string, format st
 	}
 }
 
-func exportToCSV(m map[string]interface{}, prefix string, w *csv.Writer) {
+func exportToCSV(m map[string]interface{}, prefix string, w *csv.Writer) error {
 	for key, value := range m {
 		fullKey := key
 		if prefix != "" {
@@ -368,11 +422,16 @@ func exportToCSV(m map[string]interface{}, prefix string, w *csv.Writer) {
 		}
 
 		if nestedMap, ok := value.(map[string]interface{}); ok {
-			exportToCSV(nestedMap, fullKey, w)
+			if err := exportToCSV(nestedMap, fullKey, w); err != nil {
+				return err
+			}
 		} else if str, ok := value.(string); ok {
-			w.Write([]string{fullKey, str})
+			if err := w.Write([]string{fullKey, str}); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 func importTranslations(i18n *i18n.I18n, lang string, filePath string, format string) {
@@ -381,7 +440,11 @@ func importTranslations(i18n *i18n.I18n, lang string, filePath string, format st
 		fmt.Fprintf(os.Stderr, "Error opening file: %v\n", err)
 		os.Exit(1)
 	}
-	defer func() { _ = file.Close() }()
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			fmt.Fprintf(os.Stderr, "Error closing file: %v\n", cerr)
+		}
+	}()
 
 	switch format {
 	case "csv":
@@ -447,7 +510,11 @@ func saveTranslations(translations map[string]interface{}, path string) {
 		fmt.Fprintf(os.Stderr, "Error creating file: %v\n", err)
 		os.Exit(1)
 	}
-	defer func() { _ = file.Close() }()
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			fmt.Fprintf(os.Stderr, "Error closing file: %v\n", cerr)
+		}
+	}()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")

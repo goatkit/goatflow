@@ -168,7 +168,8 @@ func addTailwindClasses(html string) string {
 	html = strings.ReplaceAll(html, "<li>", `<li class="ml-4">`)
 
 	// Blockquotes
-	html = strings.ReplaceAll(html, "<blockquote>", `<blockquote class="border-l-4 border-gray-300 pl-4 italic text-gray-600 dark:text-gray-400 mb-2">`)
+	html = strings.ReplaceAll(html, "<blockquote>",
+		`<blockquote class="border-l-4 border-gray-300 pl-4 italic text-gray-600 dark:text-gray-400 mb-2">`)
 
 	// Code blocks
 	html = strings.ReplaceAll(html, "<pre>", `<pre class="bg-gray-100 dark:bg-gray-800 p-3 rounded mb-2 overflow-x-auto">`)
@@ -233,6 +234,16 @@ func HandleCreateInternalNote(c *gin.Context) {
 		userName = "Test User"
 	}
 
+	// Safe type assertions for user context
+	authorID := 0
+	if id, ok := userID.(int); ok {
+		authorID = id
+	}
+	authorName := "Test User"
+	if name, ok := userName.(string); ok {
+		authorName = name
+	}
+
 	// Extract mentions from content
 	mentions := extractMentions(req.Content)
 	if len(req.Mentions) > 0 {
@@ -255,8 +266,8 @@ func HandleCreateInternalNote(c *gin.Context) {
 		TicketID:         ticketID,
 		Content:          req.Content,
 		FormattedContent: RenderMarkdown(req.Content),
-		AuthorID:         userID.(int),
-		AuthorName:       userName.(string),
+		AuthorID:         authorID,
+		AuthorName:       authorName,
 		Visibility:       "internal",
 		CustomerVisible:  false,
 		IsPriority:       req.IsPriority,
@@ -376,8 +387,14 @@ func HandleUpdateInternalNote(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	userRole, _ := c.Get("user_role")
 
+	// Safe type assertions
+	currentUserID := 0
+	if id, ok := userID.(int); ok {
+		currentUserID = id
+	}
+
 	// Check permissions
-	if userRole != "admin" && note.AuthorID != userID.(int) {
+	if userRole != "admin" && note.AuthorID != currentUserID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only edit your own notes"})
 		return
 	}
@@ -399,7 +416,7 @@ func HandleUpdateInternalNote(c *gin.Context) {
 			ID:       len(noteHistories[noteID]) + 1,
 			NoteID:   noteID,
 			Content:  note.Content,
-			EditedBy: userID.(int),
+			EditedBy: currentUserID,
 			EditedAt: time.Now(),
 			Version:  len(noteHistories[noteID]) + 1,
 		}
@@ -457,8 +474,14 @@ func HandleDeleteInternalNote(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	userRole, _ := c.Get("user_role")
 
+	// Safe type assertion
+	currentUserID := 0
+	if id, ok := userID.(int); ok {
+		currentUserID = id
+	}
+
 	// Check permissions
-	if userRole != "admin" && note.AuthorID != userID.(int) {
+	if userRole != "admin" && note.AuthorID != currentUserID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You can only delete your own notes"})
 		return
 	}
@@ -581,10 +604,10 @@ func handleExportInternalNotes(c *gin.Context) {
 		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"internal-notes-ticket-%d-%s.csv\"", ticketID, timestamp))
 
 		writer := csv.NewWriter(c.Writer)
-		writer.Write([]string{"ID", "Author", "Content", "Category", "Priority", "Created"})
+		_ = writer.Write([]string{"ID", "Author", "Content", "Category", "Priority", "Created"}) //nolint:errcheck // Best effort streaming
 
 		for _, note := range notes {
-			writer.Write([]string{
+			_ = writer.Write([]string{ //nolint:errcheck // Best effort streaming
 				strconv.Itoa(note.ID),
 				note.AuthorName,
 				note.Content,
@@ -646,13 +669,23 @@ func handleCreateNoteFromTemplate(c *gin.Context) {
 		userName = "Test User"
 	}
 
+	// Safe type assertions
+	authorID := 0
+	if id, ok := userID.(int); ok {
+		authorID = id
+	}
+	authorName := "Test User"
+	if name, ok := userName.(string); ok {
+		authorName = name
+	}
+
 	// Create note
 	note := &InternalNote{
 		ID:              nextNoteID,
 		TicketID:        ticketID,
 		Content:         templateContent,
-		AuthorID:        userID.(int),
-		AuthorName:      userName.(string),
+		AuthorID:        authorID,
+		AuthorName:      authorName,
 		Visibility:      "internal",
 		CustomerVisible: false,
 		CreatedAt:       time.Now(),

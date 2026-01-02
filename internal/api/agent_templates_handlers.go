@@ -49,7 +49,7 @@ func GetTemplatesForQueue(queueID int, templateType string) ([]TemplateForAgent,
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var templates []TemplateForAgent
 	for rows.Next() {
@@ -161,7 +161,7 @@ func handleGetAgentTemplate(c *gin.Context) {
 	}
 
 	// Get template attachments
-	attachmentIDs, _ := GetTemplateAttachments(id)
+	attachmentIDs, _ := GetTemplateAttachments(id) //nolint:errcheck // Empty array on error
 	attachments := GetAttachmentsByIDs(attachmentIDs)
 
 	c.JSON(http.StatusOK, gin.H{

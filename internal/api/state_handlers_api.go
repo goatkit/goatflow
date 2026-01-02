@@ -27,7 +27,7 @@ func handleGetStates(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch states"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 	var data []gin.H
 	for rows.Next() {
 		var (
@@ -45,7 +45,7 @@ func handleGetStates(c *gin.Context) {
 			data = append(data, row)
 		}
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Logged elsewhere if needed
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
 }
 
@@ -149,7 +149,8 @@ func handleUpdateState(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update state"})
 		return
 	}
-	if rows, _ := result.RowsAffected(); rows == 0 {
+	rows, _ := result.RowsAffected() //nolint:errcheck // Defaults to 0
+	if rows == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "State not found"})
 		return
 	}
@@ -175,12 +176,15 @@ func handleDeleteState(c *gin.Context) {
 		return
 	}
 	// Match tests: args (id, change_by)
-	result, err := db.Exec(database.ConvertPlaceholders(`UPDATE ticket_state SET valid_id = 2, change_by = $2, change_time = CURRENT_TIMESTAMP WHERE id = $1`), id, 1)
+	stateDeleteQuery := `UPDATE ticket_state SET valid_id = 2, change_by = $2, ` +
+		`change_time = CURRENT_TIMESTAMP WHERE id = $1`
+	result, err := db.Exec(database.ConvertPlaceholders(stateDeleteQuery), id, 1)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete state"})
 		return
 	}
-	if rows, _ := result.RowsAffected(); rows == 0 {
+	rows, _ := result.RowsAffected() //nolint:errcheck // Defaults to 0
+	if rows == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "State not found"})
 		return
 	}

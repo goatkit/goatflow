@@ -74,7 +74,7 @@ func getFieldsForSearchWithDB(db *sql.DB) ([]SearchableDynamicField, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query searchable dynamic fields: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	fields, err := scanDynamicFields(rows)
 	if err != nil {
@@ -202,7 +202,9 @@ func BuildDynamicFieldFilterSQL(filters []DynamicFieldFilter, startArgNum int) (
 			joinCondition += fmt.Sprintf(" AND %s NOT IN (%s)", valueCol, strings.Join(placeholders, ","))
 		case "empty":
 			// Field value is empty or doesn't exist
-			joinCondition = fmt.Sprintf("NOT EXISTS (SELECT 1 FROM dynamic_field_value %s WHERE %s.object_id = t.id AND %s.field_id = $%d AND %s IS NOT NULL AND %s != '')",
+			joinCondition = fmt.Sprintf(
+				"NOT EXISTS (SELECT 1 FROM dynamic_field_value %s WHERE %s.object_id = t.id "+
+					"AND %s.field_id = $%d AND %s IS NOT NULL AND %s != '')",
 				alias, alias, alias, argNum-1, valueCol, valueCol)
 		case "notempty":
 			joinCondition += fmt.Sprintf(" AND %s IS NOT NULL AND %s != ''", valueCol, valueCol)
@@ -282,7 +284,7 @@ func GetDistinctDynamicFieldValues(fieldID int, limit int) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query distinct values: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var values []string
 	for rows.Next() {

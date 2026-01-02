@@ -79,7 +79,7 @@ func (h *SearchHandlers) SearchTickets(c *gin.Context) {
 	// Record search history for authenticated users
 	if userID, exists := c.Get("user_id"); exists {
 		if uid, ok := userID.(uint); ok {
-			h.searchService.RecordSearchHistory(c.Request.Context(), uid, &request, results)
+			_ = h.searchService.RecordSearchHistory(c.Request.Context(), uid, &request, results) //nolint:errcheck // Best-effort history
 		}
 	}
 
@@ -108,7 +108,7 @@ func (h *SearchHandlers) AdvancedSearch(c *gin.Context) {
 				Query:    filter.Query,
 				PageSize: 20,
 			}
-			h.searchService.RecordSearchHistory(c.Request.Context(), uid, request, results)
+			_ = h.searchService.RecordSearchHistory(c.Request.Context(), uid, request, results) //nolint:errcheck // Best-effort history
 		}
 	}
 
@@ -148,8 +148,11 @@ func (h *SearchHandlers) SaveSearch(c *gin.Context) {
 
 	// Set user ID from context
 	if userID, exists := c.Get("user_id"); exists {
-		savedSearch.UserID = userID.(uint)
-	} else {
+		if uid, ok := userID.(uint); ok {
+			savedSearch.UserID = uid
+		}
+	}
+	if savedSearch.UserID == 0 {
 		savedSearch.UserID = 1 // Default for testing
 	}
 
@@ -165,7 +168,9 @@ func (h *SearchHandlers) SaveSearch(c *gin.Context) {
 func (h *SearchHandlers) GetSavedSearches(c *gin.Context) {
 	userID := uint(1) // Default for testing
 	if uid, exists := c.Get("user_id"); exists {
-		userID = uid.(uint)
+		if id, ok := uid.(uint); ok {
+			userID = id
+		}
 	}
 
 	searches, err := h.searchService.GetSavedSearches(c.Request.Context(), userID)
@@ -215,7 +220,9 @@ func (h *SearchHandlers) ExecuteSavedSearch(c *gin.Context) {
 func (h *SearchHandlers) GetSearchHistory(c *gin.Context) {
 	userID := uint(1) // Default for testing
 	if uid, exists := c.Get("user_id"); exists {
-		userID = uid.(uint)
+		if id, ok := uid.(uint); ok {
+			userID = id
+		}
 	}
 
 	limit := 50

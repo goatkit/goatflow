@@ -39,7 +39,8 @@ func saveTimeEntry(db *sql.DB, ticketID int, articleID *int, minutes int, userID
 		unit = "minute"
 	}
 	message := fmt.Sprintf("Logged %d %s", minutes, unit)
-	if recErr := recorder.RecordByTicketID(context.Background(), nil, ticketID, articleID, history.TypeTimeAccounting, message, userID); recErr != nil {
+	if recErr := recorder.RecordByTicketID(
+		context.Background(), nil, ticketID, articleID, history.TypeTimeAccounting, message, userID); recErr != nil {
 		log.Printf("time accounting history insert failed: %v", recErr)
 	}
 

@@ -5,23 +5,56 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 )
 
 // DBAdapter provides database-specific query adaptations.
 type DBAdapter interface {
-	// InsertWithReturning handles INSERT ... RETURNING for different databases
+	// InsertWithReturning handles INSERT ... RETURNING for different databases.
+	// Accepts PostgreSQL-style queries with $N placeholders (handles repeated placeholders).
 	InsertWithReturning(db *sql.DB, query string, args ...interface{}) (int64, error)
 
-	// InsertWithReturningTx handles INSERT ... RETURNING within a transaction
+	// InsertWithReturningTx handles INSERT ... RETURNING within a transaction.
+	// Accepts PostgreSQL-style queries with $N placeholders (handles repeated placeholders).
 	InsertWithReturningTx(tx *sql.Tx, query string, args ...interface{}) (int64, error)
+
+	// Exec executes a query with PostgreSQL-style $N placeholders.
+	// Handles repeated placeholders and placeholder conversion for MySQL.
+	Exec(db *sql.DB, query string, args ...interface{}) (sql.Result, error)
+
+	// ExecTx executes a query within a transaction with PostgreSQL-style $N placeholders.
+	// Handles repeated placeholders and placeholder conversion for MySQL.
+	ExecTx(tx *sql.Tx, query string, args ...interface{}) (sql.Result, error)
+
+	// Query executes a query with PostgreSQL-style $N placeholders and returns rows.
+	// Handles repeated placeholders and placeholder conversion for MySQL.
+	Query(db *sql.DB, query string, args ...interface{}) (*sql.Rows, error)
+
+	// QueryTx executes a query within a transaction and returns rows.
+	// Handles repeated placeholders and placeholder conversion for MySQL.
+	QueryTx(tx *sql.Tx, query string, args ...interface{}) (*sql.Rows, error)
+
+	// QueryRow executes a query expected to return at most one row.
+	// Handles repeated placeholders and placeholder conversion for MySQL.
+	QueryRow(db *sql.DB, query string, args ...interface{}) *sql.Row
+
+	// QueryRowTx executes a query within a transaction expected to return at most one row.
+	// Handles repeated placeholders and placeholder conversion for MySQL.
+	QueryRowTx(tx *sql.Tx, query string, args ...interface{}) *sql.Row
 
 	// CaseInsensitiveLike returns the appropriate case-insensitive LIKE operator
 	CaseInsensitiveLike(column, pattern string) string
 
 	// TypeCast handles type casting for different databases
 	TypeCast(value, targetType string) string
+
+	// IntervalAdd returns SQL expression for adding an interval to a timestamp.
+	// unit: "SECOND", "MINUTE", "HOUR", "DAY"
+	// Example: IntervalAdd("NOW()", 1, "MINUTE") returns database-specific SQL
+	IntervalAdd(timestamp string, amount int, unit string) string
 }
 
 // PostgreSQLAdapter implements DBAdapter for PostgreSQL.
@@ -41,6 +74,32 @@ func (p *PostgreSQLAdapter) InsertWithReturningTx(tx *sql.Tx, query string, args
 	return id, err
 }
 
+func (p *PostgreSQLAdapter) Exec(db *sql.DB, query string, args ...interface{}) (sql.Result, error) {
+	// PostgreSQL handles $N placeholders and repeated references natively
+	return db.Exec(query, args...)
+}
+
+func (p *PostgreSQLAdapter) ExecTx(tx *sql.Tx, query string, args ...interface{}) (sql.Result, error) {
+	// PostgreSQL handles $N placeholders and repeated references natively
+	return tx.Exec(query, args...)
+}
+
+func (p *PostgreSQLAdapter) Query(db *sql.DB, query string, args ...interface{}) (*sql.Rows, error) {
+	return db.Query(query, args...)
+}
+
+func (p *PostgreSQLAdapter) QueryTx(tx *sql.Tx, query string, args ...interface{}) (*sql.Rows, error) {
+	return tx.Query(query, args...)
+}
+
+func (p *PostgreSQLAdapter) QueryRow(db *sql.DB, query string, args ...interface{}) *sql.Row {
+	return db.QueryRow(query, args...)
+}
+
+func (p *PostgreSQLAdapter) QueryRowTx(tx *sql.Tx, query string, args ...interface{}) *sql.Row {
+	return tx.QueryRow(query, args...)
+}
+
 func (p *PostgreSQLAdapter) CaseInsensitiveLike(column, pattern string) string {
 	// PostgreSQL uses ILIKE for case-insensitive
 	return fmt.Sprintf("%s ILIKE %s", column, pattern)
@@ -51,13 +110,18 @@ func (p *PostgreSQLAdapter) TypeCast(value, targetType string) string {
 	return fmt.Sprintf("%s::%s", value, targetType)
 }
 
+func (p *PostgreSQLAdapter) IntervalAdd(timestamp string, amount int, unit string) string {
+	// PostgreSQL: NOW() + INTERVAL '1 minute'
+	return fmt.Sprintf("%s + INTERVAL '%d %s'", timestamp, amount, strings.ToLower(unit))
+}
+
 // MySQLAdapter implements DBAdapter for MySQL/MariaDB.
 type MySQLAdapter struct{}
 
 func (m *MySQLAdapter) InsertWithReturning(db *sql.DB, query string, args ...interface{}) (int64, error) {
-	// MySQL doesn't support RETURNING, remove it and use LastInsertId
-	query = removeReturningClause(query)
-	result, err := db.Exec(query, args...)
+	// Expand args for repeated placeholders and convert query if needed
+	query, expandedArgs := prepareQueryForMySQL(query, args)
+	result, err := db.Exec(query, expandedArgs...)
 	if err != nil {
 		return 0, err
 	}
@@ -65,13 +129,51 @@ func (m *MySQLAdapter) InsertWithReturning(db *sql.DB, query string, args ...int
 }
 
 func (m *MySQLAdapter) InsertWithReturningTx(tx *sql.Tx, query string, args ...interface{}) (int64, error) {
-	// MySQL doesn't support RETURNING, remove it and use LastInsertId
-	query = removeReturningClause(query)
-	result, err := tx.Exec(query, args...)
+	// Expand args for repeated placeholders and convert query if needed
+	query, expandedArgs := prepareQueryForMySQL(query, args)
+	result, err := tx.Exec(query, expandedArgs...)
 	if err != nil {
 		return 0, err
 	}
 	return result.LastInsertId()
+}
+
+func (m *MySQLAdapter) Exec(db *sql.DB, query string, args ...interface{}) (sql.Result, error) {
+	// Expand args for repeated placeholders and convert $N to ?
+	expandedArgs := remapArgsForRepeatedPlaceholders(query, args)
+	convertedQuery := ConvertPlaceholders(query)
+	return db.Exec(convertedQuery, expandedArgs...)
+}
+
+func (m *MySQLAdapter) ExecTx(tx *sql.Tx, query string, args ...interface{}) (sql.Result, error) {
+	// Expand args for repeated placeholders and convert $N to ?
+	expandedArgs := remapArgsForRepeatedPlaceholders(query, args)
+	query = ConvertPlaceholders(query)
+	return tx.Exec(query, expandedArgs...)
+}
+
+func (m *MySQLAdapter) Query(db *sql.DB, query string, args ...interface{}) (*sql.Rows, error) {
+	expandedArgs := remapArgsForRepeatedPlaceholders(query, args)
+	query = ConvertPlaceholders(query)
+	return db.Query(query, expandedArgs...)
+}
+
+func (m *MySQLAdapter) QueryTx(tx *sql.Tx, query string, args ...interface{}) (*sql.Rows, error) {
+	expandedArgs := remapArgsForRepeatedPlaceholders(query, args)
+	query = ConvertPlaceholders(query)
+	return tx.Query(query, expandedArgs...)
+}
+
+func (m *MySQLAdapter) QueryRow(db *sql.DB, query string, args ...interface{}) *sql.Row {
+	expandedArgs := remapArgsForRepeatedPlaceholders(query, args)
+	query = ConvertPlaceholders(query)
+	return db.QueryRow(query, expandedArgs...)
+}
+
+func (m *MySQLAdapter) QueryRowTx(tx *sql.Tx, query string, args ...interface{}) *sql.Row {
+	expandedArgs := remapArgsForRepeatedPlaceholders(query, args)
+	query = ConvertPlaceholders(query)
+	return tx.QueryRow(query, expandedArgs...)
 }
 
 func (m *MySQLAdapter) CaseInsensitiveLike(column, pattern string) string {
@@ -93,6 +195,11 @@ func (m *MySQLAdapter) TypeCast(value, targetType string) string {
 	return fmt.Sprintf("CAST(%s AS %s)", value, mysqlType)
 }
 
+func (m *MySQLAdapter) IntervalAdd(timestamp string, amount int, unit string) string {
+	// MySQL: DATE_ADD(NOW(), INTERVAL 1 MINUTE)
+	return fmt.Sprintf("DATE_ADD(%s, INTERVAL %d %s)", timestamp, amount, strings.ToUpper(unit))
+}
+
 // Helper function to remove RETURNING clause from query.
 func removeReturningClause(query string) string {
 	// Remove RETURNING clause and everything after it
@@ -100,6 +207,51 @@ func removeReturningClause(query string) string {
 		query = strings.TrimSpace(query[:idx])
 	}
 	return query
+}
+
+// prepareQueryForMySQL handles placeholder expansion and conversion for MySQL.
+// It accepts either PostgreSQL-style ($N) or pre-converted (?) queries.
+// For PostgreSQL-style queries, it expands args for repeated placeholders and converts to ?.
+// For pre-converted queries, args are passed through unchanged.
+func prepareQueryForMySQL(query string, args []interface{}) (string, []interface{}) {
+	// Check if query has PostgreSQL-style placeholders
+	re := regexp.MustCompile(`\$(\d+)`)
+	matches := re.FindAllStringSubmatch(query, -1)
+
+	if len(matches) == 0 {
+		// Already converted to ?, just remove RETURNING
+		return removeReturningClause(query), args
+	}
+
+	// Has $N placeholders - expand args for repeats, then convert
+	expandedArgs := remapArgsForRepeatedPlaceholders(query, args)
+	convertedQuery := ConvertPlaceholders(query)
+	return removeReturningClause(convertedQuery), expandedArgs
+}
+
+// remapArgsForRepeatedPlaceholders expands args for queries with repeated $N placeholders
+// and handles out-of-order placeholders.
+// PostgreSQL allows $1 to appear multiple times, sharing the same arg, and any order.
+// MySQL uses positional ? markers, so each placeholder needs its own arg copy in the order they appear.
+// This is called internally by MySQLAdapter methods - callers don't need to use it.
+func remapArgsForRepeatedPlaceholders(query string, args []interface{}) []interface{} {
+	re := regexp.MustCompile(`\$(\d+)`)
+	matches := re.FindAllStringSubmatch(query, -1)
+	if len(matches) == 0 {
+		return args
+	}
+
+	// Always expand to handle both repeated and out-of-order placeholders
+	expanded := make([]interface{}, 0, len(matches))
+	for _, match := range matches {
+		idx, err := strconv.Atoi(match[1])
+		if err != nil || idx < 1 || idx > len(args) {
+			return args // Fall back to original args on parse error
+		}
+		expanded = append(expanded, args[idx-1])
+	}
+
+	return expanded
 }
 
 // Global adapter instance protected for concurrent access.

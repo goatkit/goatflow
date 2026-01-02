@@ -79,7 +79,7 @@ func handleAdminCustomerCompanies(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load customer companies"})
 			return
 		}
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		companies := []map[string]interface{}{}
 		for rows.Next() {
@@ -160,7 +160,8 @@ func renderCustomerCompaniesFallback(c *gin.Context, companies []map[string]inte
 	c.Header("Content-Type", "text/html; charset=utf-8")
 
 	var builder strings.Builder
-	builder.WriteString("<!DOCTYPE html>\n<html>\n<head><title>Customer Companies</title></head>\n<body>\n  <h1>Customer Companies</h1>\n  <button>Add New Company</button>\n")
+	builder.WriteString("<!DOCTYPE html>\n<html>\n<head><title>Customer Companies</title></head>\n<body>\n")
+	builder.WriteString("  <h1>Customer Companies</h1>\n  <button>Add New Company</button>\n")
 
 	if search != "" {
 		builder.WriteString("  <div>Search: " + html.EscapeString(search) + "</div>\n")
@@ -219,7 +220,10 @@ func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 
 		// Check if customer ID already exists
 		var exists bool
-		db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = $1)"), customerID).Scan(&exists)
+		if err := db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = $1)"), customerID).Scan(&exists); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+			return
+		}
 		if exists {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Customer ID already exists"})
 			return
@@ -242,7 +246,8 @@ func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		shared.SendToastResponse(c, true, "Customer company created successfully", fmt.Sprintf("/admin/customer/companies/%s/edit", customerID))
+		redirectURL := fmt.Sprintf("/admin/customer/companies/%s/edit", customerID)
+		shared.SendToastResponse(c, true, "Customer company created successfully", redirectURL)
 	}
 }
 
@@ -281,10 +286,11 @@ func handleAdminEditCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		// Get portal settings from sysconfig (stored as JSON in config_item table)
 		var portalConfig map[string]interface{}
 		var configJSON sql.NullString
-		db.QueryRow(database.ConvertPlaceholders(`
+		row := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT content_json FROM sysconfig 
 			WHERE name = $1
-		`), "CustomerPortal::Company::"+customerID).Scan(&configJSON)
+		`), "CustomerPortal::Company::"+customerID)
+		_ = row.Scan(&configJSON) //nolint:errcheck // Defaults to empty config on error
 
 		if configJSON.Valid {
 			// Parse stored portal configuration
@@ -350,7 +356,9 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 
 		if name == "" {
 			if c.GetHeader("HX-Request") == "true" {
-				c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(`<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">Name is required</div>`))
+				errHTML := `<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" ` +
+					`role="alert">Name is required</div>`
+				c.Data(http.StatusBadRequest, "text/html; charset=utf-8", []byte(errHTML))
 			} else {
 				c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Name is required"})
 			}
@@ -361,7 +369,8 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		var exists bool
 		var err error
 		if db != nil {
-			err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = $1)"), customerID).Scan(&exists)
+			query := database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = $1)")
+			err = db.QueryRow(query, customerID).Scan(&exists)
 		} else {
 			// For tests or when DB is not available, assume company doesn't exist
 			exists = false
@@ -405,7 +414,10 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		rowsAffected, _ := result.RowsAffected()
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			rowsAffected = 0
+		}
 		if rowsAffected == 0 {
 			if c.GetHeader("HX-Request") == "true" {
 				shared.SendToastResponse(c, false, "Customer company not found", "")
@@ -415,7 +427,8 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		shared.SendToastResponse(c, true, "Customer company updated successfully", fmt.Sprintf("/admin/customer/companies/%s/edit", customerID))
+		redirectURL := fmt.Sprintf("/admin/customer/companies/%s/edit", customerID)
+		shared.SendToastResponse(c, true, "Customer company updated successfully", redirectURL)
 	}
 }
 
@@ -450,7 +463,10 @@ func handleAdminDeleteCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		rowsAffected, _ := result.RowsAffected()
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			rowsAffected = 0
+		}
 		if rowsAffected == 0 {
 			if c.GetHeader("HX-Request") == "true" {
 				shared.SendToastResponse(c, false, "Customer company not found", "")
@@ -495,7 +511,10 @@ func handleAdminActivateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		rowsAffected, _ := result.RowsAffected()
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			rowsAffected = 0
+		}
 		if rowsAffected == 0 {
 			if c.GetHeader("HX-Request") == "true" {
 				shared.SendToastResponse(c, false, "Customer company not found", "")
@@ -505,7 +524,8 @@ func handleAdminActivateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		shared.SendToastResponse(c, true, "Customer company activated successfully", fmt.Sprintf("/admin/customer/companies/%s/edit", customerID))
+		redirectURL := fmt.Sprintf("/admin/customer/companies/%s/edit", customerID)
+		shared.SendToastResponse(c, true, "Customer company activated successfully", redirectURL)
 	}
 }
 
@@ -514,12 +534,12 @@ func handleAdminCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
 
-		// Get company info
+		// Get company info - name defaults to empty on error
 		var companyName string
-		db.QueryRow(database.ConvertPlaceholders("SELECT name FROM customer_company WHERE customer_id = $1"), customerID).Scan(&companyName)
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM customer_company WHERE customer_id = $1"), customerID).Scan(&companyName) //nolint:errcheck
 
 		// Get users
-		rows, _ := db.Query(database.ConvertPlaceholders(`
+		rows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT cu.id, cu.login, cu.email, cu.first_name, cu.last_name,
 			       cu.phone, cu.mobile, cu.valid_id, v.name as valid_name,
 			       (SELECT COUNT(*) FROM ticket WHERE customer_user_id = cu.login) as ticket_count
@@ -528,7 +548,11 @@ func handleAdminCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 			WHERE cu.customer_id = $1
 			ORDER BY cu.last_name, cu.first_name
 		`), customerID)
-		defer func() { _ = rows.Close() }()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query users"})
+			return
+		}
+		defer rows.Close()
 
 		users := []map[string]interface{}{}
 		for rows.Next() {
@@ -545,9 +569,11 @@ func handleAdminCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 				TicketCount int
 			}
 
-			rows.Scan(&user.ID, &user.Login, &user.Email, &user.FirstName,
+			if err := rows.Scan(&user.ID, &user.Login, &user.Email, &user.FirstName,
 				&user.LastName, &user.Phone, &user.Mobile, &user.ValidID,
-				&user.ValidName, &user.TicketCount)
+				&user.ValidName, &user.TicketCount); err != nil {
+				continue
+			}
 
 			users = append(users, map[string]interface{}{
 				"id":           user.ID,
@@ -563,6 +589,11 @@ func handleAdminCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 			})
 		}
 
+		if err := rows.Err(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating users"})
+			return
+		}
+
 		c.JSON(http.StatusOK, gin.H{
 			"company_name": companyName,
 			"users":        users,
@@ -575,7 +606,7 @@ func handleAdminCustomerCompanyTickets(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		customerID := c.Param("id")
 
-		rows, _ := db.Query(database.ConvertPlaceholders(`
+		rows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT t.id, t.tn, t.title, ts.name as state,
 			       tp.name as priority, t.create_time,
 			       cu.login as customer_user
@@ -587,7 +618,11 @@ func handleAdminCustomerCompanyTickets(db *sql.DB) gin.HandlerFunc {
 			ORDER BY t.create_time DESC
 			LIMIT 100
 		`), customerID)
-		defer func() { _ = rows.Close() }()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query tickets"})
+			return
+		}
+		defer rows.Close()
 
 		tickets := []map[string]interface{}{}
 		for rows.Next() {
@@ -601,8 +636,10 @@ func handleAdminCustomerCompanyTickets(db *sql.DB) gin.HandlerFunc {
 				CustomerUser sql.NullString
 			}
 
-			rows.Scan(&ticket.ID, &ticket.TN, &ticket.Title, &ticket.State,
-				&ticket.Priority, &ticket.CreateTime, &ticket.CustomerUser)
+			if err := rows.Scan(&ticket.ID, &ticket.TN, &ticket.Title, &ticket.State,
+				&ticket.Priority, &ticket.CreateTime, &ticket.CustomerUser); err != nil {
+				continue
+			}
 
 			tickets = append(tickets, map[string]interface{}{
 				"id":            ticket.ID,
@@ -613,6 +650,11 @@ func handleAdminCustomerCompanyTickets(db *sql.DB) gin.HandlerFunc {
 				"create_time":   ticket.CreateTime.Format("2006-01-02 15:04"),
 				"customer_user": ticket.CustomerUser.String,
 			})
+		}
+
+		if err := rows.Err(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error iterating tickets"})
+			return
 		}
 
 		c.JSON(http.StatusOK, gin.H{"tickets": tickets})
@@ -645,7 +687,7 @@ func handleAdminCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load services"})
 			return
 		}
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		services := []map[string]interface{}{}
 		for rows.Next() {
@@ -712,7 +754,7 @@ func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load customer users"})
 			return
 		}
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 		userLogins := []string{}
 		for rows.Next() {
 			var login string
@@ -729,7 +771,8 @@ func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 
 		// Clear existing assignments for all users in this company
 		for _, login := range userLogins {
-			if _, err := tx.Exec(database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE customer_user_login = $1"), login); err != nil {
+			delQuery := database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE customer_user_login = $1")
+			if _, err := tx.Exec(delQuery, login); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear existing services"})
 				return
 			}
@@ -807,7 +850,8 @@ func handleAdminUpdateCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 			userID := c.GetInt("user_id")
 			if err := saveCustomerPortalConfig(db, cfg, userID); err != nil {
 				if isPortalConfigTableMissing(err) {
-					shared.SendToastResponse(c, true, "Customer portal settings saved (sysconfig unavailable)", "/admin/customer/portal/settings")
+					shared.SendToastResponse(c, true,
+						"Customer portal settings saved (sysconfig unavailable)", "/admin/customer/portal/settings")
 					return
 				}
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -880,7 +924,10 @@ func isPortalConfigTableMissing(err error) bool {
 	if strings.Contains(msg, "no such table") {
 		return true
 	}
-	return strings.Contains(msg, "doesn't exist") || strings.Contains(msg, "does not exist") || strings.Contains(msg, "undefined table") || strings.Contains(msg, "undefined_relation")
+	if strings.Contains(msg, "doesn't exist") || strings.Contains(msg, "does not exist") {
+		return true
+	}
+	return strings.Contains(msg, "undefined table") || strings.Contains(msg, "undefined_relation")
 }
 
 // handleAdminUploadCustomerPortalLogo handles logo uploads for customer portals.
@@ -894,7 +941,7 @@ func handleAdminUploadCustomerPortalLogo(db *sql.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "No file uploaded"})
 			return
 		}
-		defer func() { _ = file.Close() }()
+		defer file.Close()
 
 		// Validate file type
 		contentType := header.Header.Get("Content-Type")

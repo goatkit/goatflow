@@ -90,11 +90,11 @@ func handleTicketsList(c *gin.Context) {
 	assignedTo := c.Query("assigned_to")
 	sortParam := c.Query("sort")
 	search := strings.ToLower(strings.TrimSpace(c.Query("search")))
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1")) //nolint:errcheck // Defaults to 0, corrected below
 	if page < 1 {
 		page = 1
 	}
-	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "10"))
+	perPage, _ := strconv.Atoi(c.DefaultQuery("per_page", "10")) //nolint:errcheck // Defaults to 0, corrected below
 	if perPage <= 0 {
 		perPage = 10
 	}
@@ -335,8 +335,8 @@ func handleTicketWorkflow(c *gin.Context) {
 
 // handleTicketTransition performs state transition validations and returns JSON.
 func handleTicketTransition(c *gin.Context) {
-	roleVal, _ := c.Get("user_role")
-	userRole, _ := roleVal.(string)
+	roleVal, _ := c.Get("user_role") //nolint:errcheck // May not exist
+	userRole, _ := roleVal.(string)  //nolint:errcheck // Safe default to empty
 	userRole = strings.ToLower(strings.TrimSpace(userRole))
 	current := c.PostForm("current_state")
 	newState := c.PostForm("new_state")

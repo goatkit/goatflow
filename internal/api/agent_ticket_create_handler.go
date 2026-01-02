@@ -4,10 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +20,6 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
-	"github.com/gotrs-io/gotrs-ce/internal/service"
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
@@ -297,7 +294,9 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid interaction type"})
 				return
 			}
-			if verr := core.ValidateArticleCombination(resolved.ArticleTypeID, resolved.ArticleSenderTypeID, resolved.CustomerVisible); verr != nil {
+			verr := core.ValidateArticleCombination(
+				resolved.ArticleTypeID, resolved.ArticleSenderTypeID, resolved.CustomerVisible)
+			if verr != nil {
 				log.Printf("Article combination invalid: %v", verr)
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid article combination"})
 				return
@@ -327,107 +326,18 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Process attachments from the new ticket form using unified storage
-		if c.Request.MultipartForm != nil && c.Request.MultipartForm.File != nil && articleModel != nil && articleModel.ID > 0 {
-			files := c.Request.MultipartForm.File["attachments"]
-			if files == nil {
-				files = c.Request.MultipartForm.File["attachment"]
+		if c.Request.MultipartForm != nil && articleModel != nil && articleModel.ID > 0 {
+			files := getFormFiles(c.Request.MultipartForm)
+			if len(files) > 0 {
+				processFormAttachments(files, attachmentProcessParams{
+					ctx:       c.Request.Context(),
+					db:        db,
+					ticketID:  ticketModel.ID,
+					articleID: articleModel.ID,
+					userID:    int(userID),
+				})
+				c.Header("HX-Trigger", "attachments-updated")
 			}
-			if files == nil {
-				files = c.Request.MultipartForm.File["file"]
-			}
-
-			// Limits and type allowlist from config
-			var maxSize int64 = 10 * 1024 * 1024
-			allowed := map[string]struct{}{}
-			if cfg := config.Get(); cfg != nil {
-				if cfg.Storage.Attachments.MaxSize > 0 {
-					maxSize = cfg.Storage.Attachments.MaxSize
-				}
-				for _, t := range cfg.Storage.Attachments.AllowedTypes {
-					allowed[strings.ToLower(t)] = struct{}{}
-				}
-			}
-
-			// Blocked extensions
-			blocked := map[string]bool{".exe": true, ".bat": true, ".cmd": true, ".sh": true, ".vbs": true, ".js": true, ".com": true, ".scr": true}
-
-			storageSvc := GetStorageService()
-			for _, fh := range files {
-				if fh == nil {
-					continue
-				}
-				if fh.Size > maxSize {
-					log.Printf("attachment too large: %s", fh.Filename)
-					continue
-				}
-				if blocked[strings.ToLower(filepath.Ext(fh.Filename))] {
-					log.Printf("blocked file type: %s", fh.Filename)
-					continue
-				}
-				f, err := fh.Open()
-				if err != nil {
-					log.Printf("open attachment failed: %v", err)
-					continue
-				}
-				func() {
-					defer f.Close()
-					// Determine content type with fallback
-					contentType := fh.Header.Get("Content-Type")
-					if contentType == "" || contentType == "application/octet-stream" {
-						buf := make([]byte, 512)
-						if n, _ := f.Read(buf); n > 0 {
-							contentType = detectContentType(fh.Filename, buf[:n])
-						}
-						f.Seek(0, 0)
-					}
-					if len(allowed) > 0 && contentType != "" && contentType != "application/octet-stream" {
-						if _, ok := allowed[strings.ToLower(contentType)]; !ok {
-							log.Printf("type not allowed: %s %s", fh.Filename, contentType)
-							return
-						}
-					}
-
-					// Store via service; attach article_id and user_id in context
-					ctx := c.Request.Context()
-					ctx = service.WithUserID(ctx, int(userID))
-					ctx = service.WithArticleID(ctx, articleModel.ID)
-					storagePath := service.GenerateOTRSStoragePath(ticketModel.ID, articleModel.ID, fh.Filename)
-					if _, err := storageSvc.Store(ctx, f, fh, storagePath); err != nil {
-						log.Printf("storage Store failed: %v", err)
-						return
-					}
-					// For local FS backend, also insert attachment row so listing/download works
-					if _, isDB := storageSvc.(*service.DatabaseStorageService); !isDB {
-						if f2, e2 := fh.Open(); e2 == nil {
-							defer f2.Close()
-							bytes, rerr := io.ReadAll(f2)
-							if rerr == nil {
-								ct := contentType
-								if ct == "" {
-									ct = "application/octet-stream"
-								}
-								_, ierr := db.Exec(database.ConvertPlaceholders(`
-									INSERT INTO article_data_mime_attachment (
-										article_id, filename, content_type, content_size, content,
-										disposition, create_time, create_by, change_time, change_by
-									) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`),
-									articleModel.ID,
-									fh.Filename,
-									ct,
-									int64(len(bytes)),
-									bytes,
-									"attachment",
-									time.Now(), int(userID), time.Now(), int(userID),
-								)
-								if ierr != nil {
-									log.Printf("attachment metadata insert failed: %v", ierr)
-								}
-							}
-						}
-					}
-				}()
-			}
-			c.Header("HX-Trigger", "attachments-updated")
 		}
 
 		// Persist initial time accounting if provided
@@ -445,10 +355,13 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 
 		// Queue email notification if customer email is available
 		if customerEmail != "" {
-			log.Printf("DEBUG: Agent ticket created, queuing email to customerEmail='%s', ticketNumber='%s'", customerEmail, ticketModel.TicketNumber)
+			log.Printf("DEBUG: Agent ticket created, queuing email to customer='%s', ticket='%s'",
+				customerEmail, ticketModel.TicketNumber)
 			go func() {
 				subject := fmt.Sprintf("Ticket Created: %s", ticketModel.TicketNumber)
-				body := fmt.Sprintf("Your ticket has been created successfully.\n\nTicket Number: %s\nTitle: %s\n\nMessage:\n%s\n\nYou can view your ticket at: /tickets/%s\n\nBest regards,\nGOTRS Support Team",
+				body := fmt.Sprintf("Your ticket has been created successfully.\n\n"+
+					"Ticket Number: %s\nTitle: %s\n\nMessage:\n%s\n\n"+
+					"You can view your ticket at: /tickets/%s\n\nBest regards,\nGOTRS Support Team",
 					ticketModel.TicketNumber, ticketModel.Title, message, ticketModel.TicketNumber)
 
 				// Queue the email for processing by EmailQueueTask
@@ -500,7 +413,10 @@ func detectTicketContentType(content string) string {
 	// Check for HTML tags
 	if strings.Contains(content, "<") && strings.Contains(content, ">") {
 		// Look for common HTML tags
-		htmlTags := []string{"<p>", "<br", "<div>", "<span>", "<strong>", "<em>", "<b>", "<i>", "<h1>", "<h2>", "<h3>", "<ul>", "<ol>", "<li>"}
+		htmlTags := []string{
+			"<p>", "<br", "<div>", "<span>", "<strong>", "<em>",
+			"<b>", "<i>", "<h1>", "<h2>", "<h3>", "<ul>", "<ol>", "<li>",
+		}
 		for _, tag := range htmlTags {
 			if strings.Contains(content, tag) {
 				return "text/html"
@@ -509,7 +425,9 @@ func detectTicketContentType(content string) string {
 	}
 
 	// Check for markdown syntax
-	if strings.Contains(content, "#") || strings.Contains(content, "**") || strings.Contains(content, "*") || strings.Contains(content, "`") {
+	hasMarkdown := strings.Contains(content, "#") || strings.Contains(content, "**") ||
+		strings.Contains(content, "*") || strings.Contains(content, "`")
+	if hasMarkdown {
 		return "text/markdown"
 	}
 

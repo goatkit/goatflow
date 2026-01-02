@@ -97,7 +97,7 @@ func handleAdminRoles(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "Failed to fetch roles: "+err.Error())
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var roles []Role
 	for rows.Next() {
@@ -354,7 +354,10 @@ func handleAdminRoleUpdate(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -405,7 +408,10 @@ func handleAdminRoleDelete(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -481,7 +487,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var users []RoleUser
 	for rows.Next() {
@@ -524,7 +530,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 			u.Email = u.Login
 			availableUsers = append(availableUsers, u)
 		}
-		_ = availableRows.Err() // Check for iteration errors
+		_ = availableRows.Err() //nolint:errcheck // Iteration errors don't affect UI
 	}
 
 	// Check if it's an API request or page render
@@ -649,7 +655,10 @@ func handleAdminRoleUserRemove(c *gin.Context) {
 		return
 	}
 
-	rowsAffected, _ := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		rowsAffected = 0
+	}
 	if rowsAffected == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -669,171 +678,158 @@ func handleAdminRolePermissions(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "Invalid role ID",
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid role ID"})
 		return
 	}
 
-	if c.Request.Method == "GET" {
-		// Display permissions page
-		db, err := database.GetDB()
-		if err != nil {
-			c.String(http.StatusInternalServerError, "Database connection failed")
-			return
-		}
-
-		// Get role details
-		var role Role
-		var comments sql.NullString
-		err = db.QueryRow(database.ConvertPlaceholders(`
-			SELECT id, name, comments, valid_id 
-			FROM roles 
-			WHERE id = $1
-		`), id).Scan(&role.ID, &role.Name, &comments, &role.ValidID)
-
-		if err == sql.ErrNoRows {
-			c.String(http.StatusNotFound, "Role not found")
-			return
-		}
-
-		if comments.Valid {
-			role.Comments = &comments.String
-		}
-
-		// Get all groups and their permissions for this role
-		rows, err := db.Query(database.ConvertPlaceholders(`
-			SELECT 
-				g.id, g.name,
-				MAX(CASE WHEN gr.permission_key = 'ro' THEN gr.permission_value ELSE 0 END) as ro,
-				MAX(CASE WHEN gr.permission_key = 'move_into' THEN gr.permission_value ELSE 0 END) as move_into,
-				MAX(CASE WHEN gr.permission_key = 'create' THEN gr.permission_value ELSE 0 END) as create_perm,
-				MAX(CASE WHEN gr.permission_key = 'owner' THEN gr.permission_value ELSE 0 END) as owner,
-				MAX(CASE WHEN gr.permission_key = 'priority' THEN gr.permission_value ELSE 0 END) as priority,
-				MAX(CASE WHEN gr.permission_key = 'rw' THEN gr.permission_value ELSE 0 END) as rw,
-				MAX(CASE WHEN gr.permission_key = 'note' THEN gr.permission_value ELSE 0 END) as note
-			FROM groups g
-			LEFT JOIN group_role gr ON g.id = gr.group_id AND gr.role_id = $1
-			WHERE g.valid_id = 1
-			GROUP BY g.id, g.name
-			ORDER BY g.name
-		`), id)
-
-		if err != nil {
-			c.String(http.StatusInternalServerError, "Failed to fetch permissions")
-			return
-		}
-		defer func() { _ = rows.Close() }()
-
-		var groups []RoleGroupPermission
-		for rows.Next() {
-			var g RoleGroupPermission
-			var ro, moveInto, create, owner, priority, rw, note int
-
-			err := rows.Scan(&g.GroupID, &g.GroupName, &ro, &moveInto, &create, &owner, &priority, &rw, &note)
-			if err != nil {
-				continue
-			}
-
-			g.Permissions = map[string]bool{
-				"ro":        ro == 1,
-				"move_into": moveInto == 1,
-				"create":    create == 1,
-				"owner":     owner == 1,
-				"priority":  priority == 1,
-				"rw":        rw == 1,
-				"note":      note == 1,
-			}
-
-			groups = append(groups, g)
-		}
-		if err := rows.Err(); err != nil {
-			c.String(http.StatusInternalServerError, "Error iterating permissions")
-			return
-		}
-
-		// Render permissions template
-		getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/role_permissions.pongo2", pongo2.Context{
-			"Title":      "Role Permissions",
-			"Role":       role,
-			"Groups":     groups,
-			"User":       getUserMapForTemplate(c),
-			"ActivePage": "admin",
-		})
-	} else if c.Request.Method == "PUT" {
-		// Update permissions
-		db, err := database.GetDB()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   "Database connection failed",
-			})
-			return
-		}
-
-		// Parse form data
-		c.Request.ParseForm()
-
-		// Begin transaction
-		tx, err := db.Begin()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   "Failed to start transaction",
-			})
-			return
-		}
-		defer func() { _ = tx.Rollback() }()
-
-		// Delete existing permissions for this role
-		_, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM group_role WHERE role_id = $1"), id)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   "Failed to clear permissions",
-			})
-			return
-		}
-
-		// Insert new permissions
-		for key, values := range c.Request.PostForm {
-			if len(key) > 5 && key[:5] == "perm_" {
-				// Parse permission key: perm_groupID_permissionType
-				var groupID int
-				var permType string
-				fmt.Sscanf(key[5:], "%d_%s", &groupID, &permType)
-
-				if groupID > 0 && permType != "" && len(values) > 0 && values[0] == "1" {
-					_, err = tx.Exec(database.ConvertPlaceholders(`
-						INSERT INTO group_role (role_id, group_id, permission_key, permission_value, create_by, change_by)
-						VALUES ($1, $2, $3, 1, 1, 1)
-					`), id, groupID, permType)
-
-					if err != nil {
-						c.JSON(http.StatusInternalServerError, gin.H{
-							"success": false,
-							"error":   "Failed to save permissions",
-						})
-						return
-					}
-				}
-			}
-		}
-
-		// Commit transaction
-		err = tx.Commit()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"error":   "Failed to commit changes",
-			})
-			return
-		}
-
-		// Redirect back to permissions page
-		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/roles/%d/permissions", id))
+	switch c.Request.Method {
+	case "GET":
+		handleAdminRolePermissionsGET(c, id)
+	case "PUT":
+		handleAdminRolePermissionsPUT(c, id)
+	default:
+		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method not allowed"})
 	}
+}
+
+func handleAdminRolePermissionsGET(c *gin.Context, id int) {
+	db, err := database.GetDB()
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Database connection failed")
+		return
+	}
+
+	role, err := loadRoleByID(db, id)
+	if err == sql.ErrNoRows {
+		c.String(http.StatusNotFound, "Role not found")
+		return
+	}
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to load role")
+		return
+	}
+
+	groups, err := loadRoleGroupPermissions(db, id)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to fetch permissions")
+		return
+	}
+
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/role_permissions.pongo2", pongo2.Context{
+		"Title":      "Role Permissions",
+		"Role":       role,
+		"Groups":     groups,
+		"User":       getUserMapForTemplate(c),
+		"ActivePage": "admin",
+	})
+}
+
+func loadRoleByID(db *sql.DB, id int) (*Role, error) {
+	var role Role
+	var comments sql.NullString
+	err := db.QueryRow(database.ConvertPlaceholders(`
+		SELECT id, name, comments, valid_id FROM roles WHERE id = $1`), id).Scan(&role.ID, &role.Name, &comments, &role.ValidID)
+	if err != nil {
+		return nil, err
+	}
+	if comments.Valid {
+		role.Comments = &comments.String
+	}
+	return &role, nil
+}
+
+func loadRoleGroupPermissions(db *sql.DB, roleID int) ([]RoleGroupPermission, error) {
+	rows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT 
+			g.id, g.name,
+			MAX(CASE WHEN gr.permission_key = 'ro' THEN gr.permission_value ELSE 0 END) as ro,
+			MAX(CASE WHEN gr.permission_key = 'move_into' THEN gr.permission_value ELSE 0 END) as move_into,
+			MAX(CASE WHEN gr.permission_key = 'create' THEN gr.permission_value ELSE 0 END) as create_perm,
+			MAX(CASE WHEN gr.permission_key = 'owner' THEN gr.permission_value ELSE 0 END) as owner,
+			MAX(CASE WHEN gr.permission_key = 'priority' THEN gr.permission_value ELSE 0 END) as priority,
+			MAX(CASE WHEN gr.permission_key = 'rw' THEN gr.permission_value ELSE 0 END) as rw,
+			MAX(CASE WHEN gr.permission_key = 'note' THEN gr.permission_value ELSE 0 END) as note
+		FROM groups g
+		LEFT JOIN group_role gr ON g.id = gr.group_id AND gr.role_id = $1
+		WHERE g.valid_id = 1
+		GROUP BY g.id, g.name
+		ORDER BY g.name`), roleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	groups := make([]RoleGroupPermission, 0)
+	for rows.Next() {
+		var g RoleGroupPermission
+		var ro, moveInto, create, owner, priority, rw, note int
+		if err := rows.Scan(&g.GroupID, &g.GroupName, &ro, &moveInto, &create, &owner, &priority, &rw, &note); err != nil {
+			continue
+		}
+		g.Permissions = map[string]bool{
+			"ro": ro == 1, "move_into": moveInto == 1, "create": create == 1,
+			"owner": owner == 1, "priority": priority == 1, "rw": rw == 1, "note": note == 1,
+		}
+		groups = append(groups, g)
+	}
+	return groups, rows.Err()
+}
+
+func handleAdminRolePermissionsPUT(c *gin.Context, id int) {
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Database connection failed"})
+		return
+	}
+
+	if err := c.Request.ParseForm(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid form data"})
+		return
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to start transaction"})
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM group_role WHERE role_id = $1"), id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to clear permissions"})
+		return
+	}
+
+	if err := insertRolePermissionsFromForm(tx, id, c.Request.PostForm); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to save permissions"})
+		return
+	}
+
+	if err = tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to commit changes"})
+		return
+	}
+
+	c.Redirect(http.StatusSeeOther, fmt.Sprintf("/admin/roles/%d/permissions", id))
+}
+
+func insertRolePermissionsFromForm(tx *sql.Tx, roleID int, form map[string][]string) error {
+	for key, values := range form {
+		if len(key) <= 5 || key[:5] != "perm_" {
+			continue
+		}
+		var groupID int
+		var permType string
+		_, _ = fmt.Sscanf(key[5:], "%d_%s", &groupID, &permType) //nolint:errcheck // Parse errors handled by validation
+		if groupID > 0 && permType != "" && len(values) > 0 && values[0] == "1" {
+			_, err := tx.Exec(database.ConvertPlaceholders(`
+				INSERT INTO group_role (role_id, group_id, permission_key, permission_value, create_by, change_by)
+				VALUES ($1, $2, $3, 1, 1, 1)`), roleID, groupID, permType)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // handleAdminRolePermissionsUpdate updates role-group permissions.
@@ -858,7 +854,13 @@ func handleAdminRolePermissionsUpdate(c *gin.Context) {
 	}
 
 	// Parse form data
-	c.Request.ParseForm()
+	if err := c.Request.ParseForm(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid form data",
+		})
+		return
+	}
 
 	// Begin transaction
 	tx, err := db.Begin()
@@ -887,12 +889,13 @@ func handleAdminRolePermissionsUpdate(c *gin.Context) {
 			// Parse permission key: perm_groupID_permissionType
 			var groupID int
 			var permType string
-			fmt.Sscanf(key[5:], "%d_%s", &groupID, &permType)
+			_, _ = fmt.Sscanf(key[5:], "%d_%s", &groupID, &permType) //nolint:errcheck // Parse errors handled by validation
 
 			if groupID > 0 && permType != "" && len(values) > 0 && values[0] == "1" {
 				_, err = tx.Exec(database.ConvertPlaceholders(`
-					INSERT INTO group_role (role_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-					VALUES ($1, $2, $3, 1, NOW(), 1, NOW(), 1)
+				INSERT INTO group_role (
+					role_id, group_id, permission_key, permission_value,
+					create_time, create_by, change_time, change_by)
 				`), id, groupID, permType)
 
 				if err != nil {

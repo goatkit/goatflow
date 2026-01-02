@@ -66,6 +66,7 @@ func HandleAPIQueueGet(c *gin.Context) {
 		ORDER BY g.name
 	`), queue.ID)
 	if err == nil {
+		defer groupRows.Close()
 		for groupRows.Next() {
 			var gid int
 			var gname string
@@ -73,8 +74,7 @@ func HandleAPIQueueGet(c *gin.Context) {
 				groups = append(groups, gin.H{"id": gid, "name": gname})
 			}
 		}
-		_ = groupRows.Err() // Check for iteration errors
-		groupRows.Close()
+		_ = groupRows.Err() //nolint:errcheck // Check for iteration errors
 	}
 
 	response := gin.H{
@@ -192,6 +192,8 @@ func HandleAPIQueueDetails(c *gin.Context) {
 }
 
 // HandleAPIQueueStatus handles PUT /api/queues/:id/status.
+//
+//nolint:dupl // Similar boilerplate to admin_crud_handlers.HandleAdminGroupsAddUser but different logic
 func HandleAPIQueueStatus(c *gin.Context) {
 	queueID := c.Param("id")
 	id, err := strconv.Atoi(queueID)

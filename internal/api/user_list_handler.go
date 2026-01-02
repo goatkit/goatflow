@@ -154,7 +154,7 @@ func HandleListUsersAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	users := []map[string]interface{}{}
 	for rows.Next() {
@@ -211,6 +211,7 @@ func HandleListUsersAPI(c *gin.Context) {
 
 		groupRows, err := db.Query(groupQuery, user.ID)
 		if err == nil {
+			defer groupRows.Close()
 			groups := []map[string]interface{}{}
 			for groupRows.Next() {
 				var groupID int
@@ -222,8 +223,7 @@ func HandleListUsersAPI(c *gin.Context) {
 					})
 				}
 			}
-			_ = groupRows.Err() // Check for iteration errors
-			groupRows.Close()
+			_ = groupRows.Err() //nolint:errcheck // Check for iteration errors
 			userMap["groups"] = groups
 		} else if shouldFallbackToMock(err) {
 			userMap["groups"] = []map[string]interface{}{}
@@ -231,7 +231,7 @@ func HandleListUsersAPI(c *gin.Context) {
 
 		users = append(users, userMap)
 	}
-	_ = rows.Err() // Check for iteration errors
+	_ = rows.Err() //nolint:errcheck // Check for iteration errors
 
 	// Calculate pagination info
 	totalPages := (total + perPage - 1) / perPage
@@ -269,7 +269,8 @@ func shouldFallbackToMock(err error) bool {
 		return false
 	}
 	msg := strings.ToLower(err.Error())
-	if strings.Contains(msg, "doesn't exist") || strings.Contains(msg, "no such table") || strings.Contains(msg, "relation") && strings.Contains(msg, "does not exist") {
+	if strings.Contains(msg, "doesn't exist") || strings.Contains(msg, "no such table") ||
+		strings.Contains(msg, "relation") && strings.Contains(msg, "does not exist") {
 		return true
 	}
 	if strings.Contains(msg, "unknown table") || strings.Contains(msg, "table not found") {

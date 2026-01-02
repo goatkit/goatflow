@@ -126,7 +126,7 @@ func handleGetQueuesAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to fetch queues"})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var items []queueItem
 	for rows.Next() {
@@ -304,7 +304,7 @@ func handleCreateQueue(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to create queue"})
 		return
 	}
-	id, _ = result.LastInsertId()
+	id, _ = result.LastInsertId() //nolint:errcheck // 0 on error is acceptable
 
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
@@ -362,7 +362,8 @@ func handleUpdateQueue(c *gin.Context) {
 	// Check for duplicate queue name (if name is being updated)
 	if input.Name != nil {
 		var existingID int
-		err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM queue WHERE name = $1 AND id != $2"), *input.Name, id).Scan(&existingID)
+		dupeQuery := "SELECT id FROM queue WHERE name = $1 AND id != $2"
+		err := db.QueryRow(database.ConvertPlaceholders(dupeQuery), *input.Name, id).Scan(&existingID)
 		if err == nil {
 			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "queue name already exists"})
 			return
@@ -406,7 +407,8 @@ func handleUpdateQueue(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update queue"})
 		return
 	}
-	if rows, _ := result.RowsAffected(); rows == 0 {
+	rows, _ := result.RowsAffected() //nolint:errcheck // Defaults to 0
+	if rows == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Queue not found"})
 		return
 	}
@@ -440,18 +442,15 @@ func handleDeleteQueue(c *gin.Context) {
 		return
 	}
 
-	// Match test arg order: (id, change_by)
-	deleteQuery := database.ConvertPlaceholders(`UPDATE queue SET valid_id = 2, change_by = $2, change_time = CURRENT_TIMESTAMP WHERE id = $1`)
-	args := []interface{}{id, 1}
-	if database.IsMySQL() {
-		args = []interface{}{1, id}
-	}
-	result, err := db.Exec(deleteQuery, args...)
+	// Soft delete queue - adapter handles placeholder conversion
+	deleteQuery := `UPDATE queue SET valid_id = 2, change_by = $2, change_time = CURRENT_TIMESTAMP WHERE id = $1`
+	result, err := database.GetAdapter().Exec(db, deleteQuery, id, 1)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete queue"})
 		return
 	}
-	if rows, _ := result.RowsAffected(); rows == 0 {
+	rows2, _ := result.RowsAffected() //nolint:errcheck // Defaults to 0
+	if rows2 == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Queue not found"})
 		return
 	}

@@ -175,7 +175,9 @@ func HandleCreateTicketAPI(c *gin.Context) {
 		log.Printf("DEBUG: API ticket created, queuing email to customerEmail='%s', ticketNumber='%s'", customerEmail, ticketNumber)
 		go func() {
 			subject := fmt.Sprintf("Ticket Created: %s", ticketNumber)
-			body := fmt.Sprintf("Your ticket has been created successfully.\n\nTicket Number: %s\nTitle: %s\n\nYou can view your ticket at: /tickets/%d\n\nBest regards,\nGOTRS Support Team",
+			body := fmt.Sprintf(
+				"Your ticket has been created successfully.\n\nTicket Number: %s\nTitle: %s\n\n"+
+					"You can view your ticket at: /tickets/%d\n\nBest regards,\nGOTRS Support Team",
 				ticketNumber, ticketTitle, ticketID)
 
 			// Queue the email for processing by EmailQueueTask
@@ -225,9 +227,10 @@ func HandleCreateTicketAPI(c *gin.Context) {
 
 			senderEmail := branding.EnvelopeFrom
 			queueItem := &mailqueue.MailQueueItem{
-				Sender:     &senderEmail,
-				Recipient:  customerEmail,
-				RawMessage: mailqueue.BuildEmailMessageWithThreading(branding.HeaderFrom, customerEmail, subject, branding.Body, branding.Domain, inReplyTo, references),
+				Sender:    &senderEmail,
+				Recipient: customerEmail,
+				RawMessage: mailqueue.BuildEmailMessageWithThreading(
+					branding.HeaderFrom, customerEmail, subject, branding.Body, branding.Domain, inReplyTo, references),
 				Attempts:   0,
 				CreateTime: time.Now(),
 			}
@@ -251,5 +254,15 @@ func HandleCreateTicketAPI(c *gin.Context) {
 		}()
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"success": true, "data": gin.H{"id": created.ID, "tn": created.TicketNumber, "title": created.Title, "queue_id": created.QueueID, "ticket_state_id": created.TicketStateID, "ticket_priority_id": created.TicketPriorityID}})
+	c.JSON(http.StatusCreated, gin.H{
+		"success": true,
+		"data": gin.H{
+			"id":                 created.ID,
+			"tn":                 created.TicketNumber,
+			"title":              created.Title,
+			"queue_id":           created.QueueID,
+			"ticket_state_id":    created.TicketStateID,
+			"ticket_priority_id": created.TicketPriorityID,
+		},
+	})
 }

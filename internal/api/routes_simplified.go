@@ -49,7 +49,7 @@ func NewSimpleRouterWithDB(db *sql.DB) *gin.Engine {
 	if templateDir != "" {
 		if _, err := os.Stat(templateDir); err == nil {
 			// Normalize path
-			abs, _ := filepath.Abs(templateDir)
+			abs, _ := filepath.Abs(templateDir) //nolint:errcheck // Best effort path normalization
 			log.Printf("📂 Initializing pongo2 renderer with template dir: %s", abs)
 			renderer, err := shared.NewTemplateRenderer(templateDir)
 			if err != nil {
@@ -102,7 +102,7 @@ func setupYAMLRouting(r *gin.Engine, db *sql.DB) error {
 
 	// Copy handlers from global registry to routing registry
 	for name, handler := range handlerRegistry {
-		registry.Register(name, handler)
+		_ = registry.Register(name, handler) //nolint:errcheck // Best effort handler registration
 	}
 
 	// Load all routes from YAML files

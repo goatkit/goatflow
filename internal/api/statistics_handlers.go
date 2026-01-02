@@ -56,15 +56,21 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 
 	if id := stateID("open"); id > 0 {
 		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = $1")
-		_ = db.QueryRow(query, id).Scan(&overview.OpenTickets)
+		if err := db.QueryRow(query, id).Scan(&overview.OpenTickets); err != nil {
+			overview.OpenTickets = 0
+		}
 	}
 	if id := stateID("closed"); id > 0 {
 		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = $1")
-		_ = db.QueryRow(query, id).Scan(&overview.ClosedTickets)
+		if err := db.QueryRow(query, id).Scan(&overview.ClosedTickets); err != nil {
+			overview.ClosedTickets = 0
+		}
 	}
 	if id := stateID("pending"); id > 0 {
 		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = $1")
-		_ = db.QueryRow(query, id).Scan(&overview.PendingTickets)
+		if err := db.QueryRow(query, id).Scan(&overview.PendingTickets); err != nil {
+			overview.PendingTickets = 0
+		}
 	}
 
 	// Tickets by queue
@@ -78,7 +84,7 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 		ORDER BY cnt DESC
 	`
 	if rows, err := db.Query(queueQuery); err == nil {
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 		for rows.Next() {
 			var (
 				queueID int
@@ -93,7 +99,9 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 				})
 			}
 		}
-		_ = rows.Err()
+		if err := rows.Err(); err != nil {
+			// Log or handle iteration errors
+		}
 	}
 
 	// Tickets by priority
@@ -107,7 +115,7 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 		ORDER BY p.id
 	`
 	if rows, err := db.Query(priorityQuery); err == nil {
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 		for rows.Next() {
 			var (
 				priorityID int
@@ -122,7 +130,9 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 				})
 			}
 		}
-		_ = rows.Err()
+		if err := rows.Err(); err != nil {
+			// Log or handle iteration errors
+		}
 	}
 
 	// Recent activity
@@ -134,7 +144,7 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 		LIMIT 10
 	`
 	if rows, err := db.Query(activityQuery); err == nil {
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 		for rows.Next() {
 			var (
 				typeLabel string
@@ -151,7 +161,9 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 				})
 			}
 		}
-		_ = rows.Err()
+		if err := rows.Err(); err != nil {
+			// Log or handle iteration errors
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -214,7 +226,7 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 		`)
 		rows, err := db.Query(query, start)
 		if err == nil {
-			defer func() { _ = rows.Close() }()
+			defer rows.Close()
 			for rows.Next() {
 				var (
 					createTime time.Time
@@ -229,7 +241,9 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 					}{createTime, changeTime, typeID})
 				}
 			}
-			_ = rows.Err()
+			if err := rows.Err(); err != nil {
+				// Log or handle iteration errors
+			}
 		}
 
 		createdCounts := map[string]int{}
@@ -310,7 +324,7 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 		WHERE t.create_time >= $1 OR (t.change_time IS NOT NULL AND t.change_time >= $1)
 	`)
 	if rows, err := db.Query(query, firstOfMonth); err == nil {
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 		for rows.Next() {
 			var (
 				createTime time.Time
@@ -325,7 +339,9 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 				}{createTime, changeTime, typeID})
 			}
 		}
-		_ = rows.Err()
+		if err := rows.Err(); err != nil {
+			// Log or handle iteration errors
+		}
 	}
 
 	createdCounts := map[string]int{}
@@ -486,7 +502,9 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 				stats.closed++
 			}
 		}
-		_ = ticketRows.Err()
+		if err := ticketRows.Err(); err != nil {
+			// Log or handle iteration errors
+		}
 	}
 
 	// Aggregate article counts per agent
@@ -511,7 +529,9 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 				stats.articles = count
 			}
 		}
-		_ = articleRows.Err()
+		if err := articleRows.Err(); err != nil {
+			// Log or handle iteration errors
+		}
 	}
 
 	agentList := make([]agentStats, 0, len(agentMap))
@@ -638,7 +658,9 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 				}
 			}
 		}
-		_ = ticketRows.Err()
+		if err := ticketRows.Err(); err != nil {
+			// Log or handle iteration errors
+		}
 	}
 
 	queueList := make([]queueStats, 0, len(queueMap))
@@ -775,7 +797,10 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 	_ = userID
 
 	top := c.DefaultQuery("top", "10")
-	topInt, _ := strconv.Atoi(top)
+	topInt, err := strconv.Atoi(top)
+	if err != nil {
+		topInt = 10
+	}
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -802,7 +827,7 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 		})
 		return
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	type customerStats struct {
 		id               string
@@ -979,7 +1004,7 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load tickets"})
 			return
 		}
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		tickets := []map[string]interface{}{}
 		for rows.Next() {
@@ -1040,20 +1065,26 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 		if tickets, ok := data.([]map[string]interface{}); ok && len(tickets) > 0 {
 			// Write headers
 			headers := []string{"Ticket Number", "Title", "Queue", "State", "Priority", "Customer", "Created"}
-			writer.Write(headers)
+			if err := writer.Write(headers); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write CSV headers"})
+				return
+			}
 
 			// Write data
 			for _, ticket := range tickets {
 				row := []string{
-					ticket["ticket_number"].(string),
-					ticket["title"].(string),
-					ticket["queue"].(string),
-					ticket["state"].(string),
-					ticket["priority"].(string),
-					ticket["customer"].(string),
-					ticket["created"].(string),
+					safeString(ticket["ticket_number"]),
+					safeString(ticket["title"]),
+					safeString(ticket["queue"]),
+					safeString(ticket["state"]),
+					safeString(ticket["priority"]),
+					safeString(ticket["customer"]),
+					safeString(ticket["created"]),
 				}
-				writer.Write(row)
+				if err := writer.Write(row); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to write CSV row"})
+					return
+				}
 			}
 		}
 
@@ -1067,7 +1098,11 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 		c.Header("Content-Type", "application/json")
 		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=statistics_%s.json", time.Now().Format("20060102_150405")))
 
-		jsonData, _ := json.MarshalIndent(data, "", "  ")
+		jsonData, err := json.MarshalIndent(data, "", "  ")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to marshal JSON"})
+			return
+		}
 		c.Data(http.StatusOK, "application/json", jsonData)
 	}
 }

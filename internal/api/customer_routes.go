@@ -114,27 +114,30 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		}{}
 
 		// Count open tickets for this customer
-		db.QueryRow(database.ConvertPlaceholders(`
+		row := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket 
 			WHERE customer_user_id = $1 
 			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2))
-		`), username).Scan(&stats.OpenTickets)
+		`), username)
+		_ = row.Scan(&stats.OpenTickets) //nolint:errcheck // Count defaults to 0
 
 		// Count closed tickets for this customer
-		db.QueryRow(database.ConvertPlaceholders(`
+		row = db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket 
 			WHERE customer_user_id = $1 
 			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)
-		`), username).Scan(&stats.ClosedTickets)
+		`), username)
+		_ = row.Scan(&stats.ClosedTickets) //nolint:errcheck // Count defaults to 0
 
 		stats.TotalTickets = stats.OpenTickets + stats.ClosedTickets
 
 		// Get last ticket date
 		var lastDate sql.NullTime
-		_ = db.QueryRow(database.ConvertPlaceholders(`
+		row = db.QueryRow(database.ConvertPlaceholders(`
 			SELECT MAX(create_time) FROM ticket 
 			WHERE customer_user_id = $1
-		`), username).Scan(&lastDate)
+		`), username)
+		_ = row.Scan(&lastDate) //nolint:errcheck // Defaults to null
 		if lastDate.Valid {
 			stats.LastTicketDate = lastDate.Time
 			stats.HasLastTicket = true
@@ -169,7 +172,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		if err != nil {
 			log.Printf("handleCustomerDashboard: query error: %v", err)
 		}
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		recentTickets := []map[string]interface{}{}
 		for rows.Next() {
@@ -206,7 +209,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 				"unread_count":   ticket.UnreadCount,
 			})
 		}
-		_ = rows.Err() // Check for iteration errors
+		_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 
 		// Get customer info
 		var customerInfo struct {
@@ -215,12 +218,13 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 			Email     string
 			Company   sql.NullString
 		}
-		db.QueryRow(database.ConvertPlaceholders(`
+		row = db.QueryRow(database.ConvertPlaceholders(`
 			SELECT cu.first_name, cu.last_name, cu.email, cc.name as company
 			FROM customer_user cu
 			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
 			WHERE cu.login = $1
-		`), username).Scan(&customerInfo.FirstName, &customerInfo.LastName,
+		`), username)
+		_ = row.Scan(&customerInfo.FirstName, &customerInfo.LastName, //nolint:errcheck // Customer info defaults to empty
 			&customerInfo.Email, &customerInfo.Company)
 
 		// Get announcements/news (if any)
@@ -300,15 +304,13 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 		sortOrder := c.DefaultQuery("order", "desc")
 		query += fmt.Sprintf(" ORDER BY t.%s %s", sanitizeSortColumn(sortBy), sortOrder)
 
-		// Execute query with driver-specific placeholders
-		execQuery := database.ConvertPlaceholders(query)
-		execArgs := database.RemapArgsForMySQL(query, args)
-		rows, err := db.Query(execQuery, execArgs...)
+		// Execute query - adapter handles placeholder conversion and arg remapping
+		rows, err := database.GetAdapter().Query(db, query, args...)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		defer func() { _ = rows.Close() }()
+		defer rows.Close()
 
 		tickets := []map[string]interface{}{}
 		for rows.Next() {
@@ -351,7 +353,7 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 				"unread_count":   ticket.UnreadCount,
 			})
 		}
-		_ = rows.Err() // Check for iteration errors
+		_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 
 		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/tickets.pongo2", withPortalContext(pongo2.Context{
 			"Title":      fmt.Sprintf("%s - My Tickets", cfg.Title),
@@ -383,20 +385,24 @@ func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 			WHERE s.valid_id = 1 AND scu.customer_user_login = $1
 			ORDER BY s.name
 		`)
-		rows, _ := db.Query(query, username)
-		defer func() { _ = rows.Close() }()
-
+		rows, err := db.Query(query, username)
 		services := []map[string]interface{}{}
-		for rows.Next() {
-			var service struct {
-				ID   int
-				Name string
+		if err == nil && rows != nil {
+			defer rows.Close()
+			for rows.Next() {
+				var service struct {
+					ID   int
+					Name string
+				}
+				if err := rows.Scan(&service.ID, &service.Name); err != nil {
+					continue
+				}
+				services = append(services, map[string]interface{}{
+					"id":   service.ID,
+					"name": service.Name,
+				})
 			}
-			rows.Scan(&service.ID, &service.Name)
-			services = append(services, map[string]interface{}{
-				"id":   service.ID,
-				"name": service.Name,
-			})
+			_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 		}
 
 		// Fall back to <DEFAULT> services if no explicit assignments and config allows it
@@ -414,42 +420,52 @@ func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 					WHERE s.valid_id = 1 AND scu.customer_user_login = '<DEFAULT>'
 					ORDER BY s.name
 				`)
-				defaultRows, _ := db.Query(defaultQuery)
-				defer defaultRows.Close()
+				defaultRows, err := db.Query(defaultQuery)
+				if err == nil && defaultRows != nil {
+					defer defaultRows.Close()
 
-				for defaultRows.Next() {
-					var service struct {
-						ID   int
-						Name string
+					for defaultRows.Next() {
+						var service struct {
+							ID   int
+							Name string
+						}
+						if err := defaultRows.Scan(&service.ID, &service.Name); err != nil {
+							continue
+						}
+						services = append(services, map[string]interface{}{
+							"id":   service.ID,
+							"name": service.Name,
+						})
 					}
-					defaultRows.Scan(&service.ID, &service.Name)
-					services = append(services, map[string]interface{}{
-						"id":   service.ID,
-						"name": service.Name,
-					})
+					_ = defaultRows.Err() //nolint:errcheck // Iteration errors don't affect UI
 				}
 			}
 		}
 
 		// Get priorities customer can select
-		prRows, _ := db.Query(database.ConvertPlaceholders(`
+		prRows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT id, name FROM ticket_priority 
 			WHERE valid_id = 1 AND name NOT IN ('1 very low', '5 very high')
 			ORDER BY id
 		`))
-		defer prRows.Close()
 
 		priorities := []map[string]interface{}{}
-		for prRows.Next() {
-			var priority struct {
-				ID   int
-				Name string
+		if err == nil && prRows != nil {
+			defer prRows.Close()
+			for prRows.Next() {
+				var priority struct {
+					ID   int
+					Name string
+				}
+				if err := prRows.Scan(&priority.ID, &priority.Name); err != nil {
+					continue
+				}
+				priorities = append(priorities, map[string]interface{}{
+					"id":   priority.ID,
+					"name": priority.Name,
+				})
 			}
-			prRows.Scan(&priority.ID, &priority.Name)
-			priorities = append(priorities, map[string]interface{}{
-				"id":   priority.ID,
-				"name": priority.Name,
-			})
+			_ = prRows.Err() //nolint:errcheck // Iteration errors don't affect UI
 		}
 
 		// Get dynamic fields for customer ticket creation
@@ -504,9 +520,10 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 
 		// Get customer's company
 		var customerID sql.NullString
-		db.QueryRow(database.ConvertPlaceholders(`
+		row := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT customer_id FROM customer_user WHERE login = $1
-		`), username).Scan(&customerID)
+		`), username)
+		_ = row.Scan(&customerID) //nolint:errcheck // Defaults to empty
 
 		// Set defaults
 		if priorityID == "" {
@@ -609,7 +626,9 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 
 		// Insert article data in mime table
 		_, err = tx.Exec(database.ConvertPlaceholders(`
-			INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body, a_content_type, incoming_time, create_time, create_by, change_time, change_by)
+			INSERT INTO article_data_mime (
+				article_id, a_from, a_subject, a_body, a_content_type, incoming_time,
+				create_time, create_by, change_time, change_by)
 			VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, $7, CURRENT_TIMESTAMP, $8)
 		`), articleID, username, title, message, contentType, time.Now().Unix(), systemUserID, systemUserID)
 
@@ -626,8 +645,10 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 
 		// Process dynamic fields from customer create form
 		if c.Request.PostForm != nil {
-			if dfErr := ProcessDynamicFieldsFromForm(c.Request.PostForm, int(ticketID), DFObjectTicket, "CustomerTicketMessage"); dfErr != nil {
-				log.Printf("WARNING: Failed to process dynamic fields for customer ticket %d: %v", ticketID, dfErr)
+			if dfErr := ProcessDynamicFieldsFromForm(
+				c.Request.PostForm, int(ticketID), DFObjectTicket, "CustomerTicketMessage"); dfErr != nil {
+				log.Printf("WARNING: Failed to process dynamic fields for customer ticket %d: %v",
+					ticketID, dfErr)
 			}
 		}
 
@@ -706,7 +727,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Get articles for this ticket (only customer-visible ones)
-		rows, _ := db.Query(database.ConvertPlaceholders(`
+		rows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT a.id, adm.a_subject, adm.a_body,
 			       ast.name as sender_type,
 			       u.login as author,
@@ -720,45 +741,50 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			  AND a.is_visible_for_customer = 1
 			ORDER BY a.create_time ASC
 		`), ticket.ID)
-		defer func() { _ = rows.Close() }()
 
 		articles := []map[string]interface{}{}
-		for rows.Next() {
-			var article struct {
-				ID           int
-				Subject      sql.NullString
-				Body         sql.NullString
-				SenderType   string
-				Author       sql.NullString
-				CustomerFrom sql.NullString
-				CreateTime   time.Time
-			}
-
-			rows.Scan(&article.ID, &article.Subject, &article.Body,
-				&article.SenderType, &article.Author, &article.CustomerFrom,
-				&article.CreateTime)
-
-			// Determine display author
-			author := "System"
-			isCustomer := false
-			if article.SenderType == "customer" {
-				isCustomer = true
-				if article.CustomerFrom.Valid && article.CustomerFrom.String != "" {
-					author = article.CustomerFrom.String
+		if err == nil && rows != nil {
+			defer rows.Close()
+			for rows.Next() {
+				var article struct {
+					ID           int
+					Subject      sql.NullString
+					Body         sql.NullString
+					SenderType   string
+					Author       sql.NullString
+					CustomerFrom sql.NullString
+					CreateTime   time.Time
 				}
-			} else if article.Author.Valid {
-				author = article.Author.String
-			}
 
-			articles = append(articles, map[string]interface{}{
-				"id":          article.ID,
-				"subject":     article.Subject.String,
-				"body":        article.Body.String,
-				"author":      author,
-				"is_customer": isCustomer,
-				"created":     formatAge(article.CreateTime),
-				"create_time": article.CreateTime.Format("Jan 2, 2006 15:04"),
-			})
+				if err := rows.Scan(&article.ID, &article.Subject, &article.Body,
+					&article.SenderType, &article.Author, &article.CustomerFrom,
+					&article.CreateTime); err != nil {
+					continue
+				}
+
+				// Determine display author
+				author := "System"
+				isCustomer := false
+				if article.SenderType == "customer" {
+					isCustomer = true
+					if article.CustomerFrom.Valid && article.CustomerFrom.String != "" {
+						author = article.CustomerFrom.String
+					}
+				} else if article.Author.Valid {
+					author = article.Author.String
+				}
+
+				articles = append(articles, map[string]interface{}{
+					"id":          article.ID,
+					"subject":     article.Subject.String,
+					"body":        article.Body.String,
+					"author":      author,
+					"is_customer": isCustomer,
+					"created":     formatAge(article.CreateTime),
+					"create_time": article.CreateTime.Format("Jan 2, 2006 15:04"),
+				})
+			}
+			_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 		}
 
 		// Check if ticket can be closed by customer
@@ -843,8 +869,8 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 
 		// Get ticket title and customer email for article
 		var ticketTitle, customerEmail string
-		db.QueryRow(database.ConvertPlaceholders("SELECT title FROM ticket WHERE id = $1"), ticketID).Scan(&ticketTitle)
-		db.QueryRow(database.ConvertPlaceholders("SELECT email FROM customer_user WHERE login = $1"), username).Scan(&customerEmail)
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT title FROM ticket WHERE id = $1"), ticketID).Scan(&ticketTitle)             //nolint:errcheck // Defaults to empty
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT email FROM customer_user WHERE login = $1"), username).Scan(&customerEmail) //nolint:errcheck // Defaults to empty
 
 		// Create article (OTRS schema: article + article_data_mime)
 		// article_sender_type_id: 3 = customer
@@ -891,13 +917,14 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Save article dynamic fields for customer reply
-		c.Request.ParseForm()
+		_ = c.Request.ParseForm() //nolint:errcheck // Form already parsed by handler
 		if dfErr := ProcessArticleDynamicFieldsFromForm(c.Request.PostForm, int(articleID), "CustomerArticleReply"); dfErr != nil {
 			log.Printf("Error saving article dynamic fields for customer reply: %v", dfErr)
 		}
 
 		// Update ticket state to open if it was pending
-		db.Exec(database.ConvertPlaceholders(`
+		//nolint:errcheck // Best-effort state update
+		_, _ = db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
 			SET ticket_state_id = 4, change_time = NOW(), change_by = $2
 			WHERE id = $1 AND ticket_state_id IN (6, 7)
@@ -968,7 +995,8 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 		if err == nil {
 			if articleID, err := result.LastInsertId(); err == nil {
 				// Insert article content into article_data_mime (incoming_time is required)
-				db.Exec(database.ConvertPlaceholders(`
+				//nolint:errcheck // Best-effort article data insert
+				_, _ = db.Exec(database.ConvertPlaceholders(`
 					INSERT INTO article_data_mime (
 						article_id, a_from, a_to, a_subject, a_body, a_content_type,
 						incoming_time, create_time, create_by, change_time, change_by

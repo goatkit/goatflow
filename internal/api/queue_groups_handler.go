@@ -43,13 +43,15 @@ func HandleAssignQueueGroupAPI(c *gin.Context) {
 
 	// Verify queue and group exist
 	var count int
-	db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue WHERE id = $1`), queueID).Scan(&count)
+	row := db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue WHERE id = $1`), queueID)
+	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Queue not found"})
 		return
 	}
 	count = 0
-	db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM groups WHERE id = $1`), req.GroupID).Scan(&count)
+	row2 := db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM groups WHERE id = $1`), req.GroupID)
+	_ = row2.Scan(&count) //nolint:errcheck // Defaults to 0
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Group not found"})
 		return
@@ -57,15 +59,22 @@ func HandleAssignQueueGroupAPI(c *gin.Context) {
 
 	// Ensure mapping exists without using vendor-specific UPSERT
 	var existsMap int
-	db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue_group WHERE queue_id = $1 AND group_id = $2`), queueID, req.GroupID).Scan(&existsMap)
+	existsQuery := `SELECT 1 FROM queue_group WHERE queue_id = $1 AND group_id = $2`
+	row3 := db.QueryRow(database.ConvertPlaceholders(existsQuery), queueID, req.GroupID)
+	_ = row3.Scan(&existsMap) //nolint:errcheck // Defaults to 0
 	if existsMap != 1 {
-		if _, err := db.Exec(database.ConvertPlaceholders(`INSERT INTO queue_group (queue_id, group_id) VALUES ($1, $2)`), queueID, req.GroupID); err != nil {
+		insertQuery := `INSERT INTO queue_group (queue_id, group_id) VALUES ($1, $2)`
+		if _, err := db.Exec(database.ConvertPlaceholders(insertQuery), queueID, req.GroupID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to assign group"})
 			return
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Group assigned", "data": gin.H{"queue_id": queueID, "group_id": req.GroupID, "permissions": req.Permissions}})
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Group assigned",
+		"data":    gin.H{"queue_id": queueID, "group_id": req.GroupID, "permissions": req.Permissions},
+	})
 }
 
 // HandleRemoveQueueGroupAPI handles DELETE /api/v1/queues/:id/groups/:group_id.
@@ -98,7 +107,7 @@ func HandleRemoveQueueGroupAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to remove group"})
 		return
 	}
-	rows, _ := result.RowsAffected()
+	rows, _ := result.RowsAffected() //nolint:errcheck // Defaults to 0
 	if rows == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Association not found"})
 		return

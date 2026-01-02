@@ -48,7 +48,7 @@ func getDynamicFieldsWithDB(db *sql.DB, objectType, fieldType string) ([]Dynamic
 	if err != nil {
 		return nil, fmt.Errorf("failed to query dynamic fields: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	return scanDynamicFields(rows)
 }
@@ -276,7 +276,7 @@ func getDynamicFieldValuesWithDB(db *sql.DB, objectID int64) ([]DynamicFieldValu
 	if err != nil {
 		return nil, fmt.Errorf("failed to query dynamic field values: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var values []DynamicFieldValue
 	for rows.Next() {
@@ -539,14 +539,17 @@ func GetDynamicFieldValuesForDisplay(objectID int, objectType string, screenKey 
 	return result, nil
 }
 
-// screenKey is the screen being used (e.g., "AgentTicketPhone").
-func ProcessDynamicFieldsFromForm(formValues map[string][]string, objectID int, objectType, screenKey string) error {
+// processDynamicFieldsFromFormInternal is the shared implementation for processing dynamic fields.
+func processDynamicFieldsFromFormInternal(
+	formValues map[string][]string,
+	objectID int,
+	objectType, screenKey, fieldPrefix string,
+) error {
 	db, err := database.GetDB()
 	if err != nil {
 		return err
 	}
 
-	// Get fields enabled for this screen
 	fields, err := getFieldsForScreenWithConfigWithDB(db, screenKey, objectType)
 	if err != nil {
 		return fmt.Errorf("failed to get screen fields: %w", err)
@@ -554,91 +557,12 @@ func ProcessDynamicFieldsFromForm(formValues map[string][]string, objectID int, 
 
 	for _, fwc := range fields {
 		field := fwc.Field
-		formKey := "DynamicField_" + field.Name
+		formKey := fieldPrefix + field.Name
 		values, ok := formValues[formKey]
 
 		// Handle multiselect fields (array values)
 		if !ok {
-			formKey = "DynamicField_" + field.Name + "[]"
-			values, ok = formValues[formKey]
-		}
-
-		if !ok || len(values) == 0 {
-			// Field not submitted - skip (or could clear existing value)
-			continue
-		}
-
-		value := values[0] // For single-value fields
-		if value == "" {
-			continue // Skip empty values
-		}
-
-		dfValue := &DynamicFieldValue{
-			FieldID:  field.ID,
-			ObjectID: int64(objectID),
-		}
-
-		// Set appropriate value field based on field type
-		switch field.FieldType {
-		case DFTypeText, DFTypeTextArea, DFTypeDropdown:
-			dfValue.ValueText = &value
-		case DFTypeMultiselect:
-			// Join multiple values with ||
-			joined := strings.Join(values, "||")
-			dfValue.ValueText = &joined
-		case DFTypeCheckbox:
-			var intVal int64 = 0
-			if value == "1" || value == "on" || value == "true" {
-				intVal = 1
-			}
-			dfValue.ValueInt = &intVal
-		case DFTypeDate:
-			// Parse date in YYYY-MM-DD format
-			if t, err := time.Parse("2006-01-02", value); err == nil {
-				dfValue.ValueDate = &t
-			} else {
-				dfValue.ValueText = &value // Fallback to text
-			}
-		case DFTypeDateTime:
-			// Parse datetime-local format
-			if t, err := time.Parse("2006-01-02T15:04", value); err == nil {
-				dfValue.ValueDate = &t
-			} else if t, err := time.Parse("2006-01-02 15:04:05", value); err == nil {
-				dfValue.ValueDate = &t
-			} else {
-				dfValue.ValueText = &value // Fallback to text
-			}
-		default:
-			dfValue.ValueText = &value
-		}
-
-		if err := setDynamicFieldValueWithDB(db, dfValue); err != nil {
-			return fmt.Errorf("failed to set value for field %s: %w", field.Name, err)
-		}
-	}
-
-	return nil
-}
-
-// Similar to ProcessDynamicFieldsFromForm but uses "ArticleDynamicField_" prefix.
-func ProcessArticleDynamicFieldsFromForm(formValues map[string][]string, articleID int, screenKey string) error {
-	db, err := database.GetDB()
-	if err != nil {
-		return err
-	}
-
-	fields, err := getFieldsForScreenWithConfigWithDB(db, screenKey, DFObjectArticle)
-	if err != nil {
-		return fmt.Errorf("failed to get screen fields: %w", err)
-	}
-
-	for _, fwc := range fields {
-		field := fwc.Field
-		formKey := "ArticleDynamicField_" + field.Name
-		values, ok := formValues[formKey]
-
-		if !ok {
-			formKey = "ArticleDynamicField_" + field.Name + "[]"
+			formKey = fieldPrefix + field.Name + "[]"
 			values, ok = formValues[formKey]
 		}
 
@@ -653,7 +577,7 @@ func ProcessArticleDynamicFieldsFromForm(formValues map[string][]string, article
 
 		dfValue := &DynamicFieldValue{
 			FieldID:  field.ID,
-			ObjectID: int64(articleID),
+			ObjectID: int64(objectID),
 		}
 
 		switch field.FieldType {
@@ -692,4 +616,15 @@ func ProcessArticleDynamicFieldsFromForm(formValues map[string][]string, article
 	}
 
 	return nil
+}
+
+// ProcessDynamicFieldsFromForm processes dynamic fields with "DynamicField_" prefix.
+// screenKey is the screen being used (e.g., "AgentTicketPhone").
+func ProcessDynamicFieldsFromForm(formValues map[string][]string, objectID int, objectType, screenKey string) error {
+	return processDynamicFieldsFromFormInternal(formValues, objectID, objectType, screenKey, "DynamicField_")
+}
+
+// ProcessArticleDynamicFieldsFromForm processes dynamic fields with "ArticleDynamicField_" prefix.
+func ProcessArticleDynamicFieldsFromForm(formValues map[string][]string, articleID int, screenKey string) error {
+	return processDynamicFieldsFromFormInternal(formValues, articleID, DFObjectArticle, screenKey, "ArticleDynamicField_")
 }

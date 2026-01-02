@@ -80,7 +80,8 @@ func ListSignatures(search string, validFilter string, sortBy string, sortOrder 
 		args = append(args, 1)
 	}
 
-	query += " GROUP BY s.id, s.name, s.text, s.content_type, s.comments, s.valid_id, s.create_time, s.create_by, s.change_time, s.change_by"
+	query += " GROUP BY s.id, s.name, s.text, s.content_type, s.comments, " +
+		"s.valid_id, s.create_time, s.create_by, s.change_time, s.change_by"
 
 	allowedSorts := map[string]string{
 		"name":        "s.name",
@@ -105,7 +106,7 @@ func ListSignatures(search string, validFilter string, sortBy string, sortOrder 
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var signatures []SignatureWithStats
 	for rows.Next() {
@@ -305,7 +306,7 @@ func GetSignatureQueues(signatureID int) ([]QueueBasic, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var queues []QueueBasic
 	for rows.Next() {
@@ -345,7 +346,7 @@ func GetAllSignatures() ([]Signature, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 
 	var signatures []Signature
 	for rows.Next() {
@@ -447,7 +448,7 @@ func handleAdminSignatureEdit(c *gin.Context) {
 		return
 	}
 
-	queues, _ := GetSignatureQueues(id)
+	queues, _ := GetSignatureQueues(id) //nolint:errcheck // Page renders with empty queues on error
 
 	renderer.HTML(c, http.StatusOK, "pages/admin/signature_form.pongo2", gin.H{
 		"title":      "Edit Signature",
@@ -478,7 +479,7 @@ func handleCreateSignature(c *gin.Context) {
 		return
 	}
 
-	exists, _ := CheckSignatureNameExists(input.Name, 0)
+	exists, _ := CheckSignatureNameExists(input.Name, 0) //nolint:errcheck // Defaults to false on error
 	if exists {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "A signature with this name already exists"})
 		return
@@ -486,7 +487,9 @@ func handleCreateSignature(c *gin.Context) {
 
 	userID := 1
 	if u, exists := c.Get("userID"); exists {
-		userID = u.(int)
+		if uid, ok := u.(int); ok {
+			userID = uid
+		}
 	}
 
 	if input.ValidID == 0 {
@@ -538,7 +541,7 @@ func handleUpdateSignature(c *gin.Context) {
 		return
 	}
 
-	exists, _ := CheckSignatureNameExists(input.Name, id)
+	exists, _ := CheckSignatureNameExists(input.Name, id) //nolint:errcheck // Defaults to false
 	if exists {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "A signature with this name already exists"})
 		return
@@ -546,7 +549,9 @@ func handleUpdateSignature(c *gin.Context) {
 
 	userID := 1
 	if u, exists := c.Get("userID"); exists {
-		userID = u.(int)
+		if uid, ok := u.(int); ok {
+			userID = uid
+		}
 	}
 
 	if input.ValidID == 0 {
@@ -611,7 +616,7 @@ func ExportSignature(id int) ([]byte, error) {
 		return nil, fmt.Errorf("signature not found")
 	}
 
-	queues, _ := GetSignatureQueues(id)
+	queues, _ := GetSignatureQueues(id) //nolint:errcheck // Defaults to empty
 	queueNames := make([]string, len(queues))
 	for i, q := range queues {
 		queueNames[i] = q.Name
@@ -638,7 +643,7 @@ func ExportAllSignatures() ([]byte, error) {
 
 	exports := make([]SignatureExportData, len(signatures))
 	for i, sig := range signatures {
-		queues, _ := GetSignatureQueues(sig.ID)
+		queues, _ := GetSignatureQueues(sig.ID) //nolint:errcheck // Defaults to empty
 		queueNames := make([]string, len(queues))
 		for j, q := range queues {
 			queueNames[j] = q.Name
@@ -672,7 +677,7 @@ func handleExportSignature(c *gin.Context) {
 		return
 	}
 
-	sig, _ := GetSignature(id)
+	sig, _ := GetSignature(id) //nolint:errcheck // Name defaults to empty
 	filename := "signature_" + strings.ReplaceAll(sig.Name, " ", "_") + ".yaml"
 
 	c.Header("Content-Disposition", "attachment; filename="+filename)
@@ -766,11 +771,11 @@ func ImportSignatures(data []byte, overwrite bool) (imported int, skipped int, e
 			validID = 1
 		}
 
-		exists, _ := CheckSignatureNameExists(exp.Name, 0)
+		exists, _ := CheckSignatureNameExists(exp.Name, 0) //nolint:errcheck // Defaults to false
 		if exists {
 			if overwrite {
 				// Find existing and update
-				sigs, _ := ListSignatures(exp.Name, "", "name", "asc")
+				sigs, _ := ListSignatures(exp.Name, "", "name", "asc") //nolint:errcheck // Defaults to empty
 				for _, sig := range sigs {
 					if sig.Name == exp.Name {
 						err := UpdateSignature(sig.ID, exp.Name, exp.Text, exp.ContentType, exp.Comments, validID, userID)
