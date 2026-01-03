@@ -149,10 +149,6 @@ func setupAttachmentTestDB(t *testing.T) (ticketID int, articleID int, attachmen
 func TestUploadAttachment(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Note: The upload handler has a bug where it checks attachmentsByTicket map
-	// even when DB is available. This test documents current behavior.
-	// TODO: Fix handleUploadAttachment to skip mock check when DB is available
-
 	// Enable DB access for attachment handlers
 	t.Setenv("ATTACHMENTS_USE_DB", "1")
 
@@ -435,12 +431,6 @@ func TestDownloadAttachment(t *testing.T) {
 func TestDeleteAttachment(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Note: The delete handler has a SQL syntax bug (uses USING instead of JOIN)
-	// which causes all DB-backed deletes to fail with 500.
-	// This test documents the expected behavior once the SQL is fixed.
-	// TODO: Fix the DELETE query in handleDeleteAttachment to use proper JOIN syntax
-
-	// For now, test that the handler returns appropriate error status
 	ticketID, _, attachmentID, cleanup := setupAttachmentTestDB(t)
 	defer cleanup()
 

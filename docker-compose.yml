@@ -53,7 +53,7 @@ services:
   #   networks:
   #     - gotrs-network
 
-    # Valkey Cache - High-performance Redis-compatible cache
+  # Valkey Cache - High-performance Redis-compatible cache
   valkey:
     image: docker.io/valkey/valkey:7-alpine
     container_name: gotrs-valkey

@@ -236,15 +236,8 @@ func handleUploadAttachment(c *gin.Context) {
 	}
 
 	// Basic check passed by resolver; proceed
-
-	// In DB-less test mode, simulate not-found for unknown numeric IDs (e.g., 99999)
-	if os.Getenv("APP_ENV") == "test" {
-		if _, ok := attachmentsByTicket[ticketID]; !ok {
-			// Known mock tickets listed in attachmentsByTicket; others treated as missing
-			c.JSON(http.StatusNotFound, gin.H{"error": "Ticket not found"})
-			return
-		}
-	}
+	// If DB is available, we proceed (ticket exists via resolveTicketID)
+	// If no DB, fallback to mock logic in other handlers
 
 	// Get the file from form
 	file, header, err := c.Request.FormFile("file")
@@ -774,17 +767,19 @@ func handleDeleteAttachment(c *gin.Context) {
 		return
 	}
 
-	// If DB available, delete using a guarded join on ticket
+	// If DB available, delete using a subquery to ensure ticket ownership
 	if db := attachmentsDB(); db != nil {
 		// Basic permission check: require authenticated user
 		if _, ok := c.Get("user_id"); !ok {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			return
 		}
+		// Use MariaDB-compatible DELETE with subquery
 		res, derr := db.Exec(database.ConvertPlaceholders(`
-			DELETE FROM article_data_mime_attachment att
-			USING article a
-			WHERE att.id = $1 AND a.id = att.article_id AND a.ticket_id = $2`), attachmentID, ticketID)
+			DELETE FROM article_data_mime_attachment
+			WHERE id = $1 AND article_id IN (
+				SELECT a.id FROM article a WHERE a.ticket_id = $2
+			)`), attachmentID, ticketID)
 		if derr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete attachment"})
 			return
