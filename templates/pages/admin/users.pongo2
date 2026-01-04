@@ -882,8 +882,8 @@ fetch('/admin/password-policy', {
 })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
-            passwordPolicy = data.policy;
+        if (data.success && data.policy) {
+            passwordPolicy = { ...passwordPolicy, ...data.policy };
             // Update the UI with the actual policy
             updatePasswordPolicyDisplay();
         }
