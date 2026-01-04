@@ -26,6 +26,7 @@ services:
         target: /etc/caddy/Caddyfile
     depends_on:
       - app
+      - customer-fe
     restart: unless-stopped
 
   mariadb:
@@ -77,6 +78,32 @@ services:
       - "8080"
     restart: unless-stopped
 
+  customer-fe:
+    image: ghcr.io/gotrs-io/gotrs-ce:${GOTRS_TAG:-latest}
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      GIN_MODE: ${GIN_MODE:-release}
+      LOG_LEVEL: ${LOG_LEVEL:-warn}
+      DB_DRIVER: mysql
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-gotrs}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_NAME: ${DB_NAME:-gotrs}
+      REDIS_HOST: valkey:6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      BASE_URL: ${BASE_URL:-http://localhost:8080}
+      CUSTOMER_FE_ONLY: "true"
+      ROOT_REDIRECT_PATH: /customer
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    expose:
+      - "8080"
+    restart: unless-stopped
+
   runner:
     image: ghcr.io/gotrs-io/gotrs-ce-runner:${GOTRS_TAG:-latest}
     environment:
@@ -105,7 +132,27 @@ configs:
     content: |
       {$$DOMAIN} {
           tls {$$ACME_EMAIL}
-          reverse_proxy app:8080
+
+          # Customer portal - pages and API
+          @customer {
+              path /customer/*
+              path /auth/customer
+              path /api/auth/customer/*
+          }
+          handle @customer {
+              reverse_proxy customer-fe:8080
+          }
+
+          # Redirect /c/ to /customer/ for short URL
+          handle /c/* {
+              redir /customer{uri} permanent
+          }
+
+          # Agent/main app (default) - handles everything else
+          handle {
+              reverse_proxy app:8080
+          }
+
           encode gzip
           header {
               X-Content-Type-Options nosniff
