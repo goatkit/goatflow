@@ -18,3 +18,7 @@ web/src/contracts/auth.pact.test.ts:jwt
 web/pacts/gotrs-frontend-gotrs-backend.json:jwt
 
 # Documentation placeholder in API README
+
+# Deploy reference files - contain example/placeholder values only
+deploy/.env.example
+deploy/docker-compose.yml

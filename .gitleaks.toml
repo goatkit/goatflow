@@ -10,6 +10,9 @@ useDefault = true
 # Paths to exclude from scanning (test files with example tokens)
 [allowlist]
 paths = [
+    # Deploy reference files contain example/placeholder values
+    '''deploy/\.env\.example''',
+    '''deploy/docker-compose\.yml''',
     # Pact contract test files contain test JWT tokens
     '''web/src/contracts/auth\.pact\.test\.ts''',
     '''web/pacts/.*\.json''',
