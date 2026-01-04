@@ -152,4 +152,164 @@ test.describe('Admin Users', () => {
     const statusCell = firstRow.locator('td').nth(4);
     await expect(statusCell).toBeVisible();
   });
+
+  test('password reset modal opens without JS errors', async ({ page }) => {
+    // Capture console errors
+    const consoleErrors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+
+    await page.goto(`${BASE_URL}/admin/users`);
+    await expect(page.locator('#usersTable')).toBeVisible();
+
+    const firstRow = page.locator('#usersTable tbody tr').first();
+    await expect(firstRow).toBeVisible();
+
+    // Click reset password button
+    const resetButton = firstRow.locator('button[onclick*="resetPassword"]');
+    await expect(resetButton).toBeVisible();
+    await resetButton.click();
+
+    // Modal should open
+    const modal = page.locator('#passwordResetModal');
+    await expect(modal).toBeVisible();
+
+    // No JS errors should have occurred
+    const minLengthErrors = consoleErrors.filter(e => 
+      e.toLowerCase().includes('minlength') || e.toLowerCase().includes('undefined')
+    );
+    expect(minLengthErrors).toHaveLength(0);
+  });
+
+  test('password reset validates password requirements', async ({ page }) => {
+    await page.goto(`${BASE_URL}/admin/users`);
+    await expect(page.locator('#usersTable')).toBeVisible();
+
+    const firstRow = page.locator('#usersTable tbody tr').first();
+    const resetButton = firstRow.locator('button[onclick*="resetPassword"]');
+    await resetButton.click();
+
+    const modal = page.locator('#passwordResetModal');
+    await expect(modal).toBeVisible();
+
+    const newPasswordInput = modal.locator('#newPassword');
+    const confirmPasswordInput = modal.locator('#confirmPassword');
+
+    // Type a weak password - should show validation feedback
+    await newPasswordInput.fill('weak');
+    await confirmPasswordInput.fill('weak');
+
+    // Length icon should be red/invalid (password too short)
+    const lengthIcon = modal.locator('#lengthIcon');
+    await expect(lengthIcon).toBeVisible();
+
+    // Type a strong password
+    await newPasswordInput.fill('StrongPass123');
+    await confirmPasswordInput.fill('StrongPass123');
+
+    // Validation icons should update (check they're visible at minimum)
+    await expect(lengthIcon).toBeVisible();
+    const matchIcon = modal.locator('#matchIcon');
+    await expect(matchIcon).toBeVisible();
+  });
+
+  test('password reset works with valid credentials', async ({ page }) => {
+    // Skip actual password change to avoid breaking demo data
+    // Just verify the flow works up to submission
+    await page.goto(`${BASE_URL}/admin/users`);
+    await expect(page.locator('#usersTable')).toBeVisible();
+
+    const firstRow = page.locator('#usersTable tbody tr').first();
+    const resetButton = firstRow.locator('button[onclick*="resetPassword"]');
+    await resetButton.click();
+
+    const modal = page.locator('#passwordResetModal');
+    await expect(modal).toBeVisible();
+
+    // Fill valid password
+    await modal.locator('#newPassword').fill('ValidPass123!');
+    await modal.locator('#confirmPassword').fill('ValidPass123!');
+
+    // Submit button should be enabled and clickable
+    const submitButton = modal.locator('button:has-text("Reset Password")');
+    await expect(submitButton).toBeVisible();
+    await expect(submitButton).toBeEnabled();
+
+    // Close without submitting to preserve test data
+    await modal.locator('button:has-text("Cancel")').click();
+    await expect(modal).toBeHidden();
+  });
+
+  test('password policy API is called on page load', async ({ page }) => {
+    let policyFetched = false;
+    
+    // Intercept the password policy request
+    await page.route('**/admin/password-policy', async route => {
+      policyFetched = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          policy: {
+            minLength: 8,
+            requireUppercase: true,
+            requireLowercase: true,
+            requireDigit: true,
+            requireSpecial: false
+          }
+        })
+      });
+    });
+
+    await page.goto(`${BASE_URL}/admin/users`);
+    await expect(page.locator('#usersTable')).toBeVisible();
+
+    // Give time for the fetch to complete
+    await page.waitForTimeout(500);
+    expect(policyFetched).toBe(true);
+  });
+
+  test('password reset handles failed policy fetch gracefully', async ({ page }) => {
+    // Capture console errors
+    const consoleErrors = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+
+    // Make the policy endpoint fail
+    await page.route('**/admin/password-policy', async route => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: false, error: 'Server error' })
+      });
+    });
+
+    await page.goto(`${BASE_URL}/admin/users`);
+    await expect(page.locator('#usersTable')).toBeVisible();
+
+    const firstRow = page.locator('#usersTable tbody tr').first();
+    const resetButton = firstRow.locator('button[onclick*="resetPassword"]');
+    await resetButton.click();
+
+    // Modal should still open
+    const modal = page.locator('#passwordResetModal');
+    await expect(modal).toBeVisible();
+
+    // Type in password field - should NOT cause minLength error
+    await modal.locator('#newPassword').fill('Test123!');
+    
+    // No TypeError about minLength should occur
+    const minLengthErrors = consoleErrors.filter(e => 
+      e.toLowerCase().includes('minlength') || 
+      e.includes('Cannot read properties of undefined')
+    );
+    expect(minLengthErrors).toHaveLength(0);
+  });
 });
