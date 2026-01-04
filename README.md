@@ -333,11 +333,11 @@ See [i18n Contributing Guide](docs/i18n/CONTRIBUTING.md) for detailed instructio
 | Cloud Native | ✅ | ❌ | ✅ | ✅ |
 | Modern UI | ✅ | ❌ | ✅ | ✅ |
 | REST API | ✅ | ✅ | ✅ | ✅ |
-| GraphQL API | ✅ | ❌ | ❌ | ✅ |
+| GraphQL API | 📋 (Future)  | ❌ | ❌ | ✅ |
 | Microservices | 📋 (Future) | ❌ | ✅ | ✅ |
-| Plugin System | ✅ | ✅ | ✅ | ✅ |
-| ITSM Modules | ✅ | ✅ | ❌ | ✅ |
-| Multi-Language | ✅ (100% DE) | ✅ | ✅ | ✅ |
+| Plugin System | 📋 (Future) | ✅ | ✅ | ✅ |
+| ITSM Modules | 📋 (Future) | ✅ | ❌ | ✅ |
+| Multi-Language | ✅ (EN/DE/FR/ES/AR) | ✅ | ✅ | ✅ |
 
 ## Roadmap
 

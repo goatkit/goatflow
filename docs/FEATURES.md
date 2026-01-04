@@ -1,6 +1,6 @@
 # GOTRS Features
 
-## Core Features (MVP - Available in v0.1)
+## Core Features (Targetted for v0.1.0)
 
 ### Ticket Management
 - ✅ Create, read, update, delete tickets
@@ -26,7 +26,7 @@
 - ✅ Email integration (SMTP/IMAP)
 - ✅ Email-to-ticket conversion
 - ✅ Reply by email
-- ✅ CC/BCC support
+- ❌ CC/BCC support
 - ✅ HTML email support
 
 ### Basic UI
@@ -37,354 +37,354 @@
 - ✅ Search functionality
 - ✅ Responsive design
 
-## Standard Features (v0.2 - v0.5)
+## Standard Features (v0.2.0 - v0.7.0)
 
 ### Enhanced Ticket Management
-- 📋 Ticket templates
-- 📋 Canned responses/Macros
-- 📋 Ticket merging
-- 📋 Ticket splitting
-- 📋 Ticket linking/relationships
-- 📋 Bulk operations
-- 📋 Custom fields
-- 📋 File attachments
-- 📋 Ticket locking
-- 📋 Watch/Follow tickets
-- 📋 Ticket tags
-- 📋 Time tracking
+- ✅ Ticket templates (canned responses)
+- ✅ Canned responses/Macros
+- ✅ Ticket merging
+- ❌ Ticket splitting (TODO)
+- ❌ Ticket linking/relationships (TODO)
+- ❌ Bulk operations (routes defined, handlers TODO)
+- ✅ Custom fields (dynamic fields system)
+- ✅ File attachments
+- ✅ Ticket locking
+- ❌ Watch/Follow tickets (email follow-up only)
+- ✅ Ticket tags
+- ✅ Time tracking (time_accounting table + API)
 
 ### Advanced Search & Filters
-- 📋 Full-text search
-- 📋 Advanced search filters
-- 📋 Saved searches
-- 📋 Search templates
-- 📋 Quick filters
-- 📋 Search history
+- ✅ Full-text search
+- ✅ Advanced search filters (SearchFilter model)
+- ❌ Saved searches (TODO)
+- ❌ Search templates (TODO)
+- ❌ Quick filters (TODO)
+- ❌ Search history (TODO)
 
 ### SLA Management
-- 📋 SLA definitions
-- 📋 Response time targets
-- 📋 Resolution time targets
-- 📋 Escalation rules
-- 📋 Business hours
-- 📋 Holiday calendars
-- 📋 SLA reporting
-- 📋 Breach notifications
+- ❌ SLA definitions (tables exist, handlers TODO)
+- ❌ Response time targets (tables exist, handlers TODO)
+- ❌ Resolution time targets (tables exist, handlers TODO)
+- ❌ Escalation rules (TODO)
+- ❌ Business hours (TODO)
+- ❌ Holiday calendars (TODO)
+- ❌ SLA reporting (TODO)
+- ❌ Breach notifications (TODO)
 
 ### Workflow Automation
-- 📋 Trigger system
-- 📋 Time-based triggers
-- 📋 Event-based triggers
-- 📋 Automated actions
-- 📋 Conditional logic
-- 📋 Workflow templates
-- 📋 Round-robin assignment
-- 📋 Load balancing
+- ❌ Trigger system (TODO)
+- ❌ Time-based triggers (TODO)
+- ❌ Event-based triggers (TODO)
+- ❌ Automated actions (TODO)
+- ❌ Conditional logic (TODO)
+- ❌ Workflow templates (TODO)
+- ❌ Round-robin assignment (TODO)
+- ❌ Load balancing (TODO)
 
 ### Reporting & Analytics
-- 📋 Dashboard widgets
-- 📋 Standard reports
-- 📋 Custom report builder
-- 📋 Real-time metrics
-- 📋 Historical analytics
-- 📋 Export (CSV, PDF, Excel)
-- 📋 Scheduled reports
-- 📋 Report sharing
+- ❌ Dashboard widgets (TODO)
+- ❌ Standard reports (TODO)
+- ❌ Custom report builder (TODO)
+- ❌ Real-time metrics (TODO)
+- ❌ Historical analytics (TODO)
+- ❌ Export (CSV, PDF, Excel) (TODO)
+- ❌ Scheduled reports (TODO)
+- ❌ Report sharing (TODO)
 
 ### Customer Management
-- 📋 Customer organizations
-- 📋 Customer hierarchies
-- 📋 Contact management
-- 📋 Customer history
-- 📋 Customer notes
-- 📋 Customer custom fields
-- 📋 VIP customer flags
+- ❌ Customer organizations (TODO)
+- ❌ Customer hierarchies (TODO)
+- ❌ Contact management (TODO)
+- ❌ Customer history (TODO)
+- ❌ Customer notes (TODO)
+- ❌ Customer custom fields (TODO)
+- ❌ VIP customer flags (TODO)
 
 ### Knowledge Base
-- 📋 Article creation
-- 📋 Categories and tags
-- 📋 Article versioning
-- 📋 Article approval workflow
-- 📋 Search functionality
-- 📋 Related articles
-- 📋 Article ratings
-- 📋 FAQ section
+- ❌ Article creation (TODO)
+- ❌ Categories and tags (TODO)
+- ❌ Article versioning (TODO)
+- ❌ Article approval workflow (TODO)
+- ❌ Search functionality (TODO)
+- ❌ Related articles (TODO)
+- ❌ Article ratings (TODO)
+- ❌ FAQ section (TODO)
 
-## Advanced Features (v0.6 - v1.0)
+## Advanced Features (v0.8.0 - v1.0.0)
 
 ### Multi-Channel Support
-- 🚀 Web forms
-- 🚀 API integration
-- 🚀 Chat integration
-- 🚀 Social media (Twitter, Facebook)
-- 🚀 Phone integration (VoIP)
-- 🚀 SMS support
-- 🚀 WhatsApp Business
+- ✅ Web forms (ticket creation forms)
+- ✅ API integration (REST API + webhooks)
+- ❌ Chat integration (TODO)
+- ❌ Social media (Twitter, Facebook) (TODO)
+- ❌ Phone integration (VoIP) (TODO)
+- ❌ SMS support (TODO)
+- ❌ WhatsApp Business (TODO)
 
 ### Advanced Authentication
-- 🚀 Single Sign-On (SSO)
-- 🚀 SAML 2.0
-- 🚀 OAuth 2.0
-- 🚀 OpenID Connect
-- 🚀 LDAP/Active Directory
-- 🚀 Multi-factor authentication (MFA)
-- 🚀 Biometric authentication
-- 🚀 API key management
+- ❌ Single Sign-On (SSO) (TODO)
+- ❌ SAML 2.0 (TODO)
+- ✅ OAuth 2.0 (OAuth2 provider implemented)
+- ❌ OpenID Connect (TODO)
+- ✅ LDAP/Active Directory (LDAP provider implemented)
+- ❌ Multi-factor authentication (MFA) (2FA config exists, no TOTP implementation)
+- ❌ Biometric authentication (TODO)
+- ❌ API key management (TODO)
 
 ### Collaboration Features
-- 🚀 Team inbox
-- 🚀 Collision detection
-- 🚀 Real-time updates
-- 🚀 Agent chat
-- 🚀 Screen sharing
-- 🚀 Co-browsing
-- 🚀 Presence indicators
+- ❌ Team inbox (TODO)
+- ✅ Collision detection (agent collision detection config)
+- ✅ Real-time updates (WebSocket for dashboard metrics)
+- ❌ Agent chat (TODO)
+- ❌ Screen sharing (TODO)
+- ❌ Co-browsing (TODO)
+- ❌ Presence indicators (TODO)
 
 ### Process Management
-- 🚀 Visual workflow designer
-- 🚀 BPMN 2.0 support
-- 🚀 Process templates
-- 🚀 Approval workflows
-- 🚀 Parallel processes
-- 🚀 Process versioning
-- 🚀 Process analytics
+- ❌ Visual workflow designer (TODO)
+- ❌ BPMN 2.0 support (TODO)
+- ❌ Process templates (TODO)
+- ❌ Approval workflows (escalation models exist, no handlers)
+- ❌ Parallel processes (TODO)
+- ❌ Process versioning (TODO)
+- ❌ Process analytics (TODO)
 
 ### Asset Management
-- 🚀 Configuration items (CI)
-- 🚀 Asset relationships
-- 🚀 Asset lifecycle
-- 🚀 Software license management
-- 🚀 Hardware inventory
-- 🚀 Warranty tracking
-- 🚀 Depreciation calculation
+- ❌ Configuration items (CI) (CMDB models exist, no handlers)
+- ❌ Asset relationships (TODO)
+- ❌ Asset lifecycle (TODO)
+- ❌ Software license management (TODO)
+- ❌ Hardware inventory (TODO)
+- ❌ Warranty tracking (TODO)
+- ❌ Depreciation calculation (TODO)
 
 ### Project Management
-- 🚀 Project tickets
-- 🚀 Gantt charts
-- 🚀 Resource allocation
-- 🚀 Time tracking
-- 🚀 Milestone tracking
-- 🚀 Budget management
-- 🚀 Project templates
+- ❌ Project tickets (TODO)
+- ❌ Gantt charts (TODO)
+- ❌ Resource allocation (TODO)
+- ❌ Time tracking (already in Standard Features)
+- ❌ Milestone tracking (TODO)
+- ❌ Budget management (TODO)
+- ❌ Project templates (TODO)
 
 ## Enterprise Features (v1.1+)
 
 ### ITSM Suite
-- 💼 Incident Management
-- 💼 Problem Management
-- 💼 Change Management
-- 💼 Release Management
-- 💼 Service Catalog
-- 💼 Service Level Management
-- 💼 Capacity Management
-- 💼 Availability Management
+- ❌ Incident Management (models exist, no implementation)
+- ❌ Problem Management (models exist, no implementation)
+- ❌ Change Management (TODO)
+- ❌ Release Management (TODO)
+- ❌ Service Catalog (models exist, no implementation)
+- ❌ Service Level Management (SLA tables exist, handlers TODO)
+- ❌ Capacity Management (TODO)
+- ❌ Availability Management (TODO)
 
 ### Advanced Security
-- 💼 Field-level encryption
-- 💼 Data loss prevention (DLP)
-- 💼 Advanced audit logging
-- 💼 Session recording
-- 💼 Compliance reporting (GDPR, HIPAA)
-- 💼 Security incident response
-- 💼 Vulnerability scanning
-- 💼 Penetration testing support
+- ❌ Field-level encryption (TODO)
+- ❌ Data loss prevention (DLP) (TODO)
+- ❌ Advanced audit logging (audit log handlers TODO)
+- ❌ Session recording (TODO)
+- ❌ Compliance reporting (GDPR, HIPAA) (TODO)
+- ❌ Security incident response (TODO)
+- ❌ Vulnerability scanning (TODO)
+- ❌ Penetration testing support (TODO)
 
 ### High Availability
-- 💼 Active-active clustering
-- 💼 Database replication
-- 💼 Load balancing
-- 💼 Failover mechanisms
-- 💼 Disaster recovery
-- 💼 Backup automation
-- 💼 Point-in-time recovery
-- 💼 Geographic distribution
+- ❌ Active-active clustering (Redis cluster for cache only)
+- ❌ Database replication (TODO)
+- ❌ Load balancing (TODO)
+- ❌ Failover mechanisms (TODO)
+- ❌ Disaster recovery (TODO)
+- ❌ Backup automation (TODO)
+- ❌ Point-in-time recovery (TODO)
+- ❌ Geographic distribution (TODO)
 
 ### Multi-Tenancy
-- 💼 Isolated environments
-- 💼 Tenant management
-- 💼 Resource quotas
-- 💼 Billing integration
-- 💼 White-labeling
-- 💼 Custom domains
-- 💼 Tenant-specific customization
+- ❌ Isolated environments (tenant ID in JWT, no isolation)
+- ❌ Tenant management (TODO)
+- ❌ Resource quotas (TODO)
+- ❌ Billing integration (TODO)
+- ❌ White-labeling (TODO)
+- ❌ Custom domains (TODO)
+- ❌ Tenant-specific customization (TODO)
 
 ### Advanced Integrations
-- 💼 ERP systems (SAP, Oracle)
-- 💼 CRM systems (Salesforce, HubSpot)
-- 💼 DevOps tools (Jira, GitLab, Jenkins)
-- 💼 Monitoring tools (Nagios, Zabbix, Prometheus)
-- 💼 Communication platforms (Slack, Teams, Discord)
-- 💼 Payment gateways
-- 💼 Shipping providers
-- 💼 Cloud storage (S3, Azure Blob, GCS)
+- ❌ ERP systems (SAP, Oracle) (TODO)
+- ❌ CRM systems (Salesforce, HubSpot) (TODO)
+- ❌ DevOps tools (Jira, GitLab, Jenkins) (TODO)
+- ❌ Monitoring tools (Nagios, Zabbix, Prometheus) (TODO)
+- ❌ Communication platforms (Slack, Teams, Discord) (TODO)
+- ❌ Payment gateways (TODO)
+- ❌ Shipping providers (TODO)
+- ❌ Cloud storage (S3, Azure Blob, GCS) (TODO)
 
 ## AI/ML Features (v2.0+)
 
 ### Intelligent Automation
-- 🤖 Smart ticket categorization
-- 🤖 Auto-tagging
-- 🤖 Priority prediction
-- 🤖 Agent recommendation
-- 🤖 Response time prediction
-- 🤖 Sentiment analysis
-- 🤖 Language detection
-- 🤖 Translation services
+- ❌ Smart ticket categorization (TODO)
+- ❌ Auto-tagging (TODO)
+- ❌ Priority prediction (TODO)
+- ❌ Agent recommendation (TODO)
+- ❌ Response time prediction (TODO)
+- ❌ Sentiment analysis (TODO)
+- ❌ Language detection (TODO)
+- ❌ Translation services (TODO)
 
 ### Predictive Analytics
-- 🤖 Ticket volume forecasting
-- 🤖 Resource planning
-- 🤖 Customer churn prediction
-- 🤖 Issue trend analysis
-- 🤖 Performance prediction
-- 🤖 Anomaly detection
-- 🤖 Root cause analysis
+- ❌ Ticket volume forecasting (TODO)
+- ❌ Resource planning (TODO)
+- ❌ Customer churn prediction (TODO)
+- ❌ Issue trend analysis (TODO)
+- ❌ Performance prediction (TODO)
+- ❌ Anomaly detection (TODO)
+- ❌ Root cause analysis (TODO)
 
 ### AI Assistant
-- 🤖 Suggested responses
-- 🤖 Answer recommendations
-- 🤖 Knowledge base suggestions
-- 🤖 Similar ticket detection
-- 🤖 Chatbot integration
-- 🤖 Voice assistant
-- 🤖 Natural language processing
-- 🤖 Intent recognition
+- ❌ Suggested responses (TODO)
+- ❌ Answer recommendations (TODO)
+- ❌ Knowledge base suggestions (TODO)
+- ❌ Similar ticket detection (TODO)
+- ❌ Chatbot integration (TODO)
+- ❌ Voice assistant (TODO)
+- ❌ Natural language processing (TODO)
+- ❌ Intent recognition (TODO)
 
 ## Platform Features
 
 ### Developer Tools
-- 🛠️ REST API
-- 🛠️ GraphQL API
-- 🛠️ WebSocket support
-- 🛠️ Webhook system
-- 🛠️ SDK (Go, Python, JavaScript, Java)
-- 🛠️ CLI tools
-- 🛠️ API documentation
-- 🛠️ Postman collections
+- ✅ REST API
+- ✅ GraphQL API (schema + resolver implemented)
+- ✅ WebSocket support (dashboard metrics)
+- ✅ Webhook system
+- ✅ SDK (Go, Python, TypeScript)
+- ✅ CLI tools (multiple commands available)
+- ❌ API documentation (TODO)
+- ❌ Postman collections (TODO)
 
 ### Extension Framework
-- 🛠️ Plugin architecture
-- 🛠️ Plugin marketplace
-- 🛠️ Theme system
-- 🛠️ Custom widgets
-- 🛠️ Hook system
-- 🛠️ Event bus
-- 🛠️ Sandboxed execution
-- 🛠️ Hot reload
+- ❌ Plugin architecture (TODO)
+- ❌ Plugin marketplace (TODO)
+- ❌ Theme system (TODO)
+- ❌ Custom widgets (TODO)
+- ❌ Hook system (TODO)
+- ❌ Event bus (TODO)
+- ❌ Sandboxed execution (TODO)
+- ❌ Hot reload (TODO)
 
 ### Monitoring & Observability
-- 🛠️ Health checks
-- 🛠️ Metrics (Prometheus)
-- 🛠️ Logging (structured)
-- 🛠️ Tracing (OpenTelemetry)
-- 🛠️ Performance monitoring
-- 🛠️ Error tracking
-- 🛠️ Usage analytics
-- 🛠️ Custom dashboards
+- ✅ Health checks
+- ✅ Metrics (internal collection system)
+- ❌ Logging (structured) (TODO)
+- ❌ Tracing (OpenTelemetry) (TODO)
+- ❌ Performance monitoring (TODO)
+- ❌ Error tracking (TODO)
+- ❌ Usage analytics (TODO)
+- ❌ Custom dashboards (TODO)
 
 ### Deployment Options
-- 🛠️ Docker support
-- 🛠️ Kubernetes manifests
-- 🛠️ Helm charts
-- 🛠️ Terraform modules
-- 🛠️ Ansible playbooks
-- 🛠️ Cloud marketplace (AWS, Azure, GCP)
-- 🛠️ One-click installers
-- 🛠️ Auto-scaling
+- ✅ Docker support
+- ❌ Kubernetes manifests (TODO)
+- ❌ Helm charts (TODO)
+- ✅ Terraform modules (infrastructure repo)
+- ❌ Ansible playbooks (TODO)
+- ❌ Cloud marketplace (AWS, Azure, GCP) (TODO)
+- ❌ One-click installers (TODO)
+- ❌ Auto-scaling (TODO)
 
 ## Mobile Features
 
 ### Mobile Apps (Native)
-- 📱 iOS app
-- 📱 Android app
-- 📱 Push notifications
-- 📱 Offline support
-- 📱 Biometric login
-- 📱 Voice input
-- 📱 Camera integration
-- 📱 Location services
+- ❌ iOS app (TODO)
+- ❌ Android app (TODO)
+- ❌ Push notifications (TODO)
+- ❌ Offline support (TODO)
+- ❌ Biometric login (TODO)
+- ❌ Voice input (TODO)
+- ❌ Camera integration (TODO)
+- ❌ Location services (TODO)
 
 ### Progressive Web App (PWA)
-- 📱 Install to home screen
-- 📱 Offline functionality
-- 📱 Push notifications
-- 📱 Background sync
-- 📱 App-like experience
-- 📱 Responsive design
-- 📱 Touch optimized
+- ❌ Install to home screen (TODO)
+- ❌ Offline functionality (TODO)
+- ❌ Push notifications (TODO)
+- ❌ Background sync (TODO)
+- ❌ App-like experience (TODO)
+- ✅ Responsive design
+- ❌ Touch optimized (TODO)
 
 ## Accessibility Features
 
 ### WCAG 2.1 Compliance
-- ♿ Screen reader support
-- ♿ Keyboard navigation
-- ♿ High contrast mode
-- ♿ Font size adjustment
-- ♿ Color blind modes
-- ♿ Focus indicators
-- ♿ ARIA labels
-- ♿ Skip navigation
+- ❌ Screen reader support (TODO)
+- ❌ Keyboard navigation (TODO)
+- ❌ High contrast mode (TODO)
+- ❌ Font size adjustment (TODO)
+- ❌ Color blind modes (TODO)
+- ❌ Focus indicators (TODO)
+- ❌ ARIA labels (TODO)
+- ❌ Skip navigation (TODO)
 
 ## Localization
 
 ### Multi-Language Support
-- 🌍 Interface translation
-- 🌍 Right-to-left (RTL) support
-- 🌍 Date/time localization
-- 🌍 Number formatting
-- 🌍 Currency support
-- 🌍 Timezone handling
-- 🌍 Custom translations
-- 🌍 Language detection
+- ⚠️ Interface translation (partial - 5 languages implemented)
+- ❌ Right-to-left (RTL) support (Arabic configured but not tested)
+- ❌ Date/time localization (TODO)
+- ❌ Number formatting (TODO)
+- ❌ Currency support (TODO)
+- ❌ Timezone handling (TODO)
+- ❌ Custom translations (TODO)
+- ❌ Language detection (TODO)
 
 ### Supported Languages (Phase 1)
-- English
-- Spanish
-- German
-- French
-- Italian
-- Portuguese
-- Japanese
-- Chinese (Simplified)
-- Korean
-- Arabic
+- ✅ English
+- ✅ Spanish
+- ✅ German
+- ✅ French
+- ❌ Italian (configured but no translations)
+- ❌ Portuguese (configured but no translations)
+- ❌ Japanese (configured but no translations)
+- ❌ Chinese (Simplified) (configured but no translations)
+- ❌ Korean (not configured)
+- ✅ Arabic
 
 ## Performance Features
 
 ### Optimization
-- ⚡ Query optimization
-- ⚡ Database indexing
-- ⚡ Caching (Valkey)
-- ⚡ CDN support
-- ⚡ Lazy loading
-- ⚡ Image optimization
-- ⚡ Code splitting
-- ⚡ Compression
+- ❌ Query optimization (TODO)
+- ❌ Database indexing (TODO)
+- ✅ Caching (Valkey/Redis)
+- ❌ CDN support (TODO)
+- ❌ Lazy loading (TODO)
+- ❌ Image optimization (TODO)
+- ❌ Code splitting (TODO)
+- ❌ Compression (TODO)
 
 ### Scalability
-- ⚡ Horizontal scaling
-- ⚡ Vertical scaling
-- ⚡ Database sharding
-- ⚡ Read replicas
-- ⚡ Connection pooling
-- ⚡ Queue management
-- ⚡ Rate limiting
-- ⚡ Circuit breakers
+- ❌ Horizontal scaling (TODO)
+- ❌ Vertical scaling (TODO)
+- ❌ Database sharding (TODO)
+- ❌ Read replicas (TODO)
+- ❌ Connection pooling (TODO)
+- ❌ Queue management (TODO)
+- ❌ Rate limiting (TODO)
+- ❌ Circuit breakers (TODO)
 
-## Comparison Matrix
+## Comparison Matrix as of v0.5.0
 
 | Feature Category | GOTRS CE | GOTRS EE | OTRS | Zendesk | ServiceNow |
 |-----------------|----------|----------|------|---------|------------|
 | Core Ticketing | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Email Integration | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Knowledge Base | ✅ | ✅ | ✅ | ✅ | ✅ |
-| SLA Management | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Workflow Automation | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Knowledge Base | ❌ | ✅ | ✅ | ✅ | ✅ |
+| SLA Management | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Workflow Automation | ❌ | ✅ | ✅ | ✅ | ✅ |
 | API Access | ✅ | ✅ | ⚠️ | ✅ | ✅ |
-| Multi-Channel | ✅ | ✅ | ⚠️ | ✅ | ✅ |
+| Multi-Channel | ⚠️ | ✅ | ⚠️ | ✅ | ✅ |
 | ITSM Suite | ❌ | ✅ | ✅ | ❌ | ✅ |
 | AI/ML Features | ❌ | ✅ | ❌ | ✅ | ✅ |
 | Multi-Tenancy | ❌ | ✅ | ❌ | ✅ | ✅ |
-| High Availability | ⚠️ | ✅ | ⚠️ | ✅ | ✅ |
+| High Availability | ❌ | ✅ | ⚠️ | ✅ | ✅ |
 | Source Code Access | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Self-Hosted | ✅ | ✅ | ✅ | ❌ | ✅ |
 | Cloud Native | ✅ | ✅ | ❌ | ✅ | ✅ |
