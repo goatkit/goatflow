@@ -89,7 +89,7 @@ func HandleGetPriorities(c *gin.Context) {
 
 // HandleGetTypes returns list of ticket types as JSON or HTML options for HTMX.
 // Behavior:
-//   - If a DB connection is available (including sqlmock in tests) and the query succeeds,
+//   - If a DB connection is available and the query succeeds,
 //     return the SQL-backed shape: [{id, name, comments, valid_id}].
 //   - Otherwise fall back to the lookup service shape (value/label/order/active).
 //   - For HTMX requests, return HTML <option> elements instead of JSON.

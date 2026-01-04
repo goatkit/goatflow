@@ -85,7 +85,7 @@ func (s *ticketService) Create(ctx context.Context, in CreateTicketInput) (*mode
 		in.StateID = models.TicketStateNew
 	}
 
-	// Ensure queue exists before attempting insert (aligns with tests' sqlmock expectation)
+	// Ensure queue exists before attempting insert
 	if ok, err := s.repo.QueueExists(in.QueueID); err != nil {
 		return nil, err
 	} else if !ok {

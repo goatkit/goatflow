@@ -57,8 +57,7 @@ func HandleUpdatePriorityAPI(c *gin.Context) {
 		}
 	}
 
-	// Update priority (include color if provided). For sqlmock compatibility,
-	// use a simple statement matching tests when color is empty.
+	// Update priority (include color if provided)
 	q := database.ConvertPlaceholders(
 		`UPDATE ticket_priority SET name = $1, color = COALESCE(NULLIF($2, ''), color), ` +
 			`change_time = NOW(), change_by = $3 WHERE id = $4`)

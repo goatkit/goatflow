@@ -73,7 +73,7 @@ func handleCreateState(c *gin.Context) {
 		}})
 		return
 	}
-	// Normalize comments to plain string for SQL args (sqlmock expects string, not *string)
+	// Normalize comments to plain string for SQL args
 	commentVal := ""
 	if input.Comments != nil {
 		commentVal = *input.Comments

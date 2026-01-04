@@ -12,6 +12,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
@@ -370,6 +371,13 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 		return
 	}
 
+	// Hash password if provided
+	hashedPassword := ""
+	if req.Password != "" {
+		hasher := auth.NewPasswordHasher()
+		hashedPassword, _ = hasher.HashPassword(req.Password)
+	}
+
 	// Create customer user
 	insertQuery := `
 		INSERT INTO customer_user (
@@ -382,7 +390,7 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 	insertQuery = database.ConvertPlaceholders(insertQuery)
 	var newID int
 	err = db.QueryRow(insertQuery,
-		req.Login, req.Email, req.CustomerID, req.Password, req.Title,
+		req.Login, req.Email, req.CustomerID, hashedPassword, req.Title,
 		req.FirstName, req.LastName, req.Phone, req.Fax, req.Mobile,
 		req.Street, req.Zip, req.City, req.Country, req.Comments, req.ValidID,
 	).Scan(&newID)
@@ -489,10 +497,12 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 		req.Country, req.Comments, req.ValidID,
 	}
 
-	// Add password if provided
+	// Add password if provided (hash it first)
 	if req.Password != "" {
+		hasher := auth.NewPasswordHasher()
+		hashedPassword, _ := hasher.HashPassword(req.Password)
 		updateQuery += ", pw = $16 WHERE id = $17"
-		args = append(args, req.Password, id)
+		args = append(args, hashedPassword, id)
 	} else {
 		updateQuery += " WHERE id = $16"
 		args = append(args, id)

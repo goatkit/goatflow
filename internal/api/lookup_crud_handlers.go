@@ -55,7 +55,6 @@ func handleCreateType(c *gin.Context) {
 	}
 
 	if db, err := database.GetDB(); err == nil && db != nil {
-		// Insert and return new ID (placeholders for all values to satisfy sqlmock expectations)
 		var newID int
 		err := db.QueryRow(database.ConvertPlaceholders(`
             INSERT INTO ticket_type (name, comments, valid_id, create_by, change_by)

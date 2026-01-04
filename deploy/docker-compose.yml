@@ -39,7 +39,7 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost || mysqladmin ping -h localhost"]
       interval: 5s
       timeout: 5s
       retries: 5

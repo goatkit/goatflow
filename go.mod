@@ -4,7 +4,6 @@ go 1.24
 
 require (
 	github.com/99designs/gqlgen v0.17.78
-	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/disintegration/imaging v1.6.2
 	github.com/dop251/goja v0.0.0-20241009100908-5f46f2705ca3
 	github.com/emersion/go-imap/v2 v2.0.0-beta.7
@@ -17,6 +16,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/jmoiron/sqlx v1.4.0
 	github.com/knadh/go-pop3 v1.0.0
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.32
@@ -68,7 +68,6 @@ require (
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
