@@ -19,9 +19,11 @@ services:
       DOMAIN: ${DOMAIN:?DOMAIN is required}
       ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
     depends_on:
       - app
     restart: unless-stopped
@@ -97,3 +99,22 @@ volumes:
   caddy_data:
   caddy_config:
   mariadb_data:
+
+configs:
+  caddyfile:
+    content: |
+      {$$DOMAIN} {
+          tls {$$ACME_EMAIL}
+          reverse_proxy app:8080
+          encode gzip
+          header {
+              X-Content-Type-Options nosniff
+              X-Frame-Options DENY
+              Referrer-Policy strict-origin-when-cross-origin
+              -Server
+          }
+          log {
+              output stdout
+              format console
+          }
+      }
