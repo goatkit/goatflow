@@ -500,3 +500,10 @@ runtime/
 # Directories created by containers (use named volumes instead)
 certs/
 routing/
+
+# ============================================
+# Deploy reference files (NOT ignored)
+# ============================================
+!deploy/docker-compose.yml
+!deploy/.env.example
+!deploy/README.md
