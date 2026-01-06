@@ -76,6 +76,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
     image: localhost/gotrs-backend:latest
@@ -111,7 +112,6 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      DATABASE_URL: ${DATABASE_URL}
       VALKEY_HOST: valkey
       VALKEY_PORT: 6379
       # JWT secret must be provided via environment (.env or shell); no unsafe default here
@@ -145,6 +145,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
     image: localhost/gotrs-backend:latest
@@ -172,7 +173,6 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      DATABASE_URL: ${DATABASE_URL}
       VALKEY_HOST: valkey
       VALKEY_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
@@ -214,7 +214,6 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
-      DATABASE_URL: ${DATABASE_URL}
       # Email configuration for queue processing
       GOTRS_EMAIL_SMTP_HOST: ${SMTP_HOST:-smtp4dev}
       GOTRS_EMAIL_SMTP_PORT: ${SMTP_PORT:-25}
@@ -232,27 +231,6 @@ services:
     networks:
       - gotrs-network
     restart: unless-stopped
-
-  # Nginx Reverse Proxy (serves static assets and proxies to backend)
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: gotrs-nginx
-  #   user: "101:101" # Run as nginx user for Podman rootless compatibility
-  #   command: >
-  #     sh -c "
-  #       mkdir -p /tmp/nginx/client_temp /tmp/nginx/proxy_temp /tmp/nginx/fastcgi_temp /tmp/nginx/uwsgi_temp /tmp/nginx/scgi_temp &&
-  #       nginx -g 'daemon off;'
-  #     "
-  #   ports:
-  #     - "${NGINX_PORT:-80}:80"
-  #   volumes:
-  #     - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro,Z
-  #     - ./docker/nginx/error.html:/etc/nginx/error.html:ro,Z
-  #     - ./static:/var/www/static:ro,Z
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - gotrs-network
 
   # smtp4dev - Full email sandbox (SMTP/IMAP/POP3 + Web UI)
   smtp4dev:
@@ -296,6 +274,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
     image: localhost/gotrs-backend:latest
@@ -391,6 +370,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
     image: localhost/gotrs-backend:latest
@@ -575,6 +555,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.tests
+      args:
+        GO_IMAGE: ${GO_IMAGE}
     container_name: gotrs-tests
     environment:
       GOTRS_HOST: http://gotrs-backend:8080
@@ -594,6 +576,7 @@ services:
       context: .
       dockerfile: Dockerfile.toolbox
       args:
+        GO_IMAGE: ${GO_IMAGE}
         UID: ${HOST_UID:-1000}
         GID: ${HOST_GID:-1000}
     image: gotrs-toolbox:latest

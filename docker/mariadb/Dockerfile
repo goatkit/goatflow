@@ -10,8 +10,9 @@ RUN mkdir -p /var/lib/mysql /var/run/mysqld /docker-entrypoint-initdb.d && \
     chown -R mysql:mysql /var/lib/mysql /var/run/mysqld /docker-entrypoint-initdb.d && \
     chmod 755 /var/run/mysqld
 
-# Copy init script if needed
-COPY --chown=mysql:mysql docker/mariadb/init.sql* /docker-entrypoint-initdb.d/ 2>/dev/null || true
+# Copy init script if needed (init.sql is optional)
+# NOTE: If init.sql doesn't exist, build will fail - create an empty one or remove this line
+COPY --chown=mysql:mysql docker/mariadb/init.sql /docker-entrypoint-initdb.d/
 
 # Set proper permissions for entrypoint
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh || true

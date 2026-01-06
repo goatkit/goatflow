@@ -216,13 +216,14 @@ chmod 644 modules/generated/*.yaml
 ```
 
 ### Build Failures
-If Go version errors occur:
+If Go version errors occur, update the single source of truth:
 ```bash
-# Update Go version in script
-vim scripts/schema-discovery.sh
-# Change: golang:1.22-alpine
-# To: golang:1.23-alpine or later
+# Edit .env and change GO_IMAGE
+vim .env
+# Example: GO_IMAGE=golang:1.25.0-alpine
 ```
+
+All Dockerfiles and scripts inherit from this setting.
 
 ## Best Practices
 

@@ -73,7 +73,7 @@ This is a **reference configuration**. For production, consider:
 
 - External database (managed MariaDB/MySQL)
 - Secrets management (not plain `.env` files)
-- Reverse proxy with TLS (nginx, Traefik, etc.)
+- Reverse proxy with TLS (Caddy included, or Traefik, etc.)
 - Volume backups
 - Resource limits
 - Monitoring and alerting

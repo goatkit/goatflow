@@ -278,25 +278,26 @@ queryCache.WarmUp(ctx, warmupQueries)
 
 ## Deployment
 
-### Redis Cluster
+### Valkey (Redis-compatible)
+
+GOTRS uses Valkey for caching. Deploy via Helm chart:
 
 ```bash
-# Deploy Redis cluster
-kubectl apply -f k8s/base/redis-cluster.yaml
+# Deploy GOTRS with Valkey enabled (default)
+helm install gotrs ./charts/gotrs
 
-# Initialize cluster
-kubectl apply -f k8s/base/redis-cluster-init.yaml
+# Check Valkey status
+kubectl get pods -l app.kubernetes.io/name=valkey
 
-# Check cluster status
-redis-cli --cluster check redis-cluster-0.redis-cluster:6379
+# Connect to Valkey CLI
+kubectl exec -it <valkey-pod> -- valkey-cli
 ```
 
-### Varnish
+### Varnish (Optional)
+
+For edge caching, deploy Varnish separately:
 
 ```bash
-# Deploy Varnish cache
-kubectl apply -f k8s/base/cdn-config.yaml
-
 # Check Varnish stats
 varnishstat -1
 

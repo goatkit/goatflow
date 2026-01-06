@@ -1,7 +1,29 @@
 # Production Docker Compose Configuration
 # SAFETY: This file explicitly sets APP_ENV=production to prevent test database creation
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 services:
+  # Caddy reverse proxy with automatic TLS
+  caddy:
+    image: docker.io/caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN is required for production}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is required for TLS certificates}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
+    depends_on:
+      - backend
+      - customer-fe
+    restart: always
+
   postgres:
     environment:
       # PRODUCTION: Ensures test databases are NEVER created
@@ -24,9 +46,6 @@ services:
       NODE_ENV: production
     restart: always
 
-  nginx:
-    restart: always
-
   # Remove development tools in production
   mailhog:
     profiles:
@@ -38,6 +57,8 @@ services:
 
 # Production volume configuration
 volumes:
+  caddy_data:
+  caddy_config:
   postgres_data:
     driver: local
     driver_opts:
@@ -45,3 +66,43 @@ volumes:
       type: none
       # Mount to a specific production data directory
       device: /var/lib/gotrs/postgres
+
+# Embedded Caddyfile configuration
+configs:
+  caddyfile:
+    content: |
+      {$$DOMAIN} {
+          tls {$$ACME_EMAIL}
+
+          # Customer portal - pages and API
+          @customer {
+              path /customer/*
+              path /auth/customer
+              path /api/auth/customer/*
+          }
+          handle @customer {
+              reverse_proxy customer-fe:8080
+          }
+
+          # Redirect /c/ to /customer/ for short URL
+          handle /c/* {
+              redir /customer{uri} permanent
+          }
+
+          # Agent/main app (default) - handles everything else
+          handle {
+              reverse_proxy backend:8080
+          }
+
+          encode gzip
+          header {
+              X-Content-Type-Options nosniff
+              X-Frame-Options DENY
+              Referrer-Policy strict-origin-when-cross-origin
+              -Server
+          }
+          log {
+              output stdout
+              format console
+          }
+      }

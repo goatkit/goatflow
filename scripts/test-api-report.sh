@@ -28,7 +28,7 @@ test_api() {
         -v "/home/nigel/git/gotrs-io/gotrs-ce:/workspace" \
         -w /workspace \
         --network gotrs-ce_gotrs-network \
-        golang:1.23-alpine \
+        "${GO_IMAGE:-golang:1.24.11-alpine}" \
         sh -c "go test -v ./internal/api -run '$pattern' -count=1 2>&1" > /tmp/test_output.txt 2>&1; then
         
         # Check if tests actually passed

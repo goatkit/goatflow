@@ -297,14 +297,23 @@ generator:
 - Sanitized file uploads
 
 ### Rate Limiting
-```nginx
-# Demo instance rate limits
-limit_req_zone $binary_remote_addr zone=demo:10m rate=100r/m;
-limit_conn_zone $binary_remote_addr zone=addr:10m;
+```caddyfile
+# Demo instance rate limits (Caddyfile)
+{
+    servers {
+        max_header_size 4kb
+    }
+}
 
-# Apply limits
-limit_req zone=demo burst=20;
-limit_conn addr 10;
+try.gotrs.io {
+    rate_limit {
+        zone demo {
+            key {remote_host}
+            events 100
+            window 1m
+        }
+    }
+}
 ```
 
 ### Restrictions

@@ -15,10 +15,19 @@ ENV PATH=/usr/local/go/bin:$PATH \
     XDG_CACHE_HOME=/workspace/.cache/xdg \
     CGO_ENABLED=0
 
+# Create non-root user for running tests
+RUN useradd -m -u 1000 pwuser
+
 WORKDIR /workspace
-COPY go.mod go.sum ./
+COPY --chown=pwuser:pwuser go.mod go.sum ./
 RUN go mod download && go mod verify
-COPY . .
+COPY --chown=pwuser:pwuser . .
+
+# Ensure cache directories are writable by non-root user
+RUN mkdir -p /workspace/.cache && chown -R pwuser:pwuser /workspace/.cache
+
+# Switch to non-root user
+USER pwuser
 
 # Default command runs tests with playwright tag
 CMD ["bash","-lc","go test -tags playwright -v ./tests/e2e"]

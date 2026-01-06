@@ -1,10 +1,14 @@
 # Container-first testing environment for GOTRS
 # syntax=docker/dockerfile:1
 
+# Global build arg - must be before any FROM that uses it
+# Default provided for docker build without --build-arg; compose/make override from .env
+ARG GO_IMAGE=golang:1.24-alpine
+
 # ============================================
 # Stage 1: Build test tools
 # ============================================
-FROM golang:1.23-alpine AS test-builder
+FROM ${GO_IMAGE} AS test-builder
 
 # Install build dependencies
 RUN apk add --no-cache git gcc musl-dev ca-certificates

@@ -57,6 +57,7 @@ GROUPS: List[Dict[str, object]] = [
             {"name": "lint-cache-info", "description": "Display golangci-lint cache size"},
             {"name": "lint-cache-clean", "description": "Wipe golangci-lint cache"},
             {"name": "cache-audit", "description": "Audit cache ownership for container friendliness"},
+            {"name": "cache-fix", "description": "Fix cache volume permissions (recovery for root-owned files)"},
             {
                 "name": "toolbox-fix-cache",
                 "usage": "make toolbox-fix-cache CONFIRM=YES",
@@ -310,6 +311,33 @@ GROUPS: List[Dict[str, object]] = [
             {
                 "name": "test-mysql-reset-password",
                 "description": "Reset password in MySQL test DB",
+            },
+        ],
+    },
+    {
+        "title": "Linting & Code Quality",
+        "emoji": "🔍",
+        "entries": [
+            {"name": "lint", "description": "Run all linters (Go, YAML, OpenAPI, Helm)"},
+            {"name": "toolbox-lint", "description": "Run Go linters (golangci-lint)"},
+            {"name": "yaml-lint", "description": "Lint YAML files (routes, config, .github)"},
+            {"name": "openapi-lint", "description": "Lint OpenAPI spec with Redocly"},
+        ],
+    },
+    {
+        "title": "Helm Chart",
+        "emoji": "⎈",
+        "entries": [
+            {"name": "helm-setup", "description": "Configure Helm repos (valkey)"},
+            {"name": "helm-lint", "description": "Lint the GOTRS Helm chart (included in make lint)"},
+            {"name": "helm-template", "description": "Render chart templates (dry-run)"},
+            {"name": "helm-template-pg", "description": "Render chart with PostgreSQL values"},
+            {"name": "helm-deps", "description": "Update chart dependencies (valkey subchart)"},
+            {"name": "helm-package", "description": "Package chart for distribution"},
+            {
+                "name": "helm",
+                "usage": "make helm ARGS='template gotrs charts/gotrs'",
+                "description": "Run arbitrary helm command in toolbox",
             },
         ],
     },

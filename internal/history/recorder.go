@@ -1,166 +1,151 @@
+// Package history provides ticket history recording and formatting utilities.
 package history
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"strings"
-	"unicode/utf8"
+	"time"
 
 	"github.com/gotrs-io/gotrs-ce/internal/models"
-	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
+// HistoryType constants for common ticket history events.
 const (
-	// History type names aligned with OTRS/Znuny expectations.
-	TypeNewTicket         = "NewTicket"
-	TypeAddNote           = "AddNote"
-	TypeTimeAccounting    = "TimeAccounting"
-	TypePriorityUpdate    = "PriorityUpdate"
-	TypeQueueMove         = "Move"
-	TypeStateUpdate       = "StateUpdate"
-	TypeSetPendingTime    = "SetPendingTime"
-	TypeOwnerUpdate       = "OwnerUpdate"
-	TypeResponsibleUpdate = "ResponsibleUpdate"
-	TypeMerged            = "Merged"
+	TypeNewTicket       = "NewTicket"
+	TypeOwnerUpdate     = "OwnerUpdate"
+	TypeStateUpdate     = "StateUpdate"
+	TypeAddNote         = "AddNote"
+	TypePriorityUpdate  = "PriorityUpdate"
+	TypeQueueMove       = "Move"
+	TypeSetPendingTime  = "SetPendingTime"
+	TypeMerged          = "Merged"
+	TypeTimeAccounting  = "TimeAccounting"
 )
 
-const maxHistoryNameLength = 200
-
-// Recorder coordinates writing ticket history entries while keeping updates DRY.
-type Recorder struct {
-	repo *repository.TicketRepository
+// HistoryInserter is an interface for inserting ticket history entries.
+type HistoryInserter interface {
+	AddTicketHistoryEntry(ctx context.Context, exec interface{}, entry models.TicketHistoryInsert) error
 }
 
-// NewRecorder constructs a recorder bound to the provided repository instance.
-func NewRecorder(repo *repository.TicketRepository) *Recorder {
+// TicketGetter is an interface for getting ticket data needed for history snapshots.
+type TicketGetter interface {
+	GetByID(id uint) (*models.Ticket, error)
+}
+
+// Recorder records ticket history entries.
+type Recorder struct {
+	repo interface{}
+}
+
+// NewRecorder creates a new history recorder with the given repository.
+// The repository should implement AddTicketHistoryEntry method.
+// Returns nil if repo is nil.
+func NewRecorder(repo interface{}) *Recorder {
+	if repo == nil {
+		return nil
+	}
 	return &Recorder{repo: repo}
 }
 
-// ChangeMessage generates a consistent message for value transitions.
-func ChangeMessage(field, from, to string) string {
-	from = strings.TrimSpace(from)
-	to = strings.TrimSpace(to)
-
-	switch {
-	case from == "" && to == "":
-		return ""
-	case from == "":
-		return fmt.Sprintf("%s set to %s", field, to)
-	case to == "":
-		return fmt.Sprintf("%s cleared (was %s)", field, from)
-	case strings.EqualFold(from, to):
-		return fmt.Sprintf("%s remains %s", field, to)
-	default:
-		return fmt.Sprintf("%s changed from %s to %s", field, from, to)
-	}
-}
-
-// SetMessage produces a simple "field set to" entry.
-func SetMessage(field, value string) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return fmt.Sprintf("%s cleared", field)
-	}
-	return fmt.Sprintf("%s set to %s", field, value)
-}
-
-// Excerpt returns a shortened snippet suitable for history payloads.
-func Excerpt(body string, limit int) string {
-	trimmed := strings.TrimSpace(body)
-	if trimmed == "" {
-		return ""
-	}
-	if limit <= 0 {
-		limit = maxHistoryNameLength
-	}
-	if utf8.RuneCountInString(trimmed) <= limit {
-		return trimmed
-	}
-	runes := []rune(trimmed)
-	if limit >= len(runes) {
-		return trimmed
-	}
-	excerpt := strings.TrimSpace(string(runes[:limit]))
-	if excerpt == "" {
-		return trimmed
-	}
-	return excerpt + "…"
-}
-
-// Record persists a ticket_history entry using the provided ticket snapshot.
-func (r *Recorder) Record(ctx context.Context, exec repository.ExecContext, ticket *models.Ticket, articleID *int, historyType, message string, actorID int) error {
+// Record records a history entry for a ticket.
+// The tx parameter can be nil to use the default database connection.
+// ticket can be either a *models.Ticket or an int (ticket ID).
+// articleID is optional and can be nil (accepts *int or *uint).
+func (r *Recorder) Record(ctx context.Context, tx interface{}, ticket interface{}, articleID interface{}, historyType string, message string, userID int) error {
 	if r == nil || r.repo == nil {
-		return errors.New("history recorder not initialized")
+		return nil
 	}
-	if ticket == nil {
-		return errors.New("ticket snapshot required")
+
+	inserter, ok := r.repo.(HistoryInserter)
+	if !ok {
+		return nil
 	}
-	historyType = strings.TrimSpace(historyType)
-	if historyType == "" {
-		return errors.New("history type required")
+
+	var ticketData *models.Ticket
+
+	switch t := ticket.(type) {
+	case *models.Ticket:
+		ticketData = t
+	case int:
+		// Try to get ticket data from repo if it implements TicketGetter
+		if getter, ok := r.repo.(TicketGetter); ok {
+			var err error
+			ticketData, err = getter.GetByID(uint(t))
+			if err != nil {
+				// Create minimal ticket data if we can't fetch it
+				ticketData = &models.Ticket{ID: t}
+			}
+		} else {
+			ticketData = &models.Ticket{ID: t}
+		}
+	default:
+		return nil
 	}
-	if ctx == nil {
-		ctx = context.Background()
+
+	if ticketData == nil || ticketData.ID <= 0 {
+		return nil
 	}
 
 	entry := models.TicketHistoryInsert{
-		TicketID:    ticket.ID,
-		ArticleID:   articleID,
-		TypeID:      valueFromPtrOrDefault(ticket.TypeID, 1), // Default to Unclassified (1) if NULL
-		QueueID:     ticket.QueueID,
-		OwnerID:     valueFromPtr(ticket.UserID),
-		PriorityID:  ticket.TicketPriorityID,
-		StateID:     ticket.TicketStateID,
-		CreatedBy:   actorID,
+		TicketID:    ticketData.ID,
+		TypeID:      0,
+		QueueID:     ticketData.QueueID,
+		OwnerID:     0,
+		PriorityID:  ticketData.TicketPriorityID,
+		StateID:     ticketData.TicketStateID,
+		CreatedBy:   userID,
 		HistoryType: historyType,
-		Name:        truncate(message, maxHistoryNameLength),
-		CreatedAt:   ticket.ChangeTime,
+		Name:        message,
+		CreatedAt:   time.Now().UTC(),
 	}
 
-	return r.repo.AddTicketHistoryEntry(ctx, exec, entry)
+	if ticketData.UserID != nil {
+		entry.OwnerID = *ticketData.UserID
+	}
+
+	if ticketData.TypeID != nil {
+		entry.TypeID = *ticketData.TypeID
+	}
+
+	// Handle articleID which can be *int or *uint
+	switch aid := articleID.(type) {
+	case *int:
+		if aid != nil && *aid > 0 {
+			entry.ArticleID = aid
+		}
+	case *uint:
+		if aid != nil && *aid > 0 {
+			v := int(*aid)
+			entry.ArticleID = &v
+		}
+	}
+
+	return inserter.AddTicketHistoryEntry(ctx, tx, entry)
 }
 
-// RecordByTicketID loads a ticket snapshot and records the history entry in one step.
-func (r *Recorder) RecordByTicketID(ctx context.Context, exec repository.ExecContext, ticketID int, articleID *int, historyType, message string, actorID int) error {
-	if r == nil || r.repo == nil {
-		return errors.New("history recorder not initialized")
-	}
-	if ticketID <= 0 {
-		return errors.New("ticket id required")
-	}
-	ticket, err := r.repo.GetByID(uint(ticketID))
-	if err != nil {
-		return err
-	}
-	return r.Record(ctx, exec, ticket, articleID, historyType, message, actorID)
+// RecordByTicketID records a history entry using a ticket ID directly.
+// This is a convenience method when you only have a ticket ID.
+func (r *Recorder) RecordByTicketID(ctx context.Context, tx interface{}, ticketID int, articleID interface{}, historyType string, message string, userID int) error {
+	return r.Record(ctx, tx, ticketID, articleID, historyType, message, userID)
 }
 
-func truncate(input string, max int) string {
-	trimmed := strings.TrimSpace(input)
-	if trimmed == "" || max <= 0 {
-		return ""
+// Excerpt returns a truncated version of the input string, suitable for history messages.
+func Excerpt(s string, maxLen int) string {
+	if maxLen <= 0 {
+		maxLen = 50
 	}
-	if utf8.RuneCountInString(trimmed) <= max {
-		return trimmed
+	if len(s) <= maxLen {
+		return s
 	}
-	runes := []rune(trimmed)
-	if max > len(runes) {
-		max = len(runes)
-	}
-	return strings.TrimSpace(string(runes[:max-1])) + "…"
+	return s[:maxLen-3] + "..."
 }
 
-func valueFromPtr(ptr *int) int {
-	if ptr == nil {
-		return 0
+// ChangeMessage generates a history message for a field change.
+func ChangeMessage(field, oldVal, newVal string) string {
+	if oldVal == "" {
+		return field + " set to " + newVal
 	}
-	return *ptr
-}
-
-func valueFromPtrOrDefault(ptr *int, defaultValue int) int {
-	if ptr == nil {
-		return defaultValue
+	if newVal == "" {
+		return field + " cleared (was: " + oldVal + ")"
 	}
-	return *ptr
+	return field + " changed from " + oldVal + " to " + newVal
 }

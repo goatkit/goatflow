@@ -1,0 +1,10 @@
+{{- /*
+  Extra Resources Template
+  Renders arbitrary Kubernetes resources defined in .Values.extraResources
+  Supports Helm templating via tpl function - use {{ .Release.Name }}, {{ .Values.* }}, etc.
+  Note: Strings containing {{ must be quoted in YAML values
+*/ -}}
+{{- range .Values.extraResources }}
+---
+{{ tpl (toYaml .) $ }}
+{{- end }}

@@ -13,8 +13,6 @@ info:
 servers:
   - url: http://localhost:8081
     description: Development server
-  - url: http://localhost:8000
-    description: Development server via nginx
   - url: https://api.gotrs.io
     description: Production server
 

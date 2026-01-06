@@ -2,6 +2,10 @@
 # Syntax directive for BuildKit features
 # syntax=docker/dockerfile:1
 
+# Global build arg - must be before any FROM that uses it
+# Default provided for docker build without --build-arg; compose/make override from .env
+ARG GO_IMAGE=golang:1.24-alpine
+
 # ============================================
 # Stage 0: Download third-party assets
 # ============================================
@@ -53,7 +57,7 @@ RUN npm run build-css && npm run build-tiptap
 # ============================================
 # Stage 1: Dependencies (cached separately)
 # ============================================
-FROM docker.io/golang:1.24-alpine AS deps
+FROM docker.io/${GO_IMAGE} AS deps
 
 ARG name=defaultValue
 # Set shell for better error handling

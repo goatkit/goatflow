@@ -2,9 +2,20 @@
 
 ## Overview
 
-GOTRS provides comprehensive migration tools and compatibility layers to ensure a smooth transition from OTRS. Our migration strategy prioritizes data integrity, minimal downtime, and preservation of all ticket history.
+GOTRS provides `gotrs-migrate` to import data from OTRS SQL dumps into GOTRS. The tool handles schema translation between different database engines and migrates core ticket data, users, and article storage.
 
-## Migration Compatibility
+> **Note**: Migration tooling is under active development. This document reflects current capabilities.
+
+## Supported Migration Paths
+
+### Source → Target Database Support
+
+| Source Database | Target Database | Status |
+|-----------------|-----------------|--------|
+| MySQL 5.7+ / MariaDB 10.2+ | PostgreSQL 9.6+ | ✅ Supported |
+| MySQL 5.7+ / MariaDB 10.2+ | MySQL 8.0+ / MariaDB 10.2+ | ✅ Supported |
+| PostgreSQL 9.6+ | PostgreSQL 9.6+ | ✅ Supported |
+| PostgreSQL 9.6+ | MySQL 8.0+ / MariaDB 10.2+ | ✅ Supported |
 
 ### Supported OTRS Versions
 - ✅ OTRS 6.x (Full support)
@@ -12,432 +23,315 @@ GOTRS provides comprehensive migration tools and compatibility layers to ensure 
 - ⚠️ OTRS 4.x (Limited support, requires pre-migration upgrade)
 - ⚠️ OTRS 3.x (Requires intermediate migration to OTRS 5+)
 
-### Supported Databases
-- PostgreSQL 9.6+
-- MySQL 5.7+ / MariaDB 10.2+
-- Oracle 12c+ (Enterprise Edition only)
-
 ## Pre-Migration Checklist
 
-### 1. System Requirements
-- [ ] GOTRS system requirements met
-- [ ] Sufficient disk space (2x current OTRS database size)
+### 1. OTRS Preparation
+- [ ] OTRS system in maintenance mode
 - [ ] Database backup completed
-- [ ] Network connectivity between OTRS and GOTRS servers
-- [ ] Migration tool downloaded and verified
+- [ ] SQL dump exported (see export commands below)
+- [ ] Article storage location identified
 
-### 2. OTRS Preparation
-- [ ] OTRS system health check passed
-- [ ] All OTRS packages documented
-- [ ] Custom fields identified
-- [ ] Workflows documented
-- [ ] Integrations cataloged
-- [ ] User permissions exported
-
-### 3. GOTRS Preparation
-- [ ] GOTRS installed and tested
+### 2. GOTRS Preparation
+- [ ] GOTRS installed and running (`make up`)
 - [ ] Database connection verified
-- [ ] Email configuration ready
-- [ ] Storage configuration completed
-- [ ] SSL certificates installed
+- [ ] Storage paths configured for article attachments
 
 ## Migration Process
 
-### Phase 1: Analysis & Planning
+All migration commands use **Makefile targets** which handle container orchestration automatically.
 
-#### 1.1 Run Migration Analyzer
+### Step 1: Export OTRS Data
+
+**From MySQL/MariaDB:**
 ```bash
-./gotrs-migrate analyze \
-  --source-type otrs \
-  --source-db "postgres://otrs_user:pass@otrs-server/otrs" \
-  --report-output migration-report.html
+mysqldump -u otrs_user -p \
+  --default-character-set=utf8mb4 \
+  --single-transaction \
+  otrs_database > otrs_dump.sql
 ```
 
-#### 1.2 Review Migration Report
-```
-Migration Analysis Report
-========================
-Total Tickets: 45,328
-Total Users: 1,247
-Total Customers: 5,823
-Total Attachments: 127,491 (42.3 GB)
-Custom Fields: 23
-Workflows: 12
-Estimated Migration Time: 2.5 hours
-Compatibility Score: 98%
-
-Warnings:
-- 2 custom modules require manual migration
-- 15 users have duplicate email addresses
-- 3 workflows use unsupported conditions
-```
-
-### Phase 2: Test Migration
-
-#### 2.1 Create Test Environment
+**From PostgreSQL:**
 ```bash
-# Clone OTRS database for testing
-pg_dump otrs_production > otrs_test.sql
-psql otrs_test < otrs_test.sql
-
-# Set up test GOTRS instance
-docker-compose -f docker-compose.test.yml up -d
+pg_dump -U otrs_user -d otrs_database -f otrs_dump.sql
 ```
 
-#### 2.2 Run Test Migration
+### Step 2: Analyze the Dump
+
 ```bash
-./gotrs-migrate test \
-  --source-db "postgres://user:pass@localhost/otrs_test" \
-  --target-db "postgres://user:pass@localhost/gotrs_test" \
-  --validate
+make migrate-analyze SQL=/path/to/otrs_dump.sql
 ```
 
-#### 2.3 Validation Tests
-```bash
-# Run automated validation
-./gotrs-migrate validate \
-  --target-db "postgres://user:pass@localhost/gotrs_test" \
-  --validation-level comprehensive
+Output includes:
+- Total lines and tables in the dump
+- Tables with data vs empty tables
+- Row counts per table
+- Core OTRS tables verification (users, groups, queue, ticket, article, etc.)
 
-# Manual validation checklist
-- [ ] Random ticket content verification (10 samples)
-- [ ] User login testing
-- [ ] Permission verification
-- [ ] Attachment accessibility
-- [ ] Workflow execution
-- [ ] Report generation
+### Step 3: Dry Run Import
+
+Test the migration without making changes:
+
+```bash
+make migrate-import SQL=/path/to/otrs_dump.sql DRY_RUN=true
 ```
 
-### Phase 3: Production Migration
+### Step 4: Execute Import
 
-#### 3.1 Maintenance Mode
+Run the actual import:
+
 ```bash
-# Enable OTRS maintenance mode
-su - otrs
-./bin/otrs.Console.pl Maint::Config::Set MaintenanceMode 1
-
-# Display maintenance message
-./bin/otrs.Console.pl Maint::Config::Set MaintenanceMessage \
-  "System migration in progress. Expected completion: 2 hours"
+make migrate-import SQL=/path/to/otrs_dump.sql DRY_RUN=false
 ```
 
-#### 3.2 Final Backup
-```bash
-# Backup OTRS database
-pg_dump otrs_production > otrs_final_backup_$(date +%Y%m%d_%H%M%S).sql
+### Step 5: Validate Migration
 
-# Backup OTRS attachments
-tar -czf otrs_attachments_$(date +%Y%m%d_%H%M%S).tar.gz /opt/otrs/var/article
+Verify the imported data:
+
+```bash
+make migrate-validate
 ```
 
-#### 3.3 Execute Migration
+### Step 6: Force Reimport (if needed)
+
+To clear existing data and reimport from scratch:
+
 ```bash
-./gotrs-migrate run \
-  --source-db "postgres://otrs_user:pass@otrs-server/otrs" \
-  --target-db "postgres://gotrs_user:pass@gotrs-server/gotrs" \
-  --batch-size 1000 \
-  --parallel-workers 4 \
-  --progress \
-  --log-file migration_$(date +%Y%m%d_%H%M%S).log
+make migrate-import-force SQL=/path/to/otrs_dump.sql
 ```
 
-### Phase 4: Post-Migration
+> ⚠️ **Warning**: This will DELETE ALL EXISTING DATA before importing!
 
-#### 4.1 Data Verification
+## Article Storage Migration
+
+OTRS stores article attachments in the filesystem (typically `/opt/otrs/var/article/`). These must be migrated separately from the database.
+
+### Locate OTRS Article Storage
+
 ```bash
-./gotrs-migrate verify \
-  --source-db "postgres://otrs_user:pass@otrs-server/otrs" \
-  --target-db "postgres://gotrs_user:pass@gotrs-server/gotrs" \
-  --checksum \
-  --report post-migration-report.html
+# Check OTRS config for ArticleDir
+grep -r "ArticleDir" /opt/otrs/Kernel/Config.pm
+
+# Default location
+ls -la /opt/otrs/var/article/
 ```
 
-#### 4.2 System Configuration
-```bash
-# Update email settings
-./gotrs-cli config set email.smtp.host mail.example.com
-./gotrs-cli config set email.smtp.port 587
-./gotrs-cli config set email.smtp.auth true
+### Copy Article Storage
 
-# Configure integrations
-./gotrs-cli integration enable ldap
-./gotrs-cli integration configure ldap --import-from otrs
+```bash
+# Copy to GOTRS storage location
+rsync -avz /opt/otrs/var/article/ /path/to/gotrs/storage/articles/
+
+# Or via container volume
+make toolbox-exec ARGS="cp -r /source/articles /app/storage/articles"
+```
+
+### Verify Article Paths
+
+After database import, verify attachment references:
+
+```bash
+make migrate-validate
+```
+
+## Makefile Targets Reference
+
+| Target | Description |
+|--------|-------------|
+| `make migrate-analyze SQL=<file>` | Analyze OTRS dump structure and contents |
+| `make migrate-import SQL=<file> DRY_RUN=true` | Test import without changes |
+| `make migrate-import SQL=<file> DRY_RUN=false` | Execute actual import |
+| `make migrate-import-force SQL=<file>` | Clear data and reimport (destructive) |
+| `make migrate-validate` | Validate imported data integrity |
+
+## Direct Tool Usage
+
+For advanced usage, scripting, or CI/CD pipelines, `gotrs-migrate` can be called directly inside containers:
+
+```bash
+# Analyze dump
+gotrs-migrate -cmd=analyze -sql=/path/to/dump.sql
+
+# Import with dry run
+gotrs-migrate -cmd=import \
+  -sql=/path/to/dump.sql \
+  -db="postgres://user:pass@host:5432/gotrs?sslmode=disable" \
+  -dry-run -v
+
+# Force import (clears existing data)
+gotrs-migrate -cmd=import \
+  -sql=/path/to/dump.sql \
+  -db="postgres://user:pass@host:5432/gotrs?sslmode=disable" \
+  -force -v
+
+# Validate imported data
+gotrs-migrate -cmd=validate \
+  -db="postgres://user:pass@host:5432/gotrs?sslmode=disable" -v
+```
+
+### gotrs-migrate Options
+
+| Option | Description |
+|--------|-------------|
+| `-cmd` | Command: `analyze`, `import`, or `validate` |
+| `-sql` | Path to OTRS SQL dump file |
+| `-db` | Database connection URL |
+| `-dry-run` | Test import without making changes |
+| `-force` | Clear existing data before import (destructive!) |
+| `-v` | Verbose output |
+
+### Database Connection URLs
+
+```bash
+# PostgreSQL
+-db="postgres://user:password@host:5432/database?sslmode=disable"
+
+# MySQL/MariaDB  
+-db="mysql://user:password@tcp(host:3306)/database"
 ```
 
 ## Data Mapping
 
-### Database Schema Mapping
+### Core Tables
 
 | OTRS Table | GOTRS Table | Notes |
 |------------|-------------|-------|
-| ticket | tickets | Direct mapping with extended fields |
-| ticket_history | ticket_history | Full history preserved |
-| article | ticket_messages | Renamed for clarity |
-| users | users | Extended with OAuth fields |
-| customer_user | customers | Restructured for organizations |
-| queue | queues | Enhanced with SLA fields |
-| ticket_type | ticket_types | Direct mapping |
-| ticket_state | ticket_states | Workflow states added |
-| ticket_priority | ticket_priorities | Direct mapping |
-| groups | groups | RBAC permissions added |
-
-### Field Mapping
-
-```yaml
-# Custom field mapping configuration
-field_mapping:
-  ticket:
-    tn: number
-    title: title
-    ticket_state_id: status_id
-    ticket_priority_id: priority_id
-    queue_id: queue_id
-    customer_id: customer_id
-    customer_user_id: customer_user_id
-    owner_id: agent_id
-    responsible_user_id: responsible_id
-    
-  custom_fields:
-    - otrs_field: TicketFreeText1
-      gotrs_field: custom_field_1
-      type: string
-    - otrs_field: TicketFreeTime1
-      gotrs_field: custom_date_1
-      type: datetime
-```
+| ticket | tickets | Core ticket data |
+| article | ticket_messages | Ticket communications |
+| users | users | Agent accounts |
+| customer_user | customers | Customer accounts |
+| queue | queues | Ticket queues |
+| ticket_type | ticket_types | Ticket categories |
+| ticket_state | ticket_states | Status values |
+| ticket_priority | ticket_priorities | Priority levels |
 
 ### Status Mapping
 
-| OTRS Status | GOTRS Status | Auto-Transition |
-|-------------|--------------|-----------------|
-| new | new | No |
-| open | open | No |
-| pending reminder | pending | Yes (on date) |
-| pending auto close+ | pending_positive | Yes (auto-close) |
-| pending auto close- | pending_negative | Yes (auto-close) |
-| closed successful | resolved | No |
-| closed unsuccessful | closed | No |
-| merged | merged | No |
-| removed | deleted | No |
-
-## Migration Tools
-
-### Command Line Interface
-
-```bash
-# Basic migration
-./gotrs-migrate run --config migration.yaml
-
-# Advanced options
-./gotrs-migrate run \
-  --source-db $SOURCE_DB \
-  --target-db $TARGET_DB \
-  --include-tables tickets,users,customers \
-  --exclude-tables sessions,cache \
-  --from-date 2020-01-01 \
-  --to-date 2024-01-01 \
-  --dry-run
-```
-
-### Configuration File
-
-```yaml
-# migration.yaml
-source:
-  type: otrs
-  version: 6.0
-  database:
-    driver: postgres
-    host: otrs-server.example.com
-    port: 5432
-    name: otrs
-    user: otrs_user
-    password: ${OTRS_DB_PASSWORD}
-    
-target:
-  type: gotrs
-  database:
-    driver: postgres
-    host: gotrs-server.example.com
-    port: 5432
-    name: gotrs
-    user: gotrs_user
-    password: ${GOTRS_DB_PASSWORD}
-    
-options:
-  batch_size: 1000
-  parallel_workers: 4
-  skip_validation: false
-  preserve_ids: true
-  convert_encoding: UTF-8
-  
-mappings:
-  custom_fields: field_mappings.yaml
-  workflows: workflow_mappings.yaml
-  
-excluded:
-  tables:
-    - sessions
-    - cache_*
-  users:
-    - test_*
-    - demo_*
-```
-
-### Rollback Procedure
-
-```bash
-# If migration fails, rollback GOTRS
-psql gotrs < gotrs_pre_migration_backup.sql
-
-# Restore OTRS to operational state
-./bin/otrs.Console.pl Maint::Config::Set MaintenanceMode 0
-
-# Investigate issues
-grep ERROR migration_*.log
-```
-
-## Special Considerations
-
-### Large Installations (>100k tickets)
-
-```bash
-# Use incremental migration
-./gotrs-migrate run \
-  --mode incremental \
-  --cutoff-date 2023-01-01 \
-  --sync-recent 30d
-
-# After initial migration, sync recent changes
-./gotrs-migrate sync \
-  --source-db $SOURCE_DB \
-  --target-db $TARGET_DB \
-  --since-last-sync
-```
-
-### Custom OTRS Modules
-
-1. **GenericInterface**: Requires API endpoint mapping
-2. **Custom Packages**: Manual code migration needed
-3. **Process Management**: Workflow redesign in GOTRS
-4. **Stats Module**: Report recreation required
-
-### Performance Optimization
-
-```sql
--- Pre-migration optimizations
-VACUUM ANALYZE;
-REINDEX DATABASE otrs;
-
--- Post-migration optimizations
-ANALYZE tickets;
-ANALYZE ticket_history;
-ANALYZE users;
-```
-
-## Compatibility Mode
-
-### Enable OTRS Compatibility
-
-```yaml
-# config/compatibility.yaml
-compatibility:
-  otrs:
-    enabled: true
-    version: 6.0
-    features:
-      legacy_api: true
-      old_urls: true
-      classic_ui: false
-```
-
-### API Compatibility Layer
-
-```nginx
-# nginx.conf - URL redirects
-location /otrs/index.pl {
-    rewrite ^/otrs/index.pl(.*)$ /api/v1/legacy$1 permanent;
-}
-
-location /otrs/customer.pl {
-    rewrite ^/otrs/customer.pl(.*)$ /customer$1 permanent;
-}
-```
+| OTRS Status | GOTRS Status |
+|-------------|--------------|
+| new | new |
+| open | open |
+| pending reminder | pending |
+| closed successful | resolved |
+| closed unsuccessful | closed |
 
 ## Post-Migration Tasks
 
-### 1. User Training
-- [ ] Agent training sessions scheduled
-- [ ] Customer notification sent
-- [ ] Documentation updated
-- [ ] Video tutorials created
+### 1. Verify Data
+- [ ] Check ticket counts match
+- [ ] Verify user logins work
+- [ ] Test customer portal access
+- [ ] Review attachment accessibility
 
-### 2. System Optimization
-- [ ] Database indexes rebuilt
-- [ ] Cache warming completed
-- [ ] Performance baseline established
-- [ ] Monitoring configured
+### 2. Update Configuration
+- [ ] Configure email settings via environment variables
+- [ ] Set up LDAP if needed (see LDAP documentation)
+- [ ] Configure storage paths
 
-### 3. Integration Updates
-- [ ] Email templates updated
-- [ ] Webhook URLs changed
-- [ ] API keys regenerated
-- [ ] Third-party systems notified
+### 3. User Communication
+- [ ] Notify agents of new system
+- [ ] Update customer documentation
+- [ ] Provide login instructions
 
-### 4. Cleanup
-- [ ] Old OTRS system decommissioned
-- [ ] Temporary migration files removed
-- [ ] Backup retention policy applied
-- [ ] Documentation archived
+## URL Redirects
+
+If users have bookmarked old OTRS URLs, you can add redirects to your reverse proxy:
+
+```caddyfile
+# Optional: Redirect old OTRS bookmarks
+handle /otrs/* {
+    redir / permanent
+}
+```
+
+For the recommended Caddy configuration, see [deploy/docker-compose.yml](../deploy/docker-compose.yml).
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### Character Encoding Problems
+#### Connection Errors
+Ensure your database URL is correct:
 ```bash
-# Fix UTF-8 encoding issues
-./gotrs-migrate fix-encoding \
-  --target-db $TARGET_DB \
-  --encoding UTF-8 \
-  --tables tickets,ticket_history
+# PostgreSQL format
+-db="postgres://user:password@host:5432/database?sslmode=disable"
 ```
 
-#### Duplicate Key Errors
-```sql
--- Reset sequences after migration
-SELECT setval('tickets_id_seq', (SELECT MAX(id) FROM tickets));
-SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
-```
-
-#### Missing Attachments
+#### Character Encoding
+If you see encoding issues, ensure your OTRS dump was exported with UTF-8:
 ```bash
-# Verify and re-sync attachments
-./gotrs-migrate sync-attachments \
-  --source-path /opt/otrs/var/article \
-  --target-path /var/gotrs/attachments \
-  --verify-checksums
+mysqldump --default-character-set=utf8mb4 ...
 ```
 
-## Support
+#### Large Dumps
+For very large databases, the import may take significant time. Use `-v` to see progress.
 
-### Migration Assistance
+## Limitations
 
-- **Documentation**: https://gotrs.io/docs/migration
-- **Community Forum**: https://community.gotrs.io/migration
-- **Professional Services**: migration@gotrs.io
-- **Emergency Support**: +1-555-GOTRS-911
-
-### Reporting Issues
-
-When reporting migration issues, include:
-1. Migration report (HTML/JSON)
-2. Error logs
-3. OTRS version and configuration
-4. GOTRS version
-5. Database type and version
+Current migration tool limitations:
+- Article attachments require separate filesystem copy (see Article Storage Migration above)
+- Custom fields (DynamicFields) require manual mapping review
+- Workflows/processes need to be recreated in GOTRS
+- GenericInterface configurations are not migrated
+- OTRS-specific modules and customizations are not migrated
 
 ---
 
-*Migration guide version 1.0*
-*Last updated: August 2025*
+## Database Schema Migrations
+
+GOTRS uses [golang-migrate](https://github.com/golang-migrate/migrate) for database schema versioning. The `migrate` tool is available in the backend container.
+
+### Usage
+
+```bash
+# Check current migration version
+./migrate -database 'postgres://...' version
+
+# Apply all pending migrations
+./migrate -path /app/db/migrations -database 'postgres://...' up
+
+# Apply N migrations
+./migrate -path /app/db/migrations -database 'postgres://...' up 3
+
+# Rollback last migration
+./migrate -path /app/db/migrations -database 'postgres://...' down 1
+
+# Migrate to specific version
+./migrate -path /app/db/migrations -database 'postgres://...' goto 20250101120000
+
+# Force version (fix dirty state)
+./migrate -path /app/db/migrations -database 'postgres://...' force 20250101120000
+```
+
+### Creating New Migrations
+
+```bash
+./migrate create -ext sql -dir db/migrations -seq add_customer_preferences
+
+# Creates:
+#   db/migrations/000042_add_customer_preferences.up.sql
+#   db/migrations/000042_add_customer_preferences.down.sql
+```
+
+### Supported Database Drivers
+- `postgres` / `postgresql`
+- `mysql`
+
+### Options
+- `-source` - Migration files location (driver://url)
+- `-path` - Shorthand for -source=file://path
+- `-database` - Database connection URL
+- `-verbose` - Print verbose logging
+- `-lock-timeout N` - Database lock timeout in seconds (default: 15)
+- `-prefetch N` - Migrations to load in advance (default: 10)
+
+---
+
+## Support
+
+- **Documentation**: https://gotrs.io/docs
+- **GitHub Issues**: https://github.com/gotrs-io/gotrs-ce/issues
+- **Community**: See CONTRIBUTING.md
+
+---
+
+*Last updated: January 2026*

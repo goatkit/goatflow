@@ -41,6 +41,10 @@ dist/
 build/
 bin/           # All compiled binaries should go here!
 
+# Helm chart dependencies (downloaded by helm dependency update)
+charts/*/charts/
+charts/*/*.tgz
+
 # Individual binaries (in case they're built in root by mistake)
 goats          # Main server binary - should be in container only
 gotrs          # CLI tool - should be in container only

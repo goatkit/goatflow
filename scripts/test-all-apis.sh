@@ -33,7 +33,7 @@ run_test() {
         -v "$(pwd):/workspace" \
         -w /workspace \
         --network gotrs-ce_gotrs-network \
-        golang:1.23-alpine \
+        "${GO_IMAGE:-golang:1.24.11-alpine}" \
         sh -c "go test -v ./internal/api -run '$test_pattern' -count=1 2>&1" | grep -q "PASS"; then
         echo -e "${GREEN}✓ $test_name: PASSED${NC}"
         ((PASSED++))

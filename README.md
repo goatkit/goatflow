@@ -236,7 +236,6 @@ GOTRS maintains high code quality and security standards through comprehensive a
 For production deployments, see our comprehensive guides:
 - [Docker Deployment](docs/deployment/docker.md)
 - [Kubernetes Deployment](docs/deployment/kubernetes.md)
-- [Bare Metal Installation](docs/deployment/bare-metal.md)
 
 ## Documentation
 

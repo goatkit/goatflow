@@ -64,7 +64,6 @@ helm install gotrs gotrs/gotrs --namespace gotrs --create-namespace
 ## See Also
 
 - [Docker Deployment](docker.md)
-- [Bare Metal Installation](bare-metal.md)
 - [Architecture Overview](../../ARCHITECTURE.md)
 
 ---

@@ -91,7 +91,7 @@ $CONTAINER_CMD run --rm \
     -e GOARCH=amd64 \
     -e GOCACHE=/tmp/.cache/go-build \
     -e GOMODCACHE=/tmp/.cache/go-mod \
-    golang:1.23-alpine \
+    "${GO_IMAGE:-golang:1.24.11-alpine}" \
     go build -o /app/schema-discovery ./cmd/schema-discovery
 
 if [ $? -ne 0 ]; then

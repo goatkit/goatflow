@@ -126,41 +126,50 @@ spec:
 ### Prerequisites
 
 1. Kubernetes cluster (1.25+)
-2. CNPG operator for PostgreSQL
-3. RabbitMQ operator
-4. Prometheus operator for monitoring
-5. Storage class with SSD support
+2. Helm 3.12+
+3. Ingress controller (nginx-ingress recommended)
+4. Storage class with SSD support
+5. (Optional) Prometheus operator for monitoring
 
-### Installation Steps
+### Installation with Helm
 
-1. **Install Operators:**
+Deploy GOTRS using the Helm chart:
+
 ```bash
-# PostgreSQL operator
-kubectl apply -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/main/releases/cnpg-1.20.0.yaml
+# Basic installation
+helm install gotrs ./charts/gotrs
 
-# RabbitMQ operator
-kubectl apply -f https://github.com/rabbitmq/cluster-operator/releases/latest/download/cluster-operator.yml
+# With PostgreSQL instead of MySQL
+helm install gotrs ./charts/gotrs -f charts/gotrs/values-postgresql.yaml
+
+# Production configuration with autoscaling
+helm install gotrs ./charts/gotrs \
+  --set backend.replicaCount=3 \
+  --set backend.autoscaling.enabled=true \
+  --set backend.autoscaling.minReplicas=3 \
+  --set backend.autoscaling.maxReplicas=10
 ```
 
-2. **Deploy PostgreSQL HA:**
+### External Database (Production)
+
+For production HA, use a managed database service:
+
 ```bash
-kubectl apply -f k8s/ha/postgres-ha.yaml
+helm install gotrs ./charts/gotrs \
+  --set database.external.enabled=true \
+  --set database.external.host=your-rds-endpoint.amazonaws.com \
+  --set database.external.existingSecret=gotrs-db-credentials
 ```
 
-3. **Deploy Redis Cluster:**
-```bash
-kubectl apply -f k8s/base/redis-cluster.yaml
-kubectl apply -f k8s/base/redis-cluster-init.yaml
-```
+### External Cache (Production)
 
-4. **Deploy RabbitMQ Cluster:**
-```bash
-kubectl apply -f k8s/ha/rabbitmq-ha.yaml
-```
+For production HA, use a managed Redis/Valkey service:
 
-5. **Deploy GOTRS HA:**
 ```bash
-kubectl apply -f k8s/ha/gotrs-ha.yaml
+helm install gotrs ./charts/gotrs \
+  --set valkey.enabled=false \
+  --set externalValkey.enabled=true \
+  --set externalValkey.host=your-elasticache-endpoint
 ```
 
 ## Monitoring

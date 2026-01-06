@@ -1,0 +1,6 @@
+# Trivy ignore file for GOTRS
+# https://aquasecurity.github.io/trivy/latest/docs/configuration/filtering/#by-finding-ids
+
+# Test credentials - not real secrets
+# Test API keys in test files are acceptable per CONTRIBUTING.md
+.cache

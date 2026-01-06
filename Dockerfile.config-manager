@@ -1,6 +1,10 @@
 # Container for GOTRS Unified Configuration Manager
 # syntax=docker/dockerfile:1
 
+# Global build arg - must be before any FROM that uses it
+# Default provided for docker build without --build-arg; compose/make override from .env
+ARG GO_IMAGE=golang:1.24-alpine
+
 # ============================================
 # Reuse backend binaries from artifacts image
 # ============================================
@@ -9,7 +13,7 @@ FROM gotrs-artifacts:latest AS artifacts
 # ============================================
 # Build config manager
 # ============================================
-FROM golang:1.23-alpine AS config-builder
+FROM ${GO_IMAGE} AS config-builder
 
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates

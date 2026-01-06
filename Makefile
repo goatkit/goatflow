@@ -1,11 +1,15 @@
 # Explicit default goal
 .DEFAULT_GOAL := help
 
-# Load environment defaults from .env when present (safe for docker-compose semantics)
+# Load environment from .env (includes GO_IMAGE - single source of truth)
 ifneq (,$(wildcard .env))
 include .env
 export $(shell sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' .env)
 endif
+
+# Fallback if .env doesn't exist or doesn't define GO_IMAGE
+GO_IMAGE ?= golang:1.24.11-alpine
+export GO_IMAGE
 
 # Route manifest governance
 .PHONY: routes-verify routes-baseline-update routes-generate
@@ -103,10 +107,10 @@ define ensure_caches
 endef
 
 # Cache mounting strategy:
-# - Default: bind host .cache directories (developer-visible, good for debugging)
-# - Optional: use a single shared named volume (gotrs_cache) across all services
-#   by setting CACHE_USE_VOLUMES=1 for fully containerized caches (no host perms churn)
-CACHE_USE_VOLUMES ?= 0
+# - Default: use a single shared named volume (gotrs_cache) across all services
+#   for fully containerized caches (no host perms issues)
+# - Optional: bind host .cache directories (developer-visible) by setting CACHE_USE_VOLUMES=0
+CACHE_USE_VOLUMES ?= 1
 ifeq ($(CACHE_USE_VOLUMES),1)
 MOD_CACHE_MOUNT := -v gotrs_cache:/workspace/.cache
 BUILD_CACHE_MOUNT := 
@@ -391,6 +395,66 @@ k8s-secrets:
 	@printf "🔐 Generating Kubernetes secrets from template...\n"
 	@./scripts/generate-k8s-secrets.sh
 
+# =============================================================================
+# Helm Chart Targets
+# =============================================================================
+# Uses the gotrs_cache Docker volume mounted at /workspace/.cache
+# XDG_CACHE_HOME is already set to /workspace/.cache/xdg in docker-compose.yml
+
+# Fix cache permissions if any dir is root-owned (runs as root in container to fix ownership)
+# This is a recovery target for volumes that have incorrect permissions from previous runs
+.PHONY: cache-fix
+cache-fix:
+	@printf "\n🔧 Fixing cache permissions in Docker volume...\n"
+	@$(CONTAINER_CMD) run --rm -v gotrs-ce_gotrs_cache:/cache alpine:3.19 \
+		sh -c 'chown -R 1000:1000 /cache && mkdir -p /cache/go-build /cache/go-mod /cache/xdg/helm/repository /cache/xdg/helm/cache /cache/xdg/helm/config /cache/npm /cache/golangci-lint && chown -R 1000:1000 /cache'
+	@printf "✅ Cache permissions fixed\n"
+
+# Setup helm repos (run once, idempotent)
+.PHONY: helm-setup
+helm-setup: toolbox-build
+	@printf "\n⚙️  Setting up Helm repositories...\n"
+	@$(MAKE) toolbox-exec ARGS="helm repo add valkey https://valkey.io/valkey-helm/ 2>/dev/null || true && helm repo update"
+	@printf "✅ Helm repos configured\n"
+
+# Run helm command in toolbox (usage: make helm ARGS="lint charts/gotrs")
+.PHONY: helm
+helm: toolbox-build
+	@[ -n "$(ARGS)" ] || (echo "Usage: make helm ARGS=\"<helm command>\"" && echo "Examples:" && echo "  make helm ARGS=\"lint charts/gotrs\"" && echo "  make helm ARGS=\"template gotrs charts/gotrs\"" && echo "  make helm ARGS=\"dependency update charts/gotrs\"" && exit 2)
+	@$(MAKE) toolbox-exec ARGS="helm $(ARGS)"
+
+# Lint the GOTRS Helm chart
+.PHONY: helm-lint
+helm-lint: helm-setup
+	@printf "\n🔍 Linting Helm chart...\n"
+	@$(MAKE) toolbox-exec ARGS="helm lint charts/gotrs"
+
+# Render Helm chart templates (dry-run)
+.PHONY: helm-template
+helm-template: helm-deps
+	@printf "\n📄 Rendering Helm chart templates...\n"
+	@$(MAKE) toolbox-exec ARGS="helm template gotrs charts/gotrs"
+
+# Render Helm chart with PostgreSQL values
+.PHONY: helm-template-pg
+helm-template-pg: helm-deps
+	@printf "\n📄 Rendering Helm chart with PostgreSQL...\n"
+	@$(MAKE) toolbox-exec ARGS="helm template gotrs charts/gotrs -f charts/gotrs/values-postgresql.yaml"
+
+# Update Helm chart dependencies (valkey subchart)
+.PHONY: helm-deps
+helm-deps: helm-setup
+	@printf "\n📦 Updating Helm chart dependencies...\n"
+	@$(MAKE) toolbox-exec ARGS="helm dependency update charts/gotrs"
+
+# Package the Helm chart for distribution
+.PHONY: helm-package
+helm-package: helm-deps
+	@printf "\n📦 Packaging Helm chart...\n"
+	@$(MAKE) toolbox-exec ARGS="helm package charts/gotrs -d dist"
+
+# =============================================================================
+
 # Build toolbox image
 toolbox-build: build-artifacts
 	@printf "\n🔧 Building GOTRS toolbox container...\n"
@@ -398,7 +462,7 @@ toolbox-build: build-artifacts
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		echo "⚠️  compose not available; falling back to direct docker build"; \
 		command -v docker >/dev/null 2>&1 || (echo "docker not installed" && exit 1); \
-		docker build -f Dockerfile.toolbox -t gotrs-toolbox:latest .; \
+		docker build --build-arg GO_IMAGE=$(GO_IMAGE) -f Dockerfile.toolbox -t gotrs-toolbox:latest .; \
 	else \
 		if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
 			COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) build $(COMPOSE_BUILD_FLAGS) toolbox; \
@@ -1002,6 +1066,11 @@ toolbox-run-file:
 		-e APP_ENV=development \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run $(FILE)'
+
+# Run all linters (Go, YAML, OpenAPI, Helm)
+.PHONY: lint
+lint: toolbox-lint yaml-lint openapi-lint helm-lint
+	@printf "✅ All linting complete\n"
 
 # Run linting with toolbox
 toolbox-lint:
@@ -1812,7 +1881,7 @@ import-test-data:
 		-e GOCACHE=/tmp/.cache/go-build \
 		-e GOMODCACHE=/tmp/.cache/go-mod \
 		-u "$(id -u):$(id -g)" \
-		golang:1.23-alpine \
+		$(GO_IMAGE) \
 		go build -o /workspace/bin/import-otrs ./cmd/import-otrs/main.go
 	@printf "🗑️ Clearing existing data...\n"
 	@$(COMPOSE_CMD) exec -T postgres psql -U $(DB_USER) -d $(DB_NAME) -c "TRUNCATE ticket CASCADE;" > /dev/null 2>&1
@@ -2289,14 +2358,18 @@ scan-secrets-history:
 scan-secrets-precommit:
 	@bash scripts/install-git-hooks.sh
 
-# Scan for vulnerabilities with Trivy
-scan-vulnerabilities:
-	@printf "Scanning for vulnerabilities...\n"
+# Scan for vulnerabilities (Go dependencies + container/config)
+scan-vulnerabilities: toolbox-build
+	@printf "🔍 Scanning Go dependencies for vulnerabilities...\n"
+	@$(MAKE) toolbox-exec ARGS="govulncheck -show verbose ./..."
+	@printf "🔍 Scanning container/config for vulnerabilities...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		aquasec/trivy:latest \
 		fs --scanners vuln,secret,misconfig . \
+		--skip-dirs .cache \
+		--ignorefile .trivyignore \
 		--severity HIGH,CRITICAL
 
 # Run all security scans
@@ -2306,15 +2379,15 @@ security-scan: scan-secrets scan-vulnerabilities
 .PHONY: build-artifacts
 build-artifacts:
 	@printf "🎯 Building backend artifacts image...\n"
-	@$(CONTAINER_CMD) build --target artifacts -t gotrs-artifacts:latest .
-# Build for production (includes CSS, JS and container build)
-build: build-artifacts pre-build frontend-build
+	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) --target artifacts -t gotrs-artifacts:latest .
+# Build for production (includes CSS, JS, Helm chart and container build)
+build: build-artifacts pre-build frontend-build helm-package
 	@printf "🔨 Building backend container...\n" \
-		&& $(CONTAINER_CMD) build -f Dockerfile -t gotrs:latest .
+		&& $(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) -f Dockerfile -t gotrs:latest .
 	@printf "🧹 Cleaning host binaries...\n"
 	@rm -f goats gotrs gotrs-* generator migrate server  # Clean root directory
 	@rm -f bin/* 2>/dev/null || true  # Clean bin directory
-	@printf "✅ Build complete - CSS and JS compiled, containers ready\n"
+	@printf "✅ Build complete - CSS, JS, Helm chart compiled, containers ready\n"
 
 .PHONY: pre-build generate-route-map validate-routes
 
@@ -2344,19 +2417,21 @@ endif
 
 # Build with caching (70% faster rebuilds)
 build-cached: build-artifacts
-	@printf "🚀 Building backend image (cache flags disabled for podman compatibility)...\n"	$(CONTAINER_CMD) build -t gotrs:latest .
-	@$(CONTAINER_CMD) build -t gotrs:latest .
+	@printf "🚀 Building backend image (cache flags disabled for podman compatibility)...\n"
+	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) -t gotrs:latest .
 	@printf "✅ Build complete\n"
 # Security scan build (CI/CD)
 build-secure: build-artifacts
-	@printf "🔒 Building with security scanning...\n"	$(CONTAINER_CMD) build \
+	@printf "🔒 Building with security scanning...\n"
+	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) \
 		--target security \
 		--output type=local,dest=./security-reports \
 		.
 	@printf "📊 Security reports saved to ./security-reports/\n"
 # Multi-platform build (AMD64 and ARM64)
 build-multi: build-artifacts
-	@printf "🌍 Building for multiple platforms...\n"	$(CONTAINER_CMD) buildx build \
+	@printf "🌍 Building for multiple platforms...\n"
+	@$(CONTAINER_CMD) buildx build --build-arg GO_IMAGE=$(GO_IMAGE) \
 		--platform linux/amd64,linux/arm64 \
 		-t gotrs:latest .
 	@printf "✅ Multi-platform build complete\n"
@@ -2373,7 +2448,8 @@ analyze-size:
 
 # Build without cache (clean build)
 build-clean: build-artifacts
-	@printf "🧹 Clean build without cache...\n"	$(CONTAINER_CMD) build --no-cache -t gotrs:latest .
+	@printf "🧹 Clean build without cache...\n"
+	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) --no-cache -t gotrs:latest .
 	@printf "✅ Clean build complete\n"
 # Show build cache usage
 show-cache:
@@ -2391,18 +2467,22 @@ clear-cache:
 build-all-tools: build-cached toolbox-build
 	@printf "🛠️ Building all specialized tool containers...\n"
 	@$(CONTAINER_CMD) build \
+		--build-arg GO_IMAGE=$(GO_IMAGE) \
 		--cache-from gotrs-tests:latest \
 		--build-arg BUILDKIT_INLINE_CACHE=1 \
 		-f Dockerfile.tests -t gotrs-tests:latest .
 	@$(CONTAINER_CMD) build \
+		--build-arg GO_IMAGE=$(GO_IMAGE) \
 		--cache-from gotrs-route-tools:latest \
 		--build-arg BUILDKIT_INLINE_CACHE=1 \
 		-f Dockerfile.route-tools -t gotrs-route-tools:latest .
 	@$(CONTAINER_CMD) build \
+		--build-arg GO_IMAGE=$(GO_IMAGE) \
 		--cache-from gotrs-goatkit:latest \
 		--build-arg BUILDKIT_INLINE_CACHE=1 \
 		-f Dockerfile.goatkit -t gotrs-goatkit:latest .
 	@$(CONTAINER_CMD) build \
+		--build-arg GO_IMAGE=$(GO_IMAGE) \
 		--cache-from gotrs-config-manager:latest \
 		--build-arg BUILDKIT_INLINE_CACHE=1 \
 		-f Dockerfile.config-manager -t gotrs-config-manager:latest .
