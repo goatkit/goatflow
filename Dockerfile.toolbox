@@ -130,7 +130,7 @@ RUN apk add --no-cache curl dirmngr gpg gpg-agent unzip && \
       || (echo "error: failed to verify checksum for bun v${BUN_VERSION}" && exit 1) && \
     unzip "bun-linux-$build.zip" && \
     mv "bun-linux-$build/bun" /usr/local/bin/bun && \
-    rm -f "bun-linux-$build.zip" SHASUMS256.txt.asc SHASUMS256.txt && \
+    rm -rf "bun-linux-$build" "bun-linux-$build.zip" SHASUMS256.txt.asc SHASUMS256.txt && \
     chmod +x /usr/local/bin/bun && \
     ln -sf /usr/local/bin/bun /usr/local/bin/bunx
 
