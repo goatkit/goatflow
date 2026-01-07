@@ -115,7 +115,7 @@ func (p *PostgreSQLDatabase) TableExists(ctx context.Context, tableName string) 
 		SELECT EXISTS (
 			SELECT FROM information_schema.tables 
 			WHERE table_schema = 'public' 
-			AND table_name = $1
+			AND table_name = ?
 		)`
 
 	var exists bool
@@ -143,9 +143,9 @@ func (p *PostgreSQLDatabase) GetTableColumns(ctx context.Context, tableName stri
 			JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
 			JOIN pg_class t ON t.oid = i.indrelid
 			WHERE i.indisprimary 
-			AND t.relname = $1
+			AND t.relname = ?
 		) pk ON pk.column_name = c.column_name
-		WHERE c.table_schema = 'public' AND c.table_name = $1
+		WHERE c.table_schema = 'public' AND c.table_name = ?
 		ORDER BY c.ordinal_position`
 
 	rows, err := p.db.QueryContext(ctx, query, tableName)

@@ -46,7 +46,7 @@ func HandleUpdatePriorityAPI(c *gin.Context) {
 	// Determine target color so response reflects final state
 	currentColor := req.Color
 	if currentColor == "" {
-		fetchColorQuery := database.ConvertPlaceholders(`SELECT color FROM ticket_priority WHERE id = $1`)
+		fetchColorQuery := database.ConvertPlaceholders(`SELECT color FROM ticket_priority WHERE id = ?`)
 		if err := db.QueryRow(fetchColorQuery, priorityID).Scan(&currentColor); err != nil {
 			if err == sql.ErrNoRows {
 				c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Priority not found"})
@@ -59,8 +59,8 @@ func HandleUpdatePriorityAPI(c *gin.Context) {
 
 	// Update priority (include color if provided)
 	q := database.ConvertPlaceholders(
-		`UPDATE ticket_priority SET name = $1, color = COALESCE(NULLIF($2, ''), color), ` +
-			`change_time = NOW(), change_by = $3 WHERE id = $4`)
+		`UPDATE ticket_priority SET name = ?, color = COALESCE(NULLIF(?, ''), color), ` +
+			`change_time = NOW(), change_by = ? WHERE id = ?`)
 	result, err := db.Exec(q, req.Name, req.Color, userID, priorityID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update priority"})

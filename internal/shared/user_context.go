@@ -59,7 +59,7 @@ func GetUserMapForTemplate(c *gin.Context) map[string]interface{} {
 				              JOIN groups g ON ug.group_id = g.id 
 				              WHERE ug.user_id = u.id AND g.name = 'admin') as is_admin
 				FROM users u 
-				WHERE u.id = $1
+				WHERE u.id = ?
 			`, userID).Scan(&login, &firstName, &lastName, &email, &isAdmin)
 
 			if err == nil {

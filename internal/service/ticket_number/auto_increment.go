@@ -66,7 +66,7 @@ func (g *AutoIncrementGenerator) getNextCounterWithStart() (int64, error) {
 	// Check if counter exists already
 	err := g.db.QueryRow(database.ConvertPlaceholders(`
 		SELECT counter FROM ticket_number_counter 
-		WHERE counter_uid = $1
+		WHERE counter_uid = ?
 	`), g.counterUID).Scan(&counter)
 
 	if err == sql.ErrNoRows {

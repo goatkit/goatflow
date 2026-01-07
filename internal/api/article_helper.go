@@ -19,14 +19,15 @@ type ArticleInsertParams struct {
 // This handles both MySQL and PostgreSQL with appropriate ID retrieval.
 func insertArticle(tx *sql.Tx, params ArticleInsertParams) (int64, error) {
 	// Do NOT call ConvertPlaceholders here - let InsertWithReturningTx handle it
-	// so that repeated placeholders ($4 used twice) are properly expanded for MySQL
+	// so that repeated placeholders (? used twice) are properly expanded for MySQL
 	query := `
 		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id,
 			is_visible_for_customer, create_time, create_by, change_time, change_by)
-		VALUES ($1, 1, $2, $3, CURRENT_TIMESTAMP, $4, CURRENT_TIMESTAMP, $4)
+		VALUES (?, 1, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 		RETURNING id
 	`
-	args := []interface{}{params.TicketID, params.CommunicationChannel, params.IsVisibleForCustomer, params.CreateBy}
+	// Args: ticket_id, communication_channel_id, is_visible_for_customer, create_by, change_by
+	args := []interface{}{params.TicketID, params.CommunicationChannel, params.IsVisibleForCustomer, params.CreateBy, params.CreateBy}
 	return database.GetAdapter().InsertWithReturningTx(tx, query, args...)
 }
 
@@ -51,21 +52,23 @@ func insertArticleMimeData(tx *sql.Tx, params ArticleMimeParams) error {
 		insertQuery = `
 			INSERT INTO article_data_mime (article_id, a_from, a_to, a_subject, a_body,
 				a_content_type, incoming_time, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, $8, CURRENT_TIMESTAMP, $8)
+			VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 		`
+		// Args: article_id, a_from, a_to, a_subject, a_body, a_content_type, incoming_time, create_by, change_by
 		args = []interface{}{
 			params.ArticleID, params.From, params.To, params.Subject,
-			params.Body, params.ContentType, params.IncomingTime, params.CreateBy,
+			params.Body, params.ContentType, params.IncomingTime, params.CreateBy, params.CreateBy,
 		}
 	} else {
 		insertQuery = `
 			INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body,
 				a_content_type, incoming_time, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, $7, CURRENT_TIMESTAMP, $7)
+			VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 		`
+		// Args: article_id, a_from, a_subject, a_body, a_content_type, incoming_time, create_by, change_by
 		args = []interface{}{
 			params.ArticleID, params.From, params.Subject, params.Body,
-			params.ContentType, params.IncomingTime, params.CreateBy,
+			params.ContentType, params.IncomingTime, params.CreateBy, params.CreateBy,
 		}
 	}
 

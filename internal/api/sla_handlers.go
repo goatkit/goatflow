@@ -194,7 +194,7 @@ func HandleGetSLAAPI(c *gin.Context) {
 			solution_time, solution_notify,
 			valid_id, comments
 		FROM sla
-		WHERE id = $1
+		WHERE id = ?
 	`)
 
 	err = db.QueryRow(query, slaID).Scan(
@@ -284,7 +284,7 @@ func HandleCreateSLAAPI(c *gin.Context) {
 	var count int
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT 1 FROM sla
-		WHERE name = $1 AND valid_id = 1
+		WHERE name = ? AND valid_id = 1
 	`)
 	if scanErr := db.QueryRow(checkQuery, req.Name).Scan(&count); scanErr != nil && scanErr != sql.ErrNoRows {
 		log.Printf("HandleCreateSLAAPI: duplicate check failed: %v", scanErr)
@@ -316,8 +316,8 @@ func HandleCreateSLAAPI(c *gin.Context) {
 			solution_time, solution_notify,
 			valid_id, comments, create_time, create_by, change_time, change_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8,
-			1, $9, NOW(), $10, NOW(), $11
+			?, ?, ?, ?, ?, ?, ?, ?,
+			1, ?, NOW(), ?, NOW(), ?
 		) RETURNING id
 	`)
 	args := []interface{}{
@@ -395,7 +395,7 @@ func HandleUpdateSLAAPI(c *gin.Context) {
 	var count int
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT 1 FROM sla
-		WHERE id = $1 AND valid_id = 1
+		WHERE id = ? AND valid_id = 1
 	`)
 	row := db.QueryRow(checkQuery, slaID)
 	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0
@@ -419,13 +419,13 @@ func HandleUpdateSLAAPI(c *gin.Context) {
 
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE sla 
-		SET name = $1, calendar_name = $2,
-			first_response_time = $3, first_response_notify = $4,
-			update_time = $5, update_notify = $6,
-			solution_time = $7, solution_notify = $8,
-			comments = $9,
-			change_time = NOW(), change_by = $10
-		WHERE id = $11
+		SET name = ?, calendar_name = ?,
+			first_response_time = ?, first_response_notify = ?,
+			update_time = ?, update_notify = ?,
+			solution_time = ?, solution_notify = ?,
+			comments = ?,
+			change_time = NOW(), change_by = ?
+		WHERE id = ?
 	`)
 
 	result, err := db.Exec(
@@ -488,7 +488,7 @@ func HandleDeleteSLAAPI(c *gin.Context) {
 	var count int
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT 1 FROM sla
-		WHERE id = $1 AND valid_id = 1
+		WHERE id = ? AND valid_id = 1
 	`)
 	row := db.QueryRow(checkQuery, slaID)
 	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0
@@ -501,7 +501,7 @@ func HandleDeleteSLAAPI(c *gin.Context) {
 	var ticketCount int
 	ticketQuery := database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM tickets 
-		WHERE sla_id = $1
+		WHERE sla_id = ?
 	`)
 	row2 := db.QueryRow(ticketQuery, slaID)
 	_ = row2.Scan(&ticketCount) //nolint:errcheck // Defaults to 0
@@ -517,8 +517,8 @@ func HandleDeleteSLAAPI(c *gin.Context) {
 	// Soft delete SLA (OTRS style - set valid_id = 2)
 	deleteQuery := database.ConvertPlaceholders(`
 		UPDATE sla 
-		SET valid_id = 2, change_time = NOW(), change_by = $1
-		WHERE id = $2
+		SET valid_id = 2, change_time = NOW(), change_by = ?
+		WHERE id = ?
 	`)
 
 	result, err := db.Exec(deleteQuery, userID, slaID)
@@ -566,7 +566,7 @@ func HandleSLAMetricsAPI(c *gin.Context) {
 	var slaName string
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT name FROM sla 
-		WHERE id = $1 AND valid_id = 1
+		WHERE id = ? AND valid_id = 1
 	`)
 	err = db.QueryRow(checkQuery, slaID).Scan(&slaName)
 	if err != nil {
@@ -582,7 +582,7 @@ func HandleSLAMetricsAPI(c *gin.Context) {
 			SUM(CASE WHEN first_response_time IS NOT NULL THEN 1 ELSE 0 END) as met_first_response,
 			SUM(CASE WHEN solution_time IS NOT NULL THEN 1 ELSE 0 END) as met_solution
 		FROM tickets
-		WHERE sla_id = $1
+		WHERE sla_id = ?
 	`)
 
 	var metrics struct {

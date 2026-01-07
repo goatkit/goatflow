@@ -149,7 +149,7 @@ func GetSignature(id int) (*Signature, error) {
 		SELECT id, name, text, content_type, comments, valid_id,
 			   create_time, create_by, change_time, change_by
 		FROM signature
-		WHERE id = $1
+		WHERE id = ?
 	`
 
 	var s Signature
@@ -188,7 +188,7 @@ func CreateSignature(name, text, contentType, comments string, validID, userID i
 
 	query := `
 		INSERT INTO signature (name, text, content_type, comments, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	id, err := database.GetAdapter().InsertWithReturning(
@@ -220,9 +220,9 @@ func UpdateSignature(id int, name, text, contentType, comments string, validID, 
 
 	query := `
 		UPDATE signature
-		SET name = $1, text = $2, content_type = $3, comments = $4,
-			valid_id = $5, change_time = $6, change_by = $7
-		WHERE id = $8
+		SET name = ?, text = ?, content_type = ?, comments = ?,
+			valid_id = ?, change_time = ?, change_by = ?
+		WHERE id = ?
 	`
 
 	_, err = db.Exec(database.ConvertPlaceholders(query),
@@ -243,7 +243,7 @@ func DeleteSignature(id int) error {
 
 	// Check if signature is used by any queues
 	var count int
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM queue WHERE signature_id = $1"), id).Scan(&count)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM queue WHERE signature_id = ?"), id).Scan(&count)
 	if err != nil {
 		return fmt.Errorf("failed to check queue references: %w", err)
 	}
@@ -256,7 +256,7 @@ func DeleteSignature(id int) error {
 		return fmt.Errorf("cannot delete system default signature")
 	}
 
-	_, err = db.Exec(database.ConvertPlaceholders("DELETE FROM signature WHERE id = $1"), id)
+	_, err = db.Exec(database.ConvertPlaceholders("DELETE FROM signature WHERE id = ?"), id)
 	if err != nil {
 		return fmt.Errorf("delete failed: %w", err)
 	}
@@ -271,11 +271,11 @@ func CheckSignatureNameExists(name string, excludeID int) (bool, error) {
 		return false, err
 	}
 
-	query := "SELECT COUNT(*) FROM signature WHERE LOWER(name) = LOWER($1)"
+	query := "SELECT COUNT(*) FROM signature WHERE LOWER(name) = LOWER(?)"
 	args := []interface{}{name}
 
 	if excludeID > 0 {
-		query += " AND id != $2"
+		query += " AND id != ?"
 		args = append(args, excludeID)
 	}
 
@@ -298,7 +298,7 @@ func GetSignatureQueues(signatureID int) ([]QueueBasic, error) {
 	query := `
 		SELECT id, name
 		FROM queue
-		WHERE signature_id = $1
+		WHERE signature_id = ?
 		ORDER BY name ASC
 	`
 

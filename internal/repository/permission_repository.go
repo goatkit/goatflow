@@ -43,7 +43,7 @@ func (r *PermissionRepository) GetUserPermissions(userID uint) (map[uint][]strin
 	query := database.ConvertPlaceholders(`
 		SELECT group_id, permission_key 
 		FROM group_user 
-		WHERE user_id = $1
+		WHERE user_id = ?
 		ORDER BY group_id, permission_key`)
 
 	rows, err := r.db.Query(query, userID)
@@ -70,7 +70,7 @@ func (r *PermissionRepository) GetGroupPermissions(groupID uint) (map[uint][]str
 	query := database.ConvertPlaceholders(`
 		SELECT user_id, permission_key 
 		FROM group_user 
-		WHERE group_id = $1
+		WHERE group_id = ?
 		ORDER BY user_id, permission_key`)
 
 	rows, err := r.db.Query(query, groupID)
@@ -100,7 +100,7 @@ func (r *PermissionRepository) SetUserGroupPermission(userID, groupID uint, perm
 		// Remove permission by deleting the row
 		deleteQuery := database.ConvertPlaceholders(`
 			DELETE FROM group_user 
-			WHERE user_id = $1 AND group_id = $2 AND permission_key = $3`)
+			WHERE user_id = ? AND group_id = ? AND permission_key = ?`)
 
 		_, err := r.db.Exec(deleteQuery, userID, groupID, permKey)
 		if err != nil {
@@ -112,8 +112,8 @@ func (r *PermissionRepository) SetUserGroupPermission(userID, groupID uint, perm
 	// Insert or update permission (value = 1 means grant permission)
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, NOW(), $4, NOW(), $4)
-		ON DUPLICATE KEY UPDATE change_time = NOW(), change_by = $4`)
+		VALUES (?, ?, ?, NOW(), ?, NOW(), ?)
+		ON DUPLICATE KEY UPDATE change_time = NOW(), change_by = ?`)
 
 	_, err := r.db.Exec(insertQuery, userID, groupID, permKey, userID)
 	if err != nil {
@@ -134,7 +134,7 @@ func (r *PermissionRepository) GetUserGroupMatrix(userID, groupID uint) (map[str
 	query := database.ConvertPlaceholders(`
 		SELECT permission_key
 		FROM group_user 
-		WHERE user_id = $1 AND group_id = $2`)
+		WHERE user_id = ? AND group_id = ?`)
 
 	rows, err := r.db.Query(query, userID, groupID)
 	if err != nil {
@@ -169,7 +169,7 @@ func (r *PermissionRepository) SetUserGroupMatrix(userID, groupID uint, permissi
 	defer func() { _ = tx.Rollback() }()
 
 	// Delete existing permissions
-	deleteQuery := database.ConvertPlaceholders(`DELETE FROM group_user WHERE user_id = $1 AND group_id = $2`)
+	deleteQuery := database.ConvertPlaceholders(`DELETE FROM group_user WHERE user_id = ? AND group_id = ?`)
 	_, err = tx.Exec(deleteQuery, userID, groupID)
 	if err != nil {
 		return fmt.Errorf("failed to delete existing permissions: %w", err)
@@ -178,7 +178,7 @@ func (r *PermissionRepository) SetUserGroupMatrix(userID, groupID uint, permissi
 	// Insert new permissions
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, NOW(), $4, NOW(), $4)`)
+		VALUES (?, ?, ?, NOW(), ?, NOW(), ?)`)
 
 	stmt, err := tx.Prepare(insertQuery)
 	if err != nil {

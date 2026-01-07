@@ -377,7 +377,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 									INSERT INTO article_data_mime_attachment (
 										article_id, filename, content_type, content_size, content,
 										disposition, create_time, create_by, change_time, change_by
-									) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`),
+									) VALUES (?,?,?,?,?,?,?,?,?,?)`),
 									article.ID,
 									fileHeader.Filename,
 									ct,
@@ -541,9 +541,9 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 				if messageID != "" && articleID64 != nil {
 					if _, err := db.Exec(database.ConvertPlaceholders(`
 						UPDATE article_data_mime
-						SET a_message_id = $1, a_in_reply_to = $2, a_references = $3,
-						    change_time = CURRENT_TIMESTAMP, change_by = $4
-						WHERE article_id = $5
+						SET a_message_id = ?, a_in_reply_to = ?, a_references = ?,
+						    change_time = CURRENT_TIMESTAMP, change_by = ?
+						WHERE article_id = ?
 					`), messageID, "", "", actorID, *articleID64); err != nil {
 						log.Printf("Failed to store threading headers for article %d: %v", *articleID64, err)
 					}

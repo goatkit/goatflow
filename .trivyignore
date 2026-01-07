@@ -4,3 +4,7 @@
 # Test credentials - not real secrets
 # Test API keys in test files are acceptable per CONTRIBUTING.md
 .cache
+
+# AVD-KSV-0109: Valkey init_config.yaml contains password-handling SCRIPT, not actual secrets
+# The script reads passwords from mounted secrets, doesn't store them in ConfigMap
+AVD-KSV-0109

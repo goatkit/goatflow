@@ -518,7 +518,7 @@ func isUserInAdminGroup(db *sql.DB, userID uint) bool {
 		SELECT COUNT(*)
 		FROM group_user ug
 		JOIN groups g ON ug.group_id = g.id
-		WHERE ug.user_id = $1 AND LOWER(g.name) = 'admin'`), userID).Scan(&cnt)
+		WHERE ug.user_id = ? AND LOWER(g.name) = 'admin'`), userID).Scan(&cnt)
 	return err == nil && cnt > 0
 }
 
@@ -535,7 +535,7 @@ func getUserDetailsFromDB(db *sql.DB, userID uint) userDetails {
 	}
 	var dbLogin, dbFirst, dbLast sql.NullString
 	err := db.QueryRow(database.ConvertPlaceholders(`
-		SELECT login, first_name, last_name FROM users WHERE id = $1`), userID).Scan(&dbLogin, &dbFirst, &dbLast)
+		SELECT login, first_name, last_name FROM users WHERE id = ?`), userID).Scan(&dbLogin, &dbFirst, &dbLast)
 	if err != nil {
 		return details
 	}
@@ -723,7 +723,7 @@ func checkAdmin() gin.HandlerFunc {
 					SELECT COUNT(*)
 					FROM group_user ug
 					JOIN groups g ON ug.group_id = g.id
-					WHERE ug.user_id = $1 AND LOWER(g.name) = 'admin'`),
+					WHERE ug.user_id = ? AND LOWER(g.name) = 'admin'`),
 					userID).Scan(&count)
 				if err == nil && count > 0 {
 					c.Next()

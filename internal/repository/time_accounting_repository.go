@@ -21,7 +21,7 @@ func (r *TimeAccountingRepository) Create(entry *models.TimeAccounting) (int, er
 	entry.ChangeTime = entry.CreateTime
 	query := database.ConvertPlaceholders(`
         INSERT INTO time_accounting (ticket_id, article_id, time_unit, create_time, create_by, change_time, change_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id
+        VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
     `)
 	adapter := database.GetAdapter()
 	// Store as decimal minutes (keep compatibility with DECIMAL(10,2))
@@ -40,7 +40,7 @@ func (r *TimeAccountingRepository) Create(entry *models.TimeAccounting) (int, er
 func (r *TimeAccountingRepository) ListByTicket(ticketID int) ([]models.TimeAccounting, error) {
 	query := database.ConvertPlaceholders(`
         SELECT id, ticket_id, article_id, time_unit, create_time, create_by, change_time, change_by
-        FROM time_accounting WHERE ticket_id = $1 ORDER BY create_time ASC
+        FROM time_accounting WHERE ticket_id = ? ORDER BY create_time ASC
     `)
 	rows, err := r.db.Query(query, ticketID)
 	if err != nil {

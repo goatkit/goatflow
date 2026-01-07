@@ -48,7 +48,7 @@ func HandleCreateQueueAPI(c *gin.Context) {
 	var count int
 	checkQuery := database.ConvertPlaceholders(`
         SELECT 1 FROM queue
-        WHERE name = $1 AND valid_id = 1
+        WHERE name = ? AND valid_id = 1
     `)
 	row := db.QueryRow(checkQuery, req.Name)
 	_ = row.Scan(&count) //nolint:errcheck // Count defaults to 0
@@ -114,16 +114,16 @@ func HandleCreateQueueAPI(c *gin.Context) {
 	}
 
 	// Create queue - adapter handles MySQL vs PostgreSQL differences
-	// Note: $10 is used for both create_by and change_by (repeated placeholder)
+	// Note: ? is used for both create_by and change_by (repeated placeholder)
 	insertQuery := `
 		INSERT INTO queue (
 			name, group_id, system_address_id, salutation_id, signature_id,
 			unlock_timeout, follow_up_id, follow_up_lock, comments, valid_id,
 			create_time, create_by, change_time, change_by
 		) VALUES (
-			$1, $2, $3, $4, $5,
-			$6, $7, $8, $9, 1,
-			NOW(), $10, NOW(), $10
+			?, ?, ?, ?, ?,
+			?, ?, ?, ?, 1,
+			NOW(), ?, NOW(), ?
 		) RETURNING id`
 
 	queueID64, err := database.GetAdapter().InsertWithReturningTx(tx, insertQuery,
@@ -152,7 +152,7 @@ func HandleCreateQueueAPI(c *gin.Context) {
 	if len(req.GroupAccess) > 0 {
 		for _, groupID := range req.GroupAccess {
 			// Optional: only if auxiliary table exists in current schema
-			groupInsert := database.ConvertPlaceholders(`INSERT INTO queue_group (queue_id, group_id) VALUES ($1, $2)`)
+			groupInsert := database.ConvertPlaceholders(`INSERT INTO queue_group (queue_id, group_id) VALUES (?, ?)`)
 			if _, err := tx.Exec(groupInsert, queueID, groupID); err != nil {
 				// Swallow error if table doesn't exist (compatibility with minimal schema)
 				// Comment out the early-return to avoid breaking core creation

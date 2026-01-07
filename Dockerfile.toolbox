@@ -26,10 +26,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Copy only necessary source first (exclude heavy directories by .dockerignore)
 COPY . .
 
-# Install frontend dependencies in builder if package.json exists (safe: use npm ci and ignore scripts)
+# Install frontend dependencies in builder if package.json exists (using bun for speed)
 RUN if [ -f package.json ]; then \
-        apk add --no-cache nodejs npm; \
-        if [ -f package-lock.json ]; then npm ci --no-audit --no-progress --ignore-scripts || true; else npm install --no-audit --no-progress --ignore-scripts || true; fi; \
+        curl -fsSL https://bun.sh/install | BUN_INSTALL=/tmp bash && \
+        /tmp/bin/bun install --frozen-lockfile --ignore-scripts || /tmp/bin/bun install --ignore-scripts || true; \
     fi && \
     mkdir -p /workspace/node_modules
 
@@ -64,11 +64,14 @@ FROM alpine:3.19 AS toolbox
 ARG UID=1000
 ARG GID=1000
 
-# Install runtime and dev tools
-ARG TOOLBOX_APKS='ca-certificates postgresql15-client mysql-client sqlite git bash make curl jq graphviz openssl python3 py3-pip yamllint ripgrep fd tree nss freetype harfbuzz libx11 libxcomposite libxdamage libxext libxfixes libxi libxrandr libxrender libxshmfence libxtst alsa-lib dumb-init ttf-freefont woff2 libc6-compat gcompat libstdc++ icu-libs nodejs npm'
-RUN apk add --no-cache \
-    # Runtime essentials\
-    $TOOLBOX_APKS
+# Install runtime and dev tools (nodejs for runtime, bun replaces npm)
+ARG TOOLBOX_APKS='ca-certificates postgresql15-client mysql-client sqlite git bash make curl jq graphviz openssl python3 py3-pip yamllint ripgrep fd tree nss freetype harfbuzz libx11 libxcomposite libxdamage libxext libxfixes libxi libxrandr libxrender libxshmfence libxtst alsa-lib dumb-init ttf-freefont woff2 libc6-compat gcompat libstdc++ icu-libs nodejs'
+RUN apk add --no-cache $TOOLBOX_APKS
+
+# Install bun (fast JavaScript runtime and package manager)
+ARG BUN_VERSION=1.1.42
+RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash -s "bun-v${BUN_VERSION}" && \
+    ln -sf /usr/local/bin/bun /usr/local/bin/bunx
 
 # Install Helm
 ARG HELM_VERSION=v3.16.3
@@ -86,12 +89,13 @@ RUN addgroup -g ${GID} -S appgroup && \
 
 # Set up workspace
 WORKDIR /workspace
-# Pre-create cache directories for Go, Playwright, NPM, and Helm to avoid root-owned creation during first run
-# Only chown the cache dirs we create (avoid changing ownership of host-mounted workspace files at runtime)
-RUN mkdir -p /workspace/.cache /workspace/.cache/go-build /workspace/.cache/go-mod \
-    /workspace/.cache/xdg/helm/repository /workspace/.cache/xdg/helm/cache /workspace/.cache/xdg/helm/config \
-    /home/appuser/.cache/ms-playwright-go /tmp/npm-cache /home/appuser/.cache && \
-    chown -R appuser:appgroup /workspace/.cache /tmp/npm-cache /home/appuser/.cache
+# Pre-create cache directories for Go, Playwright, Bun, and Helm
+# Cache is at /cache (separate from workspace) to avoid host mount point creation issues
+RUN mkdir -p /cache /cache/go-build /cache/go-mod \
+    /cache/xdg/helm/repository /cache/xdg/helm/cache /cache/xdg/helm/config \
+    /cache/bun /cache/golangci-lint /cache/tmp \
+    /home/appuser/.cache/ms-playwright-go /home/appuser/.cache && \
+    chown -R appuser:appgroup /cache /home/appuser/.cache
 
 # Copy binaries from artifacts image
 COPY --from=artifacts --chown=appuser:appgroup /artifacts/goats /usr/local/bin/goats
@@ -129,11 +133,13 @@ RUN chmod +x /usr/local/bin/toolbox-entrypoint.sh
 COPY --from=toolbox-builder --chown=appuser:appgroup /workspace/node_modules /workspace/node_modules
 
 # Set environment for Go caching and prevent auto toolchain downloads
-ENV GOCACHE=/workspace/.cache/go-build \
-    GOMODCACHE=/workspace/.cache/go-mod \
+# Cache is at /cache (separate from workspace bind mount)
+ENV GOCACHE=/cache/go-build \
+    GOMODCACHE=/cache/go-mod \
     GOTOOLCHAIN=local \
-    NPM_CONFIG_CACHE=/workspace/.cache/npm \
-    XDG_CACHE_HOME=/workspace/.cache/xdg \
+    BUN_INSTALL_CACHE_DIR=/cache/bun \
+    XDG_CACHE_HOME=/cache/xdg \
+    GOLANGCI_LINT_CACHE=/cache/golangci-lint \
     PATH=/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Run as non-root user

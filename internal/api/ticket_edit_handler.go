@@ -231,7 +231,7 @@ func handleUpdateTicketEnhanced(c *gin.Context) {
 		var exists bool
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT EXISTS(
-				SELECT 1 FROM ticket_state_type WHERE LOWER(name) = LOWER($1)
+				SELECT 1 FROM ticket_state_type WHERE LOWER(name) = LOWER(?)
 			)
 		`), updateReq.Status).Scan(&exists)
 		if err != nil || !exists {

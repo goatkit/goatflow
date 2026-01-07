@@ -25,7 +25,7 @@ func (r *UserRepository) GetByID(id uint) (*models.User, error) {
 		SELECT id, login, pw, title, first_name, last_name,
 		       valid_id, create_time, create_by, change_time, change_by
 		FROM users
-		WHERE id = $1`)
+		WHERE id = ?`)
 
 	var user models.User
 	var title sql.NullString
@@ -81,7 +81,7 @@ func (r *UserRepository) GetByLogin(login string) (*models.User, error) {
 		SELECT id, login, pw, title, first_name, last_name,
 		       valid_id, create_time, create_by, change_time, change_by
 		FROM users
-		WHERE login = $1 AND valid_id = 1`)
+		WHERE login = ? AND valid_id = 1`)
 
 	var user models.User
 	var title sql.NullString
@@ -127,7 +127,7 @@ func (r *UserRepository) GetByLogin(login string) (*models.User, error) {
 		SELECT g.name 
 		FROM group_user gu
 		JOIN groups g ON gu.group_id = g.id
-		WHERE gu.user_id = $1 AND g.valid_id = 1
+		WHERE gu.user_id = ? AND g.valid_id = 1
 		ORDER BY 
 			CASE g.name 
 				WHEN 'admin' THEN 1
@@ -170,7 +170,7 @@ func (r *UserRepository) Create(user *models.User) error {
 			login, pw, title, first_name, last_name,
 			valid_id, create_time, create_by, change_time, change_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 		) RETURNING id`
 
 	query, useLastInsert := database.ConvertReturning(rawQuery)
@@ -215,15 +215,15 @@ func (r *UserRepository) Update(user *models.User) error {
 
 	query := database.ConvertPlaceholders(`
 		UPDATE users SET
-			login = $2,
-			pw = $3,
-			title = $4,
-			first_name = $5,
-			last_name = $6,
-			valid_id = $7,
-			change_time = $8,
-			change_by = $9
-		WHERE id = $1`)
+			login = ?,
+			pw = ?,
+			title = ?,
+			first_name = ?,
+			last_name = ?,
+			valid_id = ?,
+			change_time = ?,
+			change_by = ?
+		WHERE id = ?`)
 
 	result, err := r.db.Exec(
 		query,
@@ -258,10 +258,10 @@ func (r *UserRepository) Update(user *models.User) error {
 func (r *UserRepository) SetValidID(id uint, validID int, changeBy uint, changeTime time.Time) error {
 	query := database.ConvertPlaceholders(`
 		UPDATE users SET
-			valid_id = $1,
-			change_time = $2,
-			change_by = $3
-		WHERE id = $4`)
+			valid_id = ?,
+			change_time = ?,
+			change_by = ?
+		WHERE id = ?`)
 
 	result, err := r.db.Exec(query, validID, changeTime, changeBy, id)
 	if err != nil {
@@ -307,7 +307,7 @@ func (r *UserRepository) GetUserGroups(userID uint) ([]string, error) {
 		SELECT g.name 
 		FROM groups g
 		INNER JOIN group_user gu ON g.id = gu.group_id
-		WHERE gu.user_id = $1 AND g.valid_id = 1
+		WHERE gu.user_id = ? AND g.valid_id = 1
 		ORDER BY g.name`)
 
 	rows, err := r.db.Query(query, userID)
@@ -392,7 +392,7 @@ func (r *UserRepository) List() ([]*models.User, error) {
 
 // Delete deletes a user by ID.
 func (r *UserRepository) Delete(id uint) error {
-	query := database.ConvertPlaceholders(`DELETE FROM users WHERE id = $1`)
+	query := database.ConvertPlaceholders(`DELETE FROM users WHERE id = ?`)
 	result, err := r.db.Exec(query, id)
 	if err != nil {
 		return err

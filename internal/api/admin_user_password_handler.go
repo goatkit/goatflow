@@ -61,7 +61,7 @@ func HandleAdminUserResetPassword(c *gin.Context) {
 	}
 
 	// Update the user's password
-	updateQuery := "UPDATE users SET pw = $1, change_time = NOW() WHERE id = $2"
+	updateQuery := "UPDATE users SET pw = ?, change_time = NOW() WHERE id = ?"
 	_, err = db.Exec(database.ConvertPlaceholders(updateQuery), string(hashedPassword), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{

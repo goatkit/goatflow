@@ -92,11 +92,11 @@ func handleAssignTicket(c *gin.Context) {
 		// Update the ticket's responsible_user_id
 		_, updateErr = db.Exec(database.ConvertPlaceholders(`
 	            UPDATE ticket
-	            SET user_id = $1,
-	                responsible_user_id = $2,
+	            SET user_id = ?,
+	                responsible_user_id = ?,
 	                change_time = NOW(),
-	                change_by = $3
-	            WHERE id = $4
+	                change_by = ?
+	            WHERE id = ?
 	        `), agentID, agentID, changeByUserID, ticketIDInt)
 		if updateErr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign ticket"})
@@ -110,7 +110,7 @@ func handleAssignTicket(c *gin.Context) {
 		nameErr := db.QueryRow(database.ConvertPlaceholders(`
             SELECT first_name || ' ' || last_name
             FROM users
-            WHERE id = $1
+            WHERE id = ?
 	        `), agentID).Scan(&agentName)
 		if nameErr != nil {
 			agentName = fmt.Sprintf("Agent %d", agentID)
@@ -209,8 +209,8 @@ func handleCloseTicket(c *gin.Context) {
 	// Update ticket state
 	_, err = tx.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket
-		SET ticket_state_id = $1, change_time = NOW(), change_by = $2
-		WHERE id = $3
+		SET ticket_state_id = ?, change_time = NOW(), change_by = ?
+		WHERE id = ?
 	`), closeData.StateID, userID, ticketIDInt)
 
 	if err != nil {
@@ -401,8 +401,8 @@ func handleReopenTicket(c *gin.Context) {
 	// Update ticket state
 	_, err = db.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket
-		SET ticket_state_id = $1, change_time = NOW(), change_by = $2
-		WHERE id = $3
+		SET ticket_state_id = ?, change_time = NOW(), change_by = ?
+		WHERE id = ?
 	`), targetStateID, userID, ticketIDInt)
 
 	if err != nil {
@@ -419,7 +419,7 @@ func handleReopenTicket(c *gin.Context) {
 	// Insert history/note entry
 	_, err = db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO article (ticket_id, article_type_id, subject, body, created_time, created_by, change_time, change_by)
-		VALUES ($1, 1, $2, $3, NOW(), $4, NOW(), $4)
+		VALUES (?, 1, ?, ?, NOW(), ?, NOW(), ?)
 	`),
 		ticketIDInt, "Ticket Reopened", reopenNote, userID)
 
@@ -823,11 +823,11 @@ func handleUpdateTicketStatus(c *gin.Context) {
 
 	query := database.ConvertPlaceholders(`
 		UPDATE ticket
-		SET ticket_state_id = $1,
-			until_time = $2,
+		SET ticket_state_id = ?,
+			until_time = ?,
 			change_time = CURRENT_TIMESTAMP,
-			change_by = $3
-		WHERE id = $4`)
+			change_by = ?
+		WHERE id = ?`)
 	if _, err := db.Exec(query, resolvedStateID, pendingUnix, int(userID), tid); err != nil {
 		log.Printf("handleUpdateTicketStatus: failed to update ticket %d: %v", tid, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update status"})
@@ -910,7 +910,7 @@ func handleGetAvailableAgents(c *gin.Context) {
 		INNER JOIN group_user ug ON u.id = ug.user_id
 		INNER JOIN queue q ON q.group_id = ug.group_id
 		INNER JOIN ticket t ON t.queue_id = q.id
-		WHERE t.id = $1
+		WHERE t.id = ?
 		  AND u.valid_id = 1
 		  AND ug.permission_key IN ('rw', 'move_into', 'create', 'owner')
 		  AND ug.permission_value = 1

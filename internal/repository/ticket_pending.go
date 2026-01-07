@@ -22,10 +22,10 @@ JOIN ticket_state ts ON ts.id = t.ticket_state_id
 LEFT JOIN queue q ON q.id = t.queue_id
 WHERE ts.type_id = 4
   AND t.until_time > 0
-  AND t.until_time <= $1
+  AND t.until_time <= ?
   AND t.archive_flag = 0
 ORDER BY t.until_time ASC
-LIMIT $2`
+LIMIT ?`
 
 	rows, err := r.db.QueryContext(ctx, database.ConvertPlaceholders(query), now.Unix(), limit)
 	if err != nil {

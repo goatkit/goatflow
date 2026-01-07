@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,24 +15,26 @@ import (
 // helper to build a minimal config adapter with Auth::Providers list.
 func testConfigAdapter(t *testing.T, providers []string) *yamlmgmt.ConfigAdapter {
 	t.Helper()
-	vm := yamlmgmt.NewVersionManager(t.TempDir())
-	doc := &yamlmgmt.YAMLDocument{
-		APIVersion: "gotrs.io/v1",
-		Kind:       string(yamlmgmt.KindConfig),
-		Metadata:   yamlmgmt.Metadata{Name: "system-config"},
-		Data: map[string]interface{}{
-			"settings": []interface{}{
-				map[string]interface{}{
-					"name":    "Auth::Providers",
-					"default": providers,
-				},
-			},
-		},
+	dir := t.TempDir()
+	vm := yamlmgmt.NewVersionManager(dir)
+
+	// Create a Config.yaml file that the adapter can import
+	providersList := `["` + strings.Join(providers, `", "`) + `"]`
+	configYAML := `version: "1.0"
+settings:
+  - name: "Auth::Providers"
+    default: ` + providersList + `
+`
+	configPath := filepath.Join(dir, "Config.yaml")
+	if err := os.WriteFile(configPath, []byte(configYAML), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
 	}
-	if _, err := vm.CreateVersion(yamlmgmt.KindConfig, "system-config", doc, "test"); err != nil {
-		t.Fatalf("create version: %v", err)
+
+	ca := yamlmgmt.NewConfigAdapter(vm)
+	if err := ca.ImportConfigYAML(configPath); err != nil {
+		t.Fatalf("import config: %v", err)
 	}
-	return yamlmgmt.NewConfigAdapter(vm)
+	return ca
 }
 
 // minimal jwt manager constructor (reuse existing shared constructor if available); here we just create one directly.

@@ -210,7 +210,7 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 		       a.article_sender_type_id, a.is_visible_for_customer
 		FROM article a
 		LEFT JOIN article_data_mime adm ON a.id = adm.article_id
-		WHERE a.ticket_id = $1
+		WHERE a.ticket_id = ?
 		ORDER BY a.create_time ASC
 	`), ticketID)
 	if err != nil {

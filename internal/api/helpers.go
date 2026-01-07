@@ -134,7 +134,7 @@ func getStateID(state string) int {
 	var stateRow struct {
 		ID int
 	}
-	stateQuery := "SELECT id FROM ticket_state WHERE name = $1 AND valid_id = 1"
+	stateQuery := "SELECT id FROM ticket_state WHERE name = ? AND valid_id = 1"
 	err = db.QueryRow(database.ConvertPlaceholders(stateQuery), state).Scan(&stateRow.ID)
 	if err == nil {
 		return stateRow.ID
@@ -151,7 +151,7 @@ func getPriorityID(priority string) int {
 	var priorityRow struct {
 		ID int
 	}
-	priorityQuery := "SELECT id FROM ticket_priority WHERE name = $1 AND valid_id = 1"
+	priorityQuery := "SELECT id FROM ticket_priority WHERE name = ? AND valid_id = 1"
 	err = db.QueryRow(database.ConvertPlaceholders(priorityQuery), priority).Scan(&priorityRow.ID)
 	if err == nil {
 		return priorityRow.ID

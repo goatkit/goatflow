@@ -19,8 +19,7 @@ import (
 func TestGetStates(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	db := getTestDB(t)
-	defer db.Close()
+	getTestDB(t) // Initialize test database
 
 	router := gin.New()
 	router.GET("/api/states", handleGetStates)
@@ -51,7 +50,7 @@ func TestCreateState(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	router := gin.New()
 	router.POST("/api/states", handleCreateState)
@@ -117,7 +116,7 @@ func TestUpdateState(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	router := gin.New()
 	router.PUT("/api/states/:id", handleUpdateState)
@@ -127,15 +126,15 @@ func TestUpdateState(t *testing.T) {
 
 	if database.IsMySQL() {
 		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_by, change_by)
-			VALUES (?, 2, 'Test comments', 1, 1, 1)
+			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, 2, 'Test comments', 1, NOW(), 1, NOW(), 1)
 		`), testName)
 		require.NoError(t, err)
 		testID, _ = result.LastInsertId()
 	} else {
 		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_by, change_by)
-			VALUES ($1, 2, 'Test comments', 1, 1, 1) RETURNING id
+			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
+			VALUES ($1, 2, 'Test comments', 1, NOW(), 1, NOW(), 1) RETURNING id
 		`), testName).Scan(&testID)
 		require.NoError(t, err)
 	}
@@ -211,7 +210,7 @@ func TestDeleteState(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	router := gin.New()
 	router.DELETE("/api/states/:id", handleDeleteState)
@@ -221,15 +220,15 @@ func TestDeleteState(t *testing.T) {
 
 	if database.IsMySQL() {
 		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_by, change_by)
-			VALUES (?, 2, 'To be deleted', 1, 1, 1)
+			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, 2, 'To be deleted', 1, NOW(), 1, NOW(), 1)
 		`), testName)
 		require.NoError(t, err)
 		testID, _ = result.LastInsertId()
 	} else {
 		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_by, change_by)
-			VALUES ($1, 2, 'To be deleted', 1, 1, 1) RETURNING id
+			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
+			VALUES ($1, 2, 'To be deleted', 1, NOW(), 1, NOW(), 1) RETURNING id
 		`), testName).Scan(&testID)
 		require.NoError(t, err)
 	}

@@ -43,7 +43,7 @@ func HandleGetPriorityAPI(c *gin.Context) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, color, valid_id
 		FROM ticket_priority
-		WHERE id = $1
+		WHERE id = ?
 	`)
 
 	err = db.QueryRow(query, priorityID).Scan(&priority.ID, &priority.Name, &priority.Color, &priority.ValidID)

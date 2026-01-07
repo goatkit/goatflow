@@ -147,7 +147,8 @@ if [ -n "$STAGED_FILES" ]; then
         if git diff --cached --numstat "$file" | grep -q '^-[[:space:]]*-[[:space:]]'; then
             # This is a binary file according to git
             # But allow some common binary types that are OK in repos
-            if ! echo "$file" | grep -qE '\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|otf|eot)$'; then
+            # lockb = bun.lockb (bun package manager lockfile)
+            if ! echo "$file" | grep -qE '\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|otf|eot|lockb)$'; then
                 BLOCKED_FILES+=("$file (detected as binary by git)")
             fi
         fi

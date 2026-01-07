@@ -969,7 +969,7 @@ func handleGetGroupMembers(c *gin.Context) {
 		SELECT DISTINCT u.id, u.login, u.first_name, u.last_name
 		FROM users u
 		INNER JOIN group_user gu ON u.id = gu.user_id
-		WHERE gu.group_id = $1 AND u.valid_id = 1
+		WHERE gu.group_id = ? AND u.valid_id = 1
 		ORDER BY u.id`)
 
 	rows, err := db.Query(query, groupID)
@@ -1030,7 +1030,7 @@ func handleGetGroupAPI(c *gin.Context) {
 	var name, comments sql.NullString
 	var validID sql.NullInt32
 
-	query := `SELECT id, name, comments, valid_id FROM groups WHERE id = $1`
+	query := `SELECT id, name, comments, valid_id FROM groups WHERE id = ?`
 	err = db.QueryRow(query, groupID).Scan(&id, &name, &comments, &validID)
 	if err != nil {
 		if err == sql.ErrNoRows {

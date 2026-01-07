@@ -154,7 +154,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 					var id int64
 					var login, firstName, lastName sql.NullString
 					// Our schema doesn't have users.email; login acts as email. Lookup by login.
-					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, login, first_name, last_name FROM users WHERE login = $1 LIMIT 1`), claims.Email).Scan(&id, &login, &firstName, &lastName); err == nil {
+					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, login, first_name, last_name FROM users WHERE login = ? LIMIT 1`), claims.Email).Scan(&id, &login, &firstName, &lastName); err == nil {
 						resolvedID = id
 						userObj = &models.User{ID: uint(id), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, ValidID: 1}
 					}
@@ -162,7 +162,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			} else {
 				if db, dbErr := database.GetDB(); dbErr == nil && db != nil {
 					var login, firstName, lastName sql.NullString
-					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT login, first_name, last_name FROM users WHERE id = $1`), resolvedID).Scan(&login, &firstName, &lastName); err == nil {
+					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT login, first_name, last_name FROM users WHERE id = ?`), resolvedID).Scan(&login, &firstName, &lastName); err == nil {
 						userObj = &models.User{ID: uint(resolvedID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, ValidID: 1}
 					}
 				}
@@ -172,7 +172,7 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			if userObj != nil {
 				if db, dbErr := database.GetDB(); dbErr == nil && db != nil {
 					var cnt int
-					_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT COUNT(*) FROM group_user ug JOIN groups g ON ug.group_id = g.id WHERE ug.user_id = $1 AND LOWER(g.name) = 'admin'`), userObj.ID).Scan(&cnt)
+					_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT COUNT(*) FROM group_user ug JOIN groups g ON ug.group_id = g.id WHERE ug.user_id = ? AND LOWER(g.name) = 'admin'`), userObj.ID).Scan(&cnt)
 					if cnt > 0 {
 						c.Set("user_role", "Admin")
 					} else if c.GetString("user_role") == "" {
@@ -342,7 +342,7 @@ func HandleCustomerInfoPanel(c *gin.Context) {
 				 cc.name, cc.street, cc.zip, cc.city, cc.country, cc.url, cc.comments
 		  FROM customer_user cu
 		  LEFT JOIN customer_company cc ON cc.customer_id = cu.customer_id
-		  WHERE cu.login = $1 LIMIT 1`
+		  WHERE cu.login = ? LIMIT 1`
 	if err = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(q), login).Scan(
 		&user.Login, &user.Title, &user.FirstName, &user.LastName, &user.Email, &user.Phone, &user.Mobile,
 		&user.Street, &user.Zip, &user.City, &user.Country, &user.CustomerID, &user.Comment,
@@ -350,7 +350,7 @@ func HandleCustomerInfoPanel(c *gin.Context) {
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// Try by email
-			q2 := strings.Replace(q, "cu.login = $1", "cu.email = $1", 1)
+			q2 := strings.Replace(q, "cu.login = ?", "cu.email = ?", 1)
 			if err = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(q2), login).Scan(
 				&user.Login, &user.Title, &user.FirstName, &user.LastName, &user.Email, &user.Phone, &user.Mobile,
 				&user.Street, &user.Zip, &user.City, &user.Country, &user.CustomerID, &user.Comment,
@@ -388,7 +388,7 @@ func HandleCustomerInfoPanel(c *gin.Context) {
 	}
 
 	var openCount int
-	_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT count(*) FROM tickets WHERE customer_user_id = $1 AND state NOT IN ('closed','resolved')`), nullable(user.Login)).Scan(&openCount)
+	_ = db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT count(*) FROM tickets WHERE customer_user_id = ? AND state NOT IN ('closed','resolved')`), nullable(user.Login)).Scan(&openCount)
 
 	shared.GetGlobalRenderer().HTML(c, http.StatusOK, "partials/tickets/customer_info.pongo2", gin.H{"user": tmplUser, "company": tmplCompany, "open": openCount})
 }

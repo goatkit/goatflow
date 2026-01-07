@@ -270,7 +270,7 @@ func handleAdminStateCreate(c *gin.Context) {
 
 	// Validate type_id exists
 	var typeExists bool
-	typeExistsQuery := "SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = $1)"
+	typeExistsQuery := "SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = ?)"
 	err = db.QueryRow(database.ConvertPlaceholders(typeExistsQuery), input.TypeID).Scan(&typeExists)
 	if err != nil || !typeExists {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -288,7 +288,7 @@ func handleAdminStateCreate(c *gin.Context) {
 	// Create the state using the adapter for cross-database compatibility
 	query := database.ConvertPlaceholders(`
 		INSERT INTO ticket_state (name, type_id, comments, valid_id, create_by, change_by) 
-		VALUES ($1, $2, $3, $4, 1, 1) 
+		VALUES (?, ?, ?, ?, 1, 1) 
 		RETURNING id
 	`)
 
@@ -367,7 +367,7 @@ func handleAdminStateUpdate(c *gin.Context) {
 	// Validate type_id if provided
 	if input.TypeID != nil {
 		var typeExists bool
-		typeExistsQuery := "SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = $1)"
+		typeExistsQuery := "SELECT EXISTS(SELECT 1 FROM ticket_state_type WHERE id = ?)"
 		err = db.QueryRow(database.ConvertPlaceholders(typeExistsQuery), *input.TypeID).Scan(&typeExists)
 		if err != nil || !typeExists {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -465,7 +465,7 @@ func handleAdminStateDelete(c *gin.Context) {
 
 	// Check if state is in use
 	var ticketCount int
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = $1"), id).Scan(&ticketCount)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?"), id).Scan(&ticketCount)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -486,7 +486,7 @@ func handleAdminStateDelete(c *gin.Context) {
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket_state 
 		SET valid_id = 2, change_by = 1, change_time = CURRENT_TIMESTAMP 
-		WHERE id = $1
+		WHERE id = ?
 	`), id)
 
 	if err != nil {

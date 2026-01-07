@@ -43,9 +43,9 @@ func TestArticleAPI(t *testing.T) {
 	ticketTypeColumn := database.TicketTypeColumn()
 	ticketInsert := database.ConvertPlaceholders(fmt.Sprintf(`
 		INSERT INTO ticket (tn, title, queue_id, %s, ticket_state_id,
-			ticket_priority_id, customer_user_id, user_id, responsible_user_id,
-			create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, 1, 1, 1, 3, 'test@example.com', 1, 1, NOW(), 1, NOW(), 1)
+			ticket_priority_id, ticket_lock_id, customer_user_id, user_id, responsible_user_id,
+			timeout, create_time, create_by, change_time, change_by)
+		VALUES ($1, $2, 1, 1, 1, 3, 1, 'test@example.com', 1, 1, 0, NOW(), 1, NOW(), 1)
 	`, ticketTypeColumn))
 	_, err := db.Exec(ticketInsert, "2024123100001", "Test Ticket")
 	if err != nil {

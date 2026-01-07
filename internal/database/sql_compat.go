@@ -46,29 +46,54 @@ func QualifiedTicketTypeColumn(alias string) string {
 	return fmt.Sprintf("%s.%s", alias, col)
 }
 
-// This allows us to write queries in PostgreSQL format and auto-convert for MySQL.
+// ConvertPlaceholders converts SQL placeholders to the format required by the current database.
+// It accepts either ? placeholders (portable) or $N placeholders (PostgreSQL-specific).
+// - For PostgreSQL: ? → $1, $2, ... OR $N passed through
+// - For MySQL: ? passed through OR $N → ?
+// Prefer writing queries with ? placeholders for maximum portability.
 func ConvertPlaceholders(query string) string {
-	if !IsMySQL() {
-		return query // No conversion needed for PostgreSQL
+	hasQuestionMark := strings.Contains(query, "?")
+	hasDollarN := regexp.MustCompile(`\$\d+`).MatchString(query)
+
+	if IsMySQL() {
+		// MySQL uses ? placeholders
+		if hasDollarN {
+			// Convert $1, $2, etc. to ?
+			re := regexp.MustCompile(`\$\d+`)
+			placeholders := re.FindAllString(query, -1)
+			result := query
+			for _, placeholder := range placeholders {
+				result = strings.Replace(result, placeholder, "?", 1)
+			}
+			query = result
+		}
+		// ? placeholders already work for MySQL
+	} else {
+		// PostgreSQL uses $1, $2, etc.
+		if hasQuestionMark && !hasDollarN {
+			// Convert ? to $1, $2, etc.
+			result := strings.Builder{}
+			paramNum := 1
+			for _, c := range query {
+				if c == '?' {
+					result.WriteString(fmt.Sprintf("$%d", paramNum))
+					paramNum++
+				} else {
+					result.WriteRune(c)
+				}
+			}
+			query = result.String()
+		}
+		// $N placeholders already work for PostgreSQL
 	}
 
-	// Replace $1, $2, $3 etc with ?
-	re := regexp.MustCompile(`\$\d+`)
-
-	// Track placeholder positions to ensure correct ordering
-	placeholders := re.FindAllString(query, -1)
-
-	// Replace each placeholder with ?
-	result := query
-	for _, placeholder := range placeholders {
-		result = strings.Replace(result, placeholder, "?", 1)
+	// Convert ILIKE to LIKE for MySQL (MySQL is case-insensitive by default with utf8_general_ci)
+	if IsMySQL() {
+		query = strings.ReplaceAll(query, " ILIKE ", " LIKE ")
+		query = strings.ReplaceAll(query, " ilike ", " LIKE ")
 	}
 
-	// Convert ILIKE to LIKE for MySQL (MySQL is case-insensitive by default)
-	result = strings.ReplaceAll(result, " ILIKE ", " LIKE ")
-	result = strings.ReplaceAll(result, " ilike ", " LIKE ")
-
-	return result
+	return query
 }
 
 // MySQL: Use LastInsertId() after insert.
