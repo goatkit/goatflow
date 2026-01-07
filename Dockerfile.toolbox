@@ -27,8 +27,40 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY . .
 
 # Install frontend dependencies in builder if package.json exists (using bun for speed)
+# Securely install Bun with GPG and checksum verification
+ARG BUN_VERSION=1.1.42
 RUN if [ -f package.json ]; then \
-        curl -fsSL https://bun.sh/install | BUN_INSTALL=/tmp bash && \
+        apk add --no-cache curl dirmngr gpg gpg-agent unzip && \
+        arch="$(apk --print-arch)" && \
+        case "${arch##*-}" in \
+          x86_64) build="x64-musl-baseline";; \
+          aarch64) build="aarch64-musl";; \
+          *) echo "error: unsupported architecture: $arch"; exit 1 ;; \
+        esac && \
+        curl "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-$build.zip" \
+          -fsSLO \
+          --compressed \
+          --retry 5 \
+          || (echo "error: failed to download bun v${BUN_VERSION}" && exit 1) && \
+        for key in \
+          "F3DCC08A8572C0749B3E18888EAB4D40A7B22B59" \
+        ; do \
+          gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$key" \
+          || gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" ; \
+        done && \
+        curl "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/SHASUMS256.txt.asc" \
+          -fsSLO \
+          --compressed \
+          --retry 5 && \
+        gpg --batch --decrypt --output SHASUMS256.txt SHASUMS256.txt.asc \
+          || (echo "error: failed to verify bun v${BUN_VERSION}" && exit 1) && \
+        grep " bun-linux-$build.zip\$" SHASUMS256.txt | sha256sum -c - \
+          || (echo "error: failed to verify checksum for bun v${BUN_VERSION}" && exit 1) && \
+        unzip "bun-linux-$build.zip" && \
+        mkdir -p /tmp/bin && \
+        mv "bun-linux-$build/bun" /tmp/bin/bun && \
+        rm -rf "bun-linux-$build" "bun-linux-$build.zip" SHASUMS256.txt.asc SHASUMS256.txt && \
+        chmod +x /tmp/bin/bun && \
         /tmp/bin/bun install --frozen-lockfile --ignore-scripts || /tmp/bin/bun install --ignore-scripts || true; \
     fi && \
     mkdir -p /workspace/node_modules
@@ -68,9 +100,38 @@ ARG GID=1000
 ARG TOOLBOX_APKS='ca-certificates postgresql15-client mysql-client sqlite git bash make curl jq graphviz openssl python3 py3-pip yamllint ripgrep fd tree nss freetype harfbuzz libx11 libxcomposite libxdamage libxext libxfixes libxi libxrandr libxrender libxshmfence libxtst alsa-lib dumb-init ttf-freefont woff2 libc6-compat gcompat libstdc++ icu-libs nodejs'
 RUN apk add --no-cache $TOOLBOX_APKS
 
-# Install bun (fast JavaScript runtime and package manager)
+# Install bun (fast JavaScript runtime and package manager) with GPG and checksum verification
 ARG BUN_VERSION=1.1.42
-RUN curl -fsSL https://bun.sh/install | BUN_INSTALL=/usr/local bash -s "bun-v${BUN_VERSION}" && \
+RUN apk add --no-cache curl dirmngr gpg gpg-agent unzip && \
+    arch="$(apk --print-arch)" && \
+    case "${arch##*-}" in \
+      x86_64) build="x64-musl-baseline";; \
+      aarch64) build="aarch64-musl";; \
+      *) echo "error: unsupported architecture: $arch"; exit 1 ;; \
+    esac && \
+    curl "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-$build.zip" \
+      -fsSLO \
+      --compressed \
+      --retry 5 \
+      || (echo "error: failed to download bun v${BUN_VERSION}" && exit 1) && \
+    for key in \
+      "F3DCC08A8572C0749B3E18888EAB4D40A7B22B59" \
+    ; do \
+      gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$key" \
+      || gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" ; \
+    done && \
+    curl "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/SHASUMS256.txt.asc" \
+      -fsSLO \
+      --compressed \
+      --retry 5 && \
+    gpg --batch --decrypt --output SHASUMS256.txt SHASUMS256.txt.asc \
+      || (echo "error: failed to verify bun v${BUN_VERSION}" && exit 1) && \
+    grep " bun-linux-$build.zip\$" SHASUMS256.txt | sha256sum -c - \
+      || (echo "error: failed to verify checksum for bun v${BUN_VERSION}" && exit 1) && \
+    unzip "bun-linux-$build.zip" && \
+    mv "bun-linux-$build/bun" /usr/local/bin/bun && \
+    rm -f "bun-linux-$build.zip" SHASUMS256.txt.asc SHASUMS256.txt && \
+    chmod +x /usr/local/bin/bun && \
     ln -sf /usr/local/bin/bun /usr/local/bin/bunx
 
 # Install Helm
