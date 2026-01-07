@@ -35,11 +35,20 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
         fsGroup: 999
       containers:
         - name: mysql
           image: "{{ .Values.database.mysql.image.repository }}:{{ .Values.database.mysql.image.tag }}"
           imagePullPolicy: {{ .Values.database.mysql.image.pullPolicy }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           ports:
             - name: mysql
               containerPort: 3306
@@ -84,6 +93,10 @@ spec:
               mountPath: /var/lib/mysql
             - name: config
               mountPath: /etc/mysql/conf.d
+            - name: tmp
+              mountPath: /tmp
+            - name: run
+              mountPath: /run/mysqld
       {{- with .Values.database.mysql.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -100,6 +113,10 @@ spec:
         - name: config
           configMap:
             name: {{ include "gotrs.fullname" . }}-database-config
+        - name: tmp
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
   volumeClaimTemplates:
     - metadata:
         name: data

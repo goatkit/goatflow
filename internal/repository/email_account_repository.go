@@ -48,7 +48,7 @@ func (r *EmailAccountRepository) Create(account *models.EmailAccount) (int, erro
 			login, pw, host, account_type, queue_id, trusted,
 			imap_folder, comments, valid_id, create_time, create_by,
 			change_time, change_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+		) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
 		RETURNING id`)
 
 	var id int
@@ -76,7 +76,7 @@ func (r *EmailAccountRepository) Create(account *models.EmailAccount) (int, erro
 }
 
 func (r *EmailAccountRepository) GetByID(id int) (*models.EmailAccount, error) {
-	query := database.ConvertPlaceholders(mailAccountSelect + " WHERE id = $1")
+	query := database.ConvertPlaceholders(mailAccountSelect + " WHERE id = ?")
 	account, err := scanEmailAccount(r.db.QueryRow(query, id))
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("email account not found")
@@ -89,7 +89,7 @@ func (r *EmailAccountRepository) GetByID(id int) (*models.EmailAccount, error) {
 
 // GetByLogin returns an account by login (mailbox username).
 func (r *EmailAccountRepository) GetByLogin(login string) (*models.EmailAccount, error) {
-	query := database.ConvertPlaceholders(mailAccountSelect + " WHERE login = $1")
+	query := database.ConvertPlaceholders(mailAccountSelect + " WHERE login = ?")
 	account, err := scanEmailAccount(r.db.QueryRow(query, login))
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("email account not found")
@@ -147,18 +147,18 @@ func (r *EmailAccountRepository) Update(account *models.EmailAccount) error {
 
 	query := database.ConvertPlaceholders(`
 		UPDATE mail_account SET
-			login = $2,
-			pw = $3,
-			host = $4,
-			account_type = $5,
-			queue_id = $6,
-			trusted = $7,
-			imap_folder = $8,
-			comments = $9,
-			valid_id = $10,
-			change_time = $11,
-			change_by = $12
-		WHERE id = $1`)
+			login = ?,
+			pw = ?,
+			host = ?,
+			account_type = ?,
+			queue_id = ?,
+			trusted = ?,
+			imap_folder = ?,
+			comments = ?,
+			valid_id = ?,
+			change_time = ?,
+			change_by = ?
+		WHERE id = ?`)
 
 	_, err := r.db.Exec(query,
 		acct.ID,
@@ -183,7 +183,7 @@ func (r *EmailAccountRepository) Update(account *models.EmailAccount) error {
 }
 
 func (r *EmailAccountRepository) Delete(id int) error {
-	query := database.ConvertPlaceholders(`DELETE FROM mail_account WHERE id = $1`)
+	query := database.ConvertPlaceholders(`DELETE FROM mail_account WHERE id = ?`)
 	if _, err := r.db.Exec(query, id); err != nil {
 		return fmt.Errorf("failed to delete email account: %w", err)
 	}

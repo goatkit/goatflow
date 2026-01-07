@@ -195,7 +195,7 @@ func GetStandardTemplate(id int) (*StandardTemplate, error) {
 		SELECT id, name, text, content_type, template_type, comments,
 			valid_id, create_time, create_by, change_time, change_by
 		FROM standard_template
-		WHERE id = $1
+		WHERE id = ?
 	`
 
 	var t StandardTemplate
@@ -227,11 +227,11 @@ func CheckTemplateNameExists(name string, excludeID int) (bool, error) {
 		return false, err
 	}
 
-	query := `SELECT COUNT(*) FROM standard_template WHERE LOWER(name) = LOWER($1)`
+	query := `SELECT COUNT(*) FROM standard_template WHERE LOWER(name) = LOWER(?)`
 	args := []interface{}{name}
 
 	if excludeID > 0 {
-		query += ` AND id != $2`
+		query += ` AND id != ?`
 		args = append(args, excludeID)
 	}
 
@@ -276,7 +276,7 @@ func CreateStandardTemplate(t *StandardTemplate, userID int) (int, error) {
 		INSERT INTO standard_template 
 			(name, text, content_type, template_type, comments, valid_id,
 			 create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	result, err := db.Exec(database.ConvertPlaceholders(query),
@@ -292,7 +292,7 @@ func CreateStandardTemplate(t *StandardTemplate, userID int) (int, error) {
 		// For PostgreSQL, query the ID
 		var newID int
 		err = db.QueryRow(database.ConvertPlaceholders(
-			`SELECT id FROM standard_template WHERE name = $1 AND create_by = $2 ORDER BY id DESC LIMIT 1`,
+			`SELECT id FROM standard_template WHERE name = ? AND create_by = ? ORDER BY id DESC LIMIT 1`,
 		), t.Name, userID).Scan(&newID)
 		if err != nil {
 			return 0, err
@@ -328,9 +328,9 @@ func UpdateStandardTemplate(t *StandardTemplate, userID int) error {
 
 	query := `
 		UPDATE standard_template 
-		SET name = $1, text = $2, content_type = $3, template_type = $4,
-			comments = $5, valid_id = $6, change_time = $7, change_by = $8
-		WHERE id = $9
+		SET name = ?, text = ?, content_type = ?, template_type = ?,
+			comments = ?, valid_id = ?, change_time = ?, change_by = ?
+		WHERE id = ?
 	`
 
 	_, err = db.Exec(database.ConvertPlaceholders(query),
@@ -349,7 +349,7 @@ func DeleteStandardTemplate(id int) error {
 
 	// Delete queue relationships
 	_, err = db.Exec(database.ConvertPlaceholders(
-		`DELETE FROM queue_standard_template WHERE standard_template_id = $1`,
+		`DELETE FROM queue_standard_template WHERE standard_template_id = ?`,
 	), id)
 	if err != nil {
 		return fmt.Errorf("failed to delete queue relationships: %w", err)
@@ -357,7 +357,7 @@ func DeleteStandardTemplate(id int) error {
 
 	// Delete attachment relationships
 	_, err = db.Exec(database.ConvertPlaceholders(
-		`DELETE FROM standard_template_attachment WHERE standard_template_id = $1`,
+		`DELETE FROM standard_template_attachment WHERE standard_template_id = ?`,
 	), id)
 	if err != nil {
 		return fmt.Errorf("failed to delete attachment relationships: %w", err)
@@ -365,7 +365,7 @@ func DeleteStandardTemplate(id int) error {
 
 	// Delete the template
 	_, err = db.Exec(database.ConvertPlaceholders(
-		`DELETE FROM standard_template WHERE id = $1`,
+		`DELETE FROM standard_template WHERE id = ?`,
 	), id)
 	if err != nil {
 		return fmt.Errorf("failed to delete template: %w", err)
@@ -384,7 +384,7 @@ func GetTemplateQueues(templateID int) ([]int, error) {
 	}
 
 	rows, err := db.Query(database.ConvertPlaceholders(
-		`SELECT queue_id FROM queue_standard_template WHERE standard_template_id = $1`,
+		`SELECT queue_id FROM queue_standard_template WHERE standard_template_id = ?`,
 	), templateID)
 	if err != nil {
 		return nil, err
@@ -415,7 +415,7 @@ func SetTemplateQueues(templateID int, queueIDs []int, userID int) error {
 
 	// Delete existing assignments
 	_, err = db.Exec(database.ConvertPlaceholders(
-		`DELETE FROM queue_standard_template WHERE standard_template_id = $1`,
+		`DELETE FROM queue_standard_template WHERE standard_template_id = ?`,
 	), templateID)
 	if err != nil {
 		return err
@@ -431,7 +431,7 @@ func SetTemplateQueues(templateID int, queueIDs []int, userID int) error {
 		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO queue_standard_template 
 				(queue_id, standard_template_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			VALUES (?, ?, ?, ?, ?, ?)
 		`), queueID, templateID, now, userID, now, userID)
 		if err != nil {
 			return fmt.Errorf("failed to assign queue %d: %w", queueID, err)
@@ -486,7 +486,7 @@ func GetTemplateAttachments(templateID int) ([]int, error) {
 	}
 
 	rows, err := db.Query(database.ConvertPlaceholders(
-		`SELECT standard_attachment_id FROM standard_template_attachment WHERE standard_template_id = $1`,
+		`SELECT standard_attachment_id FROM standard_template_attachment WHERE standard_template_id = ?`,
 	), templateID)
 	if err != nil {
 		return nil, err
@@ -517,7 +517,7 @@ func SetTemplateAttachments(templateID int, attachmentIDs []int, userID int) err
 
 	// Delete existing assignments
 	_, err = db.Exec(database.ConvertPlaceholders(
-		`DELETE FROM standard_template_attachment WHERE standard_template_id = $1`,
+		`DELETE FROM standard_template_attachment WHERE standard_template_id = ?`,
 	), templateID)
 	if err != nil {
 		return err
@@ -533,7 +533,7 @@ func SetTemplateAttachments(templateID int, attachmentIDs []int, userID int) err
 		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO standard_template_attachment 
 				(standard_attachment_id, standard_template_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			VALUES (?, ?, ?, ?, ?, ?)
 		`), attachmentID, templateID, now, userID, now, userID)
 		if err != nil {
 			return fmt.Errorf("failed to assign attachment %d: %w", attachmentID, err)
@@ -588,7 +588,7 @@ func ExportTemplate(id int) (*TemplateExport, error) {
 		for _, qid := range queueIDs {
 			var queueName string
 			err := db.QueryRow(database.ConvertPlaceholders(
-				`SELECT name FROM queue WHERE id = $1`,
+				`SELECT name FROM queue WHERE id = ?`,
 			), qid).Scan(&queueName)
 			if err == nil {
 				export.Queues = append(export.Queues, queueName)
@@ -603,7 +603,7 @@ func ExportTemplate(id int) (*TemplateExport, error) {
 		for _, aid := range attachmentIDs {
 			var attachmentName string
 			err := db.QueryRow(database.ConvertPlaceholders(
-				`SELECT name FROM standard_attachment WHERE id = $1`,
+				`SELECT name FROM standard_attachment WHERE id = ?`,
 			), aid).Scan(&attachmentName)
 			if err == nil {
 				export.Attachments = append(export.Attachments, attachmentName)
@@ -690,7 +690,7 @@ func ImportTemplates(data []byte, overwrite bool, userID int) (imported int, ski
 		if exists && overwrite {
 			// Get existing ID
 			err := db.QueryRow(database.ConvertPlaceholders(
-				`SELECT id FROM standard_template WHERE name = $1`,
+				`SELECT id FROM standard_template WHERE name = ?`,
 			), te.Name).Scan(&templateID)
 			if err != nil {
 				errors = append(errors, fmt.Sprintf("Error finding template '%s': %v", te.Name, err))
@@ -719,7 +719,7 @@ func ImportTemplates(data []byte, overwrite bool, userID int) (imported int, ski
 			for _, queueName := range te.Queues {
 				var qid int
 				err := db.QueryRow(database.ConvertPlaceholders(
-					`SELECT id FROM queue WHERE name = $1`,
+					`SELECT id FROM queue WHERE name = ?`,
 				), queueName).Scan(&qid)
 				if err == nil {
 					queueIDs = append(queueIDs, qid)
@@ -736,7 +736,7 @@ func ImportTemplates(data []byte, overwrite bool, userID int) (imported int, ski
 			for _, attachmentName := range te.Attachments {
 				var aid int
 				err := db.QueryRow(database.ConvertPlaceholders(
-					`SELECT id FROM standard_attachment WHERE name = $1`,
+					`SELECT id FROM standard_attachment WHERE name = ?`,
 				), attachmentName).Scan(&aid)
 				if err == nil {
 					attachmentIDs = append(attachmentIDs, aid)

@@ -195,7 +195,7 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 			err := db.QueryRow(database.ConvertPlaceholders(`
 				SELECT customer_id, email
 				FROM customer_user
-				WHERE login = $1 AND valid_id = 1
+				WHERE login = ? AND valid_id = 1
 			`), customerUserID).Scan(&foundCustomerID, &foundEmail)
 
 			if err == nil {
@@ -221,7 +221,7 @@ func HandleAgentCreateTicket(db *sql.DB) gin.HandlerFunc {
 			err := db.QueryRow(database.ConvertPlaceholders(`
 				SELECT customer_id, login
 				FROM customer_user
-				WHERE email = $1 AND valid_id = 1
+				WHERE email = ? AND valid_id = 1
 			`), customerEmail).Scan(&foundCustomerID, &foundCustomerUserID)
 
 			if err == nil && foundCustomerUserID.Valid {

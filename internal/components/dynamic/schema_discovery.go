@@ -91,7 +91,7 @@ func (sd *SchemaDiscovery) GetTableColumns(tableName string) ([]ColumnInfo, erro
 			COALESCE(col_description(pgclass.oid, ordinal_position), '') as column_comment
 		FROM information_schema.columns
 		LEFT JOIN pg_class pgclass ON pgclass.relname = table_name
-		WHERE table_name = $1 
+		WHERE table_name = ? 
 		AND table_schema = 'public'
 		ORDER BY ordinal_position
 	`
@@ -173,7 +173,7 @@ func (sd *SchemaDiscovery) GetTableConstraints(tableName string) ([]ConstraintIn
 		JOIN information_schema.key_column_usage kcu
 			ON tc.constraint_name = kcu.constraint_name
 			AND tc.table_schema = kcu.table_schema
-		WHERE tc.table_name = $1
+		WHERE tc.table_name = ?
 		AND tc.table_schema = 'public'
 		ORDER BY tc.constraint_type, kcu.ordinal_position
 	`

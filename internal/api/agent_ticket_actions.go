@@ -76,7 +76,7 @@ func queueCustomerNoteNotification(params noteNotificationParams) {
 func lookupCustomerEmail(db *sql.DB, customerUserID string) string {
 	var email string
 	err := db.QueryRow(database.ConvertPlaceholders(`
-		SELECT cu.email FROM customer_user cu WHERE cu.login = $1
+		SELECT cu.email FROM customer_user cu WHERE cu.login = ?
 	`), customerUserID).Scan(&email)
 	if err != nil || email == "" {
 		log.Printf("Failed to find email for customer user %s: %v", customerUserID, err)
@@ -140,9 +140,9 @@ func storeArticleThreadingHeaders(
 	}
 	_, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE article_data_mime 
-		SET a_message_id = $1, a_in_reply_to = $2, a_references = $3,
-			change_time = CURRENT_TIMESTAMP, change_by = $4
-		WHERE article_id = $5
+		SET a_message_id = ?, a_in_reply_to = ?, a_references = ?,
+			change_time = CURRENT_TIMESTAMP, change_by = ?
+		WHERE article_id = ?
 	`), messageID, inReplyTo, references, userID, articleID)
 	if err != nil {
 		log.Printf("Failed to store threading headers for article %d: %v", articleID, err)
@@ -159,7 +159,7 @@ func queueArticleNotificationEmail(db *sql.DB, ticketID int, articleID int64, cu
 
 	var queueID int
 	var ticketNumber sql.NullString
-	ticketQuery := `SELECT queue_id, tn FROM ticket WHERE id = $1`
+	ticketQuery := `SELECT queue_id, tn FROM ticket WHERE id = ?`
 	if err := db.QueryRow(database.ConvertPlaceholders(ticketQuery), ticketID).Scan(&queueID, &ticketNumber); err != nil {
 		log.Printf("Failed to load ticket metadata for article %d: %v", ticketID, err)
 	}
@@ -333,7 +333,7 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 					INSERT INTO article_data_mime_attachment (
 						article_id, filename, content_type, content, content_size,
 						create_time, create_by, change_time, change_by
-					) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6, CURRENT_TIMESTAMP, $6)
+					) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 				`
 				_, err = database.GetAdapter().ExecTx(tx, attachmentInsert,
 					articleID, fileHeader.Filename, contentType, content, len(content), userID)
@@ -348,7 +348,7 @@ func handleAgentTicketReply(db *sql.DB) gin.HandlerFunc {
 
 		// Update ticket change time
 		query := database.ConvertPlaceholders(
-			"UPDATE ticket SET change_time = CURRENT_TIMESTAMP, change_by = $1 WHERE id = $2")
+			"UPDATE ticket SET change_time = CURRENT_TIMESTAMP, change_by = ? WHERE id = ?")
 		_, err = tx.Exec(query, userID, tid)
 		if err != nil {
 			log.Printf("Error updating ticket: %v", err)
@@ -538,8 +538,8 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 		if stateChanged {
 			if _, err := tx.Exec(database.ConvertPlaceholders(`
 				UPDATE ticket
-				SET ticket_state_id = $1, until_time = $2, change_time = CURRENT_TIMESTAMP, change_by = $3
-				WHERE id = $4
+				SET ticket_state_id = ?, until_time = ?, change_time = CURRENT_TIMESTAMP, change_by = ?
+				WHERE id = ?
 			`), nextStateID, pendingUntilUnix, userID, tid); err != nil {
 				log.Printf("Error updating ticket state from note: %v", err)
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update ticket state"})
@@ -548,8 +548,8 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 		} else {
 			if _, err = tx.Exec(database.ConvertPlaceholders(`
 				UPDATE ticket
-				SET change_time = CURRENT_TIMESTAMP, change_by = $1
-				WHERE id = $2
+				SET change_time = CURRENT_TIMESTAMP, change_by = ?
+				WHERE id = ?
 			`), userID, tid); err != nil {
 				log.Printf("Error updating ticket: %v", err)
 			}
@@ -758,7 +758,7 @@ func handleAgentTicketPhone(db *sql.DB) gin.HandlerFunc {
 		}
 
 		if _, err = tx.Exec(database.ConvertPlaceholders(`
-			UPDATE ticket SET change_time = CURRENT_TIMESTAMP, change_by = $1 WHERE id = $2
+			UPDATE ticket SET change_time = CURRENT_TIMESTAMP, change_by = ? WHERE id = ?
 		`), userID, tid); err != nil {
 			log.Printf("Error updating ticket change time for phone note: %v", err)
 		}
@@ -804,8 +804,8 @@ func handleAgentTicketStatus(db *sql.DB) gin.HandlerFunc {
 		// Update ticket status with pending time
 		_, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
-			SET ticket_state_id = $1, until_time = $2, change_time = CURRENT_TIMESTAMP, change_by = $3
-			WHERE id = $4
+			SET ticket_state_id = ?, until_time = ?, change_time = CURRENT_TIMESTAMP, change_by = ?
+			WHERE id = ?
 		`), statusID, untilTime, c.GetUint("user_id"), ticketID)
 
 		if err != nil {
@@ -819,7 +819,7 @@ func handleAgentTicketStatus(db *sql.DB) gin.HandlerFunc {
 		var statusRow struct {
 			Name string
 		}
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), statusID).Scan(&statusRow.Name)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = ?"), statusID).Scan(&statusRow.Name)
 		if err == nil {
 			statusName = statusRow.Name
 		}
@@ -859,8 +859,8 @@ func handleAgentTicketAssign(db *sql.DB) gin.HandlerFunc {
 		// Update responsible user
 		_, err = db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
-			SET responsible_user_id = $1, change_time = CURRENT_TIMESTAMP, change_by = $2
-			WHERE id = $3
+			SET responsible_user_id = ?, change_time = CURRENT_TIMESTAMP, change_by = ?
+			WHERE id = ?
 		`), agentID, currentUserID, ticketID)
 
 		if err != nil {
@@ -882,8 +882,8 @@ func handleAgentTicketPriority(db *sql.DB) gin.HandlerFunc {
 		// Update ticket priority
 		_, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
-			SET ticket_priority_id = $1, change_time = CURRENT_TIMESTAMP, change_by = $2
-			WHERE id = $3
+			SET ticket_priority_id = ?, change_time = CURRENT_TIMESTAMP, change_by = ?
+			WHERE id = ?
 		`), priorityID, c.GetUint("user_id"), ticketID)
 
 		if err != nil {
@@ -904,8 +904,8 @@ func handleAgentTicketQueue(db *sql.DB) gin.HandlerFunc {
 		// Update ticket queue
 		_, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
-			SET queue_id = $1, change_time = CURRENT_TIMESTAMP, change_by = $2
-			WHERE id = $3
+			SET queue_id = ?, change_time = CURRENT_TIMESTAMP, change_by = ?
+			WHERE id = ?
 		`), queueID, c.GetUint("user_id"), ticketID)
 
 		if err != nil {
@@ -943,7 +943,7 @@ func handleAgentTicketMerge(db *sql.DB) gin.HandlerFunc {
 
 		// Find target ticket ID by ticket number
 		var targetTicketID int
-		err = tx.QueryRow("SELECT id FROM ticket WHERE tn = $1", targetTN).Scan(&targetTicketID)
+		err = tx.QueryRow("SELECT id FROM ticket WHERE tn = ?", targetTN).Scan(&targetTicketID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Target ticket not found"})
 			return
@@ -952,8 +952,8 @@ func handleAgentTicketMerge(db *sql.DB) gin.HandlerFunc {
 		// Move all articles from source to target ticket
 		_, err = tx.Exec(database.ConvertPlaceholders(`
 			UPDATE article 
-			SET ticket_id = $1, change_time = CURRENT_TIMESTAMP, change_by = $2
-			WHERE ticket_id = $3
+			SET ticket_id = ?, change_time = CURRENT_TIMESTAMP, change_by = ?
+			WHERE ticket_id = ?
 		`), targetTicketID, c.GetUint("user_id"), sourceTicketID)
 
 		if err != nil {
@@ -966,8 +966,8 @@ func handleAgentTicketMerge(db *sql.DB) gin.HandlerFunc {
 		_, err = tx.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
 			SET ticket_state_id = (SELECT id FROM ticket_state WHERE name = 'merged'),
-				change_time = CURRENT_TIMESTAMP, change_by = $1
-			WHERE id = $2
+				change_time = CURRENT_TIMESTAMP, change_by = ?
+			WHERE id = ?
 		`), c.GetUint("user_id"), sourceTicketID)
 
 		if err != nil {

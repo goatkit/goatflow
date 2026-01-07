@@ -4,8 +4,8 @@
 
 set -e
 
-CACHE_DIR="/workspace/.cache"
-CACHE_DIRS="$CACHE_DIR $CACHE_DIR/go-build $CACHE_DIR/go-mod $CACHE_DIR/xdg $CACHE_DIR/xdg/helm"
+CACHE_DIR="/cache"
+CACHE_DIRS="$CACHE_DIR $CACHE_DIR/go-build $CACHE_DIR/go-mod $CACHE_DIR/xdg $CACHE_DIR/xdg/helm $CACHE_DIR/bun $CACHE_DIR/golangci-lint $CACHE_DIR/tmp"
 
 # Check if we can write to cache directories
 check_cache_permissions() {

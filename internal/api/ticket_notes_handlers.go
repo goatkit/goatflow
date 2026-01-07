@@ -165,7 +165,7 @@ func handleAddTicketNote(c *gin.Context) {
 				err := db.QueryRow(database.ConvertPlaceholders(`
 					SELECT cu.email
 					FROM customer_user cu
-					WHERE cu.login = $1
+					WHERE cu.login = ?
 				`), *ticket.CustomerUserID).Scan(&customerEmail)
 
 				if err != nil || customerEmail == "" {

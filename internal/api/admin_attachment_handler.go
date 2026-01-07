@@ -189,7 +189,7 @@ func handleAdminAttachmentCreate(c *gin.Context) {
 
 	var exists bool
 	dupeQuery := database.ConvertPlaceholders(
-		"SELECT EXISTS(SELECT 1 FROM standard_attachment WHERE name = $1)")
+		"SELECT EXISTS(SELECT 1 FROM standard_attachment WHERE name = ?)")
 	if err = db.QueryRow(dupeQuery, name).Scan(&exists); err != nil {
 		jsonError(c, http.StatusInternalServerError, "Failed to check for duplicate")
 		return
@@ -208,7 +208,7 @@ func handleAdminAttachmentCreate(c *gin.Context) {
 		INSERT INTO standard_attachment 
 			(name, filename, content_type, content, comments, valid_id, 
 			 create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, $4, $5, $6, NOW(), 1, NOW(), 1)
+		VALUES (?, ?, ?, ?, ?, ?, NOW(), 1, NOW(), 1)
 	`), name, header.Filename, header.Header.Get("Content-Type"), content, commentsPtr, validID)
 	if err != nil {
 		jsonError(c, http.StatusInternalServerError, "Failed to create attachment: "+err.Error())
@@ -330,7 +330,7 @@ func handleAdminAttachmentDelete(c *gin.Context) {
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE standard_attachment 
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
-		WHERE id = $1
+		WHERE id = ?
 	`), id)
 
 	if err != nil {
@@ -378,7 +378,7 @@ func handleAdminAttachmentDownload(c *gin.Context) {
 	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT filename, content_type, content 
 		FROM standard_attachment 
-		WHERE id = $1
+		WHERE id = ?
 	`), id).Scan(&filename, &contentType, &content)
 
 	if err == sql.ErrNoRows {
@@ -420,7 +420,7 @@ func handleAdminAttachmentPreview(c *gin.Context) {
 	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT filename, content_type, content 
 		FROM standard_attachment 
-		WHERE id = $1
+		WHERE id = ?
 	`), id).Scan(&filename, &contentType, &content)
 
 	if err == sql.ErrNoRows {
@@ -477,8 +477,8 @@ func handleAdminAttachmentToggle(c *gin.Context) {
 
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE standard_attachment 
-		SET valid_id = $1, change_time = CURRENT_TIMESTAMP, change_by = 1 
-		WHERE id = $2
+		SET valid_id = ?, change_time = CURRENT_TIMESTAMP, change_by = 1 
+		WHERE id = ?
 	`), input.ValidID, id)
 
 	if err != nil {

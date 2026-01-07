@@ -53,6 +53,12 @@ spec:
         - name: backend
           image: {{ include "gotrs.backend.image" . }}
           imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           ports:
             - name: http
               containerPort: 8080
@@ -130,6 +136,12 @@ spec:
             timeoutSeconds: {{ .Values.backend.probes.readiness.timeoutSeconds }}
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
       {{- with .Values.backend.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

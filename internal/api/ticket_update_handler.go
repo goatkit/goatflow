@@ -183,7 +183,7 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 	}
 
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT id, customer_user_id, user_id FROM ticket WHERE id = $1",
+		"SELECT id, customer_user_id, user_id FROM ticket WHERE id = ?",
 	), ticketID).Scan(&currentTicket.ID, &currentTicket.CustomerUserID, &currentTicket.UserID)
 
 	if err == sql.ErrNoRows {
@@ -223,7 +223,7 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 	if queueID, ok := updateRequest["queue_id"].(float64); ok {
 		var exists bool
 		err := db.QueryRow(database.ConvertPlaceholders(
-			"SELECT EXISTS(SELECT 1 FROM queue WHERE id = $1 AND valid_id = 1)",
+			"SELECT EXISTS(SELECT 1 FROM queue WHERE id = ? AND valid_id = 1)",
 		), int(queueID)).Scan(&exists)
 		if err != nil || !exists {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -237,7 +237,7 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 	if stateID, ok := updateRequest["state_id"].(float64); ok {
 		var exists bool
 		err := db.QueryRow(database.ConvertPlaceholders(
-			"SELECT EXISTS(SELECT 1 FROM ticket_state WHERE id = $1 AND valid_id = 1)",
+			"SELECT EXISTS(SELECT 1 FROM ticket_state WHERE id = ? AND valid_id = 1)",
 		), int(stateID)).Scan(&exists)
 		if err != nil || !exists {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -251,7 +251,7 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 	if priorityID, ok := updateRequest["priority_id"].(float64); ok {
 		var exists bool
 		err := db.QueryRow(database.ConvertPlaceholders(
-			"SELECT EXISTS(SELECT 1 FROM ticket_priority WHERE id = $1 AND valid_id = 1)",
+			"SELECT EXISTS(SELECT 1 FROM ticket_priority WHERE id = ? AND valid_id = 1)",
 		), int(priorityID)).Scan(&exists)
 		if err != nil || !exists {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -265,7 +265,7 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 	if typeID, ok := updateRequest["type_id"].(float64); ok {
 		var exists bool
 		err := db.QueryRow(database.ConvertPlaceholders(
-			"SELECT EXISTS(SELECT 1 FROM ticket_type WHERE id = $1 AND valid_id = 1)",
+			"SELECT EXISTS(SELECT 1 FROM ticket_type WHERE id = ? AND valid_id = 1)",
 		), int(typeID)).Scan(&exists)
 		if err != nil || !exists {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -389,7 +389,7 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 			t.change_time,
 			t.change_by
 		FROM ticket t
-		WHERE t.id = $1
+		WHERE t.id = ?
 	`, typeSelect))
 
 	var ticket struct {

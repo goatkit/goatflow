@@ -46,11 +46,11 @@ func handleAdminCustomerUserServices(db *sql.DB) gin.HandlerFunc {
 		`
 		if search != "" {
 			customerQuery += fmt.Sprintf(` AND (
-				cu.login ILIKE '%%%s%%' OR 
-				cu.first_name ILIKE '%%%s%%' OR 
-				cu.last_name ILIKE '%%%s%%' OR 
-				cu.email ILIKE '%%%s%%' OR
-				cc.name ILIKE '%%%s%%'
+				LOWER(cu.login) LIKE LOWER('%%%s%%') OR 
+				LOWER(cu.first_name) LIKE LOWER('%%%s%%') OR 
+				LOWER(cu.last_name) LIKE LOWER('%%%s%%') OR 
+				LOWER(cu.email) LIKE LOWER('%%%s%%') OR
+				LOWER(cc.name) LIKE LOWER('%%%s%%')
 			)`, search, search, search, search, search)
 		}
 		customerQuery += " ORDER BY cu.last_name, cu.first_name LIMIT 100"
@@ -157,7 +157,7 @@ func handleAdminCustomerUserServicesAllocate(db *sql.DB) gin.HandlerFunc {
 		}
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT login, first_name, last_name, email, customer_id
-			FROM customer_user WHERE login = $1
+			FROM customer_user WHERE login = ?
 		`), customerUserLogin).Scan(
 			&customerUser.Login, &customerUser.FirstName, &customerUser.LastName,
 			&customerUser.Email, &customerUser.CustomerID)
@@ -171,7 +171,7 @@ func handleAdminCustomerUserServicesAllocate(db *sql.DB) gin.HandlerFunc {
 			SELECT s.id, s.name, s.comments,
 			       CASE WHEN scu.service_id IS NOT NULL THEN 1 ELSE 0 END as assigned
 			FROM service s
-			LEFT JOIN service_customer_user scu ON s.id = scu.service_id AND scu.customer_user_login = $1
+			LEFT JOIN service_customer_user scu ON s.id = scu.service_id AND scu.customer_user_login = ?
 			WHERE s.valid_id = 1
 			ORDER BY s.name
 		`), customerUserLogin)
@@ -252,7 +252,7 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 		defer func() { _ = tx.Rollback() }()
 
 		// Clear existing assignments
-		deleteQuery := "DELETE FROM service_customer_user WHERE customer_user_login = $1"
+		deleteQuery := "DELETE FROM service_customer_user WHERE customer_user_login = ?"
 		_, err = tx.Exec(database.ConvertPlaceholders(deleteQuery), customerUserLogin)
 		if err != nil {
 			shared.SendToastResponse(c, false, "Failed to clear existing services", "")
@@ -263,7 +263,7 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 		for _, serviceID := range selectedServices {
 			_, err = tx.Exec(database.ConvertPlaceholders(`
 				INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by)
-				VALUES ($1, $2, NOW(), 1)
+				VALUES (?, ?, NOW(), 1)
 			`), customerUserLogin, serviceID)
 			if err != nil {
 				shared.SendToastResponse(c, false, "Failed to assign service", "")
@@ -301,7 +301,7 @@ func handleAdminServiceCustomerUsersAllocate(db *sql.DB) gin.HandlerFunc {
 			Comments sql.NullString
 		}
 		err := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT id, name, comments FROM service WHERE id = $1
+			SELECT id, name, comments FROM service WHERE id = ?
 		`), serviceID).Scan(&service.ID, &service.Name, &service.Comments)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Service not found"})
@@ -315,7 +315,7 @@ func handleAdminServiceCustomerUsersAllocate(db *sql.DB) gin.HandlerFunc {
 			       CASE WHEN scu.customer_user_login IS NOT NULL THEN 1 ELSE 0 END as assigned
 			FROM customer_user cu
 			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
-			LEFT JOIN service_customer_user scu ON cu.login = scu.customer_user_login AND scu.service_id = $1
+			LEFT JOIN service_customer_user scu ON cu.login = scu.customer_user_login AND scu.service_id = ?
 			WHERE cu.valid_id = 1
 			ORDER BY cu.last_name, cu.first_name
 		`), serviceID)
@@ -397,7 +397,7 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 		defer func() { _ = tx.Rollback() }()
 
 		// Clear existing assignments for this service
-		_, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE service_id = $1"), serviceID)
+		_, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE service_id = ?"), serviceID)
 		if err != nil {
 			shared.SendToastResponse(c, false, "Failed to clear existing assignments", "")
 			return
@@ -407,7 +407,7 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 		for _, userLogin := range selectedUsers {
 			_, err = tx.Exec(database.ConvertPlaceholders(`
 				INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by)
-				VALUES ($1, $2, NOW(), 1)
+				VALUES (?, ?, NOW(), 1)
 			`), userLogin, serviceID)
 			if err != nil {
 				shared.SendToastResponse(c, false, "Failed to assign customer user", "")
@@ -533,7 +533,7 @@ func handleAdminDefaultServicesUpdate(db *sql.DB) gin.HandlerFunc {
 		for _, serviceID := range selectedServices {
 			_, err = tx.Exec(database.ConvertPlaceholders(`
 				INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by)
-				VALUES ('<DEFAULT>', $1, NOW(), 1)
+				VALUES ('<DEFAULT>', ?, NOW(), 1)
 			`), serviceID)
 			if err != nil {
 				shared.SendToastResponse(c, false, "Failed to assign default service", "")

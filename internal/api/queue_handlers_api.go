@@ -282,7 +282,7 @@ func handleCreateQueue(c *gin.Context) {
 	var id int64
 	// Check for duplicate queue name
 	var existingID int
-	err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM queue WHERE name = $1"), input.Name).Scan(&existingID)
+	err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM queue WHERE name = ?"), input.Name).Scan(&existingID)
 	if err == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "queue name already exists"})
 		return
@@ -293,7 +293,7 @@ func handleCreateQueue(c *gin.Context) {
         INSERT INTO queue (
             name, group_id, system_address_id, salutation_id, signature_id,
             unlock_timeout, follow_up_id, follow_up_lock, comments, valid_id, create_by, change_by, create_time, change_time
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12, NOW(), NOW())`
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?, NOW(), NOW())`
 
 	result, err := db.Exec(database.ConvertPlaceholders(query),
 		input.Name, input.GroupID, input.SystemAddressID, input.SalutationID, input.SignatureID,
@@ -362,7 +362,7 @@ func handleUpdateQueue(c *gin.Context) {
 	// Check for duplicate queue name (if name is being updated)
 	if input.Name != nil {
 		var existingID int
-		dupeQuery := "SELECT id FROM queue WHERE name = $1 AND id != $2"
+		dupeQuery := "SELECT id FROM queue WHERE name = ? AND id != ?"
 		err := db.QueryRow(database.ConvertPlaceholders(dupeQuery), *input.Name, id).Scan(&existingID)
 		if err == nil {
 			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "queue name already exists"})
@@ -371,7 +371,7 @@ func handleUpdateQueue(c *gin.Context) {
 	}
 
 	// Build update matching test arg order: (change_by, name?, comments?, unlock_timeout?, id)
-	query := `UPDATE queue SET change_by = $1, change_time = CURRENT_TIMESTAMP`
+	query := `UPDATE queue SET change_by = ?, change_time = CURRENT_TIMESTAMP`
 	args := []interface{}{1}
 	argCount := 2
 	resp := gin.H{"id": id}
@@ -433,7 +433,7 @@ func handleDeleteQueue(c *gin.Context) {
 
 	// Protect queues with tickets
 	var cnt int
-	if err := db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket WHERE queue_id = $1`), id).Scan(&cnt); err != nil {
+	if err := db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket WHERE queue_id = ?`), id).Scan(&cnt); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to check queue tickets"})
 		return
 	}
@@ -443,8 +443,9 @@ func handleDeleteQueue(c *gin.Context) {
 	}
 
 	// Soft delete queue - adapter handles placeholder conversion
-	deleteQuery := `UPDATE queue SET valid_id = 2, change_by = $2, change_time = CURRENT_TIMESTAMP WHERE id = $1`
-	result, err := database.GetAdapter().Exec(db, deleteQuery, id, 1)
+	// Args order: change_by, id
+	deleteQuery := `UPDATE queue SET valid_id = 2, change_by = ?, change_time = CURRENT_TIMESTAMP WHERE id = ?`
+	result, err := database.GetAdapter().Exec(db, deleteQuery, 1, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete queue"})
 		return

@@ -92,7 +92,7 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		query := database.ConvertPlaceholders(`
 			SELECT id, pw, valid_id
 			FROM users
-			WHERE login = $1
+			WHERE login = ?
 			AND valid_id = 1`)
 		err = db.QueryRow(query, username).Scan(&dbUserID, &dbPassword, &validID)
 		if err != nil {
@@ -106,8 +106,8 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			query2 := database.ConvertPlaceholders(`
 				SELECT id, pw, valid_id
 				FROM users
-				WHERE login = $1
-				AND pw = $2
+				WHERE login = ?
+				AND pw = ?
 				AND valid_id = 1`)
 			err = db.QueryRow(query2, username, password).Scan(&dbUserID, &dbPassword, &validID)
 
@@ -122,9 +122,9 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 
 				updateQuery := database.ConvertPlaceholders(`
 					UPDATE users
-					SET pw = $1,
+					SET pw = ?,
 					    change_time = CURRENT_TIMESTAMP
-					WHERE id = $2`)
+					WHERE id = ?`)
 				_, _ = db.Exec(updateQuery, hashedPassword, dbUserID) //nolint:errcheck // Best-effort password rehash
 			}
 		}

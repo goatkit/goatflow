@@ -100,51 +100,16 @@ export COMPOSE_CMD
 # Convenience macro to route Go commands through toolbox container
 TOOLBOX_GO := $(MAKE) toolbox-exec ARGS=
 
-# Ensure Go caches exist for toolbox runs
-define ensure_caches
-@mkdir -p .cache .cache/go-build .cache/go-mod >/dev/null 2>&1 || true
-@chmod 775 .cache .cache/go-build .cache/go-mod >/dev/null 2>&1 || true
-endef
-
-# Cache mounting strategy:
-# - Default: use a single shared named volume (gotrs_cache) across all services
-#   for fully containerized caches (no host perms issues)
-# - Optional: bind host .cache directories (developer-visible) by setting CACHE_USE_VOLUMES=0
-CACHE_USE_VOLUMES ?= 1
-ifeq ($(CACHE_USE_VOLUMES),1)
-MOD_CACHE_MOUNT := -v gotrs_cache:/workspace/.cache
-BUILD_CACHE_MOUNT := 
-else
-MOD_CACHE_MOUNT := -v "$$PWD/.cache/go-mod:/workspace/.cache/go-mod$(VZ)"
-BUILD_CACHE_MOUNT := -v "$$PWD/.cache/go-build:/workspace/.cache/go-build$(VZ)"
-endif
-
-# Guard: warn if any .cache entries owned by foreign UID/GID (disabled by default; enable with CACHE_GUARD_DISABLE=0)
-CACHE_GUARD_DISABLE ?= 1
-# Set CACHE_GUARD_ENFORCE=1 to fail the build when foreign-owned cache entries are detected
-CACHE_GUARD_ENFORCE ?= 0
-define cache_guard
-@if [ "$(CACHE_GUARD_DISABLE)" != "1" ] && [ "$(CACHE_USE_VOLUMES)" != "1" ]; then \
-	if find .cache -mindepth 1 -printf '%U:%G\n' 2>/dev/null | grep -qv "^$$(id -u):$$(id -g)$$"; then \
-		 if [ "$(CACHE_GUARD_ENFORCE)" = "1" ]; then \
-			 echo "❌ Foreign-owned entries in .cache detected. Run 'make cache-audit' and explicitly acknowledge: 'make toolbox-fix-cache CONFIRM=YES'."; exit 1; \
-		 else \
-			 echo "⚠  Detected foreign-owned entries in .cache. Run 'make cache-audit' then 'make toolbox-fix-cache CONFIRM=YES' if needed."; \
-		 fi; \
-	fi; \
-fi
-endef
+# Cache mount: always use named Docker volume at /cache (not overlaid on workspace)
+MOD_CACHE_MOUNT := -v gotrs_cache:/cache
 
 # Helper targets for cache volumes
-.PHONY: cache-prune cache-use-volumes
+.PHONY: cache-prune
 cache-prune:
 	@echo "Pruning shared cache volume (gotrs_cache)..."
 	@$(CONTAINER_CMD) volume rm -f gotrs_cache >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) volume rm -f gotrs_go_build_cache gotrs_go_mod_cache gotrs_golangci_cache >/dev/null 2>&1 || true
 	@echo "Done."
-
-cache-use-volumes:
-	@echo "Enabling shared cache volume via environment: export CACHE_USE_VOLUMES=1"
 
 # Common run flags
 VOLUME_PWD := -v "$$(pwd):/workspace"
@@ -210,17 +175,14 @@ help:
 test-legacy: toolbox-build
 	@printf "\n🧪 Running curated Go test suite (make test-legacy) ...\n"
 	@$(MAKE) test-stack-up >/dev/null 2>&1 || true
-	@$(call ensure_caches)
-	@$(call cache_guard)
 	$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD:/workspace" \
 		--network host \
 		$(MOD_CACHE_MOUNT) \
-		$(BUILD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -398,8 +360,8 @@ k8s-secrets:
 # =============================================================================
 # Helm Chart Targets
 # =============================================================================
-# Uses the gotrs_cache Docker volume mounted at /workspace/.cache
-# XDG_CACHE_HOME is already set to /workspace/.cache/xdg in docker-compose.yml
+# Uses the gotrs_cache Docker volume mounted at /cache
+# XDG_CACHE_HOME is already set to /cache/xdg in docker-compose.yml
 
 # Fix cache permissions if any dir is root-owned (runs as root in container to fix ownership)
 # This is a recovery target for volumes that have incorrect permissions from previous runs
@@ -407,7 +369,7 @@ k8s-secrets:
 cache-fix:
 	@printf "\n🔧 Fixing cache permissions in Docker volume...\n"
 	@$(CONTAINER_CMD) run --rm -v gotrs-ce_gotrs_cache:/cache alpine:3.19 \
-		sh -c 'chown -R 1000:1000 /cache && mkdir -p /cache/go-build /cache/go-mod /cache/xdg/helm/repository /cache/xdg/helm/cache /cache/xdg/helm/config /cache/npm /cache/golangci-lint && chown -R 1000:1000 /cache'
+		sh -c 'chown -R 1000:1000 /cache && mkdir -p /cache/go-build /cache/go-mod /cache/xdg/helm/repository /cache/xdg/helm/cache /cache/xdg/helm/config /cache/bun /cache/golangci-lint && chown -R 1000:1000 /cache'
 	@printf "✅ Cache permissions fixed\n"
 
 # Setup helm repos (run once, idempotent)
@@ -458,7 +420,6 @@ helm-package: helm-deps
 # Build toolbox image
 toolbox-build: build-artifacts
 	@printf "\n🔧 Building GOTRS toolbox container...\n"
-	$(call ensure_caches)
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		echo "⚠️  compose not available; falling back to direct docker build"; \
 		command -v docker >/dev/null 2>&1 || (echo "docker not installed" && exit 1); \
@@ -485,7 +446,6 @@ api-call:
 	@if [ -z "$(ENDPOINT)" ]; then echo "❌ ENDPOINT required. Usage: make api-call [METHOD=GET] ENDPOINT=/api/v1/tickets [BODY='{}']"; exit 1; fi
 	@if [ -z "$(METHOD)" ]; then METHOD=GET; fi;
 	@printf "\n🔧 Making API call: $$METHOD $(ENDPOINT)\n";
-	$(call ensure_caches);
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		echo "ERROR: $(COMPOSE_CMD)"; \
 		echo "Please install the required compose tool and try again."; \
@@ -503,7 +463,6 @@ api-call-form:
 	@if [ -z "$(ENDPOINT)" ]; then echo "❌ ENDPOINT required. Usage: make api-call-form [METHOD=PUT] ENDPOINT=/admin/users/1 [DATA='a=b&c=d']"; exit 1; fi
 	@if [ -z "$(METHOD)" ]; then METHOD=PUT; fi;
 	@printf "\n🔧 Making form API call: $$METHOD $(ENDPOINT)\n";
-	$(call ensure_caches);
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		echo "ERROR: $(COMPOSE_CMD)"; \
 		echo "Please install the required compose tool and try again."; \
@@ -521,7 +480,6 @@ http-call:
 	@if [ -z "$(ENDPOINT)" ]; then echo "❌ ENDPOINT required. Usage: make http-call [METHOD=GET] ENDPOINT=/ [BODY='...'] [CONTENT_TYPE='text/html']"; exit 1; fi
 	@if [ -z "$(METHOD)" ]; then METHOD=GET; fi;
 	@printf "\n🔧 Making public HTTP call: $$METHOD $(ENDPOINT)\n";
-	$(call ensure_caches);
 	$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD:/workspace" \
@@ -544,7 +502,6 @@ http-call:
 api-upload:
 	@if [ -z "$(ENDPOINT)" ]; then echo "❌ ENDPOINT required. Usage: make api-upload ENDPOINT=/api/tickets/<tn>/attachments FILE=/path/to/file"; exit 1; fi
 	@if [ -z "$(FILE)" ]; then echo "❌ FILE required. Usage: make api-upload ENDPOINT=/api/tickets/<tn>/attachments FILE=/path/to/file"; exit 1; fi
-	$(call ensure_caches)
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
 		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox bash -lc 'chmod +x scripts/api-upload.sh; BACKEND_URL=$${BACKEND_URL:-http://backend:8080} scripts/api-upload.sh '"$(ENDPOINT)"' '"$(FILE)"''; \
 	else \
@@ -564,15 +521,13 @@ api-upload:
 toolbox-compile:
 	@$(MAKE) toolbox-build
 	@printf "\n🔨 Checking compilation...\n"
-	@$(call ensure_caches)
-	@$(call cache_guard)
 	$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./...'
 
@@ -580,15 +535,13 @@ toolbox-compile:
 toolbox-compile-api:
 	@$(MAKE) toolbox-build
 	@printf "\n🔨 Compiling API and goats packages only...\n"
-	@$(call ensure_caches)
-	@$(call cache_guard)
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go version && go build -buildvcs=false ./internal/api ./cmd/goats'
 
@@ -597,7 +550,6 @@ toolbox-compile-api:
 compile: toolbox-build
 	@printf "🔨 Compiling goats binary...\n"
 	@mkdir -p bin
-	@$(call cache_guard)
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
         -v "$$(pwd):/workspace" \
@@ -626,7 +578,6 @@ toolbox-test-api: toolbox-build
 	@printf "\n🧪 Running internal/api tests in toolbox...\n"
 	@# Enforce static route policy during tests
 	@$(MAKE) generate-route-map validate-routes
-	@$(call ensure_caches)
 	@printf "📡 Starting dependencies (test database, valkey)...\n"
 	@$(MAKE) test-db-up >/dev/null 2>&1 || true
 	@$(COMPOSE_CMD) up -d valkey >/dev/null 2>&1 || true
@@ -635,44 +586,9 @@ toolbox-test-api: toolbox-build
         -v "$$PWD:/workspace" \
 		--network host \
 		$(MOD_CACHE_MOUNT) \
-		$(BUILD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
-		-e APP_ENV=test \
-		-e ENABLE_TEST_ADMIN_ROUTES=1 \
-		-e STORAGE_PATH=/tmp \
-		-e TEMPLATES_DIR=/workspace/templates \
-		-e DB_DRIVER=$(TEST_DB_DRIVER) \
-		-e DB_HOST=$(TEST_DB_HOST) \
-		-e DB_PORT=$(TEST_DB_PORT) \
-		-e DB_NAME=$(TEST_DB_NAME) \
-		-e DB_USER=$(TEST_DB_USER) \
-		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
-		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
-		-e TEST_DB_HOST=$(TEST_DB_HOST) \
-		-e TEST_DB_PORT=$(TEST_DB_PORT) \
-		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
-		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\)'
-
-# Run internal/api tests binding to host-published test DB
-toolbox-test-api-host: toolbox-build
-	@printf "\n🧪 Running internal/api tests (host-network DB) in toolbox...\n"
-	@$(MAKE) generate-route-map validate-routes
-	@$(call ensure_caches)
-	@printf "📡 Starting dependencies (test database, valkey)...\n"
-	@$(MAKE) test-db-up >/dev/null 2>&1 || true
-	@$(COMPOSE_CMD) up -d valkey >/dev/null 2>&1 || true
-	@$(CONTAINER_CMD) run --rm \
-        --security-opt label=disable \
-        -v "$$PWD:/workspace" \
-		--network host \
-		$(MOD_CACHE_MOUNT) \
-		$(BUILD_CACHE_MOUNT) \
-		-w /workspace \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -686,6 +602,43 @@ toolbox-test-api-host: toolbox-build
 		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
 		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e TEST_DB_NAME=$(TEST_DB_NAME) \
+		-e TEST_DB_USER=$(TEST_DB_USER) \
+		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
+		gotrs-toolbox:latest \
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\)'
+
+# Run internal/api tests binding to host-published test DB
+toolbox-test-api-host: toolbox-build
+	@printf "\n🧪 Running internal/api tests (host-network DB) in toolbox...\n"
+	@$(MAKE) generate-route-map validate-routes
+	@printf "📡 Starting dependencies (test database, valkey)...\n"
+	@$(MAKE) test-db-up >/dev/null 2>&1 || true
+	@$(COMPOSE_CMD) up -d valkey >/dev/null 2>&1 || true
+	@$(CONTAINER_CMD) run --rm \
+        --security-opt label=disable \
+        -v "$$PWD:/workspace" \
+		--network host \
+		$(MOD_CACHE_MOUNT) \
+		-w /workspace \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
+		-e APP_ENV=test \
+		-e ENABLE_TEST_ADMIN_ROUTES=1 \
+		-e STORAGE_PATH=/tmp \
+		-e TEMPLATES_DIR=/workspace/templates \
+		-e DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
+		-e DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e DB_NAME=$(TEST_DB_NAME) \
+		-e DB_USER=$(TEST_DB_USER) \
+		-e DB_PASSWORD=$(TEST_DB_PASSWORD) \
+		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
+		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
+		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e TEST_DB_NAME=$(TEST_DB_NAME) \
+		-e TEST_DB_USER=$(TEST_DB_USER) \
 		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
 		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
@@ -697,8 +650,6 @@ toolbox-test:
 	@printf "\n🧪 Running core test suite in toolbox...\n"
 	@# Enforce static route policy during tests
 	@$(MAKE) generate-route-map validate-routes
-	@$(call ensure_caches)
-	@$(call cache_guard)
 	@printf "📡 Starting dependencies (test database, valkey)...\n"
 	@$(MAKE) test-db-up >/dev/null 2>&1 || true
 	@$(COMPOSE_CMD) up -d valkey >/dev/null 2>&1 || true
@@ -707,10 +658,9 @@ toolbox-test:
         -v "$$PWD:/workspace" \
 		--network host \
 		$(MOD_CACHE_MOUNT) \
-		$(BUILD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -724,6 +674,8 @@ toolbox-test:
 		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
 		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e TEST_DB_NAME=$(TEST_DB_NAME) \
+		-e TEST_DB_USER=$(TEST_DB_USER) \
 		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
 		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
@@ -737,12 +689,14 @@ toolbox-test:
 
 .PHONY: openapi-lint
 openapi-lint:
-	@echo "📜 Linting OpenAPI spec with Node 22 (Redocly)..."
+	@echo "📜 Linting OpenAPI spec with Bun (Redocly)..."
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD/api:/spec"$(VZ) \
-		node:22-alpine \
-		sh -lc 'npm -g i @redocly/cli >/dev/null 2>&1 && redocly lint /spec/openapi.yaml'
+		-v gotrs_cache:/cache \
+		-e BUN_INSTALL_CACHE_DIR=/cache/bun \
+		oven/bun:1.1-alpine \
+		sh -lc 'bun add -g @redocly/cli >/dev/null 2>&1 && redocly lint /spec/openapi.yaml'
 
 .PHONY: openapi-bundle
 openapi-bundle:
@@ -750,15 +704,15 @@ openapi-bundle:
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD/api:/spec"$(VZ) \
-		node:22-alpine \
-		sh -lc 'npm -g i @redocly/cli >/dev/null 2>&1 && redocly bundle /spec/openapi.yaml -o /spec/openapi.bundle.yaml'
+		-v gotrs_cache:/cache \
+		-e BUN_INSTALL_CACHE_DIR=/cache/bun \
+		oven/bun:1.1-alpine \
+		sh -lc 'bun add -g @redocly/cli >/dev/null 2>&1 && redocly bundle /spec/openapi.yaml -o /spec/openapi.bundle.yaml'
 
 # Run almost-all tests (excludes heavyweight e2e/integration and unstable lambda tests)
 toolbox-test-all:
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running broad test suite (excluding e2e/integration) in toolbox...\n"
-	@$(call ensure_caches)
-	@$(call cache_guard)
 	@printf "📡 Starting dependencies (mariadb, valkey)...\n"
 	@$(COMPOSE_CMD) up -d mariadb valkey >/dev/null 2>&1 || true
 	@$(CONTAINER_CMD) run --rm \
@@ -766,10 +720,9 @@ toolbox-test-all:
 		-v "$$PWD:/workspace" \
 		--network host \
 		$(MOD_CACHE_MOUNT) \
-		$(BUILD_CACHE_MOUNT) \
 		-w /workspace \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e APP_ENV=test \
 		-e STORAGE_PATH=/tmp \
 		-e TEMPLATES_DIR=/workspace/templates \
@@ -788,12 +741,11 @@ toolbox-test-all:
 test-unit:
 	@echo "🧪 Running unit tests (with test database)..."
 	@$(MAKE) toolbox-build
-	@$(call ensure_caches)
 	@# Ensure test DB is running
 	@$(MAKE) test-db-up >/dev/null 2>&1 || true
 	@$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile toolbox --profile testdb run --rm -T \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e GOFLAGS=-buildvcs=false \
 		toolbox \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -count=1 -buildvcs=false -v ./cmd/goats ./internal/... ./generated/... | tee generated/test-results/unit_stable.log'
@@ -803,7 +755,6 @@ test-e2e:
 	@echo "🎯 Running targeted E2E tests (set TEST=pattern, e.g., TEST=Login|Groups)"
 	@[ -n "$(TEST)" ] || (echo "Usage: make test-e2e TEST=Login|Groups|Queues" && exit 2)
 	@$(MAKE) toolbox-build
-	@$(call ensure_caches)
 	@HEADLESS=${HEADLESS:-true} \
 	 BASE_URL=${BASE_URL:-http://localhost:$(BACKEND_PORT)} \
 	 DEMO_ADMIN_EMAIL=${DEMO_ADMIN_EMAIL:-} \
@@ -813,8 +764,8 @@ test-e2e:
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e GOFLAGS=-buildvcs=false \
 		-e HEADLESS \
 		-e BASE_URL \
@@ -828,7 +779,6 @@ test-e2e:
 toolbox-test-integration:
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running integration tests (requires DB) in toolbox...\n"
-	@$(call ensure_caches)
 	@printf "📡 Starting test stack (mariadb-test, valkey-test)...\n"
 	@$(MAKE) test-stack-up >/dev/null 2>&1 || true
 	$(CONTAINER_CMD) run --rm \
@@ -837,8 +787,8 @@ toolbox-test-integration:
 		--network host \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e GOFLAGS=-buildvcs=false \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
@@ -869,7 +819,6 @@ toolbox-test-integration:
 toolbox-test-email-integration:
 	@$(MAKE) toolbox-build
 	@printf "\n📧 Running smtp4dev email integrations (requires DB + smtp4dev) in toolbox...\n"
-	@$(call ensure_caches)
 	@printf "📡 Starting dependencies (postgres, valkey, smtp4dev)...\n"
 	@$(COMPOSE_CMD) up -d postgres valkey smtp4dev >/dev/null 2>&1 || true
 	$(CONTAINER_CMD) run --rm \
@@ -878,8 +827,8 @@ toolbox-test-email-integration:
 		--network host \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e GOFLAGS=-buildvcs=false \
 		-e APP_ENV=test \
 		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
@@ -899,17 +848,14 @@ toolbox-test-email-integration:
 toolbox-test-run:
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running specific test: $(TEST)\n"
-	@$(call ensure_caches)
-	@$(call cache_guard)
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
 		$(MOD_CACHE_MOUNT) \
-		$(BUILD_CACHE_MOUNT) \
 		-w /workspace \
 		--network host \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e DB_HOST=$(DB_HOST) -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=gotrs_test -e DB_USER=gotrs_test -e DB_PASSWORD=gotrs_test_password \
 		-e VALKEY_HOST=$(VALKEY_HOST) -e VALKEY_PORT=$(VALKEY_PORT) \
@@ -923,14 +869,13 @@ toolbox-test-run:
 toolbox-mod-tidy:
 	@$(MAKE) toolbox-build
 	@printf "\n🧹 Running go mod tidy in toolbox...\n"
-	@$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go mod tidy && go mod download'
 
@@ -938,7 +883,6 @@ toolbox-mod-tidy:
 toolbox-gofmt:
 	@$(MAKE) toolbox-build
 	@printf "\n🧹 Running gofmt in toolbox...\n"
-	@$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD:/workspace" \
@@ -953,18 +897,15 @@ toolbox-test-pkg:
 	@[ -n "$(PKG)" ] || (echo "Usage: make toolbox-test-pkg PKG=./internal/api [TEST=^TestName]" && exit 2)
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running package tests in toolbox: PKG=$(PKG) TEST=$(TEST)\n"
-	@$(call ensure_caches)
-	@$(call cache_guard)
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD:/workspace" \
 		$(MOD_CACHE_MOUNT) \
-		$(BUILD_CACHE_MOUNT) \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		--network host \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -978,6 +919,9 @@ toolbox-test-pkg:
 		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
 		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e TEST_DB_NAME=$(TEST_DB_NAME) \
+		-e TEST_DB_USER=$(TEST_DB_USER) \
+		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
 		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; if [ -n "$(TEST)" ]; then go test -v -run "$(TEST)" $(PKG); else go test -v $(PKG); fi'
@@ -988,18 +932,15 @@ toolbox-test-files:
 	@[ -n "$(FILES)" ] || (echo "Usage: make toolbox-test-files FILES=\"path/to/a_test.go path/to/b_test.go\" [TEST=^Pattern]" && exit 2)
 	@$(MAKE) toolbox-build
 	@printf "\n🧪 Running test files in toolbox: FILES=$(FILES) TEST=$(TEST)\n"
-	@$(call ensure_caches)
-	@$(call cache_guard)
 	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD:/workspace" \
 		$(MOD_CACHE_MOUNT) \
-		$(BUILD_CACHE_MOUNT) \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		--network host \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e APP_ENV=test \
 		-e ENABLE_TEST_ADMIN_ROUTES=1 \
 		-e STORAGE_PATH=/tmp \
@@ -1013,6 +954,9 @@ toolbox-test-files:
 		-e TEST_DB_DRIVER=$(TEST_DB_DRIVER) \
 		-e TEST_DB_HOST=$(TOOLBOX_TEST_DB_HOST) \
 		-e TEST_DB_PORT=$(TOOLBOX_TEST_DB_PORT) \
+		-e TEST_DB_NAME=$(TEST_DB_NAME) \
+		-e TEST_DB_USER=$(TEST_DB_USER) \
+		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
 		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; if [ -n "$(TEST)" ]; then go test -v -run "$(TEST)" $(FILES); else go test -v $(FILES); fi'
@@ -1021,14 +965,13 @@ toolbox-test-files:
 toolbox-staticcheck:
 	@$(MAKE) toolbox-build
 	@printf "\n🔎 Running staticcheck in toolbox...\n"
-	@$(call ensure_caches)
 	$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e GOFLAGS=-buildvcs=false \
 		gotrs-toolbox:latest \
 		bash -lc 'set -e; export PATH=/usr/local/go/bin:/usr/local/bin:$$PATH; export GOFLAGS="-buildvcs=false"; go version; \
@@ -1050,15 +993,14 @@ toolbox-staticcheck:
 toolbox-run-file:
 	@$(MAKE) toolbox-build
 	@printf "\n🚀 Running Go file: $(FILE)\n"
-	@$(call ensure_caches)
 	@$(CONTAINER_CMD) run --rm \
         --security-opt label=disable \
         -v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
 		--network host \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		-e DB_HOST=postgres -e DB_PORT=$(DB_PORT) \
 		-e DB_NAME=$(DB_NAME) -e DB_USER=$(DB_USER) \
 		-e PGPASSWORD=$(DB_PASSWORD) \
@@ -1078,11 +1020,13 @@ toolbox-lint:
 	@printf "🔍 Running linters...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
+		-v gotrs_cache:/cache \
 		-w /workspace \
 		-u "$$(id -u):$$(id -g)" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
-		-e GOPATH=/workspace/.cache/gopath \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
+		-e GOPATH=/cache/gopath \
+		-e GOLANGCI_LINT_CACHE=/cache/golangci-lint \
 		gotrs-toolbox:latest \
 		golangci-lint run ./...
 
@@ -1113,6 +1057,8 @@ trivy-scan:
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v gotrs_cache:/cache \
+		-e TRIVY_CACHE_DIR=/cache/trivy \
 		aquasec/trivy:latest \
 		fs --severity CRITICAL,HIGH,MEDIUM /workspace
 
@@ -1121,11 +1067,15 @@ trivy-images:
 	@printf "🔍 Scanning backend image...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v gotrs_cache:/cache \
+		-e TRIVY_CACHE_DIR=/cache/trivy \
 		aquasec/trivy:latest \
 		image gotrs-backend:latest
 	@printf "🔍 Scanning frontend image...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v gotrs_cache:/cache \
+		-e TRIVY_CACHE_DIR=/cache/trivy \
 		aquasec/trivy:latest \
 		image gotrs-frontend:latest
 
@@ -1519,7 +1469,6 @@ api-call-test:
 	@if [ -z "$(ENDPOINT)" ]; then echo "❌ ENDPOINT required. Usage: make api-call-test [METHOD=GET] ENDPOINT=/api/v1/tickets [BODY='{}']"; exit 1; fi
 	@if [ -z "$(METHOD)" ]; then METHOD=GET; fi; \
 	printf "\n🔧 Making test API call: $$METHOD $(ENDPOINT)\n"; \
-	$(call ensure_caches); \
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		echo "ERROR: $(COMPOSE_CMD)"; \
 		echo "Please install the required compose tool and try again."; \
@@ -1537,7 +1486,6 @@ api-call-form-test:
 	@if [ -z "$(ENDPOINT)" ]; then echo "❌ ENDPOINT required. Usage: make api-call-form-test [METHOD=PUT] ENDPOINT=/admin/users/1 [DATA='a=b&c=d']"; exit 1; fi
 	@if [ -z "$(METHOD)" ]; then METHOD=PUT; fi; \
 	printf "\n🔧 Making test form API call: $$METHOD $(ENDPOINT)\n"; \
-	$(call ensure_caches); \
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
 		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm -u "$$
 
@@ -2005,8 +1953,8 @@ babelfish: toolbox-build
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && mkdir -p /workspace/tmp/bin && go build -buildvcs=false -o /workspace/tmp/bin/gotrs-babelfish cmd/gotrs-babelfish/main.go'
 	@printf "✨ gotrs-babelfish built at tmp/bin/gotrs-babelfish\n"
@@ -2017,8 +1965,8 @@ babelfish-run: toolbox-build
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/gotrs-babelfish/main.go $(ARGS)'
 
@@ -2028,8 +1976,8 @@ babelfish-coverage: toolbox-build
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/gotrs-babelfish/main.go -action=coverage'
 
@@ -2039,8 +1987,8 @@ babelfish-validate: toolbox-build
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/gotrs-babelfish/main.go -action=validate -lang=$(LANG) $(BF_FLAGS)'
 
@@ -2050,8 +1998,8 @@ babelfish-missing: toolbox-build
 		-v "$$PWD:/workspace" \
 		-w /workspace \
 		-u "$$UID:$$GID" \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH && go run -buildvcs=false cmd/gotrs-babelfish/main.go -action=missing -lang=$(LANG) $(BF_FLAGS)'
 
@@ -2061,8 +2009,6 @@ test-short:
 test-coverage: toolbox-build
 	@printf "Running test coverage analysis...\n"
 	@printf "Using test database: $${DB_NAME:-gotrs}_test\n"
-	@$(call ensure_caches)
-	@$(call cache_guard)
 	@printf "📡 Ensuring database/cache services are available...\n"
 	@$(COMPOSE_CMD) up -d mariadb valkey >/dev/null 2>&1 || true
 	@mkdir -p generated
@@ -2163,8 +2109,6 @@ test-db-down:
 test-coverage-html: toolbox-build
 	@printf "Running test coverage (HTML) analysis...\n"
 	@printf "Using test database: $${DB_NAME:-gotrs}_test\n"
-	@$(call ensure_caches)
-	@$(call cache_guard)
 	@printf "📡 Ensuring database/cache services are available...\n"
 	@$(COMPOSE_CMD) up -d mariadb valkey >/dev/null 2>&1 || true
 	@mkdir -p generated
@@ -2184,7 +2128,7 @@ test-coverage-html: toolbox-build
 	@printf "Coverage report generated: generated/coverage.html\n"
 # Frontend test commands
 test-frontend:
-	@printf "Running frontend tests...\n"	$(COMPOSE_CMD) exec frontend npm test
+	@printf "Running frontend tests...\n"	$(COMPOSE_CMD) exec frontend bun test
 
 test-contracts: toolbox-build
 	@printf "🔍 Running API contract tests...\n"
@@ -2210,10 +2154,9 @@ playwright-build:
 test-e2e-playwright-go:
 	@printf "\n🎭 Running Go Playwright-tagged e2e tests in dedicated container...\n"
 	$(CONTAINER_CMD) build -f Dockerfile.playwright-go -t gotrs-playwright-go:latest . >/dev/null
-	@if [ "$(CACHE_USE_VOLUMES)" = "1" ]; then \
-		HOST_UID=$$(id -u); HOST_GID=$$(id -g); \
-		$(CONTAINER_CMD) run --rm -u 0:0 -e HOST_UID=$$HOST_UID -e HOST_GID=$$HOST_GID -v gotrs_cache:/workspace/.cache alpine sh -c "mkdir -p /workspace/.cache/xdg /workspace/.cache/go-build /workspace/.cache/go-mod /workspace/.cache/ms-playwright && chown -R $$HOST_UID:$$HOST_GID /workspace/.cache"; \
-	fi
+	@# Ensure cache volume directories exist with correct ownership
+	@HOST_UID=$$(id -u); HOST_GID=$$(id -g); \
+	$(CONTAINER_CMD) run --rm -u 0:0 -e HOST_UID=$$HOST_UID -e HOST_GID=$$HOST_GID -v gotrs_cache:/cache alpine sh -c "mkdir -p /cache/xdg /cache/go-build /cache/go-mod /cache/ms-playwright && chown -R $$HOST_UID:$$HOST_GID /cache"
 	# Prefer explicit BASE_URL provided on invocation; ignore .env for this target
 	@if [ -n "$(BASE_URL)" ]; then echo "[playwright-go] (explicit) BASE_URL=$(BASE_URL)"; else echo "[playwright-go] (default) BASE_URL=$${BASE_URL:-http://localhost:8080}"; fi
 	# Allow overriding network (e.g. PLAYWRIGHT_NETWORK=gotrs-ce_default) to access compose service DNS
@@ -2222,7 +2165,7 @@ test-e2e-playwright-go:
 		--security-opt label=disable \
 		-u "$$(id -u):$$(id -g)" \
 		-v "$$PWD:/workspace" \
-		-v gotrs_cache:/workspace/.cache \
+		-v gotrs_cache:/cache \
 		-w /workspace \
 		$$( [ -n "$(PLAYWRIGHT_NETWORK)" ] && printf -- "--network $(PLAYWRIGHT_NETWORK)" || printf -- "--network host" ) \
 		-e HOME=/workspace \
@@ -2232,10 +2175,10 @@ test-e2e-playwright-go:
 		-e TEST_PASSWORD=$(TEST_PASSWORD) \
 		-e DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
 		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
-		-e PLAYWRIGHT_BROWSERS_PATH=/workspace/.cache/ms-playwright \
-		-e XDG_CACHE_HOME=/workspace/.cache/xdg \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e PLAYWRIGHT_BROWSERS_PATH=/cache/ms-playwright \
+		-e XDG_CACHE_HOME=/cache/xdg \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		 gotrs-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e/playwright $${ARGS}"
 
 .PHONY: test-e2e-go
@@ -2248,7 +2191,7 @@ test-e2e-go:
 		--security-opt label=disable \
 		-u "$$UID:$$GID" \
 		-v "$$PWD:/workspace" \
-		-v gotrs_cache:/workspace/.cache \
+		-v gotrs_cache:/cache \
 		-w /workspace \
 		--network host \
 		-e HOME=/workspace \
@@ -2258,10 +2201,10 @@ test-e2e-go:
 		-e TEST_PASSWORD=$(TEST_PASSWORD) \
 		-e DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
 		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
-		-e PLAYWRIGHT_BROWSERS_PATH=/workspace/.cache/ms-playwright \
-		-e XDG_CACHE_HOME=/workspace/.cache/xdg \
-		-e GOCACHE=/workspace/.cache/go-build \
-		-e GOMODCACHE=/workspace/.cache/go-mod \
+		-e PLAYWRIGHT_BROWSERS_PATH=/cache/ms-playwright \
+		-e XDG_CACHE_HOME=/cache/xdg \
+		-e GOCACHE=/cache/go-build \
+		-e GOMODCACHE=/cache/go-mod \
 		 gotrs-playwright-go:latest bash -lc "go test -tags e2e -v ./tests/e2e -run \"$${TEST:-CustomerTicket}\""
 
 PLAYWRIGHT_RESULTS_DIR ?= /tmp/playwright-results
@@ -2281,7 +2224,7 @@ test-acceptance-playwright: css-deps-stable playwright-build
 		-e PLAYWRIGHT_RESULTS_DIR=$(PLAYWRIGHT_RESULTS_DIR) \
 		-e PLAYWRIGHT_OUTPUT_DIR=$(PLAYWRIGHT_OUTPUT_DIR) \
 		-e PLAYWRIGHT_HTML_REPORT_DIR=$(PLAYWRIGHT_HTML_REPORT_DIR) \
-		playwright bash -lc "mkdir -p \"$${PLAYWRIGHT_RESULTS_DIR}\" \"$${PLAYWRIGHT_OUTPUT_DIR}\" \"$${PLAYWRIGHT_HTML_REPORT_DIR}\" && npx playwright test $$([ -n "$(TEST)" ] && printf %s "$(TEST)" || printf %s "tests/acceptance/ticket-new-queue.spec.js") --project=$${PLAYWRIGHT_PROJECT:-chromium} --reporter=list"
+		playwright bash -lc "mkdir -p \"$${PLAYWRIGHT_RESULTS_DIR}\" \"$${PLAYWRIGHT_OUTPUT_DIR}\" \"$${PLAYWRIGHT_HTML_REPORT_DIR}\" && bunx playwright test $$([ -n "$(TEST)" ] && printf %s "$(TEST)" || printf %s "tests/acceptance/ticket-new-queue.spec.js") --project=$${PLAYWRIGHT_PROJECT:-chromium} --reporter=list"
 
 # Run E2E tests
 test-e2e-playwright: playwright-build
@@ -2365,6 +2308,8 @@ scan-vulnerabilities: toolbox-build
 	@printf "🔍 Scanning container/config for vulnerabilities...\n"
 	@$(CONTAINER_CMD) run --rm \
 		-v "$$(pwd):/workspace" \
+		-v gotrs_cache:/cache \
+		-e TRIVY_CACHE_DIR=/cache/trivy \
 		-w /workspace \
 		aquasec/trivy:latest \
 		fs --scanners vuln,secret,misconfig . \
@@ -2380,8 +2325,8 @@ security-scan: scan-secrets scan-vulnerabilities
 build-artifacts:
 	@printf "🎯 Building backend artifacts image...\n"
 	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) --target artifacts -t gotrs-artifacts:latest .
-# Build for production (includes CSS, JS, Helm chart and container build)
-build: build-artifacts pre-build frontend-build helm-package
+# Build for production (Dockerfile handles CSS/JS via frontend stage)
+build: build-artifacts pre-build helm-package
 	@printf "🔨 Building backend container...\n" \
 		&& $(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) -f Dockerfile -t gotrs:latest .
 	@printf "🧹 Cleaning host binaries...\n"
@@ -2660,24 +2605,24 @@ test-containerized:
 	@bash scripts/test-containerized.sh
 
 # CSS Build Commands
-.PHONY: npm-updates css-deps css-build css-watch browserslist-update browserslist-update-one
+.PHONY: bun-updates css-deps css-build css-watch browserslist-update browserslist-update-one
 
 BROWSERSLIST_DIRS ?= . web sdk/typescript
-BROWSERSLIST_LOCKFILES ?= package-lock.json yarn.lock pnpm-lock.yaml
+BROWSERSLIST_LOCKFILES ?= package-lock.json bun.lockb
 
 browserslist-update-one:
 	@if [ -z "$(DIR)" ]; then \
 		echo "DIR is required"; \
 		exit 1; \
 	fi
-	@if ! [ -f "$(DIR)/package-lock.json" ] && ! [ -f "$(DIR)/yarn.lock" ] && ! [ -f "$(DIR)/pnpm-lock.yaml" ]; then \
+	@if ! [ -f "$(DIR)/package-lock.json" ] && ! [ -f "$(DIR)/bun.lockb" ]; then \
 		printf "ℹ️  Skipping %s (no lockfile)\n" "$(DIR)"; \
 	else \
 		printf "🌐 Updating Browserslist data (%s)…\n" "$(DIR)"; \
 		if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-			COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace/$(DIR) && export NPM_CONFIG_CACHE=/tmp/npm-cache && mkdir -p $$NPM_CONFIG_CACHE && npx -y update-browserslist-db@latest'; \
+			COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace/$(DIR) && bunx update-browserslist-db@latest'; \
 		else \
-			$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace/$(DIR) && export NPM_CONFIG_CACHE=/tmp/npm-cache && mkdir -p $$NPM_CONFIG_CACHE && npx -y update-browserslist-db@latest'; \
+			$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace/$(DIR) && bunx update-browserslist-db@latest'; \
 		fi; \
 		printf "✅ Browserslist data refreshed (%s)\n" "$(DIR)"; \
 	fi
@@ -2695,39 +2640,41 @@ browserslist-update:
 		done; \
 	fi
 
-npm-updates:
-	@printf "📦 Updating NPM dependencies...\n"
+bun-updates:
+	@printf "📦 Updating Bun dependencies...\n"
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && npx npm-check-updates -u && npm install'; \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && bunx npm-check-updates -u && bun install'; \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && npx npm-check-updates -u && npm install'; \
+		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && bunx npm-check-updates -u && bun install'; \
 	fi
-	@printf "✅ NPM dependencies updated\n"
+	@printf "✅ Bun dependencies updated\n"
 # Install CSS build dependencies (in container with user permissions)
 css-deps:
 	@printf "📦 Installing CSS build dependencies...\n"
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && export NPM_CONFIG_CACHE=/tmp/npm-cache && mkdir -p $$NPM_CONFIG_CACHE && npm install && touch .frontend_deps_installed || true'; \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && bun install && touch /cache/.frontend_deps_installed || true'; \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && export NPM_CONFIG_CACHE=/tmp/npm-cache && mkdir -p $$NPM_CONFIG_CACHE && npm install && touch .frontend_deps_installed || true'; \
+		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && bun install && touch /cache/.frontend_deps_installed || true'; \
 	fi
 	@printf "✅ CSS dependencies installed\n"
 # Install CSS dependencies without upgrading (preserves pinned versions)
 css-deps-stable:
 	@printf "📦 Installing CSS build dependencies (stable versions)...\n"
+	@# Pre-create node_modules with correct ownership before Docker mounts volume
+	@[ -d node_modules ] || mkdir -p node_modules
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && if [ ! -d node_modules/tailwindcss ]; then echo "🧹 Cleaning existing node_modules (fresh install)"; rm -rf node_modules 2>/dev/null || true; fi; export NPM_CONFIG_CACHE=/tmp/npm-cache && mkdir -p $$NPM_CONFIG_CACHE && cp package-lock.json /tmp/lock.json 2>/dev/null || true && npm install --no-audit --no-fund --no-save && touch .frontend_deps_installed || true'; \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && if [ ! -d node_modules/tailwindcss ]; then echo "🧹 Cleaning existing node_modules (fresh install)"; rm -rf node_modules 2>/dev/null || true; fi; bun install && touch /cache/.frontend_deps_installed || true'; \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && if [ ! -d node_modules/tailwindcss ]; then echo "🧹 Cleaning existing node_modules (fresh install)"; rm -rf node_modules 2>/dev/null || true; fi; export NPM_CONFIG_CACHE=/tmp/npm-cache && mkdir -p $$NPM_CONFIG_CACHE && cp package-lock.json /tmp/lock.json 2>/dev/null || true && npm install --no-audit --no-fund --no-save && touch .frontend_deps_installed || true'; \
+		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && if [ ! -d node_modules/tailwindcss ]; then echo "🧹 Cleaning existing node_modules (fresh install)"; rm -rf node_modules 2>/dev/null || true; fi; bun install && touch /cache/.frontend_deps_installed || true'; \
 	fi
 	@printf "✅ CSS dependencies installed\n"
 # Build production CSS (in container with user permissions) - ensure deps first
 css-build: css-deps-stable
 	@printf "🎨 Building production CSS...\n"
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && npm run build-css'; \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && bun run build-css'; \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && npm run build-css'; \
+		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && bun run build-css'; \
 	fi
 	@printf "✅ CSS built to static/css/output.css\n"
 js-build: css-deps-stable
@@ -2747,9 +2694,9 @@ js-build: css-deps-stable
 	fi
 	@# Run build (produces static/js/tiptap.min.js via esbuild --outfile)
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && npm run build-tiptap'; \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && bun run build-tiptap'; \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && npm run build-tiptap'; \
+		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && bun run build-tiptap'; \
 	fi
 	@# Validate artifact exists and non-empty; show size
 	@if [ ! -s static/js/tiptap.min.js ]; then \
@@ -2768,9 +2715,13 @@ frontend-build: css-build js-build
 
 .PHONY: frontend-clean-cache
 frontend-clean-cache:
-	@printf "🧹 Removing node_modules directory...\n"
+	@printf "🧹 Removing node_modules and frontend marker...\n"
 	@rm -rf node_modules 2>/dev/null || true
-	@rm -f .frontend_deps_installed 2>/dev/null || true
+	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'rm -f /cache/.frontend_deps_installed 2>/dev/null || true'; \
+	else \
+		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'rm -f /cache/.frontend_deps_installed 2>/dev/null || true'; \
+	fi
 	@printf "✅ node_modules removed. Next build will reinstall dependencies.\n"
 
 .PHONY: frontend-reset-deps
@@ -2786,7 +2737,9 @@ frontend-perms-fix:
 # Watch and rebuild CSS on changes (in container with user permissions)
 css-watch: css-deps
 	@printf "👁️  Watching for CSS changes...\n"
-	@$(CONTAINER_CMD) run --rm -it --security-opt label=disable -u $(shell id -u):$(shell id -g) -v $(PWD):/app -w /app node:20-alpine npm run watch-css
+	@$(CONTAINER_CMD) run --rm -it --security-opt label=disable -u $(shell id -u):$(shell id -g) \
+		-v $(PWD):/app -v gotrs_cache:/cache -e BUN_INSTALL_CACHE_DIR=/cache/bun \
+		-w /app oven/bun:1.1-alpine bun run watch-css
 
 #########################################
 # TEST TARGETS

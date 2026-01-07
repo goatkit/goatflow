@@ -31,7 +31,7 @@ func HandleGetQueueStatsAPI(c *gin.Context) {
 
 	// Verify queue exists
 	var exists int
-	row := db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue WHERE id = $1`), queueID)
+	row := db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue WHERE id = ?`), queueID)
 	_ = row.Scan(&exists) //nolint:errcheck // Defaults to 0
 	if exists != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Queue not found"})
@@ -48,7 +48,7 @@ func HandleGetQueueStatsAPI(c *gin.Context) {
 			COUNT(CASE WHEN ticket_state_id IN (2,3) THEN 1 END) as closed_count,
 			COUNT(CASE WHEN ticket_state_id IN (5,6) THEN 1 END) as pending_count
 		FROM ticket
-		WHERE queue_id = $1
+		WHERE queue_id = ?
 	`)
 	if err := db.QueryRow(statsQuery, queueID).Scan(&total, &openCount, &closedCount, &pendingCount); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to compute stats"})

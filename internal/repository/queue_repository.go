@@ -25,7 +25,7 @@ func (r *QueueRepository) GetByID(id uint) (*models.Queue, error) {
 		       follow_up_id, follow_up_lock, unlock_timeout, group_id,
 		       comments, valid_id, create_time, create_by, change_time, change_by
 		FROM queue
-		WHERE id = $1`
+		WHERE id = ?`
 
 	// Convert placeholders for MySQL compatibility
 	query = database.ConvertPlaceholders(query)
@@ -79,7 +79,7 @@ func (r *QueueRepository) GetByName(name string) (*models.Queue, error) {
 		       follow_up_id, follow_up_lock, unlock_timeout, group_id,
 		       comments, valid_id, create_time, create_by, change_time, change_by
 		FROM queue
-		WHERE name = $1 AND valid_id = 1`
+		WHERE name = ? AND valid_id = 1`
 
 	// Convert placeholders for MySQL compatibility
 	query = database.ConvertPlaceholders(query)
@@ -207,7 +207,7 @@ func (r *QueueRepository) Create(queue *models.Queue) error {
 			follow_up_id, follow_up_lock, unlock_timeout, group_id,
 			comments, valid_id, create_time, create_by, change_time, change_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 		) RETURNING id`
 
 	var systemAddressID, salutationID, signatureID sql.NullInt32
@@ -251,19 +251,19 @@ func (r *QueueRepository) Create(queue *models.Queue) error {
 func (r *QueueRepository) Update(queue *models.Queue) error {
 	query := `
 		UPDATE queue SET
-			name = $2,
-			system_address_id = $3,
-			salutation_id = $4,
-			signature_id = $5,
-			follow_up_id = $6,
-			follow_up_lock = $7,
-			unlock_timeout = $8,
-			group_id = $9,
-			comments = $10,
-			valid_id = $11,
-			change_time = $12,
-			change_by = $13
-		WHERE id = $1`
+			name = ?,
+			system_address_id = ?,
+			salutation_id = ?,
+			signature_id = ?,
+			follow_up_id = ?,
+			follow_up_lock = ?,
+			unlock_timeout = ?,
+			group_id = ?,
+			comments = ?,
+			valid_id = ?,
+			change_time = ?,
+			change_by = ?
+		WHERE id = ?`
 
 	var systemAddressID, salutationID, signatureID sql.NullInt32
 	var comments sql.NullString

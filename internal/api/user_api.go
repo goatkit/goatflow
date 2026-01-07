@@ -56,7 +56,7 @@ func HandleUserMeAPI(c *gin.Context) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, login, email, first_name, last_name, valid_id, create_time, change_time
 		FROM users
-		WHERE id = $1
+		WHERE id = ?
 	`)
 
 	err = db.QueryRow(query, userID).Scan(
@@ -96,7 +96,7 @@ func HandleUserMeAPI(c *gin.Context) {
 		SELECT g.id, g.name
 		FROM groups g
 		JOIN group_user gu ON g.id = gu.group_id
-		WHERE gu.user_id = $1 AND g.valid_id = 1
+		WHERE gu.user_id = ? AND g.valid_id = 1
 	`)
 
 	rows, err := db.Query(groupQuery, userID)

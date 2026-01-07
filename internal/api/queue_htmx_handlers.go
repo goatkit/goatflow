@@ -394,7 +394,7 @@ func handleQueueDetail(c *gin.Context) {
 		var stateRow struct {
 			Name string
 		}
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), t.TicketStateID).Scan(&stateRow.Name)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = ?"), t.TicketStateID).Scan(&stateRow.Name)
 		if err == nil {
 			stateName = stateRow.Name
 		}
@@ -404,7 +404,7 @@ func handleQueueDetail(c *gin.Context) {
 		var priorityRow struct {
 			Name string
 		}
-		query := database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = $1")
+		query := database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = ?")
 		err = db.QueryRow(query, t.TicketPriorityID).Scan(&priorityRow.Name)
 		if err == nil {
 			priorityName = priorityRow.Name
@@ -563,7 +563,7 @@ func loadQueueMetaContext(db *sql.DB, queueID uint) (gin.H, error) {
 		FROM queue q
 		LEFT JOIN groups g ON q.group_id = g.id
 		LEFT JOIN system_address sa ON q.system_address_id = sa.id
-		WHERE q.id = $1`
+		WHERE q.id = ?`
 	if err := db.QueryRow(database.ConvertPlaceholders(query), queueID).Scan(
 		&row.ID,
 		&row.Name,

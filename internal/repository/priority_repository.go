@@ -24,7 +24,7 @@ func (r *PriorityRepository) GetByID(id uint) (*models.TicketPriority, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
 		FROM ticket_priority
-		WHERE id = $1`)
+		WHERE id = ?`)
 
 	var priority models.TicketPriority
 	err := r.db.QueryRow(query, id).Scan(
@@ -87,7 +87,7 @@ func (r *PriorityRepository) GetByName(name string) (*models.TicketPriority, err
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, create_time, create_by, change_time, change_by
 		FROM ticket_priority
-		WHERE name = $1 AND valid_id = 1`)
+		WHERE name = ? AND valid_id = 1`)
 
 	var priority models.TicketPriority
 	err := r.db.QueryRow(query, name).Scan(

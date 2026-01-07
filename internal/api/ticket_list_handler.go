@@ -268,7 +268,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 
 	// Add search condition
 	if search != "" {
-		query += fmt.Sprintf(" AND (t.title ILIKE $%d OR t.tn = $%d)", argIndex, argIndex+1)
+		query += fmt.Sprintf(" AND (LOWER(t.title) LIKE LOWER($%d) OR t.tn = $%d)", argIndex, argIndex+1)
 		args = append(args, "%"+search+"%", search)
 		argIndex += 2
 	}
@@ -386,7 +386,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 		if includeArticleCount {
 			var count int
 			countErr := db.QueryRow(database.ConvertPlaceholders(
-				"SELECT COUNT(*) FROM article WHERE ticket_id = $1",
+				"SELECT COUNT(*) FROM article WHERE ticket_id = ?",
 			), ticket.ID).Scan(&count)
 			if countErr == nil {
 				ticketMap["article_count"] = count
@@ -405,7 +405,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 				SELECT adm.a_subject, a.create_time
 				FROM article a
 				LEFT JOIN article_data_mime adm ON a.id = adm.article_id
-				WHERE a.ticket_id = $1
+				WHERE a.ticket_id = ?
 				ORDER BY a.create_time DESC
 				LIMIT 1
 			`), ticket.ID).Scan(&lastArticle.Subject, &lastArticle.CreatedAt)

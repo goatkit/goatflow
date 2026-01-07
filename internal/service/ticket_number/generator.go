@@ -38,7 +38,7 @@ func getNextCounter(db *sql.DB, counterUID string) (int64, error) {
 	// Try to get current counter value with lock (SELECT FOR UPDATE)
 	err = tx.QueryRow(database.ConvertPlaceholders(`
 		SELECT counter FROM ticket_number_counter 
-		WHERE counter_uid = $1
+		WHERE counter_uid = ?
 		FOR UPDATE
 	`), counterUID).Scan(&counter)
 
@@ -53,7 +53,7 @@ func getNextCounter(db *sql.DB, counterUID string) (int64, error) {
 		} else {
 			_, err = tx.Exec(`
 				INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
-				VALUES ($1, $2, NOW())
+				VALUES (?, ?, NOW())
 				ON CONFLICT (counter_uid) DO NOTHING
 			`, 1, counterUID)
 		}
@@ -64,7 +64,7 @@ func getNextCounter(db *sql.DB, counterUID string) (int64, error) {
 
 		err = tx.QueryRow(database.ConvertPlaceholders(`
 			SELECT counter FROM ticket_number_counter 
-			WHERE counter_uid = $1
+			WHERE counter_uid = ?
 			FOR UPDATE
 		`), counterUID).Scan(&counter)
 
@@ -79,8 +79,8 @@ func getNextCounter(db *sql.DB, counterUID string) (int64, error) {
 	counter++
 	_, err = tx.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket_number_counter 
-		SET counter = $1 
-		WHERE counter_uid = $2
+		SET counter = ? 
+		WHERE counter_uid = ?
 	`), counter, counterUID)
 
 	if err != nil {
@@ -108,7 +108,7 @@ func resetCounter(db *sql.DB, counterUID string, value int64) error {
 
 	_, err := db.Exec(`
 		INSERT INTO ticket_number_counter (counter, counter_uid, create_time)
-		VALUES ($1, $2, NOW())
+		VALUES (?, ?, NOW())
 		ON CONFLICT (counter_uid) DO UPDATE 
 		SET counter = EXCLUDED.counter, create_time = NOW()
 	`, value, counterUID)

@@ -26,8 +26,7 @@ import (
 func TestPasswordHashingModes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	db := getTestDB(t)
-	defer db.Close()
+	db := getTestDB(t) // Test uses db for helper functions
 
 	testCases := []struct {
 		name       string
@@ -187,8 +186,7 @@ func testAgentPasswordReset(t *testing.T, db *sql.DB, hashType string, verify fu
 func TestCustomerUserPasswordHashFormat(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	db := getTestDB(t)
-	defer db.Close()
+	getTestDB(t) // Initialize test database
 
 	t.Run("SHA256 produces correct format", func(t *testing.T) {
 		originalHashType := os.Getenv("PASSWORD_HASH_TYPE")
@@ -275,8 +273,7 @@ func TestPasswordVerificationCrossCompatibility(t *testing.T) {
 func TestAgentPasswordAlwaysBcrypt(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	db := getTestDB(t)
-	defer db.Close()
+	db := getTestDB(t) // Test uses db for queries
 
 	// Even with SHA256 mode, agent passwords should use bcrypt
 	originalHashType := os.Getenv("PASSWORD_HASH_TYPE")

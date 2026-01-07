@@ -60,7 +60,7 @@ func HandleUpdateArticleAPI(c *gin.Context) {
 	var count int
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT 1 FROM article
-		WHERE id = $1 AND ticket_id = $2
+		WHERE id = ? AND ticket_id = ?
 	`)
 	_ = db.QueryRow(checkQuery, articleID, ticketID).Scan(&count) //nolint:errcheck // Defaults to 0
 	if count != 1 {
@@ -71,8 +71,8 @@ func HandleUpdateArticleAPI(c *gin.Context) {
 	// Update article
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE article 
-		SET subject = $1, body = $2, change_time = NOW(), change_by = $3
-		WHERE id = $4 AND ticket_id = $5
+		SET subject = ?, body = ?, change_time = NOW(), change_by = ?
+		WHERE id = ? AND ticket_id = ?
 	`)
 
 	result, err := db.Exec(updateQuery, req.Subject, req.Body, userID, articleID, ticketID)
@@ -90,8 +90,8 @@ func HandleUpdateArticleAPI(c *gin.Context) {
 	// Update ticket change time
 	updateTicketQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
-		SET change_time = NOW(), change_by = $1
-		WHERE id = $2
+		SET change_time = NOW(), change_by = ?
+		WHERE id = ?
 	`)
 	// Argument order already matches placeholders left-to-right for MySQL
 	if _, err := db.Exec(updateTicketQuery, userID, ticketID); err != nil {

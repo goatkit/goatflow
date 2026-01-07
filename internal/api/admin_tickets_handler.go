@@ -66,7 +66,7 @@ func HandleAdminTickets(c *gin.Context) {
 
 	if searchQuery != "" {
 		argCount++
-		query += fmt.Sprintf(" AND (t.tn ILIKE $%d OR t.title ILIKE $%d)", argCount, argCount)
+		query += fmt.Sprintf(" AND (LOWER(t.tn) LIKE LOWER($%d) OR LOWER(t.title) LIKE LOWER($%d))", argCount, argCount)
 		searchStr := "%" + searchQuery + "%"
 		args = append(args, searchStr)
 	}
@@ -94,7 +94,7 @@ func HandleAdminTickets(c *gin.Context) {
 	}
 	if searchQuery != "" {
 		countArgCount++
-		countQuery += fmt.Sprintf(" AND (t.tn ILIKE $%d OR t.title ILIKE $%d)", countArgCount, countArgCount)
+		countQuery += fmt.Sprintf(" AND (LOWER(t.tn) LIKE LOWER($%d) OR LOWER(t.title) LIKE LOWER($%d))", countArgCount, countArgCount)
 		countArgs = append(countArgs, "%"+searchQuery+"%")
 	}
 

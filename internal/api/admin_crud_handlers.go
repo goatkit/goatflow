@@ -59,7 +59,7 @@ func HandleAdminUsersCreate(c *gin.Context) {
 
 	// Check for existing user with same login
 	var exists bool
-	existsQuery := "SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)"
+	existsQuery := "SELECT EXISTS(SELECT 1 FROM users WHERE login = ?)"
 	if err := db.QueryRow(database.ConvertPlaceholders(existsQuery), login).Scan(&exists); err == nil && exists {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User already exists"})
 		return
@@ -105,10 +105,10 @@ func HandleAdminUsersCreate(c *gin.Context) {
 			groupID, convErr := strconv.Atoi(idStr)
 			if convErr != nil {
 				// Cleanup on error - log but don't fail on cleanup errors
-				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), user.ID); err != nil {
+				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ?"), user.ID); err != nil {
 					log.Printf("cleanup error: %v", err)
 				}
-				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = $1"), user.ID); err != nil {
+				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), user.ID); err != nil {
 					log.Printf("cleanup error: %v", err)
 				}
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID"})
@@ -116,10 +116,10 @@ func HandleAdminUsersCreate(c *gin.Context) {
 			}
 			if err := groupRepo.AddUserToGroup(user.ID, uint(groupID)); err != nil {
 				// Cleanup on error - log but don't fail on cleanup errors
-				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), user.ID); err != nil {
+				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ?"), user.ID); err != nil {
 					log.Printf("cleanup error: %v", err)
 				}
-				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = $1"), user.ID); err != nil {
+				if _, err := db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), user.ID); err != nil {
 					log.Printf("cleanup error: %v", err)
 				}
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign groups"})
@@ -182,7 +182,7 @@ func HandleAdminUsersDelete(c *gin.Context) {
 	}
 
 	// Soft delete - set valid_id = 2
-	_, err = db.Exec(database.ConvertPlaceholders("UPDATE users SET valid_id = 2 WHERE id = $1"), id)
+	_, err = db.Exec(database.ConvertPlaceholders("UPDATE users SET valid_id = 2 WHERE id = ?"), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
@@ -317,7 +317,7 @@ func HandleAdminGroupsDelete(c *gin.Context) {
 	}
 
 	// Soft delete - set valid_id = 2
-	_, err = db.Exec(database.ConvertPlaceholders("UPDATE groups SET valid_id = 2 WHERE id = $1"), id)
+	_, err = db.Exec(database.ConvertPlaceholders("UPDATE groups SET valid_id = 2 WHERE id = ?"), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete group"})
 		return
@@ -345,7 +345,7 @@ func HandleAdminGroupsUsers(c *gin.Context) {
 		SELECT u.id, u.login, u.first_name, u.last_name, u.login as email
 		FROM users u
 		JOIN group_user gu ON u.id = gu.user_id
-		WHERE gu.group_id = $1 AND u.valid_id = 1
+		WHERE gu.group_id = ? AND u.valid_id = 1
 		ORDER BY u.login
 	`), id)
 	if err != nil {
@@ -411,7 +411,7 @@ func HandleAdminGroupsAddUser(c *gin.Context) {
 	// Add user to group with default 'rw' permission (OTRS schema)
 	_, err = db.Exec(database.ConvertPlaceholders(`
 		INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, 'rw', NOW(), 1, NOW(), 1)
+		VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)
 	`), req.UserID, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add user to group"})
@@ -446,7 +446,7 @@ func HandleAdminGroupsRemoveUser(c *gin.Context) {
 	db := dbService.GetDB()
 
 	// Remove user from group
-	_, err = db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1 AND group_id = $2"), uid, gid)
+	_, err = db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ? AND group_id = ?"), uid, gid)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove user from group"})
 		return

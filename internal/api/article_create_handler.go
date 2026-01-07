@@ -106,7 +106,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 	// Check if ticket exists and get current data
 	var customerUserID sql.NullString
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT customer_user_id FROM ticket WHERE id = $1",
+		"SELECT customer_user_id FROM ticket WHERE id = ?",
 	), ticketID).Scan(&customerUserID)
 
 	if err == sql.ErrNoRows {
@@ -238,7 +238,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 	// Validate sender_type_id exists
 	if req.ArticleSenderTypeID != 0 {
 		var senderTypeExists bool
-		senderTypeQuery := "SELECT EXISTS(SELECT 1 FROM article_sender_type WHERE id = $1)"
+		senderTypeQuery := "SELECT EXISTS(SELECT 1 FROM article_sender_type WHERE id = ?)"
 		err = db.QueryRow(database.ConvertPlaceholders(senderTypeQuery), req.ArticleSenderTypeID).Scan(&senderTypeExists)
 		if err != nil || !senderTypeExists {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -252,7 +252,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 	// Validate communication_channel_id exists
 	if req.CommunicationChannelID != 0 {
 		var channelExists bool
-		channelQuery := "SELECT EXISTS(SELECT 1 FROM communication_channel WHERE id = $1)"
+		channelQuery := "SELECT EXISTS(SELECT 1 FROM communication_channel WHERE id = ?)"
 		err = db.QueryRow(database.ConvertPlaceholders(channelQuery), req.CommunicationChannelID).Scan(&channelExists)
 		if err != nil || !channelExists {
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -293,7 +293,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 			change_time,
 			change_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8
+			?, ?, ?, ?, ?, ?, ?, ?
 		) RETURNING id`)
 
 	adapter := database.GetAdapter()
@@ -337,7 +337,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 			change_time,
 			change_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 		)`)
 
 	_, err = tx.Exec(
@@ -378,7 +378,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 				create_by,
 				change_time,
 				change_by
-			) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			) VALUES (?, ?, ?, ?, ?, ?, ?)
 		`), ticketID, articleID, req.TimeUnit, now, userID, now, userID)
 		if err != nil {
 			// Log error but don't fail the whole operation
@@ -389,7 +389,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
 	// Update ticket change_time
 	// Use left-to-right placeholders so MySQL '?' binding matches arg order
 	_, err = tx.Exec(database.ConvertPlaceholders(
-		"UPDATE ticket SET change_time = $1, change_by = $2 WHERE id = $3",
+		"UPDATE ticket SET change_time = ?, change_by = ? WHERE id = ?",
 	), now, userID, ticketID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -449,7 +449,7 @@ func HandleCreateArticleAPI(c *gin.Context) {
             a.create_by
         FROM article a
         LEFT JOIN article_data_mime m ON m.article_id = a.id
-        WHERE a.id = $1
+        WHERE a.id = ?
     `), articleID).Scan(
 		&article.ID,
 		&article.TicketID,

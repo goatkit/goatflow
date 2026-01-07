@@ -246,7 +246,7 @@ func handleAdminSLACreate(c *gin.Context) {
 
 	// Check for duplicate name
 	var exists bool
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM sla WHERE name = $1)"), input.Name).Scan(&exists)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM sla WHERE name = ?)"), input.Name).Scan(&exists)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -287,7 +287,7 @@ func handleAdminSLACreate(c *gin.Context) {
 			comments, valid_id, 
 			create_time, create_by, change_time, change_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
 			CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1
 		) RETURNING id
 	`)
@@ -492,7 +492,7 @@ func handleAdminSLADelete(c *gin.Context) {
 
 	// Check if SLA has associated tickets
 	var ticketCount int
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE sla_id = $1"), id).Scan(&ticketCount)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE sla_id = ?"), id).Scan(&ticketCount)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -505,7 +505,7 @@ func handleAdminSLADelete(c *gin.Context) {
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE sla 
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
-		WHERE id = $1
+		WHERE id = ?
 	`), id)
 
 	if err != nil {

@@ -24,7 +24,7 @@ func (s *UserPreferencesService) GetPreference(userID int, key string) (string, 
 	query := `
 		SELECT preferences_value 
 		FROM user_preferences 
-		WHERE user_id = $1 AND preferences_key = $2
+		WHERE user_id = ? AND preferences_key = ?
 	`
 
 	err := s.db.QueryRow(query, userID, key).Scan(&value)
@@ -43,8 +43,8 @@ func (s *UserPreferencesService) SetPreference(userID int, key string, value str
 	// First, try to update existing preference
 	updateQuery := `
 		UPDATE user_preferences 
-		SET preferences_value = $3
-		WHERE user_id = $1 AND preferences_key = $2
+		SET preferences_value = ?
+		WHERE user_id = ? AND preferences_key = ?
 	`
 
 	result, err := s.db.Exec(updateQuery, userID, key, []byte(value))
@@ -62,7 +62,7 @@ func (s *UserPreferencesService) SetPreference(userID int, key string, value str
 	if rowsAffected == 0 {
 		insertQuery := `
 			INSERT INTO user_preferences (user_id, preferences_key, preferences_value)
-			VALUES ($1, $2, $3)
+			VALUES (?, ?, ?)
 		`
 
 		_, err = s.db.Exec(insertQuery, userID, key, []byte(value))
@@ -76,7 +76,7 @@ func (s *UserPreferencesService) SetPreference(userID int, key string, value str
 
 // DeletePreference removes a user preference.
 func (s *UserPreferencesService) DeletePreference(userID int, key string) error {
-	query := `DELETE FROM user_preferences WHERE user_id = $1 AND preferences_key = $2`
+	query := `DELETE FROM user_preferences WHERE user_id = ? AND preferences_key = ?`
 
 	_, err := s.db.Exec(query, userID, key)
 	if err != nil {
@@ -130,7 +130,7 @@ func (s *UserPreferencesService) GetAllPreferences(userID int) (map[string]strin
 	query := `
 		SELECT preferences_key, preferences_value 
 		FROM user_preferences 
-		WHERE user_id = $1
+		WHERE user_id = ?
 	`
 
 	rows, err := s.db.Query(query, userID)

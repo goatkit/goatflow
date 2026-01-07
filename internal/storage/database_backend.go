@@ -44,7 +44,7 @@ func (d *DatabaseBackend) Store(ctx context.Context, articleID int64, content *A
                 article_id, a_subject, a_body, a_content_type,
                 incoming_time, create_time, create_by, change_time, change_by
             ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9
+                ?, ?, ?, ?, ?, ?, ?, ?, ?
             )`)
 
 		var mimeID int64
@@ -53,8 +53,8 @@ func (d *DatabaseBackend) Store(ctx context.Context, articleID int64, content *A
 			// Try update existing record first
 			_, _ = tx.ExecContext(ctx, database.ConvertPlaceholders(`
                 UPDATE article_data_mime
-                SET a_body = $2, a_content_type = $3, change_time = $4, change_by = $5
-                WHERE article_id = $1
+                SET a_body = ?, a_content_type = ?, change_time = ?, change_by = ?
+                WHERE article_id = ?
             `),
 				articleID,
 				content.Content,
@@ -124,7 +124,7 @@ func (d *DatabaseBackend) Store(ctx context.Context, articleID int64, content *A
             content, content_id, content_alternative, disposition,
             create_time, create_by, change_time, change_by
         ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )`)
 
 	var attachmentID int64
@@ -202,7 +202,7 @@ func (d *DatabaseBackend) Retrieve(ctx context.Context, ref *StorageReference) (
 				a_body, a_content_type, a_subject, 
 				create_time, create_by
 			FROM article_data_mime
-			WHERE article_id = $1`
+			WHERE article_id = ?`
 
 		var subject sql.NullString
 		err := d.db.QueryRowContext(ctx, query, ref.ArticleID).Scan(
@@ -236,7 +236,7 @@ func (d *DatabaseBackend) Retrieve(ctx context.Context, ref *StorageReference) (
 			content_id, content_alternative, disposition,
 			create_time, create_by
 		FROM article_data_mime_attachment
-		WHERE article_id = $1 AND filename = $2`
+		WHERE article_id = ? AND filename = ?`
 
 	var contentID, contentAlt, disposition sql.NullString
 	var contentSize string
@@ -286,14 +286,14 @@ func (d *DatabaseBackend) Delete(ctx context.Context, ref *StorageReference) err
 	// Check if this is article body or attachment
 	if ref.FileName == "body" || (len(ref.Location) > 17 && ref.Location[:17] == "article_data_mime") {
 		// Delete from article_data_mime
-		_, err = tx.ExecContext(ctx, "DELETE FROM article_data_mime WHERE article_id = $1", ref.ArticleID)
+		_, err = tx.ExecContext(ctx, "DELETE FROM article_data_mime WHERE article_id = ?", ref.ArticleID)
 		if err != nil {
 			return fmt.Errorf("failed to delete article body: %w", err)
 		}
 	} else {
 		// Delete attachment
 		_, err = tx.ExecContext(ctx,
-			"DELETE FROM article_data_mime_attachment WHERE article_id = $1 AND filename = $2",
+			"DELETE FROM article_data_mime_attachment WHERE article_id = ? AND filename = ?",
 			ref.ArticleID, ref.FileName)
 		if err != nil {
 			return fmt.Errorf("failed to delete attachment: %w", err)
@@ -308,12 +308,12 @@ func (d *DatabaseBackend) Exists(ctx context.Context, ref *StorageReference) (bo
 	var exists bool
 
 	if ref.FileName == "body" {
-		query := "SELECT EXISTS(SELECT 1 FROM article_data_mime WHERE article_id = $1)"
+		query := "SELECT EXISTS(SELECT 1 FROM article_data_mime WHERE article_id = ?)"
 		err := d.db.QueryRowContext(ctx, query, ref.ArticleID).Scan(&exists)
 		return exists, err
 	}
 
-	query := "SELECT EXISTS(SELECT 1 FROM article_data_mime_attachment WHERE article_id = $1 AND filename = $2)"
+	query := "SELECT EXISTS(SELECT 1 FROM article_data_mime_attachment WHERE article_id = ? AND filename = ?)"
 	err := d.db.QueryRowContext(ctx, query, ref.ArticleID, ref.FileName).Scan(&exists)
 	return exists, err
 }
@@ -325,7 +325,7 @@ func (d *DatabaseBackend) List(ctx context.Context, articleID int64) ([]*Storage
 	// Check for article body
 	var hasMime bool
 	err := d.db.QueryRowContext(ctx,
-		"SELECT EXISTS(SELECT 1 FROM article_data_mime WHERE article_id = $1)",
+		"SELECT EXISTS(SELECT 1 FROM article_data_mime WHERE article_id = ?)",
 		articleID).Scan(&hasMime)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check article body: %w", err)
@@ -338,7 +338,7 @@ func (d *DatabaseBackend) List(ctx context.Context, articleID int64) ([]*Storage
 				id, a_content_type, octet_length(a_body) as size,
 				create_time
 			FROM article_data_mime
-			WHERE article_id = $1`
+			WHERE article_id = ?`
 
 		var mimeID int64
 		var contentType string
@@ -368,7 +368,7 @@ func (d *DatabaseBackend) List(ctx context.Context, articleID int64) ([]*Storage
 			id, filename, content_type, content_size::bigint,
 			create_time
 		FROM article_data_mime_attachment
-		WHERE article_id = $1
+		WHERE article_id = ?
 		ORDER BY id`
 
 	rows, err := d.db.QueryContext(ctx, query, articleID)

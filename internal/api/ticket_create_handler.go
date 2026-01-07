@@ -220,7 +220,7 @@ func HandleCreateTicketAPI(c *gin.Context) {
 
 			var articleID sql.NullInt64
 			if err := db.QueryRow(database.ConvertPlaceholders(`
-				SELECT id FROM article WHERE ticket_id = $1 ORDER BY id DESC LIMIT 1
+				SELECT id FROM article WHERE ticket_id = ? ORDER BY id DESC LIMIT 1
 			`), ticketID).Scan(&articleID); err != nil {
 				log.Printf("Failed to lookup initial article for ticket %d: %v", ticketID, err)
 			}
@@ -243,9 +243,9 @@ func HandleCreateTicketAPI(c *gin.Context) {
 				if messageID != "" && articleID.Valid {
 					if _, err := db.Exec(database.ConvertPlaceholders(`
 						UPDATE article_data_mime
-						SET a_message_id = $1, a_in_reply_to = $2, a_references = $3,
-						    change_time = CURRENT_TIMESTAMP, change_by = $4
-						WHERE article_id = $5
+						SET a_message_id = ?, a_in_reply_to = ?, a_references = ?,
+						    change_time = CURRENT_TIMESTAMP, change_by = ?
+						WHERE article_id = ?
 					`), messageID, inReplyTo, references, userID, articleID.Int64); err != nil {
 						log.Printf("Failed to store threading headers for article %d: %v", articleID.Int64, err)
 					}

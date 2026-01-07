@@ -68,7 +68,7 @@ func HandleGetArticleAPI(c *gin.Context) {
 			from_email, to_email, cc, subject, body,
 			create_time, create_by, change_time, change_by
 		FROM article
-		WHERE id = $1 AND ticket_id = $2
+		WHERE id = ? AND ticket_id = ?
 	`)
 
 	err = db.QueryRow(query, articleID, ticketID).Scan(
@@ -106,7 +106,7 @@ func HandleGetArticleAPI(c *gin.Context) {
 		attachQuery := database.ConvertPlaceholders(`
 			SELECT id, filename, content_type, content_size
 			FROM article_attachment
-			WHERE article_id = $1
+			WHERE article_id = ?
 		`)
 
 		rows, err := db.Query(attachQuery, articleID)

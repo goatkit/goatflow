@@ -134,7 +134,7 @@ func ensurePortalDefault(db *sql.DB, targetName string, def portalKeyDef, userID
 
 	var id int
 	err := db.QueryRow(database.ConvertPlaceholders(`
-		SELECT id FROM sysconfig_default WHERE name = $1 LIMIT 1
+		SELECT id FROM sysconfig_default WHERE name = ? LIMIT 1
 	`), targetName).Scan(&id)
 	if err == nil {
 		return nil
@@ -177,11 +177,11 @@ func ensurePortalDefault(db *sql.DB, targetName string, def portalKeyDef, userID
 			exclusive_lock_guid, exclusive_lock_user_id, exclusive_lock_expiry_time,
 			create_time, create_by, change_time, change_by
 		) VALUES (
-			$1, $2, 'Frontend::Customer::Portal', 0, 0, 0, 1,
+			?, ?, 'Frontend::Customer::Portal', 0, 0, 0, 1,
 			0, 1, 1, NULL,
-			$3, $4, 'CustomerPortal.xml', $5, 0,
+			?, ?, 'CustomerPortal.xml', ?, 0,
 			'', NULL, NULL,
-			CURRENT_TIMESTAMP, $6, CURRENT_TIMESTAMP, $6
+			CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?
 		)
 		ON CONFLICT (name) DO UPDATE SET
 			description = EXCLUDED.description,
@@ -310,7 +310,7 @@ func sysconfigValue(db *sql.DB, name string) (string, bool) {
 	err := db.QueryRow(database.ConvertPlaceholders(`
 		SELECT effective_value
 		  FROM sysconfig_modified
-		 WHERE name = $1 AND is_valid = 1
+		 WHERE name = ? AND is_valid = 1
 	  ORDER BY change_time DESC
 		 LIMIT 1
 	`), name).Scan(&value)
@@ -328,7 +328,7 @@ func sysconfigValue(db *sql.DB, name string) (string, bool) {
 	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT effective_value
 		  FROM sysconfig_default
-		 WHERE name = $1 AND is_valid = 1
+		 WHERE name = ? AND is_valid = 1
 		 LIMIT 1
 	`), name).Scan(&value)
 	if err == nil && value.Valid {
@@ -351,7 +351,7 @@ func upsertSysconfigValue(db *sql.DB, name, value string, userID int) error {
 
 	var defaultID int
 	err := db.QueryRow(database.ConvertPlaceholders(`
-		SELECT id FROM sysconfig_default WHERE name = $1 AND is_valid = 1 LIMIT 1
+		SELECT id FROM sysconfig_default WHERE name = ? AND is_valid = 1 LIMIT 1
 	`), name).Scan(&defaultID)
 	if err != nil {
 		return fmt.Errorf("sysconfig default missing for %s: %w", name, err)
@@ -360,14 +360,14 @@ func upsertSysconfigValue(db *sql.DB, name, value string, userID int) error {
 	// Try update existing override
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE sysconfig_modified
-		   SET effective_value = $1,
+		   SET effective_value = ?,
 		       is_valid = 1,
 		       user_modification_active = 1,
 		       is_dirty = 0,
 		       reset_to_default = 0,
-		       change_by = $2,
+		       change_by = ?,
 		       change_time = CURRENT_TIMESTAMP
-		 WHERE name = $3
+		 WHERE name = ?
 	`), value, userID, name)
 	if err != nil {
 		return err
@@ -383,7 +383,7 @@ func upsertSysconfigValue(db *sql.DB, name, value string, userID int) error {
 			sysconfig_default_id, name, user_id, is_valid, user_modification_active,
 			effective_value, is_dirty, reset_to_default, create_time, create_by, change_time, change_by
 		)
-		VALUES ($1, $2, NULL, 1, 1, $3, 0, 0, CURRENT_TIMESTAMP, $4, CURRENT_TIMESTAMP, $5)
+		VALUES (?, ?, NULL, 1, 1, ?, 0, 0, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 	`), defaultID, name, value, userID, userID)
 	return err
 }

@@ -68,7 +68,7 @@ func HandleCloseTicketAPI(c *gin.Context) {
 	var currentStateID int
 	var title string
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT ticket_state_id, title FROM ticket WHERE id = $1",
+		"SELECT ticket_state_id, title FROM ticket WHERE id = ?",
 	), ticketID).Scan(&currentStateID, &title)
 
 	if err != nil {
@@ -119,10 +119,10 @@ func HandleCloseTicketAPI(c *gin.Context) {
 	// Update ticket state
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
-		SET ticket_state_id = $1,
+		SET ticket_state_id = ?,
 		    change_time = NOW(),
-		    change_by = $2
-		WHERE id = $3
+		    change_by = ?
+		WHERE id = ?
 	`)
 
 	_, err = tx.Exec(updateQuery, newStateID, userID, ticketID)
@@ -148,7 +148,7 @@ func HandleCloseTicketAPI(c *gin.Context) {
 				change_time,
 				change_by
 			) VALUES (
-				$1, 1, 1, 1, 0, NOW(), $2, NOW(), $3
+				?, 1, 1, 1, 0, NOW(), ?, NOW(), ?
 			)
 		`)
 
@@ -175,8 +175,8 @@ func HandleCloseTicketAPI(c *gin.Context) {
 					change_time,
 					change_by
 				) VALUES (
-					$1, $2, $3, 'text/plain', 
-					$4, NOW(), $5, NOW(), $6
+					?, ?, ?, 'text/plain', 
+					?, NOW(), ?, NOW(), ?
 				)
 			`)
 
@@ -264,7 +264,7 @@ func HandleReopenTicketAPI(c *gin.Context) {
 	var currentStateID int
 	var title string
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT ticket_state_id, title FROM ticket WHERE id = $1",
+		"SELECT ticket_state_id, title FROM ticket WHERE id = ?",
 	), ticketID).Scan(&currentStateID, &title)
 
 	if err != nil {
@@ -308,8 +308,8 @@ func HandleReopenTicketAPI(c *gin.Context) {
 		SET ticket_state_id = 4,
 		    archive_flag = 0,
 		    change_time = NOW(),
-		    change_by = $1
-		WHERE id = $2
+		    change_by = ?
+		WHERE id = ?
 	`)
 
 	_, err = tx.Exec(updateQuery, userID, ticketID)
@@ -334,7 +334,7 @@ func HandleReopenTicketAPI(c *gin.Context) {
 			change_time,
 			change_by
 		) VALUES (
-			$1, 1, 1, 1, 0, NOW(), $2, NOW(), $3
+			?, 1, 1, 1, 0, NOW(), ?, NOW(), ?
 		)
 	`)
 
@@ -355,8 +355,8 @@ func HandleReopenTicketAPI(c *gin.Context) {
 				change_time,
 				change_by
 			) VALUES (
-				$1, 'Ticket Reopened', $2, 'text/plain', 
-				$3, NOW(), $4, NOW(), $5
+				?, 'Ticket Reopened', ?, 'text/plain', 
+				?, NOW(), ?, NOW(), ?
 			)
 		`)
 
@@ -439,7 +439,7 @@ func HandleAssignTicketAPI(c *gin.Context) {
 	var currentResponsibleID sql.NullInt32
 	var title string
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT responsible_user_id, title FROM ticket WHERE id = $1",
+		"SELECT responsible_user_id, title FROM ticket WHERE id = ?",
 	), ticketID).Scan(&currentResponsibleID, &title)
 
 	if err != nil {
@@ -460,7 +460,7 @@ func HandleAssignTicketAPI(c *gin.Context) {
 	// Check if the user to assign to exists
 	var assigneeLogin string
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT login FROM users WHERE id = $1 AND valid_id = 1",
+		"SELECT login FROM users WHERE id = ? AND valid_id = 1",
 	), assignRequest.AssignedTo).Scan(&assigneeLogin)
 
 	if err != nil {
@@ -492,10 +492,10 @@ func HandleAssignTicketAPI(c *gin.Context) {
 	// Update ticket with new responsible user
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
-		SET responsible_user_id = $1,
+		SET responsible_user_id = ?,
 		    change_time = NOW(),
-		    change_by = $2
-		WHERE id = $3
+		    change_by = ?
+		WHERE id = ?
 	`)
 
 	_, err = tx.Exec(updateQuery, assignRequest.AssignedTo, userID, ticketID)
@@ -521,7 +521,7 @@ func HandleAssignTicketAPI(c *gin.Context) {
 				change_time,
 				change_by
 			) VALUES (
-				$1, 1, 1, 0, 0, NOW(), $2, NOW(), $3
+				?, 1, 1, 0, 0, NOW(), ?, NOW(), ?
 			)
 		`)
 
@@ -533,7 +533,7 @@ func HandleAssignTicketAPI(c *gin.Context) {
 			var previousAssignee string
 			if currentResponsibleID.Valid {
 				_ = db.QueryRow(database.ConvertPlaceholders( //nolint:errcheck // Defaults to empty
-					"SELECT login FROM users WHERE id = $1",
+					"SELECT login FROM users WHERE id = ?",
 				), currentResponsibleID.Int32).Scan(&previousAssignee)
 			}
 
@@ -561,8 +561,8 @@ func HandleAssignTicketAPI(c *gin.Context) {
 					change_time,
 					change_by
 				) VALUES (
-					$1, 'Ticket Assignment', $2, 'text/plain', 
-					$3, NOW(), $4, NOW(), $5
+					?, 'Ticket Assignment', ?, 'text/plain', 
+					?, NOW(), ?, NOW(), ?
 				)
 			`)
 

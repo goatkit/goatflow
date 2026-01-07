@@ -462,7 +462,7 @@ func handleCustomerSearch(c *gin.Context) {
 	}
 
 	// Search for customers by login, email, first name, or last name
-	// Using ILIKE for case-insensitive search and supporting wildcard *
+	// Using LOWER() LIKE LOWER() for portable case-insensitive search; supporting wildcard *
 	searchTerm := strings.ReplaceAll(query, "*", "%")
 	if !strings.Contains(searchTerm, "%") {
 		searchTerm = "%" + searchTerm + "%"
@@ -472,11 +472,11 @@ func handleCustomerSearch(c *gin.Context) {
 		SELECT id, login, email, first_name, last_name, customer_id
 		FROM customer_user
 		WHERE valid_id = 1
-		  AND (login ILIKE $1
-		       OR email ILIKE $1
-		       OR first_name ILIKE $1
-		       OR last_name ILIKE $1
-		       OR CONCAT(first_name, ' ', last_name) ILIKE $1)
+		  AND (LOWER(login) LIKE LOWER(?)
+		       OR LOWER(email) LIKE LOWER(?)
+		       OR LOWER(first_name) LIKE LOWER(?)
+		       OR LOWER(last_name) LIKE LOWER(?)
+		       OR LOWER(CONCAT(first_name, ' ', last_name)) LIKE LOWER(?))
 		LIMIT 10`),
 		searchTerm)
 

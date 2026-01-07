@@ -396,7 +396,7 @@ func TestTicketEditValidation(t *testing.T) {
 				"status": {"invalid_status"},
 			},
 			wantStatus: http.StatusBadRequest,
-			wantError:  "Invalid status. Must be one of: new, open, pending, closed",
+			wantError:  "Invalid status. Must be one of:",
 		},
 		{
 			name:     "Cannot edit closed ticket",

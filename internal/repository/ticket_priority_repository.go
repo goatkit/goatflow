@@ -24,7 +24,7 @@ func (r *TicketPriorityRepository) GetByID(id uint) (*models.TicketPriority, err
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, color, create_time, create_by, change_time, change_by
 		FROM ticket_priority
-		WHERE id = $1`)
+		WHERE id = ?`)
 
 	var priority models.TicketPriority
 	err := r.db.QueryRow(query, id).Scan(
@@ -50,7 +50,7 @@ func (r *TicketPriorityRepository) GetByName(name string) (*models.TicketPriorit
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, color, create_time, create_by, change_time, change_by
 		FROM ticket_priority
-		WHERE name = $1 AND valid_id = 1`)
+		WHERE name = ? AND valid_id = 1`)
 
 	var priority models.TicketPriority
 	err := r.db.QueryRow(query, name).Scan(
@@ -124,7 +124,7 @@ func (r *TicketPriorityRepository) Create(priority *models.TicketPriority) error
 		INSERT INTO ticket_priority (
 			name, valid_id, color, create_time, create_by, change_time, change_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7
+			?, ?, ?, ?, ?, ?, ?
 		) RETURNING id`)
 
 	err := r.db.QueryRow(
@@ -149,12 +149,12 @@ func (r *TicketPriorityRepository) Update(priority *models.TicketPriority) error
 
 	query := database.ConvertPlaceholders(`
 		UPDATE ticket_priority SET
-			name = $2,
-			valid_id = $3,
-			color = $4,
-			change_time = $5,
-			change_by = $6
-		WHERE id = $1`)
+			name = ?,
+			valid_id = ?,
+			color = ?,
+			change_time = ?,
+			change_by = ?
+		WHERE id = ?`)
 
 	result, err := r.db.Exec(
 		query,

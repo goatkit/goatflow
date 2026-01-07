@@ -313,15 +313,15 @@ func (f *FilesystemBackend) storeReference(ctx context.Context, ref *StorageRefe
         INSERT INTO article_storage_references (
             article_id, backend, location, content_type,
             file_name, file_size, checksum, created_time
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
 	if database.IsMySQL() {
 		// Try update first
 		_, _ = f.db.ExecContext(ctx, database.ConvertPlaceholders(`
             UPDATE article_storage_references
-            SET location = $4, checksum = $7, accessed_time = NOW()
-            WHERE article_id = $1 AND file_name = $5 AND backend = $2
+            SET location = ?, checksum = ?, accessed_time = NOW()
+            WHERE article_id = ? AND file_name = ? AND backend = ?
         `),
 			ref.ArticleID, ref.Backend, ref.Location, ref.Location, ref.FileName, ref.FileSize, ref.Checksum,
 		)
@@ -368,7 +368,7 @@ func (f *FilesystemBackend) getReferences(ctx context.Context, articleID int64) 
 			id, article_id, backend, location, content_type,
 			file_name, file_size, checksum, created_time, accessed_time
 		FROM article_storage_references
-		WHERE article_id = $1 AND backend = 'FS'
+		WHERE article_id = ? AND backend = 'FS'
 		ORDER BY id`
 
 	rows, err := f.db.QueryContext(ctx, query, articleID)
@@ -474,7 +474,7 @@ func (f *FilesystemBackend) deleteReference(ctx context.Context, ref *StorageRef
 
 	query := `
 		DELETE FROM article_storage_references
-		WHERE article_id = $1 AND backend = 'FS' AND location = $2`
+		WHERE article_id = ? AND backend = 'FS' AND location = ?`
 
 	_, err := f.db.ExecContext(ctx, query, ref.ArticleID, ref.Location)
 	return err

@@ -64,7 +64,7 @@ func HandleDeleteUserAPI(c *gin.Context) {
 	// Check if user exists and is not already deleted
 	var currentValidID int
 	checkQuery := database.ConvertPlaceholders(`
-		SELECT valid_id FROM users WHERE id = $1
+		SELECT valid_id FROM users WHERE id = ?
 	`)
 	err = db.QueryRow(checkQuery, userID).Scan(&currentValidID)
 	if err != nil {
@@ -87,9 +87,9 @@ func HandleDeleteUserAPI(c *gin.Context) {
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE users 
 		SET valid_id = 2,
-		    change_time = $1,
-		    change_by = $2
-		WHERE id = $3
+		    change_time = ?,
+		    change_by = ?
+		WHERE id = ?
 	`)
 
 	result, err := db.Exec(updateQuery, time.Now(), currentUserID, userID)
@@ -158,7 +158,7 @@ func HandleGetUserGroupsAPI(c *gin.Context) {
 			ug.permission_value
 		FROM groups g
 		INNER JOIN user_groups ug ON g.id = ug.group_id
-		WHERE ug.user_id = $1
+		WHERE ug.user_id = ?
 		ORDER BY g.name
 	`)
 
@@ -259,7 +259,7 @@ func HandleAddUserToGroupAPI(c *gin.Context) {
 	var associationExists int
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT 1 FROM user_groups 
-		WHERE user_id = $1 AND group_id = $2
+		WHERE user_id = ? AND group_id = ?
 	`)
 	row := db.QueryRow(checkQuery, userID, req.GroupID)
 	_ = row.Scan(&associationExists) //nolint:errcheck // Defaults to 0
@@ -268,11 +268,11 @@ func HandleAddUserToGroupAPI(c *gin.Context) {
 		// Update existing association
 		updateQuery := database.ConvertPlaceholders(`
 			UPDATE user_groups 
-			SET permission_key = $1,
+			SET permission_key = ?,
 			    permission_value = 1,
-			    change_time = $2,
-			    change_by = $3
-			WHERE user_id = $4 AND group_id = $5
+			    change_time = ?,
+			    change_by = ?
+			WHERE user_id = ? AND group_id = ?
 		`)
 		_, err = db.Exec(updateQuery, req.Permissions, time.Now(), currentUserID, userID, req.GroupID)
 	} else {
@@ -281,7 +281,7 @@ func HandleAddUserToGroupAPI(c *gin.Context) {
 			INSERT INTO user_groups (
 				user_id, group_id, permission_key, permission_value,
 				create_time, create_by, change_time, change_by
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		`)
 		_, err = db.Exec(insertQuery,
 			userID, req.GroupID, req.Permissions, 1,
@@ -350,7 +350,7 @@ func HandleRemoveUserFromGroupAPI(c *gin.Context) {
 	// Delete the association
 	deleteQuery := database.ConvertPlaceholders(`
 		DELETE FROM user_groups 
-		WHERE user_id = $1 AND group_id = $2
+		WHERE user_id = ? AND group_id = ?
 	`)
 
 	result, err := db.Exec(deleteQuery, userID, groupID)
