@@ -47,7 +47,12 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - **Production Reverse Proxy**: Replaced nginx with Caddy in `docker-compose.prod.yml`; Caddy provides automatic HTTPS via Let's Encrypt with embedded Caddyfile configuration
 - **Dependency Updates**: Updated `golang.org/x/crypto`, `golang.org/x/net`, `golang.org/x/text`, `golang.org/x/sys`, and MCP SDK dependencies
 
+### Security
+- **SDK Dependency Updates** (`sdk/go/go.mod`): Updated `github.com/go-resty/resty/v2` v2.10.0 → v2.16.5 (fixes HTTP request body disclosure), `golang.org/x/net` v0.17.0 → v0.34.0 (fixes XSS, IPv6 proxy bypass, header DoS vulnerabilities)
+- **CVE-2023-36308 Mitigation**: Added panic recovery to `ThumbnailService.GenerateThumbnail` to gracefully handle crafted TIFF files that could cause server panic; no upstream patch available for `disintegration/imaging`
+
 ### Fixed
+- **Thumbnail URL Generation**: Fixed broken thumbnail URLs in `ticket_messages_handler.go`; was generating `/api/attachments/:id/thumbnail` (non-existent route) instead of correct `/api/tickets/:id/attachments/:attachment_id/thumbnail`
 - **History Recording Interface Mismatch**: Fixed `TicketRepository.AddTicketHistoryEntry` method signature to match `history.HistoryInserter` interface; changed `exec ExecContext` parameter to `exec interface{}` to enable proper type assertion in history recorder
 - **SQL Argument Order Bugs**: Fixed argument order in `handleDeleteQueue` and `handleDeleteType` where `change_by` and `id` parameters were swapped
 - **Missing SQL Arguments**: Fixed `insertArticle`, `insertArticleMimeData`, and `HandleRegisterWebhookAPI` missing `change_by` argument for MySQL NOT NULL columns

@@ -48,12 +48,20 @@ func DefaultThumbnailOptions() ThumbnailOptions {
 }
 
 // GenerateThumbnail generates a thumbnail from image data.
-func (s *ThumbnailService) GenerateThumbnail(data []byte, contentType string, opts ThumbnailOptions) ([]byte, string, error) {
+// Includes panic recovery to mitigate CVE-2023-36308 (crafted TIFF panic).
+func (s *ThumbnailService) GenerateThumbnail(data []byte, contentType string, opts ThumbnailOptions) (thumbnailData []byte, outputFormat string, err error) {
+	// Recover from panics (CVE-2023-36308: crafted TIFF can cause panic in imaging lib)
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("image processing panic (possible malformed image): %v", r)
+		}
+	}()
+
 	// Decode the image
 	reader := bytes.NewReader(data)
-	img, format, err := image.Decode(reader)
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to decode image: %w", err)
+	img, format, decodeErr := image.Decode(reader)
+	if decodeErr != nil {
+		return nil, "", fmt.Errorf("failed to decode image: %w", decodeErr)
 	}
 
 	// Resize the image maintaining aspect ratio
@@ -61,21 +69,21 @@ func (s *ThumbnailService) GenerateThumbnail(data []byte, contentType string, op
 
 	// Encode the thumbnail
 	var buf bytes.Buffer
-	var outputFormat string
 
 	if opts.Format == "png" || format == "png" {
-		err = png.Encode(&buf, thumbnail)
+		if encErr := png.Encode(&buf, thumbnail); encErr != nil {
+			return nil, "", fmt.Errorf("failed to encode thumbnail: %w", encErr)
+		}
 		outputFormat = "image/png"
 	} else {
-		err = jpeg.Encode(&buf, thumbnail, &jpeg.Options{Quality: opts.Quality})
+		if encErr := jpeg.Encode(&buf, thumbnail, &jpeg.Options{Quality: opts.Quality}); encErr != nil {
+			return nil, "", fmt.Errorf("failed to encode thumbnail: %w", encErr)
+		}
 		outputFormat = "image/jpeg"
 	}
 
-	if err != nil {
-		return nil, "", fmt.Errorf("failed to encode thumbnail: %w", err)
-	}
-
-	return buf.Bytes(), outputFormat, nil
+	thumbnailData = buf.Bytes()
+	return thumbnailData, outputFormat, nil
 }
 
 // GetOrCreateThumbnail gets a thumbnail from cache or generates it.

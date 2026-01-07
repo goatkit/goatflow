@@ -65,7 +65,7 @@ func handleGetTicketMessages(c *gin.Context) {
 	if c.GetHeader("HX-Request") != "" {
 		// Return HTML fragment for HTMX
 		c.Header("Content-Type", "text/html")
-		c.String(http.StatusOK, renderSimpleMessagesHTML(messages))
+		c.String(http.StatusOK, renderSimpleMessagesHTML(messages, uint(ticketID)))
 		return
 	}
 
@@ -227,14 +227,14 @@ func getCurrentUser(c *gin.Context) (uint, string, string, bool) {
 }
 
 // renderSimpleMessagesHTML renders SimpleTicketMessage objects as HTML.
-func renderSimpleMessagesHTML(messages []*service.SimpleTicketMessage) string {
+func renderSimpleMessagesHTML(messages []*service.SimpleTicketMessage, ticketID uint) string {
 	if len(messages) == 0 {
 		return `<div class="text-gray-500 text-center py-8">No messages found.</div>`
 	}
 
 	html := `<div class="space-y-4">`
 	for _, msg := range messages {
-		html += renderSimpleMessageHTML(msg)
+		html += renderSimpleMessageHTML(msg, ticketID)
 	}
 	html += `</div>`
 
@@ -242,7 +242,7 @@ func renderSimpleMessagesHTML(messages []*service.SimpleTicketMessage) string {
 }
 
 // renderSimpleMessageHTML renders a single SimpleTicketMessage as HTML.
-func renderSimpleMessageHTML(msg *service.SimpleTicketMessage) string {
+func renderSimpleMessageHTML(msg *service.SimpleTicketMessage, ticketID uint) string {
 	internalBadge := ""
 	if msg.IsInternal {
 		internalBadge = `<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200 ml-2">Internal</span>`
@@ -270,9 +270,9 @@ func renderSimpleMessageHTML(msg *service.SimpleTicketMessage) string {
 			// Use thumbnail for images, icon for others
 			var thumbnailHTML string
 			if service.IsSupportedImageType(att.ContentType) {
-				// Extract attachment ID from URL (format: /api/attachments/{id}/download)
+				// Extract attachment ID from URL and use correct thumbnail endpoint
 				attachmentID := extractAttachmentID(att.URL)
-				thumbnailURL := fmt.Sprintf("/api/attachments/%s/thumbnail?w=64&h=64", attachmentID)
+				thumbnailURL := fmt.Sprintf("/api/tickets/%d/attachments/%s/thumbnail", ticketID, attachmentID)
 				thumbnailHTML = fmt.Sprintf(`
 					<div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all" 
 					     onclick="previewAttachment('%s', '%s', '%s')" 
