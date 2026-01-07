@@ -285,6 +285,9 @@ func TestUserWorkflowEndToEnd(t *testing.T) {
 		router.ServeHTTP(w2, req2)
 
 		// ASSERT: Update should succeed
+		if w2.Code != http.StatusOK {
+			t.Logf("Update failed with status %d: %s", w2.Code, w2.Body.String())
+		}
 		assert.Equal(t, http.StatusOK, w2.Code, "Update request should succeed")
 
 		// ASSERT: Verify changes are actually persisted by querying database directly

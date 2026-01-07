@@ -66,7 +66,7 @@ func (r *DBRoleRepository) GetByID(id int) (*models.DBRole, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
 		FROM roles
-		WHERE id = $1
+		WHERE id = ?
 	`)
 
 	role := &models.DBRole{}
@@ -96,7 +96,7 @@ func (r *DBRoleRepository) GetByName(name string) (*models.DBRole, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
 		FROM roles
-		WHERE name = $1
+		WHERE name = ?
 	`)
 
 	role := &models.DBRole{}
@@ -143,7 +143,7 @@ func (r *DBRoleRepository) Create(role *models.DBRole) error {
 	} else {
 		err := r.db.QueryRow(`
 			INSERT INTO roles (name, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
 			RETURNING id
 		`, role.Name, nullString(role.Comments), role.ValidID, role.CreateTime, role.CreateBy, role.ChangeTime, role.ChangeBy).Scan(&role.ID)
 		if err != nil {
@@ -160,8 +160,8 @@ func (r *DBRoleRepository) Update(role *models.DBRole) error {
 
 	query := database.ConvertPlaceholders(`
 		UPDATE roles
-		SET name = $1, comments = $2, valid_id = $3, change_time = $4, change_by = $5
-		WHERE id = $6
+		SET name = ?, comments = ?, valid_id = ?, change_time = ?, change_by = ?
+		WHERE id = ?
 	`)
 
 	result, err := r.db.Exec(query, role.Name, nullString(role.Comments), role.ValidID, role.ChangeTime, role.ChangeBy, role.ID)
@@ -182,7 +182,7 @@ func (r *DBRoleRepository) Update(role *models.DBRole) error {
 
 // Delete deletes a role by ID.
 func (r *DBRoleRepository) Delete(id int) error {
-	query := database.ConvertPlaceholders(`DELETE FROM roles WHERE id = $1`)
+	query := database.ConvertPlaceholders(`DELETE FROM roles WHERE id = ?`)
 
 	result, err := r.db.Exec(query, id)
 	if err != nil {
@@ -203,7 +203,7 @@ func (r *DBRoleRepository) Delete(id int) error {
 // GetUserCount returns the number of users assigned to a role.
 func (r *DBRoleRepository) GetUserCount(roleID int) (int, error) {
 	query := database.ConvertPlaceholders(`
-		SELECT COUNT(*) FROM role_user WHERE role_id = $1
+		SELECT COUNT(*) FROM role_user WHERE role_id = ?
 	`)
 
 	var count int
@@ -217,7 +217,7 @@ func (r *DBRoleRepository) GetUserCount(roleID int) (int, error) {
 // GetGroupCount returns the number of groups assigned to a role.
 func (r *DBRoleRepository) GetGroupCount(roleID int) (int, error) {
 	query := database.ConvertPlaceholders(`
-		SELECT COUNT(DISTINCT group_id) FROM group_role WHERE role_id = $1
+		SELECT COUNT(DISTINCT group_id) FROM group_role WHERE role_id = ?
 	`)
 
 	var count int
@@ -231,7 +231,7 @@ func (r *DBRoleRepository) GetGroupCount(roleID int) (int, error) {
 // ListRoleUsers returns all users assigned to a role.
 func (r *DBRoleRepository) ListRoleUsers(roleID int) ([]int, error) {
 	query := database.ConvertPlaceholders(`
-		SELECT user_id FROM role_user WHERE role_id = $1
+		SELECT user_id FROM role_user WHERE role_id = ?
 	`)
 
 	rows, err := r.db.Query(query, roleID)
@@ -262,7 +262,7 @@ func (r *DBRoleRepository) ListUserRoles(userID int) ([]*models.DBRole, error) {
 		SELECT r.id, r.name, r.comments, r.valid_id, r.create_time, r.create_by, r.change_time, r.change_by
 		FROM roles r
 		INNER JOIN role_user ru ON r.id = ru.role_id
-		WHERE ru.user_id = $1
+		WHERE ru.user_id = ?
 		ORDER BY r.name
 	`)
 
@@ -316,7 +316,7 @@ func (r *DBRoleRepository) AddUserToRole(userID, roleID, createdBy int) error {
 	} else {
 		_, err := r.db.Exec(`
 			INSERT INTO role_user (user_id, role_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			VALUES (?, ?, ?, ?, ?, ?)
 			ON CONFLICT (user_id, role_id) DO UPDATE SET change_time = EXCLUDED.change_time, change_by = EXCLUDED.change_by
 		`, userID, roleID, now, createdBy, now, createdBy)
 		if err != nil {
@@ -329,7 +329,7 @@ func (r *DBRoleRepository) AddUserToRole(userID, roleID, createdBy int) error {
 
 // RemoveUserFromRole removes a user from a role.
 func (r *DBRoleRepository) RemoveUserFromRole(userID, roleID int) error {
-	query := database.ConvertPlaceholders(`DELETE FROM role_user WHERE user_id = $1 AND role_id = $2`)
+	query := database.ConvertPlaceholders(`DELETE FROM role_user WHERE user_id = ? AND role_id = ?`)
 
 	_, err := r.db.Exec(query, userID, roleID)
 	if err != nil {
@@ -347,7 +347,7 @@ func (r *DBRoleRepository) SetRoleUsers(roleID int, userIDs []int, changedBy int
 	defer func() { _ = tx.Rollback() }()
 
 	// Delete existing users
-	deleteQuery := database.ConvertPlaceholders(`DELETE FROM role_user WHERE role_id = $1`)
+	deleteQuery := database.ConvertPlaceholders(`DELETE FROM role_user WHERE role_id = ?`)
 	_, err = tx.Exec(deleteQuery, roleID)
 	if err != nil {
 		return fmt.Errorf("failed to clear role users: %w", err)
@@ -364,7 +364,7 @@ func (r *DBRoleRepository) SetRoleUsers(roleID int, userIDs []int, changedBy int
 		} else {
 			_, err = tx.Exec(`
 				INSERT INTO role_user (user_id, role_id, create_time, create_by, change_time, change_by)
-				VALUES ($1, $2, $3, $4, $5, $6)
+				VALUES (?, ?, ?, ?, ?, ?)
 			`, userID, roleID, now, changedBy, now, changedBy)
 		}
 		if err != nil {
@@ -384,7 +384,7 @@ func (r *DBRoleRepository) SetUserRoles(userID int, roleIDs []int, changedBy int
 	defer func() { _ = tx.Rollback() }()
 
 	// Delete existing roles
-	deleteQuery := database.ConvertPlaceholders(`DELETE FROM role_user WHERE user_id = $1`)
+	deleteQuery := database.ConvertPlaceholders(`DELETE FROM role_user WHERE user_id = ?`)
 	_, err = tx.Exec(deleteQuery, userID)
 	if err != nil {
 		return fmt.Errorf("failed to clear user roles: %w", err)
@@ -401,7 +401,7 @@ func (r *DBRoleRepository) SetUserRoles(userID int, roleIDs []int, changedBy int
 		} else {
 			_, err = tx.Exec(`
 				INSERT INTO role_user (user_id, role_id, create_time, create_by, change_time, change_by)
-				VALUES ($1, $2, $3, $4, $5, $6)
+				VALUES (?, ?, ?, ?, ?, ?)
 			`, userID, roleID, now, changedBy, now, changedBy)
 		}
 		if err != nil {

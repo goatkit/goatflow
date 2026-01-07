@@ -4,10 +4,9 @@ set -eu
 BASE_TPL=templates
 BASE_JS=static/js
 OUT_DIR=generated/api-map
-TMP_DIR=tmp
+TMP_DIR=/cache/tmp
 
 mkdir -p "$OUT_DIR" "$TMP_DIR"
-chmod 777 "$TMP_DIR" || true
 chmod 775 "$OUT_DIR" || true
 
 RAW_JSON="$OUT_DIR/api-map.json"

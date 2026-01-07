@@ -14,23 +14,19 @@ import (
 
 // deleteQueueInTransaction performs the queue deletion within a transaction.
 func deleteQueueInTransaction(tx *sql.Tx, queueID int, userID interface{}) error {
-	deleteGroupsQuery := database.ConvertPlaceholders(`DELETE FROM queue_group WHERE queue_id = $1`)
+	deleteGroupsQuery := database.ConvertPlaceholders(`DELETE FROM queue_group WHERE queue_id = ?`)
 	if _, err := tx.Exec(deleteGroupsQuery, queueID); err != nil {
 		return err
 	}
 
 	deleteQuery := database.ConvertPlaceholders(`
-		UPDATE queue 
-		SET valid_id = 2, change_time = NOW(), change_by = $2
-		WHERE id = $1
+		UPDATE queue
+		SET valid_id = 2, change_time = NOW(), change_by = ?
+		WHERE id = ?
 	`)
 
-	args := []interface{}{queueID, userID}
-	if database.IsMySQL() {
-		args = []interface{}{userID, queueID}
-	}
-
-	result, err := tx.Exec(deleteQuery, args...)
+	// Args order matches query: change_by=?, id=?
+	result, err := tx.Exec(deleteQuery, userID, queueID)
 	if err != nil {
 		return err
 	}
@@ -73,7 +69,7 @@ func HandleDeleteQueueAPI(c *gin.Context) {
 	}
 
 	var ticketCount int
-	ticketQuery := database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket WHERE queue_id = $1`)
+	ticketQuery := database.ConvertPlaceholders(`SELECT COUNT(*) FROM ticket WHERE queue_id = ?`)
 	if err := db.QueryRow(ticketQuery, queueID).Scan(&ticketCount); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to check queue tickets"})
 		return

@@ -201,14 +201,14 @@ func resolveTicketID(idStr string) (int, error) {
 	if db := attachmentsDB(); db != nil {
 		var realID int
 		// Try TN first
-		row := db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE tn = $1 LIMIT 1`), idStr)
+		row := db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE tn = ? LIMIT 1`), idStr)
 		if err := row.Scan(&realID); err == nil {
 			return realID, nil
 		}
 		// If not a TN match, allow numeric ID fallback
 		if n, convErr := strconv.Atoi(idStr); convErr == nil {
 			// Verify the ID exists
-			row2 := db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE id = $1 LIMIT 1`), n)
+			row2 := db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE id = ? LIMIT 1`), n)
 			if err := row2.Scan(&realID); err == nil {
 				return realID, nil
 			}
@@ -441,7 +441,7 @@ func handleUploadAttachment(c *gin.Context) {
 					INSERT INTO article_data_mime_attachment (
 						article_id, filename, content_type, content_size, content,
 						disposition, create_time, create_by, change_time, change_by
-					) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`),
+					) VALUES (?,?,?,?,?,?,?,?,?,?)`),
 					latest.ID,
 					header.Filename,
 					ct,
@@ -543,7 +543,7 @@ func handleGetAttachments(c *gin.Context) {
 		       att.article_id
 		FROM article_data_mime_attachment att
 		INNER JOIN article a ON att.article_id = a.id
-		WHERE a.ticket_id = $1
+		WHERE a.ticket_id = ?
 		ORDER BY att.id
 	`), ticketID)
 	if err != nil {
@@ -637,7 +637,7 @@ func handleDownloadAttachment(c *gin.Context) {
 				   COALESCE(att.content_size,0), att.content
 			FROM article_data_mime_attachment att
 			INNER JOIN article a ON att.article_id = a.id
-			WHERE att.id = $1 AND a.ticket_id = $2
+			WHERE att.id = ? AND a.ticket_id = ?
 			LIMIT 1`), attachmentID, ticketID)
 		if scanErr := row.Scan(&filename, &contentType, &contentSize, &contentBytes); scanErr == nil {
 			// If DB content is empty (local FS backend), try to fetch from local storage by scanning path
@@ -668,7 +668,7 @@ func handleDownloadAttachment(c *gin.Context) {
 				SELECT att.filename, a.ticket_id
 				FROM article_data_mime_attachment att
 				JOIN article a ON a.id = att.article_id
-				WHERE att.id = $1 LIMIT 1`), attachmentID)
+				WHERE att.id = ? LIMIT 1`), attachmentID)
 			if e2 := row2.Scan(&fn, &dbTicketID); e2 == nil && dbTicketID == ticketID {
 				if buf, ok := findLocalStoredAttachmentBytes(ticketID, fn); ok {
 					ct := detectContentType(fn, buf)
@@ -777,8 +777,8 @@ func handleDeleteAttachment(c *gin.Context) {
 		// Use MariaDB-compatible DELETE with subquery
 		res, derr := db.Exec(database.ConvertPlaceholders(`
 			DELETE FROM article_data_mime_attachment
-			WHERE id = $1 AND article_id IN (
-				SELECT a.id FROM article a WHERE a.ticket_id = $2
+			WHERE id = ? AND article_id IN (
+				SELECT a.id FROM article a WHERE a.ticket_id = ?
 			)`), attachmentID, ticketID)
 		if derr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete attachment"})
@@ -786,10 +786,10 @@ func handleDeleteAttachment(c *gin.Context) {
 		}
 		rows, err := res.RowsAffected()
 		if err != nil || rows == 0 {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Attachment not found"})
+			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Attachment not found"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"message": "Attachment deleted successfully"})
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Attachment deleted successfully"})
 		return
 	}
 
@@ -886,7 +886,7 @@ func handleViewAttachment(c *gin.Context) {
 			SELECT att.filename, COALESCE(att.content_type,'')
 			FROM article_data_mime_attachment att
 			JOIN article a ON a.id = att.article_id
-			WHERE att.id = $1 AND a.ticket_id = $2 LIMIT 1`), attID, ticketID).Scan(&filename, &contentType); err != nil {
+			WHERE att.id = ? AND a.ticket_id = ? LIMIT 1`), attID, ticketID).Scan(&filename, &contentType); err != nil {
 			// Use defaults
 		}
 
@@ -895,7 +895,7 @@ func handleViewAttachment(c *gin.Context) {
 			SELECT att.id
 			FROM article_data_mime_attachment att
 			JOIN article a ON a.id = att.article_id
-			WHERE a.ticket_id = $1
+			WHERE a.ticket_id = ?
 			ORDER BY att.id`), ticketID)
 		if qerr == nil {
 			defer rows.Close()
@@ -1085,7 +1085,7 @@ func serveAttachmentInlineRaw(c *gin.Context, ticketIDStr string, ticketID int, 
 			SELECT att.filename, COALESCE(att.content_type,''), att.content
 			FROM article_data_mime_attachment att
 			JOIN article a ON a.id = att.article_id
-			WHERE att.id = $1 AND a.ticket_id = $2 LIMIT 1`), attID, ticketID)
+			WHERE att.id = ? AND a.ticket_id = ? LIMIT 1`), attID, ticketID)
 		if err := row.Scan(&filename, &contentType, &content); err == nil {
 			if len(content) == 0 {
 				if ss := GetStorageService(); ss != nil {
@@ -1160,7 +1160,7 @@ func serveAttachmentInlineRaw(c *gin.Context, ticketIDStr string, ticketID int, 
 			SELECT att.filename, COALESCE(att.content_type,''), att.content
 			FROM article_data_mime_attachment att
 			JOIN article a ON a.id = att.article_id
-			WHERE att.id = $1 AND a.ticket_id = $2 LIMIT 1`), attID, ticketID)
+			WHERE att.id = ? AND a.ticket_id = ? LIMIT 1`), attID, ticketID)
 		if err := row.Scan(&filename, &contentType, &content); err == nil {
 			// Fallback: if DB content is empty (e.g., local FS backend), try retrieving from storage
 			if len(content) == 0 {
@@ -1248,7 +1248,7 @@ func serveAttachmentInlineRaw(c *gin.Context, ticketIDStr string, ticketID int, 
 				SELECT att.filename, a.ticket_id
 				FROM article_data_mime_attachment att
 				JOIN article a ON a.id = att.article_id
-				WHERE att.id = $1 LIMIT 1`), attID)
+				WHERE att.id = ? LIMIT 1`), attID)
 			if e2 := row2.Scan(&fn, &dbTicketID); e2 == nil && dbTicketID == ticketID {
 				// Try to locate and serve from local storage
 				if buf, ok := findLocalStoredAttachmentBytes(ticketID, fn); ok {
@@ -1533,7 +1533,7 @@ func handleGetThumbnail(c *gin.Context) {
 			SELECT att.content, COALESCE(att.content_type,''), att.filename
 			FROM article_data_mime_attachment att
 			JOIN article a ON a.id = att.article_id
-			WHERE att.id = $1 AND a.ticket_id = $2 LIMIT 1`), attID, ticketID)
+			WHERE att.id = ? AND a.ticket_id = ? LIMIT 1`), attID, ticketID)
 		if err := row.Scan(&content, &contentType, &filename); err == nil {
 			// If DB content is empty (e.g., local FS backend), try to fetch from storage/local disk
 			if len(content) == 0 {

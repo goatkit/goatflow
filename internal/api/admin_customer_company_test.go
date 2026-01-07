@@ -169,7 +169,7 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies creates company", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create test data
 		customerID := "TEST_CREATE_" + fmt.Sprint(time.Now().Unix())
@@ -222,7 +222,7 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies with missing required fields", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create router with test database
 		router := NewSimpleRouterWithDB(db)
@@ -243,7 +243,7 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies with duplicate customer_id", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create test data
 		customerID := "TEST_DUP_" + fmt.Sprint(time.Now().Unix())
@@ -275,7 +275,7 @@ func TestAdminCustomerCompanyEdit(t *testing.T) {
 
 	t.Run("GET /admin/customer/companies/:id/edit renders form", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create test data
 		customerID := "TEST_EDIT_" + fmt.Sprint(time.Now().Unix())
@@ -298,7 +298,7 @@ func TestAdminCustomerCompanyEdit(t *testing.T) {
 
 	t.Run("GET /admin/customer/companies/:id/edit with non-existent company", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create router with test database
 		router := NewSimpleRouterWithDB(db)
@@ -317,7 +317,7 @@ func TestAdminCustomerCompanyUpdate(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies/:id/edit updates company", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create test data
 		customerID := "TEST_UPDATE_" + fmt.Sprint(time.Now().Unix())
@@ -369,7 +369,7 @@ func TestAdminCustomerCompanyUpdate(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies/:id/edit with invalid data", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create test data
 		customerID := "TEST_INVALID_" + fmt.Sprint(time.Now().Unix())
@@ -410,7 +410,7 @@ func TestAdminCustomerCompanyUpdate(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies/:id/edit non-existent company", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create router with test database
 		router := NewSimpleRouterWithDB(db)
@@ -452,7 +452,7 @@ func TestAdminCustomerCompanyDelete(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies/:id/delete deletes company", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create test data
 		customerID := "TEST_DELETE_" + fmt.Sprint(time.Now().Unix())
@@ -489,7 +489,7 @@ func TestAdminCustomerCompanyDelete(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies/:id/delete with non-existent company", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create router with test database
 		router := NewSimpleRouterWithDB(db)
@@ -523,7 +523,7 @@ func TestAdminCustomerCompanyActivate(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies/:id/activate activates company", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create test data (inactive)
 		customerID := "TEST_ACTIVATE_" + fmt.Sprint(time.Now().Unix())
@@ -551,7 +551,7 @@ func TestAdminCustomerCompanyActivate(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies/:id/activate with non-existent company", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create router with test database
 		router := NewSimpleRouterWithDB(db)
@@ -570,7 +570,7 @@ func TestAdminCustomerCompanyPortalSettings(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies/:id/portal-settings updates portal settings", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		router := NewSimpleRouterWithDB(db)
 
@@ -596,7 +596,7 @@ func TestAdminCustomerCompanyServices(t *testing.T) {
 
 	t.Run("POST /admin/customer/companies/:id/services assigns services", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		customerID := "TEST_SERVICES_" + fmt.Sprint(time.Now().Unix())
 		createTestCustomerCompany(t, db, customerID)
@@ -622,7 +622,7 @@ func TestAdminCustomerCompanyServices(t *testing.T) {
 
 	t.Run("GET /admin/customer/companies/:id/services returns assigned services", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		customerID := "TEST_SERVICES2_" + fmt.Sprint(time.Now().Unix())
 		createTestCustomerCompany(t, db, customerID)
@@ -644,7 +644,7 @@ func TestAdminCustomerCompanyUsers(t *testing.T) {
 
 	t.Run("GET /admin/customer/companies/:id/users returns company users", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		customerID := "TEST_USERS_" + fmt.Sprint(time.Now().Unix())
 		createTestCustomerCompany(t, db, customerID)
@@ -666,7 +666,7 @@ func TestAdminCustomerCompanyTickets(t *testing.T) {
 
 	t.Run("GET /admin/customer/companies/:id/tickets returns company tickets", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		customerID := "TEST_TICKETS_" + fmt.Sprint(time.Now().Unix())
 		createTestCustomerCompany(t, db, customerID)
@@ -771,7 +771,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 
 	t.Run("complete CRUD operations", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create router with test database
 		router := NewSimpleRouterWithDB(db)
@@ -887,7 +887,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 
 	t.Run("CRUD error handling", func(t *testing.T) {
 		db := getTestDB(t)
-		defer db.Close()
+		// Note: Do not close singleton DB connection
 
 		// Create router with test database
 		router := NewSimpleRouterWithDB(db)

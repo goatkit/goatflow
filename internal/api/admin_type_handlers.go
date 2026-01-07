@@ -237,7 +237,7 @@ func handleAdminTypeCreate(c *gin.Context) {
 
 	_, err = db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, NOW(), 1, NOW(), 1)
+		VALUES (?, ?, NOW(), 1, NOW(), 1)
 	`), input.Name, input.ValidID)
 
 	if err != nil {
@@ -390,7 +390,7 @@ func handleAdminTypeDelete(c *gin.Context) {
 	var ticketCount int
 	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM ticket
-		WHERE type_id = $1
+		WHERE type_id = ?
 	`), id).Scan(&ticketCount)
 
 	if err != nil {
@@ -406,7 +406,7 @@ func handleAdminTypeDelete(c *gin.Context) {
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE ticket_type
 		SET valid_id = 2, change_by = 1, change_time = CURRENT_TIMESTAMP
-		WHERE id = $1
+		WHERE id = ?
 	`), id)
 
 	if err != nil {

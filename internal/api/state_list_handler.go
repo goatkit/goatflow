@@ -20,7 +20,7 @@ func HandleListStatesAPI(c *gin.Context) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, name, valid_id
 		FROM ticket_state
-		WHERE valid_id = $1
+		WHERE valid_id = ?
 		ORDER BY id
 	`), 1)
 	if err != nil {

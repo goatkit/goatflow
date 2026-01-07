@@ -87,7 +87,7 @@ func sysconfigValue(db *sql.DB, name string) (string, bool) {
 	query := database.ConvertPlaceholders(`
         SELECT effective_value
         FROM sysconfig_modified
-        WHERE name = $1 AND is_valid = 1
+        WHERE name = ? AND is_valid = 1
         ORDER BY change_time DESC
         LIMIT 1
     `)
@@ -102,7 +102,7 @@ func sysconfigValue(db *sql.DB, name string) (string, bool) {
 	query = database.ConvertPlaceholders(`
         SELECT effective_value
         FROM sysconfig_default
-        WHERE name = $1
+        WHERE name = ?
     `)
 	err = db.QueryRow(query, name).Scan(&value)
 	if err != nil || !value.Valid {

@@ -43,14 +43,14 @@ func HandleAssignQueueGroupAPI(c *gin.Context) {
 
 	// Verify queue and group exist
 	var count int
-	row := db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue WHERE id = $1`), queueID)
+	row := db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue WHERE id = ?`), queueID)
 	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Queue not found"})
 		return
 	}
 	count = 0
-	row2 := db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM groups WHERE id = $1`), req.GroupID)
+	row2 := db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM groups WHERE id = ?`), req.GroupID)
 	_ = row2.Scan(&count) //nolint:errcheck // Defaults to 0
 	if count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Group not found"})
@@ -59,11 +59,11 @@ func HandleAssignQueueGroupAPI(c *gin.Context) {
 
 	// Ensure mapping exists without using vendor-specific UPSERT
 	var existsMap int
-	existsQuery := `SELECT 1 FROM queue_group WHERE queue_id = $1 AND group_id = $2`
+	existsQuery := `SELECT 1 FROM queue_group WHERE queue_id = ? AND group_id = ?`
 	row3 := db.QueryRow(database.ConvertPlaceholders(existsQuery), queueID, req.GroupID)
 	_ = row3.Scan(&existsMap) //nolint:errcheck // Defaults to 0
 	if existsMap != 1 {
-		insertQuery := `INSERT INTO queue_group (queue_id, group_id) VALUES ($1, $2)`
+		insertQuery := `INSERT INTO queue_group (queue_id, group_id) VALUES (?, ?)`
 		if _, err := db.Exec(database.ConvertPlaceholders(insertQuery), queueID, req.GroupID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to assign group"})
 			return
@@ -102,7 +102,7 @@ func HandleRemoveQueueGroupAPI(c *gin.Context) {
 		return
 	}
 
-	result, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM queue_group WHERE queue_id = $1 AND group_id = $2`), queueID, groupID)
+	result, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM queue_group WHERE queue_id = ? AND group_id = ?`), queueID, groupID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to remove group"})
 		return

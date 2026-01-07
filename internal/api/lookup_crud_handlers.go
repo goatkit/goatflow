@@ -55,12 +55,11 @@ func handleCreateType(c *gin.Context) {
 	}
 
 	if db, err := database.GetDB(); err == nil && db != nil {
-		var newID int
-		err := db.QueryRow(database.ConvertPlaceholders(`
-            INSERT INTO ticket_type (name, comments, valid_id, create_by, change_by)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id
-        `), name, comments, validID, 1, 1).Scan(&newID)
+		adapter := database.GetAdapter()
+		// Note: ticket_type table doesn't have a comments column
+		query := database.ConvertPlaceholders(`INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, ?, NOW(), 1, NOW(), 1) RETURNING id`)
+		newID, err := adapter.InsertWithReturning(db, query, name, validID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create type"})
 			return
@@ -70,7 +69,7 @@ func handleCreateType(c *gin.Context) {
 			"data": map[string]interface{}{
 				"id":       newID,
 				"name":     name,
-				"comments": comments,
+				"comments": comments, // Return for API compatibility even though not stored
 				"valid_id": validID,
 			},
 		})
@@ -118,36 +117,12 @@ func handleUpdateType(c *gin.Context) {
 	}
 
 	if db, dErr := database.GetDB(); dErr == nil && db != nil {
-		// Build dynamic update
-		if body.Comments != nil {
-			// valid_id, name, comments, id
-			res, execErr := db.Exec(database.ConvertPlaceholders(`
-                UPDATE ticket_type 
-                SET valid_id = $1, name = $2, comments = $3 
-                WHERE id = $4
-            `), *body.ValidID, valueOrEmpty(body.Name), valueOrEmpty(body.Comments), id)
-			if execErr != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update type"})
-				return
-			}
-			rows, _ := res.RowsAffected() //nolint:errcheck // Error unlikely and rows default to 0
-			if rows == 0 {
-				c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Type not found"})
-				return
-			}
-			c.JSON(http.StatusOK, gin.H{"success": true, "data": map[string]interface{}{
-				"id":       id,
-				"name":     valueOrEmpty(body.Name),
-				"comments": valueOrEmpty(body.Comments),
-				"valid_id": *body.ValidID,
-			}})
-			return
-		}
-		// Without comments: valid_id, name, id
+		// Note: ticket_type table doesn't have a comments column
+		// Update only valid_id and name
 		res, execErr := db.Exec(database.ConvertPlaceholders(`
-            UPDATE ticket_type 
-            SET valid_id = $1, name = $2 
-            WHERE id = $3
+            UPDATE ticket_type
+            SET valid_id = ?, name = ?, change_time = NOW(), change_by = 1
+            WHERE id = ?
         `), *body.ValidID, valueOrEmpty(body.Name), id)
 		if execErr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update type"})
@@ -161,7 +136,7 @@ func handleUpdateType(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "data": map[string]interface{}{
 			"id":       id,
 			"name":     valueOrEmpty(body.Name),
-			"comments": "",
+			"comments": valueOrEmpty(body.Comments), // Return for API compatibility
 			"valid_id": *body.ValidID,
 		}})
 		return
@@ -198,12 +173,12 @@ func handleDeleteType(c *gin.Context) {
 	}
 
 	if db, err := database.GetDB(); err == nil && db != nil {
-		// Match test expectation: args (id, 1)
+		// Args order: change_by, id
 		res, execErr := db.Exec(database.ConvertPlaceholders(`
-            UPDATE ticket_type 
-            SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = $2 
-            WHERE id = $1
-        `), id, 1)
+            UPDATE ticket_type
+            SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = ?
+            WHERE id = ?
+        `), 1, id)
 		if execErr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete type"})
 			return

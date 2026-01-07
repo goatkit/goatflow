@@ -21,6 +21,8 @@ paths = [
     '''test-secrets/''',
     # Generated files
     '''web/src/types/api\.ts''',
+    # Binary lockfiles (no secrets, just dependency metadata)
+    '''bun\.lockb''',
 ]
 
 # Stop words to prevent false positives

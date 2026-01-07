@@ -48,7 +48,7 @@ func HandleGetTicketStateAPI(c *gin.Context) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, type_id, valid_id
 		FROM ticket_state
-		WHERE id = $1
+		WHERE id = ?
 	`)
 
 	err = db.QueryRow(query, stateID).Scan(&state.ID, &state.Name, &state.TypeID, &state.ValidID)
@@ -89,7 +89,7 @@ func HandleCreateTicketStateAPI(c *gin.Context) {
 	var count int
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT 1 FROM ticket_state
-		WHERE name = $1 AND valid_id = 1
+		WHERE name = ? AND valid_id = 1
 	`)
 	row := db.QueryRow(checkQuery, req.Name)
 	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0 on no rows
@@ -102,7 +102,7 @@ func HandleCreateTicketStateAPI(c *gin.Context) {
 	var stateID int
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO ticket_state (name, type_id, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, 1, NOW(), $3, NOW(), $3)
+		VALUES (?, ?, 1, NOW(), ?, NOW(), ?)
 		RETURNING id
 	`)
 
@@ -156,7 +156,7 @@ func HandleUpdateTicketStateAPI(c *gin.Context) {
 	var count int
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT 1 FROM ticket_state
-		WHERE id = $1 AND valid_id = 1
+		WHERE id = ? AND valid_id = 1
 	`)
 	row := db.QueryRow(checkQuery, stateID)
 	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0 on no rows
@@ -168,8 +168,8 @@ func HandleUpdateTicketStateAPI(c *gin.Context) {
 	// Update state
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE ticket_state 
-		SET name = $1, type_id = $2, change_time = NOW(), change_by = $3
-		WHERE id = $4
+		SET name = ?, type_id = ?, change_time = NOW(), change_by = ?
+		WHERE id = ?
 	`)
 
 	result, err := db.Exec(updateQuery, req.Name, req.TypeID, userID, stateID)
@@ -228,7 +228,7 @@ func HandleDeleteTicketStateAPI(c *gin.Context) {
 	var count int
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT 1 FROM ticket_state
-		WHERE id = $1 AND valid_id = 1
+		WHERE id = ? AND valid_id = 1
 	`)
 	row := db.QueryRow(checkQuery, stateID)
 	_ = row.Scan(&count) //nolint:errcheck // Defaults to 0 on no rows
@@ -241,7 +241,7 @@ func HandleDeleteTicketStateAPI(c *gin.Context) {
 	var ticketCount int
 	ticketQuery := database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM tickets 
-		WHERE ticket_state_id = $1
+		WHERE ticket_state_id = ?
 	`)
 	row2 := db.QueryRow(ticketQuery, stateID)
 	_ = row2.Scan(&ticketCount) //nolint:errcheck // Defaults to 0 on no rows
@@ -257,8 +257,8 @@ func HandleDeleteTicketStateAPI(c *gin.Context) {
 	// Soft delete state (OTRS style - set valid_id = 2)
 	deleteQuery := database.ConvertPlaceholders(`
 		UPDATE ticket_state 
-		SET valid_id = 2, change_time = NOW(), change_by = $1
-		WHERE id = $2
+		SET valid_id = 2, change_time = NOW(), change_by = ?
+		WHERE id = ?
 	`)
 
 	result, err := db.Exec(deleteQuery, userID, stateID)

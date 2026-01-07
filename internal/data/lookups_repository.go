@@ -209,7 +209,7 @@ func (r *LookupsRepository) GetTranslation(ctx context.Context, tableName, field
 	query := `
 		SELECT translation 
 		FROM lookup_translations
-		WHERE table_name = $1 AND field_value = $2 AND language_code = $3
+		WHERE table_name = ? AND field_value = ? AND language_code = ?
 		LIMIT 1
 	`
 
@@ -233,9 +233,9 @@ func (r *LookupsRepository) GetTranslation(ctx context.Context, tableName, field
 func (r *LookupsRepository) AddTranslation(ctx context.Context, tableName, fieldValue, lang, translation string, isSystem bool) error {
 	query := `
 		INSERT INTO lookup_translations (table_name, field_value, language_code, translation, is_system, create_time, change_time)
-		VALUES ($1, $2, $3, $4, $5, $6, $6)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (table_name, field_value, language_code) 
-		DO UPDATE SET translation = $4, change_time = $6
+		DO UPDATE SET translation = ?, change_time = ?
 	`
 
 	_, err := r.db.ExecContext(ctx, query, tableName, fieldValue, lang, translation, isSystem, time.Now())
@@ -255,7 +255,7 @@ func (r *LookupsRepository) GetAllTranslations(ctx context.Context, lang string)
 	query := `
 		SELECT table_name, field_value, translation
 		FROM lookup_translations
-		WHERE language_code = $1
+		WHERE language_code = ?
 	`
 
 	rows, err := r.db.QueryContext(ctx, query, lang)

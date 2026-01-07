@@ -583,12 +583,12 @@ services:
     container_name: gotrs-toolbox
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}" # Match host user to avoid root-owned artifacts
     environment:
-      # Go development environment
-      GOCACHE: /workspace/.cache/go-build
-      GOMODCACHE: /workspace/.cache/go-mod
-      GOLANGCI_LINT_CACHE: /workspace/.cache/golangci-lint
-      NPM_CONFIG_CACHE: /workspace/.cache/npm
-      XDG_CACHE_HOME: /workspace/.cache/xdg
+      # Go development environment - cache in separate volume (not overlaid on workspace)
+      GOCACHE: /cache/go-build
+      GOMODCACHE: /cache/go-mod
+      GOLANGCI_LINT_CACHE: /cache/golangci-lint
+      BUN_INSTALL_CACHE_DIR: /cache/bun
+      XDG_CACHE_HOME: /cache/xdg
       GOTOOLCHAIN: local
       PATH: /usr/local/go/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin
       # Test database environment for integration tests - credentials must be in .env
@@ -608,8 +608,7 @@ services:
       GOTRS_TEST_DB_READY: "1"
     volumes:
       - .:/workspace:Z
-      - gotrs_cache:/workspace/.cache
-      # node_modules created by npm in container with correct ownership
+      - gotrs_cache:/cache
     working_dir: /workspace
     networks:
       - gotrs-network

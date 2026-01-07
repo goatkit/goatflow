@@ -251,7 +251,7 @@ func HandleAdminCustomerUsersGet(c *gin.Context) {
 		       cc.name as company_name
 		FROM customer_user cu
 		LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
-		WHERE cu.id = $1`
+		WHERE cu.id = ?`
 	query = database.ConvertPlaceholders(query)
 
 	var customer = make(map[string]interface{})
@@ -361,7 +361,7 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 
 	// Check if login already exists
 	var existingID int
-	checkQuery := database.ConvertPlaceholders("SELECT id FROM customer_user WHERE login = $1")
+	checkQuery := database.ConvertPlaceholders("SELECT id FROM customer_user WHERE login = ?")
 	err = db.QueryRow(checkQuery, req.Login).Scan(&existingID)
 	if err == nil {
 		c.JSON(http.StatusConflict, gin.H{
@@ -385,7 +385,7 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 			phone, fax, mobile, street, zip, city, country, comments,
 			valid_id, create_by, change_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 1, 1
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1
 		) RETURNING id`
 	insertQuery = database.ConvertPlaceholders(insertQuery)
 	var newID int
@@ -471,7 +471,7 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 
 	// Check if login exists for another user
 	var existingID int
-	checkQuery := database.ConvertPlaceholders("SELECT id FROM customer_user WHERE login = $1 AND id != $2")
+	checkQuery := database.ConvertPlaceholders("SELECT id FROM customer_user WHERE login = ? AND id != ?")
 	err = db.QueryRow(checkQuery, req.Login, id).Scan(&existingID)
 	if err == nil {
 		c.JSON(http.StatusConflict, gin.H{
@@ -484,10 +484,10 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 	// Build update query
 	updateQuery := `
 		UPDATE customer_user SET 
-			login = $1, email = $2, customer_id = $3, title = $4,
-			first_name = $5, last_name = $6, phone = $7, fax = $8,
-			mobile = $9, street = $10, zip = $11, city = $12,
-			country = $13, comments = $14, valid_id = $15,
+			login = ?, email = ?, customer_id = ?, title = ?,
+			first_name = ?, last_name = ?, phone = ?, fax = ?,
+			mobile = ?, street = ?, zip = ?, city = ?,
+			country = ?, comments = ?, valid_id = ?,
 			change_time = CURRENT_TIMESTAMP, change_by = 1`
 
 	args := []interface{}{
@@ -501,10 +501,10 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 	if req.Password != "" {
 		hasher := auth.NewPasswordHasher()
 		hashedPassword, _ := hasher.HashPassword(req.Password)
-		updateQuery += ", pw = $16 WHERE id = $17"
+		updateQuery += ", pw = ? WHERE id = ?"
 		args = append(args, hashedPassword, id)
 	} else {
-		updateQuery += " WHERE id = $16"
+		updateQuery += " WHERE id = ?"
 		args = append(args, id)
 	}
 	updateQuery = database.ConvertPlaceholders(updateQuery)
@@ -571,7 +571,7 @@ func HandleAdminCustomerUsersDelete(c *gin.Context) {
 	updateQuery := `
 		UPDATE customer_user 
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1
-		WHERE id = $1`
+		WHERE id = ?`
 	updateQuery = database.ConvertPlaceholders(updateQuery)
 
 	result, err := db.Exec(updateQuery, id)
@@ -624,7 +624,7 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 
 	// Get customer login first
 	var customerLogin string
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT login FROM customer_user WHERE id = $1"), id).Scan(&customerLogin)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT login FROM customer_user WHERE id = ?"), id).Scan(&customerLogin)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -641,7 +641,7 @@ func HandleAdminCustomerUsersTickets(c *gin.Context) {
 		LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
 		LEFT JOIN queue q ON t.queue_id = q.id
-		WHERE t.customer_user_id = $1
+		WHERE t.customer_user_id = ?
 		ORDER BY t.create_time DESC
 		LIMIT 100`
 	query = database.ConvertPlaceholders(query)
@@ -784,7 +784,7 @@ func HandleAdminCustomerUsersImport(c *gin.Context) {
 
 		// Check if customer user already exists
 		var existingID int
-		checkQuery := database.ConvertPlaceholders("SELECT id FROM customer_user WHERE login = $1")
+		checkQuery := database.ConvertPlaceholders("SELECT id FROM customer_user WHERE login = ?")
 		err = db.QueryRow(checkQuery, login).Scan(&existingID)
 		if err == nil {
 			errors = append(errors, fmt.Sprintf("Row %d: Login %s already exists", i+1, login))
@@ -799,7 +799,7 @@ func HandleAdminCustomerUsersImport(c *gin.Context) {
 				phone, fax, mobile, street, zip, city, country, comments,
 				valid_id, create_by, change_by
 			) VALUES (
-				$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 1, 1, 1
+				?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1
 			)`
 		insertQuery = database.ConvertPlaceholders(insertQuery)
 

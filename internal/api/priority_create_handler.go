@@ -43,7 +43,7 @@ func HandleCreatePriorityAPI(c *gin.Context) {
 	var count int
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT COUNT(*) FROM ticket_priority
-		WHERE name = $1 AND valid_id = 1
+		WHERE name = ? AND valid_id = 1
 	`)
 	if err := db.QueryRow(checkQuery, req.Name).Scan(&count); err == nil && count > 0 {
 		c.JSON(http.StatusConflict, gin.H{"success": false, "error": "Priority with this name already exists"})
@@ -53,7 +53,7 @@ func HandleCreatePriorityAPI(c *gin.Context) {
 	// Create priority
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO ticket_priority (name, color, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, NOW(), $4, NOW(), $5)
+		VALUES (?, ?, ?, NOW(), ?, NOW(), ?)
 		RETURNING id
 	`)
 	adapter := database.GetAdapter()

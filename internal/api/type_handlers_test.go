@@ -19,8 +19,7 @@ import (
 func TestGetTypes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	db := getTestDB(t)
-	defer db.Close()
+	getTestDB(t) // Initialize test database
 
 	router := gin.New()
 	router.GET("/api/types", HandleGetTypes)
@@ -48,7 +47,7 @@ func TestCreateType(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	router := gin.New()
 	router.POST("/api/types", handleCreateType)
@@ -114,7 +113,7 @@ func TestUpdateType(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	router := gin.New()
 	router.PUT("/api/types/:id", handleUpdateType)
@@ -122,17 +121,18 @@ func TestUpdateType(t *testing.T) {
 	testName := "update_type_" + time.Now().Format("150405")
 	var testID int64
 
+	// Note: ticket_type table doesn't have a comments column
 	if database.IsMySQL() {
 		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_type (name, comments, valid_id, create_by, change_by)
-			VALUES (?, 'Test comments', 1, 1, 1)
+			INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, 1, NOW(), 1, NOW(), 1)
 		`), testName)
 		require.NoError(t, err)
 		testID, _ = result.LastInsertId()
 	} else {
 		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_type (name, comments, valid_id, create_by, change_by)
-			VALUES ($1, 'Test comments', 1, 1, 1) RETURNING id
+			INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+			VALUES ($1, 1, NOW(), 1, NOW(), 1) RETURNING id
 		`), testName).Scan(&testID)
 		require.NoError(t, err)
 	}
@@ -209,7 +209,7 @@ func TestDeleteType(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	router := gin.New()
 	router.DELETE("/api/types/:id", handleDeleteType)
@@ -217,17 +217,18 @@ func TestDeleteType(t *testing.T) {
 	testName := "delete_type_" + time.Now().Format("150405")
 	var testID int64
 
+	// Note: ticket_type table doesn't have a comments column
 	if database.IsMySQL() {
 		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_type (name, comments, valid_id, create_by, change_by)
-			VALUES (?, 'To be deleted', 1, 1, 1)
+			INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, 1, NOW(), 1, NOW(), 1)
 		`), testName)
 		require.NoError(t, err)
 		testID, _ = result.LastInsertId()
 	} else {
 		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_type (name, comments, valid_id, create_by, change_by)
-			VALUES ($1, 'To be deleted', 1, 1, 1) RETURNING id
+			INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
+			VALUES ($1, 1, NOW(), 1, NOW(), 1) RETURNING id
 		`), testName).Scan(&testID)
 		require.NoError(t, err)
 	}

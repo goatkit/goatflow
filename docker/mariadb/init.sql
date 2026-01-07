@@ -8,8 +8,8 @@ CREATE DATABASE IF NOT EXISTS otrs CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode
 
 -- Grant all privileges on the database to the user created by MYSQL_USER env var
 -- The user is automatically created by MariaDB image from MYSQL_USER/MYSQL_PASSWORD
+-- Note: '%' wildcard covers all hosts including localhost
 GRANT ALL PRIVILEGES ON otrs.* TO 'otrs'@'%';
-GRANT ALL PRIVILEGES ON otrs.* TO 'otrs'@'localhost';
 
 -- Flush privileges to ensure they take effect
 FLUSH PRIVILEGES;

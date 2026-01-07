@@ -29,7 +29,7 @@ func GetQueueSignature(queueID int) (*SignatureForAgent, error) {
 		SELECT s.id, s.name, s.text, s.content_type
 		FROM signature s
 		INNER JOIN queue q ON q.signature_id = s.id
-		WHERE q.id = $1 AND s.valid_id = 1
+		WHERE q.id = ? AND s.valid_id = 1
 	`
 
 	var sig SignatureForAgent

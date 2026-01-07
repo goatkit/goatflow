@@ -64,7 +64,7 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 	var currentStateID int
 	var customerUserID string
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT ticket_state_id, customer_user_id FROM ticket WHERE id = $1",
+		"SELECT ticket_state_id, customer_user_id FROM ticket WHERE id = ?",
 	), ticketID).Scan(&currentStateID, &customerUserID)
 
 	if err != nil {
@@ -108,8 +108,8 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 		SET ticket_state_id = 2,
 		    archive_flag = 1,
 		    change_time = NOW(),
-		    change_by = $1
-		WHERE id = $2
+		    change_by = ?
+		WHERE id = ?
 	`)
 
 	result, err := db.Exec(updateQuery, userID, ticketID)
@@ -146,7 +146,7 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 			change_time,
 			change_by
 		) VALUES (
-			$1, 1, 1, 0, 0, NOW(), $2, NOW(), $3
+			?, 1, 1, 0, 0, NOW(), ?, NOW(), ?
 		)
 	`)
 
@@ -167,8 +167,8 @@ func HandleDeleteTicketAPI(c *gin.Context) {
 				change_time,
 				change_by
 			) VALUES (
-				$1, 'Ticket Archived', 'This ticket has been archived.', 'text/plain', 
-				$2, NOW(), $3, NOW(), $4
+				?, 'Ticket Archived', 'This ticket has been archived.', 'text/plain', 
+				?, NOW(), ?, NOW(), ?
 			)
 		`)
 

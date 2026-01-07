@@ -88,7 +88,7 @@ func HandleUpdateUserAPI(c *gin.Context) {
 	// Check if user exists
 	var existingLogin string
 	checkQuery := database.ConvertPlaceholders(`
-		SELECT login FROM users WHERE id = $1
+		SELECT login FROM users WHERE id = ?
 	`)
 	err = db.QueryRow(checkQuery, userID).Scan(&existingLogin)
 	if err == sql.ErrNoRows {
@@ -107,7 +107,7 @@ func HandleUpdateUserAPI(c *gin.Context) {
 		// Check if email is already taken by another user
 		var otherUserID int
 		emailCheckQuery := database.ConvertPlaceholders(`
-			SELECT id FROM users WHERE email = $1 AND id != $2
+			SELECT id FROM users WHERE email = ? AND id != ?
 		`)
 		err = db.QueryRow(emailCheckQuery, *req.Email, userID).Scan(&otherUserID)
 		if err != sql.ErrNoRows {

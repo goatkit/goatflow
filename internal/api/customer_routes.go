@@ -116,7 +116,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		// Count open tickets for this customer
 		row := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket 
-			WHERE customer_user_id = $1 
+			WHERE customer_user_id = ? 
 			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2))
 		`), username)
 		_ = row.Scan(&stats.OpenTickets) //nolint:errcheck // Count defaults to 0
@@ -124,7 +124,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		// Count closed tickets for this customer
 		row = db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM ticket 
-			WHERE customer_user_id = $1 
+			WHERE customer_user_id = ? 
 			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)
 		`), username)
 		_ = row.Scan(&stats.ClosedTickets) //nolint:errcheck // Count defaults to 0
@@ -135,7 +135,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		var lastDate sql.NullTime
 		row = db.QueryRow(database.ConvertPlaceholders(`
 			SELECT MAX(create_time) FROM ticket 
-			WHERE customer_user_id = $1
+			WHERE customer_user_id = ?
 		`), username)
 		_ = row.Scan(&lastDate) //nolint:errcheck // Defaults to null
 		if lastDate.Valid {
@@ -145,7 +145,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 
 		// Get recent tickets
 		// Note: For MySQL compatibility, placeholder order must match order of appearance in query
-		// $1 = userID (for unread_count subquery), $2 = username (for WHERE clause)
+		// ? = userID (for unread_count subquery), ? = username (for WHERE clause)
 		rows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT t.id, t.tn, t.title, 
 				   ts.name as state,
@@ -161,11 +161,11 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 				   t.create_time,
 				   t.change_time,
 				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id) as article_count,
-				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id AND create_by != $1) as unread_count
+				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id AND create_by != ?) as unread_count
 			FROM ticket t
 			LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
 			LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
-			WHERE t.customer_user_id = $2
+			WHERE t.customer_user_id = ?
 			ORDER BY t.create_time DESC
 			LIMIT 10
 		`), userID, username)
@@ -222,7 +222,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 			SELECT cu.first_name, cu.last_name, cu.email, cc.name as company
 			FROM customer_user cu
 			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
-			WHERE cu.login = $1
+			WHERE cu.login = ?
 		`), username)
 		_ = row.Scan(&customerInfo.FirstName, &customerInfo.LastName, //nolint:errcheck // Customer info defaults to empty
 			&customerInfo.Email, &customerInfo.Company)
@@ -273,12 +273,12 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 				   t.create_time,
 				   t.change_time,
 				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id) as article_count,
-				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id AND create_by != $1) as unread_count
+				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id AND create_by != ?) as unread_count
 			FROM ticket t
 			LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
 			LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
 			LEFT JOIN service s ON t.service_id = s.id
-			WHERE t.customer_user_id = $2
+			WHERE t.customer_user_id = ?
 		`
 
 		args := []interface{}{userID, username}
@@ -294,7 +294,7 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 		// Apply search
 		if search != "" {
 			argCount++
-			query += fmt.Sprintf(" AND (t.tn ILIKE $%d OR t.title ILIKE $%d)",
+			query += fmt.Sprintf(" AND (LOWER(t.tn) LIKE LOWER($%d) OR LOWER(t.title) LIKE LOWER($%d))",
 				argCount, argCount)
 			args = append(args, "%"+search+"%")
 		}
@@ -382,7 +382,7 @@ func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 		query := database.ConvertPlaceholders(`
 			SELECT s.id, s.name FROM service s
 			INNER JOIN service_customer_user scu ON s.id = scu.service_id
-			WHERE s.valid_id = 1 AND scu.customer_user_login = $1
+			WHERE s.valid_id = 1 AND scu.customer_user_login = ?
 			ORDER BY s.name
 		`)
 		rows, err := db.Query(query, username)
@@ -521,7 +521,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 		// Get customer's company
 		var customerID sql.NullString
 		row := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT customer_id FROM customer_user WHERE login = $1
+			SELECT customer_id FROM customer_user WHERE login = ?
 		`), username)
 		_ = row.Scan(&customerID) //nolint:errcheck // Defaults to empty
 
@@ -552,13 +552,13 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 				escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time,
 				create_time, create_by, change_time, change_by
 			) VALUES (
-				$1, $2, 1, 1, $3,
-				1, $4, 1,
-				$5, $6,
-				$7, $8,
+				?, ?, 1, 1, ?,
+				1, ?, 1,
+				?, ?,
+				?, ?,
 				0, 0,
 				0, 0, 0, 0,
-				NOW(), $9, NOW(), $10
+				NOW(), ?, NOW(), ?
 			)
 		`, typeColumn)), tn, title, serviceIDVal, priorityID, systemUserID, systemUserID, customerID, username, systemUserID, systemUserID)
 
@@ -605,9 +605,9 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 				is_visible_for_customer, search_index_needs_rebuild,
 				create_time, create_by, change_time, change_by
 			) VALUES (
-				$1, 3, 1,
+				?, 3, 1,
 				1, 1,
-				NOW(), $2, NOW(), $3
+				NOW(), ?, NOW(), ?
 			)
 		`), ticketID, systemUserID, systemUserID)
 
@@ -629,7 +629,7 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 			INSERT INTO article_data_mime (
 				article_id, a_from, a_subject, a_body, a_content_type, incoming_time,
 				create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, $7, CURRENT_TIMESTAMP, $8)
+			VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 		`), articleID, username, title, message, contentType, time.Now().Unix(), systemUserID, systemUserID)
 
 		if err != nil {
@@ -708,7 +708,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			LEFT JOIN queue q ON t.queue_id = q.id
 			LEFT JOIN users ou ON t.user_id = ou.id
 			LEFT JOIN users ru ON t.responsible_user_id = ru.id
-			WHERE t.id = $1 AND t.customer_user_id = $2
+			WHERE t.id = ? AND t.customer_user_id = ?
 		`), ticketID, username).Scan(
 			&ticket.ID, &ticket.TN, &ticket.Title,
 			&ticket.State, &ticket.StateID,
@@ -737,7 +737,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			LEFT JOIN article_data_mime adm ON a.id = adm.article_id
 			LEFT JOIN article_sender_type ast ON a.article_sender_type_id = ast.id
 			LEFT JOIN users u ON a.create_by = u.id
-			WHERE a.ticket_id = $1 
+			WHERE a.ticket_id = ? 
 			  AND a.is_visible_for_customer = 1
 			ORDER BY a.create_time ASC
 		`), ticket.ID)
@@ -851,7 +851,7 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT EXISTS(
 				SELECT 1 FROM ticket 
-				WHERE id = $1 AND customer_user_id = $2
+				WHERE id = ? AND customer_user_id = ?
 			)
 		`), ticketID, username).Scan(&exists)
 
@@ -869,8 +869,8 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 
 		// Get ticket title and customer email for article
 		var ticketTitle, customerEmail string
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT title FROM ticket WHERE id = $1"), ticketID).Scan(&ticketTitle)             //nolint:errcheck // Defaults to empty
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT email FROM customer_user WHERE login = $1"), username).Scan(&customerEmail) //nolint:errcheck // Defaults to empty
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT title FROM ticket WHERE id = ?"), ticketID).Scan(&ticketTitle)             //nolint:errcheck // Defaults to empty
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT email FROM customer_user WHERE login = ?"), username).Scan(&customerEmail) //nolint:errcheck // Defaults to empty
 
 		// Create article (OTRS schema: article + article_data_mime)
 		// article_sender_type_id: 3 = customer
@@ -881,9 +881,9 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 				is_visible_for_customer, search_index_needs_rebuild,
 				create_time, create_by, change_time, change_by
 			) VALUES (
-				$1, 3, 1,
+				?, 3, 1,
 				1, 1,
-				NOW(), $2, NOW(), $3
+				NOW(), ?, NOW(), ?
 			)
 		`), ticketID, systemUserID, systemUserID)
 
@@ -906,8 +906,8 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 				article_id, a_from, a_subject, a_body, a_content_type,
 				incoming_time, create_time, create_by, change_time, change_by
 			) VALUES (
-				$1, $2, $3, $4, 'text/plain; charset=utf-8',
-				UNIX_TIMESTAMP(), NOW(), $5, NOW(), $6
+				?, ?, ?, ?, 'text/plain; charset=utf-8',
+				UNIX_TIMESTAMP(), NOW(), ?, NOW(), ?
 			)
 		`), articleID, customerEmail, "Re: "+ticketTitle, message, systemUserID, systemUserID)
 
@@ -926,8 +926,8 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		//nolint:errcheck // Best-effort state update
 		_, _ = db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
-			SET ticket_state_id = 4, change_time = NOW(), change_by = $2
-			WHERE id = $1 AND ticket_state_id IN (6, 7)
+			SET ticket_state_id = 4, change_time = NOW(), change_by = ?
+			WHERE id = ? AND ticket_state_id IN (6, 7)
 		`), ticketID, systemUserID)
 
 		// Redirect back to ticket view
@@ -949,7 +949,7 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 		var stateID int
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT ticket_state_id FROM ticket 
-			WHERE id = $1 AND customer_user_id = $2
+			WHERE id = ? AND customer_user_id = ?
 		`), ticketID, username).Scan(&stateID)
 
 		if err != nil {
@@ -969,8 +969,8 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 		// Close the ticket (args must match SQL text order: change_by first, then id)
 		_, err = db.Exec(database.ConvertPlaceholders(`
 			UPDATE ticket 
-			SET ticket_state_id = 2, change_time = NOW(), change_by = $1
-			WHERE id = $2
+			SET ticket_state_id = 2, change_time = NOW(), change_by = ?
+			WHERE id = ?
 		`), systemUserID, ticketID)
 
 		if err != nil {
@@ -986,9 +986,9 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 				is_visible_for_customer,
 				create_time, create_by, change_time, change_by
 			) VALUES (
-				$1, 3, 1,
+				?, 3, 1,
 				1,
-				NOW(), $2, NOW(), $3
+				NOW(), ?, NOW(), ?
 			)
 		`), ticketID, systemUserID, systemUserID)
 
@@ -1001,8 +1001,8 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 						article_id, a_from, a_to, a_subject, a_body, a_content_type,
 						incoming_time, create_time, create_by, change_time, change_by
 					) VALUES (
-						$1, 'Customer', '', 'Ticket closed by customer', 'Customer closed this ticket.', 'text/plain',
-						UNIX_TIMESTAMP(), NOW(), $2, NOW(), $3
+						?, 'Customer', '', 'Ticket closed by customer', 'Customer closed this ticket.', 'text/plain',
+						UNIX_TIMESTAMP(), NOW(), ?, NOW(), ?
 					)
 				`), articleID, systemUserID, systemUserID)
 			}

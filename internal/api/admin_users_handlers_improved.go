@@ -43,7 +43,7 @@ func ImprovedHandleAdminUserGet(c *gin.Context) {
 	query := `
 		SELECT id, login, title, first_name, last_name, valid_id
 		FROM users
-		WHERE id = $1`
+		WHERE id = ?`
 
 	err = db.QueryRow(query, id).Scan(
 		&user.ID,
@@ -70,7 +70,7 @@ func ImprovedHandleAdminUserGet(c *gin.Context) {
 		SELECT g.id, g.name, gu.permission_key, gu.permission_value
 		FROM groups g
 		JOIN group_user gu ON g.id = gu.group_id
-		WHERE gu.user_id = $1 AND g.valid_id = 1
+		WHERE gu.user_id = ? AND g.valid_id = 1
 		ORDER BY g.name`
 
 	rows, err := db.Query(groupQuery, id)
@@ -199,9 +199,9 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 
 		if _, err = tx.Exec(database.ConvertPlaceholders(`
 			UPDATE users 
-			SET login = $1, pw = $2, first_name = $3, last_name = $4, 
-			    valid_id = $5, change_time = NOW(), change_by = 1
-			WHERE id = $6`),
+			SET login = ?, pw = ?, first_name = ?, last_name = ?, 
+			    valid_id = ?, change_time = NOW(), change_by = 1
+			WHERE id = ?`),
 			req.Login, string(hash), req.FirstName, req.LastName, req.ValidID, id,
 		); err != nil {
 			fmt.Printf("ERROR: Failed to update user %d: %v\n", id, err)
@@ -215,9 +215,9 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 		// Update without changing password
 		if _, err = tx.Exec(database.ConvertPlaceholders(`
 			UPDATE users 
-			SET login = $1, first_name = $2, last_name = $3, 
-			    valid_id = $4, change_time = NOW(), change_by = 1
-			WHERE id = $5`),
+			SET login = ?, first_name = ?, last_name = ?, 
+			    valid_id = ?, change_time = NOW(), change_by = 1
+			WHERE id = ?`),
 			req.Login, req.FirstName, req.LastName, req.ValidID, id); err != nil {
 			fmt.Printf("ERROR: Failed to update user %d: %v\n", id, err)
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -240,7 +240,7 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 	rows, err := tx.Query(database.ConvertPlaceholders(`
 		SELECT g.name FROM groups g 
 		JOIN group_user gu ON g.id = gu.group_id 
-		WHERE gu.user_id = $1 AND g.valid_id = 1`), id)
+		WHERE gu.user_id = ? AND g.valid_id = 1`), id)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -254,7 +254,7 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 	fmt.Printf("INFO: User %d current groups: %v\n", id, currentGroups)
 
 	// Remove all existing group memberships
-	if _, err := tx.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), id); err != nil {
+	if _, err := tx.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ?"), id); err != nil {
 		fmt.Printf("ERROR: Failed to remove existing group memberships for user %d: %v\n", id, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -275,7 +275,7 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 		}
 
 		var groupID int
-		groupQuery := "SELECT id FROM groups WHERE name = $1 AND valid_id = 1"
+		groupQuery := "SELECT id FROM groups WHERE name = ? AND valid_id = 1"
 		if err := tx.QueryRow(database.ConvertPlaceholders(groupQuery), groupName).Scan(&groupID); err != nil {
 			fmt.Printf("WARNING: Group '%s' not found or invalid\n", groupName)
 			failedGroups = append(failedGroups, groupName)
@@ -284,7 +284,7 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 
 		_, err = tx.Exec(database.ConvertPlaceholders(`
             INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-            VALUES ($1, $2, 'rw', NOW(), 1, NOW(), 1)`),
+            VALUES (?, ?, 'rw', NOW(), 1, NOW(), 1)`),
 			id, groupID)
 
 		if err != nil {
@@ -313,7 +313,7 @@ func ImprovedHandleAdminUserUpdate(c *gin.Context) {
 	rows, err = db.Query(database.ConvertPlaceholders(`
 		SELECT g.name FROM groups g 
 		JOIN group_user gu ON g.id = gu.group_id 
-		WHERE gu.user_id = $1 AND g.valid_id = 1
+		WHERE gu.user_id = ? AND g.valid_id = 1
 		ORDER BY g.name`), id)
 	if err == nil {
 		defer rows.Close()

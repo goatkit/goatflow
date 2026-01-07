@@ -15,7 +15,7 @@ func loadArticleAttachments(db *sql.DB, articleID int) []gin.H {
 	query := database.ConvertPlaceholders(`
 		SELECT id, filename, content_type, content_size
 		FROM article_attachment
-		WHERE article_id = $1
+		WHERE article_id = ?
 	`)
 	rows, err := db.Query(query, articleID)
 	if err != nil {
@@ -69,7 +69,7 @@ func HandleListArticlesAPI(c *gin.Context) {
 	// Check if ticket exists (OTRS uses singular table names)
 	var ticketExists int
 	checkQuery := database.ConvertPlaceholders(`
-		SELECT 1 FROM ticket WHERE id = $1
+		SELECT 1 FROM ticket WHERE id = ?
 	`)
 	_ = db.QueryRow(checkQuery, ticketID).Scan(&ticketExists) //nolint:errcheck // Defaults to 0
 	if ticketExists != 1 {
@@ -86,7 +86,7 @@ func HandleListArticlesAPI(c *gin.Context) {
         FROM article a
 		LEFT JOIN article_type at ON a.article_type_id = at.id
 		LEFT JOIN article_sender_type ast ON a.article_sender_type_id = ast.id
-		WHERE a.ticket_id = $1
+		WHERE a.ticket_id = ?
 		ORDER BY a.create_time DESC
 	`)
 

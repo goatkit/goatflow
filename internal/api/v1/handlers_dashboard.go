@@ -338,7 +338,7 @@ func (router *APIRouter) handleGetMyTickets(c *gin.Context) {
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
-		WHERE t.responsible_user_id = $1 OR t.user_id = $1
+		WHERE t.responsible_user_id = ? OR t.user_id = ?
 		ORDER BY t.create_time DESC
 		LIMIT 20
 	`), userID)

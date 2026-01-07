@@ -49,7 +49,7 @@ func HandleDeleteArticleAPI(c *gin.Context) {
 	var count int
 	checkQuery := database.ConvertPlaceholders(`
 		SELECT 1 FROM article
-		WHERE id = $1 AND ticket_id = $2
+		WHERE id = ? AND ticket_id = ?
 	`)
 	_ = db.QueryRow(checkQuery, articleID, ticketID).Scan(&count) //nolint:errcheck // Defaults to 0
 	if count != 1 {
@@ -67,7 +67,7 @@ func HandleDeleteArticleAPI(c *gin.Context) {
 
 	// Delete attachments first
 	deleteAttachmentsQuery := database.ConvertPlaceholders(`
-		DELETE FROM article_attachment WHERE article_id = $1
+		DELETE FROM article_attachment WHERE article_id = ?
 	`)
 	if _, err := tx.Exec(deleteAttachmentsQuery, articleID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete article attachments"})
@@ -77,7 +77,7 @@ func HandleDeleteArticleAPI(c *gin.Context) {
 	// Delete article
 	deleteQuery := database.ConvertPlaceholders(`
 		DELETE FROM article 
-		WHERE id = $1 AND ticket_id = $2
+		WHERE id = ? AND ticket_id = ?
 	`)
 
 	result, err := tx.Exec(deleteQuery, articleID, ticketID)
@@ -101,8 +101,8 @@ func HandleDeleteArticleAPI(c *gin.Context) {
 	// Update ticket change time
 	updateTicketQuery := database.ConvertPlaceholders(`
         UPDATE ticket 
-        SET change_time = NOW(), change_by = $1
-        WHERE id = $2
+        SET change_time = NOW(), change_by = ?
+        WHERE id = ?
     `)
 	_, _ = db.Exec(updateTicketQuery, userID, ticketID) //nolint:errcheck // Best-effort timestamp update
 

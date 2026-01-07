@@ -78,11 +78,11 @@ func handleCreateState(c *gin.Context) {
 	if input.Comments != nil {
 		commentVal = *input.Comments
 	}
-	var id int
-	err = db.QueryRow(database.ConvertPlaceholders(`
-        INSERT INTO ticket_state (name, type_id, comments, valid_id, create_by, change_by)
-        VALUES ($1,$2,$3,$4,$5,$6) RETURNING id
-    `), input.Name, input.TypeID, commentVal, 1, 1, 1).Scan(&id)
+	// Use adapter for portable INSERT with id retrieval
+	adapter := database.GetAdapter()
+	query := database.ConvertPlaceholders(`INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, 1, NOW(), 1, NOW(), 1) RETURNING id`)
+	id, err := adapter.InsertWithReturning(db, query, input.Name, input.TypeID, commentVal)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to create state"})
 		return
@@ -126,23 +126,20 @@ func handleUpdateState(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "data": out})
 		return
 	}
-	query := `UPDATE ticket_state SET change_by = $1, change_time = CURRENT_TIMESTAMP`
+	query := `UPDATE ticket_state SET change_by = ?, change_time = CURRENT_TIMESTAMP`
 	args := []interface{}{1}
-	argN := 2
 	resp := gin.H{"id": id}
 	if input.Name != nil {
-		query += `, name = $` + strconv.Itoa(argN)
+		query += `, name = ?`
 		args = append(args, *input.Name)
 		resp["name"] = *input.Name
-		argN++
 	}
 	if input.Comments != nil {
-		query += `, comments = $` + strconv.Itoa(argN)
+		query += `, comments = ?`
 		args = append(args, *input.Comments)
 		resp["comments"] = *input.Comments
-		argN++
 	}
-	query += ` WHERE id = $` + strconv.Itoa(argN)
+	query += ` WHERE id = ?`
 	args = append(args, id)
 	result, err := db.Exec(database.ConvertPlaceholders(query), args...)
 	if err != nil {
@@ -175,10 +172,10 @@ func handleDeleteState(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "message": "State deleted successfully"})
 		return
 	}
-	// Match tests: args (id, change_by)
-	stateDeleteQuery := `UPDATE ticket_state SET valid_id = 2, change_by = $2, ` +
-		`change_time = CURRENT_TIMESTAMP WHERE id = $1`
-	result, err := db.Exec(database.ConvertPlaceholders(stateDeleteQuery), id, 1)
+	// Args match query order: change_by, id
+	stateDeleteQuery := `UPDATE ticket_state SET valid_id = 2, change_by = ?, ` +
+		`change_time = CURRENT_TIMESTAMP WHERE id = ?`
+	result, err := db.Exec(database.ConvertPlaceholders(stateDeleteQuery), 1, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete state"})
 		return

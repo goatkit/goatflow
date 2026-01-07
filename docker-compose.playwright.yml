@@ -8,13 +8,13 @@ services:
     volumes:
       - ./:/workspace
       - gotrs_node_modules:/workspace/node_modules
-      - gotrs_cache:/workspace/.cache
+      - gotrs_cache:/cache
     working_dir: /workspace
     command: tail -f /dev/null  # Keep container running
     environment:
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-      - NPM_CONFIG_CACHE=/workspace/.cache/npm
-      - XDG_CACHE_HOME=/workspace/.cache/xdg
+      - BUN_INSTALL_CACHE_DIR=/cache/bun
+      - XDG_CACHE_HOME=/cache/xdg
       - NODE_ENV=test
 
 networks:

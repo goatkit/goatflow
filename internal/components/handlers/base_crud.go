@@ -217,9 +217,9 @@ func (h *BaseCRUDHandler) Delete(c *gin.Context) {
 
 	var query string
 	if h.Config.SoftDelete {
-		query = fmt.Sprintf("UPDATE %s SET valid_id = 2 WHERE id = $1", h.Config.TableName)
+		query = fmt.Sprintf("UPDATE %s SET valid_id = 2 WHERE id = ?", h.Config.TableName)
 	} else {
-		query = fmt.Sprintf("DELETE FROM %s WHERE id = $1", h.Config.TableName)
+		query = fmt.Sprintf("DELETE FROM %s WHERE id = ?", h.Config.TableName)
 	}
 
 	_, err := h.DB.Exec(query, id)
@@ -298,7 +298,7 @@ func (h *BaseCRUDHandler) buildListQuery() string {
 
 func (h *BaseCRUDHandler) buildGetQuery() string {
 	columns := h.getSelectColumns()
-	return fmt.Sprintf("SELECT %s FROM %s WHERE id = $1", columns, h.Config.TableName)
+	return fmt.Sprintf("SELECT %s FROM %s WHERE id = ?", columns, h.Config.TableName)
 }
 
 func (h *BaseCRUDHandler) buildInsertQuery() string {
@@ -343,7 +343,7 @@ func (h *BaseCRUDHandler) buildSearchQuery(searchTerm string) string {
 	for _, field := range h.Config.Fields {
 		if field.Searchable {
 			searchableFields = append(searchableFields,
-				fmt.Sprintf("%s ILIKE $1", field.DBColumn))
+				fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", field.DBColumn))
 		}
 	}
 

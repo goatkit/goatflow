@@ -85,7 +85,7 @@ func HandleListUsersAPI(c *gin.Context) {
 		fields := []string{"u.login", "u.first_name", "u.last_name"}
 		for _, field := range fields {
 			argCount++
-			searchClauses = append(searchClauses, fmt.Sprintf("%s ILIKE $%d", field, argCount))
+			searchClauses = append(searchClauses, fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", field, argCount))
 			args = append(args, searchPattern)
 		}
 		where = append(where, "("+strings.Join(searchClauses, " OR ")+")")
@@ -206,7 +206,7 @@ func HandleListUsersAPI(c *gin.Context) {
 			SELECT g.id, g.name
 			FROM groups g
 			INNER JOIN group_user gu ON g.id = gu.group_id
-			WHERE gu.user_id = $1
+			WHERE gu.user_id = ?
 		`)
 
 		groupRows, err := db.Query(groupQuery, user.ID)

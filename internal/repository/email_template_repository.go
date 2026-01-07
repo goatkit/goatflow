@@ -23,7 +23,7 @@ func (r *EmailTemplateRepository) Create(template *models.EmailTemplate) (int, e
 		INSERT INTO email_templates (
 			template_name, subject_template, body_template, template_type,
 			is_active, created_at, created_by, updated_at, updated_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		RETURNING id`)
 
 	var id int
@@ -51,7 +51,7 @@ func (r *EmailTemplateRepository) GetByID(id int) (*models.EmailTemplate, error)
 		SELECT id, template_name, subject_template, body_template, template_type,
 			is_active, created_at, created_by, updated_at, updated_by
 		FROM email_templates
-		WHERE id = $1`)
+		WHERE id = ?`)
 
 	template := &models.EmailTemplate{}
 	err := r.db.QueryRow(query, id).Scan(
@@ -82,7 +82,7 @@ func (r *EmailTemplateRepository) GetByName(name string) (*models.EmailTemplate,
 		SELECT id, template_name, subject_template, body_template, template_type,
 			is_active, created_at, created_by, updated_at, updated_by
 		FROM email_templates
-		WHERE template_name = $1 AND is_active = true`)
+		WHERE template_name = ? AND is_active = true`)
 
 	template := &models.EmailTemplate{}
 	err := r.db.QueryRow(query, name).Scan(
@@ -113,7 +113,7 @@ func (r *EmailTemplateRepository) GetByType(templateType string) ([]*models.Emai
 		SELECT id, template_name, subject_template, body_template, template_type,
 			is_active, created_at, created_by, updated_at, updated_by
 		FROM email_templates
-		WHERE template_type = $1 AND is_active = true
+		WHERE template_type = ? AND is_active = true
 		ORDER BY template_name`)
 
 	rows, err := r.db.Query(query, templateType)
@@ -192,14 +192,14 @@ func (r *EmailTemplateRepository) GetAll() ([]*models.EmailTemplate, error) {
 func (r *EmailTemplateRepository) Update(template *models.EmailTemplate) error {
 	query := database.ConvertPlaceholders(`
 		UPDATE email_templates SET
-			template_name = $2,
-			subject_template = $3,
-			body_template = $4,
-			template_type = $5,
-			is_active = $6,
-			updated_at = $7,
-			updated_by = $8
-		WHERE id = $1`)
+			template_name = ?,
+			subject_template = ?,
+			body_template = ?,
+			template_type = ?,
+			is_active = ?,
+			updated_at = ?,
+			updated_by = ?
+		WHERE id = ?`)
 
 	_, err := r.db.Exec(query,
 		template.ID,
@@ -220,7 +220,7 @@ func (r *EmailTemplateRepository) Update(template *models.EmailTemplate) error {
 }
 
 func (r *EmailTemplateRepository) Delete(id int) error {
-	query := database.ConvertPlaceholders(`DELETE FROM email_templates WHERE id = $1`)
+	query := database.ConvertPlaceholders(`DELETE FROM email_templates WHERE id = ?`)
 	_, err := r.db.Exec(query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete email template: %w", err)

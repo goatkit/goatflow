@@ -198,7 +198,7 @@ func handleTicketDetail(c *gin.Context) {
 	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT ts.name, ts.type_id
 		FROM ticket_state ts
-		WHERE ts.id = $1
+		WHERE ts.id = ?
 	`), ticket.TicketStateID).Scan(&stateRow.Name, &stateRow.TypeID)
 	if err == nil {
 		stateName = stateRow.Name
@@ -210,7 +210,7 @@ func handleTicketDetail(c *gin.Context) {
 	var priorityRow struct {
 		Name string
 	}
-	priorityQuery := "SELECT name FROM ticket_priority WHERE id = $1"
+	priorityQuery := "SELECT name FROM ticket_priority WHERE id = ?"
 	err = db.QueryRow(database.ConvertPlaceholders(priorityQuery), ticket.TicketPriorityID).Scan(&priorityRow.Name)
 	if err == nil {
 		priorityName = priorityRow.Name
@@ -222,7 +222,7 @@ func handleTicketDetail(c *gin.Context) {
 		var typeRow struct {
 			Name string
 		}
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_type WHERE id = $1"), *ticket.TypeID).Scan(&typeRow.Name)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_type WHERE id = ?"), *ticket.TypeID).Scan(&typeRow.Name)
 		if err == nil {
 			typeName = typeRow.Name
 		}
@@ -237,7 +237,7 @@ func handleTicketDetail(c *gin.Context) {
 		customerRow := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT CONCAT(first_name, ' ', last_name), email, phone
 			FROM customer_user
-			WHERE login = $1 AND valid_id = 1
+			WHERE login = ? AND valid_id = 1
 		`), *ticket.CustomerUserID)
 		err = customerRow.Scan(&customerName, &customerEmail, &customerPhone)
 		if err != nil {
@@ -258,7 +258,7 @@ func handleTicketDetail(c *gin.Context) {
 		ownerRow := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT CONCAT(first_name, ' ', last_name)
 			FROM users
-			WHERE id = $1 AND valid_id = 1
+			WHERE id = ? AND valid_id = 1
 		`), *ticket.UserID)
 		if err := ownerRow.Scan(&ownerName); err != nil {
 			ownerName = fmt.Sprintf("User %d", *ticket.UserID)
@@ -272,7 +272,7 @@ func handleTicketDetail(c *gin.Context) {
 		agentRow := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT CONCAT(first_name, ' ', last_name), login
 			FROM users
-			WHERE id = $1 AND valid_id = 1
+			WHERE id = ? AND valid_id = 1
 		`), *ticket.ResponsibleUserID)
 		var responsibleName string
 		if err := agentRow.Scan(&responsibleName, &responsibleLogin); err == nil {
@@ -288,7 +288,7 @@ func handleTicketDetail(c *gin.Context) {
 	var queueRow struct {
 		Name string
 	}
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM queue WHERE id = $1"), ticket.QueueID).Scan(&queueRow.Name)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM queue WHERE id = ?"), ticket.QueueID).Scan(&queueRow.Name)
 	if err == nil {
 		queueName = queueRow.Name
 	}
@@ -550,7 +550,7 @@ func handleTicketDetail(c *gin.Context) {
 				   cc.name, cc.street, cc.zip, cc.city, cc.country, cc.url
 			FROM customer_user cu
 			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
-			WHERE cu.login = $1
+			WHERE cu.login = ?
 		`), *ticket.CustomerUserID).Scan(
 			&title, &firstName, &lastName, &login, &email, &phone, &mobile, &customerID,
 			&compName, &street, &zip, &city, &country, &url)
@@ -579,7 +579,7 @@ func handleTicketDetail(c *gin.Context) {
 					SELECT COUNT(*)
 					FROM ticket t
 					JOIN ticket_state s ON s.id = t.ticket_state_id
-					WHERE t.customer_id = $1 AND LOWER(s.name) NOT LIKE 'closed%'
+					WHERE t.customer_id = ? AND LOWER(s.name) NOT LIKE 'closed%'
 				`), customerID.String)
 				_ = row.Scan(&panelOpen) //nolint:errcheck // Defaults to 0
 			}
@@ -598,7 +598,7 @@ func handleTicketDetail(c *gin.Context) {
 			if ticket.CustomerID != nil && *ticket.CustomerID != "" {
 				var ccName, ccStreet, ccZip, ccCity, ccCountry, ccURL sql.NullString
 				ccErr := db.QueryRow(database.ConvertPlaceholders(`
-					SELECT name, street, zip, city, country, url FROM customer_company WHERE customer_id = $1
+					SELECT name, street, zip, city, country, url FROM customer_company WHERE customer_id = ?
 				`), *ticket.CustomerID).Scan(&ccName, &ccStreet, &ccZip, &ccCity, &ccCountry, &ccURL)
 				if ccErr == nil {
 					panelCompany = gin.H{
@@ -615,7 +615,7 @@ func handleTicketDetail(c *gin.Context) {
 					SELECT COUNT(*)
 					FROM ticket t
 					JOIN ticket_state s ON s.id = t.ticket_state_id
-					WHERE t.customer_id = $1 AND LOWER(s.name) NOT LIKE 'closed%'
+					WHERE t.customer_id = ? AND LOWER(s.name) NOT LIKE 'closed%'
 				`), *ticket.CustomerID)
 				_ = row.Scan(&panelOpen) //nolint:errcheck // Defaults to 0
 			}

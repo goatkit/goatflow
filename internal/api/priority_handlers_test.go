@@ -19,8 +19,7 @@ import (
 func TestGetPriorities(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	db := getTestDB(t)
-	defer db.Close()
+	getTestDB(t) // Initialize test database
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) { c.Set("user_id", 1); c.Next() })
@@ -52,7 +51,7 @@ func TestCreatePriority(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) { c.Set("user_id", 1); c.Next() })
@@ -119,7 +118,7 @@ func TestUpdatePriority(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) { c.Set("user_id", 1); c.Next() })
@@ -130,15 +129,15 @@ func TestUpdatePriority(t *testing.T) {
 
 	if database.IsMySQL() {
 		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_priority (name, color, valid_id, create_by, change_by)
-			VALUES (?, '#aaaaaa', 1, 1, 1)
+			INSERT INTO ticket_priority (name, color, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, '#aaaaaa', 1, NOW(), 1, NOW(), 1)
 		`), testName)
 		require.NoError(t, err)
 		testID, _ = result.LastInsertId()
 	} else {
 		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_priority (name, color, valid_id, create_by, change_by)
-			VALUES ($1, '#aaaaaa', 1, 1, 1) RETURNING id
+			INSERT INTO ticket_priority (name, color, valid_id, create_time, create_by, change_time, change_by)
+			VALUES ($1, '#aaaaaa', 1, NOW(), 1, NOW(), 1) RETURNING id
 		`), testName).Scan(&testID)
 		require.NoError(t, err)
 	}
@@ -215,7 +214,7 @@ func TestDeletePriority(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	router := gin.New()
 	router.Use(func(c *gin.Context) { c.Set("user_id", 1); c.Next() })
@@ -226,15 +225,15 @@ func TestDeletePriority(t *testing.T) {
 
 	if database.IsMySQL() {
 		result, err := db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO ticket_priority (name, color, valid_id, create_by, change_by)
-			VALUES (?, '#cccccc', 1, 1, 1)
+			INSERT INTO ticket_priority (name, color, valid_id, create_time, create_by, change_time, change_by)
+			VALUES (?, '#cccccc', 1, NOW(), 1, NOW(), 1)
 		`), testName)
 		require.NoError(t, err)
 		testID, _ = result.LastInsertId()
 	} else {
 		err := db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO ticket_priority (name, color, valid_id, create_by, change_by)
-			VALUES ($1, '#cccccc', 1, 1, 1) RETURNING id
+			INSERT INTO ticket_priority (name, color, valid_id, create_time, create_by, change_time, change_by)
+			VALUES ($1, '#cccccc', 1, NOW(), 1, NOW(), 1) RETURNING id
 		`), testName).Scan(&testID)
 		require.NoError(t, err)
 	}

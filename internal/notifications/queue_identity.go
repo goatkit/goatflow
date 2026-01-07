@@ -55,7 +55,7 @@ func ResolveQueueIdentity(ctx context.Context, db *sql.DB, queueID int) (*QueueI
 		LEFT JOIN system_address sa ON sa.id = q.system_address_id
 		LEFT JOIN salutation sal ON sal.id = q.salutation_id
 		LEFT JOIN signature sig ON sig.id = q.signature_id
-		WHERE q.id = $1
+		WHERE q.id = ?
 	`
 
 	row := db.QueryRowContext(ctx, database.ConvertPlaceholders(query), queueID)

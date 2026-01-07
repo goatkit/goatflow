@@ -110,7 +110,7 @@ func (router *APIRouter) handleListTickets(c *gin.Context) {
 		if err != nil {
 			// Handle error or continue with default queue name
 		} else {
-			err := db.QueryRow(database.ConvertPlaceholders("SELECT name FROM queue WHERE id = $1"), t.QueueID).Scan(&queueRow.Name)
+			err := db.QueryRow(database.ConvertPlaceholders("SELECT name FROM queue WHERE id = ?"), t.QueueID).Scan(&queueRow.Name)
 			if err == nil {
 				queueName = queueRow.Name
 			}
@@ -188,7 +188,7 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 
 	// Validate queue exists
 	var queueExists bool
-	queueExistsQuery := "SELECT EXISTS(SELECT 1 FROM queue WHERE id = $1 AND valid_id = 1)"
+	queueExistsQuery := "SELECT EXISTS(SELECT 1 FROM queue WHERE id = ? AND valid_id = 1)"
 	err = db.QueryRow(database.ConvertPlaceholders(queueExistsQuery), ticketRequest.QueueID).Scan(&queueExists)
 	if err != nil || !queueExists {
 		sendError(c, http.StatusBadRequest, "Invalid queue_id")
@@ -247,10 +247,10 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 			ticket_lock_id, user_id, responsible_user_id,
 			create_time, create_by, change_time, change_by
 		) VALUES (
-			$1, $2, $3, $4, $5, 
-			$6, $7, $8,
-			1, $9, $10,
-			NOW(), $11, NOW(), $12
+			?, ?, ?, ?, ?, 
+			?, ?, ?,
+			1, ?, ?,
+			NOW(), ?, NOW(), ?
 		) RETURNING id
 	`, ticketTypeColumn))
 
@@ -294,7 +294,7 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 				is_visible_for_customer, create_time, create_by, 
 				change_time, change_by
 			) VALUES (
-				$1, $2, 1, 1, NOW(), $3, NOW(), $4
+				?, ?, 1, 1, NOW(), ?, NOW(), ?
 			) RETURNING id
 		`)
 
@@ -316,8 +316,8 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 					article_id, a_subject, a_body, a_content_type,
 					create_time, create_by, change_time, change_by
 				) VALUES (
-					$1, $2, $3, $4,
-					NOW(), $5, NOW(), $6
+					?, ?, ?, ?,
+					NOW(), ?, NOW(), ?
 				)
 			`)
 
@@ -361,7 +361,7 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 		SELECT id, tn, title, queue_id, %s, ticket_state_id,
 		       ticket_priority_id, customer_user_id, customer_id, create_time
 		FROM ticket
-		WHERE id = $1
+		WHERE id = ?
 	`, typeSelect))
 
 	row := db.QueryRow(query, ticketID)
@@ -481,7 +481,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 	// Check if ticket exists and get current customer_user_id for permission check
 	var customerUserID string
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT customer_user_id FROM ticket WHERE id = $1",
+		"SELECT customer_user_id FROM ticket WHERE id = ?",
 	), ticketID).Scan(&customerUserID)
 
 	if err != nil {
@@ -512,7 +512,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 	// Validate referenced IDs exist
 	if updateRequest.QueueID != nil {
 		var exists bool
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM queue WHERE id = $1)"), *updateRequest.QueueID).Scan(&exists) //nolint:errcheck // Defaults to false
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM queue WHERE id = ?)"), *updateRequest.QueueID).Scan(&exists) //nolint:errcheck // Defaults to false
 		if !exists {
 			sendError(c, http.StatusBadRequest, "Invalid queue ID")
 			return
@@ -521,7 +521,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 
 	if updateRequest.StateID != nil {
 		var exists bool
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_state WHERE id = $1)"), *updateRequest.StateID).Scan(&exists) //nolint:errcheck // Defaults to false
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_state WHERE id = ?)"), *updateRequest.StateID).Scan(&exists) //nolint:errcheck // Defaults to false
 		if !exists {
 			sendError(c, http.StatusBadRequest, "Invalid state ID")
 			return
@@ -530,7 +530,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 
 	if updateRequest.PriorityID != nil {
 		var exists bool
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_priority WHERE id = $1)"), *updateRequest.PriorityID).Scan(&exists) //nolint:errcheck // Defaults to false
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM ticket_priority WHERE id = ?)"), *updateRequest.PriorityID).Scan(&exists) //nolint:errcheck // Defaults to false
 		if !exists {
 			sendError(c, http.StatusBadRequest, "Invalid priority ID")
 			return
@@ -629,7 +629,7 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 		       ticket_priority_id, customer_user_id, customer_id,
 		       ticket_lock_id, user_id, responsible_user_id,
 		       create_time, change_time
-		FROM ticket WHERE id = $1
+		FROM ticket WHERE id = ?
 	`, typeSelectUpdated)), ticketID).Scan(
 		&ticket.ID, &ticket.TicketNumber, &ticket.Title, &ticket.QueueID,
 		&ticket.TypeID, &ticket.TicketStateID, &ticket.TicketPriorityID,
@@ -674,7 +674,7 @@ func (router *APIRouter) HandleDeleteTicket(c *gin.Context) {
 	var currentStateID int
 	var customerUserID string
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT ticket_state_id, customer_user_id FROM ticket WHERE id = $1",
+		"SELECT ticket_state_id, customer_user_id FROM ticket WHERE id = ?",
 	), ticketID).Scan(&currentStateID, &customerUserID)
 
 	if err != nil {
@@ -707,8 +707,8 @@ func (router *APIRouter) HandleDeleteTicket(c *gin.Context) {
 		SET ticket_state_id = 2,
 		    archive_flag = 1,
 		    change_time = NOW(),
-		    change_by = $1
-		WHERE id = $2
+		    change_by = ?
+		WHERE id = ?
 	`)
 
 	result, err := db.Exec(updateQuery, userID, ticketID)
@@ -736,7 +736,7 @@ func (router *APIRouter) HandleDeleteTicket(c *gin.Context) {
 			change_time,
 			change_by
 		) VALUES (
-			$1, 1, 1, 0, 0, NOW(), $2, NOW(), $3
+			?, 1, 1, 0, 0, NOW(), ?, NOW(), ?
 		)
 	`)
 
@@ -757,8 +757,8 @@ func (router *APIRouter) HandleDeleteTicket(c *gin.Context) {
 				change_time,
 				change_by
 			) VALUES (
-				$1, 'Ticket Archived', 'This ticket has been archived.', 'text/plain', 
-				$2, NOW(), $3, NOW(), $4
+				?, 'Ticket Archived', 'This ticket has been archived.', 'text/plain', 
+				?, NOW(), ?, NOW(), ?
 			)
 		`)
 
@@ -812,7 +812,7 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 	var currentResponsibleID sql.NullInt32
 	var title string
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT responsible_user_id, title FROM ticket WHERE id = $1",
+		"SELECT responsible_user_id, title FROM ticket WHERE id = ?",
 	), ticketID).Scan(&currentResponsibleID, &title)
 
 	if err != nil {
@@ -827,7 +827,7 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 	// Check if the user to assign to exists
 	var assigneeLogin string
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT login FROM users WHERE id = $1 AND valid_id = 1",
+		"SELECT login FROM users WHERE id = ? AND valid_id = 1",
 	), assignRequest.AssignedTo).Scan(&assigneeLogin)
 
 	if err != nil {
@@ -850,10 +850,10 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 	// Update ticket with new responsible user
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
-		SET responsible_user_id = $1,
+		SET responsible_user_id = ?,
 		    change_time = NOW(),
-		    change_by = $2
-		WHERE id = $3
+		    change_by = ?
+		WHERE id = ?
 	`)
 
 	_, err = tx.Exec(updateQuery, assignRequest.AssignedTo, userID, ticketID)
@@ -876,7 +876,7 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 				change_time,
 				change_by
 			) VALUES (
-				$1, 1, 1, 0, 0, NOW(), $2, NOW(), $3
+				?, 1, 1, 0, 0, NOW(), ?, NOW(), ?
 			)
 		`)
 
@@ -888,7 +888,7 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 			var previousAssignee string
 			if currentResponsibleID.Valid {
 				_ = db.QueryRow(database.ConvertPlaceholders( //nolint:errcheck // Defaults to empty
-					"SELECT login FROM users WHERE id = $1",
+					"SELECT login FROM users WHERE id = ?",
 				), currentResponsibleID.Int32).Scan(&previousAssignee)
 			}
 
@@ -916,8 +916,8 @@ func (router *APIRouter) HandleAssignTicket(c *gin.Context) {
 					change_time,
 					change_by
 				) VALUES (
-					$1, 'Ticket Assignment', $2, 'text/plain', 
-					$3, NOW(), $4, NOW(), $5
+					?, 'Ticket Assignment', ?, 'text/plain', 
+					?, NOW(), ?, NOW(), ?
 				)
 			`)
 
@@ -979,7 +979,7 @@ func (router *APIRouter) HandleCloseTicket(c *gin.Context) {
 	var currentStateID int
 	var title string
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT ticket_state_id, title FROM ticket WHERE id = $1",
+		"SELECT ticket_state_id, title FROM ticket WHERE id = ?",
 	), ticketID).Scan(&currentStateID, &title)
 
 	if err != nil {
@@ -1018,10 +1018,10 @@ func (router *APIRouter) HandleCloseTicket(c *gin.Context) {
 	// Update ticket state
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE ticket 
-		SET ticket_state_id = $1,
+		SET ticket_state_id = ?,
 		    change_time = NOW(),
-		    change_by = $2
-		WHERE id = $3
+		    change_by = ?
+		WHERE id = ?
 	`)
 
 	_, err = tx.Exec(updateQuery, newStateID, userID, ticketID)
@@ -1044,7 +1044,7 @@ func (router *APIRouter) HandleCloseTicket(c *gin.Context) {
 				change_time,
 				change_by
 			) VALUES (
-				$1, 1, 1, 1, 0, NOW(), $2, NOW(), $3
+				?, 1, 1, 1, 0, NOW(), ?, NOW(), ?
 			)
 		`)
 
@@ -1071,8 +1071,8 @@ func (router *APIRouter) HandleCloseTicket(c *gin.Context) {
 					change_time,
 					change_by
 				) VALUES (
-					$1, $2, $3, 'text/plain', 
-					$4, NOW(), $5, NOW(), $6
+					?, ?, ?, 'text/plain', 
+					?, NOW(), ?, NOW(), ?
 				)
 			`)
 
@@ -1139,7 +1139,7 @@ func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 	var currentStateID int
 	var title string
 	err = db.QueryRow(database.ConvertPlaceholders(
-		"SELECT ticket_state_id, title FROM ticket WHERE id = $1",
+		"SELECT ticket_state_id, title FROM ticket WHERE id = ?",
 	), ticketID).Scan(&currentStateID, &title)
 
 	if err != nil {
@@ -1171,8 +1171,8 @@ func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 		SET ticket_state_id = 4,
 		    archive_flag = 0,
 		    change_time = NOW(),
-		    change_by = $1
-		WHERE id = $2
+		    change_by = ?
+		WHERE id = ?
 	`)
 
 	_, err = tx.Exec(updateQuery, userID, ticketID)
@@ -1194,7 +1194,7 @@ func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 			change_time,
 			change_by
 		) VALUES (
-			$1, 1, 1, 1, 0, NOW(), $2, NOW(), $3
+			?, 1, 1, 1, 0, NOW(), ?, NOW(), ?
 		)
 	`)
 
@@ -1215,8 +1215,8 @@ func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 				change_time,
 				change_by
 			) VALUES (
-				$1, 'Ticket Reopened', $2, 'text/plain', 
-				$3, NOW(), $4, NOW(), $5
+				?, 'Ticket Reopened', ?, 'text/plain', 
+				?, NOW(), ?, NOW(), ?
 			)
 		`)
 
@@ -1470,7 +1470,7 @@ func mapTicketState(stateID int) string {
 	var stateRow struct {
 		Name string
 	}
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), stateID).Scan(&stateRow.Name)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = ?"), stateID).Scan(&stateRow.Name)
 	if err == nil {
 		return stateRow.Name
 	}
@@ -1485,7 +1485,7 @@ func mapTicketPriority(priorityID int) string {
 	var priorityRow struct {
 		Name string
 	}
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = $1"), priorityID).Scan(&priorityRow.Name)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = ?"), priorityID).Scan(&priorityRow.Name)
 	if err == nil {
 		return priorityRow.Name
 	}

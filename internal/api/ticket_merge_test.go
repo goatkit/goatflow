@@ -82,7 +82,7 @@ func TestMergeTickets(t *testing.T) {
 			},
 			wantStatus: http.StatusBadRequest,
 			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				assert.Contains(t, resp["error"], "Cannot merge closed tickets")
+				assert.Contains(t, resp["error"], "cannot merge closed tickets")
 			},
 		},
 		{
@@ -431,7 +431,7 @@ func TestMergeValidation(t *testing.T) {
 				},
 			},
 			wantValid: false,
-			wantError: "Cannot merge tickets from different customers",
+			wantError: "cannot merge tickets from different customers",
 		},
 		{
 			name: "Invalid - closed ticket",
@@ -448,7 +448,7 @@ func TestMergeValidation(t *testing.T) {
 				},
 			},
 			wantValid: false,
-			wantError: "Cannot merge closed tickets",
+			wantError: "cannot merge closed tickets",
 		},
 		{
 			name: "Invalid - already merged ticket",
@@ -466,7 +466,7 @@ func TestMergeValidation(t *testing.T) {
 				},
 			},
 			wantValid: false,
-			wantError: "Ticket 401 is already merged",
+			wantError: "ticket 401 is already merged",
 		},
 	}
 

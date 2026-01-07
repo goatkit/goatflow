@@ -32,7 +32,7 @@ func GetTemplatesForQueue(queueID int, templateType string) ([]TemplateForAgent,
 		SELECT DISTINCT t.id, t.name, t.text, t.content_type, t.template_type
 		FROM standard_template t
 		INNER JOIN queue_standard_template qt ON qt.standard_template_id = t.id
-		WHERE qt.queue_id = $1
+		WHERE qt.queue_id = ?
 		  AND t.valid_id = 1
 	`
 	args := []interface{}{queueID}
@@ -192,7 +192,7 @@ func GetTicketTemplateVariables(ticketID int) map[string]string {
 		FROM ticket t
 		LEFT JOIN queue q ON q.id = t.queue_id
 		LEFT JOIN users u ON u.id = t.user_id
-		WHERE t.id = $1
+		WHERE t.id = ?
 	`
 
 	var tn, title, customerID, customerUserID sql.NullString
@@ -218,7 +218,7 @@ func GetTicketTemplateVariables(ticketID int) map[string]string {
 		cuQuery := `
 			SELECT first_name, last_name, email
 			FROM customer_user
-			WHERE login = $1
+			WHERE login = ?
 		`
 		var firstName, lastName, email sql.NullString
 		err = db.QueryRow(database.ConvertPlaceholders(cuQuery), customerUserID.String).Scan(
@@ -266,7 +266,7 @@ func GetAttachmentsByIDs(ids []int) []AttachmentInfo {
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT id, name, filename, content_type, LENGTH(content) as content_size
 			FROM standard_attachment
-			WHERE id = $1 AND valid_id = 1
+			WHERE id = ? AND valid_id = 1
 		`), id).Scan(&a.ID, &a.Name, &a.Filename, &a.ContentType, &a.ContentSize)
 		if err == nil {
 			result = append(result, a)
