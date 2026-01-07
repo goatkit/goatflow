@@ -72,7 +72,7 @@ func HandleCreateUserAPI(c *gin.Context) {
 	// Check if login already exists
 	var existingID int
 	checkQuery := database.ConvertPlaceholders(`
-		SELECT id FROM users WHERE login = $1
+		SELECT id FROM users WHERE login = ?
 	`)
 	err = db.QueryRow(checkQuery, req.Login).Scan(&existingID)
 	if err != sql.ErrNoRows {
@@ -85,7 +85,7 @@ func HandleCreateUserAPI(c *gin.Context) {
 
 	// Check if email already exists
 	checkEmailQuery := database.ConvertPlaceholders(`
-		SELECT id FROM users WHERE email = $1
+		SELECT id FROM users WHERE email = ?
 	`)
 	err = db.QueryRow(checkEmailQuery, req.Email).Scan(&existingID)
 	if err != sql.ErrNoRows {
@@ -130,7 +130,7 @@ func HandleCreateUserAPI(c *gin.Context) {
 			create_by,
 			change_time,
 			change_by
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		RETURNING id
 	`)
 
@@ -173,7 +173,7 @@ func HandleCreateUserAPI(c *gin.Context) {
 					create_by,
 					change_time,
 					change_by
-				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			`)
 
 			_, err = tx.Exec(

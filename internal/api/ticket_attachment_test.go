@@ -265,7 +265,7 @@ func TestUploadAttachment(t *testing.T) {
 			fileType:    "application/x-msdownload",
 			wantStatus:  http.StatusBadRequest,
 			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				assert.Contains(t, resp["error"], "File type not allowed")
+				assert.Contains(t, resp["error"], "file type not allowed")
 			},
 		},
 	}
@@ -443,14 +443,13 @@ func TestDeleteAttachment(t *testing.T) {
 		checkResp    func(t *testing.T, resp map[string]interface{})
 	}{
 		{
-			name:         "Delete with DB available returns error (known SQL bug)",
+			name:         "Delete attachment successfully",
 			userRole:     "admin",
 			userID:       1,
 			attachmentID: fmt.Sprintf("%d", attachmentID),
-			wantStatus:   http.StatusInternalServerError, // Due to SQL syntax bug
+			wantStatus:   http.StatusOK,
 			checkResp: func(t *testing.T, resp map[string]interface{}) {
-				// Documents current buggy behavior
-				assert.Contains(t, resp["error"], "Failed to delete")
+				assert.Equal(t, true, resp["success"])
 			},
 		},
 		{
@@ -521,14 +520,14 @@ func TestAttachmentValidation(t *testing.T) {
 			filename:    "virus.exe",
 			contentType: "application/x-msdownload",
 			wantAllowed: false,
-			wantError:   "File type not allowed",
+			wantError:   "file type not allowed",
 		},
 		{
 			name:        "Script blocked",
 			filename:    "hack.bat",
 			contentType: "application/x-msdos-program",
 			wantAllowed: false,
-			wantError:   "File type not allowed",
+			wantError:   "file type not allowed",
 		},
 		{
 			name:        "Hidden file blocked",
@@ -627,7 +626,7 @@ func TestAttachmentSecurity(t *testing.T) {
 			filename:    "script.ps1",
 			content:     []byte("Write-Host 'test'"),
 			wantBlocked: true,
-			reason:      "File type not allowed",
+			reason:      "file type not allowed",
 		},
 		{
 			name:        "Clean file passes",

@@ -22,7 +22,7 @@ func TestAdminCustomerPortalSettingsUpdate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	if !portalSysconfigAvailable(t, db) {
 		t.Skip("sysconfig tables not present in test database")
@@ -69,7 +69,7 @@ func TestAdminCustomerCompanyPortalSettingsUpdate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	if !portalSysconfigAvailable(t, db) {
 		t.Skip("sysconfig tables not present in test database")
@@ -122,7 +122,7 @@ func TestAdminCustomerCompanyPortalSettingsDelete(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	db := getTestDB(t)
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	if !portalSysconfigAvailable(t, db) {
 		t.Skip("sysconfig tables not present in test database")

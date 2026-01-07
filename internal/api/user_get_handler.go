@@ -55,7 +55,7 @@ func HandleGetUserAPI(c *gin.Context) {
 			create_time,
 			change_time
 		FROM users
-		WHERE id = $1
+		WHERE id = ?
 	`)
 
 	var user struct {
@@ -129,7 +129,7 @@ func HandleGetUserAPI(c *gin.Context) {
 			ug.permission_value
 		FROM groups g
 		INNER JOIN user_groups ug ON g.id = ug.group_id
-		WHERE ug.user_id = $1
+		WHERE ug.user_id = ?
 		ORDER BY g.name
 	`)
 
@@ -174,7 +174,7 @@ func HandleGetUserAPI(c *gin.Context) {
 			preferences_key,
 			preferences_value
 		FROM user_preferences
-		WHERE user_id = $1
+		WHERE user_id = ?
 	`)
 
 	prefRows, err := db.Query(prefsQuery, userID)

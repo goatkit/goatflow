@@ -42,7 +42,7 @@ func (r *TicketRepository) AutoClosePendingTickets(
 	placeholders := make([]string, len(names))
 	args := make([]any, len(names))
 	for i, name := range names {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		placeholders[i] = "?"
 		args[i] = name
 	}
 
@@ -87,13 +87,13 @@ func (r *TicketRepository) AutoClosePendingTickets(
 
 		update := `
 			UPDATE ticket
-			SET ticket_state_id = $1,
+			SET ticket_state_id = ?,
 			    until_time = 0,
 			    change_time = CURRENT_TIMESTAMP,
-			    change_by = $2
-			WHERE ticket_state_id = $3
+			    change_by = ?
+			WHERE ticket_state_id = ?
 			  AND until_time > 0
-			  AND until_time <= $4
+			  AND until_time <= ?
 			  AND archive_flag = 0
 		`
 

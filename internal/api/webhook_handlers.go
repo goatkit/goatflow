@@ -70,21 +70,22 @@ func HandleRegisterWebhookAPI(c *gin.Context) {
 		return
 	}
 
-	// Insert webhook - adapter handles placeholder conversion and arg remapping for $8 repeated
+	// Insert webhook - adapter handles placeholder conversion and arg remapping for ? repeated
 	insertQuery := `
 		INSERT INTO webhooks (
 			name, url, secret, events, active,
 			retry_count, timeout_seconds, headers,
 			create_time, create_by, change_time, change_by
 		) VALUES (
-			$1, $2, $3, $4, true, $5, $6, $7,
-			NOW(), $8, NOW(), $8
+			?, ?, ?, ?, true, ?, ?, ?,
+			NOW(), ?, NOW(), ?
 		) RETURNING id
 	`
+	// Args: name, url, secret, events, retry_count, timeout_seconds, headers, create_by, change_by
 	webhookID64, err := database.GetAdapter().InsertWithReturning(db, insertQuery,
 		req.Name, req.URL, req.Secret, string(eventsJSON),
 		req.RetryCount, req.TimeoutSeconds, string(headersJSON),
-		userID,
+		userID, userID,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -235,7 +236,7 @@ func HandleGetWebhookAPI(c *gin.Context) {
 		SELECT id, name, url, secret, events, active, 
 			   retry_count, timeout_seconds, headers, create_time
 		FROM webhooks
-		WHERE id = $1
+		WHERE id = ?
 	`)
 
 	err = db.QueryRow(query, webhookID).Scan(
@@ -316,14 +317,14 @@ func HandleUpdateWebhookAPI(c *gin.Context) {
 
 	// Check if webhook exists
 	var count int
-	checkQuery := database.ConvertPlaceholders(`SELECT 1 FROM webhooks WHERE id = $1`)
+	checkQuery := database.ConvertPlaceholders(`SELECT 1 FROM webhooks WHERE id = ?`)
 	if err := db.QueryRow(checkQuery, webhookID).Scan(&count); err != nil || count != 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Webhook not found"})
 		return
 	}
 
 	// Build update query dynamically
-	updateParts := []string{"change_time = NOW()", "change_by = $1"}
+	updateParts := []string{"change_time = NOW()", "change_by = ?"}
 	args := []interface{}{userID}
 	paramCount := 1
 
@@ -435,7 +436,7 @@ func HandleDeleteWebhookAPI(c *gin.Context) {
 
 	// Delete deliveries first
 	deleteDeliveriesQuery := database.ConvertPlaceholders(`
-		DELETE FROM webhook_deliveries WHERE webhook_id = $1
+		DELETE FROM webhook_deliveries WHERE webhook_id = ?
 	`)
 	if _, err := tx.Exec(deleteDeliveriesQuery, webhookID); err != nil {
 		// Non-fatal, continue with webhook deletion
@@ -443,7 +444,7 @@ func HandleDeleteWebhookAPI(c *gin.Context) {
 
 	// Delete webhook
 	deleteWebhookQuery := database.ConvertPlaceholders(`
-		DELETE FROM webhooks WHERE id = $1
+		DELETE FROM webhooks WHERE id = ?
 	`)
 	result, err := tx.Exec(deleteWebhookQuery, webhookID)
 	if err != nil {
@@ -515,7 +516,7 @@ func HandleTestWebhookAPI(c *gin.Context) {
 	query := database.ConvertPlaceholders(`
 		SELECT url, secret, timeout_seconds, headers
 		FROM webhooks
-		WHERE id = $1
+		WHERE id = ?
 	`)
 
 	err = db.QueryRow(query, webhookID).Scan(
@@ -639,7 +640,7 @@ func HandleWebhookDeliveriesAPI(c *gin.Context) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, event_type, status_code, attempts, delivered_at, created_at
 		FROM webhook_deliveries
-		WHERE webhook_id = $1
+		WHERE webhook_id = ?
 		ORDER BY created_at DESC
 		LIMIT 100
 	`)
@@ -726,7 +727,7 @@ func HandleRetryWebhookDeliveryAPI(c *gin.Context) {
 	query := database.ConvertPlaceholders(`
 		SELECT webhook_id, payload, event_type
 		FROM webhook_deliveries
-		WHERE id = $1
+		WHERE id = ?
 	`)
 
 	err = db.QueryRow(query, deliveryID).Scan(
@@ -746,7 +747,7 @@ func HandleRetryWebhookDeliveryAPI(c *gin.Context) {
 		UPDATE webhook_deliveries
 		SET next_retry = %s,
 			attempts = attempts + 1
-		WHERE id = $1
+		WHERE id = ?
 	`, nextRetryExpr)
 
 	_, err = database.GetAdapter().Exec(db, updateQuery, deliveryID)

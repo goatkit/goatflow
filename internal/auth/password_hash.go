@@ -64,7 +64,7 @@ func (h *PasswordHasher) VerifyPassword(password, hash string) bool {
 //nolint:unused
 func (h *PasswordHasher) detectHashType(hash string) PasswordHashType {
 	// Bcrypt hashes start with $2a$, $2b$, or $2y$
-	if strings.HasPrefix(hash, "$2") {
+	if strings.HasPrefix(hash, "?") {
 		return HashTypeBcrypt
 	}
 

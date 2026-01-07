@@ -91,7 +91,7 @@ func (pb *PostgresBackend) searchTickets(ctx context.Context, query SearchQuery)
 		SELECT 
 			t.id, t.tn, t.title, 
 			COALESCE(t.title || ' ' || STRING_AGG(a.body, ' '), t.title) as content,
-			ts_rank(to_tsvector('english', t.title), plainto_tsquery('english', $1)) as score,
+			ts_rank(to_tsvector('english', t.title), plainto_tsquery('english', ?)) as score,
 			t.create_time,
 			q.name as queue_name,
 			s.name as state_name,
@@ -101,7 +101,7 @@ func (pb *PostgresBackend) searchTickets(ctx context.Context, query SearchQuery)
 		LEFT JOIN queues q ON t.queue_id = q.id
 		LEFT JOIN ticket_state s ON t.ticket_state_id = s.id
 		LEFT JOIN ticket_priority p ON t.ticket_priority_id = p.id
-		WHERE to_tsvector('english', t.title) @@ plainto_tsquery('english', $1)
+		WHERE to_tsvector('english', t.title) @@ plainto_tsquery('english', ?)
 	`)
 
 	args := []interface{}{query.Query}
@@ -186,13 +186,13 @@ func (pb *PostgresBackend) searchArticles(ctx context.Context, query SearchQuery
 	sqlQuery := database.ConvertPlaceholders(`
 		SELECT 
 			a.id, a.subject, a.body,
-			ts_rank(to_tsvector('english', a.subject || ' ' || a.body), plainto_tsquery('english', $1)) as score,
+			ts_rank(to_tsvector('english', a.subject || ' ' || a.body), plainto_tsquery('english', ?)) as score,
 			a.create_time,
 			t.tn as ticket_number,
 			t.title as ticket_title
 		FROM article a
 		JOIN tickets t ON a.ticket_id = t.id
-		WHERE to_tsvector('english', a.subject || ' ' || a.body) @@ plainto_tsquery('english', $1)
+		WHERE to_tsvector('english', a.subject || ' ' || a.body) @@ plainto_tsquery('english', ?)
 		ORDER BY score DESC
 	`)
 
@@ -260,7 +260,7 @@ func (pb *PostgresBackend) searchCustomers(ctx context.Context, query SearchQuer
 		LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
 		WHERE 
 			to_tsvector('english', cu.login || ' ' || COALESCE(cu.first_name, '') || ' ' || COALESCE(cu.last_name, '') || ' ' || cu.email) 
-			@@ plainto_tsquery('english', $1)
+			@@ plainto_tsquery('english', ?)
 		ORDER BY cu.create_time DESC
 	`)
 

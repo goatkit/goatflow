@@ -88,7 +88,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 		SELECT name, group_id, system_address_id, salutation_id, signature_id,
 		       unlock_timeout, follow_up_id, follow_up_lock, comments, valid_id
 		FROM queue
-		WHERE id = $1
+		WHERE id = ?
 	`)
 	if err := db.QueryRow(currentQuery, queueID).Scan(
 		&current.Name,
@@ -133,7 +133,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 		var duplicateCount int
 		dupQuery := database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM queue
-			WHERE LOWER(name) = LOWER($1) AND id <> $2
+			WHERE LOWER(name) = LOWER(?) AND id <> ?
 		`)
 		if err := db.QueryRow(dupQuery, name, queueID).Scan(&duplicateCount); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to validate queue name"})
@@ -260,19 +260,19 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 	if updateRequired {
 		updateQuery := database.ConvertPlaceholders(`
 			UPDATE queue SET
-				name = $1,
-				group_id = $2,
-				system_address_id = $3,
-				salutation_id = $4,
-				signature_id = $5,
-				unlock_timeout = $6,
-				follow_up_id = $7,
-				follow_up_lock = $8,
-				comments = $9,
-				valid_id = $10,
+				name = ?,
+				group_id = ?,
+				system_address_id = ?,
+				salutation_id = ?,
+				signature_id = ?,
+				unlock_timeout = ?,
+				follow_up_id = ?,
+				follow_up_lock = ?,
+				comments = ?,
+				valid_id = ?,
 				change_time = NOW(),
-				change_by = $11
-			WHERE id = $12
+				change_by = ?
+			WHERE id = ?
 		`)
 		if _, err := tx.Exec(updateQuery,
 			name,
@@ -295,7 +295,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 
 	if groupAccessProvided {
 		deleteQuery := database.ConvertPlaceholders(`
-			DELETE FROM queue_group WHERE queue_id = $1
+			DELETE FROM queue_group WHERE queue_id = ?
 		`)
 		if _, err := tx.Exec(deleteQuery, queueID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update group access"})
@@ -306,7 +306,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 			for _, gid := range *req.GroupAccess {
 				insertQuery := database.ConvertPlaceholders(`
 					INSERT INTO queue_group (queue_id, group_id)
-					VALUES ($1, $2)
+					VALUES (?, ?)
 				`)
 				if _, err := tx.Exec(insertQuery, queueID, gid); err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update group access"})
@@ -345,7 +345,7 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 
 	groupQuery := database.ConvertPlaceholders(`
 		SELECT group_id FROM queue_group
-		WHERE queue_id = $1
+		WHERE queue_id = ?
 	`)
 	rows, err := db.Query(groupQuery, queueID)
 	if err == nil {

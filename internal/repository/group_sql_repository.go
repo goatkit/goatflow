@@ -62,7 +62,7 @@ func (r *GroupSQLRepository) GetUserGroups(userID uint) ([]string, error) {
 		SELECT g.name 
 		FROM groups g
 		JOIN group_user ug ON g.id = ug.group_id
-		WHERE ug.user_id = $1 AND g.valid_id = 1
+		WHERE ug.user_id = ? AND g.valid_id = 1
 		ORDER BY g.name`)
 
 	rows, err := r.db.Query(query, userID) //nolint:rowserrcheck // rows.Err checked inside CollectStrings
@@ -79,7 +79,7 @@ func (r *GroupSQLRepository) GetByID(id uint) (*models.Group, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
 		FROM groups
-		WHERE id = $1`)
+		WHERE id = ?`)
 
 	var group models.Group
 	var comments sql.NullString
@@ -109,7 +109,7 @@ func (r *GroupSQLRepository) GetByID(id uint) (*models.Group, error) {
 func (r *GroupSQLRepository) AddUserToGroup(userID uint, groupID uint) error {
 	// Check if the relationship already exists
 	var exists bool
-	checkQuery := database.ConvertPlaceholders(`SELECT EXISTS(SELECT 1 FROM group_user WHERE user_id = $1 AND group_id = $2 AND permission_key = 'rw')`)
+	checkQuery := database.ConvertPlaceholders(`SELECT EXISTS(SELECT 1 FROM group_user WHERE user_id = ? AND group_id = ? AND permission_key = 'rw')`)
 	err := r.db.QueryRow(checkQuery, userID, groupID).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("failed to check user-group relationship: %w", err)
@@ -122,7 +122,7 @@ func (r *GroupSQLRepository) AddUserToGroup(userID uint, groupID uint) error {
 	// Insert the relationship with required OTRS fields
 	insertQuery := database.ConvertPlaceholders(`
         INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by) 
-        VALUES ($1, $2, 'rw', CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)`)
+        VALUES (?, ?, 'rw', CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)`)
 	_, err = r.db.Exec(insertQuery, userID, groupID)
 	if err != nil {
 		return fmt.Errorf("failed to add user to group: %w", err)
@@ -133,7 +133,7 @@ func (r *GroupSQLRepository) AddUserToGroup(userID uint, groupID uint) error {
 
 // RemoveUserFromGroup removes a user from a group.
 func (r *GroupSQLRepository) RemoveUserFromGroup(userID uint, groupID uint) error {
-	query := database.ConvertPlaceholders(`DELETE FROM group_user WHERE user_id = $1 AND group_id = $2`)
+	query := database.ConvertPlaceholders(`DELETE FROM group_user WHERE user_id = ? AND group_id = ?`)
 	result, err := r.db.Exec(query, userID, groupID)
 	if err != nil {
 		return fmt.Errorf("failed to remove user from group: %w", err)
@@ -162,7 +162,7 @@ func (r *GroupSQLRepository) Create(group *models.Group) error {
 
 	query := database.ConvertPlaceholders(`
 		INSERT INTO groups (name, comments, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, CURRENT_TIMESTAMP, $5)
+		VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)
 		RETURNING id, create_time, change_time`)
 
 	err := r.db.QueryRow(
@@ -185,8 +185,8 @@ func (r *GroupSQLRepository) Create(group *models.Group) error {
 func (r *GroupSQLRepository) Update(group *models.Group) error {
 	query := database.ConvertPlaceholders(`
 		UPDATE groups 
-		SET name = $1, comments = $2, valid_id = $3, change_time = CURRENT_TIMESTAMP, change_by = $4
-		WHERE id = $5`)
+		SET name = ?, comments = ?, valid_id = ?, change_time = CURRENT_TIMESTAMP, change_by = ?
+		WHERE id = ?`)
 
 	result, err := r.db.Exec(
 		query,
@@ -216,13 +216,13 @@ func (r *GroupSQLRepository) Update(group *models.Group) error {
 // Delete permanently deletes a group and removes all member associations.
 func (r *GroupSQLRepository) Delete(id uint) error {
 	// First, remove all group members
-	_, err := r.db.Exec(database.ConvertPlaceholders(`DELETE FROM group_user WHERE group_id = $1`), id)
+	_, err := r.db.Exec(database.ConvertPlaceholders(`DELETE FROM group_user WHERE group_id = ?`), id)
 	if err != nil {
 		return fmt.Errorf("failed to remove group members: %w", err)
 	}
 
 	// Then delete the group itself
-	query := database.ConvertPlaceholders(`DELETE FROM groups WHERE id = $1`)
+	query := database.ConvertPlaceholders(`DELETE FROM groups WHERE id = ?`)
 
 	result, err := r.db.Exec(query, id)
 	if err != nil {
@@ -251,12 +251,12 @@ func (r *GroupSQLRepository) GetByName(name string) (*models.Group, error) {
 	baseQuery := `
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
 		FROM groups
-		WHERE name = $1 AND valid_id = 1`
+		WHERE name = ? AND valid_id = 1`
 	if database.IsMySQL() {
 		baseQuery = `
 		SELECT id, name, comments, valid_id, create_time, create_by, change_time, change_by
 		FROM groups
-		WHERE BINARY name = $1 AND valid_id = 1`
+		WHERE BINARY name = ? AND valid_id = 1`
 	}
 	query := database.ConvertPlaceholders(baseQuery)
 
@@ -290,7 +290,7 @@ func (r *GroupSQLRepository) GetGroupMembers(groupID uint) ([]*models.User, erro
 		SELECT u.id, u.login, u.first_name, u.last_name, u.valid_id
 		FROM users u
 		JOIN group_user ug ON u.id = ug.user_id
-		WHERE ug.group_id = $1 AND u.valid_id = 1
+		WHERE ug.group_id = ? AND u.valid_id = 1
 		ORDER BY u.login`)
 
 	rows, err := r.db.Query(query, groupID)

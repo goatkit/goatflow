@@ -7,52 +7,81 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
-- **Helm Chart**: Production-ready Kubernetes deployment via `charts/gotrs/` with OCI registry publishing.
-  - **Tag-Mirroring**: Chart `appVersion` matches git ref for GitOps workflows. Install `--version main` deploys `:main` images, `--version v0.5.0` deploys `:v0.5.0` images.
-  - **Database Selection**: MySQL (default) or PostgreSQL via `database.type: mysql|postgresql` with custom StatefulSet templates.
-  - **Valkey Subchart**: Official valkey-helm chart (BSD-3 licensed) as Redis-compatible cache dependency.
-  - **extraResources**: Arbitrary Kubernetes resources with full Helm templating support (`{{ .Release.Name }}`, `{{ .Values.* }}`, etc.).
-  - **Annotations & Labels**: Inject custom annotations/labels for cloud integrations (AWS IRSA, GKE Workload Identity, Prometheus scraping, Istio sidecar, AWS load balancers).
-  - **HPA Support**: Horizontal Pod Autoscaler for backend with configurable min/max replicas and CPU/memory targets.
-  - **Ingress Configuration**: Flexible ingress with TLS, custom annotations, and multi-host support.
-  - **CI Integration**: GitHub Actions publishes chart to `oci://ghcr.io/gotrs-io/charts/gotrs` on push to main or version tags.
-- **govulncheck Integration**: Go vulnerability scanning now included in toolbox and security scans via `make scan-vulnerabilities`.
-- **Trivy Ignore File**: Added `.trivyignore` for configuring security scanner exclusions.
-- **Toolbox Entrypoint Script**: Added `scripts/toolbox-entrypoint.sh` for cache permission validation.
+- **SQL Portability Guard**: New `scripts/tools/check-sql.sh` script validates SQL queries for cross-database compatibility, blocking commits with PostgreSQL-specific `$N` placeholders or `ILIKE` operators
+- **Helm Chart**: Production-ready Kubernetes deployment via `charts/gotrs/` with OCI registry publishing
+  - Tag-mirroring: Chart `appVersion` matches git ref for GitOps workflows; `--version main` deploys `:main` images, `--version v0.5.0` deploys `:v0.5.0` images
+  - Database selection: MySQL (default) or PostgreSQL via `database.type: mysql|postgresql` with custom StatefulSet templates
+  - Valkey subchart: Official valkey-helm chart (BSD-3 licensed) as Redis-compatible cache dependency
+  - extraResources: Arbitrary Kubernetes resources with full Helm templating support (`{{ .Release.Name }}`, `{{ .Values.* }}`, etc.)
+  - Annotations and labels: Custom annotations/labels for cloud integrations (AWS IRSA, GKE Workload Identity, Prometheus scraping, Istio sidecar, AWS load balancers)
+  - HPA support: Horizontal Pod Autoscaler for backend with configurable min/max replicas and CPU/memory targets
+  - Ingress configuration: Flexible ingress with TLS, custom annotations, and multi-host support
+  - Security contexts: All deployments include `readOnlyRootFilesystem`, `allowPrivilegeEscalation: false`, `capabilities: drop: [ALL]`; database adds `runAsNonRoot`, `runAsUser: 999`, tmpfs for /tmp and /run/mysqld
+  - CI integration: GitHub Actions publishes chart to `oci://ghcr.io/gotrs-io/charts/gotrs` on push to main or version tags
+- **govulncheck Integration**: Go vulnerability scanning included in toolbox and security scans via `make scan-vulnerabilities`
+- **Trivy Ignore File**: `.trivyignore` for configuring security scanner exclusions
+- **Trivy Cache Persistence**: Trivy vulnerability database cached in `gotrs_cache` volume at `/cache/trivy`; eliminates re-download on every scan
+- **Tool Cache Consolidation**: All standalone container tools now use `gotrs_cache` volume: golangci-lint (`/cache/golangci-lint`), Redocly/bun (`/cache/bun`), css-watch
+- **Toolbox Entrypoint Script**: `scripts/toolbox-entrypoint.sh` for cache permission validation
 
 ### Changed
-- **Go Version Single Source of Truth**: Go version now centralized in `.env` as `GO_IMAGE` variable. All Dockerfiles, scripts, and Makefile targets inherit from this setting, eliminating version drift.
-- **Go Toolchain Upgrade**: Upgraded to Go 1.24.11 with toolchain directive in go.mod.
-- **Named Volume for Cache (Default)**: Changed `CACHE_USE_VOLUMES` default from `0` to `1`. Development now uses named Docker volume `gotrs_cache` instead of host bind mounts, eliminating permission issues.
-- **Dockerfile.toolbox Simplified**: Removed complex entrypoint script, su-exec dependency, and USER root. Container now runs directly as `appuser` (UID 1000).
-- **Dockerfile.playwright-go Security**: Now creates and runs as non-root user `pwuser` with proper cache directory ownership.
-- **Production Reverse Proxy**: Replaced nginx with Caddy in `docker-compose.prod.yml`. Caddy provides automatic HTTPS via Let's Encrypt with embedded Caddyfile configuration.
-- **Dependency Updates**: Updated `golang.org/x/crypto`, `golang.org/x/net`, `golang.org/x/text`, `golang.org/x/sys`, and MCP SDK dependencies.
+- **SQL Portability (MySQL/PostgreSQL)**: Comprehensive refactor of ~1,800 SQL queries across 127 files for cross-database compatibility
+  - Converted all PostgreSQL-specific `$N` placeholders to portable `?` format with `database.ConvertPlaceholders()` wrapper
+  - Replaced all `ILIKE` operators with `LOWER(column) LIKE LOWER(?)` for case-insensitive search portability
+  - Updated repositories: ticket, article, user, queue, group, priority, state, permission, email_account, email_template, time_accounting
+  - Updated API handlers: admin modules (users, groups, queues, priorities, states, types, roles, services, SLAs, customer companies/users), agent handlers, customer portal handlers
+  - Updated components: dynamic field handlers, base CRUD handlers
+  - All queries now use `database.GetAdapter().InsertWithReturning()` for portable INSERT operations with ID retrieval
+- **Bun Package Manager Migration**: Replaced npm with bun for faster frontend builds and cleaner host filesystem
+  - Dockerfile frontend stage uses `oven/bun:1.1-alpine` with Node.js for build tool compatibility
+  - All `npm`/`npx` commands replaced with `bun`/`bunx` in Makefile and package.json scripts
+  - Removed `package-lock.json`, now using `bun.lockb` binary lockfile
+  - `make build` no longer runs frontend-build on host; Dockerfile handles CSS/JS build entirely
+  - No `node_modules` directory created on host during builds
+  - Bun global cache at `/cache/bun` in toolbox container
+- **Go Version Single Source of Truth**: Go version centralized in `.env` as `GO_IMAGE` variable; all Dockerfiles, scripts, and Makefile targets inherit from this setting
+- **Go Toolchain Upgrade**: Upgraded to Go 1.24.11 with toolchain directive in go.mod
+- **Named Volume for Cache**: Changed `CACHE_USE_VOLUMES` default from `0` to `1`; development uses named Docker volume `gotrs_cache` instead of host bind mounts
+- **Dockerfile.toolbox Simplified**: Removed complex entrypoint script, su-exec dependency, and USER root; container runs directly as `appuser` (UID 1000)
+- **Dockerfile.playwright-go Security**: Creates and runs as non-root user `pwuser` with proper cache directory ownership
+- **Production Reverse Proxy**: Replaced nginx with Caddy in `docker-compose.prod.yml`; Caddy provides automatic HTTPS via Let's Encrypt with embedded Caddyfile configuration
+- **Dependency Updates**: Updated `golang.org/x/crypto`, `golang.org/x/net`, `golang.org/x/text`, `golang.org/x/sys`, and MCP SDK dependencies
 
 ### Fixed
-- **MariaDB Port Exposure**: Database port 3306 now exposed for host-based tools and MCP MySQL server access.
-- **Password Reset Modal**: Fixed JavaScript error when password reset API call fails.
+- **History Recording Interface Mismatch**: Fixed `TicketRepository.AddTicketHistoryEntry` method signature to match `history.HistoryInserter` interface; changed `exec ExecContext` parameter to `exec interface{}` to enable proper type assertion in history recorder
+- **SQL Argument Order Bugs**: Fixed argument order in `handleDeleteQueue` and `handleDeleteType` where `change_by` and `id` parameters were swapped
+- **Missing SQL Arguments**: Fixed `insertArticle`, `insertArticleMimeData`, and `HandleRegisterWebhookAPI` missing `change_by` argument for MySQL NOT NULL columns
+- **LOWER() Format String Typo**: Fixed `%LOWER(s)` typo in `base_crud.go` search query builder (should be `LOWER(%s)`)
+- **Test Database Isolation**: Removed `defer db.Close()` calls from 7 test files that were closing the singleton database connection, causing "sql: database is closed" errors in subsequent tests
+- **Makefile Toolbox Environment**: Added missing `TEST_DB_NAME`, `TEST_DB_USER`, `TEST_DB_PASSWORD` environment variables to 5 toolbox targets; fixed `TEST_DB_HOST`/`TEST_DB_PORT` to use `TOOLBOX_TEST_DB_HOST`/`TOOLBOX_TEST_DB_PORT` for host network mode
+- **MariaDB Init Script**: Fixed `GRANT ALL PRIVILEGES ON otrs.* TO 'otrs'@'localhost'` error on fresh installs; `%` wildcard already covers localhost connections so removed redundant localhost grant
+- **MariaDB Port Exposure**: Database port 3306 now exposed for host-based tools and MCP MySQL server access
+- **Password Reset Modal**: Fixed JavaScript error when password reset API call fails
+- **Gitignore Exception**: Added `!charts/gotrs/templates/secrets/` to prevent Helm secret templates from being ignored
+- **Gitleaks Binary Allowlist**: Added `bun.lockb` to `.gitleaks.toml` allowlist; binary lockfile contains no secrets
 
 ### Removed
-- **Legacy Kustomize Manifests**: Removed entire `k8s/` directory (22 files). Kubernetes deployments now use Helm chart at `charts/gotrs/`.
-- **Bare Metal Deployment**: Removed `docs/deployment/bare-metal.md` and all references. GOTRS supports containerized deployment only (Docker/Podman).
-- **Nginx Configuration**: Removed `docker/nginx/` directory (Dockerfile, nginx.conf, error.html, entrypoint.sh). Production deployments now use Caddy.
-- **DATABASE_URL Environment Variable**: Removed from compose files; use individual `DB_*` variables instead.
+- **Legacy Kustomize Manifests**: Removed entire `k8s/` directory (22 files); Kubernetes deployments now use Helm chart at `charts/gotrs/`
+- **Bare Metal Deployment**: Removed `docs/deployment/bare-metal.md` and all references; GOTRS supports containerized deployment only (Docker/Podman)
+- **Nginx Configuration**: Removed `docker/nginx/` directory (Dockerfile, nginx.conf, error.html, entrypoint.sh); production deployments now use Caddy
+- **DATABASE_URL Environment Variable**: Removed from compose files; use individual `DB_*` variables instead
 
 ### Documentation
-- **Kubernetes Deployment Guide**: Rewritten for Helm chart usage with `helm install` commands, ArgoCD examples, and values customization.
-- **Helm Chart README**: Comprehensive documentation at `charts/gotrs/README.md` covering installation, configuration, database selection, annotations/labels, and extraResources.
-- **Docker Deployment Guide**: Completely rewritten with two deployment methods - Quick Deploy (curl files) and Development (full repo with make).
-- **Podman Support**: Added comprehensive Podman deployment instructions and notes.
-- **Migration Guide**: Major rewrite with accurate make targets (`migrate-analyze`, `migrate-import`, `migrate-import-force`, `migrate-validate`), migration paths table, article storage migration, and direct tool usage documentation.
-- **Demo Rate Limiting**: Updated from nginx to Caddyfile format.
-- **Schema Discovery**: Updated to reference `GO_IMAGE` environment variable.
+- **Kubernetes Deployment Guide**: Rewritten for Helm chart usage with `helm install` commands, ArgoCD examples, and values customization
+- **Helm Chart README**: Comprehensive documentation at `charts/gotrs/README.md` covering installation, configuration, database selection, annotations/labels, and extraResources
+- **Docker Deployment Guide**: Completely rewritten with two deployment methods: Quick Deploy (curl files) and Development (full repo with make)
+- **Podman Support**: Comprehensive Podman deployment instructions and notes
+- **Migration Guide**: Major rewrite with accurate make targets (`migrate-analyze`, `migrate-import`, `migrate-import-force`, `migrate-validate`), migration paths table, article storage migration, and direct tool usage documentation
+- **Demo Rate Limiting**: Updated from nginx to Caddyfile format
+- **Schema Discovery**: Updated to reference `GO_IMAGE` environment variable
 
 ### Internal
-- All Dockerfiles now accept `GO_IMAGE` build arg with consistent defaults.
-- Build targets (`make build`, `make build-cached`, etc.) pass `GO_IMAGE` to container builds.
-- Test and API scripts updated to use `GO_IMAGE` environment variable.
-- OpenAPI spec cleaned up (removed duplicate localhost:8000 server entry).
+- All Dockerfiles now accept `GO_IMAGE` build arg with consistent defaults
+- Build targets (`make build`, `make build-cached`, etc.) pass `GO_IMAGE` to container builds
+- Test and API scripts updated to use `GO_IMAGE` environment variable
+- OpenAPI spec cleaned up (removed duplicate localhost:8000 server entry)
+- Test suite now passes 876 tests with proper database isolation and MySQL compatibility
+- SQL portability guard integrated into development workflow via check-sql.sh script
 
 ## [0.5.0] - 2026-01-03
 

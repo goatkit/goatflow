@@ -130,7 +130,7 @@ func (d *Discovery) GetTables() ([]string, error) {
 	query := `
         SELECT table_name 
         FROM information_schema.tables 
-        WHERE table_schema = $1 
+        WHERE table_schema = ? 
         AND table_type = 'BASE TABLE'
         ORDER BY table_name
     `
@@ -218,7 +218,7 @@ func (d *Discovery) getColumns(tableName string) ([]ColumnInfo, error) {
 			FROM information_schema.table_constraints tc
 			JOIN information_schema.key_column_usage kcu 
 				ON tc.constraint_name = kcu.constraint_name
-			WHERE tc.table_name = $1 
+			WHERE tc.table_name = ? 
 			AND tc.constraint_type = 'PRIMARY KEY'
 		) pk ON c.column_name = pk.column_name
 		LEFT JOIN (
@@ -226,7 +226,7 @@ func (d *Discovery) getColumns(tableName string) ([]ColumnInfo, error) {
 			FROM information_schema.table_constraints tc
 			JOIN information_schema.key_column_usage kcu 
 				ON tc.constraint_name = kcu.constraint_name
-			WHERE tc.table_name = $1 
+			WHERE tc.table_name = ? 
 			AND tc.constraint_type = 'FOREIGN KEY'
 		) fk ON c.column_name = fk.column_name
 		LEFT JOIN (
@@ -234,11 +234,11 @@ func (d *Discovery) getColumns(tableName string) ([]ColumnInfo, error) {
 			FROM information_schema.table_constraints tc
 			JOIN information_schema.key_column_usage kcu 
 				ON tc.constraint_name = kcu.constraint_name
-			WHERE tc.table_name = $1 
+			WHERE tc.table_name = ? 
 			AND tc.constraint_type = 'UNIQUE'
 		) u ON c.column_name = u.column_name
 		LEFT JOIN pg_class pgc ON pgc.relname = c.table_name
-		WHERE c.table_name = $1
+		WHERE c.table_name = ?
 		ORDER BY c.ordinal_position
 	`
 
@@ -290,7 +290,7 @@ func (d *Discovery) getForeignKeys(tableName string) ([]ForeignKeyInfo, error) {
 			ON tc.constraint_name = kcu.constraint_name
 		JOIN information_schema.constraint_column_usage ccu
 			ON tc.constraint_name = ccu.constraint_name
-		WHERE tc.table_name = $1
+		WHERE tc.table_name = ?
 		AND tc.constraint_type = 'FOREIGN KEY'
 	`
 
@@ -323,7 +323,7 @@ func (d *Discovery) getIndexes(tableName string) ([]IndexInfo, error) {
 			indexdef,
 			CASE WHEN indexdef LIKE '%UNIQUE%' THEN true ELSE false END as is_unique
 		FROM pg_indexes
-		WHERE tablename = $1
+		WHERE tablename = ?
 		AND indexname NOT LIKE '%_pkey'
 	`
 

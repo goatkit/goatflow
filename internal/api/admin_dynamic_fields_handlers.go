@@ -393,8 +393,8 @@ func GetDynamicFieldsForScreen(objectType, screenKey string) ([]DynamicField, er
 		       COALESCE(sc.config_value, 0) as screen_config
 		FROM dynamic_field df
 		LEFT JOIN dynamic_field_screen_config sc 
-		  ON df.id = sc.field_id AND sc.screen_key = $1
-		WHERE df.object_type = $2 AND df.valid_id = 1
+		  ON df.id = sc.field_id AND sc.screen_key = ?
+		WHERE df.object_type = ? AND df.valid_id = 1
 		  AND COALESCE(sc.config_value, 0) > 0
 		ORDER BY df.field_order, df.name
 	`)

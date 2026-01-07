@@ -39,7 +39,7 @@ func TestFullStackTicketCreation(t *testing.T) {
 
 	db, err := sql.Open("postgres", dsn)
 	require.NoError(t, err, "Database must be available for full stack testing")
-	defer db.Close()
+	// Note: Do not close singleton DB connection
 
 	err = db.Ping()
 	if err != nil {

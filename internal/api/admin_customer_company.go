@@ -51,7 +51,7 @@ func handleAdminCustomerCompanies(db *sql.DB) gin.HandlerFunc {
 			columns := []string{"cc.name", "cc.customer_id", "cc.city"}
 			for _, col := range columns {
 				argPos++
-				likeClauses = append(likeClauses, fmt.Sprintf("%s ILIKE $%d", col, argPos))
+				likeClauses = append(likeClauses, fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", col, argPos))
 				args = append(args, searchTerm)
 			}
 			query += " AND (" + strings.Join(likeClauses, " OR ") + ")"
@@ -220,7 +220,7 @@ func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 
 		// Check if customer ID already exists
 		var exists bool
-		if err := db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = $1)"), customerID).Scan(&exists); err != nil {
+		if err := db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = ?)"), customerID).Scan(&exists); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 			return
 		}
@@ -235,8 +235,8 @@ func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 				customer_id, name, street, zip, city, country, url, comments,
 				valid_id, create_time, create_by, change_time, change_by
 			) VALUES (
-				$1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), 
-				NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''),
+				?, ?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), 
+				NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''),
 				1, NOW(), 1, NOW(), 1
 			)
 		`), customerID, name, street, zip, city, country, url, comments)
@@ -273,7 +273,7 @@ func handleAdminEditCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT customer_id, name, street, zip, city, country, url, comments, valid_id
 			FROM customer_company
-			WHERE customer_id = $1
+			WHERE customer_id = ?
 		`), customerID).Scan(&company.CustomerID, &company.Name, &company.Street,
 			&company.Zip, &company.City, &company.Country, &company.URL,
 			&company.Comments, &company.ValidID)
@@ -288,7 +288,7 @@ func handleAdminEditCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		var configJSON sql.NullString
 		row := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT content_json FROM sysconfig 
-			WHERE name = $1
+			WHERE name = ?
 		`), "CustomerPortal::Company::"+customerID)
 		_ = row.Scan(&configJSON) //nolint:errcheck // Defaults to empty config on error
 
@@ -369,7 +369,7 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		var exists bool
 		var err error
 		if db != nil {
-			query := database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = $1)")
+			query := database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = ?)")
 			err = db.QueryRow(query, customerID).Scan(&exists)
 		} else {
 			// For tests or when DB is not available, assume company doesn't exist
@@ -398,11 +398,11 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		// Update company
 		result, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE customer_company SET
-				name = $1, street = NULLIF($2, ''), zip = NULLIF($3, ''),
-				city = NULLIF($4, ''), country = NULLIF($5, ''),
-				url = NULLIF($6, ''), comments = NULLIF($7, ''),
-				valid_id = $8, change_time = NOW(), change_by = 1
-			WHERE customer_id = $9
+				name = ?, street = NULLIF(?, ''), zip = NULLIF(?, ''),
+				city = NULLIF(?, ''), country = NULLIF(?, ''),
+				url = NULLIF(?, ''), comments = NULLIF(?, ''),
+				valid_id = ?, change_time = NOW(), change_by = 1
+			WHERE customer_id = ?
 		`), name, street, zip, city, country, url, comments, validID, customerID)
 
 		if err != nil {
@@ -451,7 +451,7 @@ func handleAdminDeleteCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		result, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE customer_company 
 			SET valid_id = 2, change_time = NOW(), change_by = 1
-			WHERE customer_id = $1
+			WHERE customer_id = ?
 		`), customerID)
 
 		if err != nil {
@@ -499,7 +499,7 @@ func handleAdminActivateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		result, err := db.Exec(database.ConvertPlaceholders(`
 			UPDATE customer_company 
 			SET valid_id = 1, change_time = NOW(), change_by = 1
-			WHERE customer_id = $1
+			WHERE customer_id = ?
 		`), customerID)
 
 		if err != nil {
@@ -536,7 +536,7 @@ func handleAdminCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 
 		// Get company info - name defaults to empty on error
 		var companyName string
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM customer_company WHERE customer_id = $1"), customerID).Scan(&companyName) //nolint:errcheck
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM customer_company WHERE customer_id = ?"), customerID).Scan(&companyName) //nolint:errcheck
 
 		// Get users
 		rows, err := db.Query(database.ConvertPlaceholders(`
@@ -545,7 +545,7 @@ func handleAdminCustomerCompanyUsers(db *sql.DB) gin.HandlerFunc {
 			       (SELECT COUNT(*) FROM ticket WHERE customer_user_id = cu.login) as ticket_count
 			FROM customer_user cu
 			LEFT JOIN valid v ON cu.valid_id = v.id
-			WHERE cu.customer_id = $1
+			WHERE cu.customer_id = ?
 			ORDER BY cu.last_name, cu.first_name
 		`), customerID)
 		if err != nil {
@@ -614,7 +614,7 @@ func handleAdminCustomerCompanyTickets(db *sql.DB) gin.HandlerFunc {
 			LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
 			LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
 			LEFT JOIN customer_user cu ON t.customer_user_id = cu.login
-			WHERE t.customer_id = $1
+			WHERE t.customer_id = ?
 			ORDER BY t.create_time DESC
 			LIMIT 100
 		`), customerID)
@@ -674,7 +674,7 @@ func handleAdminCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 						   SELECT 1 FROM service_customer_user 
 						   WHERE service_id = s.id 
 							 AND customer_user_login IN (
-								 SELECT login FROM customer_user WHERE customer_id = $1
+								 SELECT login FROM customer_user WHERE customer_id = ?
 							 )
 					   ) THEN 1
 					   ELSE 0
@@ -749,7 +749,7 @@ func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 		defer func() { _ = tx.Rollback() }()
 
 		// Get all customer users for this company
-		rows, err := tx.Query(database.ConvertPlaceholders("SELECT login FROM customer_user WHERE customer_id = $1"), customerID)
+		rows, err := tx.Query(database.ConvertPlaceholders("SELECT login FROM customer_user WHERE customer_id = ?"), customerID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load customer users"})
 			return
@@ -771,7 +771,7 @@ func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 
 		// Clear existing assignments for all users in this company
 		for _, login := range userLogins {
-			delQuery := database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE customer_user_login = $1")
+			delQuery := database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE customer_user_login = ?")
 			if _, err := tx.Exec(delQuery, login); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear existing services"})
 				return
@@ -783,7 +783,7 @@ func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 			for _, serviceID := range selectedServices {
 				if _, err := tx.Exec(database.ConvertPlaceholders(`
 					INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by)
-					VALUES ($1, $2, NOW(), 1)
+					VALUES (?, ?, NOW(), 1)
 				`), login, serviceID); err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign services"})
 					return

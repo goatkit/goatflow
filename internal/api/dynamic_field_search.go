@@ -66,7 +66,7 @@ func getFieldsForSearchWithDB(db *sql.DB) ([]SearchableDynamicField, error) {
 		       field_type, object_type, config, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM dynamic_field
-		WHERE object_type = $1 AND valid_id = 1
+		WHERE object_type = ? AND valid_id = 1
 		ORDER BY field_order, name
 	`)
 
@@ -275,9 +275,9 @@ func GetDistinctDynamicFieldValues(fieldID int, limit int) ([]string, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT DISTINCT value_text
 		FROM dynamic_field_value
-		WHERE field_id = $1 AND value_text IS NOT NULL AND value_text != ''
+		WHERE field_id = ? AND value_text IS NOT NULL AND value_text != ''
 		ORDER BY value_text
-		LIMIT $2
+		LIMIT ?
 	`)
 
 	rows, err := db.Query(query, fieldID, limit)

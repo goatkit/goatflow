@@ -63,7 +63,7 @@ func HandleListQueuesAPI(c *gin.Context) {
 	// Add valid filter if specified
 	if validFilter != "" {
 		if valid, err := strconv.Atoi(validFilter); err == nil && (valid == 1 || valid == 2) {
-			conditions = append(conditions, "q.valid_id = $1")
+			conditions = append(conditions, "q.valid_id = ?")
 			args = append(args, valid)
 		}
 	}
@@ -170,7 +170,7 @@ func HandleListQueuesAPI(c *gin.Context) {
                     COUNT(CASE WHEN ticket_state_id IN (2, 3) THEN 1 END) as closed_count,
                     COUNT(CASE WHEN ticket_state_id IN (5) THEN 1 END) as pending_count
                 FROM ticket
-                WHERE queue_id = $1
+                WHERE queue_id = ?
             `)
 
 			var total, openCount, closedCount, pendingCount int
@@ -188,7 +188,7 @@ func HandleListQueuesAPI(c *gin.Context) {
 			SELECT DISTINCT g.id, g.name
 			FROM groups g
 			INNER JOIN queue_group qg ON g.id = qg.group_id
-			WHERE qg.queue_id = $1
+			WHERE qg.queue_id = ?
 			ORDER BY g.name
 		`)
 

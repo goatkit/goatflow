@@ -156,7 +156,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 				SELECT EXISTS(
 					SELECT 1 FROM group_user gu
 					JOIN groups g ON gu.group_id = g.id
-					WHERE gu.user_id = $1 AND g.name = 'admin'
+					WHERE gu.user_id = ? AND g.name = 'admin'
 				)
 			`), userID).Scan(&isAdmin)
 
@@ -193,7 +193,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 			second := argCount
 			argCount++
 			third := argCount
-			query += fmt.Sprintf(" AND (t.tn ILIKE $%d OR t.title ILIKE $%d OR c.login ILIKE $%d)",
+			query += fmt.Sprintf(" AND (LOWER(t.tn) LIKE LOWER($%d) OR LOWER(t.title) LIKE LOWER($%d) OR LOWER(c.login) LIKE LOWER($%d))",
 				first, second, third)
 			args = append(args, pattern, pattern, pattern)
 		}
@@ -329,7 +329,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 			SELECT q.id, q.name
 			FROM queue q
 			JOIN group_user gu ON q.group_id = gu.group_id
-			WHERE gu.user_id = $1
+			WHERE gu.user_id = ?
 			ORDER BY q.name
 		`), userID)
 
@@ -361,7 +361,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 			SELECT EXISTS(
 				SELECT 1 FROM group_user gu
 				JOIN groups g ON gu.group_id = g.id
-				WHERE gu.user_id = $1 AND g.name = 'admin'
+				WHERE gu.user_id = ? AND g.name = 'admin'
 			)
 		`), userID).Scan(&isInAdminGroup)
 		if adminErr == nil && isInAdminGroup && user != nil {
@@ -443,7 +443,7 @@ func handleTicketCustomerUsers(db *sql.DB) gin.HandlerFunc {
 		var currentCustomerID, currentCustomerUserID string
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT COALESCE(customer_id, ''), COALESCE(customer_user_id, '')
-			FROM ticket WHERE id = $1
+			FROM ticket WHERE id = ?
 		`), ticketID).Scan(&currentCustomerID, &currentCustomerUserID)
 
 		if err != nil {
@@ -477,9 +477,9 @@ func handleTicketCustomerUsers(db *sql.DB) gin.HandlerFunc {
 			FROM customer_user cu
 			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
 			WHERE cu.valid_id = 1
-				AND ($1 = '' OR cu.customer_id = $1)
+				AND (? = '' OR cu.customer_id = ?)
 			ORDER BY 
-				CASE WHEN cu.customer_id = $1 THEN 0 ELSE 1 END,
+				CASE WHEN cu.customer_id = ? THEN 0 ELSE 1 END,
 				cu.first_name, cu.last_name
 			LIMIT 50
 		`)
@@ -569,7 +569,7 @@ func handleAgentQueues(db *sql.DB) gin.HandlerFunc {
 			FROM queue q
 			LEFT JOIN ticket t ON q.id = t.queue_id
 			WHERE q.group_id IN (
-				SELECT group_id FROM group_user WHERE user_id = $1
+				SELECT group_id FROM group_user WHERE user_id = ?
 			)
 			GROUP BY q.id, q.name, q.comments, q.valid_id
 			ORDER BY q.name
@@ -621,7 +621,7 @@ func handleAgentQueues(db *sql.DB) gin.HandlerFunc {
 			SELECT EXISTS(
 				SELECT 1 FROM group_user gu
 				JOIN groups g ON gu.group_id = g.id
-				WHERE gu.user_id = $1 AND g.name = 'admin'
+				WHERE gu.user_id = ? AND g.name = 'admin'
 			)
 		`), userID).Scan(&isInAdminGroup)
 

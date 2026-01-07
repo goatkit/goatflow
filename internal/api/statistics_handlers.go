@@ -47,7 +47,7 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 
 	stateID := func(name string) int {
 		var id int
-		query := database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = $1")
+		query := database.ConvertPlaceholders("SELECT id FROM ticket_state WHERE name = ?")
 		if err := db.QueryRow(query, name).Scan(&id); err != nil {
 			return 0
 		}
@@ -55,19 +55,19 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 	}
 
 	if id := stateID("open"); id > 0 {
-		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = $1")
+		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?")
 		if err := db.QueryRow(query, id).Scan(&overview.OpenTickets); err != nil {
 			overview.OpenTickets = 0
 		}
 	}
 	if id := stateID("closed"); id > 0 {
-		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = $1")
+		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?")
 		if err := db.QueryRow(query, id).Scan(&overview.ClosedTickets); err != nil {
 			overview.ClosedTickets = 0
 		}
 	}
 	if id := stateID("pending"); id > 0 {
-		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = $1")
+		query := database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?")
 		if err := db.QueryRow(query, id).Scan(&overview.PendingTickets); err != nil {
 			overview.PendingTickets = 0
 		}
@@ -222,7 +222,7 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 			SELECT t.create_time, t.change_time, ts.type_id
 			FROM ticket t
 			JOIN ticket_state ts ON t.ticket_state_id = ts.id
-			WHERE t.create_time >= $1 OR (t.change_time IS NOT NULL AND t.change_time >= $1)
+			WHERE t.create_time >= ? OR (t.change_time IS NOT NULL AND t.change_time >= ?)
 		`)
 		rows, err := db.Query(query, start)
 		if err == nil {
@@ -321,7 +321,7 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 		SELECT t.create_time, t.change_time, ts.type_id
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
-		WHERE t.create_time >= $1 OR (t.change_time IS NOT NULL AND t.change_time >= $1)
+		WHERE t.create_time >= ? OR (t.change_time IS NOT NULL AND t.change_time >= ?)
 	`)
 	if rows, err := db.Query(query, firstOfMonth); err == nil {
 		defer rows.Close()
@@ -476,7 +476,7 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		WHERE t.responsible_user_id IS NOT NULL
-		AND (t.create_time >= $1 OR (t.change_time IS NOT NULL AND t.change_time >= $1))
+		AND (t.create_time >= ? OR (t.change_time IS NOT NULL AND t.change_time >= ?))
 	`)
 	ticketRows, err := db.Query(ticketQuery, start)
 	if err == nil {
@@ -511,7 +511,7 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 	articleQuery := database.ConvertPlaceholders(`
 		SELECT create_by, COUNT(*)
 		FROM article
-		WHERE create_by IS NOT NULL AND create_time >= $1
+		WHERE create_by IS NOT NULL AND create_time >= ?
 		GROUP BY create_by
 	`)
 	articleRows, err := db.Query(articleQuery, start)
@@ -995,7 +995,7 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 			JOIN queue q ON t.queue_id = q.id
 			JOIN ticket_state ts ON t.ticket_state_id = ts.id
 			JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
-			WHERE t.create_time >= $1
+			WHERE t.create_time >= ?
 			ORDER BY t.create_time DESC
 		`)
 

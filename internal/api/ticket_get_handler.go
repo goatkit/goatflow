@@ -150,7 +150,7 @@ func HandleGetTicketAPI(c *gin.Context) {
 		LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
 		LEFT JOIN queue q ON t.queue_id = q.id
-		WHERE t.id = $1
+		WHERE t.id = ?
 	`, typeSelect))
 
 	var ticket struct {
@@ -240,7 +240,7 @@ func HandleGetTicketAPI(c *gin.Context) {
 	// Get article count
 	var articleCount int
 	err = db.QueryRow(database.ConvertPlaceholders(`
-		SELECT COUNT(*) FROM article WHERE ticket_id = $1
+		SELECT COUNT(*) FROM article WHERE ticket_id = ?
 	`), ticketID).Scan(&articleCount)
 
 	if err == nil {

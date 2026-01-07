@@ -8,13 +8,13 @@
     "generate-docs": "node scripts/generate-docs.js",
     "validate-api": "swagger-codegen validate -i api/openapi.yaml",
     "serve-docs": "echo 'Open docs/api/index.html in your browser'",
-    "test:contract": "npm run generate-types && npm run validate-api && npm run generate-docs",
-    "contracts:all": "npm run generate-types && npm run generate-docs && cd web && npm run test:contracts",
-    "build-css": "BROWSERSLIST_IGNORE_OLD_DATA=1 npx --no-install tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify",
-    "watch-css": "BROWSERSLIST_IGNORE_OLD_DATA=1 npx --no-install tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch",
+    "test:contract": "bun run generate-types && bun run validate-api && bun run generate-docs",
+    "contracts:all": "bun run generate-types && bun run generate-docs && cd web && bun run test:contracts",
+    "build-css": "BROWSERSLIST_IGNORE_OLD_DATA=1 ./node_modules/.bin/tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify",
+    "watch-css": "BROWSERSLIST_IGNORE_OLD_DATA=1 ./node_modules/.bin/tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch",
     "build-tiptap": "esbuild static/js/tiptap-bundle.js --bundle --minify --format=iife --global-name=TiptapBundle --outfile=static/js/tiptap.min.js",
-    "build-js": "npm run build-tiptap",
-    "build": "npm run build-css && npm run build-js"
+    "build-js": "bun run build-tiptap",
+    "build": "bun run build-css && bun run build-js"
   },
   "devDependencies": {
     "esbuild": "^0.25.10",
@@ -39,7 +39,6 @@
   "author": "GOTRS Team",
   "dependencies": {
     "@playwright/test": "^1.55.1",
-    "@sajithrw/mcp-mysql": "^1.0.0",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.18",
     "@tiptap/core": "^3.5.1",
@@ -59,7 +58,6 @@
     "@tiptap/extension-underline": "^3.5.1",
     "@tiptap/pm": "^3.5.1",
     "@tiptap/starter-kit": "^3.5.1",
-    "npm-check-updates": "^18.3.0",
     "tailwindcss": "^3.4.0"
   }
 }

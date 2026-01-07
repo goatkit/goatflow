@@ -194,7 +194,7 @@ func HandleCreateSystemAddressAPI(c *gin.Context) {
 	adapter := database.GetAdapter()
 	insert := database.ConvertPlaceholders(`
         INSERT INTO system_address (value0, value1, queue_id, comments, valid_id, create_time, create_by, change_time, change_by)
-        VALUES ($1, $2, $3, $4, $5, NOW(), $6, NOW(), $7)
+        VALUES (?, ?, ?, ?, ?, NOW(), ?, NOW(), ?)
         RETURNING id
     `)
 
@@ -269,8 +269,8 @@ func HandleUpdateSystemAddressAPI(c *gin.Context) {
 
 	update := database.ConvertPlaceholders(`
         UPDATE system_address
-        SET value0 = $1, value1 = $2, queue_id = $3, comments = $4, valid_id = $5, change_time = NOW(), change_by = $6
-        WHERE id = $7
+        SET value0 = ?, value1 = ?, queue_id = ?, comments = ?, valid_id = ?, change_time = NOW(), change_by = ?
+        WHERE id = ?
     `)
 
 	if _, err := db.Exec(update, payload.Email, payload.DisplayName, payload.QueueID, comments, payload.ValidID, userID, id); err != nil {
@@ -346,7 +346,7 @@ func HandleCreateSalutationAPI(c *gin.Context) {
 	adapter := database.GetAdapter()
 	insert := database.ConvertPlaceholders(`
         INSERT INTO salutation (name, text, content_type, comments, valid_id, create_time, create_by, change_time, change_by)
-        VALUES ($1, $2, $3, $4, $5, NOW(), $6, NOW(), $7)
+        VALUES (?, ?, ?, ?, ?, NOW(), ?, NOW(), ?)
         RETURNING id
     `)
 
@@ -427,7 +427,7 @@ func HandleCreateSignatureAPI(c *gin.Context) {
 
 	insert := database.ConvertPlaceholders(`
         INSERT INTO signature (name, text, content_type, comments, valid_id, create_time, create_by, change_time, change_by)
-        VALUES ($1, $2, $3, $4, $5, NOW(), $6, NOW(), $7)
+        VALUES (?, ?, ?, ?, ?, NOW(), ?, NOW(), ?)
         RETURNING id
     `)
 
@@ -553,8 +553,8 @@ func updateTextEntity(
 
 	update := database.ConvertPlaceholders(`
         UPDATE ` + tableName + `
-        SET name = $1, text = $2, content_type = $3, comments = $4, valid_id = $5, change_time = NOW(), change_by = $6
-        WHERE id = $7
+        SET name = ?, text = ?, content_type = ?, comments = ?, valid_id = ?, change_time = NOW(), change_by = ?
+        WHERE id = ?
     `)
 
 	if _, err := db.Exec(
@@ -612,7 +612,7 @@ func lookupQueueName(db *sql.DB, queueID int) string {
 	}
 
 	var name string
-	if err := db.QueryRow(database.ConvertPlaceholders("SELECT name FROM queue WHERE id = $1"), queueID).Scan(&name); err != nil {
+	if err := db.QueryRow(database.ConvertPlaceholders("SELECT name FROM queue WHERE id = ?"), queueID).Scan(&name); err != nil {
 		return ""
 	}
 

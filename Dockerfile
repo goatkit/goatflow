@@ -37,13 +37,16 @@ RUN curl -sL "https://use.fontawesome.com/releases/v6.7.2/fontawesome-free-6.7.2
 # ============================================
 # Stage 0b: Build frontend assets (CSS + JS)
 # ============================================
-FROM docker.io/node:22-alpine AS frontend
+FROM oven/bun:1.1-alpine AS frontend
+
+# Add Node.js for tailwindcss compatibility (bunx has mkdir bugs with tailwind)
+RUN apk add --no-cache nodejs
 
 WORKDIR /build
 
 # Copy package files and install dependencies
-COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile
 
 # Copy source files needed for build
 COPY static/css/input.css static/css/
@@ -51,8 +54,9 @@ COPY static/js/tiptap-bundle.js static/js/markdown-utils.js static/js/
 COPY tailwind.config.js ./
 COPY templates ./templates/
 
-# Build CSS and JS
-RUN npm run build-css && npm run build-tiptap
+# Build CSS and JS (use node_modules/.bin for Node.js-based tools)
+RUN ./node_modules/.bin/tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify && \
+    ./node_modules/.bin/esbuild static/js/tiptap-bundle.js --bundle --minify --format=iife --global-name=TiptapBundle --outfile=static/js/tiptap.min.js
 
 # ============================================
 # Stage 1: Dependencies (cached separately)

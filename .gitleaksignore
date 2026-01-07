@@ -1,24 +1,7 @@
 # Gitleaks Ignore File
-# Format: <fingerprint>:<file>:<rule>:<line> OR just <fingerprint>
-# These are known test tokens and placeholders that are safe to ignore
+# Format: <fingerprint> (the commit hash where the secret was introduced)
+# Path-based allowlists should go in .gitleaks.toml instead
 
-# John Doe test JWT tokens in Pact contract tests
-# These are well-known example tokens used for API contract testing
-7523fcf607a642be97d177335acd696212379696:web/src/contracts/auth.pact.test.ts:jwt:155
-7523fcf607a642be97d177335acd696212379696:web/src/contracts/auth.pact.test.ts:jwt:159
-7523fcf607a642be97d177335acd696212379696:web/src/contracts/auth.pact.test.ts:jwt:303
-7523fcf607a642be97d177335acd696212379696:web/src/contracts/auth.pact.test.ts:jwt:307
-7523fcf607a642be97d177335acd696212379696:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:754
-7523fcf607a642be97d177335acd696212379696:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:755
-7523fcf607a642be97d177335acd696212379696:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:804
-7523fcf607a642be97d177335acd696212379696:web/pacts/gotrs-frontend-gotrs-backend.json:jwt:805
-
-# Test JWT tokens in auth.pact.test.ts - global ignore for test file
-web/src/contracts/auth.pact.test.ts:jwt
-web/pacts/gotrs-frontend-gotrs-backend.json:jwt
-
-# Documentation placeholder in API README
-
-# Deploy reference files - contain example/placeholder values only
-deploy/.env.example
-deploy/docker-compose.yml
+# NOTE: The web/ directory was removed from this project.
+# Historical fingerprints for removed files are no longer needed.
+# Path-based exclusions are configured in .gitleaks.toml

@@ -915,7 +915,7 @@ func (h *DynamicModuleHandler) handleGet(c *gin.Context, config *ModuleConfig, i
 	config = h.resolveConfigTranslations(config, lang)
 
 	columns := h.getSelectColumns(config)
-	query := fmt.Sprintf("SELECT %s FROM %s WHERE id = $1", columns, config.Module.Table)
+	query := fmt.Sprintf("SELECT %s FROM %s WHERE id = ?", columns, config.Module.Table)
 
 	row := h.queryRow(query, id)
 	item := h.scanRow(row, config)
@@ -933,7 +933,7 @@ func (h *DynamicModuleHandler) handleGet(c *gin.Context, config *ModuleConfig, i
 			SELECT DISTINCT g.name 
 			FROM groups g 
 			INNER JOIN user_groups ug ON g.id = ug.group_id 
-			WHERE ug.user_id = $1
+			WHERE ug.user_id = ?
 			ORDER BY g.name`
 
 		rows, err := h.query(groupQuery, id)
@@ -1099,7 +1099,7 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 				if groupID != "" {
 					_, err = h.exec(`
 						INSERT INTO user_groups (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-						VALUES ($1, $2, 'rw', 1, CURRENT_TIMESTAMP, $3, CURRENT_TIMESTAMP, $3)`,
+						VALUES (?, ?, 'rw', 1, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)`,
 						newID, groupID, currentUserID)
 					if err != nil {
 						// Log but don't fail the whole operation
@@ -1203,7 +1203,7 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 		// Only update groups if they were explicitly submitted
 		if groupsSubmitted {
 			// First, remove all existing group assignments
-			_, err = h.exec("DELETE FROM user_groups WHERE user_id = $1", id)
+			_, err = h.exec("DELETE FROM user_groups WHERE user_id = ?", id)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update groups: " + err.Error()})
 				return
@@ -1217,7 +1217,7 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 					if groupID != "" {
 						_, err = h.exec(`
 							INSERT INTO user_groups (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-							VALUES ($1, $2, 'rw', 1, CURRENT_TIMESTAMP, $3, CURRENT_TIMESTAMP, $3)`,
+							VALUES (?, ?, 'rw', 1, CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?)`,
 							id, groupID, currentUserID)
 						if err != nil {
 							// Log but don't fail the whole operation
@@ -1245,9 +1245,9 @@ func (h *DynamicModuleHandler) handleDelete(c *gin.Context, config *ModuleConfig
 	var query string
 
 	if config.Features.SoftDelete {
-		query = fmt.Sprintf("UPDATE %s SET valid_id = 2 WHERE id = $1", config.Module.Table)
+		query = fmt.Sprintf("UPDATE %s SET valid_id = 2 WHERE id = ?", config.Module.Table)
 	} else {
-		query = fmt.Sprintf("DELETE FROM %s WHERE id = $1", config.Module.Table)
+		query = fmt.Sprintf("DELETE FROM %s WHERE id = ?", config.Module.Table)
 	}
 
 	_, err := h.exec(query, id)
@@ -1966,7 +1966,7 @@ func (h *DynamicModuleHandler) handleDetails(c *gin.Context, config *ModuleConfi
 	}
 
 	// For other modules, use regular record lookup
-	query := fmt.Sprintf("SELECT * FROM %s WHERE id = $1", config.Module.Table)
+	query := fmt.Sprintf("SELECT * FROM %s WHERE id = ?", config.Module.Table)
 	row := h.queryRow(query, id)
 
 	item := h.scanRow(row, config)
@@ -1987,7 +1987,7 @@ func (h *DynamicModuleHandler) handleSysconfigDetails(c *gin.Context, config *Mo
 		SELECT name, description, navigation, effective_value, xml_content_parsed,
 		       user_modification_possible, is_readonly, is_required
 		FROM sysconfig_default 
-		WHERE name = $1 AND is_valid = 1
+		WHERE name = ? AND is_valid = 1
 	`
 
 	var details struct {
@@ -2067,7 +2067,7 @@ func (h *DynamicModuleHandler) handleReset(c *gin.Context, config *ModuleConfig,
 // handleSysconfigReset handles sysconfig reset to default.
 func (h *DynamicModuleHandler) handleSysconfigReset(c *gin.Context, config *ModuleConfig, configName string) {
 	// Remove any custom value from sysconfig_modified table
-	query := `DELETE FROM sysconfig_modified WHERE name = $1`
+	query := `DELETE FROM sysconfig_modified WHERE name = ?`
 
 	_, err := h.exec(query, configName)
 	if err != nil {
@@ -2228,17 +2228,17 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 	searchValue := c.Query("search")
 	if searchValue != "" {
 		searchConditions := []string{}
-		// Find searchable fields and add ILIKE conditions for each
+		// Find searchable fields and add case-insensitive LIKE conditions for each
 		for _, field := range config.Fields {
 			if field.Searchable {
-				// Add condition for the direct field value
-				searchConditions = append(searchConditions, config.Module.Table+"."+field.DBColumn+" ILIKE $"+fmt.Sprintf("%d", len(args)+1))
+				// Add condition for the direct field value (LOWER for case-insensitive search)
+				searchConditions = append(searchConditions, "LOWER("+config.Module.Table+"."+field.DBColumn+") LIKE LOWER($"+fmt.Sprintf("%d", len(args)+1)+")")
 				args = append(args, "%"+searchValue+"%")
 
 				// If this field has a lookup configuration, also search in the display value
 				if field.LookupTable != "" && field.LookupDisplay != "" {
 					// Add a subquery condition to search in the lookup table's display column
-					subquery := fmt.Sprintf("%s.%s IN (SELECT %s FROM %s WHERE %s ILIKE $%d)",
+					subquery := fmt.Sprintf("%s.%s IN (SELECT %s FROM %s WHERE LOWER(%s) LIKE LOWER($%d))",
 						config.Module.Table, field.DBColumn, field.LookupKey,
 						field.LookupTable, field.LookupDisplay, len(args)+1)
 					searchConditions = append(searchConditions, subquery)
@@ -2268,8 +2268,8 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 			conditions = append(conditions, filter.Field+" = $"+fmt.Sprintf("%d", len(args)+1))
 			args = append(args, filterValue)
 		case "text":
-			// For text filters, do LIKE search
-			conditions = append(conditions, filter.Field+" ILIKE $"+fmt.Sprintf("%d", len(args)+1))
+			// For text filters, do case-insensitive LIKE search
+			conditions = append(conditions, "LOWER("+filter.Field+") LIKE LOWER($"+fmt.Sprintf("%d", len(args)+1)+")")
 			args = append(args, "%"+filterValue+"%")
 		case "date_range":
 			// Handle date range filters - expect from and to parameters

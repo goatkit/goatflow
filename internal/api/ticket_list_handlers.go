@@ -154,7 +154,7 @@ func handleTickets(c *gin.Context) {
 		var stateRow struct {
 			Name string
 		}
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), t.TicketStateID).Scan(&stateRow.Name)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = ?"), t.TicketStateID).Scan(&stateRow.Name)
 		if err == nil {
 			stateName = stateRow.Name
 		}
@@ -164,7 +164,7 @@ func handleTickets(c *gin.Context) {
 		var priorityRow struct {
 			Name string
 		}
-		pq := "SELECT name FROM ticket_priority WHERE id = $1"
+		pq := "SELECT name FROM ticket_priority WHERE id = ?"
 		err = db.QueryRow(database.ConvertPlaceholders(pq), t.TicketPriorityID).Scan(&priorityRow.Name)
 		if err == nil {
 			priorityName = priorityRow.Name
@@ -402,7 +402,7 @@ func handleSearchTickets(c *gin.Context) {
 		rows, err := db.Query(database.ConvertPlaceholders(`
             SELECT id, tn, title
             FROM ticket
-            WHERE title ILIKE $1 OR tn ILIKE $1
+            WHERE LOWER(title) LIKE LOWER(?) OR LOWER(tn) LIKE LOWER(?)
             LIMIT 20
         `), "%"+query+"%")
 

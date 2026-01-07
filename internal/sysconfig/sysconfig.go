@@ -308,7 +308,7 @@ func (m *Manager) getModifiedValue(name string) (interface{}, error) {
 	query := `
 		SELECT effective_value 
 		FROM sysconfig_modified 
-		WHERE name = $1 AND is_valid = 1
+		WHERE name = ? AND is_valid = 1
 		ORDER BY change_time DESC
 		LIMIT 1
 	`
@@ -356,9 +356,9 @@ func (m *Manager) Set(name, value string, userID int) error {
 	query := `
 		INSERT INTO sysconfig_modified 
 		(sysconfig_default_id, name, effective_value, is_valid, create_by, change_by)
-		VALUES ($1, $2, $3, 1, $4, $4)
+		VALUES (?, ?, ?, 1, ?, ?)
 		ON CONFLICT (name) DO UPDATE SET
-		effective_value = $3, change_by = $4, change_time = CURRENT_TIMESTAMP
+		effective_value = ?, change_by = ?, change_time = CURRENT_TIMESTAMP
 	`
 
 	_, err := m.db.Exec(query, setting.ID, name, value, userID)
@@ -478,7 +478,7 @@ func (m *Manager) GetSettings() map[string]*Setting {
 func (m *Manager) Reset(name string, userID int) error {
 	query := `
 		DELETE FROM sysconfig_modified 
-		WHERE name = $1
+		WHERE name = ?
 	`
 
 	_, err := m.db.Exec(query, name)

@@ -25,7 +25,7 @@ func (r *TicketStateRepository) GetByID(id uint) (*models.TicketState, error) {
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
-		WHERE id = $1`)
+		WHERE id = ?`)
 
 	var state models.TicketState
 	err := r.db.QueryRow(query, id).Scan(
@@ -53,7 +53,7 @@ func (r *TicketStateRepository) GetByName(name string) (*models.TicketState, err
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
-		WHERE name = $1 AND valid_id = 1`)
+		WHERE name = ? AND valid_id = 1`)
 
 	var state models.TicketState
 	err := r.db.QueryRow(query, name).Scan(
@@ -81,7 +81,7 @@ func (r *TicketStateRepository) GetByTypeID(typeID uint) ([]*models.TicketState,
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
-		WHERE type_id = $1 AND valid_id = 1
+		WHERE type_id = ? AND valid_id = 1
 		ORDER BY name`)
 
 	rows, err := r.db.Query(query, typeID)
@@ -166,7 +166,7 @@ func (r *TicketStateRepository) Create(state *models.TicketState) error {
 			name, type_id, comments, valid_id,
 			create_time, create_by, change_time, change_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8
+			?, ?, ?, ?, ?, ?, ?, ?
 		) RETURNING id`)
 
 	err := r.db.QueryRow(
@@ -188,13 +188,13 @@ func (r *TicketStateRepository) Create(state *models.TicketState) error {
 func (r *TicketStateRepository) Update(state *models.TicketState) error {
 	query := database.ConvertPlaceholders(`
 		UPDATE ticket_state SET
-			name = $2,
-			type_id = $3,
-			comments = $4,
-			valid_id = $5,
-			change_time = $6,
-			change_by = $7
-		WHERE id = $1`)
+			name = ?,
+			type_id = ?,
+			comments = ?,
+			valid_id = ?,
+			change_time = ?,
+			change_by = ?
+		WHERE id = ?`)
 
 	result, err := r.db.Exec(
 		query,
@@ -232,7 +232,7 @@ func (r *TicketStateRepository) GetOpenStates() ([]*models.TicketState, error) {
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
-		WHERE type_id = ANY($1) AND valid_id = 1
+		WHERE type_id = ANY(?) AND valid_id = 1
 		ORDER BY name`)
 
 	rows, err := r.db.Query(query, openTypeIDs)
@@ -277,7 +277,7 @@ func (r *TicketStateRepository) GetClosedStates() ([]*models.TicketState, error)
 		SELECT id, name, type_id, comments, valid_id,
 		       create_time, create_by, change_time, change_by
 		FROM ticket_state
-		WHERE type_id = ANY($1) AND valid_id = 1
+		WHERE type_id = ANY(?) AND valid_id = 1
 		ORDER BY name`)
 
 	rows, err := r.db.Query(query, closedTypeIDs)

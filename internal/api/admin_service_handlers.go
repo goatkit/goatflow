@@ -204,7 +204,7 @@ func handleAdminServiceCreate(c *gin.Context) {
 
 	// Check for duplicate name
 	var exists bool
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM service WHERE name = $1)"), input.Name).Scan(&exists)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT EXISTS(SELECT 1 FROM service WHERE name = ?)"), input.Name).Scan(&exists)
 	if err != nil {
 		shared.SendToastResponse(c, false, "Failed to check for duplicate", "")
 		return
@@ -217,7 +217,7 @@ func handleAdminServiceCreate(c *gin.Context) {
 
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO service (name, comments, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
+		VALUES (?, ?, ?, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 		RETURNING id
 	`)
 	id64, err := database.GetAdapter().InsertWithReturning(db, insertQuery, input.Name, input.Comments, input.ValidID)
@@ -335,7 +335,7 @@ func handleAdminServiceDelete(c *gin.Context) {
 
 	// Check if service has associated tickets
 	var ticketCount int
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE service_id = $1"), id).Scan(&ticketCount)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM ticket WHERE service_id = ?"), id).Scan(&ticketCount)
 	if err != nil {
 		shared.SendToastResponse(c, false, "Failed to check ticket dependencies", "")
 		return
@@ -346,7 +346,7 @@ func handleAdminServiceDelete(c *gin.Context) {
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE service 
 		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
-		WHERE id = $1
+		WHERE id = ?
 	`), id)
 
 	if err != nil {

@@ -18,7 +18,7 @@ func GetArticleAttachments(articleID int) ([]map[string]interface{}, error) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, filename, content_type, content_size, content, disposition
 		FROM article_data_mime_attachment
-		WHERE article_id = $1
+		WHERE article_id = ?
 		ORDER BY id
 	`), articleID)
 	if err != nil {
@@ -87,7 +87,7 @@ func GetTicketAttachments(ticketID int) (map[int][]map[string]interface{}, error
 		SELECT a.id, att.id, att.filename, att.content_type, att.content_size, att.content, att.disposition
 		FROM article a
 		LEFT JOIN article_data_mime_attachment att ON a.id = att.article_id
-		WHERE a.ticket_id = $1
+		WHERE a.ticket_id = ?
 		ORDER BY a.id, att.id
 	`), ticketID)
 	if err != nil {

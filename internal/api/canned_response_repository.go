@@ -101,7 +101,7 @@ func (r *CannedResponseRepository) Create(cr *CannedResponse, userID int) (int, 
 		INSERT INTO canned_response 
 		(name, category, content, content_type, tags, scope, owner_id, team_id, placeholders, 
 		 usage_count, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, 1, NOW(), $10, NOW(), $10)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, NOW(), ?, NOW(), ?)
 	`)
 
 	result, err := r.db.Exec(query,
@@ -120,7 +120,7 @@ func (r *CannedResponseRepository) GetByID(id int) (*CannedResponse, error) {
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, category, content, content_type, tags, scope, owner_id, team_id,
 		       placeholders, usage_count, last_used, valid_id, create_time, create_by, change_time, change_by
-		FROM canned_response WHERE id = $1
+		FROM canned_response WHERE id = ?
 	`)
 
 	var dbr CannedResponseDB
@@ -242,9 +242,9 @@ func (r *CannedResponseRepository) Update(id int, cr *CannedResponse, userID int
 
 	query := database.ConvertPlaceholders(`
 		UPDATE canned_response 
-		SET name = $1, category = $2, content = $3, content_type = $4, tags = $5, 
-		    scope = $6, team_id = $7, placeholders = $8, change_time = NOW(), change_by = $9
-		WHERE id = $10
+		SET name = ?, category = ?, content = ?, content_type = ?, tags = ?, 
+		    scope = ?, team_id = ?, placeholders = ?, change_time = NOW(), change_by = ?
+		WHERE id = ?
 	`)
 
 	_, err := r.db.Exec(query,
@@ -256,7 +256,7 @@ func (r *CannedResponseRepository) Update(id int, cr *CannedResponse, userID int
 // Delete soft-deletes a canned response by setting valid_id = 2.
 func (r *CannedResponseRepository) Delete(id, userID int) error {
 	query := database.ConvertPlaceholders(`
-		UPDATE canned_response SET valid_id = 2, change_time = NOW(), change_by = $1 WHERE id = $2
+		UPDATE canned_response SET valid_id = 2, change_time = NOW(), change_by = ? WHERE id = ?
 	`)
 	_, err := r.db.Exec(query, userID, id)
 	return err
@@ -265,7 +265,7 @@ func (r *CannedResponseRepository) Delete(id, userID int) error {
 // IncrementUsage increments usage count and updates last_used.
 func (r *CannedResponseRepository) IncrementUsage(id int) error {
 	query := database.ConvertPlaceholders(`
-		UPDATE canned_response SET usage_count = usage_count + 1, last_used = NOW() WHERE id = $1
+		UPDATE canned_response SET usage_count = usage_count + 1, last_used = NOW() WHERE id = ?
 	`)
 	_, err := r.db.Exec(query, id)
 	return err
@@ -280,18 +280,18 @@ func (r *CannedResponseRepository) CheckDuplicate(name, scope string, ownerID, t
 	case "personal":
 		query = database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM canned_response 
-			WHERE name = $1 AND scope = 'personal' AND owner_id = $2 AND valid_id = 1
+			WHERE name = ? AND scope = 'personal' AND owner_id = ? AND valid_id = 1
 		`)
 		args = []interface{}{name, ownerID}
 	case "team":
 		query = database.ConvertPlaceholders(`
 			SELECT COUNT(*) FROM canned_response 
-			WHERE name = $1 AND scope = 'team' AND team_id = $2 AND valid_id = 1
+			WHERE name = ? AND scope = 'team' AND team_id = ? AND valid_id = 1
 		`)
 		args = []interface{}{name, teamID}
 	case "global":
 		query = database.ConvertPlaceholders(`
-			SELECT COUNT(*) FROM canned_response WHERE name = $1 AND scope = 'global' AND valid_id = 1
+			SELECT COUNT(*) FROM canned_response WHERE name = ? AND scope = 'global' AND valid_id = 1
 		`)
 		args = []interface{}{name}
 	default:
