@@ -21,9 +21,10 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./docker/mariadb/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro,Z
+      - ./docker/mariadb/healthcheck.sh:/usr/local/bin/healthcheck.sh:ro,Z
       - /etc/localtime:/etc/localtime:ro
     healthcheck:
-      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD"]
+      test: ["CMD", "healthcheck.sh"]
       start_period: 10s
       interval: 10s
       timeout: 5s
@@ -196,7 +197,7 @@ services:
     networks:
       - gotrs-network
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${CUSTOMER_FE_APP_PORT:-8080}/health || exit 1"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       start_period: 10s
       interval: 10s
       timeout: 5s
