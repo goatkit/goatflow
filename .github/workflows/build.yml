@@ -197,17 +197,36 @@ jobs:
           fi
           echo "Chart will be tagged as: $TAG"
 
-      - name: Get chart version
-        id: chart
+      - name: Get base chart version
+        id: chart_base
         run: |
           VERSION=$(grep '^version:' charts/gotrs/Chart.yaml | awk '{print $2}')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Update chart appVersion to match git ref
+      - name: Update chart version and appVersion for OCI push
+        id: chart
         run: |
-          sed -i "s/^appVersion:.*/appVersion: \"${{ steps.chart_tag.outputs.tag }}\"/" charts/gotrs/Chart.yaml
-          echo "Updated appVersion to: ${{ steps.chart_tag.outputs.tag }}"
-          grep appVersion charts/gotrs/Chart.yaml
+          # For tagged releases, use the tag as version (e.g., 0.5.0 from v0.5.0)
+          # For branches, use base version with branch suffix (e.g., 0.1.0-main)
+          TAG="${{ steps.chart_tag.outputs.tag }}"
+          BASE_VERSION="${{ steps.chart_base.outputs.version }}"
+
+          if [[ "$TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            # It's a semantic version tag, strip the 'v' prefix if present
+            CHART_VERSION="${TAG#v}"
+          else
+            # It's a branch name, append to base version
+            CHART_VERSION="${BASE_VERSION}-${TAG}"
+          fi
+
+          # Update both version and appVersion in Chart.yaml
+          sed -i "s/^version:.*/version: ${CHART_VERSION}/" charts/gotrs/Chart.yaml
+          sed -i "s/^appVersion:.*/appVersion: \"${TAG}\"/" charts/gotrs/Chart.yaml
+
+          echo "version=$CHART_VERSION" >> $GITHUB_OUTPUT
+          echo "Updated chart version to: $CHART_VERSION"
+          echo "Updated appVersion to: $TAG"
+          grep -E '^(version|appVersion):' charts/gotrs/Chart.yaml
 
       - name: Add Helm repositories
         run: |
@@ -228,19 +247,12 @@ jobs:
       - name: Push chart to OCI registry
         if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
         run: |
-          # Push with ref-based tag (main, dev, v0.5.0, etc.)
+          # Push chart - version is embedded in the package from Chart.yaml
+          # For branches: 0.1.0-main, 0.1.0-dev
+          # For releases: 0.5.0, 1.0.0
           helm push dist/gotrs-${{ steps.chart.outputs.version }}.tgz \
-            oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts \
-            --version ${{ steps.chart_tag.outputs.tag }}
-          echo "Pushed chart with tag: ${{ steps.chart_tag.outputs.tag }}"
-
-      - name: Push chart as latest (releases only)
-        if: (github.event.inputs.push_to_registry == 'true' || github.event_name == 'push') && steps.chart_tag.outputs.is_release == 'true'
-        run: |
-          helm push dist/gotrs-${{ steps.chart.outputs.version }}.tgz \
-            oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts \
-            --version latest
-          echo "Pushed chart with tag: latest"
+            oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
+          echo "Pushed chart version: ${{ steps.chart.outputs.version }}"
 
       - name: Upload chart artifact
         uses: actions/upload-artifact@v4
