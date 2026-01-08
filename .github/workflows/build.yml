@@ -64,6 +64,24 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
+      - name: Determine version for build
+        id: version
+        run: |
+          # For tags (v0.5.0), use the tag
+          # For branches (main), use branch name
+          # For workflow_dispatch, use the input version
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/heads/}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "commit=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
       - name: Build and push image
         id: build
         uses: docker/build-push-action@v5
@@ -79,6 +97,11 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: true
           sbom: true
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            GIT_COMMIT=${{ steps.version.outputs.commit }}
+            GIT_BRANCH=${{ steps.version.outputs.branch }}
+            BUILD_DATE=${{ steps.version.outputs.date }}
 
       - name: Output image name
         id: image
@@ -128,6 +151,21 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
+      - name: Determine version for build
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/heads/}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "commit=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+          echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
       - name: Build and push runner image
         id: build
         uses: docker/build-push-action@v5
@@ -139,6 +177,11 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            GIT_COMMIT=${{ steps.version.outputs.commit }}
+            GIT_BRANCH=${{ steps.version.outputs.branch }}
+            BUILD_DATE=${{ steps.version.outputs.date }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: true
