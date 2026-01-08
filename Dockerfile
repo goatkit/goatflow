@@ -72,7 +72,9 @@ RUN apk add --no-cache \
     git \
     gcc \
     musl-dev \
-    ca-certificates
+    ca-certificates \
+    vips-dev \
+    vips-heif
 
 # Set up module caching
 WORKDIR /build
@@ -98,14 +100,24 @@ FROM deps AS builder
 
 # Copy source code
 COPY . ./
-# Force rebuild marker
+
+# Version information - set at build time via --build-arg or defaults to git info
+ARG VERSION=dev
+ARG GIT_COMMIT=unknown
+ARG GIT_BRANCH=unknown
+ARG BUILD_DATE=unknown
 
 # Build with optimizations and cache mounts
-# -ldflags="-w -s" strips debug info for smaller binary
+# -ldflags injects version info and strips debug info for smaller binary
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=1 GOOS=linux \
-    go build -ldflags="-w -s" -a -installsuffix cgo -o goats ./cmd/goats
+    go build -ldflags="-w -s \
+        -X github.com/gotrs-io/gotrs-ce/internal/version.Version=${VERSION} \
+        -X github.com/gotrs-io/gotrs-ce/internal/version.GitCommit=${GIT_COMMIT} \
+        -X github.com/gotrs-io/gotrs-ce/internal/version.GitBranch=${GIT_BRANCH} \
+        -X github.com/gotrs-io/gotrs-ce/internal/version.BuildDate=${BUILD_DATE}" \
+    -a -installsuffix cgo -o goats ./cmd/goats
 
 # ============================================
 # Stage 4: Export build artifacts
@@ -142,7 +154,9 @@ RUN apk add --no-cache \
     ca-certificates \
     curl \
     postgresql15-client \
-    tzdata
+    tzdata \
+    vips \
+    vips-heif
 
 # Create non-root user and cache directories
 RUN addgroup -g ${GID} -S appgroup && \

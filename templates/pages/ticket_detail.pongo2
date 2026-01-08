@@ -413,7 +413,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
             <!-- Add Note Form -->
             <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6" data-testid="add-note-section">
                 <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4" data-testid="add-note-title">{{ t("tickets.add_note")|default:"Add Note" }}</h2>
-                <form id="noteForm" class="space-y-4" data-testid="note-form" data-require-time="{% if RequireNoteTimeUnits %}true{% else %}false{% endif %}" data-pending-states="{% if PendingStateIDs %}{% for sid in PendingStateIDs %}{{ sid }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
+                <form id="noteForm" class="space-y-4" enctype="multipart/form-data" data-testid="note-form" data-require-time="{% if RequireNoteTimeUnits %}true{% else %}false{% endif %}" data-pending-states="{% if PendingStateIDs %}{% for sid in PendingStateIDs %}{{ sid }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
                     <div>
                         <label for="note_subject" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             {{ t("tickets.subject")|default:"Subject" }} <span class="text-xs font-normal text-gray-500 dark:text-gray-400">({{ t("tickets.optional")|default:"optional" }})</span>
@@ -1559,13 +1559,21 @@ if (noteForm) {
     const subjectInput = document.getElementById('note_subject');
 
     const ensureErrorDiv = () => {
-        return document.getElementById('note-error') || (() => {
-            const div = document.createElement('div');
-            div.id = 'note-error';
-            div.className = 'bg-red-50 text-red-800 p-3 rounded mb-3';
-            document.getElementById('note_content').parentElement.prepend(div);
-            return div;
-        })();
+        const existing = document.getElementById('note-error');
+        if (existing) return existing;
+
+        const div = document.createElement('div');
+        div.id = 'note-error';
+        div.className = 'bg-red-50 text-red-800 p-3 rounded mb-3';
+
+        // Try to find a parent element to prepend to (noteEditor is the rich text editor container)
+        const noteEditor = document.getElementById('noteEditor');
+        if (noteEditor && noteEditor.parentElement) {
+            noteEditor.parentElement.prepend(div);
+        } else if (noteForm) {
+            noteForm.prepend(div);
+        }
+        return div;
     };
 
     const clearNoteError = () => {
@@ -1606,7 +1614,13 @@ if (noteForm) {
         e.preventDefault();
         clearNoteError();
 
-        const content = document.getElementById('note_content').value.trim();
+        // The rich text editor stores content in a hidden textarea with id="body" (FieldName from the partial)
+        const contentEl = document.getElementById('body');
+        if (!contentEl) {
+            ensureErrorDiv().textContent = 'Note content field not found.';
+            return;
+        }
+        const content = contentEl.value.trim();
         if (!content) {
             ensureErrorDiv().textContent = 'Please enter note content.';
             return;
@@ -1704,6 +1718,38 @@ if (noteForm) {
 }
 
 // Note editor initialized by partial include
+
+// Delete attachment function for HTMX-rendered attachment list
+function deleteAttachment(attachmentId, filename) {
+    if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+        return;
+    }
+
+    apiFetch(`/api/tickets/${ticketId}/attachments/${attachmentId}`, {
+        method: 'DELETE'
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showNotification('Attachment deleted successfully', 'success');
+            // Reload to refresh the attachments list
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            throw new Error(data.error || 'Failed to delete attachment');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting attachment:', error);
+        showNotification('Error: ' + (error.message || 'Failed to delete attachment'), 'error');
+    });
+}
 
 // Initialize ticket zoom functionality
 initTicketZoom(ticketId);

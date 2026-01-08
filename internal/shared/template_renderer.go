@@ -15,6 +15,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/lookups"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/version"
 )
 
 // TemplateRenderer handles template rendering with pongo2.
@@ -84,6 +85,12 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 	ctx["Lang"] = lang
 	ctx["Direction"] = string(i18n.GetDirection(lang))
 	ctx["IsRTL"] = i18n.IsRTL(lang)
+
+	// Add version info to context
+	ctx["AppVersion"] = version.String()
+	ctx["AppVersionShort"] = version.Short()
+	ctx["AppVersionFull"] = version.Full()
+	ctx["AppVersionInfo"] = version.GetInfo()
 
 	// Auto-inject User and IsInAdminGroup from context for consistent nav bar
 	isAdmin := false

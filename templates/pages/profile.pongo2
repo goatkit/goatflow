@@ -91,8 +91,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Load current session timeout preference
-    fetch('/agent/api/preferences/session-timeout')
-        .then(response => response.json())
+    apiFetch('/agent/api/preferences/session-timeout')
         .then(data => {
             if (data.success && data.value) {
                 document.getElementById('session-timeout').value = data.value;
@@ -107,14 +106,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(this);
         const timeout = formData.get('session_timeout');
         
-        fetch('/agent/api/preferences/session-timeout', {
+        apiFetch('/agent/api/preferences/session-timeout', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ value: parseInt(timeout) })
         })
-        .then(response => response.json())
         .then(data => {
             if (data.success) {
                 // Show success feedback

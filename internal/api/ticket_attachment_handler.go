@@ -14,10 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"image"
-	_ "image/gif"
-	_ "image/jpeg"
-
+	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/config"
@@ -26,14 +23,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 
-	// Register additional decoders for thumbnails.
-	"bytes"
-	"image/png"
 	"log"
-
-	_ "golang.org/x/image/bmp"
-	_ "golang.org/x/image/tiff"
-	_ "golang.org/x/image/webp"
 )
 
 // Attachment represents a file attached to a ticket.
@@ -497,6 +487,7 @@ func handleUploadAttachment(c *gin.Context) {
 // handleGetAttachments returns list of attachments for a ticket.
 func handleGetAttachments(c *gin.Context) {
 	ticketIDStr := c.Param("id")
+	log.Printf("ATTACHMENTS: handleGetAttachments called with id=%s", ticketIDStr)
 	// Resolve TN or ID (handles numeric-looking TNs)
 	ticketID, err := resolveTicketID(ticketIDStr)
 	if err != nil {
@@ -877,16 +868,19 @@ func handleViewAttachment(c *gin.Context) {
 	// Determine filename and content type without loading full content
 	filename := "attachment"
 	contentType := "application/octet-stream"
+	var contentSize int64
+	var createTime time.Time
+	var createBy int
 	// Determine prev/next attachment ids for this ticket
 	prevID, nextID := 0, 0
 	// Try DB metadata path first
 	if db := attachmentsDB(); db != nil {
-		// content type + filename
+		// content type + filename + size + timestamps
 		if err := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT att.filename, COALESCE(att.content_type,'')
+			SELECT att.filename, COALESCE(att.content_type,''), COALESCE(att.content_size, 0), att.create_time, att.create_by
 			FROM article_data_mime_attachment att
 			JOIN article a ON a.id = att.article_id
-			WHERE att.id = ? AND a.ticket_id = ? LIMIT 1`), attID, ticketID).Scan(&filename, &contentType); err != nil {
+			WHERE att.id = ? AND a.ticket_id = ? LIMIT 1`), attID, ticketID).Scan(&filename, &contentType, &contentSize, &createTime, &createBy); err != nil {
 			// Use defaults
 		}
 
@@ -927,6 +921,8 @@ func handleViewAttachment(c *gin.Context) {
 		if att, ok := attachments[attID]; ok {
 			filename = att.Filename
 			contentType = att.ContentType
+			contentSize = att.Size
+			createTime = att.UploadedAt
 		}
 		if ids, ok := attachmentsByTicket[ticketID]; ok {
 			for i, id := range ids {
@@ -973,7 +969,12 @@ func handleViewAttachment(c *gin.Context) {
 		nextURL = fmt.Sprintf("/api/tickets/%s/attachments/%d/view", ticketIDStr, nextID)
 	}
 
-	// Build HTML page
+	// Format metadata for display
+	sizeFormatted := formatFileSize(contentSize)
+	uploadedAt := createTime.Format("Jan 2, 2006 at 3:04 PM")
+	downloadURL := fmt.Sprintf("/api/tickets/%s/attachments/%d", ticketIDStr, attID)
+
+	// Build HTML page with enhanced header
 	html := fmt.Sprintf(`<!doctype html>
 <html lang="en">
 <head>
@@ -981,31 +982,85 @@ func handleViewAttachment(c *gin.Context) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>%s · Attachment Viewer</title>
   <style>
-	html, body { height: 100%%; margin: 0; background: #0b0b0b; color: #e5e5e5; }
-	.viewer { position: fixed; inset: 0; display: grid; place-items: center; }
-	.nav { position: fixed; top: 0; bottom: 0; width: 15%%; max-width: 180px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .25s ease; pointer-events: none; }
+	:root { --primary: #0066cc; --primary-hover: #0052a3; }
+	@media (prefers-color-scheme: dark) { :root { --primary: #3b82f6; --primary-hover: #2563eb; } }
+	html, body { height: 100%%; margin: 0; background: #0b0b0b; color: #e5e5e5; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+	.header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(17,17,17,.95); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(255,255,255,.1); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+	.header-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+	.header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+	.close-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--primary); color: white; border: none; cursor: pointer; transition: background .15s; flex-shrink: 0; }
+	.close-btn:hover { background: var(--primary-hover); }
+	.close-btn svg { width: 20px; height: 20px; }
+	.file-info { min-width: 0; }
+	.filename { font-weight: 600; font-size: 14px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px; }
+	.file-meta { font-size: 12px; color: #999; margin-top: 2px; }
+	.details-toggle { font-size: 11px; color: #3b82f6; cursor: pointer; margin-left: 8px; }
+	.details-toggle:hover { text-decoration: underline; }
+	.details-panel { position: fixed; top: 60px; left: 16px; background: rgba(30,30,30,.98); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; padding: 12px 16px; font-size: 12px; z-index: 99; display: none; min-width: 280px; box-shadow: 0 4px 20px rgba(0,0,0,.5); }
+	.details-panel.open { display: block; }
+	.details-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+	.details-row:last-child { border-bottom: none; }
+	.details-label { color: #888; }
+	.details-value { color: #ddd; font-weight: 500; }
+	.action-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; text-decoration: none; transition: all .15s; border: none; cursor: pointer; }
+	.btn-primary { background: var(--primary); color: white; }
+	.btn-primary:hover { background: var(--primary-hover); }
+	.btn-secondary { background: rgba(255,255,255,.1); color: #ddd; }
+	.btn-secondary:hover { background: rgba(255,255,255,.15); }
+	.viewer { position: fixed; inset: 0; top: 60px; display: grid; place-items: center; }
+	.nav { position: fixed; top: 60px; bottom: 0; width: 15%%; max-width: 180px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .25s ease; pointer-events: none; }
 	.nav.visible { opacity: .95; pointer-events: auto; }
 	.nav.left { left: 0; background: linear-gradient(90deg, rgba(0,0,0,.35), rgba(0,0,0,0)); }
 	.nav.right { right: 0; background: linear-gradient(270deg, rgba(0,0,0,.35), rgba(0,0,0,0)); }
-	.btn { font: 700 28px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: #fff; text-decoration: none; padding: 12px 16px; border-radius: 8px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.2); }
-	.meta { position: fixed; left: 12px; top: 12px; font: 500 12px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color: #cfcfcf; opacity: .85; background: rgba(0,0,0,.35); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,.15); }
+	.nav-btn { font: 700 28px/1 system-ui; color: #fff; text-decoration: none; padding: 12px 16px; border-radius: 8px; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.2); }
 	.content { width: 100%%; height: 100%%; display: grid; place-items: center; }
   </style>
 </head>
 <body>
+  <div class="header">
+	<div class="header-left">
+	  <button class="close-btn" onclick="window.close(); window.location.href='/agent/tickets/%s';" title="Close (Esc)">
+		<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+	  </button>
+	  <div class="file-info">
+		<div class="filename" title="%s">%s</div>
+		<div class="file-meta">
+		  %s · %s
+		  <span class="details-toggle" onclick="toggleDetails()">▼ More details</span>
+		</div>
+	  </div>
+	</div>
+	<div class="header-right">
+	  <a href="%s" download class="action-btn btn-primary">
+		<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"/></svg>
+		Download
+	  </a>
+	</div>
+  </div>
+  <div class="details-panel" id="detailsPanel">
+	<div class="details-row"><span class="details-label">Filename</span><span class="details-value">%s</span></div>
+	<div class="details-row"><span class="details-label">Type</span><span class="details-value">%s</span></div>
+	<div class="details-row"><span class="details-label">Size</span><span class="details-value">%s</span></div>
+	<div class="details-row"><span class="details-label">Uploaded</span><span class="details-value">%s</span></div>
+	<div class="details-row"><span class="details-label">Attachment ID</span><span class="details-value">%d</span></div>
+  </div>
   <div class="viewer" id="viewer">
-	<div class="meta">%s · %s</div>
 	<div class="content">%s</div>
 	%s
 	%s
   </div>
   <script>
+  function toggleDetails() {
+	const panel = document.getElementById('detailsPanel');
+	panel.classList.toggle('open');
+	const toggle = document.querySelector('.details-toggle');
+	toggle.textContent = panel.classList.contains('open') ? '▲ Hide details' : '▼ More details';
+  }
   (function(){
-	const left = document.createElement('div');
-	const right = document.createElement('div');
+	let left = null;
+	let right = null;
 	%s
 	%s
-	const viewer = document.getElementById('viewer');
 	let hideTimer = null;
 	function showNav(){
 	  if (left) left.classList.add('visible');
@@ -1014,55 +1069,61 @@ func handleViewAttachment(c *gin.Context) {
 	  hideTimer = setTimeout(()=>{
 		if (left) left.classList.remove('visible');
 		if (right) right.classList.remove('visible');
-	  }, 1000);
+	  }, 1500);
 	}
 	window.addEventListener('mousemove', showNav, {passive:true});
-		window.addEventListener('keydown', function(e){
-			// Ignore hotkeys when user is typing in an input, textarea, or contenteditable editor
-			var ae = document.activeElement;
-			if (ae && (ae.isContentEditable || ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) { return; }
-			if (e.key === 'Escape') {
-		window.location.href = '/tickets/%s';
+	window.addEventListener('keydown', function(e){
+	  var ae = document.activeElement;
+	  if (ae && (ae.isContentEditable || ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA')) { return; }
+	  if (e.key === 'Escape') {
+		window.close();
+		window.location.href = '/agent/tickets/%s';
 	  } else if (e.key === 'ArrowLeft' && %t) {
 		window.location.href = '%s';
 	  } else if (e.key === 'ArrowRight' && %t) {
 		window.location.href = '%s';
 	  }
 	});
-	// Initialize once on load
 	showNav();
   })();
   </script>
 </body>
 </html>`,
 		htmlEscape(filename),
-		htmlEscape(filename), htmlEscape(contentType),
+		// Header section
+		ticketIDStr,
+		htmlEscape(filename), htmlEscape(filename),
+		sizeFormatted, htmlEscape(contentType),
+		downloadURL,
+		// Details panel
+		htmlEscape(filename), htmlEscape(contentType), sizeFormatted, uploadedAt, attID,
+		// Content
 		embed,
 		// left and right overlays
 		func() string {
 			if prevURL == "" {
 				return ""
 			}
-			return fmt.Sprintf(`<div class="nav left"><a class="btn" href="%s" aria-label="Previous">&#x2039;</a></div>`, prevURL)
+			return fmt.Sprintf(`<div class="nav left"><a class="nav-btn" href="%s" aria-label="Previous">&#x2039;</a></div>`, prevURL)
 		}(),
 		func() string {
 			if nextURL == "" {
 				return ""
 			}
-			return fmt.Sprintf(`<div class="nav right"><a class="btn" href="%s" aria-label="Next">&#x203A;</a></div>`, nextURL)
+			return fmt.Sprintf(`<div class="nav right"><a class="nav-btn" href="%s" aria-label="Next">&#x203A;</a></div>`, nextURL)
 		}(),
 		// create elements so we can toggle classes even if absent
 		func() string {
 			if prevURL == "" {
 				return "/* no prev */"
 			}
-			return "const leftEl = document.querySelector('.nav.left'); if (leftEl) left = leftEl;"
+			return "left = document.querySelector('.nav.left');"
 		}(),
 		func() string {
 			if nextURL == "" {
 				return "/* no next */"
 			}
-			return "const rightEl = document.querySelector('.nav.right'); if (rightEl) right = rightEl;"
+			return "right = document.querySelector('.nav.right');"
 		}(),
 		// go-back target uses original id param for nicer TN links
 		ticketIDStr,
@@ -1081,16 +1142,16 @@ func serveAttachmentInlineRaw(c *gin.Context, ticketIDStr string, ticketID int, 
 	if db := attachmentsDB(); db != nil {
 		var filename, contentType string
 		var content []byte
+		var articleID int
 		row := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT att.filename, COALESCE(att.content_type,''), att.content
+			SELECT att.filename, COALESCE(att.content_type,''), att.content, att.article_id
 			FROM article_data_mime_attachment att
 			JOIN article a ON a.id = att.article_id
 			WHERE att.id = ? AND a.ticket_id = ? LIMIT 1`), attID, ticketID)
-		if err := row.Scan(&filename, &contentType, &content); err == nil {
+		if err := row.Scan(&filename, &contentType, &content, &articleID); err == nil {
 			if len(content) == 0 {
 				if ss := GetStorageService(); ss != nil {
-					// Attempt OTRS-style path (article id unknown here -> 0)
-					sp := service.GenerateOTRSStoragePath(ticketID, 0, filename)
+					sp := service.GenerateOTRSStoragePath(ticketID, articleID, filename)
 					if rc, rerr := ss.Retrieve(c.Request.Context(), sp); rerr == nil {
 						defer rc.Close()
 						if buf, berr := io.ReadAll(rc); berr == nil {
@@ -1156,19 +1217,17 @@ func serveAttachmentInlineRaw(c *gin.Context, ticketIDStr string, ticketID int, 
 	if db := attachmentsDB(); db != nil {
 		var filename, contentType string
 		var content []byte
+		var articleID int
 		row := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT att.filename, COALESCE(att.content_type,''), att.content
+			SELECT att.filename, COALESCE(att.content_type,''), att.content, att.article_id
 			FROM article_data_mime_attachment att
 			JOIN article a ON a.id = att.article_id
 			WHERE att.id = ? AND a.ticket_id = ? LIMIT 1`), attID, ticketID)
-		if err := row.Scan(&filename, &contentType, &content); err == nil {
+		if err := row.Scan(&filename, &contentType, &content, &articleID); err == nil {
 			// Fallback: if DB content is empty (e.g., local FS backend), try retrieving from storage
 			if len(content) == 0 {
-				// First try storage service with a best-effort lookup using the exact stored path (unknown here)
-				// Since GenerateStoragePath uses current time, it likely won't match; so additionally search on disk
 				if ss := GetStorageService(); ss != nil {
-					// Attempt naive retrieve with generated path (may fail)
-					sp := service.GenerateOTRSStoragePath(ticketID, 0, filename)
+					sp := service.GenerateOTRSStoragePath(ticketID, articleID, filename)
 					if rc, rerr := ss.Retrieve(c.Request.Context(), sp); rerr == nil {
 						defer rc.Close()
 						if buf, berr := io.ReadAll(rc); berr == nil {
@@ -1511,16 +1570,20 @@ func htmlEscape(s string) string { return html.EscapeString(s) }
 func handleGetThumbnail(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	attachmentIDStr := c.Param("attachment_id")
+	log.Printf("THUMBNAIL: request for ticket=%s attachment=%s", ticketIDStr, attachmentIDStr)
 	ticketID, err := resolveTicketID(ticketIDStr)
 	if err != nil {
+		log.Printf("THUMBNAIL: ticket not found: %v", err)
 		c.JSON(404, gin.H{"error": "Ticket not found"})
 		return
 	}
 	attID, err := strconv.Atoi(attachmentIDStr)
 	if err != nil {
+		log.Printf("THUMBNAIL: invalid attachment id: %v", err)
 		c.JSON(400, gin.H{"error": "Invalid attachment id"})
 		return
 	}
+	log.Printf("THUMBNAIL: resolved ticketID=%d attID=%d", ticketID, attID)
 
 	// Try DB first: fetch bytes and content type
 	if db := attachmentsDB(); db != nil {
@@ -1528,17 +1591,19 @@ func handleGetThumbnail(c *gin.Context) {
 			content     []byte
 			contentType string
 			filename    string
+			articleID   int
 		)
 		row := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT att.content, COALESCE(att.content_type,''), att.filename
+			SELECT att.content, COALESCE(att.content_type,''), att.filename, att.article_id
 			FROM article_data_mime_attachment att
 			JOIN article a ON a.id = att.article_id
 			WHERE att.id = ? AND a.ticket_id = ? LIMIT 1`), attID, ticketID)
-		if err := row.Scan(&content, &contentType, &filename); err == nil {
+		if err := row.Scan(&content, &contentType, &filename, &articleID); err == nil {
+			log.Printf("THUMBNAIL: DB query success - contentType=%s filename=%s articleID=%d contentLen=%d", contentType, filename, articleID, len(content))
 			// If DB content is empty (e.g., local FS backend), try to fetch from storage/local disk
 			if len(content) == 0 {
 				if ss := GetStorageService(); ss != nil {
-					sp := service.GenerateOTRSStoragePath(ticketID, 0, filename)
+					sp := service.GenerateOTRSStoragePath(ticketID, articleID, filename)
 					if rc, rerr := ss.Retrieve(c.Request.Context(), sp); rerr == nil {
 						defer rc.Close()
 						if buf, berr := io.ReadAll(rc); berr == nil {
@@ -1576,18 +1641,22 @@ func handleGetThumbnail(c *gin.Context) {
 				}
 				return
 			}
-			// Decode
-			img, _, err := image.Decode(bytes.NewReader(content))
+			// Decode using govips (supports AVIF, HEIC, WebP, etc.)
+			vipsImg, err := vips.NewImageFromBuffer(content)
 			if err != nil {
-				// If we cannot decode (e.g., SVG/AVIF/HEIC), return a placeholder thumbnail instead
+				log.Printf("THUMBNAIL: decode failed for %s (contentType=%s): %v - returning placeholder", filename, contentType, err)
 				ph, phType := service.GetPlaceholderThumbnail(contentType)
 				c.Header("Cache-Control", "public, max-age=86400")
 				c.Data(http.StatusOK, phType, ph)
 				return
 			}
-			// Simple nearest-neighbor resize to max 320x240 preserving aspect
-			w := img.Bounds().Dx()
-			h := img.Bounds().Dy()
+			defer vipsImg.Close()
+
+			log.Printf("THUMBNAIL: decode success via govips")
+
+			// Calculate scale to fit within 320x240 preserving aspect ratio
+			w := vipsImg.Width()
+			h := vipsImg.Height()
 			maxW, maxH := 320, 240
 			scale := 1.0
 			if w > maxW || h > maxH {
@@ -1599,31 +1668,37 @@ func handleGetThumbnail(c *gin.Context) {
 					scale = sy
 				}
 			}
-			tw := int(float64(w) * scale)
-			th := int(float64(h) * scale)
-			if tw < 1 {
-				tw = 1
-			}
-			if th < 1 {
-				th = 1
-			}
-			// Manual resize (box filter)
-			dst := image.NewRGBA(image.Rect(0, 0, tw, th))
-			for y := 0; y < th; y++ {
-				for x := 0; x < tw; x++ {
-					sx := int(float64(x) / float64(tw) * float64(w))
-					sy := int(float64(y) / float64(th) * float64(h))
-					dst.Set(x, y, img.At(sx, sy))
+
+			// Resize using high-quality Lanczos3 kernel
+			if scale < 1.0 {
+				if err := vipsImg.Resize(scale, vips.KernelLanczos3); err != nil {
+					log.Printf("THUMBNAIL: resize failed: %v - returning placeholder", err)
+					ph, phType := service.GetPlaceholderThumbnail(contentType)
+					c.Header("Cache-Control", "public, max-age=86400")
+					c.Data(http.StatusOK, phType, ph)
+					return
 				}
 			}
-			// Encode PNG to cache and serve
-			f, err := os.Create(cachePath) //nolint:gosec // G304 false positive - path from integers
-			if err == nil {
-				_ = png.Encode(f, dst) //nolint:errcheck // Best effort cache
+
+			// Export as PNG
+			pngData, _, err := vipsImg.ExportPng(&vips.PngExportParams{Compression: 6})
+			if err != nil {
+				log.Printf("THUMBNAIL: export failed: %v - returning placeholder", err)
+				ph, phType := service.GetPlaceholderThumbnail(contentType)
+				c.Header("Cache-Control", "public, max-age=86400")
+				c.Data(http.StatusOK, phType, ph)
+				return
+			}
+
+			// Cache to file
+			if f, err := os.Create(cachePath); err == nil { //nolint:gosec // G304 false positive
+				_, _ = f.Write(pngData) //nolint:errcheck // Best effort cache
 				f.Close()
 			}
+
 			c.Header("Content-Type", "image/png")
-			_ = png.Encode(c.Writer, dst) //nolint:errcheck // Best effort streaming
+			c.Header("Cache-Control", "public, max-age=86400")
+			c.Data(http.StatusOK, "image/png", pngData)
 			return
 		}
 	}
@@ -1654,7 +1729,9 @@ func handleGetThumbnail(c *gin.Context) {
 		}
 		defer rc.Close()
 		buf, _ := io.ReadAll(rc) //nolint:errcheck // Defaults to empty
-		img, _, err := image.Decode(bytes.NewReader(buf))
+
+		// Decode using govips (supports AVIF, HEIC, WebP, etc.)
+		vipsImg, err := vips.NewImageFromBuffer(buf)
 		if err != nil {
 			// Use placeholder for undecodable formats
 			ph, phType := service.GetPlaceholderThumbnail(att.ContentType)
@@ -1662,8 +1739,11 @@ func handleGetThumbnail(c *gin.Context) {
 			c.Data(http.StatusOK, phType, ph)
 			return
 		}
-		w := img.Bounds().Dx()
-		h := img.Bounds().Dy()
+		defer vipsImg.Close()
+
+		// Calculate scale to fit within 320x240 preserving aspect ratio
+		w := vipsImg.Width()
+		h := vipsImg.Height()
 		maxW, maxH := 320, 240
 		scale := 1.0
 		if w > maxW || h > maxH {
@@ -1675,24 +1755,29 @@ func handleGetThumbnail(c *gin.Context) {
 				scale = sy
 			}
 		}
-		tw := int(float64(w) * scale)
-		th := int(float64(h) * scale)
-		if tw < 1 {
-			tw = 1
-		}
-		if th < 1 {
-			th = 1
-		}
-		dst := image.NewRGBA(image.Rect(0, 0, tw, th))
-		for y := 0; y < th; y++ {
-			for x := 0; x < tw; x++ {
-				sx := int(float64(x) / float64(tw) * float64(w))
-				sy := int(float64(y) / float64(th) * float64(h))
-				dst.Set(x, y, img.At(sx, sy))
+
+		// Resize using high-quality Lanczos3 kernel
+		if scale < 1.0 {
+			if err := vipsImg.Resize(scale, vips.KernelLanczos3); err != nil {
+				ph, phType := service.GetPlaceholderThumbnail(att.ContentType)
+				c.Header("Cache-Control", "public, max-age=86400")
+				c.Data(http.StatusOK, phType, ph)
+				return
 			}
 		}
+
+		// Export as PNG
+		pngData, _, err := vipsImg.ExportPng(&vips.PngExportParams{Compression: 6})
+		if err != nil {
+			ph, phType := service.GetPlaceholderThumbnail(att.ContentType)
+			c.Header("Cache-Control", "public, max-age=86400")
+			c.Data(http.StatusOK, phType, ph)
+			return
+		}
+
 		c.Header("Content-Type", "image/png")
-		_ = png.Encode(c.Writer, dst) //nolint:errcheck // Best effort streaming
+		c.Header("Cache-Control", "public, max-age=86400")
+		c.Data(http.StatusOK, "image/png", pngData)
 		return
 	}
 
@@ -1781,7 +1866,7 @@ func renderAttachmentListHTML(attachments []gin.H) string {
 			<div class="flex items-center space-x-3">
 				%s
 				<div>
-					<a href="%s" class="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" download>
+					<a href="%s/view" target="_blank" class="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
 						%s
 					</a>
 					<p class="text-xs text-gray-500 dark:text-gray-400">%s</p>
@@ -1790,10 +1875,11 @@ func renderAttachmentListHTML(attachments []gin.H) string {
 			<div class="flex items-center space-x-2">
 				<a href="%s/view" target="_blank" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title="View">
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14m-6 0l-4.553 2.276A1 1 0 013 15.382V8.618a1 1 0 011.447-.894L9 10m6 0l-6 4m6-4l-6-4" />
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
 					</svg>
 				</a>
-				<a href="%s" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title="Download">
+				<a href="%s" class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" title="Download" download>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
 					</svg>

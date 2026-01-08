@@ -383,4 +383,53 @@ func TestAuthMiddleware(t *testing.T) {
 		assert.Contains(t, w.Body.String(), `"role":"Admin"`)
 		assert.Contains(t, w.Body.String(), "test@gotrs.local")
 	})
+
+	t.Run("unauthorizedResponse returns JSON for Accept: application/json", func(t *testing.T) {
+		router := gin.New()
+		router.Use(authMiddleware.RequireAuth())
+		router.GET("/api/protected", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "success"})
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/protected", nil)
+		req.Header.Set("Accept", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		assert.Contains(t, w.Header().Get("Content-Type"), "application/json")
+		assert.Contains(t, w.Body.String(), "Missing authorization token")
+	})
+
+	t.Run("unauthorizedResponse redirects for Accept: text/html", func(t *testing.T) {
+		router := gin.New()
+		router.Use(authMiddleware.RequireAuth())
+		router.GET("/protected", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "success"})
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusFound, w.Code)
+		assert.Equal(t, "/login", w.Header().Get("Location"))
+	})
+
+	t.Run("unauthorizedResponse returns JSON when Accept header is missing", func(t *testing.T) {
+		router := gin.New()
+		router.Use(authMiddleware.RequireAuth())
+		router.GET("/api/endpoint", func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "success"})
+		})
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/endpoint", nil)
+		// No Accept header set
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		assert.Contains(t, w.Header().Get("Content-Type"), "application/json")
+	})
 }

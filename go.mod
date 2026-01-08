@@ -6,7 +6,7 @@ toolchain go1.24.11
 
 require (
 	github.com/99designs/gqlgen v0.17.78
-	github.com/disintegration/imaging v1.6.2
+	github.com/davidbyttow/govips/v2 v2.16.0
 	github.com/dop251/goja v0.0.0-20241009100908-5f46f2705ca3
 	github.com/emersion/go-imap/v2 v2.0.0-beta.7
 	github.com/emersion/go-message v0.18.1

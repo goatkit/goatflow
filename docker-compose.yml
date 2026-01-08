@@ -21,9 +21,10 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./docker/mariadb/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro,Z
+      - ./docker/mariadb/healthcheck.sh:/usr/local/bin/healthcheck.sh:ro,Z
       - /etc/localtime:/etc/localtime:ro
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD", "healthcheck.sh"]
       start_period: 10s
       interval: 10s
       timeout: 5s
@@ -46,7 +47,7 @@ services:
   #     # Init script handles any username and creates test database safely
   #     - ./docker/postgres/01-init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro,Z
   #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+  #     test: ["CMD", "pg_isready", "-U", "${DB_USER}"]
   #     interval: 10s
   #     timeout: 5s
   #     retries: 5
@@ -187,6 +188,7 @@ services:
       - "${CUSTOMER_FE_PORT:-8083}:${CUSTOMER_FE_APP_PORT:-8080}"
     volumes:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
+      - ./docker/frontend/healthcheck.sh:/usr/local/bin/healthcheck.sh:ro,Z
       - gotrs_certs:/app/certs
     depends_on:
       mariadb:
@@ -196,7 +198,7 @@ services:
     networks:
       - gotrs-network
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${CUSTOMER_FE_APP_PORT:-8080}/health || exit 1"]
+      test: ["CMD", "healthcheck.sh"]
       start_period: 10s
       interval: 10s
       timeout: 5s

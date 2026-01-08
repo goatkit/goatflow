@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/api"
@@ -42,6 +43,10 @@ import (
 var valkeyCache *cache.RedisCache
 
 func main() {
+	// Initialize libvips for image processing (AVIF, HEIC, WebP, etc.)
+	vips.Startup(nil)
+	defer vips.Shutdown()
+
 	// Parse command line flags
 	var mode = flag.String("mode", "server", "Run mode: server (default) or runner")
 	flag.Parse()

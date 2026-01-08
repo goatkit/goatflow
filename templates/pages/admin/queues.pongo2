@@ -587,14 +587,10 @@ function closeQueueModal() {
 async function editQueue(id) {
     currentEditId = id;
     document.getElementById('queue-modal-title').textContent = 'Edit Queue';
-    
+
     try {
-        const response = await fetch(`/api/queues/${id}`, {
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
+        const data = await apiFetch(`/api/queues/${id}`);
+        if (data && data.data) {
             const queue = data.data;
             
             document.getElementById('queueId').value = queue.id;
@@ -616,7 +612,7 @@ async function editQueue(id) {
             showToast('Failed to load queue details', 'error');
         }
     } catch (error) {
-        showToast('Network error: ' + error.message, 'error');
+        showToast('Error: ' + error.message, 'error');
     }
 }
 
@@ -748,21 +744,16 @@ async function toggleQueueStatus(id, currentStatus) {
     }
     
     try {
-        const response = await fetch(`/api/queues/${id}/status`, {
+        await apiFetch(`/api/queues/${id}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ valid_id: newStatus })
         });
-        
-        if (response.ok) {
-            showToast(`Queue ${action}d successfully`, 'success');
-            setTimeout(() => window.location.reload(), 1000);
-        } else {
-            showToast(`Failed to ${action} queue`, 'error');
-        }
+        showToast(`Queue ${action}d successfully`, 'success');
+        setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
         console.error('Error toggling queue status:', error);
-        showToast('An error occurred', 'error');
+        showToast(`Failed to ${action} queue: ` + error.message, 'error');
     }
 }
 
@@ -773,22 +764,16 @@ function closeDeleteModal() {
 
 async function confirmDeleteQueue() {
     if (!deleteQueueId) return;
-    
+
     try {
-        const response = await fetch(`/api/queues/${deleteQueueId}`, {
+        await apiFetch(`/api/queues/${deleteQueueId}`, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' }
         });
-        
-        if (response.ok) {
-            closeDeleteModal();
-            location.reload();
-        } else {
-            const error = await response.json();
-            showToast(error.error || 'Failed to delete queue', 'error');
-        }
+        closeDeleteModal();
+        location.reload();
     } catch (error) {
-        showToast('Network error: ' + error.message, 'error');
+        showToast('Failed to delete queue: ' + error.message, 'error');
     }
 }
 

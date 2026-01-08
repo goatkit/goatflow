@@ -1,17 +1,13 @@
 package service
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	"image"
-	"image/jpeg"
-	"image/png"
 	"strings"
 	"time"
 
-	"github.com/disintegration/imaging"
+	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/net/context"
 )
@@ -47,27 +43,34 @@ func DefaultThumbnailOptions() ThumbnailOptions {
 	}
 }
 
-// GenerateThumbnail generates a thumbnail from image data.
-func (s *ThumbnailService) GenerateThumbnail(data []byte, contentType string, opts ThumbnailOptions) ([]byte, string, error) {
-	// Decode the image
-	reader := bytes.NewReader(data)
-	img, format, err := image.Decode(reader)
+// GenerateThumbnail generates a thumbnail from image data using libvips.
+// Supports JPEG, PNG, GIF, WebP, AVIF, HEIC, TIFF, and more.
+func (s *ThumbnailService) GenerateThumbnail(data []byte, contentType string, opts ThumbnailOptions) (thumbnailData []byte, outputFormat string, err error) {
+	// Load image from buffer - govips auto-detects format
+	image, err := vips.NewImageFromBuffer(data)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to decode image: %w", err)
 	}
+	defer image.Close()
 
-	// Resize the image maintaining aspect ratio
-	thumbnail := imaging.Fit(img, opts.Width, opts.Height, imaging.Lanczos)
+	// Calculate scale to fit within bounds while maintaining aspect ratio
+	scale := calculateThumbnailScale(image.Width(), image.Height(), opts.Width, opts.Height)
 
-	// Encode the thumbnail
-	var buf bytes.Buffer
-	var outputFormat string
+	// Resize using high-quality Lanczos3 kernel
+	if err := image.Resize(scale, vips.KernelLanczos3); err != nil {
+		return nil, "", fmt.Errorf("failed to resize image: %w", err)
+	}
 
-	if opts.Format == "png" || format == "png" {
-		err = png.Encode(&buf, thumbnail)
+	// Export to desired format
+	if opts.Format == "png" {
+		thumbnailData, _, err = image.ExportPng(&vips.PngExportParams{
+			Compression: 6,
+		})
 		outputFormat = "image/png"
 	} else {
-		err = jpeg.Encode(&buf, thumbnail, &jpeg.Options{Quality: opts.Quality})
+		thumbnailData, _, err = image.ExportJpeg(&vips.JpegExportParams{
+			Quality: opts.Quality,
+		})
 		outputFormat = "image/jpeg"
 	}
 
@@ -75,7 +78,30 @@ func (s *ThumbnailService) GenerateThumbnail(data []byte, contentType string, op
 		return nil, "", fmt.Errorf("failed to encode thumbnail: %w", err)
 	}
 
-	return buf.Bytes(), outputFormat, nil
+	return thumbnailData, outputFormat, nil
+}
+
+// calculateThumbnailScale calculates the scale factor to fit image within bounds.
+func calculateThumbnailScale(srcWidth, srcHeight, maxWidth, maxHeight int) float64 {
+	if srcWidth <= 0 || srcHeight <= 0 {
+		return 1.0
+	}
+
+	scaleX := float64(maxWidth) / float64(srcWidth)
+	scaleY := float64(maxHeight) / float64(srcHeight)
+
+	// Use the smaller scale to ensure image fits within bounds
+	scale := scaleX
+	if scaleY < scaleX {
+		scale = scaleY
+	}
+
+	// Don't upscale images
+	if scale > 1.0 {
+		scale = 1.0
+	}
+
+	return scale
 }
 
 // GetOrCreateThumbnail gets a thumbnail from cache or generates it.
@@ -151,6 +177,7 @@ func (s *ThumbnailService) generateCacheKey(attachmentID int, opts ThumbnailOpti
 }
 
 // IsSupportedImageType checks if a content type can be thumbnailed.
+// With govips/libvips, we support many more formats than before.
 func IsSupportedImageType(contentType string) bool {
 	supportedTypes := []string{
 		"image/jpeg",
@@ -159,6 +186,12 @@ func IsSupportedImageType(contentType string) bool {
 		"image/gif",
 		"image/webp",
 		"image/bmp",
+		"image/tiff",
+		"image/avif",
+		"image/heic",
+		"image/heif",
+		"image/jxl", // JPEG XL
+		"image/svg+xml",
 	}
 
 	contentType = strings.ToLower(contentType)
@@ -177,7 +210,10 @@ func GetPlaceholderThumbnail(contentType string) ([]byte, string) {
 	color := "#6B7280" // Default gray
 	icon := "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
 
-	if strings.HasPrefix(contentType, "video/") {
+	if strings.HasPrefix(contentType, "image/") {
+		color = "#3B82F6" // Blue for images
+		icon = "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+	} else if strings.HasPrefix(contentType, "video/") {
 		color = "#9333EA" // Purple
 		icon = "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
 	} else if strings.HasPrefix(contentType, "audio/") {

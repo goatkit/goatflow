@@ -74,6 +74,11 @@
     </div>
 </div>
 
+<!-- Version info -->
+<div class="fixed bottom-4 left-0 right-0 text-center">
+    <span class="text-xs text-gray-400 dark:text-gray-600 font-mono">{{ AppVersion|default:"dev" }}</span>
+</div>
+
 <script>
     // Caps Lock indicator
     const capsLockIcon = document.getElementById('capsLockIcon');

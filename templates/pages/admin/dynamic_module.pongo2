@@ -1496,13 +1496,7 @@ function openModal() {
 }
 
 function loadGroups() {
-    return fetch('/api/groups', {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => response.json())
+    return apiFetch('/api/groups')
     .then(data => {
         const groupSelect = document.getElementById('groups');
         if (groupSelect && data.groups) {
@@ -1664,13 +1658,7 @@ if (moduleName === 'users') {
 
 // Populate group filter dropdown
 function populateGroupFilter() {
-    fetch('/api/groups', {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => response.json())
+    apiFetch('/api/groups')
     .then(data => {
         const groupFilter = document.getElementById('groupFilter');
         if (groupFilter && data.groups) {
