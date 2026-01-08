@@ -23,7 +23,7 @@ services:
       - ./docker/mariadb/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro,Z
       - /etc/localtime:/etc/localtime:ro
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u$$MYSQL_USER -p$$MYSQL_PASSWORD"]
       start_period: 10s
       interval: 10s
       timeout: 5s

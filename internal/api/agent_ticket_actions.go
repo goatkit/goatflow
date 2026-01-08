@@ -562,6 +562,21 @@ func handleAgentTicketNote(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		// Process file attachments (after commit so article exists)
+		if form, err := c.MultipartForm(); err == nil && form != nil {
+			files := getFormFiles(form)
+			if len(files) > 0 {
+				log.Printf("Processing %d attachments for article %d", len(files), articleID)
+				processFormAttachments(files, attachmentProcessParams{
+					ctx:       c.Request.Context(),
+					db:        db,
+					ticketID:  tid,
+					articleID: int(articleID),
+					userID:    int(userID),
+				})
+			}
+		}
+
 		// Persist time accounting (after commit to avoid orphaning on rollback)
 		if timeUnits > 0 {
 			aid := int(articleID)

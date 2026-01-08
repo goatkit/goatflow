@@ -6,9 +6,15 @@
  * Enhanced fetch wrapper that automatically includes credentials for API calls
  */
 function apiFetch(url, options = {}) {
-        // If it's an API call, include credentials
+        // If it's an API call, include credentials and set Accept header
         if (url.startsWith('/api/') || url.startsWith('/api/v1/') || url.startsWith('/agent/')) {
                 options.credentials = options.credentials || 'include';
+                // Ensure headers object exists
+                options.headers = options.headers || {};
+                // Set Accept header to request JSON (prevents HTML redirect on auth failure)
+                if (!options.headers['Accept']) {
+                        options.headers['Accept'] = 'application/json';
+                }
         }
 
         return fetch(url, options)

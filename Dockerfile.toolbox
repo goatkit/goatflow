@@ -11,7 +11,7 @@ FROM gotrs-artifacts:latest AS artifacts
 # Build additional toolbox utilities
 FROM docker.io/${GO_IMAGE} AS toolbox-builder
 
-ARG TOOLCHAIN_PKGS="git gcc musl-dev ca-certificates binutils-gold"
+ARG TOOLCHAIN_PKGS="git gcc musl-dev ca-certificates binutils-gold vips-dev vips-heif"
 RUN apk add --no-cache $TOOLCHAIN_PKGS
 
 # Set working directory
@@ -94,7 +94,7 @@ ARG UID=1000
 ARG GID=1000
 
 # Install runtime and dev tools (nodejs for runtime, bun replaces npm)
-ARG TOOLBOX_APKS='ca-certificates postgresql15-client mysql-client sqlite git bash make curl jq graphviz openssl python3 py3-pip yamllint ripgrep fd tree nss freetype harfbuzz libx11 libxcomposite libxdamage libxext libxfixes libxi libxrandr libxrender libxshmfence libxtst alsa-lib dumb-init ttf-freefont woff2 libc6-compat gcompat libstdc++ icu-libs nodejs'
+ARG TOOLBOX_APKS='ca-certificates postgresql15-client mysql-client sqlite git bash make curl jq graphviz openssl python3 py3-pip yamllint ripgrep fd tree nss freetype harfbuzz libx11 libxcomposite libxdamage libxext libxfixes libxi libxrandr libxrender libxshmfence libxtst alsa-lib dumb-init ttf-freefont woff2 libc6-compat gcompat libstdc++ icu-libs nodejs vips vips-heif vips-dev gcc musl-dev'
 RUN apk add --no-cache $TOOLBOX_APKS
 
 # Install bun (fast JavaScript runtime and package manager) with GPG and checksum verification

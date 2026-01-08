@@ -293,28 +293,33 @@ func renderSimpleMessageHTML(msg *service.SimpleTicketMessage, ticketID uint) st
 
 			attachmentsHTML += fmt.Sprintf(`
 				<div class="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-lg hover:shadow-md transition-shadow"
-				     data-attachment-url="%s" 
-				     data-attachment-name="%s" 
+				     data-attachment-url="%s"
+				     data-attachment-name="%s"
 				     data-attachment-type="%s">
 					<div class="flex items-center space-x-3">
 						%s
 						<div>
-							<p class="text-sm font-medium text-gray-900 dark:text-white">%s</p>
+							<a href="%s/view" target="_blank" class="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 cursor-pointer">%s</a>
 							<p class="text-xs text-gray-500 dark:text-gray-400">%s • %s</p>
 						</div>
 					</div>
 					<div class="flex items-center space-x-2">
-						<button onclick="previewAttachment('%s', '%s', '%s')" class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors">
-							Preview
-						</button>
-						<a href="%s" download class="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors">
-							Download
+						<a href="%s/view" target="_blank" class="p-1 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400" title="View">
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+							</svg>
+						</a>
+						<a href="%s" download class="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" title="Download">
+							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+							</svg>
 						</a>
 					</div>
 				</div>`,
 				att.URL, att.Filename, att.ContentType,
-				thumbnailHTML, att.Filename, att.ContentType, sizeStr,
-				att.URL, att.Filename, att.ContentType, att.URL)
+				thumbnailHTML, att.URL, att.Filename, att.ContentType, sizeStr,
+				att.URL, att.URL)
 		}
 
 		attachmentsHTML += `</div></div>`
