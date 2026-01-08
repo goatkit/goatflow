@@ -4,9 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project (currently) does not yet use semantic versioning; versions will be tagged once the ticket vertical slice lands.
 
-## [Unreleased]
+## [0.5.1] - 2026-01-08
 
 ### Added
+- **AVIF/HEIC Thumbnail Support**: Thumbnail service now supports AVIF and HEIC image formats via govips/libvips; Dockerfile.toolbox updated with required vips packages for CGO compilation
+- **Thumbnail Service Tests**: Comprehensive test coverage for `IsSupportedImageType`, `calculateThumbnailScale`, `GetPlaceholderThumbnail`, `DefaultThumbnailOptions`
+- **Note Attachment Support**: Notes can now include file attachments; form uses `multipart/form-data` encoding and backend processes uploads after article creation
+- **Enhanced Attachment Viewer**: Inline attachment viewer redesigned with:
+  - Close button (primary color, dark mode compatible) with Esc key support
+  - Collapsible metadata panel showing filename, type, size, upload date, attachment ID
+  - Download button in header bar
+  - Eye icon for view action (replaces ambiguous video icon)
+  - Clicking attachment filename opens inline viewer by default (previously downloaded)
+- **Version Display on Login**: Build version shown at bottom of agent login page; displays semantic version tag or branch name with short git commit hash in parentheses
+- **Build Version Injection**: New `internal/version` package with ldflags injection; Makefile extracts git tag/branch/commit at build time and injects via `-X` flags; all build targets updated
 - **SQL Portability Guard**: New `scripts/tools/check-sql.sh` script validates SQL queries for cross-database compatibility, blocking commits with PostgreSQL-specific `$N` placeholders or `ILIKE` operators
 - **Helm Chart**: Production-ready Kubernetes deployment via `charts/gotrs/` with OCI registry publishing
   - Tag-mirroring: Chart `appVersion` matches git ref for GitOps workflows; `--version main` deploys `:main` images, `--version v0.5.0` deploys `:v0.5.0` images
@@ -25,6 +36,8 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - **Toolbox Entrypoint Script**: `scripts/toolbox-entrypoint.sh` for cache permission validation
 
 ### Changed
+- **Attachment Click Behavior**: Clicking attachment filename now opens inline viewer instead of triggering download; download available via dedicated button
+- **Attachment List Icons**: View button changed from video/play icon to eye icon for clearer UX
 - **SQL Portability (MySQL/PostgreSQL)**: Comprehensive refactor of ~1,800 SQL queries across 127 files for cross-database compatibility
   - Converted all PostgreSQL-specific `$N` placeholders to portable `?` format with `database.ConvertPlaceholders()` wrapper
   - Replaced all `ILIKE` operators with `LOWER(column) LIKE LOWER(?)` for case-insensitive search portability
@@ -47,7 +60,18 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - **Production Reverse Proxy**: Replaced nginx with Caddy in `docker-compose.prod.yml`; Caddy provides automatic HTTPS via Let's Encrypt with embedded Caddyfile configuration
 - **Dependency Updates**: Updated `golang.org/x/crypto`, `golang.org/x/net`, `golang.org/x/text`, `golang.org/x/sys`, and MCP SDK dependencies
 
+### Security
+- **Bun Installation Security**: Replaced insecure `curl|bash` Bun installation in Dockerfile.toolbox with GPG-verified tarball download; verifies signature against official Bun signing key before extraction
+- **SDK Dependency Updates** (`sdk/go/go.mod`): Updated `github.com/go-resty/resty/v2` v2.10.0 → v2.16.5 (fixes HTTP request body disclosure), `golang.org/x/net` v0.17.0 → v0.34.0 (fixes XSS, IPv6 proxy bypass, header DoS vulnerabilities)
+- **CVE-2023-36308 Mitigation**: Added panic recovery to `ThumbnailService.GenerateThumbnail` to gracefully handle crafted TIFF files that could cause server panic; no upstream patch available for `disintegration/imaging`
+
 ### Fixed
+- **deleteAttachment JavaScript Error**: Added missing `deleteAttachment` function to ticket detail template; was called from HTMX-rendered attachment list but never defined
+- **Note Content Field Not Found**: Fixed note form submission looking for wrong element ID (`note_content` instead of `body` used by rich text editor)
+- **Note Form Null Errors**: Fixed `ensureErrorDiv` and `htmx.trigger` null reference errors by using correct element IDs and removing invalid element references
+- **API Empty Response on Auth Failure**: Auth middleware now returns JSON 401 instead of HTML redirect when `Accept: application/json` header is present; `apiFetch()` helper automatically sets this header for all API calls
+- **Direct fetch() API Calls**: Replaced 10 direct `fetch()` calls across 5 templates (profile, priorities, queues, dynamic_module, tickets) with `apiFetch()` to ensure proper Accept header and error handling
+- **Thumbnail URL Generation**: Fixed broken thumbnail URLs in `ticket_messages_handler.go`; was generating `/api/attachments/:id/thumbnail` (non-existent route) instead of correct `/api/tickets/:id/attachments/:attachment_id/thumbnail`
 - **History Recording Interface Mismatch**: Fixed `TicketRepository.AddTicketHistoryEntry` method signature to match `history.HistoryInserter` interface; changed `exec ExecContext` parameter to `exec interface{}` to enable proper type assertion in history recorder
 - **SQL Argument Order Bugs**: Fixed argument order in `handleDeleteQueue` and `handleDeleteType` where `change_by` and `id` parameters were swapped
 - **Missing SQL Arguments**: Fixed `insertArticle`, `insertArticleMimeData`, and `HandleRegisterWebhookAPI` missing `change_by` argument for MySQL NOT NULL columns
@@ -76,8 +100,10 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - **Schema Discovery**: Updated to reference `GO_IMAGE` environment variable
 
 ### Internal
+- **Auth Middleware Tests**: Added 3 tests for `unauthorizedResponse` Accept header behavior verifying JSON vs HTML redirect based on Accept header
+- **Note Attachment Test**: Added `TestTicketNoteWithAttachment` integration test with multipart form handling
 - All Dockerfiles now accept `GO_IMAGE` build arg with consistent defaults
-- Build targets (`make build`, `make build-cached`, etc.) pass `GO_IMAGE` to container builds
+- Build targets (`make build`, `make build-cached`, etc.) pass `GO_IMAGE` and version build args to container builds
 - Test and API scripts updated to use `GO_IMAGE` environment variable
 - OpenAPI spec cleaned up (removed duplicate localhost:8000 server entry)
 - Test suite now passes 876 tests with proper database isolation and MySQL compatibility

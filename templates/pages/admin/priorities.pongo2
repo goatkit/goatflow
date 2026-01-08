@@ -201,8 +201,7 @@ document.addEventListener('DOMContentLoaded', loadPriorities);
 
 async function loadPriorities() {
     try {
-        const response = await fetch('/api/priorities');
-        const data = await response.json();
+        const data = await apiFetch('/api/priorities');
         
         if (data.success) {
             priorities = data.data || [];
@@ -358,14 +357,12 @@ function closeDeleteModal() {
 
 async function confirmDelete() {
     if (!deleteId) return;
-    
+
     try {
-        const response = await fetch(`/api/priorities/${deleteId}`, {
+        const result = await apiFetch(`/api/priorities/${deleteId}`, {
             method: 'DELETE'
         });
-        
-        const result = await response.json();
-        
+
         if (result.success) {
             showNotification('Priority deleted successfully', 'success');
             closeDeleteModal();

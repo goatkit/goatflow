@@ -11,6 +11,16 @@ endif
 GO_IMAGE ?= golang:1.24.11-alpine
 export GO_IMAGE
 
+# Version information from git (used in docker build)
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+GIT_TAG := $(shell git describe --tags --exact-match 2>/dev/null || echo "")
+BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+# Use tag if available, otherwise use branch name
+VERSION := $(if $(GIT_TAG),$(GIT_TAG),$(GIT_BRANCH))
+# Build args for version injection
+VERSION_BUILD_ARGS := --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg GIT_BRANCH=$(GIT_BRANCH) --build-arg BUILD_DATE=$(BUILD_DATE)
+
 # Route manifest governance
 .PHONY: routes-verify routes-baseline-update routes-generate
 routes-generate:
@@ -2324,11 +2334,11 @@ security-scan: scan-secrets scan-vulnerabilities
 .PHONY: build-artifacts
 build-artifacts:
 	@printf "🎯 Building backend artifacts image...\n"
-	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) --target artifacts -t gotrs-artifacts:latest .
+	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) --target artifacts -t gotrs-artifacts:latest .
 # Build for production (Dockerfile handles CSS/JS via frontend stage)
 build: build-artifacts pre-build helm-package
-	@printf "🔨 Building backend container...\n" \
-		&& $(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) -f Dockerfile -t gotrs:latest .
+	@printf "🔨 Building backend container ($(VERSION) @ $(GIT_COMMIT))...\n" \
+		&& $(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) -f Dockerfile -t gotrs:latest .
 	@printf "🧹 Cleaning host binaries...\n"
 	@rm -f goats gotrs gotrs-* generator migrate server  # Clean root directory
 	@rm -f bin/* 2>/dev/null || true  # Clean bin directory
@@ -2362,13 +2372,13 @@ endif
 
 # Build with caching (70% faster rebuilds)
 build-cached: build-artifacts
-	@printf "🚀 Building backend image (cache flags disabled for podman compatibility)...\n"
-	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) -t gotrs:latest .
+	@printf "🚀 Building backend image ($(VERSION) @ $(GIT_COMMIT))...\n"
+	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) -t gotrs:latest .
 	@printf "✅ Build complete\n"
 # Security scan build (CI/CD)
 build-secure: build-artifacts
 	@printf "🔒 Building with security scanning...\n"
-	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) \
+	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) \
 		--target security \
 		--output type=local,dest=./security-reports \
 		.
@@ -2376,7 +2386,7 @@ build-secure: build-artifacts
 # Multi-platform build (AMD64 and ARM64)
 build-multi: build-artifacts
 	@printf "🌍 Building for multiple platforms...\n"
-	@$(CONTAINER_CMD) buildx build --build-arg GO_IMAGE=$(GO_IMAGE) \
+	@$(CONTAINER_CMD) buildx build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) \
 		--platform linux/amd64,linux/arm64 \
 		-t gotrs:latest .
 	@printf "✅ Multi-platform build complete\n"
@@ -2393,8 +2403,8 @@ analyze-size:
 
 # Build without cache (clean build)
 build-clean: build-artifacts
-	@printf "🧹 Clean build without cache...\n"
-	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) --no-cache -t gotrs:latest .
+	@printf "🧹 Clean build without cache ($(VERSION) @ $(GIT_COMMIT))...\n"
+	@$(CONTAINER_CMD) build --build-arg GO_IMAGE=$(GO_IMAGE) $(VERSION_BUILD_ARGS) --no-cache -t gotrs:latest .
 	@printf "✅ Clean build complete\n"
 # Show build cache usage
 show-cache:
