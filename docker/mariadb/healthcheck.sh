@@ -1,5 +1,6 @@
 #!/bin/sh
 # MariaDB healthcheck script
-# Uses environment variables MYSQL_USER and MYSQL_PASSWORD set by container
+# Uses MYSQL_PWD environment variable to avoid exposing password in process list
 
-mariadb-admin ping -h 127.0.0.1 -u"${MYSQL_USER}" -p"${MYSQL_PASSWORD}"
+export MYSQL_PWD="${MYSQL_PASSWORD}"
+mariadb-admin ping -h 127.0.0.1 -u"${MYSQL_USER}"
