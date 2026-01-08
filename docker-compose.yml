@@ -47,7 +47,7 @@ services:
   #     # Init script handles any username and creates test database safely
   #     - ./docker/postgres/01-init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro,Z
   #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+  #     test: ["CMD", "pg_isready", "-U", "${DB_USER}"]
   #     interval: 10s
   #     timeout: 5s
   #     retries: 5
