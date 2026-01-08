@@ -111,6 +111,7 @@ RUN apk add --no-cache curl dirmngr gpg gpg-agent unzip && \
       --compressed \
       --retry 5 \
       || (echo "error: failed to download bun v${BUN_VERSION}" && exit 1) && \
+    # Official Bun release signing key fingerprint from https://github.com/oven-sh/bun/releases
     gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "F3DCC08A8572C0749B3E18888EAB4D40A7B22B59" \
       || gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "F3DCC08A8572C0749B3E18888EAB4D40A7B22B59" \
       || (echo "error: failed to retrieve GPG key for bun v${BUN_VERSION}" && exit 1) && \
