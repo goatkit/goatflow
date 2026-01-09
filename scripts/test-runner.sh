@@ -15,8 +15,11 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Test counters
-UNIT_PASSED=0
-UNIT_FAILED=0
+UNIT_PACKAGES_PASSED=0
+UNIT_PACKAGES_FAILED=0
+UNIT_TESTS_RUN=0
+UNIT_TESTS_PASSED=0
+UNIT_TESTS_FAILED=0
 E2E_PASSED=0
 E2E_FAILED=0
 E2E_SKIPPED=0
@@ -132,21 +135,38 @@ step "4/6  Unit Tests"
 
 log "Running Go unit tests..."
 if make toolbox-test > "$UNIT_LOG" 2>&1; then
-    # Parse results from output
-    UNIT_PASSED=$(grep -c "^ok" "$UNIT_LOG" 2>/dev/null || true)
-    UNIT_PASSED=${UNIT_PASSED:-0}
-    UNIT_FAILED=$(grep -c "^FAIL" "$UNIT_LOG" 2>/dev/null || true)
-    UNIT_FAILED=${UNIT_FAILED:-0}
-    
-    if [ "$UNIT_FAILED" = "0" ] || [ -z "$UNIT_FAILED" ]; then
-        UNIT_FAILED=0
-        success "All unit tests passed ($UNIT_PASSED packages)"
+    # Parse package results from output
+    UNIT_PACKAGES_PASSED=$(grep -c "^ok" "$UNIT_LOG" 2>/dev/null || true)
+    UNIT_PACKAGES_PASSED=${UNIT_PACKAGES_PASSED:-0}
+    UNIT_PACKAGES_FAILED=$(grep -c "^FAIL" "$UNIT_LOG" 2>/dev/null || true)
+    UNIT_PACKAGES_FAILED=${UNIT_PACKAGES_FAILED:-0}
+
+    # Count individual test functions (--- PASS: TestXxx and --- FAIL: TestXxx)
+    UNIT_TESTS_PASSED=$(grep -c "^--- PASS:" "$UNIT_LOG" 2>/dev/null || true)
+    UNIT_TESTS_PASSED=${UNIT_TESTS_PASSED:-0}
+    UNIT_TESTS_FAILED=$(grep -c "^--- FAIL:" "$UNIT_LOG" 2>/dev/null || true)
+    UNIT_TESTS_FAILED=${UNIT_TESTS_FAILED:-0}
+    UNIT_TESTS_RUN=$((UNIT_TESTS_PASSED + UNIT_TESTS_FAILED))
+
+    if [ "$UNIT_PACKAGES_FAILED" = "0" ] || [ -z "$UNIT_PACKAGES_FAILED" ]; then
+        UNIT_PACKAGES_FAILED=0
+        success "Unit tests: $UNIT_TESTS_PASSED tests passed ($UNIT_PACKAGES_PASSED packages)"
     else
-        fail "Unit tests: $UNIT_PASSED passed, $UNIT_FAILED failed"
+        fail "Unit tests: $UNIT_TESTS_PASSED passed, $UNIT_TESTS_FAILED failed ($UNIT_PACKAGES_FAILED packages failed)"
     fi
 else
-    fail "Unit tests failed - see $UNIT_LOG"
-    UNIT_FAILED=1
+    # Even on failure, parse what we can
+    UNIT_PACKAGES_PASSED=$(grep -c "^ok" "$UNIT_LOG" 2>/dev/null || true)
+    UNIT_PACKAGES_PASSED=${UNIT_PACKAGES_PASSED:-0}
+    UNIT_PACKAGES_FAILED=$(grep -c "^FAIL" "$UNIT_LOG" 2>/dev/null || true)
+    UNIT_PACKAGES_FAILED=${UNIT_PACKAGES_FAILED:-0}
+    UNIT_TESTS_PASSED=$(grep -c "^--- PASS:" "$UNIT_LOG" 2>/dev/null || true)
+    UNIT_TESTS_PASSED=${UNIT_TESTS_PASSED:-0}
+    UNIT_TESTS_FAILED=$(grep -c "^--- FAIL:" "$UNIT_LOG" 2>/dev/null || true)
+    UNIT_TESTS_FAILED=${UNIT_TESTS_FAILED:-0}
+    UNIT_TESTS_RUN=$((UNIT_TESTS_PASSED + UNIT_TESTS_FAILED))
+
+    fail "Unit tests failed: $UNIT_TESTS_PASSED passed, $UNIT_TESTS_FAILED failed - see $UNIT_LOG"
 fi
 
 #########################################
@@ -233,20 +253,24 @@ echo -e "${CYAN}                      TEST SUMMARY                            ${
 echo -e "${CYAN}══════════════════════════════════════════════════════════════${NC}"
 echo ""
 
-TOTAL_FAILED=$((UNIT_FAILED + E2E_FAILED))
+# Calculate totals
+TOTAL_TESTS_RUN=$((UNIT_TESTS_RUN + E2E_PASSED + E2E_FAILED + E2E_SKIPPED))
+TOTAL_TESTS_PASSED=$((UNIT_TESTS_PASSED + E2E_PASSED))
+TOTAL_TESTS_FAILED=$((UNIT_TESTS_FAILED + E2E_FAILED))
+TOTAL_PACKAGES_FAILED=$((UNIT_PACKAGES_FAILED))
 
 # Checklist style summary
 echo "  Test Results:"
-if [ "$UNIT_FAILED" = "0" ]; then
-    echo -e "    ${GREEN}[✓]${NC} Unit Tests          ($UNIT_PASSED packages passed)"
+if [ "$UNIT_PACKAGES_FAILED" = "0" ]; then
+    echo -e "    ${GREEN}[✓]${NC} Unit Tests          ${UNIT_TESTS_PASSED} passed, ${UNIT_TESTS_FAILED} failed (${UNIT_PACKAGES_PASSED} packages)"
 else
-    echo -e "    ${RED}[✗]${NC} Unit Tests          ($UNIT_FAILED packages failed)"
+    echo -e "    ${RED}[✗]${NC} Unit Tests          ${UNIT_TESTS_PASSED} passed, ${UNIT_TESTS_FAILED} failed (${UNIT_PACKAGES_FAILED} packages failed)"
 fi
 
 if [ "$E2E_FAILED" = "0" ]; then
-    echo -e "    ${GREEN}[✓]${NC} E2E Playwright      ($E2E_PASSED passed, $E2E_SKIPPED skipped)"
+    echo -e "    ${GREEN}[✓]${NC} E2E Playwright      ${E2E_PASSED} passed, ${E2E_SKIPPED} skipped"
 else
-    echo -e "    ${RED}[✗]${NC} E2E Playwright      ($E2E_FAILED failed, $E2E_PASSED passed)"
+    echo -e "    ${RED}[✗]${NC} E2E Playwright      ${E2E_PASSED} passed, ${E2E_FAILED} failed, ${E2E_SKIPPED} skipped"
 fi
 
 if [ "${ERROR_COUNT:-0}" = "0" ] && [ "${HTTP_500_COUNT:-0}" = "0" ]; then
@@ -256,6 +280,11 @@ else
 fi
 
 echo ""
+echo "  ─────────────────────────────────────────────────────────"
+echo -e "  ${CYAN}TOTAL:${NC} ${TOTAL_TESTS_PASSED} passed, ${TOTAL_TESTS_FAILED} failed, ${E2E_SKIPPED} skipped (${TOTAL_TESTS_RUN} tests executed)"
+echo "  ─────────────────────────────────────────────────────────"
+
+echo ""
 echo "  Evidence Files:"
 echo "    • Main log:      $MAIN_LOG"
 echo "    • Unit tests:    $UNIT_LOG"
@@ -263,24 +292,30 @@ echo "    • E2E tests:     $E2E_LOG"
 echo "    • Container log: $CONTAINER_LOG"
 echo ""
 
-if [ "$TOTAL_FAILED" = "0" ]; then
+if [ "$TOTAL_TESTS_FAILED" = "0" ]; then
     echo -e "  ${GREEN}══════════════════════════════════════════════════════════${NC}"
-    echo -e "  ${GREEN}                    ALL TESTS PASSED                      ${NC}"
+    echo -e "  ${GREEN}       ALL ${TOTAL_TESTS_PASSED} TESTS PASSED                           ${NC}"
     echo -e "  ${GREEN}══════════════════════════════════════════════════════════${NC}"
     echo ""
     exit 0
 else
     echo -e "  ${RED}══════════════════════════════════════════════════════════${NC}"
-    echo -e "  ${RED}                   TESTS FAILED ($TOTAL_FAILED)                     ${NC}"
+    echo -e "  ${RED}       ${TOTAL_TESTS_FAILED} TESTS FAILED                                 ${NC}"
     echo -e "  ${RED}══════════════════════════════════════════════════════════${NC}"
     echo ""
-    
+
     # Show failed test details
-    if [ "$E2E_FAILED" != "0" ]; then
-        echo "  Failed E2E tests:"
-        grep "^--- FAIL:" "$E2E_LOG" 2>/dev/null | sed 's/^/    /' || true
+    if [ "$UNIT_TESTS_FAILED" != "0" ]; then
+        echo "  Failed Unit tests:"
+        grep "^--- FAIL:" "$UNIT_LOG" 2>/dev/null | head -10 | sed 's/^/    /' || true
         echo ""
     fi
-    
+
+    if [ "$E2E_FAILED" != "0" ]; then
+        echo "  Failed E2E tests:"
+        grep "^--- FAIL:" "$E2E_LOG" 2>/dev/null | head -10 | sed 's/^/    /' || true
+        echo ""
+    fi
+
     exit 1
 fi
