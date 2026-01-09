@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project (currently) does not yet use semantic versioning; versions will be tagged once the ticket vertical slice lands.
 
+## [Unreleased]
+
+### Added
+- **Postmaster Filter Admin UI**: Full CRUD interface at `/admin/postmaster-filters` for managing database-backed email routing filters
+  - Create, edit, and delete filters with match conditions (regex patterns on headers/body) and set actions (X-GOTRS-* headers)
+  - Dynamic form inputs with type-ahead search for queue, priority, state, and type selections
+  - Boolean dropdown for X-GOTRS-Ignore action
+  - NOT operator support for negative match conditions
+  - Stop flag to halt further filter processing after match
+  - Navigation link added to admin dashboard under System Administration
+- **DBSourceFilter**: Email filter that loads postmaster filters from database and applies them to incoming mail (equivalent to OTRS `PostMaster::PreFilterModule###000-MatchDBSource`)
+  - Runs first in filter chain before token extraction filters
+  - Supports all X-GOTRS-* headers: Queue, QueueID, Priority, PriorityID, State, Type, Title, CustomerID, CustomerUser, Ignore
+  - Comprehensive test coverage for VIP routing, spam filtering, NOT matches, multi-match conditions, and stop flag behavior
+- **PostmasterFilter Repository**: Database repository for `postmaster_filter` table with YAML serialization for match/set rules
+
+
 ## [0.5.1] - 2026-01-08
 
 ### Added

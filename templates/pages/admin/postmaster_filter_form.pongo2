@@ -1,0 +1,514 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{% if IsNew %}{{ t("admin.modules.postmaster_filter.new_filter") }}{% else %}{{ t("admin.modules.postmaster_filter.edit_filter") }}{% endif %} - GOTRS Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                        {% if IsNew %}{{ t("admin.modules.postmaster_filter.new_filter") }}{% else %}{{ t("admin.modules.postmaster_filter.edit_filter") }}{% endif %}
+                    </h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {% if IsNew %}
+                        {{ t("admin.modules.postmaster_filter.create_filter") }}
+                        {% else %}
+                        {{ t("admin.modules.postmaster_filter.edit_filter_desc") }}: {{ Filter.Name }}
+                        {% endif %}
+                    </p>
+                </div>
+                <a href="/admin/postmaster-filters"
+                   class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </a>
+            </div>
+        </div>
+
+        <form id="filterForm" class="px-6 py-6 space-y-6">
+            <!-- Filter Name -->
+            <div>
+                <label for="filterName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {{ t("admin.modules.postmaster_filter.filter_name") }} <span class="text-red-500">*</span>
+                </label>
+                <input type="text"
+                       id="filterName"
+                       name="name"
+                       value="{% if Filter %}{{ Filter.Name }}{% endif %}"
+                       required
+                       {% if not IsNew %}data-original-name="{{ Filter.Name }}"{% endif %}
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       placeholder="{{ t("admin.modules.postmaster_filter.filter_name_placeholder") }}">
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.modules.postmaster_filter.filter_name_help") }}
+                </p>
+            </div>
+
+            <!-- Stop Processing Checkbox -->
+            <div class="flex items-center">
+                <input type="checkbox"
+                       id="filterStop"
+                       name="stop"
+                       {% if Filter and Filter.Stop %}checked{% endif %}
+                       class="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500">
+                <label for="filterStop" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                    {{ t("admin.modules.postmaster_filter.stop_processing") }}
+                </label>
+            </div>
+
+            <!-- Match Conditions Section -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin.modules.postmaster_filter.match_conditions") }}</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("admin.modules.postmaster_filter.match_conditions_help") }}</p>
+                    </div>
+                    <button type="button"
+                            onclick="addMatchRow()"
+                            class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+                        <i class="fas fa-plus mr-1"></i>{{ t("admin.modules.postmaster_filter.add_condition") }}
+                    </button>
+                </div>
+
+                <div id="matchContainer" class="space-y-3">
+                    <!-- Match rows will be added here -->
+                </div>
+            </div>
+
+            <!-- Set Actions Section -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin.modules.postmaster_filter.set_actions") }}</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("admin.modules.postmaster_filter.set_actions_help") }}</p>
+                    </div>
+                    <button type="button"
+                            onclick="addSetRow()"
+                            class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+                        <i class="fas fa-plus mr-1"></i>{{ t("admin.modules.postmaster_filter.add_action") }}
+                    </button>
+                </div>
+
+                <div id="setContainer" class="space-y-3">
+                    <!-- Set rows will be added here -->
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-6 flex justify-end space-x-3">
+                <a href="/admin/postmaster-filters"
+                   class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    {{ t("buttons.cancel") }}
+                </a>
+                <button type="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    {% if IsNew %}{{ t("buttons.create") }}{% else %}{{ t("buttons.save") }}{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="fixed top-4 right-4 z-50"></div>
+
+<!-- Lookup Data for Dynamic Inputs -->
+<script id="lookup-data" type="application/json">
+{
+    "queues": [{% for q in Queues %}{"id":{{ q.ID }},"name":"{{ q.Name|escapejs }}"}{% if not forloop.Last %},{% endif %}{% endfor %}],
+    "priorities": [{% for p in Priorities %}{"id":{{ p.ID }},"name":"{{ p.Name|escapejs }}"}{% if not forloop.Last %},{% endif %}{% endfor %}],
+    "states": [{% for s in States %}{"id":{{ s.ID }},"name":"{{ s.Name|escapejs }}"}{% if not forloop.Last %},{% endif %}{% endfor %}],
+    "types": [{% for t in Types %}{"id":{{ t.ID }},"name":"{{ t.Name|escapejs }}"}{% if not forloop.Last %},{% endif %}{% endfor %}]
+}
+</script>
+
+<script>
+// Load lookup data from JSON
+const lookupData = JSON.parse(document.getElementById('lookup-data').textContent);
+
+// i18n strings from server
+const i18n = {
+    header: '{{ t("admin.modules.postmaster_filter.header")|escapejs }}',
+    regexPlaceholder: '{{ t("admin.modules.postmaster_filter.regex_placeholder")|escapejs }}',
+    valuePlaceholder: '{{ t("admin.modules.postmaster_filter.value_placeholder")|escapejs }}',
+    typeToSearch: '{{ t("admin.modules.postmaster_filter.type_to_search")|escapejs }}',
+    selectAction: '{{ t("admin.modules.postmaster_filter.select_action")|escapejs }}',
+    not: '{{ t("admin.modules.postmaster_filter.not")|escapejs }}',
+    yesIgnore: '{{ t("admin.modules.postmaster_filter.yes_ignore")|escapejs }}',
+    no: '{{ t("admin.modules.postmaster_filter.no")|escapejs }}',
+    createSuccess: '{{ t("admin.modules.postmaster_filter.create_success")|escapejs }}',
+    updateSuccess: '{{ t("admin.modules.postmaster_filter.update_success")|escapejs }}',
+    validation: {
+        nameRequired: '{{ t("admin.modules.postmaster_filter.validation.name_required")|escapejs }}',
+        matchRequired: '{{ t("admin.modules.postmaster_filter.validation.match_required")|escapejs }}',
+        setRequired: '{{ t("admin.modules.postmaster_filter.validation.set_required")|escapejs }}'
+    },
+    actions: {
+        'X-GOTRS-Queue': '{{ t("admin.modules.postmaster_filter.actions.queue")|escapejs }}',
+        'X-GOTRS-QueueID': '{{ t("admin.modules.postmaster_filter.actions.queue_id")|escapejs }}',
+        'X-GOTRS-Priority': '{{ t("admin.modules.postmaster_filter.actions.priority")|escapejs }}',
+        'X-GOTRS-PriorityID': '{{ t("admin.modules.postmaster_filter.actions.priority_id")|escapejs }}',
+        'X-GOTRS-State': '{{ t("admin.modules.postmaster_filter.actions.state")|escapejs }}',
+        'X-GOTRS-Type': '{{ t("admin.modules.postmaster_filter.actions.type")|escapejs }}',
+        'X-GOTRS-Title': '{{ t("admin.modules.postmaster_filter.actions.title")|escapejs }}',
+        'X-GOTRS-CustomerID': '{{ t("admin.modules.postmaster_filter.actions.customer_id")|escapejs }}',
+        'X-GOTRS-CustomerUser': '{{ t("admin.modules.postmaster_filter.actions.customer_user")|escapejs }}',
+        'X-GOTRS-Ignore': '{{ t("admin.modules.postmaster_filter.actions.ignore")|escapejs }}'
+    }
+};
+
+// Common header keys for match conditions
+const headerKeys = [
+    'From', 'To', 'Cc', 'Subject', 'Body',
+    'Reply-To', 'X-Priority', 'X-Spam-Status',
+    'Content-Type', 'X-Mailer', 'Return-Path'
+];
+
+// Common set keys (X-GOTRS-* headers) - using translated labels
+const setKeys = [
+    { value: 'X-GOTRS-Queue', label: i18n.actions['X-GOTRS-Queue'] },
+    { value: 'X-GOTRS-QueueID', label: i18n.actions['X-GOTRS-QueueID'] },
+    { value: 'X-GOTRS-PriorityID', label: i18n.actions['X-GOTRS-PriorityID'] },
+    { value: 'X-GOTRS-Priority', label: i18n.actions['X-GOTRS-Priority'] },
+    { value: 'X-GOTRS-Title', label: i18n.actions['X-GOTRS-Title'] },
+    { value: 'X-GOTRS-State', label: i18n.actions['X-GOTRS-State'] },
+    { value: 'X-GOTRS-Type', label: i18n.actions['X-GOTRS-Type'] },
+    { value: 'X-GOTRS-CustomerID', label: i18n.actions['X-GOTRS-CustomerID'] },
+    { value: 'X-GOTRS-CustomerUser', label: i18n.actions['X-GOTRS-CustomerUser'] },
+    { value: 'X-GOTRS-Ignore', label: i18n.actions['X-GOTRS-Ignore'] }
+];
+
+// HTML escape helper
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Build searchable input with datalist for type-ahead
+function buildSearchableSelect(data, displayField, currentValue = '') {
+    const id = 'typeahead-' + Math.random().toString(36).substr(2, 9);
+    let html = `<input type="text"
+           class="set-value flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+           list="${id}"
+           value="${escapeHtml(currentValue)}"
+           placeholder="${escapeHtml(i18n.typeToSearch)}">
+    <datalist id="${id}">`;
+    for (const item of data) {
+        const val = displayField === 'id' ? String(item.id) : item.name;
+        const display = displayField === 'id' ? `${item.id} - ${item.name}` : item.name;
+        html += `<option value="${escapeHtml(val)}">${escapeHtml(display)}</option>`;
+    }
+    html += '</datalist>';
+    return html;
+}
+
+// Build boolean select for X-GOTRS-Ignore
+function buildBooleanSelect(currentValue = '') {
+    const isTrue = currentValue === '1' || currentValue === 'true' || currentValue === 'yes';
+    return `<select class="set-value flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="1" ${isTrue ? 'selected' : ''}>${escapeHtml(i18n.yesIgnore)}</option>
+        <option value="0" ${!isTrue ? 'selected' : ''}>${escapeHtml(i18n.no)}</option>
+    </select>`;
+}
+
+// Build plain text input
+function buildTextInput(currentValue = '') {
+    return `<input type="text"
+           class="set-value flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+           value="${escapeHtml(currentValue)}"
+           placeholder="${escapeHtml(i18n.valuePlaceholder)}">`;
+}
+
+// Update value input based on selected action
+function updateValueInput(container, selectedKey, currentValue = '') {
+    switch(selectedKey) {
+        case 'X-GOTRS-Queue':
+            container.innerHTML = buildSearchableSelect(lookupData.queues, 'name', currentValue);
+            break;
+        case 'X-GOTRS-QueueID':
+            container.innerHTML = buildSearchableSelect(lookupData.queues, 'id', currentValue);
+            break;
+        case 'X-GOTRS-Priority':
+            container.innerHTML = buildSearchableSelect(lookupData.priorities, 'name', currentValue);
+            break;
+        case 'X-GOTRS-PriorityID':
+            container.innerHTML = buildSearchableSelect(lookupData.priorities, 'id', currentValue);
+            break;
+        case 'X-GOTRS-State':
+            container.innerHTML = buildSearchableSelect(lookupData.states, 'name', currentValue);
+            break;
+        case 'X-GOTRS-Type':
+            container.innerHTML = buildSearchableSelect(lookupData.types, 'name', currentValue);
+            break;
+        case 'X-GOTRS-Ignore':
+            container.innerHTML = buildBooleanSelect(currentValue);
+            break;
+        default:
+            container.innerHTML = buildTextInput(currentValue);
+    }
+}
+
+// Initialize with existing data or empty rows
+document.addEventListener('DOMContentLoaded', function() {
+    {% if Filter and Filter.Matches %}
+    // Load existing matches
+    {% for match in Filter.Matches %}
+    addMatchRow('{{ match.Key|escapejs }}', '{{ match.Value|escapejs }}', {{ match.Not|lower }});
+    {% endfor %}
+    {% else %}
+    // Add one empty match row
+    addMatchRow();
+    {% endif %}
+
+    {% if Filter and Filter.Sets %}
+    // Load existing sets
+    {% for set in Filter.Sets %}
+    addSetRow('{{ set.Key|escapejs }}', '{{ set.Value|escapejs }}');
+    {% endfor %}
+    {% else %}
+    // Add one empty set row
+    addSetRow();
+    {% endif %}
+
+    // Form submission handler
+    document.getElementById('filterForm').addEventListener('submit', saveFilter);
+});
+
+let matchRowCounter = 0;
+let setRowCounter = 0;
+
+function addMatchRow(key = '', value = '', not = false) {
+    const container = document.getElementById('matchContainer');
+    const rowId = matchRowCounter++;
+
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2 match-row';
+    row.dataset.rowId = rowId;
+
+    // NOT checkbox
+    const notLabel = document.createElement('label');
+    notLabel.className = 'flex items-center space-x-1 min-w-[60px]';
+    notLabel.innerHTML = `
+        <input type="checkbox" class="match-not w-4 h-4 text-red-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded"
+               ${not ? 'checked' : ''}>
+        <span class="text-sm text-gray-600 dark:text-gray-400">${escapeHtml(i18n.not)}</span>
+    `;
+
+    // Key input with datalist
+    const keyInput = document.createElement('input');
+    keyInput.type = 'text';
+    keyInput.className = 'match-key w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+    keyInput.placeholder = i18n.header;
+    keyInput.value = key;
+    keyInput.setAttribute('list', 'headerKeysList');
+
+    // Value input
+    const valueInput = document.createElement('input');
+    valueInput.type = 'text';
+    valueInput.className = 'match-value flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+    valueInput.placeholder = i18n.regexPlaceholder;
+    valueInput.value = value;
+
+    // Remove button
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'px-2 py-2 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300';
+    removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+    removeBtn.onclick = function() { removeMatchRow(rowId); };
+
+    row.appendChild(notLabel);
+    row.appendChild(keyInput);
+    row.appendChild(valueInput);
+    row.appendChild(removeBtn);
+    container.appendChild(row);
+}
+
+function removeMatchRow(rowId) {
+    const container = document.getElementById('matchContainer');
+    const row = container.querySelector(`[data-row-id="${rowId}"]`);
+    if (row && container.children.length > 1) {
+        row.remove();
+    } else if (container.children.length === 1) {
+        showError(i18n.validation.matchRequired);
+    }
+}
+
+function addSetRow(key = '', value = '') {
+    const container = document.getElementById('setContainer');
+    const rowId = setRowCounter++;
+
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2 set-row';
+    row.dataset.rowId = rowId;
+
+    // Key select
+    const keySelect = document.createElement('select');
+    keySelect.className = 'set-key w-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+    keySelect.innerHTML = `<option value="">${escapeHtml(i18n.selectAction)}</option>` +
+        setKeys.map(k => `<option value="${k.value}" ${k.value === key ? 'selected' : ''}>${escapeHtml(k.label)}</option>`).join('');
+
+    // Value container (will be dynamically updated based on selected action)
+    const valueContainer = document.createElement('div');
+    valueContainer.className = 'set-value-container flex-1';
+
+    // Remove button
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'px-2 py-2 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300';
+    removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+    removeBtn.onclick = function() { removeSetRow(rowId); };
+
+    row.appendChild(keySelect);
+    row.appendChild(valueContainer);
+    row.appendChild(removeBtn);
+    container.appendChild(row);
+
+    // Set initial value input based on key (or default to text)
+    updateValueInput(valueContainer, key, value);
+
+    // Add change listener to swap input type when action changes
+    keySelect.addEventListener('change', function() {
+        updateValueInput(valueContainer, this.value, '');
+    });
+}
+
+function removeSetRow(rowId) {
+    const container = document.getElementById('setContainer');
+    const row = container.querySelector(`[data-row-id="${rowId}"]`);
+    if (row && container.children.length > 1) {
+        row.remove();
+    } else if (container.children.length === 1) {
+        showError(i18n.validation.setRequired);
+    }
+}
+
+function saveFilter(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('filterName').value.trim();
+    const stop = document.getElementById('filterStop').checked;
+
+    if (!name) {
+        showError(i18n.validation.nameRequired);
+        return;
+    }
+
+    // Collect match conditions
+    const matches = [];
+    document.querySelectorAll('.match-row').forEach(row => {
+        const key = row.querySelector('.match-key').value.trim();
+        const value = row.querySelector('.match-value').value.trim();
+        const not = row.querySelector('.match-not').checked;
+
+        if (key && value) {
+            matches.push({ key, value, not });
+        }
+    });
+
+    if (matches.length === 0) {
+        showError(i18n.validation.matchRequired);
+        return;
+    }
+
+    // Collect set actions
+    const sets = [];
+    document.querySelectorAll('.set-row').forEach(row => {
+        const key = row.querySelector('.set-key').value;
+        const value = row.querySelector('.set-value').value.trim();
+
+        if (key && value) {
+            sets.push({ key, value });
+        }
+    });
+
+    if (sets.length === 0) {
+        showError(i18n.validation.setRequired);
+        return;
+    }
+
+    const data = { name, stop, matches, sets };
+
+    const isNew = {% if IsNew %}true{% else %}false{% endif %};
+    const originalName = document.getElementById('filterName').dataset.originalName || name;
+
+    const url = isNew
+        ? '/admin/api/postmaster-filters'
+        : `/admin/api/postmaster-filters/${encodeURIComponent(originalName)}`;
+
+    fetch(url, {
+        method: isNew ? 'POST' : 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showSuccess(isNew ? i18n.createSuccess : i18n.updateSuccess);
+            setTimeout(() => {
+                window.location.href = '/admin/postmaster-filters';
+            }, 1000);
+        } else {
+            showError(result.error || 'Failed to save filter');
+        }
+    })
+    .catch(error => {
+        showError('An error occurred: ' + error.message);
+    });
+}
+
+function showSuccess(message) {
+    showToast(message, 'success');
+}
+
+function showError(message) {
+    showToast(message, 'error');
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `px-4 py-3 rounded-lg shadow-lg mb-4 transform transition-all duration-300 ${
+        type === 'success'
+            ? 'bg-green-500 text-white'
+            : 'bg-red-500 text-white'
+    }`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+
+    document.getElementById('toastContainer').appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('opacity-0');
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 3000);
+}
+</script>
+
+<!-- Datalist for header keys -->
+<datalist id="headerKeysList">
+    {% for key in headerKeys %}
+    <option value="{{ key }}">
+    {% endfor %}
+    <option value="From">
+    <option value="To">
+    <option value="Cc">
+    <option value="Subject">
+    <option value="Body">
+    <option value="Reply-To">
+    <option value="X-Priority">
+    <option value="X-Spam-Status">
+    <option value="Content-Type">
+    <option value="X-Mailer">
+    <option value="Return-Path">
+</datalist>
+{% endblock %}
