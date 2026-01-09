@@ -15,8 +15,8 @@ ENV PATH=/usr/local/go/bin:$PATH \
     XDG_CACHE_HOME=/workspace/.cache/xdg \
     CGO_ENABLED=0
 
-# Create non-root user for running tests
-RUN useradd -m -u 1000 pwuser
+# Create non-root user for running tests (ignore if exists)
+RUN useradd -m -u 1000 pwuser 2>/dev/null || true
 
 WORKDIR /workspace
 COPY --chown=pwuser:pwuser go.mod go.sum ./
