@@ -782,3 +782,43 @@ spec:
       method: POST
       handler: handleImportSignatures
       description: "Import signatures from YAML file"
+
+    # Postmaster filters management
+    - path: /postmaster-filters
+      method: GET
+      handler: handleAdminPostmasterFilters
+      template: pages/admin/postmaster_filters.pongo2
+      description: "Display postmaster filters management page"
+
+    - path: /postmaster-filters/new
+      method: GET
+      handler: handleAdminPostmasterFilterNew
+      template: pages/admin/postmaster_filter_form.pongo2
+      description: "Display new postmaster filter form"
+
+    - path: /postmaster-filters/:name
+      method: GET
+      handler: handleAdminPostmasterFilterEdit
+      template: pages/admin/postmaster_filter_form.pongo2
+      description: "Display postmaster filter edit form"
+
+    # Postmaster filters API
+    - path: /api/postmaster-filters
+      method: POST
+      handler: handleCreatePostmasterFilter
+      description: "Create a new postmaster filter"
+
+    - path: /api/postmaster-filters/:name
+      method: GET
+      handler: handleAdminPostmasterFilterGet
+      description: "Get postmaster filter details"
+
+    - path: /api/postmaster-filters/:name
+      method: PUT
+      handler: handleUpdatePostmasterFilter
+      description: "Update an existing postmaster filter"
+
+    - path: /api/postmaster-filters/:name
+      method: DELETE
+      handler: handleDeletePostmasterFilter
+      description: "Delete a postmaster filter"

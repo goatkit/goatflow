@@ -210,6 +210,9 @@ func main() {
 			postmaster.WithTicketProcessorDatabase(db),
 		)
 		var filterList []filters.Filter
+		// DBSourceFilter runs first to apply database-configured postmaster filters
+		// (equivalent to OTRS's PostMaster::PreFilterModule###000-MatchDBSource)
+		filterList = append(filterList, filters.NewDBSourceFilter(db, log.Default()))
 		filterList = append(filterList,
 			filters.NewHeaderTokenFilter(log.Default()),
 			filters.NewSubjectTokenFilter(log.Default()),
