@@ -2,19 +2,17 @@ module:
     name: queue_auto_response
     singular: Queue Auto Response
     plural: Queue Auto Responses
-    table: queue_auto_response_view
+    table: queue_auto_response
     description: Manage Queue Auto Response mappings
     route_prefix: /admin/dynamic/queue_auto_response
-    # Uses a view to provide synthetic ID for composite key table
 
 fields:
     - name: id
       type: integer
       db_column: id
       label: ID
-      show_in_list: true
+      show_in_list: false
       show_in_form: false
-      synthetic: true
     - name: queue_id
       type: integer
       db_column: queue_id
@@ -37,18 +35,6 @@ fields:
       show_in_list: true
       show_in_form: true
       lookup_table: auto_response
-      lookup_key: id
-      lookup_display: name
-    - name: auto_response_type_id
-      type: integer
-      db_column: auto_response_type_id
-      label: Type
-      required: true
-      searchable: false
-      sortable: true
-      show_in_list: true
-      show_in_form: true
-      lookup_table: auto_response_type
       lookup_key: id
       lookup_display: name
     - name: create_time
@@ -95,4 +81,3 @@ validation:
     required_fields:
         - queue_id
         - auto_response_id
-        - auto_response_type_id

@@ -7,6 +7,12 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
+- **Queue Auto Response Admin**: Dynamic module at `/admin/queue-auto-responses` for mapping queues to auto-response templates
+  - Lookup display resolution shows queue names and auto-response names instead of IDs
+  - i18n translations for all 6 languages (en, de, es, fr, ar, tlh)
+- **Auto Response Admin**: Dynamic module at `/admin/auto-responses` for managing automatic email response templates
+  - Full CRUD with template variable support for dynamic content
+  - i18n translations including template variable labels
 - **Postmaster Filter Admin UI**: Full CRUD interface at `/admin/postmaster-filters` for managing database-backed email routing filters
   - Create, edit, and delete filters with match conditions (regex patterns on headers/body) and set actions (X-GOTRS-* headers)
   - Dynamic form inputs with type-ahead search for queue, priority, state, and type selections
@@ -19,6 +25,12 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - Supports all X-GOTRS-* headers: Queue, QueueID, Priority, PriorityID, State, Type, Title, CustomerID, CustomerUser, Ignore
   - Comprehensive test coverage for VIP routing, spam filtering, NOT matches, multi-match conditions, and stop flag behavior
 - **PostmasterFilter Repository**: Database repository for `postmaster_filter` table with YAML serialization for match/set rules
+
+### Fixed
+- **Dynamic Module Lookup Display**: Fixed template rendering to show lookup display values (e.g., queue names) instead of raw IDs for integer foreign key fields in both `allFields` and regular `fields` template sections
+
+### Internal
+- **Lookup Display Tests**: Added unit tests for `processLookups`, `coerceString`, and lookup field configuration in `handler_lookup_test.go`
 
 
 ## [0.5.1] - 2026-01-08

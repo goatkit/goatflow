@@ -125,6 +125,88 @@
         "delete_title": "Typ löschen",
         "edit_title": "Typ bearbeiten"
       },
+      "auto_response": {
+        "title": "Auto-Antworten",
+        "singular": "Auto-Antwort",
+        "plural": "Auto-Antworten",
+        "description": "Automatische E-Mail-Antworten für Ticket-Ereignisse verwalten",
+        "actions": {
+          "new": "Neue Auto-Antwort"
+        },
+        "create_title": "Neue Auto-Antwort",
+        "edit_title": "Auto-Antwort bearbeiten",
+        "delete_title": "Auto-Antwort löschen",
+        "delete_confirm": "Sind Sie sicher, dass Sie diese Auto-Antwort löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "fields": {
+          "name": "Name",
+          "type_id": "Typ",
+          "system_address_id": "Absenderadresse",
+          "text0": "Betreff",
+          "text1": "Antworttext",
+          "comments": "Kommentare",
+          "valid_id": "Status"
+        },
+        "help": {
+          "name": "Ein eindeutiger Name für diese Auto-Antwort",
+          "type_id": "Wann diese Auto-Antwort ausgelöst werden soll",
+          "system_address_id": "Die E-Mail-Adresse, von der diese Antwort gesendet wird",
+          "text0": "Betreffzeile für die Auto-Antwort-E-Mail. Verwenden Sie <OTRS_*>-Tags für dynamische Inhalte.",
+          "text1": "Textinhalt der Auto-Antwort. Verwenden Sie <OTRS_*>-Tags für dynamische Inhalte.",
+          "comments": "Interne Notizen zu dieser Auto-Antwort",
+          "valid_id": "Ob diese Auto-Antwort aktiv ist"
+        },
+        "placeholders": {
+          "name": "z.B. Neues Ticket Bestätigung",
+          "text0": "RE: <OTRS_TICKET_Title>"
+        },
+        "template_variables": {
+          "title": "Vorlagenvariablen",
+          "click_to_insert": "Klicken zum Einfügen",
+          "categories": {
+            "ticket": "Ticket",
+            "customer": "Kunde",
+            "agent": "Agent",
+            "system": "System"
+          },
+          "ticket_number": "Ticketnummer",
+          "ticket_title": "Tickettitel",
+          "ticket_queue": "Queue",
+          "ticket_state": "Status",
+          "ticket_priority": "Priorität",
+          "ticket_created": "Erstellungsdatum",
+          "customer_firstname": "Kunde Vorname",
+          "customer_lastname": "Kunde Nachname",
+          "customer_email": "Kunde E-Mail",
+          "customer_id": "Kunden-ID",
+          "owner_firstname": "Besitzer Vorname",
+          "owner_lastname": "Besitzer Nachname",
+          "owner_email": "Besitzer E-Mail",
+          "responsible_firstname": "Verantwortlicher Vorname",
+          "config_fqdn": "System FQDN",
+          "config_http_type": "HTTP-Typ"
+        }
+      },
+      "queue_auto_response": {
+        "title": "Queue Auto-Antworten",
+        "singular": "Queue Auto-Antwort",
+        "plural": "Queue Auto-Antworten",
+        "description": "Queue-zu-Auto-Antwort-Zuordnungen verwalten",
+        "actions": {
+          "new": "Neue Zuordnung"
+        },
+        "create_title": "Neue Queue Auto-Antwort Zuordnung",
+        "edit_title": "Queue Auto-Antwort Zuordnung bearbeiten",
+        "delete_title": "Zuordnung löschen",
+        "delete_confirm": "Sind Sie sicher, dass Sie diese Zuordnung löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "fields": {
+          "queue_id": "Queue",
+          "auto_response_id": "Auto-Antwort"
+        },
+        "help": {
+          "queue_id": "Wählen Sie die Queue für diese Zuordnung",
+          "auto_response_id": "Wählen Sie die zu verwendende Auto-Antwort"
+        }
+      },
       "template": {
         "title": "Antwortvorlagen",
         "description": "Standardantwortvorlagen für Tickets und Kommunikation verwalten",

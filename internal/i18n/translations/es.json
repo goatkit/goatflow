@@ -125,6 +125,88 @@
         "delete_title": "Eliminar Tipo",
         "edit_title": "Editar Tipo"
       },
+      "auto_response": {
+        "title": "Respuestas Automáticas",
+        "singular": "Respuesta Automática",
+        "plural": "Respuestas Automáticas",
+        "description": "Gestionar respuestas automáticas de correo para eventos de tickets",
+        "actions": {
+          "new": "Nueva Respuesta Automática"
+        },
+        "create_title": "Nueva Respuesta Automática",
+        "edit_title": "Editar Respuesta Automática",
+        "delete_title": "Eliminar Respuesta Automática",
+        "delete_confirm": "¿Está seguro de que desea eliminar esta respuesta automática? Esta acción no se puede deshacer.",
+        "fields": {
+          "name": "Nombre",
+          "type_id": "Tipo",
+          "system_address_id": "Dirección de Envío",
+          "text0": "Asunto",
+          "text1": "Cuerpo de Respuesta",
+          "comments": "Comentarios",
+          "valid_id": "Estado"
+        },
+        "help": {
+          "name": "Un nombre único para esta respuesta automática",
+          "type_id": "Cuándo se debe activar esta respuesta automática",
+          "system_address_id": "La dirección de correo desde la que se enviará esta respuesta",
+          "text0": "Línea de asunto para el correo de respuesta automática. Use etiquetas <OTRS_*> para contenido dinámico.",
+          "text1": "Contenido del cuerpo de la respuesta automática. Use etiquetas <OTRS_*> para contenido dinámico.",
+          "comments": "Notas internas sobre esta respuesta automática",
+          "valid_id": "Si esta respuesta automática está activa"
+        },
+        "placeholders": {
+          "name": "ej., Confirmación de Nuevo Ticket",
+          "text0": "RE: <OTRS_TICKET_Title>"
+        },
+        "template_variables": {
+          "title": "Variables de Plantilla",
+          "click_to_insert": "Clic para insertar",
+          "categories": {
+            "ticket": "Ticket",
+            "customer": "Cliente",
+            "agent": "Agente",
+            "system": "Sistema"
+          },
+          "ticket_number": "Número de Ticket",
+          "ticket_title": "Título del Ticket",
+          "ticket_queue": "Cola",
+          "ticket_state": "Estado",
+          "ticket_priority": "Prioridad",
+          "ticket_created": "Fecha de Creación",
+          "customer_firstname": "Nombre del Cliente",
+          "customer_lastname": "Apellido del Cliente",
+          "customer_email": "Email del Cliente",
+          "customer_id": "ID del Cliente",
+          "owner_firstname": "Nombre del Propietario",
+          "owner_lastname": "Apellido del Propietario",
+          "owner_email": "Email del Propietario",
+          "responsible_firstname": "Nombre del Responsable",
+          "config_fqdn": "FQDN del Sistema",
+          "config_http_type": "Tipo HTTP"
+        }
+      },
+      "queue_auto_response": {
+        "title": "Respuestas Automáticas de Cola",
+        "singular": "Respuesta Automática de Cola",
+        "plural": "Respuestas Automáticas de Cola",
+        "description": "Gestionar asignaciones de cola a respuesta automática",
+        "actions": {
+          "new": "Nueva Asignación"
+        },
+        "create_title": "Nueva Asignación de Respuesta Automática de Cola",
+        "edit_title": "Editar Asignación de Respuesta Automática de Cola",
+        "delete_title": "Eliminar Asignación",
+        "delete_confirm": "¿Está seguro de que desea eliminar esta asignación? Esta acción no se puede deshacer.",
+        "fields": {
+          "queue_id": "Cola",
+          "auto_response_id": "Respuesta Automática"
+        },
+        "help": {
+          "queue_id": "Seleccione la cola para esta asignación",
+          "auto_response_id": "Seleccione la respuesta automática a usar"
+        }
+      },
       "template": {
         "title": "Plantillas de Respuesta",
         "description": "Gestionar plantillas de respuesta estándar para tickets y comunicación",

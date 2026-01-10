@@ -125,6 +125,88 @@
         "delete_title": "Supprimer le type",
         "edit_title": "Modifier le type"
       },
+      "auto_response": {
+        "title": "Réponses Automatiques",
+        "singular": "Réponse Automatique",
+        "plural": "Réponses Automatiques",
+        "description": "Gérer les réponses automatiques par e-mail pour les événements de tickets",
+        "actions": {
+          "new": "Nouvelle Réponse Automatique"
+        },
+        "create_title": "Nouvelle Réponse Automatique",
+        "edit_title": "Modifier la Réponse Automatique",
+        "delete_title": "Supprimer la Réponse Automatique",
+        "delete_confirm": "Êtes-vous sûr de vouloir supprimer cette réponse automatique ? Cette action est irréversible.",
+        "fields": {
+          "name": "Nom",
+          "type_id": "Type",
+          "system_address_id": "Adresse d'Expéditeur",
+          "text0": "Sujet",
+          "text1": "Corps de la Réponse",
+          "comments": "Commentaires",
+          "valid_id": "Statut"
+        },
+        "help": {
+          "name": "Un nom unique pour cette réponse automatique",
+          "type_id": "Quand cette réponse automatique doit être déclenchée",
+          "system_address_id": "L'adresse e-mail depuis laquelle cette réponse sera envoyée",
+          "text0": "Ligne de sujet pour l'e-mail de réponse automatique. Utilisez les balises <OTRS_*> pour le contenu dynamique.",
+          "text1": "Contenu du corps de la réponse automatique. Utilisez les balises <OTRS_*> pour le contenu dynamique.",
+          "comments": "Notes internes sur cette réponse automatique",
+          "valid_id": "Si cette réponse automatique est active"
+        },
+        "placeholders": {
+          "name": "ex., Accusé de Réception Nouveau Ticket",
+          "text0": "RE: <OTRS_TICKET_Title>"
+        },
+        "template_variables": {
+          "title": "Variables de Modèle",
+          "click_to_insert": "Cliquer pour insérer",
+          "categories": {
+            "ticket": "Ticket",
+            "customer": "Client",
+            "agent": "Agent",
+            "system": "Système"
+          },
+          "ticket_number": "Numéro de Ticket",
+          "ticket_title": "Titre du Ticket",
+          "ticket_queue": "File d'attente",
+          "ticket_state": "État",
+          "ticket_priority": "Priorité",
+          "ticket_created": "Date de Création",
+          "customer_firstname": "Prénom du Client",
+          "customer_lastname": "Nom du Client",
+          "customer_email": "E-mail du Client",
+          "customer_id": "ID du Client",
+          "owner_firstname": "Prénom du Propriétaire",
+          "owner_lastname": "Nom du Propriétaire",
+          "owner_email": "E-mail du Propriétaire",
+          "responsible_firstname": "Prénom du Responsable",
+          "config_fqdn": "FQDN du Système",
+          "config_http_type": "Type HTTP"
+        }
+      },
+      "queue_auto_response": {
+        "title": "Réponses Automatiques de File",
+        "singular": "Réponse Automatique de File",
+        "plural": "Réponses Automatiques de File",
+        "description": "Gérer les associations file d'attente vers réponse automatique",
+        "actions": {
+          "new": "Nouvelle Association"
+        },
+        "create_title": "Nouvelle Association Réponse Automatique de File",
+        "edit_title": "Modifier l'Association Réponse Automatique de File",
+        "delete_title": "Supprimer l'Association",
+        "delete_confirm": "Êtes-vous sûr de vouloir supprimer cette association ? Cette action est irréversible.",
+        "fields": {
+          "queue_id": "File d'attente",
+          "auto_response_id": "Réponse Automatique"
+        },
+        "help": {
+          "queue_id": "Sélectionnez la file d'attente pour cette association",
+          "auto_response_id": "Sélectionnez la réponse automatique à utiliser"
+        }
+      },
       "template": {
         "title": "Modèles de réponse",
         "description": "Gérer les modèles de réponse standard pour les tickets et la communication",

@@ -125,6 +125,88 @@
         "delete_title": "Segh HeghmoH",
         "edit_title": "Segh choH"
       },
+      "auto_response": {
+        "title": "jang'a' automatic",
+        "singular": "jang automatic",
+        "plural": "jang'a' automatic",
+        "description": "chaw' ta'meyvaD QIn jang automatic SeH",
+        "actions": {
+          "new": "chu' jang automatic"
+        },
+        "create_title": "chu' jang automatic",
+        "edit_title": "jang automatic choH",
+        "delete_title": "jang automatic HeghmoH",
+        "delete_confirm": "jang automaticvam DaHeghmoH 'e' DaneH'a'? ta'vam vIchenmoHlaHbe'.",
+        "fields": {
+          "name": "pong",
+          "type_id": "Segh",
+          "system_address_id": "ngeHwI' Daq",
+          "text0": "Subject",
+          "text1": "jang De'",
+          "comments": "QInmey",
+          "valid_id": "Dotlh"
+        },
+        "help": {
+          "name": "jang automaticvamvaD pong le'",
+          "type_id": "jang automatic qaS poH wIv",
+          "system_address_id": "jang ngeHlu'bogh QIn Daq",
+          "text0": "jang automatic QInvaD Subject. <OTRS_*> permey lo' taHvIS De'.",
+          "text1": "jang automatic De'. <OTRS_*> permey lo' taHvIS De'.",
+          "comments": "jang automaticvam qach ghItlhmey",
+          "valid_id": "jang automatic Qap 'e' wIv"
+        },
+        "placeholders": {
+          "name": "moj, chaw' chu' Qoch",
+          "text0": "jang: <OTRS_TICKET_Title>"
+        },
+        "template_variables": {
+          "title": "ra' Daqmey",
+          "click_to_insert": "lanmeH qIp",
+          "categories": {
+            "ticket": "chaw'",
+            "customer": "mach",
+            "agent": "toy'wI'",
+            "system": "pat"
+          },
+          "ticket_number": "chaw' mI'",
+          "ticket_title": "chaw' pong",
+          "ticket_queue": "tlhegh",
+          "ticket_state": "Dotlh",
+          "ticket_priority": "potlh patlh",
+          "ticket_created": "chenmoHlu'bogh jaj",
+          "customer_firstname": "mach wa'DIch pong",
+          "customer_lastname": "mach Qav pong",
+          "customer_email": "mach QIn Daq",
+          "customer_id": "mach mI'",
+          "owner_firstname": "ghajwI' wa'DIch pong",
+          "owner_lastname": "ghajwI' Qav pong",
+          "owner_email": "ghajwI' QIn Daq",
+          "responsible_firstname": "ngoy wa'DIch pong",
+          "config_fqdn": "pat FQDN",
+          "config_http_type": "HTTP Segh"
+        }
+      },
+      "queue_auto_response": {
+        "title": "tlhegh jang'a' automatic",
+        "singular": "tlhegh jang automatic",
+        "plural": "tlhegh jang'a' automatic",
+        "description": "tlhegh jang automatic lanmey SeH",
+        "actions": {
+          "new": "chu' lan"
+        },
+        "create_title": "chu' tlhegh jang automatic lan",
+        "edit_title": "tlhegh jang automatic lan choH",
+        "delete_title": "lan HeghmoH",
+        "delete_confirm": "lanvam DaHeghmoH 'e' DaneH'a'? ta'vam vIchenmoHlaHbe'.",
+        "fields": {
+          "queue_id": "tlhegh",
+          "auto_response_id": "jang automatic"
+        },
+        "help": {
+          "queue_id": "lanvamvaD tlhegh wIv",
+          "auto_response_id": "lo'meH jang automatic wIv"
+        }
+      },
       "template": {
         "title": "jang ra'mey",
         "description": "chaw'mey toy'wI' jang ra'mey SeH",

@@ -1,15 +1,15 @@
 module:
     name: auto_response_type
-    singular: Auto_response_type
-    plural: Auto_response_types
+    singular: Auto Response Type
+    plural: Auto Response Types
     table: auto_response_type
-    description: Manage Auto_response_types
+    description: Define when auto responses are triggered
     route_prefix: /admin/dynamic/auto_response_type
 fields:
     - name: id
       type: integer
       db_column: id
-      label: Id
+      label: ID
       required: false
       searchable: false
       sortable: true
@@ -31,11 +31,12 @@ fields:
       default: null
       options: []
       validation: ""
-      help: ""
+      help: "Identifier for this response type (e.g., auto reply/new ticket)"
+      placeholder: "e.g., auto reply/new ticket"
     - name: comments
       type: string
       db_column: comments
-      label: Comments
+      label: Description
       required: false
       searchable: true
       sortable: true
@@ -44,24 +45,29 @@ fields:
       default: null
       options: []
       validation: ""
-      help: ""
+      help: "Describe when this auto response type is triggered"
     - name: valid_id
       type: integer
       db_column: valid_id
-      label: Valid Id
-      required: false
+      label: Status
+      required: true
       searchable: false
       sortable: true
       show_in_list: true
       show_in_form: true
-      default: null
+      default: 1
       options: []
       validation: ""
       help: ""
+      lookup_table: valid
+      lookup_key: id
+      lookup_display: name
+      lookup_condition: "1=1"
+      display_as: chip
     - name: create_time
       type: datetime
       db_column: create_time
-      label: Create Time
+      label: Created
       required: false
       searchable: false
       sortable: true
@@ -74,20 +80,24 @@ fields:
     - name: create_by
       type: integer
       db_column: create_by
-      label: Create By
+      label: Created By
       required: true
       searchable: false
       sortable: true
-      show_in_list: true
+      show_in_list: false
       show_in_form: false
       default: null
       options: []
+      lookup_table: users
+      lookup_key: id
+      lookup_display: login
+      lookup_condition: "1=1"
       validation: ""
       help: ""
     - name: change_time
       type: datetime
       db_column: change_time
-      label: Change Time
+      label: Modified
       required: false
       searchable: false
       sortable: true
@@ -100,7 +110,7 @@ fields:
     - name: change_by
       type: integer
       db_column: change_by
-      label: Change By
+      label: Modified By
       required: true
       searchable: false
       sortable: true
@@ -115,10 +125,22 @@ features:
     search: true
     import_csv: false
     export_csv: true
-    status_toggle: false
+    status_toggle: true
     color_picker: false
+    filters: true
+
+filters:
+    - field: valid_id
+      type: select
+      label: Status
+      options:
+        - value: ""
+          label: "All Types"
+      source: database
+      query: SELECT id, name FROM valid ORDER BY name
 permissions: []
 validation:
     unique_fields:
         - name
-    required_fields: []
+    required_fields:
+        - name

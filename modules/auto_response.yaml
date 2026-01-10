@@ -1,15 +1,15 @@
 module:
     name: auto_response
-    singular: Auto_response
-    plural: Auto_responses
+    singular: Auto Response
+    plural: Auto Responses
     table: auto_response
-    description: Manage Auto_responses
+    description: Manage automatic email responses for ticket events
     route_prefix: /admin/dynamic/auto_response
 fields:
     - name: id
       type: integer
       db_column: id
-      label: Id
+      label: ID
       required: false
       searchable: false
       sortable: true
@@ -31,37 +31,12 @@ fields:
       default: null
       options: []
       validation: ""
-      help: ""
-    - name: text0
-      type: textarea
-      db_column: text0
-      label: Text0
-      required: false
-      searchable: true
-      sortable: false
-      show_in_list: false
-      show_in_form: true
-      default: null
-      options: []
-      validation: ""
-      help: ""
-    - name: text1
-      type: textarea
-      db_column: text1
-      label: Text1
-      required: false
-      searchable: true
-      sortable: false
-      show_in_list: false
-      show_in_form: true
-      default: null
-      options: []
-      validation: ""
-      help: ""
+      help: "A unique name for this auto response"
+      placeholder: "e.g., New Ticket Acknowledgment"
     - name: type_id
       type: integer
       db_column: type_id
-      label: Type Id
+      label: Type
       required: true
       searchable: false
       sortable: true
@@ -70,11 +45,15 @@ fields:
       default: null
       options: []
       validation: ""
-      help: ""
+      help: "When this auto response should be triggered"
+      lookup_table: auto_response_type
+      lookup_key: id
+      lookup_display: name
+      lookup_condition: "valid_id = 1"
     - name: system_address_id
       type: integer
       db_column: system_address_id
-      label: System Address Id
+      label: From Address
       required: true
       searchable: false
       sortable: true
@@ -83,20 +62,55 @@ fields:
       default: null
       options: []
       validation: ""
-      help: ""
-    - name: content_type
+      help: "The email address this response will be sent from"
+      lookup_table: system_address
+      lookup_key: id
+      lookup_display: value0
+      lookup_condition: "valid_id = 1"
+    - name: text0
       type: string
-      db_column: content_type
-      label: Content Type
-      required: false
+      db_column: text0
+      label: Subject
+      required: true
       searchable: true
-      sortable: true
-      show_in_list: true
+      sortable: false
+      show_in_list: false
       show_in_form: true
       default: null
       options: []
       validation: ""
-      help: ""
+      help: "Subject line for the auto response email. Use <OTRS_*> tags for dynamic content."
+      placeholder: "RE: <OTRS_TICKET_Title>"
+    - name: text1
+      type: textarea
+      db_column: text1
+      label: Response Body
+      required: true
+      searchable: true
+      sortable: false
+      show_in_list: false
+      show_in_form: true
+      default: null
+      options: []
+      validation: ""
+      help: "Body content of the auto response. Use <OTRS_*> tags for dynamic content."
+    - name: content_type
+      type: select
+      db_column: content_type
+      label: Content Type
+      required: false
+      searchable: false
+      sortable: true
+      show_in_list: false
+      show_in_form: false
+      default: "text/html"
+      options:
+        - value: "text/plain"
+          label: "Plain Text"
+        - value: "text/html"
+          label: "HTML"
+      validation: ""
+      help: "Format of the response body (auto-set based on editor mode)"
     - name: comments
       type: string
       db_column: comments
@@ -104,33 +118,38 @@ fields:
       required: false
       searchable: true
       sortable: true
-      show_in_list: true
+      show_in_list: false
       show_in_form: true
       default: null
       options: []
       validation: ""
-      help: ""
+      help: "Internal notes about this auto response"
     - name: valid_id
       type: integer
       db_column: valid_id
-      label: Valid Id
-      required: false
+      label: Status
+      required: true
       searchable: false
       sortable: true
       show_in_list: true
       show_in_form: true
-      default: null
+      default: 1
       options: []
       validation: ""
-      help: ""
+      help: "Whether this auto response is active"
+      lookup_table: valid
+      lookup_key: id
+      lookup_display: name
+      lookup_condition: "1=1"
+      display_as: chip
     - name: create_time
       type: datetime
       db_column: create_time
-      label: Create Time
+      label: Created
       required: false
       searchable: false
       sortable: true
-      show_in_list: true
+      show_in_list: false
       show_in_form: false
       default: null
       options: []
@@ -139,24 +158,28 @@ fields:
     - name: create_by
       type: integer
       db_column: create_by
-      label: Create By
+      label: Created By
       required: true
       searchable: false
       sortable: true
-      show_in_list: true
+      show_in_list: false
       show_in_form: false
       default: null
       options: []
+      lookup_table: users
+      lookup_key: id
+      lookup_display: login
+      lookup_condition: "1=1"
       validation: ""
       help: ""
     - name: change_time
       type: datetime
       db_column: change_time
-      label: Change Time
+      label: Modified
       required: false
       searchable: false
       sortable: true
-      show_in_list: true
+      show_in_list: false
       show_in_form: false
       default: null
       options: []
@@ -165,7 +188,7 @@ fields:
     - name: change_by
       type: integer
       db_column: change_by
-      label: Change By
+      label: Modified By
       required: true
       searchable: false
       sortable: true
@@ -191,12 +214,23 @@ filters:
       options:
         - value: ""
           label: "All Auto Responses"
-        - value: "1"
-          label: "Valid"
-        - value: "2"
-          label: "Invalid"
+      source: database
+      query: SELECT id, name FROM valid ORDER BY name
+    - field: type_id
+      type: select
+      label: Type
+      options:
+        - value: ""
+          label: "All Types"
+      source: database
+      query: SELECT id, name FROM auto_response_type WHERE valid_id = 1 ORDER BY name
 permissions: []
 validation:
     unique_fields:
         - name
-    required_fields: []
+    required_fields:
+        - name
+        - type_id
+        - system_address_id
+        - text0
+        - text1

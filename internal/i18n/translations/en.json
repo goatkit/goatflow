@@ -125,6 +125,88 @@
         "delete_title": "Delete Type",
         "edit_title": "Edit Type"
       },
+      "auto_response": {
+        "title": "Auto Responses",
+        "singular": "Auto Response",
+        "plural": "Auto Responses",
+        "description": "Manage automatic email responses for ticket events",
+        "actions": {
+          "new": "New Auto Response"
+        },
+        "create_title": "New Auto Response",
+        "edit_title": "Edit Auto Response",
+        "delete_title": "Delete Auto Response",
+        "delete_confirm": "Are you sure you want to delete this auto response? This action cannot be undone.",
+        "fields": {
+          "name": "Name",
+          "type_id": "Type",
+          "system_address_id": "From Address",
+          "text0": "Subject",
+          "text1": "Response Body",
+          "comments": "Comments",
+          "valid_id": "Status"
+        },
+        "help": {
+          "name": "A unique name for this auto response",
+          "type_id": "When this auto response should be triggered",
+          "system_address_id": "The email address this response will be sent from",
+          "text0": "Subject line for the auto response email. Use <OTRS_*> tags for dynamic content.",
+          "text1": "Body content of the auto response. Use <OTRS_*> tags for dynamic content.",
+          "comments": "Internal notes about this auto response",
+          "valid_id": "Whether this auto response is active"
+        },
+        "placeholders": {
+          "name": "e.g., New Ticket Acknowledgment",
+          "text0": "RE: <OTRS_TICKET_Title>"
+        },
+        "template_variables": {
+          "title": "Template Variables",
+          "click_to_insert": "Click to insert at cursor",
+          "categories": {
+            "ticket": "Ticket",
+            "customer": "Customer",
+            "agent": "Agent",
+            "system": "System"
+          },
+          "ticket_number": "Ticket Number",
+          "ticket_title": "Ticket Title",
+          "ticket_queue": "Queue",
+          "ticket_state": "State",
+          "ticket_priority": "Priority",
+          "ticket_created": "Created Date",
+          "customer_firstname": "Customer First Name",
+          "customer_lastname": "Customer Last Name",
+          "customer_email": "Customer Email",
+          "customer_id": "Customer ID",
+          "owner_firstname": "Owner First Name",
+          "owner_lastname": "Owner Last Name",
+          "owner_email": "Owner Email",
+          "responsible_firstname": "Responsible First Name",
+          "config_fqdn": "System FQDN",
+          "config_http_type": "HTTP Type"
+        }
+      },
+      "queue_auto_response": {
+        "title": "Queue Auto Responses",
+        "singular": "Queue Auto Response",
+        "plural": "Queue Auto Responses",
+        "description": "Manage queue to auto response mappings",
+        "actions": {
+          "new": "New Mapping"
+        },
+        "create_title": "New Queue Auto Response Mapping",
+        "edit_title": "Edit Queue Auto Response Mapping",
+        "delete_title": "Delete Mapping",
+        "delete_confirm": "Are you sure you want to delete this mapping? This action cannot be undone.",
+        "fields": {
+          "queue_id": "Queue",
+          "auto_response_id": "Auto Response"
+        },
+        "help": {
+          "queue_id": "Select the queue for this mapping",
+          "auto_response_id": "Select the auto response to use"
+        }
+      },
       "template": {
         "title": "Response Templates",
         "description": "Manage standard response templates for tickets and communication",
