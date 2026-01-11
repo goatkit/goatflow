@@ -7,6 +7,22 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
+- **Generic Agent Execution Engine**: Automated ticket processing via scheduled jobs (OTRS GenericAgent equivalent)
+  - Job scheduler integration: runs jobs based on ScheduleDays/ScheduleHours/ScheduleMinutes
+  - Ticket matching: StateIDs, QueueIDs, PriorityIDs, TypeIDs, LockIDs, OwnerIDs, ServiceIDs, SLAIDs, CustomerID (wildcards), Title, time-based filters (create/change/pending/escalation older/newer minutes)
+  - Actions: NewStateID, NewQueueID, NewPriorityID, NewOwnerID, NewResponsibleID, NewLockID, NewTypeID, NewServiceID, NewSLAID, NewCustomerID, NewTitle, NoteBody/NoteSubject, NewPendingTime, Delete
+  - Repository for OTRS key-value job storage format with schedule parsing
+  - Comprehensive unit tests and end-to-end verification
+  - Files: `internal/models/generic_agent_job.go`, `internal/repository/generic_agent_repository.go`, `internal/services/genericagent/service.go`
+- **ACL Execution Engine**: Access Control List evaluation for filtering ticket form options (OTRS TicketACL equivalent)
+  - Property matching: Properties (frontend values) and PropertiesDatabase (DB values)
+  - Supports wildcards (`*`), negation (`[Not]`), and regex (`[RegExp]`)
+  - Change rules: Possible (whitelist), PossibleAdd (add to options), PossibleNot (blacklist)
+  - StopAfterMatch support for halting ACL chain processing
+  - Filter methods for States, Queues, Priorities, Types, Services, SLAs, and Actions
+  - API helper for easy integration with ticket handlers
+  - Unit tests and integration tests against live database
+  - Files: `internal/models/acl.go`, `internal/repository/acl_repository.go`, `internal/services/acl/service.go`, `internal/api/acl_helper.go`
 - **i18n Expansion**: Extended language support from 8 to 15 languages (12 at 100% coverage)
   - Added Japanese (ja) - 100% complete with native translations
   - Added Russian (ru) - 100% complete with Cyrillic translations, ₽ currency support

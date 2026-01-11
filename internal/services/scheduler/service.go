@@ -36,6 +36,7 @@ type Handler func(context.Context, *models.ScheduledJob) error
 
 // Service coordinates scheduled job execution.
 type Service struct {
+	db               *sql.DB
 	ticketRepo       ticketAutoCloser
 	emailRepo        emailAccountLister
 	connectorFactory connector.Factory
@@ -120,6 +121,7 @@ func NewService(db *sql.DB, opts ...Option) *Service {
 	}
 
 	s := &Service{
+		db:               db,
 		ticketRepo:       ticketRepo,
 		emailRepo:        emailRepo,
 		connectorFactory: connectorFactory,

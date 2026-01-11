@@ -862,3 +862,59 @@ spec:
       method: DELETE
       handler: handleDeleteNotificationEvent
       description: "Delete a notification event"
+
+    # ACL management
+    - path: /acl
+      method: GET
+      handler: handleAdminACL
+      template: pages/admin/acl.pongo2
+      description: "Display ACL management page"
+
+    # ACL API
+    - path: /api/acl
+      method: POST
+      handler: handleAdminACLCreate
+      description: "Create a new ACL"
+
+    - path: /api/acl/:id
+      method: GET
+      handler: handleAdminACLGet
+      description: "Get ACL details"
+
+    - path: /api/acl/:id
+      method: PUT
+      handler: handleAdminACLUpdate
+      description: "Update an existing ACL"
+
+    - path: /api/acl/:id
+      method: DELETE
+      handler: handleAdminACLDelete
+      description: "Delete an ACL"
+
+    # Generic Agent Jobs management
+    - path: /generic-agent
+      method: GET
+      handler: handleAdminGenericAgent
+      template: pages/admin/generic_agent.pongo2
+      description: "Display generic agent jobs management page"
+
+    # Generic Agent API
+    - path: /api/generic-agent
+      method: POST
+      handler: handleAdminGenericAgentCreate
+      description: "Create a new generic agent job"
+
+    - path: /api/generic-agent/:name
+      method: GET
+      handler: handleAdminGenericAgentGet
+      description: "Get generic agent job details"
+
+    - path: /api/generic-agent/:name
+      method: PUT
+      handler: handleAdminGenericAgentUpdate
+      description: "Update an existing generic agent job"
+
+    - path: /api/generic-agent/:name
+      method: DELETE
+      handler: handleAdminGenericAgentDelete
+      description: "Delete a generic agent job"

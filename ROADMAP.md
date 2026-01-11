@@ -64,8 +64,9 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 
 **Stabilization & Completions**
 - Complete admin modules
-- SLA engine
-- Email auto-ticket creation rules
+- SLA escalation engine
+- ~~Generic Agent execution engine~~ ✅ Done
+- ~~ACL execution engine~~ ✅ Done
 - Bulk ticket actions
 - Kubernetes manifests
 

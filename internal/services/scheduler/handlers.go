@@ -14,6 +14,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
+	"github.com/gotrs-io/gotrs-ce/internal/services/genericagent"
 )
 
 func (s *Service) registerBuiltinHandlers() {
@@ -21,6 +22,7 @@ func (s *Service) registerBuiltinHandlers() {
 	s.RegisterHandler("ticket.pendingReminder", s.handlePendingReminder)
 	s.RegisterHandler("email.poll", s.handleEmailPoll)
 	s.RegisterHandler("scheduler.housekeeping", s.handleHousekeeping)
+	s.RegisterHandler("genericAgent.execute", s.handleGenericAgentExecute)
 }
 
 func (s *Service) handleAutoClose(ctx context.Context, job *models.ScheduledJob) error {
@@ -250,6 +252,16 @@ func (s *Service) handleHousekeeping(ctx context.Context, job *models.ScheduledJ
 	return nil
 }
 
+func (s *Service) handleGenericAgentExecute(ctx context.Context, job *models.ScheduledJob) error {
+	if s.db == nil {
+		s.logger.Printf("scheduler: database unavailable, skipping genericAgent")
+		return nil
+	}
+
+	svc := genericagent.NewService(s.db, genericagent.WithLogger(s.logger))
+	return svc.ExecuteAllDueJobs(ctx)
+}
+
 func defaultJobs() []*models.ScheduledJob {
 	return []*models.ScheduledJob{
 		{
@@ -296,6 +308,14 @@ func defaultJobs() []*models.ScheduledJob {
 			Config: map[string]any{
 				"retention_days": 30,
 			},
+		},
+		{
+			Name:           "Generic Agent Job Executor",
+			Slug:           "generic-agent",
+			Handler:        "genericAgent.execute",
+			Schedule:       "* * * * *",
+			TimeoutSeconds: 300,
+			Config:         map[string]any{},
 		},
 	}
 }

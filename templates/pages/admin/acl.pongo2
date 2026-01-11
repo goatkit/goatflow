@@ -1,0 +1,385 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}ACL Management{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">ACL Management</h1>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Access Control Lists define rules for ticket actions and permissions</p>
+                </div>
+                <button onclick="openACLModal()" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600" title="Add new ACL">
+                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    Add ACL
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <form method="GET" action="/admin/acl" class="flex flex-wrap gap-4">
+                <div class="flex-1 min-w-[200px]">
+                    <input type="text" name="search" value="{{ SearchQuery }}"
+                           placeholder="Search ACLs..."
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                </div>
+                <div>
+                    <select name="valid" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="all" {% if ValidFilter == "all" %}selected{% endif %}>All Status</option>
+                        <option value="valid" {% if ValidFilter == "valid" %}selected{% endif %}>Valid Only</option>
+                        <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>Invalid Only</option>
+                    </select>
+                </div>
+                <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" title="Apply filters">
+                    Filter
+                </button>
+                {% if SearchQuery or ValidFilter != "all" %}
+                <a href="/admin/acl" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg" title="Clear all filters">
+                    Clear
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- ACL List -->
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <a href="?sort=id&order={% if SortBy == 'id' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
+                                ID {% if SortBy == 'id' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <a href="?sort=name&order={% if SortBy == 'name' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
+                                Name {% if SortBy == 'name' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                            </a>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stop After Match</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for acl in ACLs %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{{ acl.ID }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{{ acl.Name }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white max-w-xs truncate" title="{% if acl.Description %}{{ acl.Description }}{% endif %}">
+                            {% if acl.Description %}{{ acl.Description }}{% else %}<span class="text-gray-400">-</span>{% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                            {% if acl.StopAfterMatch and acl.StopAfterMatch == 1 %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">Yes</span>
+                            {% else %}
+                                <span class="text-gray-400">No</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if acl.ValidID == 1 %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">Valid</span>
+                            {% else %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">Invalid</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="editACL({{ acl.ID }})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="Edit ACL">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="toggleACLStatus({{ acl.ID }}, {{ acl.ValidID }}, '{{ acl.Name }}')"
+                                    class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+                                    title="{% if acl.ValidID == 1 %}Deactivate{% else %}Activate{% endif %}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {% if acl.ValidID == 1 %}
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                                    {% else %}
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    {% endif %}
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            No ACLs found. Click "Add ACL" to create one.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ACL Modal -->
+<div id="aclModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900 dark:text-white">Add ACL</h2>
+        </div>
+        <form id="aclForm" onsubmit="saveACL(event)">
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="aclId" name="id">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
+                        <input type="text" id="aclName" name="name" required
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                        <select id="aclValidId" name="valid_id"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="1">Valid</option>
+                            <option value="2">Invalid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                    <input type="text" id="aclDescription" name="description"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comments</label>
+                    <textarea id="aclComments" name="comments" rows="2"
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                </div>
+
+                <div>
+                    <label class="flex items-center">
+                        <input type="checkbox" id="aclStopAfterMatch" name="stop_after_match" class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-300 focus:ring focus:ring-gotrs-200 focus:ring-opacity-50">
+                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Stop after match (don't process further ACLs)</span>
+                    </label>
+                </div>
+
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Match Conditions (Properties)</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Define conditions that must match for this ACL to apply. Enter as JSON.</p>
+                    <textarea id="aclConfigMatch" name="config_match" rows="6"
+                              placeholder='{"Properties": {"Queue": ["Raw", "Postmaster"], "State": ["new", "open"]}}'
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"></textarea>
+                </div>
+
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Change Actions</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Define what changes this ACL makes when conditions match. Enter as JSON.</p>
+                    <textarea id="aclConfigChange" name="config_change" rows="6"
+                              placeholder='{"Possible": {"Action": ["AgentTicketClose", "AgentTicketNote"]}, "PossibleNot": {"Action": ["AgentTicketBounce"]}}'
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"></textarea>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+                <button type="button" onclick="closeACLModal()"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:text-sm">
+                    Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openACLModal() {
+    document.getElementById('modalTitle').textContent = 'Add ACL';
+    document.getElementById('aclForm').reset();
+    document.getElementById('aclId').value = '';
+    document.getElementById('aclConfigMatch').value = '';
+    document.getElementById('aclConfigChange').value = '';
+    const modal = document.getElementById('aclModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function editACL(id) {
+    fetch(`/admin/api/acl/${id}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const acl = result.data;
+                document.getElementById('modalTitle').textContent = 'Edit ACL';
+                document.getElementById('aclId').value = acl.id;
+                document.getElementById('aclName').value = acl.name;
+                document.getElementById('aclDescription').value = acl.description || '';
+                document.getElementById('aclComments').value = acl.comments || '';
+                document.getElementById('aclValidId').value = acl.valid_id;
+                document.getElementById('aclStopAfterMatch').checked = acl.stop_after_match === 1;
+
+                if (acl.config_match) {
+                    document.getElementById('aclConfigMatch').value = JSON.stringify(acl.config_match, null, 2);
+                } else {
+                    document.getElementById('aclConfigMatch').value = '';
+                }
+
+                if (acl.config_change) {
+                    document.getElementById('aclConfigChange').value = JSON.stringify(acl.config_change, null, 2);
+                } else {
+                    document.getElementById('aclConfigChange').value = '';
+                }
+
+                const modal = document.getElementById('aclModal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                }
+            } else {
+                showToast(result.error || 'Failed to load ACL', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Failed to load ACL', 'error');
+        });
+}
+
+function closeACLModal() {
+    const modal = document.getElementById('aclModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function saveACL(event) {
+    event.preventDefault();
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+
+    const formData = new FormData(event.target);
+    const id = formData.get('id');
+
+    // Parse JSON config fields
+    let configMatch = null;
+    let configChange = null;
+
+    const configMatchText = document.getElementById('aclConfigMatch').value.trim();
+    if (configMatchText) {
+        try {
+            configMatch = JSON.parse(configMatchText);
+        } catch (e) {
+            showToast('Invalid JSON in Match Conditions', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save';
+            return;
+        }
+    }
+
+    const configChangeText = document.getElementById('aclConfigChange').value.trim();
+    if (configChangeText) {
+        try {
+            configChange = JSON.parse(configChangeText);
+        } catch (e) {
+            showToast('Invalid JSON in Change Actions', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save';
+            return;
+        }
+    }
+
+    const data = {
+        name: formData.get('name'),
+        description: formData.get('description') || null,
+        comments: formData.get('comments') || null,
+        valid_id: parseInt(formData.get('valid_id')) || 1,
+        stop_after_match: document.getElementById('aclStopAfterMatch').checked ? 1 : 0,
+        config_match: configMatch,
+        config_change: configChange
+    };
+
+    const url = id ? `/admin/api/acl/${id}` : '/admin/api/acl';
+    const method = id ? 'PUT' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showToast(result.message, 'success');
+            closeACLModal();
+            window.location.reload();
+        } else {
+            showToast(result.error || 'An error occurred', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save';
+        }
+    })
+    .catch(error => {
+        console.error('Save error:', error);
+        showToast('An error occurred: ' + error.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save';
+    });
+}
+
+function toggleACLStatus(id, currentStatus, name) {
+    const newStatus = currentStatus === 1 ? 2 : 1;
+    const action = newStatus === 1 ? 'activate' : 'deactivate';
+
+    if (confirm(`Are you sure you want to ${action} "${name}"?`)) {
+        fetch(`/admin/api/acl/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ valid_id: newStatus })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showToast(`ACL ${action}d successfully`, 'success');
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                showToast(result.error || 'An error occurred', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Toggle error:', error);
+            showToast('An error occurred: ' + error.message, 'error');
+        });
+    }
+}
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeACLModal();
+    }
+});
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
+        type === 'error' ? 'bg-red-600' :
+        type === 'success' ? 'bg-green-600' :
+        'bg-blue-600'
+    }`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}
