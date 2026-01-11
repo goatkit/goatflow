@@ -7,6 +7,16 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
+- **i18n Expansion**: Extended language support from 8 to 15 languages (12 at 100% coverage)
+  - Added Japanese (ja) - 100% complete with native translations
+  - Added Russian (ru) - 100% complete with Cyrillic translations, ₽ currency support
+  - Added Ukrainian (uk) - 100% complete with distinct Ukrainian vocabulary, ₴ currency support
+  - Added Urdu (ur) - 100% complete with RTL support
+  - Added Hebrew (he) - 99.4% coverage with RTL support
+  - Added Chinese (zh) - 98.4% coverage
+  - Added Persian (fa) - 91.3% coverage with RTL and Persian numerals
+  - Language configs in `rtl.go` include locale-specific date/time/number/currency formatting
+  - `GetEnabledLanguages()` now auto-detects languages based on JSON file existence
 - **Queue Auto Response Admin**: Dynamic module at `/admin/queue-auto-responses` for mapping queues to auto-response templates
   - Lookup display resolution shows queue names and auto-response names instead of IDs
   - i18n translations for all 6 languages (en, de, es, fr, ar, tlh)
@@ -25,6 +35,11 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - Supports all X-GOTRS-* headers: Queue, QueueID, Priority, PriorityID, State, Type, Title, CustomerID, CustomerUser, Ignore
   - Comprehensive test coverage for VIP routing, spam filtering, NOT matches, multi-match conditions, and stop flag behavior
 - **PostmasterFilter Repository**: Database repository for `postmaster_filter` table with YAML serialization for match/set rules
+
+### Changed
+- **Translation Coverage Test Output**: `TestTranslationCompleteness` now prints a formatted ASCII table showing all language coverage with checkmarks for 100% complete languages
+- **Test Runner Enhancement**: `scripts/test-runner.sh` now tracks individual test counts (not just packages) and displays the i18n coverage table in the summary output
+- **http-call Script**: `scripts/http-call.sh` now uses JSON API login to extract `access_token` via Bearer authentication instead of cookie-based session handling
 
 ### Fixed
 - **Dynamic Module Lookup Display**: Fixed template rendering to show lookup display values (e.g., queue names) instead of raw IDs for integer foreign key fields in both `allFields` and regular `fields` template sections

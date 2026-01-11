@@ -6,7 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
+	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
 
 const (
@@ -121,13 +123,35 @@ func (m *I18nMiddleware) parseAcceptLanguage(header string) string {
 // getUserLanguage gets the language preference from authenticated user.
 func (m *I18nMiddleware) getUserLanguage(c *gin.Context) string {
 	// Check if user is authenticated
-	if userID, exists := c.Get("user_id"); exists {
-		// In a real implementation, this would fetch user preferences from database
-		// For now, return empty to use other detection methods
-		_ = userID
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
 		return ""
 	}
-	return ""
+
+	// Convert user ID to int
+	var userID int
+	switch v := userIDInterface.(type) {
+	case int:
+		userID = v
+	case int64:
+		userID = int(v)
+	case uint:
+		userID = int(v)
+	case float64:
+		userID = int(v)
+	default:
+		return ""
+	}
+
+	// Get database connection
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return ""
+	}
+
+	// Get user language preference
+	prefService := service.NewUserPreferencesService(db)
+	return prefService.GetLanguage(userID)
 }
 
 // isSupported checks if a language is supported.

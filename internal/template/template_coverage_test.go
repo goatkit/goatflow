@@ -71,6 +71,10 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/tickets.pongo2":                   true,
 	"pages/admin/types.pongo2":                     true,
 	"pages/admin/users.pongo2":                     true,
+	"pages/admin/notification_events.pongo2":       true,
+	"pages/admin/notification_event_form.pongo2":   true,
+	"pages/admin/postmaster_filters.pongo2":        true,
+	"pages/admin/postmaster_filter_form.pongo2":    true,
 
 	// Agent templates
 	"pages/agent/dashboard.pongo2":   true,
@@ -903,6 +907,79 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 				ctx := adminContext()
 				ctx["Users"] = []map[string]interface{}{sampleUser()}
 				ctx["Search"] = ""
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/notification_events",
+			template: "pages/admin/notification_events.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Events"] = []map[string]interface{}{
+					{
+						"ID":         1,
+						"Name":       "Test Notification",
+						"Comments":   "Test comment",
+						"ValidID":    1,
+						"ChangeTime": "2024-01-01 12:00:00",
+					},
+				}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/notification_event_form",
+			template: "pages/admin/notification_event_form.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["IsNew"] = true
+				ctx["Event"] = nil
+				ctx["TicketEvents"] = []string{"TicketCreate", "TicketUpdate", "TicketDelete"}
+				ctx["ArticleEvents"] = []string{"ArticleCreate", "ArticleSend"}
+				ctx["Queues"] = []map[string]interface{}{sampleQueue()}
+				ctx["States"] = []map[string]interface{}{sampleState()}
+				ctx["Priorities"] = []map[string]interface{}{samplePriority()}
+				ctx["Types"] = []map[string]interface{}{sampleType()}
+				ctx["Agents"] = []map[string]interface{}{sampleUser()}
+				ctx["Groups"] = []map[string]interface{}{sampleGroup()}
+				ctx["Roles"] = []map[string]interface{}{sampleRole()}
+				ctx["Languages"] = []map[string]interface{}{
+					{"Name": "en"},
+					{"Name": "de"},
+				}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/postmaster_filters",
+			template: "pages/admin/postmaster_filters.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Filters"] = []map[string]interface{}{
+					{
+						"ID":         1,
+						"Name":       "Test Filter",
+						"Comment":    "Test comment",
+						"ValidID":    1,
+						"ChangeTime": "2024-01-01 12:00:00",
+					},
+				}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/postmaster_filter_form",
+			template: "pages/admin/postmaster_filter_form.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["IsNew"] = true
+				ctx["Filter"] = nil
+				ctx["Queues"] = []map[string]interface{}{sampleQueue()}
+				ctx["States"] = []map[string]interface{}{sampleState()}
+				ctx["Priorities"] = []map[string]interface{}{samplePriority()}
+				ctx["Types"] = []map[string]interface{}{sampleType()}
+				ctx["HeaderFields"] = []string{"From", "To", "Subject", "X-Priority"}
+				ctx["SetFields"] = []string{"Queue", "State", "Priority", "Type"}
 				return ctx
 			}(),
 		},

@@ -1,0 +1,465 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{% if IsNew %}{{ t("admin.modules.notification_event.create_title") }}{% else %}{{ t("admin.modules.notification_event.edit_title") }}{% endif %} - GOTRS Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                        {% if IsNew %}{{ t("admin.modules.notification_event.create_title") }}{% else %}{{ t("admin.modules.notification_event.edit_title") }}{% endif %}
+                    </h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {% if IsNew %}
+                        {{ t("admin.modules.notification_event.create_description") }}
+                        {% else %}
+                        {{ t("admin.modules.notification_event.edit_description") }}: {{ Event.Name }}
+                        {% endif %}
+                    </p>
+                </div>
+                <a href="/admin/notification-events"
+                   class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </a>
+            </div>
+        </div>
+
+        <form id="notificationForm" class="px-6 py-6 space-y-6">
+            <!-- Basic Information -->
+            <div class="space-y-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                    {{ t("admin.modules.notification_event.sections.basic") }}
+                </h3>
+
+                <!-- Name -->
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {{ t("admin.modules.notification_event.fields.name") }} <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="name" name="name" required
+                           value="{% if Event %}{{ Event.Name }}{% endif %}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="{{ t('admin.modules.notification_event.placeholders.name') }}">
+                </div>
+
+                <!-- Comment -->
+                <div>
+                    <label for="comments" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {{ t("admin.modules.notification_event.fields.comments") }}
+                    </label>
+                    <textarea id="comments" name="comments" rows="2"
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="{{ t('admin.modules.notification_event.placeholders.comments') }}">{% if Event %}{{ Event.Comments }}{% endif %}</textarea>
+                </div>
+
+                <!-- Validity -->
+                <div>
+                    <label for="valid_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {{ t("admin.modules.notification_event.fields.valid_id") }}
+                    </label>
+                    <select id="valid_id" name="valid_id"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="1" {% if not Event or Event.ValidID == 1 %}selected{% endif %}>{{ t("common.valid") }}</option>
+                        <option value="2" {% if Event and Event.ValidID == 2 %}selected{% endif %}>{{ t("common.invalid") }}</option>
+                        <option value="3" {% if Event and Event.ValidID == 3 %}selected{% endif %}>{{ t("common.invalid_temporary") }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Events Section -->
+            <div class="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                    {{ t("admin.modules.notification_event.sections.events") }}
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.modules.notification_event.help.events") }}
+                </p>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                    <div class="col-span-full text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">Ticket Events</div>
+                    {% for event in TicketEvents %}
+                    <label class="flex items-center space-x-2 text-sm">
+                        <input type="checkbox" name="events" value="{{ event }}"
+                               {% if Event and event in Event.Events %}checked{% endif %}
+                               class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                        <span class="text-gray-700 dark:text-gray-300">{{ event }}</span>
+                    </label>
+                    {% endfor %}
+                    <div class="col-span-full text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mt-4 mb-2">Article Events</div>
+                    {% for event in ArticleEvents %}
+                    <label class="flex items-center space-x-2 text-sm">
+                        <input type="checkbox" name="events" value="{{ event }}"
+                               {% if Event and event in Event.Events %}checked{% endif %}
+                               class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                        <span class="text-gray-700 dark:text-gray-300">{{ event }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Ticket Filters Section -->
+            <div class="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                    {{ t("admin.modules.notification_event.sections.filters") }}
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.modules.notification_event.help.filters") }}
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Queue Filter -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {{ t("admin.modules.notification_event.filters.queue") }}
+                        </label>
+                        <select name="filter_QueueID" multiple
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                size="4">
+                            {% for queue in Queues %}
+                            <option value="{{ queue.ID }}" {% if Event and queue.ID|stringformat:"%d" in Event.Filters.QueueID %}selected{% endif %}>{{ queue.Name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- State Filter -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {{ t("admin.modules.notification_event.filters.state") }}
+                        </label>
+                        <select name="filter_StateID" multiple
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                size="4">
+                            {% for state in States %}
+                            <option value="{{ state.ID }}" {% if Event and state.ID|stringformat:"%d" in Event.Filters.StateID %}selected{% endif %}>{{ state.Name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Priority Filter -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {{ t("admin.modules.notification_event.filters.priority") }}
+                        </label>
+                        <select name="filter_PriorityID" multiple
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                size="4">
+                            {% for priority in Priorities %}
+                            <option value="{{ priority.ID }}" {% if Event and priority.ID|stringformat:"%d" in Event.Filters.PriorityID %}selected{% endif %}>{{ priority.Name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Type Filter -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {{ t("admin.modules.notification_event.filters.type") }}
+                        </label>
+                        <select name="filter_TypeID" multiple
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                size="4">
+                            {% for type in Types %}
+                            <option value="{{ type.ID }}" {% if Event and type.ID|stringformat:"%d" in Event.Filters.TypeID %}selected{% endif %}>{{ type.Name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recipients Section -->
+            <div class="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                    {{ t("admin.modules.notification_event.sections.recipients") }}
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.modules.notification_event.help.recipients") }}
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Recipient Agents -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {{ t("admin.modules.notification_event.recipients.agents") }}
+                        </label>
+                        <select name="recipient_RecipientAgents" multiple
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                size="4">
+                            {% for agent in Agents %}
+                            <option value="{{ agent.ID }}" {% if Event and agent.ID|stringformat:"%d" in Event.Recipients.RecipientAgents %}selected{% endif %}>{{ agent.Name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Recipient Groups -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {{ t("admin.modules.notification_event.recipients.groups") }}
+                        </label>
+                        <select name="recipient_RecipientGroups" multiple
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                size="4">
+                            {% for group in Groups %}
+                            <option value="{{ group.ID }}" {% if Event and group.ID|stringformat:"%d" in Event.Recipients.RecipientGroups %}selected{% endif %}>{{ group.Name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Recipient Roles -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {{ t("admin.modules.notification_event.recipients.roles") }}
+                        </label>
+                        <select name="recipient_RecipientRoles" multiple
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                size="4">
+                            {% for role in Roles %}
+                            <option value="{{ role.ID }}" {% if Event and role.ID|stringformat:"%d" in Event.Recipients.RecipientRoles %}selected{% endif %}>{{ role.Name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Special Recipients -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {{ t("admin.modules.notification_event.recipients.special") }}
+                        </label>
+                        <div class="space-y-2">
+                            <label class="flex items-center space-x-2 text-sm">
+                                <input type="checkbox" name="recipient_Recipients" value="AgentOwner"
+                                       {% if Event and "AgentOwner" in Event.Recipients.Recipients %}checked{% endif %}
+                                       class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                                <span class="text-gray-700 dark:text-gray-300">{{ t("admin.modules.notification_event.recipients.owner") }}</span>
+                            </label>
+                            <label class="flex items-center space-x-2 text-sm">
+                                <input type="checkbox" name="recipient_Recipients" value="AgentResponsible"
+                                       {% if Event and "AgentResponsible" in Event.Recipients.Recipients %}checked{% endif %}
+                                       class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                                <span class="text-gray-700 dark:text-gray-300">{{ t("admin.modules.notification_event.recipients.responsible") }}</span>
+                            </label>
+                            <label class="flex items-center space-x-2 text-sm">
+                                <input type="checkbox" name="recipient_Recipients" value="AgentWatcher"
+                                       {% if Event and "AgentWatcher" in Event.Recipients.Recipients %}checked{% endif %}
+                                       class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                                <span class="text-gray-700 dark:text-gray-300">{{ t("admin.modules.notification_event.recipients.watcher") }}</span>
+                            </label>
+                            <label class="flex items-center space-x-2 text-sm">
+                                <input type="checkbox" name="recipient_Recipients" value="Customer"
+                                       {% if Event and "Customer" in Event.Recipients.Recipients %}checked{% endif %}
+                                       class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                                <span class="text-gray-700 dark:text-gray-300">{{ t("admin.modules.notification_event.recipients.customer") }}</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notification Message Section -->
+            <div class="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">
+                    {{ t("admin.modules.notification_event.sections.message") }}
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ t("admin.modules.notification_event.help.message") }}
+                </p>
+
+                <!-- Language Tabs -->
+                <div class="border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <div class="flex border-b border-gray-200 dark:border-gray-700">
+                        {% for lang in Languages %}
+                        <button type="button" onclick="showLanguageTab('{{ lang.Name }}')"
+                                id="tab-{{ lang.Name }}"
+                                class="px-4 py-2 text-sm font-medium {% if lang.Name == 'en' %}text-blue-600 dark:text-blue-400 border-b-2 border-blue-600{% else %}text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300{% endif %}">
+                            {{ lang.Name|upper }}
+                        </button>
+                        {% endfor %}
+                    </div>
+
+                    {% for lang in Languages %}
+                    <div id="lang-{{ lang.Name }}" class="p-4 {% if lang.Name != 'en' %}hidden{% endif %}">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {{ t("admin.modules.notification_event.message.subject") }}
+                                </label>
+                                <input type="text" name="message_{{ lang.Name }}_subject" id="message_{{ lang.Name }}_subject"
+                                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="{{ t('admin.modules.notification_event.placeholders.subject') }}">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {{ t("admin.modules.notification_event.message.body") }}
+                                </label>
+                                <textarea name="message_{{ lang.Name }}_body" id="message_{{ lang.Name }}_body" rows="8"
+                                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                                          placeholder="{{ t('admin.modules.notification_event.placeholders.body') }}"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    {{ t("admin.modules.notification_event.message.content_type") }}
+                                </label>
+                                <select name="message_{{ lang.Name }}_content_type" id="message_{{ lang.Name }}_content_type"
+                                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="text/plain">text/plain</option>
+                                    <option value="text/html">text/html</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Template Variables Reference -->
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        {{ t("admin.modules.notification_event.template_variables.title") }}
+                    </h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-gray-600 dark:text-gray-400">
+                        <code class="bg-gray-200 dark:bg-gray-600 px-1 rounded">&lt;OTRS_TICKET_TicketID&gt;</code>
+                        <code class="bg-gray-200 dark:bg-gray-600 px-1 rounded">&lt;OTRS_TICKET_TicketNumber&gt;</code>
+                        <code class="bg-gray-200 dark:bg-gray-600 px-1 rounded">&lt;OTRS_TICKET_Title&gt;</code>
+                        <code class="bg-gray-200 dark:bg-gray-600 px-1 rounded">&lt;OTRS_TICKET_Queue&gt;</code>
+                        <code class="bg-gray-200 dark:bg-gray-600 px-1 rounded">&lt;OTRS_TICKET_State&gt;</code>
+                        <code class="bg-gray-200 dark:bg-gray-600 px-1 rounded">&lt;OTRS_TICKET_Priority&gt;</code>
+                        <code class="bg-gray-200 dark:bg-gray-600 px-1 rounded">&lt;OTRS_CUSTOMER_UserFirstname&gt;</code>
+                        <code class="bg-gray-200 dark:bg-gray-600 px-1 rounded">&lt;OTRS_CUSTOMER_UserLastname&gt;</code>
+                        <code class="bg-gray-200 dark:bg-gray-600 px-1 rounded">&lt;OTRS_CUSTOMER_UserEmail&gt;</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="border-t border-gray-200 dark:border-gray-700 pt-6 flex justify-end space-x-3">
+                <a href="/admin/notification-events"
+                   class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                    {{ t("common.cancel") }}
+                </a>
+                <button type="submit"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    {% if IsNew %}{{ t("common.create") }}{% else %}{{ t("common.save") }}{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showLanguageTab(lang) {
+    // Hide all language panels
+    document.querySelectorAll('[id^="lang-"]').forEach(el => el.classList.add('hidden'));
+    // Remove active state from all tabs
+    document.querySelectorAll('[id^="tab-"]').forEach(el => {
+        el.classList.remove('text-blue-600', 'dark:text-blue-400', 'border-b-2', 'border-blue-600');
+        el.classList.add('text-gray-500', 'dark:text-gray-400');
+    });
+
+    // Show selected language panel
+    document.getElementById('lang-' + lang).classList.remove('hidden');
+    // Activate selected tab
+    const tab = document.getElementById('tab-' + lang);
+    tab.classList.remove('text-gray-500', 'dark:text-gray-400');
+    tab.classList.add('text-blue-600', 'dark:text-blue-400', 'border-b-2', 'border-blue-600');
+}
+
+document.getElementById('notificationForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+
+    // Build the request payload
+    const payload = {
+        name: formData.get('name'),
+        valid_id: parseInt(formData.get('valid_id')),
+        comments: formData.get('comments'),
+        events: formData.getAll('events'),
+        filters: {},
+        recipients: {},
+        messages: {}
+    };
+
+    // Collect filters
+    ['QueueID', 'StateID', 'PriorityID', 'TypeID'].forEach(key => {
+        const values = formData.getAll('filter_' + key);
+        if (values.length > 0) {
+            payload.filters[key] = values;
+        }
+    });
+
+    // Collect recipients
+    ['RecipientAgents', 'RecipientGroups', 'RecipientRoles', 'Recipients'].forEach(key => {
+        const values = formData.getAll('recipient_' + key);
+        if (values.length > 0) {
+            payload.recipients[key] = values;
+        }
+    });
+
+    // Collect messages per language
+    ['en', 'de', 'es', 'fr', 'ar'].forEach(lang => {
+        const subject = formData.get('message_' + lang + '_subject');
+        const body = formData.get('message_' + lang + '_body');
+        const contentType = formData.get('message_' + lang + '_content_type');
+
+        if (subject || body) {
+            payload.messages[lang] = {
+                subject: subject || '',
+                text: body || '',
+                content_type: contentType || 'text/plain',
+                language: lang
+            };
+        }
+    });
+
+    const isNew = {% if IsNew %}true{% else %}false{% endif %};
+    const eventId = {% if Event %}{{ Event.ID }}{% else %}0{% endif %};
+
+    const url = isNew
+        ? '/admin/api/notification-events'
+        : '/admin/api/notification-events/' + eventId;
+
+    try {
+        const response = await fetch(url, {
+            method: isNew ? 'POST' : 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            window.location.href = '/admin/notification-events';
+        } else {
+            alert('Error: ' + (result.error || 'Failed to save notification'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+});
+
+// Populate message fields when editing existing notification
+{% if Event and Event.Messages %}
+const existingMessages = {{ Event.Messages|safe }};
+document.addEventListener('DOMContentLoaded', function() {
+    if (existingMessages) {
+        for (const [lang, msg] of Object.entries(existingMessages)) {
+            const subjectField = document.getElementById('message_' + lang + '_subject');
+            const bodyField = document.getElementById('message_' + lang + '_body');
+            const contentTypeField = document.getElementById('message_' + lang + '_content_type');
+
+            if (subjectField && msg.Subject) {
+                subjectField.value = msg.Subject;
+            }
+            if (bodyField && msg.Text) {
+                bodyField.value = msg.Text;
+            }
+            if (contentTypeField && msg.ContentType) {
+                contentTypeField.value = msg.ContentType;
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

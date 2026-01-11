@@ -484,13 +484,12 @@ api-call-form:
 		$(COMPOSE_CMD) --profile toolbox run --rm toolbox bash scripts/api-form.sh "$$METHOD" "$(ENDPOINT)" "$(DATA)"; \
 	fi
 
-# Public HTTP call without auth (useful for GET /, redirects, legacy forms)
+# Authenticated HTTP call (logs in with ADMIN_USER/ADMIN_PASSWORD, or use AUTH_TOKEN)
 .PHONY: http-call
 http-call:
 	@if [ -z "$(ENDPOINT)" ]; then echo "❌ ENDPOINT required. Usage: make http-call [METHOD=GET] ENDPOINT=/ [BODY='...'] [CONTENT_TYPE='text/html']"; exit 1; fi
-	@if [ -z "$(METHOD)" ]; then METHOD=GET; fi;
-	@printf "\n🔧 Making public HTTP call: $$METHOD $(ENDPOINT)\n";
-	$(CONTAINER_CMD) run --rm \
+	@printf "\n🔧 Making authenticated HTTP call: $(or $(METHOD),GET) $(ENDPOINT)\n";
+	@$(CONTAINER_CMD) run --rm \
 		--security-opt label=disable \
 		-v "$$PWD:/workspace" \
 		-w /workspace \
@@ -502,8 +501,8 @@ http-call:
 		-e CONTENT_TYPE="$(CONTENT_TYPE)" \
 		-e BACKEND_URL="$(BACKEND_URL)" \
 		-e AUTH_TOKEN="$(AUTH_TOKEN)" \
-		-e LOGIN="$(LOGIN)" \
-		-e PASSWORD="$(PASSWORD)" \
+		-e LOGIN="$(or $(LOGIN),$(ADMIN_USER))" \
+		-e PASSWORD="$(or $(PASSWORD),$(ADMIN_PASSWORD))" \
 		gotrs-toolbox:latest \
 		bash -lc 'chmod +x scripts/http-call.sh 2>/dev/null || true; scripts/http-call.sh'
 
@@ -692,6 +691,7 @@ toolbox-test:
 		gotrs-toolbox:latest \
 		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; set -e; \
 		echo Running: ./cmd/goats; go test -buildvcs=false -v ./cmd/goats; \
+		echo Running: ./internal/i18n; go test -buildvcs=false -v ./internal/i18n; \
 		echo Running: ./internal/api focused; go test -buildvcs=false -v ./internal/api -run ^Test\(AdminType\|Queue\|Article\|Search\|Priority\|User\|TicketZoom\|AdminService\|AdminStates\|AdminGroupManagement\|HandleGetQueues\|HandleGetPriorities\|DatabaseIntegrity\); \
 		echo Running: ./internal/service; go test -buildvcs=false -v ./internal/service'
 
@@ -1235,8 +1235,10 @@ test-stack-teardown:
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		exit 0; \
 	fi
-	# Preserve shared volumes (mariadb_data, etc.) to avoid nuking dev/prod data during test runs
-	@$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb -f docker-compose.test.yaml down --remove-orphans >/dev/null 2>&1 || true
+	# Stop only test-specific containers - do NOT use 'down' with docker-compose.yml
+	# as that would bring down the dev/prod stack too
+	@docker stop gotrs-backend-test gotrs-runner-test gotrs-customer-fe-test 2>/dev/null || true
+	@docker rm gotrs-backend-test gotrs-runner-test gotrs-customer-fe-test 2>/dev/null || true
 
 test-up:
 	@printf "🚀 Starting test environment...\n"

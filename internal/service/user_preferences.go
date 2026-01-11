@@ -42,12 +42,13 @@ func (s *UserPreferencesService) GetPreference(userID int, key string) (string, 
 func (s *UserPreferencesService) SetPreference(userID int, key string, value string) error {
 	// First, try to update existing preference
 	updateQuery := `
-		UPDATE user_preferences 
+		UPDATE user_preferences
 		SET preferences_value = ?
 		WHERE user_id = ? AND preferences_key = ?
 	`
 
-	result, err := s.db.Exec(updateQuery, userID, key, []byte(value))
+	// Parameters must match query order: value, userID, key
+	result, err := s.db.Exec(updateQuery, []byte(value), userID, key)
 	if err != nil {
 		return fmt.Errorf("failed to update preference: %w", err)
 	}
@@ -123,6 +124,25 @@ func (s *UserPreferencesService) SetSessionTimeout(userID int, timeout int) erro
 	}
 
 	return s.SetPreference(userID, "SessionTimeout", strconv.Itoa(timeout))
+}
+
+// GetLanguage returns the user's preferred language.
+// Returns empty string if no preference is set (use system detection).
+func (s *UserPreferencesService) GetLanguage(userID int) string {
+	value, err := s.GetPreference(userID, "Language")
+	if err != nil || value == "" {
+		return ""
+	}
+	return value
+}
+
+// SetLanguage sets the user's preferred language.
+func (s *UserPreferencesService) SetLanguage(userID int, lang string) error {
+	if lang == "" {
+		// Empty language means "use system default" - delete the preference
+		return s.DeletePreference(userID, "Language")
+	}
+	return s.SetPreference(userID, "Language", lang)
 }
 
 // GetAllPreferences returns all preferences for a user.

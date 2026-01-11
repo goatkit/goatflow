@@ -14,7 +14,7 @@ func TestLanguageDirectionConstants(t *testing.T) {
 }
 
 func TestSupportedLanguages_RTL(t *testing.T) {
-	// Test that required languages exist
+	// Test that required languages exist in metadata
 	required := []string{"en", "de", "ar", "he", "fa", "es", "fr"}
 	for _, code := range required {
 		if _, exists := SupportedLanguages[code]; !exists {
@@ -33,8 +33,18 @@ func TestSupportedLanguages_RTL(t *testing.T) {
 	if en.Direction != LTR {
 		t.Errorf("en.Direction = %q, want %q", en.Direction, LTR)
 	}
-	if !en.Enabled {
-		t.Error("English should be enabled")
+
+	// English should be enabled (has JSON file)
+	enabledLangs := GetEnabledLanguages()
+	foundEnglish := false
+	for _, lang := range enabledLangs {
+		if lang.Code == "en" {
+			foundEnglish = true
+			break
+		}
+	}
+	if !foundEnglish {
+		t.Error("English should be enabled (en.json must exist)")
 	}
 }
 

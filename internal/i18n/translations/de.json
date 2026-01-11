@@ -207,6 +207,75 @@
           "auto_response_id": "Wählen Sie die zu verwendende Auto-Antwort"
         }
       },
+      "notification_event": {
+        "title": "Ticket-Benachrichtigungen",
+        "singular": "Ticket-Benachrichtigung",
+        "plural": "Ticket-Benachrichtigungen",
+        "description": "Automatische Benachrichtigungen bei Ticket-Ereignissen konfigurieren",
+        "no_notifications": "Noch keine Benachrichtigungsereignisse konfiguriert.",
+        "actions": {
+          "new": "Benachrichtigung hinzufügen"
+        },
+        "create_title": "Ticket-Benachrichtigung hinzufügen",
+        "create_description": "Neue automatische Benachrichtigung für Ticket-Ereignisse erstellen",
+        "edit_title": "Ticket-Benachrichtigung bearbeiten",
+        "edit_description": "Benachrichtigung bearbeiten",
+        "delete_title": "Benachrichtigung löschen",
+        "delete_confirm": "Sind Sie sicher, dass Sie diese Benachrichtigung löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "sections": {
+          "basic": "Grundinformationen",
+          "events": "Ereignisse",
+          "filters": "Ticket-Filter",
+          "recipients": "Empfänger",
+          "message": "Benachrichtigungsnachricht"
+        },
+        "fields": {
+          "name": "Name",
+          "valid_id": "Gültigkeit",
+          "comments": "Kommentar",
+          "create_time": "Erstellt",
+          "change_time": "Geändert"
+        },
+        "help": {
+          "name": "Eindeutiger Name für dieses Benachrichtigungsereignis",
+          "valid_id": "Ob diese Benachrichtigung aktiv ist",
+          "comments": "Interne Notizen zum Zweck dieser Benachrichtigung",
+          "events": "Wählen Sie aus, welche Ereignisse diese Benachrichtigung auslösen.",
+          "filters": "Optional nur für Tickets senden, die diesen Kriterien entsprechen.",
+          "recipients": "Wählen Sie aus, wer diese Benachrichtigung erhält.",
+          "message": "Definieren Sie den Inhalt der Benachrichtigung für jede Sprache."
+        },
+        "placeholders": {
+          "name": "z.B. Ticket erstellt Benachrichtigung",
+          "comments": "Optionale Beschreibung dieser Benachrichtigung",
+          "subject": "Betreffzeile der Benachrichtigung",
+          "body": "Nachrichtentext der Benachrichtigung - Sie können Vorlagenvariablen verwenden"
+        },
+        "filters": {
+          "queue": "Queue",
+          "state": "Status",
+          "priority": "Priorität",
+          "type": "Typ"
+        },
+        "recipients": {
+          "agents": "Bestimmte Agenten",
+          "groups": "Gruppen",
+          "roles": "Rollen",
+          "special": "Besondere Empfänger",
+          "owner": "Ticket-Besitzer",
+          "responsible": "Ticket-Verantwortlicher",
+          "watcher": "Ticket-Beobachter",
+          "customer": "Kunde"
+        },
+        "message": {
+          "subject": "Betreff",
+          "body": "Nachricht",
+          "content_type": "Inhaltstyp"
+        },
+        "template_variables": {
+          "title": "Verfügbare Vorlagenvariablen"
+        }
+      },
       "template": {
         "title": "Antwortvorlagen",
         "description": "Standardantwortvorlagen für Tickets und Kommunikation verwalten",
@@ -859,6 +928,7 @@
     "all_statuses": "Alle Status",
     "not_closed": "Nicht geschlossen",
     "are_you_sure": "Sind Sie sicher?",
+    "back": "Zurück",
     "clear": "Leeren",
     "cancel": "Abbrechen",
     "comments": "Kommentare",
@@ -871,6 +941,7 @@
     "edit": "Bearbeiten",
     "error": "Fehler",
     "info": "Information",
+    "invalid_temporary": "Ungültig (temporär)",
     "loading": "Wird geladen...",
     "modified": "Geändert",
     "modified_by": "Geändert von",
@@ -900,6 +971,8 @@
     "email": "E-Mail",
     "unassigned": "Nicht zugewiesen",
     "update": "Aktualisieren",
+    "valid": "Gültig",
+    "invalid": "Ungültig",
     "view_all": "Alle anzeigen",
     "warning": "Warnung",
     "yes": "Ja"
@@ -1356,6 +1429,7 @@
     "sessions": "Aktive Sitzungen",
     "settings": "Einstellungen",
     "session_timeout_help": "Wählen Sie, wie lange Browser-Sitzungen aktiv bleiben sollen, bevor eine erneute Anmeldung erforderlich ist.",
+    "language_help": "Wählen Sie Ihre bevorzugte Anzeigesprache",
     "theme": "Design",
     "time_format": "Zeitformat",
     "timezone": "Zeitzone",
@@ -1595,6 +1669,12 @@
     "this_week": "Diese Woche",
     "today": "Heute",
     "yesterday": "Gestern",
+    "hour": "Stunde",
+    "hours": "Stunden",
+    "day": "Tag",
+    "days": "Tage",
+    "minute": "Minute",
+    "minutes": "Minuten",
     "formats": {
       "queue_detail": "2. Jan. 2006 um 15:04"
     }
@@ -1609,7 +1689,8 @@
     "preferences": "Einstellungen",
     "profile": "Profil",
     "settings": "Einstellungen",
-    "title": "Berufsbezeichnung",
+    "title": "Anrede",
+    "title_placeholder": "z.B. Herr, Frau, Dr.",
     "username": "Benutzername"
   },
   "validation": {

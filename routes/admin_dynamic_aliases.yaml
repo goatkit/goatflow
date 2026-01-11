@@ -67,59 +67,7 @@ spec:
       handler: handleAdminModuleMailAccounts
       description: "Execute custom mail account action"
 
-    # Notification events module
-    - path: /notification-events
-      method: GET
-      handler: handleAdminModuleNotificationEvents
-      description: "List notification events"
-    - path: /notification-events/export
-      method: GET
-      handler: handleAdminModuleNotificationEvents
-      description: "Export notification events"
-    - path: /notification-events/new
-      method: GET
-      handler: handleAdminModuleNotificationEvents
-      description: "Render notification event creation form"
-    - path: /notification-events/:id
-      method: GET
-      handler: handleAdminModuleNotificationEvents
-      description: "Show notification event details"
-    - path: /notification-events/:id/edit
-      method: GET
-      handler: handleAdminModuleNotificationEvents
-      description: "Render notification event edit form"
-    - path: /notification-events
-      method: POST
-      handler: handleAdminModuleNotificationEvents
-      description: "Create a notification event"
-    - path: /notification-events/:id
-      method: PUT
-      handler: handleAdminModuleNotificationEvents
-      description: "Update a notification event"
-    - path: /notification-events/:id
-      method: POST
-      handler: handleAdminModuleNotificationEvents
-      description: "Update a notification event via form submission"
-    - path: /notification-events/:id
-      method: DELETE
-      handler: handleAdminModuleNotificationEvents
-      description: "Delete a notification event"
-    - path: /notification-events/:id/status
-      method: PUT
-      handler: handleAdminModuleNotificationEvents
-      description: "Toggle notification event status"
-    - path: /notification-events/:id/status
-      method: POST
-      handler: handleAdminModuleNotificationEvents
-      description: "Toggle notification event status via form submission"
-    - path: /notification-events/:id/:action
-      method: GET
-      handler: handleAdminModuleNotificationEvents
-      description: "Execute custom notification event action"
-    - path: /notification-events/:id/:action
-      method: POST
-      handler: handleAdminModuleNotificationEvents
-      description: "Execute custom notification event action"
+    # Notification events - uses custom handler, routes defined in admin.yaml
 
     # Communication channels module
     - path: /communication-channels

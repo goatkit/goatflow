@@ -822,3 +822,43 @@ spec:
       method: DELETE
       handler: handleDeletePostmasterFilter
       description: "Delete a postmaster filter"
+
+    # Notification Events management
+    - path: /notification-events
+      method: GET
+      handler: handleAdminNotificationEvents
+      template: pages/admin/notification_events.pongo2
+      description: "Display notification events management page"
+
+    - path: /notification-events/new
+      method: GET
+      handler: handleAdminNotificationEventNew
+      template: pages/admin/notification_event_form.pongo2
+      description: "Display new notification event form"
+
+    - path: /notification-events/:id
+      method: GET
+      handler: handleAdminNotificationEventEdit
+      template: pages/admin/notification_event_form.pongo2
+      description: "Display notification event edit form"
+
+    # Notification Events API
+    - path: /api/notification-events
+      method: POST
+      handler: handleCreateNotificationEvent
+      description: "Create a new notification event"
+
+    - path: /api/notification-events/:id
+      method: GET
+      handler: handleAdminNotificationEventGet
+      description: "Get notification event details"
+
+    - path: /api/notification-events/:id
+      method: PUT
+      handler: handleUpdateNotificationEvent
+      description: "Update an existing notification event"
+
+    - path: /api/notification-events/:id
+      method: DELETE
+      handler: handleDeleteNotificationEvent
+      description: "Delete a notification event"

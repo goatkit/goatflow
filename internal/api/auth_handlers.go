@@ -93,32 +93,6 @@ var HandleAuthLogin = func(c *gin.Context) {
 	// Explicit provider field is advisory; future: route to single-provider auth path.
 	user, accessToken, refreshToken, err := authService.Login(ctx, username, password)
 	if err != nil {
-		// Fallback: allow env ADMIN_USER/ADMIN_PASSWORD for bootstrap API JSON logins
-		if strings.Contains(contentType, "application/json") {
-			adminUser := strings.TrimSpace(os.Getenv("ADMIN_USER"))
-			adminPass := strings.TrimSpace(os.Getenv("ADMIN_PASSWORD"))
-			isAdminMatch := adminUser != "" && adminPass != "" && password == adminPass &&
-				(username == adminUser || (adminUser == "admin@example.com" && username == "root@localhost"))
-			if isAdminMatch {
-				// Issue minimal token via shared JWT manager
-				jwtm := shared.GetJWTManager()
-				if jwtm == nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "jwt manager unavailable"})
-					return
-				}
-				// Use ID 1 admin role
-				tok, err2 := jwtm.GenerateToken(1, username, "Admin", 0)
-				if err2 != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "token generation failed"})
-					return
-				}
-				c.JSON(http.StatusOK, gin.H{
-					"success": true, "access_token": tok, "token_type": "Bearer",
-					"user": gin.H{"id": 1, "login": username, "role": "Admin"},
-				})
-				return
-			}
-		}
 		if strings.Contains(contentType, "application/json") {
 			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "invalid credentials"})
 			return
