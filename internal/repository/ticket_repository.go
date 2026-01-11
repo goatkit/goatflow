@@ -449,18 +449,15 @@ func (r *TicketRepository) List(req *models.TicketListRequest) (*models.TicketLi
 	// Build filters
 	var filters []string
 	var args []interface{}
-	argCount := 1
 
 	if req.QueueID != nil {
-		filters = append(filters, fmt.Sprintf(" AND t.queue_id = $%d", argCount))
+		filters = append(filters, " AND t.queue_id = ?")
 		args = append(args, *req.QueueID)
-		argCount++
 	}
 
 	if req.StateID != nil {
-		filters = append(filters, fmt.Sprintf(" AND t.ticket_state_id = $%d", argCount))
+		filters = append(filters, " AND t.ticket_state_id = ?")
 		args = append(args, *req.StateID)
-		argCount++
 	}
 
 	if req.ExcludeClosedStates {
@@ -468,43 +465,37 @@ func (r *TicketRepository) List(req *models.TicketListRequest) (*models.TicketLi
 	}
 
 	if req.PriorityID != nil {
-		filters = append(filters, fmt.Sprintf(" AND t.ticket_priority_id = $%d", argCount))
+		filters = append(filters, " AND t.ticket_priority_id = ?")
 		args = append(args, *req.PriorityID)
-		argCount++
 	}
 
 	if req.CustomerID != nil {
-		filters = append(filters, fmt.Sprintf(" AND t.customer_id = $%d", argCount))
+		filters = append(filters, " AND t.customer_id = ?")
 		args = append(args, *req.CustomerID)
-		argCount++
 	}
 
 	if req.OwnerID != nil {
-		filters = append(filters, fmt.Sprintf(" AND t.user_id = $%d", argCount))
+		filters = append(filters, " AND t.user_id = ?")
 		args = append(args, *req.OwnerID)
-		argCount++
 	}
 
 	if req.ArchiveFlag != nil {
-		filters = append(filters, fmt.Sprintf(" AND t.archive_flag = $%d", argCount))
+		filters = append(filters, " AND t.archive_flag = ?")
 		args = append(args, *req.ArchiveFlag)
-		argCount++
 	}
 
 	if req.Search != "" {
-		filters = append(filters, fmt.Sprintf(" AND (LOWER(t.title) LIKE LOWER($%d) OR LOWER(t.tn) LIKE LOWER($%d))", argCount, argCount+1))
+		filters = append(filters, " AND (LOWER(t.title) LIKE LOWER(?) OR LOWER(t.tn) LIKE LOWER(?))")
 		args = append(args, "%"+req.Search+"%", "%"+req.Search+"%")
-		argCount += 2
 	}
 
 	if req.StartDate != nil {
-		filters = append(filters, fmt.Sprintf(" AND t.create_time >= $%d", argCount))
+		filters = append(filters, " AND t.create_time >= ?")
 		args = append(args, *req.StartDate)
-		argCount++
 	}
 
 	if req.EndDate != nil {
-		filters = append(filters, fmt.Sprintf(" AND t.create_time <= $%d", argCount))
+		filters = append(filters, " AND t.create_time <= ?")
 		args = append(args, *req.EndDate)
 	}
 

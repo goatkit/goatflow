@@ -207,8 +207,8 @@ func HandleUpdateUserAPI(c *gin.Context) {
 		return
 	}
 
-	updateQuery := qb.Rebind("UPDATE users SET " + strings.Join(updates, ", ") + " WHERE id = ?")
-	result, err := qb.Exec(updateQuery, args...)
+	updateQuery := database.ConvertPlaceholders("UPDATE users SET " + strings.Join(updates, ", ") + " WHERE id = ?")
+	result, err := qb.DB().Exec(updateQuery, args...)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,

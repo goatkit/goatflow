@@ -26,12 +26,12 @@ func createAdminTestState(t *testing.T, name string) (int, bool) {
 	var id int
 	query := database.ConvertPlaceholders(`
 		INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, 2, $2, 1, NOW(), 1, NOW(), 1)
+		VALUES (?, 2, ?, 1, NOW(), 1, NOW(), 1)
 		RETURNING id`)
 	require.NoError(t, db.QueryRow(query, name, "Admin state test").Scan(&id))
 
 	t.Cleanup(func() {
-		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM ticket_state WHERE id = $1`), id)
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM ticket_state WHERE id = ?`), id)
 	})
 
 	return id, true
@@ -320,7 +320,7 @@ func TestAdminStatesDelete(t *testing.T) {
 		if ok {
 			db, _ := database.GetDB()
 			var validID int
-			_ = db.QueryRow(database.ConvertPlaceholders(`SELECT valid_id FROM ticket_state WHERE id = $1`), stateID).Scan(&validID)
+			_ = db.QueryRow(database.ConvertPlaceholders(`SELECT valid_id FROM ticket_state WHERE id = ?`), stateID).Scan(&validID)
 			assert.Equal(t, 2, validID)
 		}
 	})

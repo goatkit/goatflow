@@ -339,7 +339,7 @@ func loadPreferredQueuesInternal(db *sql.DB, identifiers []string, tableName, id
 	placeholders := make([]string, len(uniqueIDs))
 	args := make([]interface{}, len(uniqueIDs))
 	for i, id := range uniqueIDs {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		placeholders[i] = "?"
 		args[i] = id
 	}
 

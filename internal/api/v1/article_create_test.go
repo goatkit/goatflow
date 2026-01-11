@@ -383,8 +383,8 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 	// Clean up after test
 	t.Cleanup(func() {
-		db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id = $1"), testTicketID)
-		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id = $1"), testTicketID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id = ?"), testTicketID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id = ?"), testTicketID)
 	})
 
 	tests := []struct {

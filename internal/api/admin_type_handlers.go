@@ -73,10 +73,9 @@ func handleAdminTypes(c *gin.Context) {
 	`
 
 	var args []interface{}
-	argCount := 1
 
 	if search != "" {
-		query += fmt.Sprintf(" WHERE LOWER(t.name) LIKE LOWER($%d)", argCount)
+		query += " WHERE LOWER(t.name) LIKE LOWER(?)"
 		args = append(args, "%"+search+"%")
 	}
 
@@ -309,24 +308,21 @@ func handleAdminTypeUpdate(c *gin.Context) {
 		return
 	}
 
-	// Build update query
+	// Build update query using ? placeholders
 	query := "UPDATE ticket_type SET change_by = 1, change_time = CURRENT_TIMESTAMP"
 	args := []interface{}{}
-	argPos := 1
 
 	if input.Name != "" {
-		query += fmt.Sprintf(", name = $%d", argPos)
+		query += ", name = ?"
 		args = append(args, input.Name)
-		argPos++
 	}
 
 	if input.ValidID != nil {
-		query += fmt.Sprintf(", valid_id = $%d", argPos)
+		query += ", valid_id = ?"
 		args = append(args, *input.ValidID)
-		argPos++
 	}
 
-	query += fmt.Sprintf(" WHERE id = $%d", argPos)
+	query += " WHERE id = ?"
 	args = append(args, id)
 
 	// Update the type

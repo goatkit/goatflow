@@ -147,11 +147,11 @@ func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
 		login := "bugtest_remove_all_groups@example.com"
 		_, _ = db.Exec(database.ConvertPlaceholders(`
             INSERT INTO users (login, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-            SELECT $1, 'Bug', 'User', 1, NOW(), 1, NOW(), 1
-            WHERE NOT EXISTS (SELECT 1 FROM users WHERE login = $1)`), login)
+            SELECT ?, 'Bug', 'User', 1, NOW(), 1, NOW(), 1
+            WHERE NOT EXISTS (SELECT 1 FROM users WHERE login = ?)`), login)
 
 		var testUserID int
-		err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM users WHERE login = $1"), login).Scan(&testUserID)
+		err := db.QueryRow(database.ConvertPlaceholders("SELECT id FROM users WHERE login = ?"), login).Scan(&testUserID)
 		if err != nil {
 			t.Skipf("Database not seeded or users table missing; skipping integration test: %v", err)
 		}
@@ -160,12 +160,12 @@ func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
 		// Cross-DB compatible upsert: insert only if not exists
 		_, err = db.Exec(database.ConvertPlaceholders(`
             INSERT INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
-            SELECT $1, g.id, 'rw', NOW(), 1, NOW(), 1
+            SELECT ?, g.id, 'rw', NOW(), 1, NOW(), 1
             FROM groups g 
             WHERE g.name = 'support' AND g.valid_id = 1
               AND NOT EXISTS (
                 SELECT 1 FROM group_user gu 
-                WHERE gu.user_id = $1 AND gu.group_id = g.id AND gu.permission_key = 'rw'
+                WHERE gu.user_id = ? AND gu.group_id = g.id AND gu.permission_key = 'rw'
               )`), testUserID)
 		if err != nil {
 			t.Skipf("support group missing; skipping integration test: %v", err)
@@ -173,7 +173,7 @@ func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
 
 		// Verify user has groups
 		var groupCount int
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM group_user WHERE user_id = $1"), testUserID).Scan(&groupCount)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM group_user WHERE user_id = ?"), testUserID).Scan(&groupCount)
 		if err != nil {
 			t.Skipf("Database not seeded; skipping integration test (count query failed): %v", err)
 		}
@@ -207,7 +207,7 @@ func TestNoWayToRemoveUserFromAllGroups(t *testing.T) {
 
 		// ASSERT: User should have no groups after update
 		var finalGroupCount int
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM group_user WHERE user_id = $1"), testUserID).Scan(&finalGroupCount)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM group_user WHERE user_id = ?"), testUserID).Scan(&finalGroupCount)
 		require.NoError(t, err)
 
 		assert.Equal(t, 0, finalGroupCount, "User should have 0 groups after sending empty groups array")

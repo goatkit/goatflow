@@ -58,8 +58,8 @@ func TestSLAAPI(t *testing.T) {
 				update_time, update_notify, solution_time, solution_notify,
 				valid_id, create_time, create_by, change_time, change_by)
 			VALUES 
-				($1, NULL, 60, 50, 120, 100, 480, 400, 1, NOW(), 1, NOW(), 1),
-				($2, NULL, 30, 25, 60, 50, 240, 200, 1, NOW(), 1, NOW(), 1)
+				(?, NULL, 60, 50, 120, 100, 480, 400, 1, NOW(), 1, NOW(), 1),
+				(?, NULL, 30, 25, 60, 50, 240, 200, 1, NOW(), 1, NOW(), 1)
 		`)
 		_, err := db.Exec(slaQuery, "Premium SLA", "Standard SLA")
 		require.NoError(t, err)
@@ -308,7 +308,7 @@ func TestSLAAPI(t *testing.T) {
 		// Verify soft delete
 		var validID int
 		checkQuery := database.ConvertPlaceholders(`
-			SELECT valid_id FROM sla WHERE id = $1
+			SELECT valid_id FROM sla WHERE id = ?
 		`)
 		err := db.QueryRow(checkQuery, slaID).Scan(&validID)
 		require.NoError(t, err)
@@ -509,8 +509,8 @@ func insertTestSLA(t *testing.T, db *sql.DB, params insertSLAParams) int {
 			solution_time, solution_notify,
 			valid_id, create_time, create_by, change_time, change_by
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8,
-			$9, NOW(), $10, NOW(), $11
+			?, ?, ?, ?, ?, ?, ?, ?,
+			?, NOW(), ?0, NOW(), ?1
 		) RETURNING id
 	`)
 

@@ -45,9 +45,9 @@ func TestSearchAPI(t *testing.T) {
 			ticket_priority_id, customer_user_id, user_id, responsible_user_id,
 			create_time, create_by, change_time, change_by)
 		VALUES 
-			($1, 'Network connectivity issue', 1, 1, 1, 3, 'customer1@example.com', 1, 1, NOW(), 1, NOW(), 1),
-			($2, 'Email server problem', 1, 1, 1, 2, 'customer2@example.com', 1, 1, NOW(), 1, NOW(), 1),
-			($3, 'Password reset request', 2, 1, 2, 3, 'customer3@example.com', 1, 1, NOW(), 1, NOW(), 1)
+			(?, 'Network connectivity issue', 1, 1, 1, 3, 'customer1@example.com', 1, 1, NOW(), 1, NOW(), 1),
+			(?, 'Email server problem', 1, 1, 1, 2, 'customer2@example.com', 1, 1, NOW(), 1, NOW(), 1),
+			(?, 'Password reset request', 2, 1, 2, 3, 'customer3@example.com', 1, 1, NOW(), 1, NOW(), 1)
 	`, ticketTypeColumn))
 	db.Exec(ticketQuery, "2024123100001", "2024123100002", "2024123100003")
 

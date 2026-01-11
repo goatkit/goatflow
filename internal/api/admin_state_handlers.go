@@ -114,17 +114,15 @@ func handleAdminStates(c *gin.Context) {
 	`
 
 	var args []interface{}
-	argCount := 1
 
 	if searchQuery != "" {
-		query += fmt.Sprintf(" AND (LOWER(s.name) LIKE $%d OR LOWER(s.comments) LIKE $%d)", argCount, argCount+1)
+		query += " AND (LOWER(s.name) LIKE ? OR LOWER(s.comments) LIKE ?)"
 		searchPattern := "%" + strings.ToLower(searchQuery) + "%"
 		args = append(args, searchPattern, searchPattern)
-		argCount += 2
 	}
 
 	if typeFilter != "" {
-		query += fmt.Sprintf(" AND s.type_id = $%d", argCount)
+		query += " AND s.type_id = ?"
 		args = append(args, typeFilter)
 	}
 
@@ -381,33 +379,28 @@ func handleAdminStateUpdate(c *gin.Context) {
 	// Build update query dynamically
 	query := `UPDATE ticket_state SET change_by = 1, change_time = CURRENT_TIMESTAMP`
 	var args []interface{}
-	argCount := 1
 
 	if input.Name != "" {
-		query += fmt.Sprintf(", name = $%d", argCount)
+		query += ", name = ?"
 		args = append(args, input.Name)
-		argCount++
 	}
 
 	if input.TypeID != nil {
-		query += fmt.Sprintf(", type_id = $%d", argCount)
+		query += ", type_id = ?"
 		args = append(args, *input.TypeID)
-		argCount++
 	}
 
 	if input.Comments != nil {
-		query += fmt.Sprintf(", comments = $%d", argCount)
+		query += ", comments = ?"
 		args = append(args, *input.Comments)
-		argCount++
 	}
 
 	if input.ValidID != nil {
-		query += fmt.Sprintf(", valid_id = $%d", argCount)
+		query += ", valid_id = ?"
 		args = append(args, *input.ValidID)
-		argCount++
 	}
 
-	query += fmt.Sprintf(" WHERE id = $%d", argCount)
+	query += " WHERE id = ?"
 	args = append(args, id)
 
 	result, err := db.Exec(database.ConvertPlaceholders(query), args...)

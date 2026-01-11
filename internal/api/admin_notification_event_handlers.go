@@ -135,7 +135,7 @@ func loadNotificationEventByID(ctx context.Context, db *sql.DB, id int) (*Notifi
 	query := database.ConvertPlaceholders(`
 		SELECT id, name, valid_id, COALESCE(comments, ''), create_time, create_by, change_time, change_by
 		FROM notification_event
-		WHERE id = $1`)
+		WHERE id = ?`)
 
 	var e NotificationEventFull
 	err := db.QueryRowContext(ctx, query, id).Scan(
@@ -152,7 +152,7 @@ func loadNotificationEventByID(ctx context.Context, db *sql.DB, id int) (*Notifi
 	itemQuery := database.ConvertPlaceholders(`
 		SELECT event_key, event_value
 		FROM notification_event_item
-		WHERE notification_id = $1`)
+		WHERE notification_id = ?`)
 
 	itemRows, err := db.QueryContext(ctx, itemQuery, id)
 	if err == nil {
@@ -179,7 +179,7 @@ func loadNotificationEventByID(ctx context.Context, db *sql.DB, id int) (*Notifi
 	msgQuery := database.ConvertPlaceholders(`
 		SELECT id, notification_id, subject, text, content_type, language
 		FROM notification_event_message
-		WHERE notification_id = $1`)
+		WHERE notification_id = ?`)
 
 	msgRows, err := db.QueryContext(ctx, msgQuery, id)
 	if err == nil {
@@ -469,7 +469,7 @@ func HandleCreateNotificationEvent(c *gin.Context) {
 	// Insert notification_event
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO notification_event (name, valid_id, comments, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`)
 
 	result, err := tx.ExecContext(ctx, insertQuery, input.Name, input.ValidID, input.Comments, now, userID, now, userID)
 	if err != nil {
@@ -486,7 +486,7 @@ func HandleCreateNotificationEvent(c *gin.Context) {
 	// Insert event items (events, filters, recipients)
 	itemQuery := database.ConvertPlaceholders(`
 		INSERT INTO notification_event_item (notification_id, event_key, event_value)
-		VALUES ($1, $2, $3)`)
+		VALUES (?, ?, ?)`)
 
 	// Insert events
 	for _, event := range input.Events {
@@ -519,7 +519,7 @@ func HandleCreateNotificationEvent(c *gin.Context) {
 	// Insert messages
 	msgQuery := database.ConvertPlaceholders(`
 		INSERT INTO notification_event_message (notification_id, subject, text, content_type, language)
-		VALUES ($1, $2, $3, $4, $5)`)
+		VALUES (?, ?, ?, ?, ?)`)
 
 	for lang, msg := range input.Messages {
 		contentType := msg.ContentType
@@ -582,8 +582,8 @@ func HandleUpdateNotificationEvent(c *gin.Context) {
 	// Update notification_event
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE notification_event
-		SET name = $1, valid_id = $2, comments = $3, change_time = $4, change_by = $5
-		WHERE id = $6`)
+		SET name = ?, valid_id = ?, comments = ?, change_time = ?, change_by = ?
+		WHERE id = ?`)
 
 	result, err := tx.ExecContext(ctx, updateQuery, input.Name, input.ValidID, input.Comments, now, userID, id)
 	if err != nil {
@@ -598,14 +598,14 @@ func HandleUpdateNotificationEvent(c *gin.Context) {
 	}
 
 	// Delete existing items
-	deleteItemsQuery := database.ConvertPlaceholders(`DELETE FROM notification_event_item WHERE notification_id = $1`)
+	deleteItemsQuery := database.ConvertPlaceholders(`DELETE FROM notification_event_item WHERE notification_id = ?`)
 	if _, err := tx.ExecContext(ctx, deleteItemsQuery, id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to clear existing items"})
 		return
 	}
 
 	// Delete existing messages
-	deleteMsgsQuery := database.ConvertPlaceholders(`DELETE FROM notification_event_message WHERE notification_id = $1`)
+	deleteMsgsQuery := database.ConvertPlaceholders(`DELETE FROM notification_event_message WHERE notification_id = ?`)
 	if _, err := tx.ExecContext(ctx, deleteMsgsQuery, id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to clear existing messages"})
 		return
@@ -614,7 +614,7 @@ func HandleUpdateNotificationEvent(c *gin.Context) {
 	// Re-insert items
 	itemQuery := database.ConvertPlaceholders(`
 		INSERT INTO notification_event_item (notification_id, event_key, event_value)
-		VALUES ($1, $2, $3)`)
+		VALUES (?, ?, ?)`)
 
 	for _, event := range input.Events {
 		if _, err := tx.ExecContext(ctx, itemQuery, id, "Events", event); err != nil {
@@ -644,7 +644,7 @@ func HandleUpdateNotificationEvent(c *gin.Context) {
 	// Re-insert messages
 	msgQuery := database.ConvertPlaceholders(`
 		INSERT INTO notification_event_message (notification_id, subject, text, content_type, language)
-		VALUES ($1, $2, $3, $4, $5)`)
+		VALUES (?, ?, ?, ?, ?)`)
 
 	for lang, msg := range input.Messages {
 		contentType := msg.ContentType
@@ -691,21 +691,21 @@ func HandleDeleteNotificationEvent(c *gin.Context) {
 	defer tx.Rollback()
 
 	// Delete messages first (foreign key constraint)
-	deleteMsgsQuery := database.ConvertPlaceholders(`DELETE FROM notification_event_message WHERE notification_id = $1`)
+	deleteMsgsQuery := database.ConvertPlaceholders(`DELETE FROM notification_event_message WHERE notification_id = ?`)
 	if _, err := tx.ExecContext(ctx, deleteMsgsQuery, id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete messages"})
 		return
 	}
 
 	// Delete items
-	deleteItemsQuery := database.ConvertPlaceholders(`DELETE FROM notification_event_item WHERE notification_id = $1`)
+	deleteItemsQuery := database.ConvertPlaceholders(`DELETE FROM notification_event_item WHERE notification_id = ?`)
 	if _, err := tx.ExecContext(ctx, deleteItemsQuery, id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete items"})
 		return
 	}
 
 	// Delete notification
-	deleteQuery := database.ConvertPlaceholders(`DELETE FROM notification_event WHERE id = $1`)
+	deleteQuery := database.ConvertPlaceholders(`DELETE FROM notification_event WHERE id = ?`)
 	result, err := tx.ExecContext(ctx, deleteQuery, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete notification"})

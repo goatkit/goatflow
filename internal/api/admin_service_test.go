@@ -47,7 +47,7 @@ func createAdminTestService(t *testing.T, name string) (int, bool) {
 	var id int
 	query := database.ConvertPlaceholders(`
 		INSERT INTO service (name, comments, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, 1, NOW(), 1, NOW(), 1)
+		VALUES (?, ?, 1, NOW(), 1, NOW(), 1)
 		RETURNING id`)
 	err = db.QueryRow(query, name, "Admin service test").Scan(&id)
 	if err != nil {
@@ -55,7 +55,7 @@ func createAdminTestService(t *testing.T, name string) (int, bool) {
 	}
 
 	t.Cleanup(func() {
-		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM service WHERE id = $1`), id)
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM service WHERE id = ?`), id)
 	})
 
 	return id, true
@@ -67,7 +67,7 @@ func cleanupTestServiceByName(t *testing.T, name string) {
 	if err != nil || db == nil {
 		return
 	}
-	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM service WHERE name = $1`), name)
+	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM service WHERE name = ?`), name)
 }
 
 func TestAdminServicePage(t *testing.T) {
@@ -441,7 +441,7 @@ func TestAdminServiceUpdate(t *testing.T) {
 
 		// Verify service was deactivated
 		var validID int
-		_ = db.QueryRow(database.ConvertPlaceholders(`SELECT valid_id FROM service WHERE id = $1`), serviceID).Scan(&validID)
+		_ = db.QueryRow(database.ConvertPlaceholders(`SELECT valid_id FROM service WHERE id = ?`), serviceID).Scan(&validID)
 		assert.Equal(t, 2, validID)
 	})
 }
@@ -480,7 +480,7 @@ func TestAdminServiceDelete(t *testing.T) {
 
 		// Verify soft delete (valid_id = 2)
 		var validID int
-		_ = db.QueryRow(database.ConvertPlaceholders(`SELECT valid_id FROM service WHERE id = $1`), serviceID).Scan(&validID)
+		_ = db.QueryRow(database.ConvertPlaceholders(`SELECT valid_id FROM service WHERE id = ?`), serviceID).Scan(&validID)
 		assert.Equal(t, 2, validID)
 	})
 
@@ -579,7 +579,7 @@ func TestAdminServiceWithDBIntegration(t *testing.T) {
 
 		// Verify service exists in database
 		var foundName string
-		err := db.QueryRow(database.ConvertPlaceholders(`SELECT name FROM service WHERE id = $1`), serviceID).Scan(&foundName)
+		err := db.QueryRow(database.ConvertPlaceholders(`SELECT name FROM service WHERE id = ?`), serviceID).Scan(&foundName)
 		require.NoError(t, err, "should find service in database")
 		assert.Equal(t, testName, foundName, "service name should match")
 
@@ -622,7 +622,7 @@ func TestAdminServiceWithDBIntegration(t *testing.T) {
 
 		// Get the ID from response or query DB
 		var serviceID int
-		err := db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM service WHERE name = $1`), testName).Scan(&serviceID)
+		err := db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM service WHERE name = ?`), testName).Scan(&serviceID)
 		require.NoError(t, err)
 
 		// Update
@@ -642,7 +642,7 @@ func TestAdminServiceWithDBIntegration(t *testing.T) {
 
 		// Verify update in DB
 		var updatedName string
-		err = db.QueryRow(database.ConvertPlaceholders(`SELECT name FROM service WHERE id = $1`), serviceID).Scan(&updatedName)
+		err = db.QueryRow(database.ConvertPlaceholders(`SELECT name FROM service WHERE id = ?`), serviceID).Scan(&updatedName)
 		require.NoError(t, err)
 		assert.Equal(t, testName+"_updated", updatedName)
 
@@ -658,7 +658,7 @@ func TestAdminServiceWithDBIntegration(t *testing.T) {
 
 		// Verify soft delete
 		var validID int
-		err = db.QueryRow(database.ConvertPlaceholders(`SELECT valid_id FROM service WHERE id = $1`), serviceID).Scan(&validID)
+		err = db.QueryRow(database.ConvertPlaceholders(`SELECT valid_id FROM service WHERE id = ?`), serviceID).Scan(&validID)
 		require.NoError(t, err)
 		assert.Equal(t, 2, validID, "Service should be soft deleted (valid_id = 2)")
 	})

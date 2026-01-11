@@ -148,7 +148,7 @@ func handleNewTicket(c *gin.Context) {
 	if userMap, ok := getUserMapForTemplate(c)["ID"]; ok {
 		if db != nil {
 			var cnt int
-			row := db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM group_user ug JOIN groups g ON ug.group_id = g.id WHERE ug.user_id = $1 AND g.name = 'admin'`), userMap)
+			row := db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM group_user ug JOIN groups g ON ug.group_id = g.id WHERE ug.user_id = ? AND g.name = 'admin'`), userMap)
 			_ = row.Scan(&cnt) //nolint:errcheck // Defaults to 0
 			if cnt > 0 {
 				isInAdminGroup = true

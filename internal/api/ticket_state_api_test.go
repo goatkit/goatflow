@@ -112,7 +112,7 @@ func TestTicketStateAPI(t *testing.T) {
 		var stateID int
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_state (name, type_id, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, 1, NOW(), 1, NOW(), 1)
+			VALUES (?, 1, 1, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
 		if err := db.QueryRow(query, stateName).Scan(&stateID); err != nil {
@@ -213,7 +213,7 @@ func TestTicketStateAPI(t *testing.T) {
 		var stateID int
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_state (name, type_id, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, 1, NOW(), 1, NOW(), 1)
+			VALUES (?, 1, 1, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
 		if err := db.QueryRow(query, stateName).Scan(&stateID); err != nil {
@@ -274,7 +274,7 @@ func TestTicketStateAPI(t *testing.T) {
 		var stateID int
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_state (name, type_id, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, 1, NOW(), 1, NOW(), 1)
+			VALUES (?, 1, 1, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
 		if err := db.QueryRow(query, stateName).Scan(&stateID); err != nil {
@@ -293,7 +293,7 @@ func TestTicketStateAPI(t *testing.T) {
 		// Verify soft delete
 		var validID int
 		checkQuery := database.ConvertPlaceholders(`
-			SELECT valid_id FROM ticket_state WHERE id = $1
+			SELECT valid_id FROM ticket_state WHERE id = ?
 		`)
 		db.QueryRow(checkQuery, stateID).Scan(&validID)
 		assert.Equal(t, 2, validID)
@@ -333,9 +333,9 @@ func TestTicketStateAPI(t *testing.T) {
 				ticket_priority_id, customer_user_id, user_id, responsible_user_id,
 				create_time, create_by, change_time, change_by)
 			VALUES 
-				($1, 'Test 1', 1, 1, 1, 3, 'cust1@example.com', 1, 1, NOW(), 1, NOW(), 1),
-				($2, 'Test 2', 1, 1, 1, 3, 'cust2@example.com', 1, 1, NOW(), 1, NOW(), 1),
-				($3, 'Test 3', 1, 1, 2, 3, 'cust3@example.com', 1, 1, NOW(), 1, NOW(), 1)
+				(?, 'Test 1', 1, 1, 1, 3, 'cust1@example.com', 1, 1, NOW(), 1, NOW(), 1),
+				(?, 'Test 2', 1, 1, 1, 3, 'cust2@example.com', 1, 1, NOW(), 1, NOW(), 1),
+				(?, 'Test 3', 1, 1, 2, 3, 'cust3@example.com', 1, 1, NOW(), 1, NOW(), 1)
 		`, ticketTypeColumn))
 		if _, err := db.Exec(ticketQuery, "2024123100010", "2024123100011", "2024123100012"); err != nil {
 			t.Skipf("Failed to insert tickets for statistics: %v", err)

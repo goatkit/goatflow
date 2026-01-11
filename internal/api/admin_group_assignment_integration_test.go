@@ -32,19 +32,19 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 	aggregateQuery := func() string {
 		if database.IsMySQL() {
 			return `
-				SELECT GROUP_CONCAT(g.name SEPARATOR ', ') as groups 
-				FROM users u 
-				LEFT JOIN group_user gu ON u.id = gu.user_id 
-				LEFT JOIN groups g ON gu.group_id = g.id 
-				WHERE u.login = $1 
+				SELECT GROUP_CONCAT(g.name SEPARATOR ', ') as groups
+				FROM users u
+				LEFT JOIN group_user gu ON u.id = gu.user_id
+				LEFT JOIN groups g ON gu.group_id = g.id
+				WHERE u.login = ?
 				GROUP BY u.id, u.login, u.first_name, u.last_name`
 		}
 		return `
-			SELECT string_agg(g.name, ', ') as groups 
-			FROM users u 
-			LEFT JOIN group_user gu ON u.id = gu.user_id 
-			LEFT JOIN groups g ON gu.group_id = g.id 
-			WHERE u.login = $1 
+			SELECT string_agg(g.name, ', ') as groups
+			FROM users u
+			LEFT JOIN group_user gu ON u.id = gu.user_id
+			LEFT JOIN groups g ON gu.group_id = g.id
+			WHERE u.login = ?
 			GROUP BY u.id, u.login, u.first_name, u.last_name`
 	}
 
@@ -88,7 +88,7 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 		if testUsername == "" {
 			testUsername = "testuser"
 		}
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM users WHERE login = $1"), testUsername).Scan(&testUserID)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM users WHERE login = ?"), testUsername).Scan(&testUserID)
 		if err != nil {
 			t.Skip("Test user not found")
 		}
@@ -137,7 +137,7 @@ func TestRealGroupAssignmentIssue(t *testing.T) {
 		if testUsernameLocal == "" {
 			testUsernameLocal = "testuser"
 		}
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT id, login, first_name, last_name FROM users WHERE login = $1"), testUsernameLocal).Scan(&testUserID, &login, &firstName, &lastName)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT id, login, first_name, last_name FROM users WHERE login = ?"), testUsernameLocal).Scan(&testUserID, &login, &firstName, &lastName)
 		if err != nil {
 			t.Skip("Test user not found")
 		}
@@ -231,7 +231,7 @@ func ensureTestUserWithGroups(t *testing.T, db *sql.DB, config TestConfig) {
 }
 
 func findUserAnyStatus(db *sql.DB, login string) (*models.User, error) {
-	query := database.ConvertPlaceholders("SELECT id, valid_id FROM users WHERE login = $1 LIMIT 1")
+	query := database.ConvertPlaceholders("SELECT id, valid_id FROM users WHERE login = ? LIMIT 1")
 	var id int64
 	var validID int
 	err := db.QueryRow(query, login).Scan(&id, &validID)
@@ -261,7 +261,7 @@ func isDuplicateKeyError(err error) bool {
 func ensureGroupExists(t *testing.T, db *sql.DB, groupRepo *repository.GroupSQLRepository, name string) uint {
 	t.Helper()
 
-	query := database.ConvertPlaceholders("SELECT id FROM groups WHERE name = $1")
+	query := database.ConvertPlaceholders("SELECT id FROM groups WHERE name = ?")
 	var existingID uint64
 	err := db.QueryRow(query, name).Scan(&existingID)
 	if err == nil {

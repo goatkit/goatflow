@@ -58,7 +58,7 @@ func TestCreateState(t *testing.T) {
 	testName := "test_state_" + time.Now().Format("150405")
 
 	defer func() {
-		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_state WHERE name = $1"), testName)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_state WHERE name = ?"), testName)
 	}()
 
 	t.Run("successful create state", func(t *testing.T) {
@@ -86,7 +86,7 @@ func TestCreateState(t *testing.T) {
 		assert.NotNil(t, data["id"])
 
 		var dbName string
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE name = $1"), testName).Scan(&dbName)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE name = ?"), testName).Scan(&dbName)
 		require.NoError(t, err)
 		assert.Equal(t, testName, dbName)
 	})
@@ -134,13 +134,13 @@ func TestUpdateState(t *testing.T) {
 	} else {
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 2, 'Test comments', 1, NOW(), 1, NOW(), 1) RETURNING id
+			VALUES (?, 2, 'Test comments', 1, NOW(), 1, NOW(), 1) RETURNING id
 		`), testName).Scan(&testID)
 		require.NoError(t, err)
 	}
 
 	defer func() {
-		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_state WHERE id = $1"), testID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_state WHERE id = ?"), testID)
 	}()
 
 	t.Run("successful update state", func(t *testing.T) {
@@ -164,7 +164,7 @@ func TestUpdateState(t *testing.T) {
 		assert.True(t, response["success"].(bool))
 
 		var dbName string
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1"), testID).Scan(&dbName)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = ?"), testID).Scan(&dbName)
 		require.NoError(t, err)
 		assert.Equal(t, updatedName, dbName)
 	})
@@ -228,13 +228,13 @@ func TestDeleteState(t *testing.T) {
 	} else {
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO ticket_state (name, type_id, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 2, 'To be deleted', 1, NOW(), 1, NOW(), 1) RETURNING id
+			VALUES (?, 2, 'To be deleted', 1, NOW(), 1, NOW(), 1) RETURNING id
 		`), testName).Scan(&testID)
 		require.NoError(t, err)
 	}
 
 	defer func() {
-		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_state WHERE id = $1"), testID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_state WHERE id = ?"), testID)
 	}()
 
 	t.Run("successful delete state (soft delete)", func(t *testing.T) {
@@ -251,7 +251,7 @@ func TestDeleteState(t *testing.T) {
 		assert.Equal(t, "State deleted successfully", response["message"])
 
 		var validID int
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT valid_id FROM ticket_state WHERE id = $1"), testID).Scan(&validID)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT valid_id FROM ticket_state WHERE id = ?"), testID).Scan(&validID)
 		require.NoError(t, err)
 		assert.Equal(t, 2, validID)
 	})

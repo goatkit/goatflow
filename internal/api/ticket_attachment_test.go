@@ -47,7 +47,7 @@ func createTestTicketWithAttachment(t *testing.T, db *sql.DB) (ticketID int, art
 	// Create a test article for the ticket
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer, create_time, create_by, change_time, change_by)
-		VALUES ($1, 1, 1, 1, NOW(), 1, NOW(), 1)
+		VALUES (?, 1, 1, 1, NOW(), 1, NOW(), 1)
 	`), ticketID)
 	if err != nil {
 		return 0, 0, 0, err
@@ -58,7 +58,7 @@ func createTestTicketWithAttachment(t *testing.T, db *sql.DB) (ticketID int, art
 	// Create a test attachment
 	result, err = db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO article_data_mime_attachment (article_id, filename, content_size, content_type, disposition, content, create_time, create_by, change_time, change_by)
-		VALUES ($1, 'existing_test.txt', '20', 'text/plain', 'attachment', 'Existing test content', NOW(), 1, NOW(), 1)
+		VALUES (?, 'existing_test.txt', '20', 'text/plain', 'attachment', 'Existing test content', NOW(), 1, NOW(), 1)
 	`), articleID)
 	if err != nil {
 		return ticketID, articleID, 0, err
@@ -121,7 +121,7 @@ func setupAttachmentTestDB(t *testing.T) (ticketID int, articleID int, attachmen
 	// Create a test article for the ticket
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id, is_visible_for_customer, create_time, create_by, change_time, change_by)
-		VALUES ($1, 1, 1, 1, NOW(), 1, NOW(), 1)
+		VALUES (?, 1, 1, 1, NOW(), 1, NOW(), 1)
 	`), ticketID)
 	require.NoError(t, err, "Failed to create test article")
 	artID, _ := result.LastInsertId()
@@ -130,7 +130,7 @@ func setupAttachmentTestDB(t *testing.T) (ticketID int, articleID int, attachmen
 	// Create a test attachment
 	result, err = db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO article_data_mime_attachment (article_id, filename, content_size, content_type, disposition, content, create_time, create_by, change_time, change_by)
-		VALUES ($1, 'existing_test.txt', '20', 'text/plain', 'attachment', 'Existing test content', NOW(), 1, NOW(), 1)
+		VALUES (?, 'existing_test.txt', '20', 'text/plain', 'attachment', 'Existing test content', NOW(), 1, NOW(), 1)
 	`), articleID)
 	require.NoError(t, err, "Failed to create test attachment")
 	attID, _ := result.LastInsertId()
@@ -138,8 +138,8 @@ func setupAttachmentTestDB(t *testing.T) (ticketID int, articleID int, attachmen
 
 	// Cleanup function to remove test data
 	cleanup = func() {
-		db.Exec(database.ConvertPlaceholders(`DELETE FROM article_data_mime_attachment WHERE article_id = $1`), articleID)
-		db.Exec(database.ConvertPlaceholders(`DELETE FROM article WHERE id = $1`), articleID)
+		db.Exec(database.ConvertPlaceholders(`DELETE FROM article_data_mime_attachment WHERE article_id = ?`), articleID)
+		db.Exec(database.ConvertPlaceholders(`DELETE FROM article WHERE id = ?`), articleID)
 		// Don't call ResetDB() as it closes the shared connection and breaks other tests
 	}
 
@@ -170,8 +170,8 @@ func TestUploadAttachment(t *testing.T) {
 	// Cleanup
 	defer func() {
 		delete(attachmentsByTicket, ticketID)
-		db.Exec(database.ConvertPlaceholders(`DELETE FROM article_data_mime_attachment WHERE article_id = $1`), articleID)
-		db.Exec(database.ConvertPlaceholders(`DELETE FROM article WHERE id = $1`), articleID)
+		db.Exec(database.ConvertPlaceholders(`DELETE FROM article_data_mime_attachment WHERE article_id = ?`), articleID)
+		db.Exec(database.ConvertPlaceholders(`DELETE FROM article WHERE id = ?`), articleID)
 	}()
 
 	tests := []struct {

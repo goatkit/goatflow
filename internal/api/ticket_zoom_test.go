@@ -345,7 +345,7 @@ func TestTicketNoteWithAttachment(t *testing.T) {
 			err := db.QueryRow(database.ConvertPlaceholders(`
 				SELECT a.id FROM article a
 				JOIN ticket t ON a.ticket_id = t.id
-				WHERE t.id = $1
+				WHERE t.id = ?
 				ORDER BY a.id DESC LIMIT 1
 			`), seedID).Scan(&articleID)
 
@@ -354,7 +354,7 @@ func TestTicketNoteWithAttachment(t *testing.T) {
 				var attachCount int
 				db.QueryRow(database.ConvertPlaceholders(`
 					SELECT COUNT(*) FROM article_data_mime_attachment
-					WHERE article_id = $1
+					WHERE article_id = ?
 				`), articleID).Scan(&attachCount)
 
 				if attachCount > 0 {
