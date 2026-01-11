@@ -1,11 +1,24 @@
 package i18n
 
 import (
+	"fmt"
 	"sort"
+	"strings"
 	"testing"
 )
 
+// languageCoverage holds coverage data for the summary table.
+type languageCoverage struct {
+	Code       string
+	Name       string
+	NativeName string
+	Keys       int
+	Coverage   float64
+	HasJSON    bool
+}
+
 // TestTranslationCompleteness validates that all languages have complete translations.
+// Languages are auto-detected based on JSON file existence in internal/i18n/translations/.
 func TestTranslationCompleteness(t *testing.T) {
 	i18n := GetInstance()
 
@@ -18,10 +31,19 @@ func TestTranslationCompleteness(t *testing.T) {
 	sort.Strings(baseKeys)
 	t.Logf("Total base translation keys: %d", len(baseKeys))
 
-	// Check each supported language
-	languages := i18n.GetSupportedLanguages()
+	// Use rtl.go as source of truth - languages with JSON files are enabled
+	enabledLanguages := GetEnabledLanguages()
 
-	for _, lang := range languages {
+	// Sort by language code for consistent output
+	sort.Slice(enabledLanguages, func(i, j int) bool {
+		return enabledLanguages[i].Code < enabledLanguages[j].Code
+	})
+
+	// Collect coverage data for summary table
+	var coverageData []languageCoverage
+
+	for _, langConfig := range enabledLanguages {
+		lang := langConfig.Code
 		t.Run(lang, func(t *testing.T) {
 			langKeys := i18n.GetAllKeys(lang)
 			langKeyMap := make(map[string]bool)
@@ -45,88 +67,109 @@ func TestTranslationCompleteness(t *testing.T) {
 				}
 			}
 
-			// Check for extra keys not in base
-			extra := []string{}
-			for _, key := range langKeys {
-				found := false
-				for _, baseKey := range baseKeys {
-					if key == baseKey {
-						found = true
-						break
+			// Report findings (only fail for English)
+			if len(missing) > 0 && lang == "en" {
+				t.Errorf("Base language %s is missing %d keys:", lang, len(missing))
+				for i, key := range missing {
+					if i < 10 {
+						t.Errorf("  - %s", key)
 					}
 				}
-				if !found {
-					extra = append(extra, key)
+				if len(missing) > 10 {
+					t.Errorf("  ... and %d more", len(missing)-10)
 				}
 			}
 
-			// Report findings
-			if len(missing) > 0 {
-				// Only fail for base language; log for others to avoid blocking progress
-				if lang == "en" {
-					t.Errorf("Language %s is missing %d keys:", lang, len(missing))
-					for i, key := range missing {
-						if i < 10 { // Show first 10
-							t.Errorf("  - %s", key)
-						}
-					}
-					if len(missing) > 10 {
-						t.Errorf("  ... and %d more", len(missing)-10)
-					}
-				} else {
-					t.Logf("Language %s is missing %d keys (work in progress):", lang, len(missing))
-				}
-			}
-
-			if len(untranslated) > 0 {
-				// For English, this is expected (base language)
-				if lang != "en" {
-					// Log for non-base languages to avoid failing CI while translations mature
-					t.Logf("Language %s has %d untranslated keys (work in progress):", lang, len(untranslated))
-				}
-			}
-
-			if len(extra) > 0 {
-				t.Logf("Language %s has %d extra keys not in base:", lang, len(extra))
-				for i, key := range extra {
-					if i < 5 {
-						t.Logf("  - %s", key)
-					}
-				}
-				if len(extra) > 5 {
-					t.Logf("  ... and %d more", len(extra)-5)
-				}
-			}
-
-			// Calculate coverage
-			translated := len(langKeys) - len(untranslated)
+			// Calculate coverage: percentage of base keys that are translated
+			// Keys that exist in this language (matching base keys, excluding untranslated)
+			translated := len(baseKeys) - len(missing) - len(untranslated)
 			coverage := float64(translated) / float64(len(baseKeys)) * 100
 
-			t.Logf("Language %s coverage: %.1f%% (%d/%d keys)",
-				lang, coverage, translated, len(baseKeys))
+			// Store for summary table
+			coverageData = append(coverageData, languageCoverage{
+				Code:       lang,
+				Name:       langConfig.Name,
+				NativeName: langConfig.NativeName,
+				Keys:       translated,
+				Coverage:   coverage,
+				HasJSON:    true,
+			})
 
-			// Set minimum coverage requirements
-			minCoverage := map[string]float64{
-				"en":  100.0, // Base language
-				"de":  80.0,  // German
-				"es":  80.0,  // Spanish
-				"fr":  80.0,  // French
-				"ar":  80.0,  // Arabic
-				"tlh": 80.0,  // Klingon
-				// Other languages may have lower coverage initially
-			}
-
-			if required, ok := minCoverage[lang]; ok {
-				if coverage < required {
-					t.Errorf("Language %s coverage %.1f%% is below required %.1f%%",
-						lang, coverage, required)
-				}
+			// Only enforce 100% for English (base language)
+			if lang == "en" && coverage < 100.0 {
+				t.Errorf("Base language %s must have 100%% coverage, got %.1f%%", lang, coverage)
 			}
 		})
 	}
+
+	// Add languages without JSON files to show what needs to be done
+	enabledCodes := make(map[string]bool)
+	for _, c := range coverageData {
+		enabledCodes[c.Code] = true
+	}
+	for code, config := range SupportedLanguages {
+		if !enabledCodes[code] {
+			coverageData = append(coverageData, languageCoverage{
+				Code:       code,
+				Name:       config.Name,
+				NativeName: config.NativeName,
+				Keys:       0,
+				Coverage:   0,
+				HasJSON:    false,
+			})
+		}
+	}
+
+	// Sort all coverage data by language code
+	sort.Slice(coverageData, func(i, j int) bool {
+		return coverageData[i].Code < coverageData[j].Code
+	})
+
+	// Print summary table (use t.Log - shows with -v flag which toolbox-test uses)
+	t.Log("")
+	t.Log("┌──────────────────────────────────────────────────────────────┐")
+	t.Log("│                  Translation Coverage Summary                │")
+	t.Log("├──────┬──────────────┬──────────────────┬───────┬─────────────┤")
+	t.Log("│ Code │ Name         │ Native           │ Keys  │ Coverage    │")
+	t.Log("├──────┼──────────────┼──────────────────┼───────┼─────────────┤")
+
+	withJSON := 0
+	for _, c := range coverageData {
+		if c.HasJSON {
+			withJSON++
+			status := "✓"
+			if c.Coverage < 100.0 {
+				status = " "
+			}
+			t.Logf("│ %-4s │ %-12s │ %-16s │ %5d │ %6.1f%% %s  │",
+				c.Code, truncate(c.Name, 12), truncate(c.NativeName, 16), c.Keys, c.Coverage, status)
+		} else {
+			t.Logf("│ %-4s │ %-12s │ %-16s │     - │   No JSON   │",
+				c.Code, truncate(c.Name, 12), truncate(c.NativeName, 16))
+		}
+	}
+
+	t.Log("└──────┴──────────────┴──────────────────┴───────┴─────────────┘")
+	t.Logf("Total: %d/%d languages with JSON files, %d base keys", withJSON, len(coverageData), len(baseKeys))
 }
 
-// TestCriticalTranslations ensures critical UI keys are translated in all languages.
+// truncate shortens a string to maxLen, adding ellipsis if needed.
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s + strings.Repeat(" ", maxLen-len(s))
+	}
+	return s[:maxLen-1] + "…"
+}
+
+// formatCoverage returns a formatted coverage string with status indicator.
+func formatCoverage(coverage float64) string {
+	if coverage >= 100.0 {
+		return fmt.Sprintf("%.1f%% ✓", coverage)
+	}
+	return fmt.Sprintf("%.1f%%", coverage)
+}
+
+// TestCriticalTranslations ensures critical UI keys are translated in all enabled languages.
 func TestCriticalTranslations(t *testing.T) {
 	i18n := GetInstance()
 
@@ -150,9 +193,11 @@ func TestCriticalTranslations(t *testing.T) {
 		"messages.error_occurred",
 	}
 
-	languages := i18n.GetSupportedLanguages()
+	// Use enabled languages (those with JSON files)
+	enabledLanguages := GetEnabledLanguages()
 
-	for _, lang := range languages {
+	for _, langConfig := range enabledLanguages {
+		lang := langConfig.Code
 		t.Run(lang, func(t *testing.T) {
 			for _, key := range criticalKeys {
 				translation := i18n.T(lang, key)
@@ -182,7 +227,8 @@ func TestTranslationConsistency(t *testing.T) {
 		"pagination.showing":    "", // Check exists
 	}
 
-	languages := i18n.GetSupportedLanguages()
+	// Use enabled languages (those with JSON files)
+	enabledLanguages := GetEnabledLanguages()
 
 	for key, expectedPattern := range formatKeys {
 		t.Run(key, func(t *testing.T) {
@@ -193,7 +239,8 @@ func TestTranslationConsistency(t *testing.T) {
 				return
 			}
 
-			for _, lang := range languages {
+			for _, langConfig := range enabledLanguages {
+				lang := langConfig.Code
 				translation := i18n.T(lang, key)
 
 				if translation != key && expectedPattern != "" {

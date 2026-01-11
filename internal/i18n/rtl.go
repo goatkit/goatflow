@@ -60,8 +60,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: false,
 		},
-		Enabled: true,
-	},
+			},
 	"es": {
 		Code:       "es",
 		Name:       "Spanish",
@@ -81,8 +80,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-		Enabled: true,
-	},
+			},
 	"fr": {
 		Code:       "fr",
 		Name:       "French",
@@ -102,8 +100,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-		Enabled: true,
-	},
+			},
 	"de": {
 		Code:       "de",
 		Name:       "German",
@@ -123,8 +120,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-		Enabled: true,
-	},
+			},
 	"ar": {
 		Code:       "ar",
 		Name:       "Arabic",
@@ -144,8 +140,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-		Enabled: true,
-	},
+			},
 	"he": {
 		Code:       "he",
 		Name:       "Hebrew",
@@ -165,8 +160,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-		Enabled: true,
-	},
+			},
 	"fa": {
 		Code:       "fa",
 		Name:       "Persian",
@@ -186,8 +180,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    0,
 			SpaceAfterSymbol: true,
 		},
-		Enabled: true,
-	},
+			},
 	"ur": {
 		Code:       "ur",
 		Name:       "Urdu",
@@ -207,8 +200,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-		Enabled: true,
-	},
+			},
 	"ja": {
 		Code:       "ja",
 		Name:       "Japanese",
@@ -228,8 +220,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    0,
 			SpaceAfterSymbol: false,
 		},
-		Enabled: true,
-	},
+			},
 	"zh": {
 		Code:       "zh",
 		Name:       "Chinese",
@@ -249,8 +240,27 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: false,
 		},
-		Enabled: true,
-	},
+			},
+	"pl": {
+		Code:       "pl",
+		Name:       "Polish",
+		NativeName: "Polski",
+		Direction:  LTR,
+		DateFormat: "2 Jan 2006",
+		TimeFormat: "15:04",
+		NumberFormat: NumberFormat{
+			DecimalSeparator:  ",",
+			ThousandSeparator: " ",
+			Digits:            "0123456789",
+		},
+		Currency: CurrencyFormat{
+			Symbol:           "zł",
+			Code:             "PLN",
+			Position:         "after",
+			DecimalPlaces:    2,
+			SpaceAfterSymbol: true,
+		},
+			},
 	"pt": {
 		Code:       "pt",
 		Name:       "Portuguese",
@@ -270,8 +280,7 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-		Enabled: true,
-	},
+			},
 	"tlh": {
 		Code:       "tlh",
 		Name:       "Klingon",
@@ -291,8 +300,47 @@ var SupportedLanguages = map[string]LanguageConfig{
 			DecimalPlaces:    2,
 			SpaceAfterSymbol: true,
 		},
-		Enabled: true,
-	},
+			},
+	"ru": {
+		Code:       "ru",
+		Name:       "Russian",
+		NativeName: "Русский",
+		Direction:  LTR,
+		DateFormat: "2 Jan 2006",
+		TimeFormat: "15:04",
+		NumberFormat: NumberFormat{
+			DecimalSeparator:  ",",
+			ThousandSeparator: " ",
+			Digits:            "0123456789",
+		},
+		Currency: CurrencyFormat{
+			Symbol:           "₽",
+			Code:             "RUB",
+			Position:         "after",
+			DecimalPlaces:    2,
+			SpaceAfterSymbol: true,
+		},
+			},
+	"uk": {
+		Code:       "uk",
+		Name:       "Ukrainian",
+		NativeName: "Українська",
+		Direction:  LTR,
+		DateFormat: "2 Jan 2006",
+		TimeFormat: "15:04",
+		NumberFormat: NumberFormat{
+			DecimalSeparator:  ",",
+			ThousandSeparator: " ",
+			Digits:            "0123456789",
+		},
+		Currency: CurrencyFormat{
+			Symbol:           "₴",
+			Code:             "UAH",
+			Position:         "after",
+			DecimalPlaces:    2,
+			SpaceAfterSymbol: true,
+		},
+			},
 }
 
 // GetLanguageConfig returns configuration for a language.
@@ -317,15 +365,23 @@ func GetDirection(code string) LanguageDirection {
 	return LTR
 }
 
-// GetEnabledLanguages returns only enabled languages.
+// GetEnabledLanguages returns languages that have translation files.
+// A language is considered enabled if its JSON file exists in the embedded translations.
 func GetEnabledLanguages() []LanguageConfig {
 	var enabled []LanguageConfig
-	for _, config := range SupportedLanguages {
-		if config.Enabled {
+	for code, config := range SupportedLanguages {
+		if translationFileExists(code) {
+			config.Enabled = true
 			enabled = append(enabled, config)
 		}
 	}
 	return enabled
+}
+
+// translationFileExists checks if xx.json exists in embedded translations.
+func translationFileExists(code string) bool {
+	_, err := translationsFS.ReadFile("translations/" + code + ".json")
+	return err == nil
 }
 
 // ConvertDigits converts Western digits to locale-specific digits.

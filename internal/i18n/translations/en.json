@@ -207,6 +207,75 @@
           "auto_response_id": "Select the auto response to use"
         }
       },
+      "notification_event": {
+        "title": "Ticket Notifications",
+        "singular": "Ticket Notification",
+        "plural": "Ticket Notifications",
+        "description": "Configure automated notifications triggered by ticket events",
+        "no_notifications": "No notification events configured yet.",
+        "actions": {
+          "new": "Add Notification"
+        },
+        "create_title": "Add Ticket Notification",
+        "create_description": "Create a new automated notification for ticket events",
+        "edit_title": "Edit Ticket Notification",
+        "edit_description": "Editing notification",
+        "delete_title": "Delete Notification",
+        "delete_confirm": "Are you sure you want to delete this notification? This action cannot be undone.",
+        "sections": {
+          "basic": "Basic Information",
+          "events": "Events",
+          "filters": "Ticket Filters",
+          "recipients": "Recipients",
+          "message": "Notification Message"
+        },
+        "fields": {
+          "name": "Name",
+          "valid_id": "Validity",
+          "comments": "Comment",
+          "create_time": "Created",
+          "change_time": "Changed"
+        },
+        "help": {
+          "name": "Unique name for this notification event",
+          "valid_id": "Whether this notification is active",
+          "comments": "Internal notes about this notification's purpose",
+          "events": "Select which events will trigger this notification.",
+          "filters": "Optionally filter to only send for tickets matching these criteria.",
+          "recipients": "Choose who will receive this notification.",
+          "message": "Define the notification message content for each language."
+        },
+        "placeholders": {
+          "name": "e.g., Ticket Created Notification",
+          "comments": "Optional description of this notification",
+          "subject": "Notification subject line",
+          "body": "Notification message body - you can use template variables"
+        },
+        "filters": {
+          "queue": "Queue",
+          "state": "State",
+          "priority": "Priority",
+          "type": "Type"
+        },
+        "recipients": {
+          "agents": "Specific Agents",
+          "groups": "Groups",
+          "roles": "Roles",
+          "special": "Special Recipients",
+          "owner": "Ticket Owner",
+          "responsible": "Ticket Responsible",
+          "watcher": "Ticket Watchers",
+          "customer": "Customer"
+        },
+        "message": {
+          "subject": "Subject",
+          "body": "Body",
+          "content_type": "Content Type"
+        },
+        "template_variables": {
+          "title": "Available Template Variables"
+        }
+      },
       "template": {
         "title": "Response Templates",
         "description": "Manage standard response templates for tickets and communication",
@@ -859,6 +928,7 @@
   "all_statuses": "All Statuses",
   "not_closed": "Not Closed",
     "are_you_sure": "Are you sure?",
+    "back": "Back",
     "clear": "Clear",
     "cancel": "Cancel",
     "comments": "Comments",
@@ -871,6 +941,7 @@
     "edit": "Edit",
     "error": "Error",
     "info": "Information",
+    "invalid_temporary": "Invalid (temporary)",
     "loading": "Loading...",
     "modified": "Modified",
     "modified_by": "Modified By",
@@ -900,6 +971,8 @@
     "email": "Email",
     "unassigned": "Unassigned",
     "update": "Update",
+    "valid": "Valid",
+    "invalid": "Invalid",
     "view_all": "View All",
     "warning": "Warning",
     "yes": "Yes"
@@ -1356,6 +1429,7 @@
     "sessions": "Active Sessions",
     "settings": "Settings",
     "session_timeout_help": "Choose how long browser sessions should remain active before requiring login again.",
+    "language_help": "Select your preferred display language",
     "theme": "Theme",
     "time_format": "Time Format",
     "timezone": "Timezone",
@@ -1596,6 +1670,12 @@
     "this_week": "This Week",
     "today": "Today",
     "yesterday": "Yesterday",
+    "hour": "hour",
+    "hours": "hours",
+    "day": "day",
+    "days": "days",
+    "minute": "minute",
+    "minutes": "minutes",
     "formats": {
       "queue_detail": "Jan 2, 2006 at 3:04 PM"
     }
@@ -1610,7 +1690,8 @@
     "preferences": "Preferences",
     "profile": "Profile",
     "settings": "Settings",
-    "title": "Job Title",
+    "title": "Title or salutation",
+    "title_placeholder": "e.g. Mr., Ms., Dr.",
     "username": "Username"
   },
   "validation": {

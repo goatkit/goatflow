@@ -24,10 +24,7 @@ var dynamicModuleAliases = map[string]dynamicModuleAlias{
 		HandlerName:  "handleAdminModuleMailAccounts",
 		FriendlyPath: "/admin/mail-accounts",
 	},
-	"notification_event": {
-		HandlerName:  "handleAdminModuleNotificationEvents",
-		FriendlyPath: "/admin/notification-events",
-	},
+	// notification_event uses custom handler, not dynamic module system
 	"communication_channel": {
 		HandlerName:  "handleAdminModuleCommunication",
 		FriendlyPath: "/admin/communication-channels",

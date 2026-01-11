@@ -18,7 +18,7 @@ GOTRS (Go Open Ticket Request System) is a modern, secure, cloud-native ticketin
 - 📱 **Responsive UI** - Modern HTMX-powered interface with progressive enhancement
 - 🔄 **OTRS Compatible** - Database schema superset enables seamless migration
   - ⚠️ **Unicode Support**: Configure with `UNICODE_SUPPORT=true` for full Unicode support (requires utf8mb4 migration)
-- 🌍 **Multi-Language** - Full i18n with German 100% complete, even supports Klingon! 🖖
+- 🌍 **Multi-Language** - Full i18n with 12 languages at 100% coverage including RTL support, even supports Klingon! 🖖
 - 🎨 **Themeable** - Customizable UI with dark/light modes and branding options
 - 🔌 **Extensible** - Plugin framework for custom modules and integrations
 
@@ -277,51 +277,43 @@ See [Migration Guide](docs/MIGRATION.md) for detailed instructions.
 
 ## Internationalization (i18n)
 
-GOTRS provides comprehensive multi-language support with developer-friendly tools:
+GOTRS provides comprehensive multi-language support:
 
 ### Language Support
-- **English** (en) - 100% complete (base language)
-- **German** (de) - 100% complete
-- **Klingon** (tlh) - 39% complete (Yes, really! 🖖)
-- **Spanish** (es) - 47% complete
-- **French** (fr) - In progress
-- **Portuguese** (pt) - In progress
-- **Japanese** (ja) - In progress
-- **Chinese** (zh) - In progress
-- More languages coming soon!
+
+| Language | Code | Direction | Status |
+|----------|------|-----------|--------|
+| English | en | LTR | ✅ Base Language |
+| Arabic | ar | RTL | ✅ Complete |
+| Chinese | zh | LTR | ⚠️ 98.4% |
+| French | fr | LTR | ✅ Complete |
+| German | de | LTR | ✅ Complete |
+| Hebrew | he | RTL | ⚠️ 99.4% |
+| Japanese | ja | LTR | ✅ Complete |
+| Persian | fa | RTL | ⚠️ 91.3% |
+| Polish | pl | LTR | ✅ Complete |
+| Portuguese | pt | LTR | ✅ Complete |
+| Russian | ru | LTR | ✅ Complete |
+| Spanish | es | LTR | ✅ Complete |
+| Ukrainian | uk | LTR | ✅ Complete |
+| Urdu | ur | RTL | ✅ Complete |
+| Klingon | tlh | LTR | ✅ Complete (Qapla'! 🖖) |
 
 ### i18n Features
-- **API-driven translation management** - RESTful endpoints for coverage, validation, import/export
-- **CLI tools** - Command-line utilities for translation workflows
-- **Live language switching** - Change language without page reload using `?lang=xx`
-- **Translation validation** - Automatic completeness checking and key validation
-- **CSV/JSON export** - Easy integration with translation services
-- **TDD approach** - All i18n features developed with test-driven development
+- **Embedded translations** - JSON files compiled into the binary for zero-config deployment
+- **RTL support** - Full right-to-left language support (Arabic, Hebrew, Persian, Urdu)
+- **User preferences** - Language selection persisted per-user in profile settings
+- **Locale formatting** - Date, time, number, and currency formatting per language
+- **Validation tests** - Automated coverage testing ensures 100% translation completeness
 
-### For Contributors - Using gotrs-babelfish 🐠
-```bash
-# Check translation coverage (with Hitchhiker's Guide style!)
-make babelfish-coverage
+### Adding New Languages
 
-# Find missing translations (even for Klingon!)
-make babelfish-missing LANG=tlh
+1. Create translation file: `internal/i18n/translations/xx.json`
+2. Add language config to `internal/i18n/rtl.go` (single source of truth)
+3. Run tests: `make test-i18n`
+4. Rebuild: `make build`
 
-# Validate translations
-make babelfish-validate LANG=de
-
-# Run with custom options (Don't Panic!)
-docker exec gotrs-backend go run cmd/gotrs-babelfish/main.go -help
-
-# Use API for coverage stats
-curl http://localhost:8080/api/v1/i18n/coverage
-
-# Test the UI in Klingon (Qapla'!)
-# http://localhost:8080/dashboard?lang=tlh
-```
-
-> **gotrs-babelfish**: Named after the Babel fish from The Hitchhiker's Guide to the Galaxy - stick it in your ear and instantly understand any language!
-
-See [i18n Contributing Guide](docs/i18n/CONTRIBUTING.md) for detailed instructions on adding new languages.
+See [i18n Contributing Guide](docs/i18n/CONTRIBUTING.md) for detailed instructions.
 
 ## Features Comparison
 
@@ -336,25 +328,11 @@ See [i18n Contributing Guide](docs/i18n/CONTRIBUTING.md) for detailed instructio
 | Microservices | 📋 (Future) | ❌ | ✅ | ✅ |
 | Plugin System | 📋 (Future) | ✅ | ✅ | ✅ |
 | ITSM Modules | 📋 (Future) | ✅ | ❌ | ✅ |
-| Multi-Language | ✅ (EN/DE/FR/ES/AR) | ✅ | ✅ | ✅ |
+| Multi-Language | ✅ (15 languages) | ✅ | ✅ | ✅ |
 
 ## Roadmap
 
-### Current Phase: MVP Development (Starting August 2025)
-- 🚧 Core ticketing functionality
-- 🚧 User authentication and authorization
-- ✅ Email threading (RFC-compliant Message-ID, In-Reply-To, References)
-- 📋 Basic reporting
-- 📋 Docker deployment
-
-### Upcoming Phases
-- **Q4 2025**: Essential features, Production-ready deployment
-- **Q1 2026**: Advanced workflows, API v1, Plugin framework
-- **Q2 2026**: ITSM modules, Advanced reporting, Mobile apps
-- **Q3 2026**: AI/ML features, Enterprise features
-- **Q4 2026**: Platform maturity, Cloud SaaS launch
-
-See [ROADMAP.md](ROADMAP.md) for detailed development timeline.
+See [ROADMAP.md](ROADMAP.md) for the development timeline and planned features.
 
 ## Contributing
 

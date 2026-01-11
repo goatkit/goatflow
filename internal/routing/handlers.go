@@ -152,18 +152,18 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			if resolvedID == 0 {
 				if db, dbErr := database.GetDB(); dbErr == nil && db != nil {
 					var id int64
-					var login, firstName, lastName sql.NullString
+					var login, firstName, lastName, title sql.NullString
 					// Our schema doesn't have users.email; login acts as email. Lookup by login.
-					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, login, first_name, last_name FROM users WHERE login = ? LIMIT 1`), claims.Email).Scan(&id, &login, &firstName, &lastName); err == nil {
+					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT id, login, first_name, last_name, title FROM users WHERE login = ? LIMIT 1`), claims.Email).Scan(&id, &login, &firstName, &lastName, &title); err == nil {
 						resolvedID = id
-						userObj = &models.User{ID: uint(id), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, ValidID: 1}
+						userObj = &models.User{ID: uint(id), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1}
 					}
 				}
 			} else {
 				if db, dbErr := database.GetDB(); dbErr == nil && db != nil {
-					var login, firstName, lastName sql.NullString
-					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT login, first_name, last_name FROM users WHERE id = ?`), resolvedID).Scan(&login, &firstName, &lastName); err == nil {
-						userObj = &models.User{ID: uint(resolvedID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Email: login.String, ValidID: 1}
+					var login, firstName, lastName, title sql.NullString
+					if err := db.QueryRowContext(c.Request.Context(), database.ConvertPlaceholders(`SELECT login, first_name, last_name, title FROM users WHERE id = ?`), resolvedID).Scan(&login, &firstName, &lastName, &title); err == nil {
+						userObj = &models.User{ID: uint(resolvedID), Login: login.String, FirstName: firstName.String, LastName: lastName.String, Title: title.String, Email: login.String, ValidID: 1}
 					}
 				}
 			}

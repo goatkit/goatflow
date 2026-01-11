@@ -122,3 +122,172 @@ func TestLookupQueryGeneration(t *testing.T) {
 		t.Fatalf("expected 2 IDs, got %d", len(ids))
 	}
 }
+
+func TestNotificationEventModuleConfig(t *testing.T) {
+	// Test the notification_event module configuration
+	config := ModuleConfig{
+		Fields: []Field{
+			{Name: "id", Type: "integer", DBColumn: "id", ShowInList: false, ShowInForm: false},
+			{Name: "name", Type: "string", DBColumn: "name", Required: true, ShowInList: true, ShowInForm: true},
+			{Name: "valid_id", Type: "integer", DBColumn: "valid_id", Required: true, ShowInList: true, ShowInForm: true,
+				LookupTable: "valid", LookupKey: "id", LookupDisplay: "name", DisplayAs: "chip"},
+			{Name: "comments", Type: "text", DBColumn: "comments", ShowInList: true, ShowInForm: true},
+			{Name: "create_time", Type: "datetime", DBColumn: "create_time", ShowInList: true, ShowInForm: false},
+			{Name: "change_time", Type: "datetime", DBColumn: "change_time", ShowInList: true, ShowInForm: false},
+		},
+	}
+	config.Module.Name = "notification_event"
+	config.Module.Singular = "Ticket Notification"
+	config.Module.Plural = "Ticket Notifications"
+	config.Module.Table = "notification_event"
+	config.Module.RoutePrefix = "/admin/notification-events"
+
+	// Test module name
+	if config.Module.Name != "notification_event" {
+		t.Errorf("expected module name 'notification_event', got %s", config.Module.Name)
+	}
+
+	// Test route prefix
+	if config.Module.RoutePrefix != "/admin/notification-events" {
+		t.Errorf("expected route prefix '/admin/notification-events', got %s", config.Module.RoutePrefix)
+	}
+
+	// Test that we have the expected number of fields
+	if len(config.Fields) != 6 {
+		t.Errorf("expected 6 fields, got %d", len(config.Fields))
+	}
+
+	// Test valid_id has lookup configured
+	var validField *Field
+	for i := range config.Fields {
+		if config.Fields[i].Name == "valid_id" {
+			validField = &config.Fields[i]
+			break
+		}
+	}
+
+	if validField == nil {
+		t.Fatal("valid_id field not found")
+	}
+
+	if validField.LookupTable != "valid" {
+		t.Errorf("expected valid_id LookupTable='valid', got %s", validField.LookupTable)
+	}
+
+	if validField.DisplayAs != "chip" {
+		t.Errorf("expected valid_id DisplayAs='chip', got %s", validField.DisplayAs)
+	}
+
+	// Test name field is required
+	var nameField *Field
+	for i := range config.Fields {
+		if config.Fields[i].Name == "name" {
+			nameField = &config.Fields[i]
+			break
+		}
+	}
+
+	if nameField == nil {
+		t.Fatal("name field not found")
+	}
+
+	if !nameField.Required {
+		t.Error("expected name field to be required")
+	}
+
+	if !nameField.ShowInList {
+		t.Error("expected name field to show in list")
+	}
+
+	if !nameField.ShowInForm {
+		t.Error("expected name field to show in form")
+	}
+}
+
+func TestNotificationEventValidIdLookup(t *testing.T) {
+	// Test that valid_id lookup produces correct display values
+	items := []map[string]interface{}{
+		{"id": 1, "name": "Ticket create notification", "valid_id": 1},
+		{"id": 2, "name": "Ticket update notification", "valid_id": 2},
+		{"id": 3, "name": "Ticket close notification", "valid_id": 1},
+	}
+
+	// Simulate valid table lookup map
+	validLookupMap := map[string]string{
+		"1": "valid",
+		"2": "invalid",
+		"3": "invalid-temporarily",
+	}
+
+	// Apply lookup transformation
+	for _, item := range items {
+		if val, exists := item["valid_id"]; exists && val != nil {
+			key := coerceString(val)
+			if displayVal, found := validLookupMap[key]; found {
+				item["valid_id_display"] = displayVal
+			}
+		}
+	}
+
+	// Verify display values
+	if items[0]["valid_id_display"] != "valid" {
+		t.Errorf("expected first item valid_id_display='valid', got %v", items[0]["valid_id_display"])
+	}
+
+	if items[1]["valid_id_display"] != "invalid" {
+		t.Errorf("expected second item valid_id_display='invalid', got %v", items[1]["valid_id_display"])
+	}
+
+	if items[2]["valid_id_display"] != "valid" {
+		t.Errorf("expected third item valid_id_display='valid', got %v", items[2]["valid_id_display"])
+	}
+}
+
+func TestNotificationEventFieldVisibility(t *testing.T) {
+	// Test field visibility configuration for list vs form views
+	fields := []Field{
+		{Name: "id", ShowInList: false, ShowInForm: false},
+		{Name: "name", ShowInList: true, ShowInForm: true},
+		{Name: "valid_id", ShowInList: true, ShowInForm: true},
+		{Name: "comments", ShowInList: true, ShowInForm: true},
+		{Name: "create_time", ShowInList: true, ShowInForm: false},
+		{Name: "create_by", ShowInList: false, ShowInForm: false},
+		{Name: "change_time", ShowInList: true, ShowInForm: false},
+		{Name: "change_by", ShowInList: false, ShowInForm: false},
+	}
+
+	// Count fields visible in list
+	listFieldCount := 0
+	for _, f := range fields {
+		if f.ShowInList {
+			listFieldCount++
+		}
+	}
+
+	// Count fields visible in form
+	formFieldCount := 0
+	for _, f := range fields {
+		if f.ShowInForm {
+			formFieldCount++
+		}
+	}
+
+	// We expect 5 fields in list: name, valid_id, comments, create_time, change_time
+	if listFieldCount != 5 {
+		t.Errorf("expected 5 list fields, got %d", listFieldCount)
+	}
+
+	// We expect 3 fields in form: name, valid_id, comments
+	if formFieldCount != 3 {
+		t.Errorf("expected 3 form fields, got %d", formFieldCount)
+	}
+
+	// Audit fields (create_by, change_by) should not be visible anywhere
+	for _, f := range fields {
+		if f.Name == "create_by" || f.Name == "change_by" {
+			if f.ShowInList || f.ShowInForm {
+				t.Errorf("audit field %s should not be visible", f.Name)
+			}
+		}
+	}
+}

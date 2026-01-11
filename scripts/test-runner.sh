@@ -284,6 +284,17 @@ echo "  ────────────────────────
 echo -e "  ${CYAN}TOTAL:${NC} ${TOTAL_TESTS_PASSED} passed, ${TOTAL_TESTS_FAILED} failed, ${E2E_SKIPPED} skipped (${TOTAL_TESTS_RUN} tests executed)"
 echo "  ─────────────────────────────────────────────────────────"
 
+# Extract and display translation coverage table
+if [ -f "$UNIT_LOG" ]; then
+    I18N_TABLE=$(grep -E "(┌|│|└|├|Total:.*languages)" "$UNIT_LOG" 2>/dev/null | sed 's/.*validation_test.go:[0-9]*: //' || true)
+    if [ -n "$I18N_TABLE" ]; then
+        echo ""
+        echo -e "  ${CYAN}Translation Coverage:${NC}"
+        echo "$I18N_TABLE" | sed 's/^/    /'
+        echo ""
+    fi
+fi
+
 echo ""
 echo "  Evidence Files:"
 echo "    • Main log:      $MAIN_LOG"

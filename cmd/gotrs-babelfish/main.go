@@ -525,22 +525,8 @@ func saveTranslations(translations map[string]interface{}, path string) {
 }
 
 func getLanguageName(code string) string {
-	names := map[string]string{
-		"en":  "English",
-		"es":  "Spanish",
-		"fr":  "French",
-		"de":  "German",
-		"pt":  "Portuguese",
-		"ja":  "Japanese",
-		"zh":  "Chinese",
-		"ar":  "Arabic",
-		"ru":  "Russian",
-		"it":  "Italian",
-		"nl":  "Dutch",
-		"tlh": "Klingon",
-	}
-	if name, ok := names[code]; ok {
-		return name
+	if config, exists := i18n.GetLanguageConfig(code); exists {
+		return config.Name
 	}
 	return code
 }

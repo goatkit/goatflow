@@ -526,6 +526,7 @@ type userDetails struct {
 	Login     string
 	FirstName string
 	LastName  string
+	Title     string
 }
 
 func getUserDetailsFromDB(db *sql.DB, userID uint) userDetails {
@@ -533,9 +534,9 @@ func getUserDetailsFromDB(db *sql.DB, userID uint) userDetails {
 	if db == nil || userID == 0 {
 		return details
 	}
-	var dbLogin, dbFirst, dbLast sql.NullString
+	var dbLogin, dbFirst, dbLast, dbTitle sql.NullString
 	err := db.QueryRow(database.ConvertPlaceholders(`
-		SELECT login, first_name, last_name FROM users WHERE id = ?`), userID).Scan(&dbLogin, &dbFirst, &dbLast)
+		SELECT login, first_name, last_name, title FROM users WHERE id = ?`), userID).Scan(&dbLogin, &dbFirst, &dbLast, &dbTitle)
 	if err != nil {
 		return details
 	}
@@ -547,6 +548,9 @@ func getUserDetailsFromDB(db *sql.DB, userID uint) userDetails {
 	}
 	if dbLast.Valid {
 		details.LastName = dbLast.String
+	}
+	if dbTitle.Valid {
+		details.Title = dbTitle.String
 	}
 	return details
 }
@@ -628,6 +632,7 @@ func buildUserMapFromModel(user *models.User) gin.H {
 		"Login":          user.Login,
 		"FirstName":      user.FirstName,
 		"LastName":       user.LastName,
+		"Title":          user.Title,
 		"Email":          user.Email,
 		"IsActive":       user.ValidID == 1,
 		"IsAdmin":        isAdmin,
@@ -645,7 +650,7 @@ func buildUserMapFromContext(c *gin.Context, userID interface{}) gin.H {
 	}
 
 	login := fmt.Sprintf("%v", userEmail)
-	firstName, lastName := "", ""
+	firstName, lastName, title := "", "", ""
 	isInAdminGroup := false
 	userIDVal := toUintID(userID)
 
@@ -656,6 +661,7 @@ func buildUserMapFromContext(c *gin.Context, userID interface{}) gin.H {
 		}
 		firstName = details.FirstName
 		lastName = details.LastName
+		title = details.Title
 		isInAdminGroup = isUserInAdminGroup(db, userIDVal)
 	}
 
@@ -675,6 +681,7 @@ func buildUserMapFromContext(c *gin.Context, userID interface{}) gin.H {
 		"Login":          login,
 		"FirstName":      firstName,
 		"LastName":       lastName,
+		"Title":          title,
 		"Email":          login,
 		"IsActive":       true,
 		"IsAdmin":        isAdminRole(normalizedRole),

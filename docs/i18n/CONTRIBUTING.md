@@ -7,21 +7,33 @@ This guide explains how to add new language support or improve existing translat
 - [Translation Structure](#translation-structure)
 - [Adding a New Language](#adding-a-new-language)
 - [Testing Translations](#testing-translations)
-- [API Endpoints](#api-endpoints)
 - [Best Practices](#best-practices)
 
 ## Quick Start
 
 To add or improve translations:
 
-1. Navigate to `/internal/i18n/translations/`
+1. Navigate to `internal/i18n/translations/`
 2. Edit existing language files or create new ones
-3. Test your translations using the validation tools
+3. Test your translations using `make test-i18n`
 4. Submit a PR with 100% coverage
+
+### Check Current Coverage
+
+Before starting, check the current translation coverage for a language:
+
+```bash
+# Check missing keys for any language (requires authentication)
+make http-call ENDPOINT=/api/v1/i18n/missing/xx
+
+# Example: check German coverage
+make http-call ENDPOINT=/api/v1/i18n/missing/de
+# {"language":"de","missing_keys":null,"count":0}  # 0 = complete
+```
 
 ## Translation Structure
 
-Translation files are JSON files with nested structure:
+Translation files are JSON files with nested structure located in `internal/i18n/translations/`:
 
 ```json
 {
@@ -43,6 +55,8 @@ Translation files are JSON files with nested structure:
 
 ## Adding a New Language
 
+Adding a new language requires two steps:
+
 ### Step 1: Create Translation File
 
 1. Copy `en.json` as template:
@@ -50,91 +64,97 @@ Translation files are JSON files with nested structure:
 cp internal/i18n/translations/en.json internal/i18n/translations/xx.json
 ```
 
-2. Replace `xx` with your language code (ISO 639-1)
+2. Replace `xx` with your language code (ISO 639-1, e.g., `pl` for Polish)
 
-### Step 2: Translate All Keys
+3. Translate all keys in the new file
 
-Use the API to check missing keys:
-```bash
-curl http://localhost:8080/api/v1/i18n/missing/xx
+### Step 2: Add Language Configuration
+
+Add your language to the `SupportedLanguages` map in `internal/i18n/rtl.go`:
+
+```go
+"xx": {
+    Code:       "xx",
+    Name:       "Language Name",      // English name
+    NativeName: "Native Name",        // Name in the language itself
+    Direction:  LTR,                  // or RTL for right-to-left languages
+    DateFormat: "2 Jan 2006",
+    TimeFormat: "15:04",
+    NumberFormat: NumberFormat{
+        DecimalSeparator:  ".",
+        ThousandSeparator: ",",
+        Digits:            "0123456789",
+    },
+    Currency: CurrencyFormat{
+        Symbol:           "$",
+        Code:             "XXX",      // ISO 4217 currency code
+        Position:         "before",   // or "after"
+        DecimalPlaces:    2,
+        SpaceAfterSymbol: false,
+    }
+}
 ```
+
+**Important:** `rtl.go` is the single source of truth for language metadata. The `Name` and `NativeName` fields are used throughout the application (API responses, UI dropdowns, etc.). Do not duplicate language names elsewhere.
 
 ### Step 3: Validate Completeness
 
-Run validation to ensure 100% coverage:
+Run the i18n tests to ensure 100% coverage:
+
 ```bash
-# Use gotrs-babelfish for validation
-make babelfish-validate LANG=xx
+# Run i18n validation tests
+make test-i18n
 
-# Or run directly
-docker exec gotrs-backend go run cmd/gotrs-babelfish/main.go -action=validate -lang=xx
+# Or run directly via Docker
+docker compose run --rm toolbox go test ./internal/i18n/... -v
 ```
 
-Or use the API:
+To verify the language is now complete via the API:
+
 ```bash
-curl http://localhost:8080/api/v1/i18n/validate/xx
+# Verify no missing keys (requires authentication)
+make http-call ENDPOINT=/api/v1/i18n/missing/xx
+
+# Expected output for a complete language:
+# {"language":"xx","missing_keys":null,"count":0}
 ```
 
-### Step 4: Test in Application
+### Step 4: Rebuild and Test
 
-Test your translations by adding `?lang=xx` to any URL:
-```
-http://localhost:8080/dashboard?lang=xx
+```bash
+# Rebuild to embed new translations
+make build
+
+# Restart to apply changes
+make restart
+
+# Test in the UI by changing language in profile settings
 ```
 
 ## Testing Translations
 
-### Using gotrs-babelfish (The Universal Translation Tool)
+### Running Tests
 
 ```bash
-# Run comprehensive translation tests
-docker exec gotrs-backend go test ./internal/i18n -v
+# Run all i18n tests
+make test-i18n
 
-# Use gotrs-babelfish for coverage analysis
-make babelfish-coverage
-
-# Or run directly with custom options
-docker exec gotrs-backend go run cmd/gotrs-babelfish/main.go -action=coverage
+# Run specific test
+docker compose run --rm toolbox go test ./internal/i18n/... -run TestTranslationCompleteness -v
 ```
 
 ### Coverage Requirements
 
 - **100% coverage required** - All English keys must have translations
-- **No extra keys** - Don't add keys not present in English
-- **Format consistency** - Maintain placeholder formatting (%s, %d)
+- **Extra keys allowed** - Languages may have additional keys for locale-specific content
+- **Format consistency** - Maintain placeholder formatting (%s, %d, {{variable}})
 
-## API Endpoints
+### Test Output Example
 
-GOTRS provides comprehensive i18n management APIs:
-
-### Get Translation Coverage
-```bash
-GET /api/v1/i18n/coverage
 ```
-Returns coverage statistics for all languages.
-
-### Get Missing Keys
-```bash
-GET /api/v1/i18n/missing/{lang}
-```
-Lists all missing translation keys for a language.
-
-### Export Translations
-```bash
-GET /api/v1/i18n/export/{lang}?format=json
-GET /api/v1/i18n/export/{lang}?format=csv
-```
-Export translations in JSON or CSV format.
-
-### Validate Translations
-```bash
-GET /api/v1/i18n/validate/{lang}
-```
-Validates translation completeness and correctness.
-
-### Example: Check German Coverage
-```bash
-curl http://localhost:8080/api/v1/i18n/coverage | jq '.languages[] | select(.code=="de")'
+=== RUN   TestTranslationCompleteness/pl
+    validation_test.go:105: Language pl coverage: 100.0% (1587/1587 keys)
+--- PASS: TestTranslationCompleteness/pl (0.00s)
 ```
 
 ## Best Practices
@@ -154,18 +174,20 @@ Consider where text appears when translating:
 Preserve placeholders in translations:
 ```json
 "min_length": "Minimum length is %d characters"
+"welcome": "Welcome, {{name}}!"
 ```
 
 ### 4. Cultural Adaptation
-- Use appropriate date/time formats
-- Consider text direction (RTL languages)
-- Adapt idioms and examples
+- Use appropriate date/time formats (configured in `rtl.go`)
+- Consider text direction (RTL languages like Arabic, Hebrew)
+- Adapt idioms and examples appropriately
 
 ### 5. Testing Process
 1. Complete all translations
-2. Run validation tests
-3. Test in application UI
-4. Review with native speakers
+2. Run `make test-i18n`
+3. Rebuild with `make build`
+4. Test in application UI
+5. Review with native speakers if possible
 
 ## Translation Guidelines
 
@@ -176,39 +198,38 @@ Preserve placeholders in translations:
 - Use formal/informal address consistently
 
 ### Technical Terms
-Some terms should remain in English:
+Some terms may remain in English depending on locale conventions:
 - API
 - URL
-- Email
-- Admin
-- Dashboard (optional)
+- Email (or localized equivalent)
+- SLA
 
 ### Common Patterns
 
 #### Status Messages
 ```json
 "status": {
-  "new": "New",        // Keep concise
-  "open": "Open",      // Single word preferred
-  "closed": "Closed"   // Past participle for completed states
+  "new": "New",
+  "open": "Open",
+  "closed": "Closed"
 }
 ```
 
 #### Form Labels
 ```json
 "labels": {
-  "email": "Email Address",     // Be specific
-  "phone": "Phone Number",      // Include "Number" for clarity
-  "required": "Required Field"  // Clear indicators
+  "email": "Email Address",
+  "phone": "Phone Number",
+  "required": "Required Field"
 }
 ```
 
 #### Error Messages
 ```json
 "errors": {
-  "not_found": "Resource not found",              // What happened
-  "unauthorized": "You are not authorized",       // Why it happened
-  "try_again": "Please try again later"          // What to do
+  "not_found": "Resource not found",
+  "unauthorized": "You are not authorized",
+  "try_again": "Please try again later"
 }
 ```
 
@@ -216,64 +237,90 @@ Some terms should remain in English:
 
 1. **Fork the repository**
 2. **Create feature branch**: `git checkout -b i18n/add-xx-language`
-3. **Add translations**: Follow the structure of `en.json`
-4. **Test thoroughly**: Use validation tools and UI testing
-5. **Submit PR**: Include coverage report in description
+3. **Add translation file**: `internal/i18n/translations/xx.json`
+4. **Add language config**: Update `internal/i18n/rtl.go`
+5. **Test thoroughly**: Run `make test-i18n`
+6. **Submit PR**: Include test output in description
 
 ### PR Checklist
-- [ ] 100% translation coverage
-- [ ] No extra keys beyond English
-- [ ] Validation tests pass
+- [ ] Translation file created with all keys from `en.json`
+- [ ] Language config added to `rtl.go` with correct metadata
+- [ ] `make test-i18n` passes with 100% coverage
+- [ ] `make build` succeeds
 - [ ] UI tested with new language
 - [ ] Native speaker review (preferred)
 
-## Tools and Resources
+## File Structure
 
-### Development Tools
-- **VS Code Extensions**: JSON language support, i18n Ally
-- **Online Tools**: Google Translate (for reference only)
-- **Validation**: Built-in test suite
-
-### Command Reference
-```bash
-# Test all languages with gotrs-babelfish
-make babelfish-coverage
-
-# Check specific language
-make babelfish-validate LANG=de
-
-# Export for translation service
-docker exec gotrs-backend go run cmd/gotrs-babelfish/main.go \
-  -action=export -lang=en -file=/tmp/en.csv -format=csv
-
-# Import translations
-docker exec gotrs-backend go run cmd/gotrs-babelfish/main.go \
-  -action=import -lang=fr -file=/tmp/fr.csv -format=csv
-
-# API alternatives
-curl http://localhost:8080/api/v1/i18n/coverage
-curl http://localhost:8080/api/v1/i18n/export/en?format=csv > en.csv
-curl http://localhost:8080/api/v1/i18n/validate/xx
 ```
-
-## Getting Help
-
-- **Discord**: Join our community for translation discussions
-- **GitHub Issues**: Report translation bugs or suggestions
-- **API Documentation**: See `/api/docs` for full API reference
+internal/i18n/
+├── i18n.go              # Core i18n functionality
+├── rtl.go               # Language configs (source of truth for names/metadata)
+├── validation_test.go   # Translation coverage tests
+└── translations/
+    ├── en.json          # English (base language)
+    ├── ar.json          # Arabic (RTL)
+    ├── de.json          # German
+    ├── es.json          # Spanish
+    ├── fa.json          # Persian (RTL)
+    ├── fr.json          # French
+    ├── he.json          # Hebrew (RTL)
+    ├── ja.json          # Japanese
+    ├── pl.json          # Polish
+    ├── pt.json          # Portuguese
+    ├── ru.json          # Russian
+    ├── tlh.json         # Klingon
+    ├── uk.json          # Ukrainian
+    ├── ur.json          # Urdu (RTL)
+    └── zh.json          # Chinese
+```
 
 ## Language Status
 
-Current language support and coverage:
+Current language support (15 languages, 12 complete):
 
-| Language | Code | Coverage | Status |
-|----------|------|----------|--------|
-| English | en | 100% | ✅ Complete |
-| German | de | 100% | ✅ Complete |
-| Spanish | es | ~44% | 🚧 In Progress |
-| French | fr | ~44% | 🚧 In Progress |
-| Portuguese | pt | ~44% | 🚧 In Progress |
-| Japanese | ja | ~44% | 🚧 In Progress |
-| Chinese | zh | ~44% | 🚧 In Progress |
+| Language | Code | Direction | Status |
+|----------|------|-----------|--------|
+| English | en | LTR | ✅ Base Language |
+| Arabic | ar | RTL | ✅ Complete |
+| German | de | LTR | ✅ Complete |
+| Spanish | es | LTR | ✅ Complete |
+| French | fr | LTR | ✅ Complete |
+| Japanese | ja | LTR | ✅ Complete |
+| Polish | pl | LTR | ✅ Complete |
+| Portuguese | pt | LTR | ✅ Complete |
+| Russian | ru | LTR | ✅ Complete |
+| Ukrainian | uk | LTR | ✅ Complete |
+| Urdu | ur | RTL | ✅ Complete |
+| Klingon | tlh | LTR | ✅ Complete |
+| Hebrew | he | RTL | ⚠️ 99.4% |
+| Chinese | zh | LTR | ⚠️ 98.4% |
+| Persian | fa | RTL | ⚠️ 91.3% |
 
-Help us reach 100% coverage for all languages!
+## Getting Help
+
+- **GitHub Issues**: Report translation bugs or suggestions
+- **Pull Requests**: Submit improvements or new languages
+
+## Architecture Notes
+
+### Single Source of Truth
+
+Language metadata is centralized in `internal/i18n/rtl.go`:
+
+- `SupportedLanguages` map contains all language configurations
+- `GetLanguageConfig(code)` returns config for a language
+- Used by API handlers, templates, and CLI tools
+
+This prevents duplication of language names across:
+- Backend API responses
+- Frontend templates
+- CLI tools (gotrs-babelfish)
+
+### Embedded Translations
+
+Translation JSON files are embedded at compile time using Go's `//go:embed` directive. After modifying translation files, you must rebuild:
+
+```bash
+make build
+```

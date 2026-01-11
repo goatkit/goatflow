@@ -254,6 +254,40 @@ func (r *UserRepository) Update(user *models.User) error {
 	return nil
 }
 
+// UpdateProfile updates only the profile display fields for a user (first_name, last_name, title).
+// This is safe for self-service profile editing.
+func (r *UserRepository) UpdateProfile(id uint, firstName, lastName, title string, changeBy uint, changeTime time.Time) error {
+	// Truncate title to fit varchar(50) limit
+	if len(title) > 50 {
+		title = title[:50]
+	}
+
+	query := database.ConvertPlaceholders(`
+		UPDATE users SET
+			first_name = ?,
+			last_name = ?,
+			title = ?,
+			change_time = ?,
+			change_by = ?
+		WHERE id = ?`)
+
+	result, err := r.db.Exec(query, firstName, lastName, title, changeTime, changeBy, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
 // SetValidID updates only the validity status metadata for a user.
 func (r *UserRepository) SetValidID(id uint, validID int, changeBy uint, changeTime time.Time) error {
 	query := database.ConvertPlaceholders(`

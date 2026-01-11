@@ -28,3 +28,15 @@ spec:
       method: POST
       handler: HandleSetSessionTimeout
       description: "Update session timeout preference"
+
+    # Language preference (GET current value and available languages)
+    - path: /api/preferences/language
+      method: GET
+      handler: HandleGetLanguage
+      description: "Get current language preference and available languages"
+
+    # Language preference (POST update)
+    - path: /api/preferences/language
+      method: POST
+      handler: HandleSetLanguage
+      description: "Update language preference"

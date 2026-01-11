@@ -31,7 +31,8 @@ function apiFetch(url, options = {}) {
                         const msg = `Request failed: ${url} [${response.status} ${response.statusText}]`;
                         try { showGuruMeditation(msg, code); } catch(_) {}
                 }
-                return response;
+                // Parse JSON response - callers expect data, not Response object
+                return response.json();
             })
             .catch((err) => {
                 // Network failures also surface the Guru overlay

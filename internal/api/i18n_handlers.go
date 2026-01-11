@@ -422,43 +422,15 @@ func (h *I18nHandlers) ValidateTranslations(c *gin.Context) {
 // Helper methods
 
 func (h *I18nHandlers) getLanguageName(code string) string {
-	names := map[string]string{
-		"en":  "English",
-		"es":  "Spanish",
-		"fr":  "French",
-		"de":  "German",
-		"pt":  "Portuguese",
-		"ja":  "Japanese",
-		"zh":  "Chinese",
-		"ar":  "Arabic",
-		"he":  "Hebrew",
-		"fa":  "Persian",
-		"ur":  "Urdu",
-		"tlh": "Klingon",
-	}
-	if name, ok := names[code]; ok {
-		return name
+	if config, exists := i18n.GetLanguageConfig(code); exists {
+		return config.Name
 	}
 	return code
 }
 
 func (h *I18nHandlers) getLanguageNativeName(code string) string {
-	names := map[string]string{
-		"en":  "English",
-		"es":  "Español",
-		"fr":  "Français",
-		"de":  "Deutsch",
-		"pt":  "Português",
-		"ja":  "日本語",
-		"zh":  "中文",
-		"ar":  "العربية",
-		"he":  "עברית",
-		"fa":  "فارسی",
-		"ur":  "اردو",
-		"tlh": "tlhIngan Hol",
-	}
-	if name, ok := names[code]; ok {
-		return name
+	if config, exists := i18n.GetLanguageConfig(code); exists {
+		return config.NativeName
 	}
 	return code
 }

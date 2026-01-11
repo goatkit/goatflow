@@ -43,72 +43,72 @@
 - ✅ Ticket templates (canned responses)
 - ✅ Canned responses/Macros
 - ✅ Ticket merging
-- ❌ Ticket splitting (TODO)
-- ❌ Ticket linking/relationships (TODO)
-- ❌ Bulk operations (routes defined, handlers TODO)
+- ⚠️ Ticket splitting (models + routes defined, handler TODO)
+- ⚠️ Ticket linking/relationships (models complete, UI TODO)
+- ⚠️ Bulk operations (UI framework exists, execution logic TODO)
 - ✅ Custom fields (dynamic fields system)
 - ✅ File attachments
 - ✅ Ticket locking
-- ❌ Watch/Follow tickets (email follow-up only)
+- ❌ Watch/Follow tickets (TODO)
 - ✅ Ticket tags
 - ✅ Time tracking (time_accounting table + API)
 
 ### Advanced Search & Filters
 - ✅ Full-text search
 - ✅ Advanced search filters (SearchFilter model)
-- ❌ Saved searches (TODO)
+- ✅ Saved searches (CRUD handlers implemented)
 - ❌ Search templates (TODO)
 - ❌ Quick filters (TODO)
-- ❌ Search history (TODO)
+- ✅ Search history (tracking implemented)
 
 ### SLA Management
-- ❌ SLA definitions (tables exist, handlers TODO)
-- ❌ Response time targets (tables exist, handlers TODO)
-- ❌ Resolution time targets (tables exist, handlers TODO)
-- ❌ Escalation rules (TODO)
-- ❌ Business hours (TODO)
+- ✅ SLA definitions (models + CRUD handlers)
+- ✅ Response time targets (SLA calculation implemented)
+- ✅ Resolution time targets (SLA calculation implemented)
+- ✅ Escalation rules (manual + auto-escalation handlers)
+- ⚠️ Business hours (model exists, enforcement TODO)
 - ❌ Holiday calendars (TODO)
 - ❌ SLA reporting (TODO)
 - ❌ Breach notifications (TODO)
 
 ### Workflow Automation
-- ❌ Trigger system (TODO)
+- ⚠️ Trigger system (models complete, execution engine TODO)
 - ❌ Time-based triggers (TODO)
 - ❌ Event-based triggers (TODO)
 - ❌ Automated actions (TODO)
-- ❌ Conditional logic (TODO)
-- ❌ Workflow templates (TODO)
+- ⚠️ Conditional logic (models exist, engine TODO)
+- ⚠️ Workflow templates (models exist, UI TODO)
 - ❌ Round-robin assignment (TODO)
 - ❌ Load balancing (TODO)
 
 ### Reporting & Analytics
-- ❌ Dashboard widgets (TODO)
-- ❌ Standard reports (TODO)
+- ✅ Dashboard widgets (statistics + HTMX handlers)
+- ⚠️ Standard reports (basic stats, full reports TODO)
 - ❌ Custom report builder (TODO)
-- ❌ Real-time metrics (TODO)
+- ✅ Real-time metrics (WebSocket dashboard)
 - ❌ Historical analytics (TODO)
 - ❌ Export (CSV, PDF, Excel) (TODO)
 - ❌ Scheduled reports (TODO)
 - ❌ Report sharing (TODO)
 
 ### Customer Management
-- ❌ Customer organizations (TODO)
+- ⚠️ Customer organizations (basic model exists)
 - ❌ Customer hierarchies (TODO)
-- ❌ Contact management (TODO)
+- ✅ Contact management (customer user CRUD)
 - ❌ Customer history (TODO)
 - ❌ Customer notes (TODO)
 - ❌ Customer custom fields (TODO)
 - ❌ VIP customer flags (TODO)
 
 ### Knowledge Base
-- ❌ Article creation (TODO)
-- ❌ Categories and tags (TODO)
-- ❌ Article versioning (TODO)
-- ❌ Article approval workflow (TODO)
-- ❌ Search functionality (TODO)
-- ❌ Related articles (TODO)
-- ❌ Article ratings (TODO)
-- ❌ FAQ section (TODO)
+- ✅ Article creation (full CRUD handlers)
+- ✅ Categories and tags (category hierarchy + tags)
+- ✅ Article versioning (version tracking)
+- ✅ Article approval workflow (reviewer/approver fields)
+- ✅ Search functionality (integrated search)
+- ⚠️ Related articles (model exists, UI TODO)
+- ✅ Article ratings (helpful count + feedback)
+- ⚠️ FAQ section (can use KB articles, dedicated FAQ TODO)
 
 ## Advanced Features (v0.8.0 - v1.0.0)
 
@@ -283,13 +283,13 @@
 
 ### Deployment Options
 - ✅ Docker support
-- ❌ Kubernetes manifests (TODO)
-- ❌ Helm charts (TODO)
+- ✅ Kubernetes support (Helm chart with K8s 1.25+)
+- ✅ Helm charts (OCI registry + GitHub releases)
 - ✅ Terraform modules (infrastructure repo)
 - ❌ Ansible playbooks (TODO)
 - ❌ Cloud marketplace (AWS, Azure, GCP) (TODO)
 - ❌ One-click installers (TODO)
-- ❌ Auto-scaling (TODO)
+- ✅ Auto-scaling (HPA with CPU/memory targets)
 
 ## Mobile Features
 
@@ -315,59 +315,67 @@
 ## Accessibility Features
 
 ### WCAG 2.1 Compliance
-- ❌ Screen reader support (TODO)
-- ❌ Keyboard navigation (TODO)
+- ⚠️ Screen reader support (ARIA labels present, full audit TODO)
+- ⚠️ Keyboard navigation (basic support, full audit TODO)
 - ❌ High contrast mode (TODO)
 - ❌ Font size adjustment (TODO)
 - ❌ Color blind modes (TODO)
-- ❌ Focus indicators (TODO)
-- ❌ ARIA labels (TODO)
+- ✅ Focus indicators (Tailwind focus: styles throughout)
+- ✅ ARIA labels (129+ aria-* attributes across templates)
 - ❌ Skip navigation (TODO)
 
 ## Localization
 
 ### Multi-Language Support
-- ⚠️ Interface translation (partial - 5 languages implemented)
-- ❌ Right-to-left (RTL) support (Arabic configured but not tested)
-- ❌ Date/time localization (TODO)
-- ❌ Number formatting (TODO)
-- ❌ Currency support (TODO)
+- ✅ Interface translation (12 languages complete with 100% coverage)
+- ✅ Right-to-left (RTL) support (Arabic, Hebrew, Persian, Urdu)
+- ✅ Date/time localization (per-language formats in rtl.go)
+- ✅ Number formatting (decimal/thousands separators, locale digits)
+- ✅ Currency support (symbol, position, decimal places per locale)
 - ❌ Timezone handling (TODO)
 - ❌ Custom translations (TODO)
 - ❌ Language detection (TODO)
+- ✅ User language preference (stored in user_preferences table)
 
-### Supported Languages (Phase 1)
-- ✅ English
-- ✅ Spanish
-- ✅ German
-- ✅ French
-- ❌ Italian (configured but no translations)
-- ❌ Portuguese (configured but no translations)
-- ❌ Japanese (configured but no translations)
-- ❌ Chinese (Simplified) (configured but no translations)
-- ❌ Korean (not configured)
-- ✅ Arabic
+### Supported Languages (100% Complete)
+- ✅ English (en) - Base language
+- ✅ Arabic (ar) - RTL, Arabic-Indic numerals
+- ✅ German (de) - Complete
+- ✅ Spanish (es) - Complete
+- ✅ French (fr) - Complete
+- ✅ Japanese (ja) - Complete
+- ✅ Polish (pl) - Complete
+- ✅ Portuguese (pt) - Complete
+- ✅ Russian (ru) - Complete
+- ✅ Ukrainian (uk) - Complete
+- ✅ Urdu (ur) - RTL, Complete
+- ✅ Klingon (tlh) - Complete (Qapla'!)
+
+### Partial Translation Coverage
+- ⚠️ Hebrew (he) - RTL, 99.4% coverage
+- ⚠️ Chinese (zh) - 98.4% coverage
+- ⚠️ Persian (fa) - RTL, Persian numerals, 91.3% coverage
 
 ## Performance Features
 
 ### Optimization
-- ❌ Query optimization (TODO)
-- ❌ Database indexing (TODO)
+- ⚠️ Query optimization (basic optimization, ongoing)
+- ✅ Database indexing (270+ indexes defined in schema)
 - ✅ Caching (Valkey/Redis)
 - ❌ CDN support (TODO)
 - ❌ Lazy loading (TODO)
-- ❌ Image optimization (TODO)
+- ✅ Image optimization (govips/libvips - WebP, AVIF, HEIC support)
 - ❌ Code splitting (TODO)
 - ❌ Compression (TODO)
 
 ### Scalability
-- ❌ Horizontal scaling (TODO)
-- ❌ Vertical scaling (TODO)
+- ✅ Horizontal scaling (Helm HPA with CPU/memory targets)
+- ✅ Vertical scaling (resource limits configurable)
 - ❌ Database sharding (TODO)
 - ❌ Read replicas (TODO)
-- ❌ Connection pooling (TODO)
+- ✅ Connection pooling (MaxOpenConns/MaxIdleConns)
 - ❌ Queue management (TODO)
-- ❌ Rate limiting (TODO)
+- ✅ Rate limiting (login rate limiter implemented)
 - ❌ Circuit breakers (TODO)
 
 ## Comparison Matrix as of v0.5.0
@@ -376,8 +384,8 @@
 |-----------------|----------|----------|------|---------|------------|
 | Core Ticketing | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Email Integration | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Knowledge Base | ❌ | ✅ | ✅ | ✅ | ✅ |
-| SLA Management | ❌ | ✅ | ✅ | ✅ | ✅ |
+| Knowledge Base | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SLA Management | ⚠️ | ✅ | ✅ | ✅ | ✅ |
 | Workflow Automation | ❌ | ✅ | ✅ | ✅ | ✅ |
 | API Access | ✅ | ✅ | ⚠️ | ✅ | ✅ |
 | Multi-Channel | ⚠️ | ✅ | ⚠️ | ✅ | ✅ |
@@ -389,6 +397,7 @@
 | Self-Hosted | ✅ | ✅ | ✅ | ❌ | ✅ |
 | Cloud Native | ✅ | ✅ | ❌ | ✅ | ✅ |
 | Modern UI | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Localization | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 Legend:
 - ✅ Full support

@@ -1,0 +1,175 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("admin.modules.notification_event.title") }} - GOTRS Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <!-- Header -->
+        <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
+                        {{ t("admin.modules.notification_event.title") }}
+                    </h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {{ t("admin.modules.notification_event.description") }}
+                    </p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="/admin"
+                       class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                        <i class="fas fa-arrow-left mr-2"></i>{{ t("common.back") }}
+                    </a>
+                    <a href="/admin/notification-events/new"
+                       class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>{{ t("admin.modules.notification_event.actions.new") }}
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            {{ t("admin.modules.notification_event.fields.name") }}
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            {{ t("admin.modules.notification_event.fields.comments") }}
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            {{ t("admin.modules.notification_event.fields.valid_id") }}
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            {{ t("admin.modules.notification_event.fields.change_time") }}
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            {{ t("common.actions") }}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for event in Events %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 {% if event.ValidID != 1 %}opacity-50{% endif %}">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <a href="/admin/notification-events/{{ event.ID }}" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                                {{ event.Name }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                            {{ event.Comments|truncatechars:50 }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if event.ValidID == 1 %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                {{ t("common.valid") }}
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                                {{ t("common.invalid") }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <span class="datetime-field" data-utc="{{ event.ChangeTime }}">{{ event.ChangeTime }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <a href="/admin/notification-events/{{ event.ID }}"
+                               class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 mr-3"
+                               title="{{ t('common.edit') }}">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button onclick="deleteNotification({{ event.ID }}, '{{ event.Name|escapejs }}')"
+                                    class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                                    title="{{ t('common.delete') }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            <i class="fas fa-bell-slash text-4xl mb-3"></i>
+                            <p>{{ t("admin.modules.notification_event.no_notifications") }}</p>
+                            <a href="/admin/notification-events/new" class="text-blue-600 dark:text-blue-400 hover:underline mt-2 inline-block">
+                                {{ t("admin.modules.notification_event.actions.new") }}
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                {{ t("admin.modules.notification_event.delete_title") }}
+            </h3>
+            <p class="text-gray-600 dark:text-gray-400 mb-4">
+                {{ t("admin.modules.notification_event.delete_confirm") }}
+            </p>
+            <p class="text-gray-900 dark:text-white font-medium mb-6" id="deleteNotificationName"></p>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeDeleteModal()"
+                        class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                    {{ t("common.cancel") }}
+                </button>
+                <button onclick="confirmDelete()"
+                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                    {{ t("common.delete") }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let deleteId = null;
+
+function deleteNotification(id, name) {
+    deleteId = id;
+    document.getElementById('deleteNotificationName').textContent = name;
+    document.getElementById('deleteModal').classList.remove('hidden');
+    document.getElementById('deleteModal').classList.add('flex');
+}
+
+function closeDeleteModal() {
+    deleteId = null;
+    document.getElementById('deleteModal').classList.add('hidden');
+    document.getElementById('deleteModal').classList.remove('flex');
+}
+
+async function confirmDelete() {
+    if (!deleteId) return;
+
+    try {
+        const response = await fetch(`/admin/api/notification-events/${deleteId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            window.location.reload();
+        } else {
+            alert('Error: ' + (result.error || 'Failed to delete notification'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+
+    closeDeleteModal();
+}
+</script>
+{% endblock %}

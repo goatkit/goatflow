@@ -25,11 +25,39 @@ if [[ -z "${BACKEND_URL:-}" ]]; then
   BACKEND_URL="${BACKEND_URL:-http://localhost:8080}"
 fi
 
+# Cookie jar for session
+COOKIE_JAR=$(mktemp)
+trap "rm -f $COOKIE_JAR" EXIT
+
+# If LOGIN and PASSWORD are set, authenticate first (use JSON API for token)
+if [[ -n "${LOGIN:-}" && -n "${PASSWORD:-}" && -z "${AUTH_TOKEN:-}" ]]; then
+  # Perform JSON login to get access_token
+  login_output=$(curl -k -s \
+    -X POST "$BACKEND_URL/api/auth/login" \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
+    -d "{\"username\":\"${LOGIN}\",\"password\":\"${PASSWORD}\"}")
+
+  # Extract access_token from JSON response
+  AUTH_TOKEN=$(echo "$login_output" | grep -oE '"access_token"\s*:\s*"[^"]+"' | sed 's/.*"access_token"\s*:\s*"\([^"]*\)".*/\1/')
+
+  if [[ -z "$AUTH_TOKEN" ]]; then
+    echo "❌ Login failed: invalid credentials"
+    echo "   Check ADMIN_USER and ADMIN_PASSWORD in your .env file"
+    exit 1
+  fi
+fi
+
 # Build curl args
 args=(-k -i -s -X "$METHOD" "$BACKEND_URL$ENDPOINT" -H "Accept: $CONTENT_TYPE")
-if [[ -n "${AUTH_TOKEN:-}" ]]; then
+
+# Use cookie jar if we logged in, or Bearer token if provided
+if [[ -n "${LOGIN:-}" && -n "${PASSWORD:-}" && -z "${AUTH_TOKEN:-}" ]]; then
+  args+=(-b "$COOKIE_JAR" -c "$COOKIE_JAR")
+elif [[ -n "${AUTH_TOKEN:-}" ]]; then
   args+=(-H "Authorization: Bearer $AUTH_TOKEN")
 fi
+
 if [[ -n "$BODY" ]]; then
   args+=(-H "Content-Type: $CONTENT_TYPE" -d "$BODY")
 fi

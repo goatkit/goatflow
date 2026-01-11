@@ -207,6 +207,75 @@
           "auto_response_id": "Seleccione la respuesta automática a usar"
         }
       },
+      "notification_event": {
+        "title": "Notificaciones de Ticket",
+        "singular": "Notificación de Ticket",
+        "plural": "Notificaciones de Ticket",
+        "description": "Configurar notificaciones automáticas activadas por eventos de ticket",
+        "no_notifications": "Aún no hay eventos de notificación configurados.",
+        "actions": {
+          "new": "Añadir Notificación"
+        },
+        "create_title": "Añadir Notificación de Ticket",
+        "create_description": "Crear una nueva notificación automática para eventos de ticket",
+        "edit_title": "Editar Notificación de Ticket",
+        "edit_description": "Editando notificación",
+        "delete_title": "Eliminar Notificación",
+        "delete_confirm": "¿Está seguro de que desea eliminar esta notificación? Esta acción no se puede deshacer.",
+        "sections": {
+          "basic": "Información Básica",
+          "events": "Eventos",
+          "filters": "Filtros de Ticket",
+          "recipients": "Destinatarios",
+          "message": "Mensaje de Notificación"
+        },
+        "fields": {
+          "name": "Nombre",
+          "valid_id": "Validez",
+          "comments": "Comentario",
+          "create_time": "Creado",
+          "change_time": "Modificado"
+        },
+        "help": {
+          "name": "Nombre único para este evento de notificación",
+          "valid_id": "Si esta notificación está activa",
+          "comments": "Notas internas sobre el propósito de esta notificación",
+          "events": "Seleccione qué eventos activarán esta notificación.",
+          "filters": "Opcionalmente filtrar para enviar solo a tickets que coincidan con estos criterios.",
+          "recipients": "Elija quién recibirá esta notificación.",
+          "message": "Defina el contenido del mensaje de notificación para cada idioma."
+        },
+        "placeholders": {
+          "name": "ej., Notificación de Ticket Creado",
+          "comments": "Descripción opcional de esta notificación",
+          "subject": "Línea de asunto de la notificación",
+          "body": "Cuerpo del mensaje de notificación - puede usar variables de plantilla"
+        },
+        "filters": {
+          "queue": "Cola",
+          "state": "Estado",
+          "priority": "Prioridad",
+          "type": "Tipo"
+        },
+        "recipients": {
+          "agents": "Agentes Específicos",
+          "groups": "Grupos",
+          "roles": "Roles",
+          "special": "Destinatarios Especiales",
+          "owner": "Propietario del Ticket",
+          "responsible": "Responsable del Ticket",
+          "watcher": "Observadores del Ticket",
+          "customer": "Cliente"
+        },
+        "message": {
+          "subject": "Asunto",
+          "body": "Cuerpo",
+          "content_type": "Tipo de Contenido"
+        },
+        "template_variables": {
+          "title": "Variables de Plantilla Disponibles"
+        }
+      },
       "template": {
         "title": "Plantillas de Respuesta",
         "description": "Gestionar plantillas de respuesta estándar para tickets y comunicación",
@@ -859,6 +928,7 @@
     "all_statuses": "Todos los Estados",
     "not_closed": "No Cerrado",
     "are_you_sure": "¿Está seguro?",
+    "back": "Volver",
     "clear": "Limpiar",
     "cancel": "Cancelar",
     "comments": "Comentarios",
@@ -871,6 +941,7 @@
     "edit": "Editar",
     "error": "Error",
     "info": "Información",
+    "invalid_temporary": "Inválido (temporal)",
     "loading": "Cargando...",
     "modified": "Modificado",
     "modified_by": "Modificado Por",
@@ -900,6 +971,8 @@
     "email": "Correo Electrónico",
     "unassigned": "Sin Asignar",
     "update": "Actualizar",
+    "valid": "Válido",
+    "invalid": "Inválido",
     "view_all": "Ver Todo",
     "warning": "Advertencia",
     "yes": "Sí"
@@ -1356,6 +1429,7 @@
     "sessions": "Sesiones Activas",
     "settings": "Configuración",
     "session_timeout_help": "Elija cuánto tiempo deben permanecer activas las sesiones del navegador antes de requerir iniciar sesión nuevamente.",
+    "language_help": "Seleccione su idioma de visualización preferido",
     "theme": "Tema",
     "time_format": "Formato de Hora",
     "timezone": "Zona Horaria",
@@ -1595,6 +1669,12 @@
     "this_week": "Esta Semana",
     "today": "Hoy",
     "yesterday": "Ayer",
+    "hour": "hora",
+    "hours": "horas",
+    "day": "día",
+    "days": "días",
+    "minute": "minuto",
+    "minutes": "minutos",
     "formats": {
       "queue_detail": "2 Ene 2006 a las 15:04"
     }
@@ -1609,7 +1689,8 @@
     "preferences": "Preferencias",
     "profile": "Perfil",
     "settings": "Configuración",
-    "title": "Cargo",
+    "title": "Título",
+    "title_placeholder": "ej. Sr., Sra., Dr.",
     "username": "Nombre de Usuario"
   },
   "validation": {

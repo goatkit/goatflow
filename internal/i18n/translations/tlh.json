@@ -207,6 +207,75 @@
           "auto_response_id": "lo'meH jang automatic wIv"
         }
       },
+      "notification_event": {
+        "title": "chaw' ghojmoH",
+        "singular": "chaw' ghojmoH",
+        "plural": "chaw' ghojmoHmey",
+        "description": "chaw' wanI' automatic ghojmoH qorDu'",
+        "no_notifications": "ghojmoH wanI' pagh qorDu'ta'.",
+        "actions": {
+          "new": "ghojmoH chel"
+        },
+        "create_title": "chaw' ghojmoH chel",
+        "create_description": "chaw' wanI'vaD ghojmoH chu' chenmoH",
+        "edit_title": "chaw' ghojmoH choH",
+        "edit_description": "ghojmoH choHtaH",
+        "delete_title": "ghojmoH HeghmoH",
+        "delete_confirm": "ghojmoHvam DaHeghmoH 'e' DaneH'a'? ta'vam vIchenmoHlaHbe'.",
+        "sections": {
+          "basic": "ngoD DaH",
+          "events": "wanI'mey",
+          "filters": "chaw' Dolmey",
+          "recipients": "Hevwl'mey",
+          "message": "ghojmoH QIn"
+        },
+        "fields": {
+          "name": "pong",
+          "valid_id": "moj",
+          "comments": "QIn",
+          "create_time": "chenmoH poH",
+          "change_time": "choH poH"
+        },
+        "help": {
+          "name": "ghojmoH wanI'vaD pong le'",
+          "valid_id": "ghojmoHvam Qap'a'",
+          "comments": "ghojmoHvam meq tu'lu'",
+          "events": "ghojmoHvam maqtaHvIS wanI'mey wIv.",
+          "filters": "chaw'mey wIv'a', Dol'a' tlhab.",
+          "recipients": "ghojmoHvam Hevwl' wIv.",
+          "message": "Hol'a' ghojmoH QIn De' Del."
+        },
+        "placeholders": {
+          "name": "Sovbe', chaw' chenmoH ghojmoH",
+          "comments": "ghojmoHvam Del'a'",
+          "subject": "ghojmoH meq tlhegh",
+          "body": "ghojmoH QIn porgh - ra' nab lo'laH"
+        },
+        "filters": {
+          "queue": "tlhegh",
+          "state": "Dotlh",
+          "priority": "potlh",
+          "type": "Segh"
+        },
+        "recipients": {
+          "agents": "toy'wI' le'mey",
+          "groups": "ghommey",
+          "roles": "pathmey",
+          "special": "Hevwl' le'mey",
+          "owner": "chaw' ghajwl'",
+          "responsible": "chaw' 'oy'naQ",
+          "watcher": "chaw' bejwl'mey",
+          "customer": "Suy'wl'"
+        },
+        "message": {
+          "subject": "meq",
+          "body": "porgh",
+          "content_type": "De' Segh"
+        },
+        "template_variables": {
+          "title": "ra' nab tu'lu'"
+        }
+      },
       "template": {
         "title": "jang ra'mey",
         "description": "chaw'mey toy'wI' jang ra'mey SeH",
@@ -859,6 +928,7 @@
     "all_statuses": "Hoch Dotlhmey",
     "not_closed": "SoQbe'",
     "are_you_sure": "DaneH'a'?",
+    "back": "chegh",
     "clear": "Qaw'",
     "cancel": "qIl",
     "comments": "QInmey",
@@ -871,6 +941,7 @@
     "edit": "choH",
     "error": "Qagh",
     "info": "De'",
+    "invalid_temporary": "poQbe' (loQ)",
     "loading": "laj...",
     "modified": "choHlu'ta'",
     "modified_by": "choHwI'",
@@ -900,6 +971,8 @@
     "email": "QIn Daq",
     "unassigned": "lanbe'lu'",
     "update": "Dub",
+    "valid": "moj",
+    "invalid": "mojbe'",
     "view_all": "Hoch legh",
     "warning": "yIqIm",
     "yes": "HIja'"
@@ -1356,6 +1429,7 @@
     "sessions": "Qap yInmey",
     "settings": "DuHmey",
     "session_timeout_help": "HaSta yIn taHvIS wIv. 'elqa' poQlu' vorgh.",
+    "language_help": "lo' Hol wIv",
     "theme": "legh",
     "time_format": "poH mIw",
     "timezone": "poH Sep",
@@ -1595,6 +1669,12 @@
     "this_week": "Hoghvam",
     "today": "DaHjaj",
     "yesterday": "wa'Hu'",
+    "hour": "rep",
+    "hours": "rep",
+    "day": "jaj",
+    "days": "jaj",
+    "minute": "tup",
+    "minutes": "tup",
     "formats": {
       "queue_detail": "jar jaj, DIS poH rep:tup"
     }
@@ -1609,7 +1689,8 @@
     "preferences": "DuHmey",
     "profile": "ngoD",
     "settings": "DuHmey",
-    "title": "Qu' pong",
+    "title": "patlh",
+    "title_placeholder": "DaH joq, joq'a', joqwI'",
     "username": "lo'wI' pong"
   },
   "validation": {

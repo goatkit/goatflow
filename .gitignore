@@ -504,7 +504,8 @@ runtime/
 
 # Directories created by containers (use named volumes instead)
 certs/
-routing/
+/routing/
+go/
 
 # ============================================
 # Deploy reference files (NOT ignored)

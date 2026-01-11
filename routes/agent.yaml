@@ -131,3 +131,35 @@ spec:
       method: GET
       handler: handleGetQueueSignature
       description: "Get a queue signature with variable substitution"
+
+    # User preferences API
+    - path: /api/preferences/session-timeout
+      method: GET
+      handler: HandleGetSessionTimeout
+      description: "Get current session timeout preference"
+
+    - path: /api/preferences/session-timeout
+      method: POST
+      handler: HandleSetSessionTimeout
+      description: "Update session timeout preference"
+
+    - path: /api/preferences/language
+      method: GET
+      handler: HandleGetLanguage
+      description: "Get current language preference and available languages"
+
+    - path: /api/preferences/language
+      method: POST
+      handler: HandleSetLanguage
+      description: "Update language preference"
+
+    # User profile API
+    - path: /api/profile
+      method: GET
+      handler: HandleGetProfile
+      description: "Get current user's profile information"
+
+    - path: /api/profile
+      method: POST
+      handler: HandleUpdateProfile
+      description: "Update current user's profile information"
