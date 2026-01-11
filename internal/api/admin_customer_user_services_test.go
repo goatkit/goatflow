@@ -62,7 +62,7 @@ func createTestServiceForCustomerUser(t *testing.T, name string) (int, bool) {
 	} else {
 		err = db.QueryRow(`
 			INSERT INTO service (name, comments, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, 1, NOW(), 1, NOW(), 1)
+			VALUES (?, ?, 1, NOW(), 1, NOW(), 1)
 			RETURNING id`, name, "Test service for customer user services").Scan(&id)
 		if err != nil {
 			t.Logf("Insert service failed: %v", err)
@@ -75,8 +75,8 @@ func createTestServiceForCustomerUser(t *testing.T, name string) (int, bool) {
 			_, _ = db.Exec(`DELETE FROM service_customer_user WHERE service_id = ?`, id)
 			_, _ = db.Exec(`DELETE FROM service WHERE id = ?`, id)
 		} else {
-			_, _ = db.Exec(`DELETE FROM service_customer_user WHERE service_id = $1`, id)
-			_, _ = db.Exec(`DELETE FROM service WHERE id = $1`, id)
+			_, _ = db.Exec(`DELETE FROM service_customer_user WHERE service_id = ?`, id)
+			_, _ = db.Exec(`DELETE FROM service WHERE id = ?`, id)
 		}
 	})
 
@@ -100,7 +100,7 @@ func createTestCustomerUser(t *testing.T, login string) bool {
 	} else {
 		_, execErr = db.Exec(`
 			INSERT INTO customer_user (login, email, customer_id, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, 'test-company', 'test', 'Test', 'User', 1, NOW(), 1, NOW(), 1)
+			VALUES (?, ?, 'test-company', 'test', 'Test', 'User', 1, NOW(), 1, NOW(), 1)
 			ON CONFLICT (login) DO NOTHING`, login, login+"@test.local")
 	}
 	if execErr != nil {
@@ -113,8 +113,8 @@ func createTestCustomerUser(t *testing.T, login string) bool {
 			_, _ = db.Exec(`DELETE FROM service_customer_user WHERE customer_user_login = ?`, login)
 			_, _ = db.Exec(`DELETE FROM customer_user WHERE login = ?`, login)
 		} else {
-			_, _ = db.Exec(`DELETE FROM service_customer_user WHERE customer_user_login = $1`, login)
-			_, _ = db.Exec(`DELETE FROM customer_user WHERE login = $1`, login)
+			_, _ = db.Exec(`DELETE FROM service_customer_user WHERE customer_user_login = ?`, login)
+			_, _ = db.Exec(`DELETE FROM customer_user WHERE login = ?`, login)
 		}
 	})
 
@@ -407,8 +407,8 @@ func TestAdminDefaultServices(t *testing.T) {
 		// Verify <DEFAULT> pseudo-user was used
 		var count int
 		err = db.QueryRow(database.ConvertPlaceholders(`
-			SELECT COUNT(*) FROM service_customer_user 
-			WHERE customer_user_login = '<DEFAULT>' AND service_id = $1
+			SELECT COUNT(*) FROM service_customer_user
+			WHERE customer_user_login = '<DEFAULT>' AND service_id = ?
 		`), serviceID).Scan(&count)
 		require.NoError(t, err)
 		assert.Equal(t, 1, count, "Expected <DEFAULT> pseudo-user assignment")
@@ -499,7 +499,7 @@ func TestGetDefaultServicesCount(t *testing.T) {
 		// Assign both to <DEFAULT>
 		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by)
-			VALUES ('<DEFAULT>', $1, NOW(), 1), ('<DEFAULT>', $2, NOW(), 1)
+			VALUES ('<DEFAULT>', ?, NOW(), 1), ('<DEFAULT>', ?, NOW(), 1)
 		`), service1ID, service2ID)
 		require.NoError(t, err)
 
@@ -536,7 +536,7 @@ func TestDefaultServicesFallbackLogic(t *testing.T) {
 
 		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by)
-			VALUES ($1, $2, NOW(), 1)
+			VALUES (?, ?, NOW(), 1)
 		`), testLogin, explicitServiceID)
 		require.NoError(t, err)
 
@@ -549,7 +549,7 @@ func TestDefaultServicesFallbackLogic(t *testing.T) {
 
 		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by)
-			VALUES ('<DEFAULT>', $1, NOW(), 1)
+			VALUES ('<DEFAULT>', ?, NOW(), 1)
 		`), defaultServiceID)
 		require.NoError(t, err)
 
@@ -557,7 +557,7 @@ func TestDefaultServicesFallbackLogic(t *testing.T) {
 		rows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT s.id, s.name FROM service s
 			INNER JOIN service_customer_user scu ON s.id = scu.service_id
-			WHERE s.valid_id = 1 AND scu.customer_user_login = $1
+			WHERE s.valid_id = 1 AND scu.customer_user_login = ?
 			ORDER BY s.name
 		`), testLogin)
 		require.NoError(t, err)
@@ -601,7 +601,7 @@ func TestDefaultServicesFallbackLogic(t *testing.T) {
 
 		_, err = db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO service_customer_user (customer_user_login, service_id, create_time, create_by)
-			VALUES ('<DEFAULT>', $1, NOW(), 1)
+			VALUES ('<DEFAULT>', ?, NOW(), 1)
 		`), defaultServiceID)
 		require.NoError(t, err)
 
@@ -609,7 +609,7 @@ func TestDefaultServicesFallbackLogic(t *testing.T) {
 		rows, err := db.Query(database.ConvertPlaceholders(`
 			SELECT s.id FROM service s
 			INNER JOIN service_customer_user scu ON s.id = scu.service_id
-			WHERE s.valid_id = 1 AND scu.customer_user_login = $1
+			WHERE s.valid_id = 1 AND scu.customer_user_login = ?
 		`), testLogin)
 		require.NoError(t, err)
 

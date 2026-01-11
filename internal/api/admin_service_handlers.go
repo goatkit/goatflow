@@ -73,24 +73,22 @@ func handleAdminServices(c *gin.Context) {
 	`
 
 	var args []interface{}
-	argCount := 1
 
 	if searchQuery != "" {
-		query += fmt.Sprintf(" AND (LOWER(s.name) LIKE $%d OR LOWER(s.comments) LIKE $%d)", argCount, argCount+1)
+		query += " AND (LOWER(s.name) LIKE ? OR LOWER(s.comments) LIKE ?)"
 		searchPattern := "%" + strings.ToLower(searchQuery) + "%"
 		args = append(args, searchPattern, searchPattern)
-		argCount += 2
 	}
 
 	if validFilter != "all" {
 		if validFilter == "valid" {
-			query += fmt.Sprintf(" AND s.valid_id = $%d", argCount)
+			query += " AND s.valid_id = ?"
 			args = append(args, 1)
 		} else if validFilter == "invalid" {
-			query += fmt.Sprintf(" AND s.valid_id = $%d", argCount)
+			query += " AND s.valid_id = ?"
 			args = append(args, 2)
 		} else if validFilter == "invalid-temporarily" {
-			query += fmt.Sprintf(" AND s.valid_id = $%d", argCount)
+			query += " AND s.valid_id = ?"
 			args = append(args, 3)
 		}
 	}
@@ -272,28 +270,24 @@ func handleAdminServiceUpdate(c *gin.Context) {
 	// Build update query dynamically
 	updates := []string{"change_time = CURRENT_TIMESTAMP", "change_by = 1"}
 	args := []interface{}{}
-	argCount := 1
 
 	if input.Name != "" {
-		updates = append(updates, fmt.Sprintf("name = $%d", argCount))
+		updates = append(updates, "name = ?")
 		args = append(args, input.Name)
-		argCount++
 	}
 
 	if input.Comments != nil {
-		updates = append(updates, fmt.Sprintf("comments = $%d", argCount))
+		updates = append(updates, "comments = ?")
 		args = append(args, *input.Comments)
-		argCount++
 	}
 
 	if input.ValidID != nil {
-		updates = append(updates, fmt.Sprintf("valid_id = $%d", argCount))
+		updates = append(updates, "valid_id = ?")
 		args = append(args, *input.ValidID)
-		argCount++
 	}
 
 	args = append(args, id)
-	query := fmt.Sprintf("UPDATE service SET %s WHERE id = $%d", strings.Join(updates, ", "), argCount)
+	query := fmt.Sprintf("UPDATE service SET %s WHERE id = ?", strings.Join(updates, ", "))
 
 	result, err := db.Exec(database.ConvertPlaceholders(query), args...)
 	if err != nil {

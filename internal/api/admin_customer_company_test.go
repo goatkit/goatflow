@@ -55,7 +55,7 @@ func createTestCustomerCompany(t *testing.T, db *sql.DB, customerID string) {
 
 	_, err := db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO customer_company (customer_id, name, street, city, country, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, $4, $5, 1, NOW(), 1, NOW(), 1)
+		VALUES (?, ?, ?, ?, ?, 1, NOW(), 1, NOW(), 1)
 		ON CONFLICT (customer_id) DO UPDATE SET
 			name = EXCLUDED.name,
 			street = EXCLUDED.street,
@@ -68,7 +68,7 @@ func createTestCustomerCompany(t *testing.T, db *sql.DB, customerID string) {
 
 // Helper function to clean up test customer company.
 func cleanupTestCustomerCompany(t *testing.T, db *sql.DB, customerID string) {
-	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM customer_company WHERE customer_id = $1"), customerID)
+	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM customer_company WHERE customer_id = ?"), customerID)
 	require.NoError(t, err, "Failed to cleanup test customer company")
 }
 
@@ -78,7 +78,7 @@ func verifyCustomerCompanyUpdated(t *testing.T, db *sql.DB, customerID, expected
 	err := db.QueryRow(database.ConvertPlaceholders(`
 		SELECT name, street, city, country 
 		FROM customer_company 
-		WHERE customer_id = $1
+		WHERE customer_id = ?
 	`), customerID).Scan(&name, &street, &city, &country)
 	require.NoError(t, err, "Failed to query customer company")
 
@@ -94,7 +94,7 @@ func verifyCustomerCompanyStatus(t *testing.T, db *sql.DB, customerID string, ex
 	err := db.QueryRow(database.ConvertPlaceholders(`
 		SELECT valid_id 
 		FROM customer_company 
-		WHERE customer_id = $1
+		WHERE customer_id = ?
 	`), customerID).Scan(&validID)
 	require.NoError(t, err, "Failed to query customer company status")
 
@@ -207,7 +207,7 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT name, street, city, country 
 			FROM customer_company 
-			WHERE customer_id = $1
+			WHERE customer_id = ?
 		`), customerID).Scan(&dbName, &dbStreet, &dbCity, &dbCountry)
 		require.NoError(t, err, "Company should exist in database")
 
@@ -529,7 +529,7 @@ func TestAdminCustomerCompanyActivate(t *testing.T) {
 		customerID := "TEST_ACTIVATE_" + fmt.Sprint(time.Now().Unix())
 		_, err := db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO customer_company (customer_id, name, street, city, country, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, $3, $4, $5, 2, NOW(), 1, NOW(), 1)
+			VALUES (?, ?, ?, ?, ?, 2, NOW(), 1, NOW(), 1)
 		`), customerID, "Test Company "+customerID, "123 Test St", "Test City", "Test Country")
 		require.NoError(t, err, "Failed to create inactive test customer company")
 		defer cleanupTestCustomerCompany(t, db, customerID)
@@ -802,7 +802,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 			// Verify the data was written to the database
 			var name string
 			err := db.QueryRow(database.ConvertPlaceholders(`
-				SELECT name FROM customer_company WHERE customer_id = $1
+				SELECT name FROM customer_company WHERE customer_id = ?
 			`), customerID).Scan(&name)
 			require.NoError(t, err, "Company should exist in database")
 			assert.Equal(t, "CRUD Test Company", name)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
@@ -47,30 +46,29 @@ func QualifiedTicketTypeColumn(alias string) string {
 }
 
 // ConvertPlaceholders converts SQL placeholders to the format required by the current database.
-// It accepts either ? placeholders (portable) or $N placeholders (PostgreSQL-specific).
-// - For PostgreSQL: ? → $1, $2, ... OR $N passed through
-// - For MySQL: ? passed through OR $N → ?
-// Prefer writing queries with ? placeholders for maximum portability.
+// This is the ONLY function that should be used for placeholder conversion in the codebase.
+// Do NOT use qb.Rebind() directly - always go through this function.
+//
+// IMPORTANT: Only ? placeholders are allowed. Using $N placeholders will panic.
+// - For PostgreSQL: ? → $1, $2, ...
+// - For MySQL: ? passed through as-is
+//
+// Example:
+//
+//	query := database.ConvertPlaceholders("SELECT * FROM users WHERE id = ? AND name = ?")
+//	rows, err := db.Query(query, id, name)
 func ConvertPlaceholders(query string) string {
-	hasQuestionMark := strings.Contains(query, "?")
-	hasDollarN := regexp.MustCompile(`\$\d+`).MatchString(query)
+	// Reject $N placeholders - all queries must use ? for portability
+	if regexp.MustCompile(`\$\d+`).MatchString(query) {
+		panic(fmt.Sprintf("ConvertPlaceholders: $N placeholders are not allowed. Use ? placeholders instead.\nQuery: %s", query))
+	}
 
 	if IsMySQL() {
-		// MySQL uses ? placeholders
-		if hasDollarN {
-			// Convert $1, $2, etc. to ?
-			re := regexp.MustCompile(`\$\d+`)
-			placeholders := re.FindAllString(query, -1)
-			result := query
-			for _, placeholder := range placeholders {
-				result = strings.Replace(result, placeholder, "?", 1)
-			}
-			query = result
-		}
-		// ? placeholders already work for MySQL
+		// ? placeholders work directly for MySQL
+		// No conversion needed
 	} else {
 		// PostgreSQL uses $1, $2, etc.
-		if hasQuestionMark && !hasDollarN {
+		if strings.Contains(query, "?") {
 			// Convert ? to $1, $2, etc.
 			result := strings.Builder{}
 			paramNum := 1
@@ -84,7 +82,6 @@ func ConvertPlaceholders(query string) string {
 			}
 			query = result.String()
 		}
-		// $N placeholders already work for PostgreSQL
 	}
 
 	// Convert ILIKE to LIKE for MySQL (MySQL is case-insensitive by default with utf8_general_ci)
@@ -124,6 +121,7 @@ func QuoteIdentifier(name string) string {
 }
 
 // BuildInsertQuery builds an INSERT query compatible with the current database.
+// Returns a query with ? placeholders - caller must use ConvertPlaceholders() before executing.
 func BuildInsertQuery(table string, columns []string, returning bool) string {
 	quotedTable := QuoteIdentifier(table)
 	quotedColumns := make([]string, len(columns))
@@ -131,11 +129,7 @@ func BuildInsertQuery(table string, columns []string, returning bool) string {
 
 	for i, col := range columns {
 		quotedColumns[i] = QuoteIdentifier(col)
-		if IsMySQL() {
-			placeholders[i] = "?"
-		} else {
-			placeholders[i] = fmt.Sprintf("$%d", i+1)
-		}
+		placeholders[i] = "?"
 	}
 
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
@@ -151,25 +145,15 @@ func BuildInsertQuery(table string, columns []string, returning bool) string {
 }
 
 // BuildUpdateQuery builds an UPDATE query compatible with the current database.
+// Returns a query with ? placeholders - caller must use ConvertPlaceholders() before executing.
+// The whereClause should also use ? placeholders.
 func BuildUpdateQuery(table string, setColumns []string, whereClause string) string {
 	quotedTable := QuoteIdentifier(table)
 	setClauses := make([]string, len(setColumns))
 
-	paramOffset := 1
 	for i, col := range setColumns {
 		quotedCol := QuoteIdentifier(col)
-		if IsMySQL() {
-			setClauses[i] = fmt.Sprintf("%s = ?", quotedCol)
-		} else {
-			setClauses[i] = fmt.Sprintf("%s = $%d", quotedCol, paramOffset)
-			paramOffset++
-		}
-	}
-
-	// Adjust WHERE clause placeholders
-	if whereClause != "" && !IsMySQL() {
-		// Update placeholder numbers in WHERE clause for PostgreSQL
-		whereClause = adjustPlaceholderNumbers(whereClause, paramOffset)
+		setClauses[i] = fmt.Sprintf("%s = ?", quotedCol)
 	}
 
 	query := fmt.Sprintf("UPDATE %s SET %s", quotedTable, strings.Join(setClauses, ", "))
@@ -178,38 +162,4 @@ func BuildUpdateQuery(table string, setColumns []string, whereClause string) str
 	}
 
 	return query
-}
-
-// adjustPlaceholderNumbers updates $1, $2 to start from the given offset.
-func adjustPlaceholderNumbers(clause string, offset int) string {
-	re := regexp.MustCompile(`\$(\d+)`)
-	return re.ReplaceAllStringFunc(clause, func(match string) string {
-		var num int
-		fmt.Sscanf(match, "$%d", &num)
-		return fmt.Sprintf("$%d", num+offset-1)
-	})
-}
-
-// RemapArgsForMySQL expands positional arguments so repeated placeholders share the same value.
-func RemapArgsForMySQL(query string, args []interface{}) []interface{} {
-	if !IsMySQL() {
-		return args
-	}
-
-	re := regexp.MustCompile(`\$(\d+)`)
-	matches := re.FindAllStringSubmatch(query, -1)
-	if len(matches) == 0 {
-		return args
-	}
-
-	expanded := make([]interface{}, len(matches))
-	for i, match := range matches {
-		idx, err := strconv.Atoi(match[1])
-		if err != nil || idx < 1 || idx > len(args) {
-			return args
-		}
-		expanded[i] = args[idx-1]
-	}
-
-	return expanded
 }

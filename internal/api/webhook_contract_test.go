@@ -116,7 +116,7 @@ func TestWebhookAPIContract(t *testing.T) {
 		// Create test webhooks
 		db.Exec(database.ConvertPlaceholders(`
 			INSERT INTO webhooks (name, url, events, active, create_by, change_by)
-			VALUES ($1, $2, $3, true, 1, 1), ($4, $5, $6, false, 1, 1)
+			VALUES (?, ?, ?, true, 1, 1), (?, ?, ?, false, 1, 1)
 		`), "Active Hook", "https://active.com", "ticket.created",
 			"Inactive Hook", "https://inactive.com", "ticket.closed")
 
@@ -162,7 +162,7 @@ func TestWebhookAPIContract(t *testing.T) {
 		// Create a test webhook
 		insertQuery := `
 			INSERT INTO webhooks (name, url, secret, events, active, create_by, change_by)
-			VALUES ($1, $2, $3, $4, true, 1, 1)
+			VALUES (?, ?, ?, ?, true, 1, 1)
 			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertQuery,
@@ -206,7 +206,7 @@ func TestWebhookAPIContract(t *testing.T) {
 		// Create a test webhook
 		insertQuery := `
 			INSERT INTO webhooks (name, url, events, active, create_by, change_by)
-			VALUES ($1, $2, $3, true, 1, 1)
+			VALUES (?, ?, ?, true, 1, 1)
 			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertQuery,
@@ -259,7 +259,7 @@ func TestWebhookAPIContract(t *testing.T) {
 		// Create a test webhook
 		insertQuery := `
 			INSERT INTO webhooks (name, url, events, active, create_by, change_by)
-			VALUES ($1, $2, $3, true, 1, 1)
+			VALUES (?, ?, ?, true, 1, 1)
 			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertQuery,
@@ -278,7 +278,7 @@ func TestWebhookAPIContract(t *testing.T) {
 		// Contract: Webhook must be deleted from database
 		var count int
 		db.QueryRow(database.ConvertPlaceholders(`
-			SELECT COUNT(*) FROM webhooks WHERE id = $1
+			SELECT COUNT(*) FROM webhooks WHERE id = ?
 		`), webhookID).Scan(&count)
 		assert.Equal(t, 0, count, "Webhook should be deleted from database")
 
@@ -303,7 +303,7 @@ func TestWebhookAPIContract(t *testing.T) {
 		// Create a test webhook
 		insertQuery := `
 			INSERT INTO webhooks (name, url, secret, events, active, create_by, change_by)
-			VALUES ($1, $2, $3, $4, true, 1, 1)
+			VALUES (?, ?, ?, ?, true, 1, 1)
 			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertQuery,
@@ -347,7 +347,7 @@ func TestWebhookAPIContract(t *testing.T) {
 		// Create a test webhook with deliveries
 		insertQuery := `
 			INSERT INTO webhooks (name, url, events, active, create_by, change_by)
-			VALUES ($1, $2, $3, true, 1, 1)
+			VALUES (?, ?, ?, true, 1, 1)
 			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertQuery,
@@ -355,17 +355,13 @@ func TestWebhookAPIContract(t *testing.T) {
 		)
 
 		// Create test deliveries
-		rawDeliveryQuery := `
+		deliveryQuery := database.ConvertPlaceholders(`
 			INSERT INTO webhook_deliveries (webhook_id, event_type, payload, status_code, attempts, success)
-			VALUES ($1, 'ticket.created', '{"test": "data1"}', 200, 1, true),
-			       ($1, 'ticket.updated', '{"test": "data2"}', 500, 3, false)
-		`
-		deliveryQuery := database.ConvertPlaceholders(rawDeliveryQuery)
-		deliveryArgs := []interface{}{webhookID}
-		if database.IsMySQL() {
-			deliveryArgs = database.RemapArgsForMySQL(rawDeliveryQuery, deliveryArgs)
-		}
-		_, err := db.Exec(deliveryQuery, deliveryArgs...)
+			VALUES (?, 'ticket.created', '{"test": "data1"}', 200, 1, true),
+			       (?, 'ticket.updated', '{"test": "data2"}', 500, 3, false)
+		`)
+		// Pass webhookID twice since we use ? placeholders (not ? which can be reused)
+		_, err := db.Exec(deliveryQuery, webhookID, webhookID)
 		require.NoError(t, err)
 
 		req := httptest.NewRequest("GET", "/api/v1/webhooks/"+strconv.Itoa(webhookID)+"/deliveries", nil)
@@ -398,7 +394,7 @@ func TestWebhookAPIContract(t *testing.T) {
 		// First create webhook
 		insertWebhook := `
 			INSERT INTO webhooks (name, url, events, active, create_by, change_by)
-			VALUES ($1, $2, $3, true, 1, 1)
+			VALUES (?, ?, ?, true, 1, 1)
 			RETURNING id
 		`
 		webhookID := insertWebhookRow(t, insertWebhook,
@@ -408,7 +404,7 @@ func TestWebhookAPIContract(t *testing.T) {
 		// Then create failed delivery
 		insertDelivery := `
 			INSERT INTO webhook_deliveries (webhook_id, event_type, payload, status_code, attempts, success)
-			VALUES ($1, 'ticket.created', '{"test": "retry"}', 500, 3, false)
+			VALUES (?, 'ticket.created', '{"test": "retry"}', 500, 3, false)
 			RETURNING id
 		`
 		deliveryID := insertWebhookRow(t, insertDelivery, webhookID)

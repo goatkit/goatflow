@@ -26,15 +26,15 @@ func createTestNotificationEvent(t *testing.T, name string) (int64, bool) {
 	var id int64
 	query := database.ConvertPlaceholders(`
 		INSERT INTO notification_event (name, valid_id, comments, create_time, create_by, change_time, change_by)
-		VALUES ($1, 1, $2, NOW(), 1, NOW(), 1)
+		VALUES (?, 1, ?, NOW(), 1, NOW(), 1)
 		RETURNING id`)
 	require.NoError(t, db.QueryRow(query, name, "Test notification event").Scan(&id))
 
 	t.Cleanup(func() {
 		// Delete related items first due to foreign key constraints
-		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_message WHERE notification_id = $1`), id)
-		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_item WHERE notification_id = $1`), id)
-		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event WHERE id = $1`), id)
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_message WHERE notification_id = ?`), id)
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_item WHERE notification_id = ?`), id)
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event WHERE id = ?`), id)
 	})
 
 	return id, true
@@ -222,9 +222,9 @@ func TestCreateNotificationEvent(t *testing.T) {
 			// Clean up created notification
 			if id, ok := response["id"].(float64); ok {
 				t.Cleanup(func() {
-					_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_message WHERE notification_id = $1`), int64(id))
-					_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_item WHERE notification_id = $1`), int64(id))
-					_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event WHERE id = $1`), int64(id))
+					_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_message WHERE notification_id = ?`), int64(id))
+					_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event_item WHERE notification_id = ?`), int64(id))
+					_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM notification_event WHERE id = ?`), int64(id))
 				})
 			}
 		}
@@ -331,7 +331,7 @@ func TestDeleteNotificationEvent(t *testing.T) {
 		var id int64
 		query := database.ConvertPlaceholders(`
 			INSERT INTO notification_event (name, valid_id, comments, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, $2, NOW(), 1, NOW(), 1)
+			VALUES (?, 1, ?, NOW(), 1, NOW(), 1)
 			RETURNING id`)
 		require.NoError(t, db.QueryRow(query, "TestDeleteNotification", "To be deleted").Scan(&id))
 
@@ -351,7 +351,7 @@ func TestDeleteNotificationEvent(t *testing.T) {
 
 			// Verify deletion
 			var count int
-			err = db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM notification_event WHERE id = $1`), id).Scan(&count)
+			err = db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM notification_event WHERE id = ?`), id).Scan(&count)
 			require.NoError(t, err)
 			assert.Equal(t, 0, count)
 		}

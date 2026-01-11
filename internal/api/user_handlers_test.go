@@ -165,8 +165,8 @@ func TestCreateUserWithGroups(t *testing.T) {
 			}
 
 			if strings.HasPrefix(login, "testuser") {
-				db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id IN (SELECT id FROM users WHERE login = $1)"), login)
-				db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE login = $1"), login)
+				db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id IN (SELECT id FROM users WHERE login = ?)"), login)
+				db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE login = ?"), login)
 			}
 		})
 	}
@@ -234,6 +234,6 @@ func createTestUser(t *testing.T, repo *repository.UserRepository) *models.User 
 }
 
 func cleanupTestUser(t *testing.T, db *sql.DB, userID uint) {
-	db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = $1"), userID)
-	db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = $1"), userID)
+	db.Exec(database.ConvertPlaceholders("DELETE FROM group_user WHERE user_id = ?"), userID)
+	db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), userID)
 }

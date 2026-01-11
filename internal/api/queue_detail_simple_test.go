@@ -70,7 +70,7 @@ func getQueueNameForTest(t *testing.T, id int) string {
 		t.Fatalf("database connection is nil")
 	}
 	var name string
-	query := database.ConvertPlaceholders("SELECT name FROM queue WHERE id = $1")
+	query := database.ConvertPlaceholders("SELECT name FROM queue WHERE id = ?")
 	if err := db.QueryRow(query, id).Scan(&name); err != nil {
 		t.Fatalf("failed to fetch queue %d name: %v", id, err)
 	}

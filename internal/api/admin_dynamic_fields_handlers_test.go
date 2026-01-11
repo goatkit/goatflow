@@ -64,7 +64,7 @@ func createTestDynamicField(t *testing.T, db *sql.DB, name string, fieldType str
 
 	err := db.QueryRow(database.ConvertPlaceholders(`
 		INSERT INTO dynamic_field (internal_field, name, label, field_order, field_type, object_type, config, valid_id, create_time, create_by, change_time, change_by)
-		VALUES (0, $1, $2, 1, $3, $4, $5, 1, $6, 1, $7, 1)
+		VALUES (0, ?, ?, 1, ?, ?, ?, 1, ?, 1, ?, 1)
 		RETURNING id
 	`), name, name, fieldType, objectType, config, now, now).Scan(&fieldID)
 	require.NoError(t, err, "Failed to create test dynamic field")
@@ -73,18 +73,18 @@ func createTestDynamicField(t *testing.T, db *sql.DB, name string, fieldType str
 }
 
 func cleanupTestDynamicField(t *testing.T, db *sql.DB, fieldID int64) {
-	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field_value WHERE field_id = $1"), fieldID)
-	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field WHERE id = $1"), fieldID)
+	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field_value WHERE field_id = ?"), fieldID)
+	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field WHERE id = ?"), fieldID)
 	require.NoError(t, err, "Failed to cleanup test dynamic field")
 }
 
 func cleanupTestDynamicFieldByName(t *testing.T, db *sql.DB, name string) {
 	var fieldID int64
-	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM dynamic_field WHERE name = $1"), name).Scan(&fieldID)
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT id FROM dynamic_field WHERE name = ?"), name).Scan(&fieldID)
 	if fieldID > 0 {
-		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field_value WHERE field_id = $1"), fieldID)
+		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field_value WHERE field_id = ?"), fieldID)
 	}
-	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field WHERE name = $1"), name)
+	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM dynamic_field WHERE name = ?"), name)
 }
 
 func TestAdminDynamicFieldsPage(t *testing.T) {
@@ -323,7 +323,7 @@ func TestUpdateDynamicFieldWithDB(t *testing.T) {
 			"Expected success status, got %d", w.Code)
 
 		var label string
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT label FROM dynamic_field WHERE id = $1"), fieldID).Scan(&label)
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT label FROM dynamic_field WHERE id = ?"), fieldID).Scan(&label)
 		assert.Equal(t, "Updated Label", label)
 	})
 
@@ -361,7 +361,7 @@ func TestDeleteDynamicFieldWithDB(t *testing.T) {
 			"Expected success status, got %d", w.Code)
 
 		var count int
-		_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM dynamic_field WHERE id = $1"), fieldID).Scan(&count)
+		_ = db.QueryRow(database.ConvertPlaceholders("SELECT COUNT(*) FROM dynamic_field WHERE id = ?"), fieldID).Scan(&count)
 		assert.Equal(t, 0, count)
 	})
 

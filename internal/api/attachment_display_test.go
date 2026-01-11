@@ -136,7 +136,7 @@ func TestAttachmentDisplayInTicketDetail(t *testing.T) {
 			SELECT COUNT(*)
 			FROM ticket_history th
 			JOIN ticket_history_type tht ON th.history_type_id = tht.id
-			WHERE th.ticket_id = $1 AND tht.name = $2
+			WHERE th.ticket_id = ? AND tht.name = ?
 		`)
 		var historyCount int
 		err = db.QueryRow(historyQuery, created.ID, history.TypeNewTicket).Scan(&historyCount)
@@ -148,7 +148,7 @@ func TestAttachmentDisplayInTicketDetail(t *testing.T) {
 			SELECT th.name
 			FROM ticket_history th
 			JOIN ticket_history_type tht ON th.history_type_id = tht.id
-			WHERE th.ticket_id = $1 AND tht.name = $2
+			WHERE th.ticket_id = ? AND tht.name = ?
 			ORDER BY th.id DESC
 			LIMIT 1
 		`)
@@ -186,9 +186,9 @@ func TestAttachmentDownloadHandler(t *testing.T) {
 		// Insert test attachment record
 		var attachmentID int
 		err = db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO article_data_mime_attachment 
+			INSERT INTO article_data_mime_attachment
 			(article_id, filename, content_type, content_size, content, disposition, create_by, change_by)
-			VALUES (1, 'test-download.txt', 'text/plain', '21', $1, 'attachment', 1, 1)
+			VALUES (1, 'test-download.txt', 'text/plain', '21', ?, 'attachment', 1, 1)
 			RETURNING id
 		`), []byte(testFile)).Scan(&attachmentID)
 
@@ -210,7 +210,7 @@ func TestAttachmentDownloadHandler(t *testing.T) {
 		assert.Equal(t, string(testContent), w.Body.String())
 
 		// Clean up
-		db.Exec("DELETE FROM article_data_mime_attachment WHERE id = $1", attachmentID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime_attachment WHERE id = ?"), attachmentID)
 	})
 
 	t.Run("Download non-existent attachment", func(t *testing.T) {
@@ -251,19 +251,19 @@ func TestGetMessagesWithAttachments(t *testing.T) {
 		if err != nil {
 			t.Skip("Could not create test ticket")
 		}
-		defer db.Exec("DELETE FROM ticket WHERE id = $1", ticketID)
+		defer db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id = ?"), ticketID)
 
 		// Create an article for the ticket
 		var articleID int
 		err = db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO article (ticket_id, subject, body, sender_type_id, communication_channel_id,
 			                    is_visible_for_customer, create_by, change_by)
-			VALUES ($1, 'Test Article', 'Test article body', 3, 1, 1, 1, 1)
+			VALUES (?, 'Test Article', 'Test article body', 3, 1, 1, 1, 1)
 			RETURNING id
 		`), ticketID).Scan(&articleID)
 
 		require.NoError(t, err)
-		defer db.Exec("DELETE FROM article WHERE id = $1", articleID)
+		defer db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE id = ?"), articleID)
 
 		// Create an attachment for the article
 		testFile := "/tmp/test-article-attachment.pdf"
@@ -272,14 +272,14 @@ func TestGetMessagesWithAttachments(t *testing.T) {
 
 		var attachmentID int
 		err = db.QueryRow(database.ConvertPlaceholders(`
-			INSERT INTO article_data_mime_attachment 
+			INSERT INTO article_data_mime_attachment
 			(article_id, filename, content_type, content_size, content, disposition, create_by, change_by)
-			VALUES ($1, 'document.pdf', 'application/pdf', '11', $2, 'attachment', 1, 1)
+			VALUES (?, 'document.pdf', 'application/pdf', '11', ?, 'attachment', 1, 1)
 			RETURNING id
 		`), articleID, []byte(testFile)).Scan(&attachmentID)
 
 		require.NoError(t, err)
-		defer db.Exec("DELETE FROM article_data_mime_attachment WHERE id = $1", attachmentID)
+		defer db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime_attachment WHERE id = ?"), attachmentID)
 
 		// Get the ticket service and retrieve messages
 		ticketService := GetTicketService()

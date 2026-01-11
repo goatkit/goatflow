@@ -45,13 +45,13 @@ func TestArticleAPI(t *testing.T) {
 		INSERT INTO ticket (tn, title, queue_id, %s, ticket_state_id,
 			ticket_priority_id, ticket_lock_id, customer_user_id, user_id, responsible_user_id,
 			timeout, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, 1, 1, 1, 3, 1, 'test@example.com', 1, 1, 0, NOW(), 1, NOW(), 1)
+		VALUES (?, ?, 1, 1, 1, 3, 1, 'test@example.com', 1, 1, 0, NOW(), 1, NOW(), 1)
 	`, ticketTypeColumn))
 	_, err := db.Exec(ticketInsert, "2024123100001", "Test Ticket")
 	if err != nil {
 		t.Skipf("Failed to create test ticket (likely missing FK references): %v", err)
 	}
-	err = db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE tn = $1 ORDER BY id DESC LIMIT 1`), "2024123100001").Scan(&ticketID)
+	err = db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket WHERE tn = ? ORDER BY id DESC LIMIT 1`), "2024123100001").Scan(&ticketID)
 	if err != nil || ticketID == 0 {
 		t.Skip("Could not retrieve test ticket ID, skipping")
 	}
@@ -68,7 +68,7 @@ func TestArticleAPI(t *testing.T) {
 		articleQuery := database.ConvertPlaceholders(`
 			INSERT INTO article (ticket_id, article_type_id, article_sender_type_id,
 				from_email, to_email, subject, body, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, 1, 'sender@example.com', 'recipient@example.com', 
+			VALUES (?, 1, 1, 'sender@example.com', 'recipient@example.com',
 				'Test Subject', 'Test Body', NOW(), 1, NOW(), 1)
 		`)
 		db.Exec(articleQuery, ticketID)
@@ -115,11 +115,11 @@ func TestArticleAPI(t *testing.T) {
 		_, _ = db.Exec(database.ConvertPlaceholders(`
             INSERT INTO article (ticket_id, article_type_id, article_sender_type_id,
                 from_email, to_email, subject, body, create_time, create_by, change_time, change_by)
-            VALUES ($1, 1, 1, 'from@test.com', 'to@test.com', 
+            VALUES (?, 1, 1, 'from@test.com', 'to@test.com',
                 'Get Test', 'Get Test Body', NOW(), 1, NOW(), 1)
         `), ticketID)
 		_ = db.QueryRow(database.ConvertPlaceholders(`
-            SELECT id FROM article WHERE ticket_id = $1 AND subject = 'Get Test' ORDER BY id DESC LIMIT 1
+            SELECT id FROM article WHERE ticket_id = ? AND subject = 'Get Test' ORDER BY id DESC LIMIT 1
         `), ticketID).Scan(&articleID)
 
 		// Test getting the article (fallback permits any positive id in test)
@@ -204,11 +204,11 @@ func TestArticleAPI(t *testing.T) {
 		_, _ = db.Exec(database.ConvertPlaceholders(`
             INSERT INTO article (ticket_id, article_type_id, article_sender_type_id,
                 from_email, to_email, subject, body, create_time, create_by, change_time, change_by)
-            VALUES ($1, 1, 1, 'original@test.com', 'to@test.com', 
+            VALUES (?, 1, 1, 'original@test.com', 'to@test.com',
                 'Original Subject', 'Original Body', NOW(), 1, NOW(), 1)
         `), ticketID)
 		_ = db.QueryRow(database.ConvertPlaceholders(`
-            SELECT id FROM article WHERE ticket_id = $1 AND subject = 'Original Subject' ORDER BY id DESC LIMIT 1
+            SELECT id FROM article WHERE ticket_id = ? AND subject = 'Original Subject' ORDER BY id DESC LIMIT 1
         `), ticketID).Scan(&articleID)
 
 		// Test updating article
@@ -251,11 +251,11 @@ func TestArticleAPI(t *testing.T) {
 		_, _ = db.Exec(database.ConvertPlaceholders(`
             INSERT INTO article (ticket_id, article_type_id, article_sender_type_id,
                 from_email, to_email, subject, body, create_time, create_by, change_time, change_by)
-            VALUES ($1, 1, 1, 'delete@test.com', 'to@test.com', 
+            VALUES (?, 1, 1, 'delete@test.com', 'to@test.com',
                 'Delete Test', 'Delete Body', NOW(), 1, NOW(), 1)
         `), ticketID)
 		_ = db.QueryRow(database.ConvertPlaceholders(`
-            SELECT id FROM article WHERE ticket_id = $1 AND subject = 'Delete Test' ORDER BY id DESC LIMIT 1
+            SELECT id FROM article WHERE ticket_id = ? AND subject = 'Delete Test' ORDER BY id DESC LIMIT 1
         `), ticketID).Scan(&articleID)
 
 		// Test deleting article
@@ -270,7 +270,7 @@ func TestArticleAPI(t *testing.T) {
 		// Verify article is deleted
 		var count int
 		checkQuery := database.ConvertPlaceholders(`
-			SELECT COUNT(*) FROM article WHERE id = $1
+			SELECT COUNT(*) FROM article WHERE id = ?
 		`)
 		db.QueryRow(checkQuery, articleID).Scan(&count)
 		assert.Equal(t, 0, count)
@@ -289,18 +289,18 @@ func TestArticleAPI(t *testing.T) {
 		_, _ = db.Exec(database.ConvertPlaceholders(`
             INSERT INTO article (ticket_id, article_type_id, article_sender_type_id,
                 from_email, to_email, subject, body, create_time, create_by, change_time, change_by)
-            VALUES ($1, 1, 1, 'attach@test.com', 'to@test.com', 
+            VALUES (?, 1, 1, 'attach@test.com', 'to@test.com',
                 'Attachment Test', 'Body with attachment', NOW(), 1, NOW(), 1)
         `), ticketID)
 		_ = db.QueryRow(database.ConvertPlaceholders(`
-            SELECT id FROM article WHERE ticket_id = $1 AND subject = 'Attachment Test' ORDER BY id DESC LIMIT 1
+            SELECT id FROM article WHERE ticket_id = ? AND subject = 'Attachment Test' ORDER BY id DESC LIMIT 1
         `), ticketID).Scan(&articleID)
 
 		// Add attachment
 		attachQuery := database.ConvertPlaceholders(`
 			INSERT INTO article_attachment (article_id, filename, content_type, content_size,
 				content, create_time, create_by, change_time, change_by)
-			VALUES ($1, 'test.pdf', 'application/pdf', 1024, 
+			VALUES (?, 'test.pdf', 'application/pdf', 1024,
 				'dummy content', NOW(), 1, NOW(), 1)
 		`)
 		db.Exec(attachQuery, articleID)

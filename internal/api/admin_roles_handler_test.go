@@ -33,7 +33,7 @@ func createTestRole(t *testing.T, name string) (int, bool) {
 
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO roles (name, comments, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, 1, NOW(), 1, NOW(), 1)
+		VALUES (?, ?, 1, NOW(), 1, NOW(), 1)
 		RETURNING id
 	`)
 
@@ -44,7 +44,7 @@ func createTestRole(t *testing.T, name string) (int, bool) {
 
 	id := int(result)
 	t.Cleanup(func() {
-		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM roles WHERE id = $1`), id)
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM roles WHERE id = ?`), id)
 	})
 
 	return id, true
@@ -56,7 +56,7 @@ func cleanupTestRoleByName(t *testing.T, name string) {
 	if err != nil || db == nil {
 		return
 	}
-	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM roles WHERE name = $1`), name)
+	_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM roles WHERE name = ?`), name)
 }
 
 // createTestUser creates a test user for role assignment tests.
@@ -68,7 +68,7 @@ func createTestUserForRole(t *testing.T, login string) (int, bool) {
 
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, 'test', 'Test', 'User', 1, NOW(), 1, NOW(), 1)
+		VALUES (?, 'test', 'Test', 'User', 1, NOW(), 1, NOW(), 1)
 		RETURNING id
 	`)
 
@@ -79,8 +79,8 @@ func createTestUserForRole(t *testing.T, login string) (int, bool) {
 
 	id := int(result)
 	t.Cleanup(func() {
-		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM role_user WHERE user_id = $1`), id)
-		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM users WHERE id = $1`), id)
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM role_user WHERE user_id = ?`), id)
+		_, _ = db.Exec(database.ConvertPlaceholders(`DELETE FROM users WHERE id = ?`), id)
 	})
 
 	return id, true
@@ -598,7 +598,7 @@ func TestAdminRoleUserRemove(t *testing.T) {
 		// First add user to role
 		db, _ := database.GetDB()
 		_, _ = db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO role_user (role_id, user_id, create_time, create_by, change_time, change_by) VALUES ($1, $2, NOW(), 1, NOW(), 1)
+			INSERT INTO role_user (role_id, user_id, create_time, create_by, change_time, change_by) VALUES (?, ?, NOW(), 1, NOW(), 1)
 		`), roleID, userID)
 
 		// Now remove
@@ -773,7 +773,7 @@ func TestAdminRolesDBIntegration(t *testing.T) {
 
 		// Verify in database
 		var count int
-		err = db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM roles WHERE name = $1`), testName).Scan(&count)
+		err = db.QueryRow(database.ConvertPlaceholders(`SELECT COUNT(*) FROM roles WHERE name = ?`), testName).Scan(&count)
 		require.NoError(t, err)
 		assert.Equal(t, 1, count, "Role should exist in database")
 	})
@@ -812,7 +812,7 @@ func TestAdminRolesDBIntegration(t *testing.T) {
 		// Verify in database
 		var count int
 		err = db.QueryRow(database.ConvertPlaceholders(`
-			SELECT COUNT(*) FROM role_user WHERE role_id = $1 AND user_id = $2
+			SELECT COUNT(*) FROM role_user WHERE role_id = ? AND user_id = ?
 		`), roleID, userID).Scan(&count)
 		require.NoError(t, err)
 		assert.Equal(t, 1, count, "Role-user assignment should exist in database")

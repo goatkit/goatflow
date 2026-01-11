@@ -66,13 +66,11 @@ func HandleListUsersAPI(c *gin.Context) {
 
 	where := []string{}
 	args := []interface{}{}
-	argCount := 0
 
 	// Join with user_groups if filtering by group
 	if groupID != "" {
 		query += " INNER JOIN group_user gu ON u.id = gu.user_id"
-		argCount++
-		where = append(where, fmt.Sprintf("gu.group_id = $%d", argCount))
+		where = append(where, "gu.group_id = ?")
 		if gid, err := strconv.Atoi(groupID); err == nil {
 			args = append(args, gid)
 		}
@@ -84,8 +82,7 @@ func HandleListUsersAPI(c *gin.Context) {
 		searchClauses := make([]string, 0, 4)
 		fields := []string{"u.login", "u.first_name", "u.last_name"}
 		for _, field := range fields {
-			argCount++
-			searchClauses = append(searchClauses, fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", field, argCount))
+			searchClauses = append(searchClauses, fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", field))
 			args = append(args, searchPattern)
 		}
 		where = append(where, "("+strings.Join(searchClauses, " OR ")+")")
@@ -94,8 +91,7 @@ func HandleListUsersAPI(c *gin.Context) {
 	// Add valid filter
 	if validFilter != "" {
 		if valid, err := strconv.Atoi(validFilter); err == nil && (valid == 1 || valid == 2) {
-			argCount++
-			where = append(where, fmt.Sprintf("u.valid_id = $%d", argCount))
+			where = append(where, "u.valid_id = ?")
 			args = append(args, valid)
 		}
 	}
@@ -131,11 +127,9 @@ func HandleListUsersAPI(c *gin.Context) {
 
 	// Add pagination
 	offset := (page - 1) * perPage
-	argCount++
-	query += fmt.Sprintf(" ORDER BY u.id LIMIT $%d", argCount)
+	query += " ORDER BY u.id LIMIT ?"
 	args = append(args, perPage)
-	argCount++
-	query += fmt.Sprintf(" OFFSET $%d", argCount)
+	query += " OFFSET ?"
 	args = append(args, offset)
 
 	// Convert placeholders for the database

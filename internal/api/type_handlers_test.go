@@ -55,7 +55,7 @@ func TestCreateType(t *testing.T) {
 	testName := "test_type_" + time.Now().Format("150405")
 
 	defer func() {
-		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_type WHERE name = $1"), testName)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_type WHERE name = ?"), testName)
 	}()
 
 	t.Run("successful create type", func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestCreateType(t *testing.T) {
 		assert.NotNil(t, data["id"])
 
 		var dbName string
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_type WHERE name = $1"), testName).Scan(&dbName)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_type WHERE name = ?"), testName).Scan(&dbName)
 		require.NoError(t, err)
 		assert.Equal(t, testName, dbName)
 	})
@@ -132,13 +132,13 @@ func TestUpdateType(t *testing.T) {
 	} else {
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, NOW(), 1, NOW(), 1) RETURNING id
+			VALUES (?, 1, NOW(), 1, NOW(), 1) RETURNING id
 		`), testName).Scan(&testID)
 		require.NoError(t, err)
 	}
 
 	defer func() {
-		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_type WHERE id = $1"), testID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_type WHERE id = ?"), testID)
 	}()
 
 	t.Run("successful update type", func(t *testing.T) {
@@ -162,7 +162,7 @@ func TestUpdateType(t *testing.T) {
 		assert.True(t, response["success"].(bool))
 
 		var dbName string
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_type WHERE id = $1"), testID).Scan(&dbName)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM ticket_type WHERE id = ?"), testID).Scan(&dbName)
 		require.NoError(t, err)
 		assert.Equal(t, updatedName, dbName)
 	})
@@ -228,13 +228,13 @@ func TestDeleteType(t *testing.T) {
 	} else {
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			INSERT INTO ticket_type (name, valid_id, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, NOW(), 1, NOW(), 1) RETURNING id
+			VALUES (?, 1, NOW(), 1, NOW(), 1) RETURNING id
 		`), testName).Scan(&testID)
 		require.NoError(t, err)
 	}
 
 	defer func() {
-		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_type WHERE id = $1"), testID)
+		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket_type WHERE id = ?"), testID)
 	}()
 
 	t.Run("successful delete type (soft delete)", func(t *testing.T) {
@@ -251,7 +251,7 @@ func TestDeleteType(t *testing.T) {
 		assert.Equal(t, "Type deleted successfully", response["message"])
 
 		var validID int
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT valid_id FROM ticket_type WHERE id = $1"), testID).Scan(&validID)
+		err = db.QueryRow(database.ConvertPlaceholders("SELECT valid_id FROM ticket_type WHERE id = ?"), testID).Scan(&validID)
 		require.NoError(t, err)
 		assert.Equal(t, 2, validID)
 	})

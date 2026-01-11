@@ -75,7 +75,7 @@ func createTestQueue(t *testing.T, db *sql.DB, name string) int64 {
 
 	err := db.QueryRow(database.ConvertPlaceholders(`
 		INSERT INTO queue (name, group_id, system_address_id, salutation_id, signature_id, follow_up_id, follow_up_lock, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, 1, 1, 1, 1, 1, 0, 1, NOW(), 1, NOW(), 1)
+		VALUES (?, 1, 1, 1, 1, 1, 0, 1, NOW(), 1, NOW(), 1)
 		RETURNING id
 	`), name).Scan(&queueID)
 	require.NoError(t, err, "Failed to create test queue")
@@ -85,13 +85,13 @@ func createTestQueue(t *testing.T, db *sql.DB, name string) int64 {
 
 // Helper function to clean up test queue.
 func cleanupTestQueue(t *testing.T, db *sql.DB, queueID int64) {
-	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE id = $1"), queueID)
+	_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE id = ?"), queueID)
 	require.NoError(t, err, "Failed to cleanup test queue")
 }
 
 // Helper function to clean up test queue by name.
 func cleanupTestQueueByName(t *testing.T, db *sql.DB, name string) {
-	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE name = $1"), name)
+	_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM queue WHERE name = ?"), name)
 }
 
 func TestAdminQueuesPage(t *testing.T) {
@@ -277,7 +277,7 @@ func TestAdminQueuesCRUDWithDB(t *testing.T) {
 			// Verify queue was soft-deleted (valid_id = 0 or row removed)
 			var count int
 			err := db.QueryRow(database.ConvertPlaceholders(
-				"SELECT COUNT(*) FROM queue WHERE id = $1 AND valid_id = 1"), queueID).Scan(&count)
+				"SELECT COUNT(*) FROM queue WHERE id = ? AND valid_id = 1"), queueID).Scan(&count)
 			require.NoError(t, err)
 			assert.Equal(t, 0, count, "Queue should be deleted or marked invalid")
 		} else {

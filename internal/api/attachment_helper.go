@@ -151,7 +151,7 @@ func insertAttachmentMetadata(fh *multipart.FileHeader, contentType string, para
 		INSERT INTO article_data_mime_attachment (
 			article_id, filename, content_type, content_size, content,
 			disposition, create_time, create_by, change_time, change_by
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`),
+		) VALUES (?,?,?,?,?,?,?,?,?,?)`),
 		params.articleID,
 		fh.Filename,
 		contentType,

@@ -112,7 +112,7 @@ func handleDashboard(c *gin.Context) {
 			var statusRow struct {
 				Name string
 			}
-			query := database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1")
+			query := database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = ?")
 			err = db.QueryRow(query, ticket.TicketStateID).Scan(&statusRow.Name)
 			if err == nil {
 				statusLabel = statusRow.Name
@@ -123,7 +123,7 @@ func handleDashboard(c *gin.Context) {
 			var priorityRow struct {
 				Name string
 			}
-			query = database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = $1")
+			query = database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = ?")
 			err = db.QueryRow(query, ticket.TicketPriorityID).Scan(&priorityRow.Name)
 			if err == nil {
 				priorityLabel = priorityRow.Name
@@ -326,7 +326,7 @@ func handleRecentTickets(c *gin.Context) {
 			var statusRow struct {
 				Name string
 			}
-			query := database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = $1")
+			query := database.ConvertPlaceholders("SELECT name FROM ticket_state WHERE id = ?")
 			err = db.QueryRow(query, ticket.TicketStateID).Scan(&statusRow.Name)
 			if err == nil {
 				statusLabel = statusRow.Name
@@ -337,7 +337,7 @@ func handleRecentTickets(c *gin.Context) {
 			var priorityRow struct {
 				Name string
 			}
-			query = database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = $1")
+			query = database.ConvertPlaceholders("SELECT name FROM ticket_priority WHERE id = ?")
 			err = db.QueryRow(query, ticket.TicketPriorityID).Scan(&priorityRow.Name)
 			if err == nil {
 				priorityName = priorityRow.Name

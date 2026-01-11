@@ -181,8 +181,8 @@ func portalSysconfigAvailable(t *testing.T, db *sql.DB) bool {
 func clearCompanyPortalEntries(t *testing.T, db *sql.DB, customerID string) {
 	t.Helper()
 	pattern := "CustomerPortal::%::" + customerID
-	_, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM sysconfig_modified WHERE name LIKE $1`), pattern)
+	_, err := db.Exec(database.ConvertPlaceholders(`DELETE FROM sysconfig_modified WHERE name LIKE ?`), pattern)
 	require.NoError(t, err)
-	_, err = db.Exec(database.ConvertPlaceholders(`DELETE FROM sysconfig_default WHERE name LIKE $1`), pattern)
+	_, err = db.Exec(database.ConvertPlaceholders(`DELETE FROM sysconfig_default WHERE name LIKE ?`), pattern)
 	require.NoError(t, err)
 }

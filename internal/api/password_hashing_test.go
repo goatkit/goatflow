@@ -96,7 +96,7 @@ func testCustomerUserPasswordHashing(t *testing.T, db *sql.DB, hashType string, 
 
 	// Cleanup after test
 	defer func() {
-		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM customer_user WHERE login = $1"), testLogin)
+		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM customer_user WHERE login = ?"), testLogin)
 	}()
 
 	// Hash the password using the auth hasher (simulating what the handler does)
@@ -106,15 +106,15 @@ func testCustomerUserPasswordHashing(t *testing.T, db *sql.DB, hashType string, 
 
 	// Insert directly into DB (bypassing handler to focus on password hashing)
 	_, err = db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO customer_user (login, email, customer_id, pw, first_name, last_name, valid_id, 
+		INSERT INTO customer_user (login, email, customer_id, pw, first_name, last_name, valid_id,
 			create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, $3, $4, 'Test', 'User', 1, NOW(), 1, NOW(), 1)
+		VALUES (?, ?, ?, ?, 'Test', 'User', 1, NOW(), 1, NOW(), 1)
 	`), testLogin, testEmail, testCustomerID, hashedPassword)
 	require.NoError(t, err, "Failed to insert customer user")
 
 	// Query the stored hash
 	var storedHash string
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT pw FROM customer_user WHERE login = $1"), testLogin).Scan(&storedHash)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT pw FROM customer_user WHERE login = ?"), testLogin).Scan(&storedHash)
 	require.NoError(t, err, "Failed to query stored password")
 
 	// Password should NOT be stored as plain text
@@ -132,7 +132,7 @@ func testAgentPasswordReset(t *testing.T, db *sql.DB, hashType string, verify fu
 	// Insert test agent
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, 'placeholder', 'Test', 'Agent', 1, NOW(), 1, NOW(), 1)
+		VALUES (?, 'placeholder', 'Test', 'Agent', 1, NOW(), 1, NOW(), 1)
 	`), testLogin)
 	require.NoError(t, err, "Failed to create test agent")
 
@@ -141,7 +141,7 @@ func testAgentPasswordReset(t *testing.T, db *sql.DB, hashType string, verify fu
 
 	// Cleanup after test
 	defer func() {
-		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = $1"), agentID)
+		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), agentID)
 	}()
 
 	// Create router with auth context
@@ -166,7 +166,7 @@ func testAgentPasswordReset(t *testing.T, db *sql.DB, hashType string, verify fu
 
 	// Query the stored hash
 	var storedHash string
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT pw FROM users WHERE id = $1"), agentID).Scan(&storedHash)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT pw FROM users WHERE id = ?"), agentID).Scan(&storedHash)
 	require.NoError(t, err, "Failed to query stored password")
 
 	// Password should NOT be stored as plain text
@@ -175,7 +175,7 @@ func testAgentPasswordReset(t *testing.T, db *sql.DB, hashType string, verify fu
 	// Note: Agent password handler uses bcrypt regardless of PASSWORD_HASH_TYPE
 	// This is intentional - agents should always use stronger security
 	// Verify it's a bcrypt hash
-	assert.True(t, strings.HasPrefix(storedHash, "$2"), "Agent passwords should always use bcrypt")
+	assert.True(t, strings.HasPrefix(storedHash, "$2"), "Agent passwords should always use bcrypt") // sql-ok: bcrypt prefix check, not SQL placeholder
 
 	// Verify with bcrypt
 	err = bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(testPassword))
@@ -286,7 +286,7 @@ func TestAgentPasswordAlwaysBcrypt(t *testing.T) {
 	// Insert test agent
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		INSERT INTO users (login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, 'placeholder', 'Test', 'Agent', 1, NOW(), 1, NOW(), 1)
+		VALUES (?, 'placeholder', 'Test', 'Agent', 1, NOW(), 1, NOW(), 1)
 	`), testLogin)
 	require.NoError(t, err)
 
@@ -294,7 +294,7 @@ func TestAgentPasswordAlwaysBcrypt(t *testing.T) {
 	require.NoError(t, err)
 
 	defer func() {
-		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = $1"), agentID)
+		_, _ = db.Exec(database.ConvertPlaceholders("DELETE FROM users WHERE id = ?"), agentID)
 	}()
 
 	// Create router
@@ -318,10 +318,10 @@ func TestAgentPasswordAlwaysBcrypt(t *testing.T) {
 
 	// Verify it's bcrypt despite SHA256 being configured
 	var storedHash string
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT pw FROM users WHERE id = $1"), agentID).Scan(&storedHash)
+	err = db.QueryRow(database.ConvertPlaceholders("SELECT pw FROM users WHERE id = ?"), agentID).Scan(&storedHash)
 	require.NoError(t, err)
 
-	assert.True(t, strings.HasPrefix(storedHash, "$2"),
+	assert.True(t, strings.HasPrefix(storedHash, "$2"), // sql-ok: bcrypt prefix check, not SQL placeholder
 		"Agent passwords MUST use bcrypt regardless of PASSWORD_HASH_TYPE. Got: %s", storedHash)
 
 	// Verify password works

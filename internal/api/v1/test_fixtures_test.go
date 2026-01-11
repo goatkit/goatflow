@@ -80,25 +80,25 @@ func seedLookupTables(db *sql.DB) error {
 		return execErr
 	}
 
-	if err := exec(`DELETE FROM system_address WHERE id = $1 OR queue_id = $2`, 1, 1); err != nil {
+	if err := exec(`DELETE FROM system_address WHERE id = ? OR queue_id = ?`, 1, 1); err != nil {
 		return err
 	}
-	if err := exec(`DELETE FROM queue WHERE id = $1 OR name = $2`, 1, "Raw"); err != nil {
+	if err := exec(`DELETE FROM queue WHERE id = ? OR name = ?`, 1, "Raw"); err != nil {
 		return err
 	}
-	if err := exec(`DELETE FROM groups WHERE id = $1 OR name = $2`, 1, "Raw"); err != nil {
+	if err := exec(`DELETE FROM groups WHERE id = ? OR name = ?`, 1, "Raw"); err != nil {
 		return err
 	}
-	if err := exec(`DELETE FROM salutation WHERE id = $1 OR name = $2`, 1, "Standard"); err != nil {
+	if err := exec(`DELETE FROM salutation WHERE id = ? OR name = ?`, 1, "Standard"); err != nil {
 		return err
 	}
-	if err := exec(`DELETE FROM signature WHERE id = $1 OR name = $2`, 1, "Default"); err != nil {
+	if err := exec(`DELETE FROM signature WHERE id = ? OR name = ?`, 1, "Default"); err != nil {
 		return err
 	}
-	if err := exec(`DELETE FROM follow_up_possible WHERE id = $1 OR name = $2`, 1, "yes"); err != nil {
+	if err := exec(`DELETE FROM follow_up_possible WHERE id = ? OR name = ?`, 1, "yes"); err != nil {
 		return err
 	}
-	if err := exec(`DELETE FROM ticket_type WHERE id = $1 OR name = $2`, 1, "Incident"); err != nil {
+	if err := exec(`DELETE FROM ticket_type WHERE id = ? OR name = ?`, 1, "Incident"); err != nil {
 		return err
 	}
 	if err := exec(`DELETE FROM ticket_priority WHERE id IN (1,2,3,4,5)`); err != nil {
@@ -113,7 +113,7 @@ func seedLookupTables(db *sql.DB) error {
 
 	if err := exec(`
 		INSERT INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
-		VALUES ($1, $2, 1, NOW(), 1, NOW(), 1)
+		VALUES (?, ?, 1, NOW(), 1, NOW(), 1)
 		ON CONFLICT (id) DO UPDATE SET
 			name = EXCLUDED.name,
 			valid_id = EXCLUDED.valid_id
@@ -123,7 +123,7 @@ func seedLookupTables(db *sql.DB) error {
 
 	if err := exec(`
         INSERT INTO follow_up_possible (id, name, valid_id, create_time, create_by, change_time, change_by)
-        VALUES ($1, $2, 1, NOW(), 1, NOW(), 1)
+        VALUES (?, ?, 1, NOW(), 1, NOW(), 1)
         ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             valid_id = EXCLUDED.valid_id
@@ -133,7 +133,7 @@ func seedLookupTables(db *sql.DB) error {
 
 	if err := exec(`
         INSERT INTO salutation (id, name, text, content_type, comments, valid_id, create_time, create_by, change_time, change_by)
-        VALUES ($1, $2, $3, 'text/plain', $4, 1, NOW(), 1, NOW(), 1)
+        VALUES (?, ?, ?, 'text/plain', ?, 1, NOW(), 1, NOW(), 1)
         ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             text = EXCLUDED.text
@@ -143,7 +143,7 @@ func seedLookupTables(db *sql.DB) error {
 
 	if err := exec(`
         INSERT INTO signature (id, name, text, content_type, comments, valid_id, create_time, create_by, change_time, change_by)
-        VALUES ($1, $2, $3, 'text/plain', $4, 1, NOW(), 1, NOW(), 1)
+        VALUES (?, ?, ?, 'text/plain', ?, 1, NOW(), 1, NOW(), 1)
         ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             text = EXCLUDED.text
@@ -155,7 +155,7 @@ func seedLookupTables(db *sql.DB) error {
         INSERT INTO queue (id, name, group_id, unlock_timeout, first_response_time, first_response_notify, update_time, update_notify,
                            solution_time, solution_notify, system_address_id, calendar_name, default_sign_key, salutation_id,
                            signature_id, follow_up_id, follow_up_lock, comments, valid_id, create_time, create_by, change_time, change_by)
-        VALUES ($1, $2, 1, 0, 0, 0, 0, 0, 0, 0, 1, NULL, NULL, 1, 1, 1, 1, $3, 1, NOW(), 1, NOW(), 1)
+        VALUES (?, ?, 1, 0, 0, 0, 0, 0, 0, 0, 1, NULL, NULL, 1, 1, 1, 1, ?, 1, NOW(), 1, NOW(), 1)
         ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             group_id = EXCLUDED.group_id,
@@ -166,7 +166,7 @@ func seedLookupTables(db *sql.DB) error {
 
 	if err := exec(`
         INSERT INTO system_address (id, value0, value1, value2, value3, queue_id, comments, valid_id, create_time, create_by, change_time, change_by)
-        VALUES ($1, $2, $3, NULL, NULL, $4, $5, 1, NOW(), 1, NOW(), 1)
+        VALUES (?, ?, ?, NULL, NULL, ?, ?, 1, NOW(), 1, NOW(), 1)
         ON CONFLICT (id) DO UPDATE SET
             value0 = EXCLUDED.value0,
             value1 = EXCLUDED.value1,
@@ -188,7 +188,7 @@ func seedLookupTables(db *sql.DB) error {
 	for _, st := range stateTypes {
 		if err := exec(`
             INSERT INTO ticket_state_type (id, name, comments, create_time, create_by, change_time, change_by)
-            VALUES ($1, $2, $3, NOW(), 1, NOW(), 1)
+            VALUES (?, ?, ?, NOW(), 1, NOW(), 1)
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name
         `, st.id, st.name, st.name); err != nil {
@@ -209,7 +209,7 @@ func seedLookupTables(db *sql.DB) error {
 	for _, s := range states {
 		if err := exec(`
             INSERT INTO ticket_state (id, name, comments, type_id, valid_id, create_time, create_by, change_time, change_by)
-            VALUES ($1, $2, $3, $4, 1, NOW(), 1, NOW(), 1)
+            VALUES (?, ?, ?, ?, 1, NOW(), 1, NOW(), 1)
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
                 type_id = EXCLUDED.type_id,
@@ -233,7 +233,7 @@ func seedLookupTables(db *sql.DB) error {
 	for _, p := range priorities {
 		if err := exec(`
 			INSERT INTO ticket_priority (id, name, valid_id, color, create_time, create_by, change_time, change_by)
-			VALUES ($1, $2, 1, $3, NOW(), 1, NOW(), 1)
+			VALUES (?, ?, 1, ?, NOW(), 1, NOW(), 1)
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
 				valid_id = EXCLUDED.valid_id,
@@ -245,7 +245,7 @@ func seedLookupTables(db *sql.DB) error {
 
 	if err := exec(`
         INSERT INTO ticket_type (id, name, valid_id, create_time, create_by, change_time, change_by)
-        VALUES ($1, $2, 1, NOW(), 1, NOW(), 1)
+        VALUES (?, ?, 1, NOW(), 1, NOW(), 1)
         ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
             valid_id = EXCLUDED.valid_id

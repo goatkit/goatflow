@@ -42,7 +42,7 @@ func TestDebugGroupAssignmentLogic(t *testing.T) {
 		// STEP 2: Simulate the DELETE operation
 		log.Println("STEP 2: Deleting existing group memberships")
 		result, err := db.Exec(database.ConvertPlaceholders(`
-            DELETE FROM group_user WHERE user_id = $1
+            DELETE FROM group_user WHERE user_id = ?
         `), userID)
 		require.NoError(t, err)
 
@@ -60,7 +60,7 @@ func TestDebugGroupAssignmentLogic(t *testing.T) {
 			var groupID int
 			var validID int
 			err := db.QueryRow(database.ConvertPlaceholders(`
-                SELECT id, valid_id FROM groups WHERE name = $1
+                SELECT id, valid_id FROM groups WHERE name = ?
             `), groupName).Scan(&groupID, &validID)
 			if err == sql.ErrNoRows {
 				log.Printf("❌ Group '%s' does not exist in database", groupName)
@@ -84,7 +84,7 @@ func TestDebugGroupAssignmentLogic(t *testing.T) {
 
 			var groupID int
 			err = db.QueryRow(database.ConvertPlaceholders(`
-                SELECT id FROM groups WHERE name = $1 AND valid_id = 1
+                SELECT id FROM groups WHERE name = ? AND valid_id = 1
             `), groupName).Scan(&groupID)
 			if err == sql.ErrNoRows {
 				log.Printf("❌ Group '%s' not found or not valid", groupName)
@@ -98,7 +98,7 @@ func TestDebugGroupAssignmentLogic(t *testing.T) {
 
 			_, err = db.Exec(database.ConvertPlaceholders(`
 				INSERT INTO group_user (user_id, group_id, permission_key, permission_value, create_time, create_by, change_time, change_by)
-                VALUES ($1, $2, 'rw', 1, NOW(), 1, NOW(), 1)`),
+                VALUES (?, ?, 'rw', 1, NOW(), 1, NOW(), 1)`),
 				userID, groupID,
 			)
 
@@ -143,12 +143,12 @@ func TestDebugGroupAssignmentLogic(t *testing.T) {
 func getCurrentGroups(t *testing.T, db *sql.DB, userID int) []string {
 	var groups []string
 
-	query := `
-		SELECT g.name 
-		FROM groups g 
-		JOIN group_user gu ON g.id = gu.group_id 
-		WHERE gu.user_id = $1 AND g.valid_id = 1
-		ORDER BY g.name`
+	query := database.ConvertPlaceholders(`
+		SELECT g.name
+		FROM groups g
+		JOIN group_user gu ON g.id = gu.group_id
+		WHERE gu.user_id = ? AND g.valid_id = 1
+		ORDER BY g.name`)
 
 	rows, err := db.Query(query, userID)
 	require.NoError(t, err)
@@ -187,9 +187,9 @@ func TestGroupExistenceAndValidity(t *testing.T) {
 			var comments string
 
 			err := db.QueryRow(database.ConvertPlaceholders(`
-				SELECT id, valid_id, COALESCE(comments, '') 
-                FROM groups 
-                WHERE name = $1`), groupName).Scan(&groupID, &validID, &comments)
+				SELECT id, valid_id, COALESCE(comments, '')
+                FROM groups
+                WHERE name = ?`), groupName).Scan(&groupID, &validID, &comments)
 
 			if err == sql.ErrNoRows {
 				fmt.Printf("❌ Group '%s': NOT FOUND\n", groupName)

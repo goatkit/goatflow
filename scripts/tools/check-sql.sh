@@ -1,14 +1,16 @@
 #!/bin/bash
 # SQL Guard - Check for database portability issues
 #
-# This project uses sqlx with QueryBuilder.Rebind() for safe SQL:
-# - Write queries with ? placeholders
-# - Rebind() converts to $1/$2 (PostgreSQL) or ? (MySQL)
+# This project uses database.ConvertPlaceholders() for all SQL queries:
+# - Write queries with ? placeholders ONLY
+# - ConvertPlaceholders() converts to $1/$2 (PostgreSQL) or passes through (MySQL)
 # - User values passed as args, never concatenated
+# - Do NOT use qb.Rebind() directly - use ConvertPlaceholders() instead
 #
 # This script catches code that bypasses this safety:
-# 1. Raw $N placeholders (PostgreSQL-only, bypasses Rebind)
-# 2. ILIKE keyword (PostgreSQL-only, use LOWER() or adapter)
+# 1. Raw $N placeholders (PostgreSQL-only, must use ? instead)
+# 2. Direct Rebind() calls (must use ConvertPlaceholders() instead)
+# 3. ILIKE keyword (PostgreSQL-only, use LOWER() or adapter)
 
 set -e
 
@@ -63,7 +65,19 @@ while IFS= read -r file; do
         done <<< "$matches"
     fi
 
-    # 2. ILIKE keyword (PostgreSQL-only)
+    # 2. Direct Rebind() calls outside of querybuilder.go
+    # Should use database.ConvertPlaceholders() instead
+    matches=$(grep -nE '\.Rebind\(' "$file" 2>/dev/null | \
+        grep -v '// sql-ok' || true)
+    if [ -n "$matches" ]; then
+        while IFS= read -r match; do
+            FINDINGS+=("${RED}❌ $file: Direct Rebind() call - use database.ConvertPlaceholders() instead${NC}")
+            FINDINGS+=("    $match")
+            ((ERRORS++)) || true
+        done <<< "$matches"
+    fi
+
+    # 3. ILIKE keyword (PostgreSQL-only)
     # Should use LOWER(col) LIKE LOWER(?) for MySQL compatibility
     # Or use the database adapter's case-insensitive search method
     matches=$(grep -nE '\bILIKE\b' "$file" 2>/dev/null | \
@@ -89,7 +103,8 @@ if [ $ERRORS -gt 0 ]; then
     echo ""
     echo -e "${RED}❌ SQL guard: $ERRORS portability error(s), $WARNINGS warning(s)${NC}"
     echo ""
-    echo "Fix: Use ? placeholders with qb.Rebind() instead of raw \$N"
+    echo "Fix: Use ? placeholders with database.ConvertPlaceholders() instead of raw \$N"
+    echo "     Use database.ConvertPlaceholders() instead of direct qb.Rebind() calls"
     echo "     Use LOWER(col) LIKE LOWER(?) instead of ILIKE"
     echo "     Add '// sql-ok' comment to suppress false positives"
     exit 1

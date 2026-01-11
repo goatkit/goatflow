@@ -44,11 +44,11 @@ func TestStatisticsAPI(t *testing.T) {
 			ticket_priority_id, customer_user_id, user_id, responsible_user_id,
 			create_time, create_by, change_time, change_by)
 		VALUES 
-			($1, 'Open ticket 1', 1, 1, 1, 3, 'customer1@example.com', 1, 1, NOW() - INTERVAL '7 days', 1, NOW(), 1),
-			($2, 'Open ticket 2', 1, 1, 1, 2, 'customer2@example.com', 2, 2, NOW() - INTERVAL '3 days', 1, NOW(), 1),
-			($3, 'Closed ticket 1', 2, 1, 2, 3, 'customer3@example.com', 1, 1, NOW() - INTERVAL '14 days', 1, NOW() - INTERVAL '10 days', 1),
-			($4, 'Closed ticket 2', 2, 1, 2, 1, 'customer4@example.com', 2, 2, NOW() - INTERVAL '1 day', 1, NOW(), 1),
-			($5, 'Pending ticket', 1, 1, 3, 2, 'customer5@example.com', 1, 2, NOW() - INTERVAL '2 days', 1, NOW(), 1)
+			(?, 'Open ticket 1', 1, 1, 1, 3, 'customer1@example.com', 1, 1, NOW() - INTERVAL '7 days', 1, NOW(), 1),
+			(?, 'Open ticket 2', 1, 1, 1, 2, 'customer2@example.com', 2, 2, NOW() - INTERVAL '3 days', 1, NOW(), 1),
+			(?, 'Closed ticket 1', 2, 1, 2, 3, 'customer3@example.com', 1, 1, NOW() - INTERVAL '14 days', 1, NOW() - INTERVAL '10 days', 1),
+			(?, 'Closed ticket 2', 2, 1, 2, 1, 'customer4@example.com', 2, 2, NOW() - INTERVAL '1 day', 1, NOW(), 1),
+			(?, 'Pending ticket', 1, 1, 3, 2, 'customer5@example.com', 1, 2, NOW() - INTERVAL '2 days', 1, NOW(), 1)
 	`, ticketTypeColumn))
 	db.Exec(ticketQuery, "2024120100001", "2024120100002", "2024120100003", "2024120100004", "2024120100005")
 

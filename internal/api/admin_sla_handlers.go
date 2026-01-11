@@ -434,8 +434,8 @@ func handleAdminSLAUpdate(c *gin.Context) {
 		return
 	}
 
-	query := qb.Rebind("UPDATE sla SET " + strings.Join(updates, ", ") + " WHERE id = ?")
-	result, err := qb.Exec(query, args...)
+	query := database.ConvertPlaceholders("UPDATE sla SET " + strings.Join(updates, ", ") + " WHERE id = ?")
+	result, err := qb.DB().Exec(query, args...)
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			c.JSON(http.StatusBadRequest, gin.H{

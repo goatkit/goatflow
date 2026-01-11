@@ -30,7 +30,7 @@ func cleanupPriorityTestData(t *testing.T, names ...string) {
 	placeholders := make([]string, len(names))
 	args := make([]interface{}, len(names))
 	for i, name := range names {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		placeholders[i] = "?"
 		args[i] = name
 	}
 	query := fmt.Sprintf("DELETE FROM ticket_priority WHERE name IN (%s)", strings.Join(placeholders, ", "))
@@ -123,7 +123,7 @@ func TestPriorityAPI(t *testing.T) {
 		var priorityID int
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_priority (name, valid_id, color, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, $2, NOW(), 1, NOW(), 1)
+			VALUES (?, 1, ?, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
 		db.QueryRow(query, "Test Priority", "#123456").Scan(&priorityID)
@@ -228,7 +228,7 @@ func TestPriorityAPI(t *testing.T) {
 		var priorityID int
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_priority (name, valid_id, color, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, $2, NOW(), 1, NOW(), 1)
+			VALUES (?, 1, ?, NOW(), 1, NOW(), 1)
 			RETURNING id
 		`)
 		db.QueryRow(query, "Update Test Priority", "#abcdef").Scan(&priorityID)
@@ -292,7 +292,7 @@ func TestPriorityAPI(t *testing.T) {
 		adapter := database.GetAdapter()
 		query := database.ConvertPlaceholders(`
 			INSERT INTO ticket_priority (name, valid_id, color, create_time, create_by, change_time, change_by)
-			VALUES ($1, 1, $2, NOW(), 1, NOW(), 1)
+			VALUES (?, 1, ?, NOW(), 1, NOW(), 1)
 		`)
 		priorityID, err := adapter.InsertWithReturning(db, query, "Delete Test Priority", "#654321")
 		if err != nil {
@@ -311,7 +311,7 @@ func TestPriorityAPI(t *testing.T) {
 		// Verify soft delete
 		var validID int
 		checkQuery := database.ConvertPlaceholders(`
-			SELECT valid_id FROM ticket_priority WHERE id = $1
+			SELECT valid_id FROM ticket_priority WHERE id = ?
 		`)
 		err = db.QueryRow(checkQuery, priorityID).Scan(&validID)
 		require.NoError(t, err)
