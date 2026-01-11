@@ -136,7 +136,7 @@ define check_required_env
 endef
 # All variables below MUST be set in .env - no defaults
 # DB_HOST, DB_DRIVER, DB_PORT, DB_NAME, DB_USER, DB_SCOPE
-# VALKEY_HOST, VALKEY_PORT  
+# VALKEY_HOST, VALKEY_PORT
 # TEST_DB_* variables
 
 # Derived test DB variables based on driver
@@ -693,7 +693,8 @@ toolbox-test:
 		echo Running: ./cmd/goats; go test -buildvcs=false -v ./cmd/goats; \
 		echo Running: ./internal/i18n; go test -buildvcs=false -v ./internal/i18n; \
 		echo Running: ./internal/api focused; go test -buildvcs=false -v ./internal/api -run ^Test\(AdminType\|Queue\|Article\|Search\|Priority\|User\|TicketZoom\|AdminService\|AdminStates\|AdminGroupManagement\|HandleGetQueues\|HandleGetPriorities\|DatabaseIntegrity\); \
-		echo Running: ./internal/service; go test -buildvcs=false -v ./internal/service'
+		echo Running: ./internal/service; go test -buildvcs=false -v ./internal/service; \
+		echo Running: ./internal/services/escalation; go test -buildvcs=false -v ./internal/services/escalation'
 
 
 

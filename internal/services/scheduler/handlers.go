@@ -14,6 +14,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
+	"github.com/gotrs-io/gotrs-ce/internal/services/escalation"
 	"github.com/gotrs-io/gotrs-ce/internal/services/genericagent"
 )
 
@@ -23,6 +24,7 @@ func (s *Service) registerBuiltinHandlers() {
 	s.RegisterHandler("email.poll", s.handleEmailPoll)
 	s.RegisterHandler("scheduler.housekeeping", s.handleHousekeeping)
 	s.RegisterHandler("genericAgent.execute", s.handleGenericAgentExecute)
+	s.RegisterHandler("escalation.check", s.handleEscalationCheck)
 }
 
 func (s *Service) handleAutoClose(ctx context.Context, job *models.ScheduledJob) error {
@@ -262,6 +264,50 @@ func (s *Service) handleGenericAgentExecute(ctx context.Context, job *models.Sch
 	return svc.ExecuteAllDueJobs(ctx)
 }
 
+func (s *Service) handleEscalationCheck(ctx context.Context, job *models.ScheduledJob) error {
+	if s.db == nil {
+		s.logger.Printf("scheduler: database unavailable, skipping escalation check")
+		return nil
+	}
+
+	// Initialize escalation service
+	escService := escalation.NewService(s.db, s.logger)
+	if err := escService.Initialize(ctx); err != nil {
+		s.logger.Printf("scheduler: failed to initialize escalation service: %v", err)
+		return err
+	}
+
+	// Create check service using the calendar service from escalation service
+	calService := escalation.NewCalendarService(s.db)
+	if err := calService.LoadCalendars(ctx); err != nil {
+		s.logger.Printf("scheduler: failed to load calendars: %v", err)
+		return err
+	}
+
+	checkService := escalation.NewCheckService(s.db, calService, s.logger)
+
+	// Set decay time from config if provided
+	if decayTime := intFromConfig(job.Config, "decay_time_minutes", 0); decayTime > 0 {
+		checkService.SetDecayTime(decayTime)
+	}
+
+	// Check escalations and trigger events
+	events, err := checkService.CheckEscalations(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(events) > 0 {
+		s.logger.Printf("scheduler: escalation check triggered %d event(s)", len(events))
+		for _, evt := range events {
+			s.logger.Printf("scheduler: escalation event %s for ticket %d", evt.EventName, evt.TicketID)
+			// TODO: Integrate with event/notification system when available
+		}
+	}
+
+	return nil
+}
+
 func defaultJobs() []*models.ScheduledJob {
 	return []*models.ScheduledJob{
 		{
@@ -316,6 +362,16 @@ func defaultJobs() []*models.ScheduledJob {
 			Schedule:       "* * * * *",
 			TimeoutSeconds: 300,
 			Config:         map[string]any{},
+		},
+		{
+			Name:           "Escalation Check",
+			Slug:           "escalation-check",
+			Handler:        "escalation.check",
+			Schedule:       "* * * * *",
+			TimeoutSeconds: 120,
+			Config: map[string]any{
+				"decay_time_minutes": 0, // 0 = no decay, events triggered every run
+			},
 		},
 	}
 }

@@ -75,6 +75,8 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/notification_event_form.pongo2":   true,
 	"pages/admin/postmaster_filters.pongo2":        true,
 	"pages/admin/postmaster_filter_form.pongo2":    true,
+	"pages/admin/acl.pongo2":                       true,
+	"pages/admin/generic_agent.pongo2":             true,
 
 	// Agent templates
 	"pages/agent/dashboard.pongo2":   true,

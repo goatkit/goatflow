@@ -457,6 +457,10 @@ var testedFormTemplates = map[string]bool{
 	"pages/admin/schema_monitoring.pongo2": true,
 	"pages/admin/schema_discovery.pongo2":  true,
 
+	// ACL and Generic Agent (added for escalation engine work)
+	"pages/admin/acl.pongo2":           true,
+	"pages/admin/generic_agent.pongo2": true,
+
 	// Dev tools (not production, skip strict validation)
 	"pages/dev/database.pongo2": true,
 }
