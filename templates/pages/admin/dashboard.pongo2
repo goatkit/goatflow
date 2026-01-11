@@ -84,6 +84,17 @@
                     </div>
                 </div>
             </a>
+            <a href="/admin/acl" class="block bg-white dark:bg-gray-800 shadow rounded-lg p-5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gotrs-500">
+                <div class="flex items-start">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-md bg-gotrs-50 text-gotrs-600 dark:bg-gotrs-900 dark:text-gotrs-300">
+                        <i class="fa-solid fa-lock text-xl" aria-hidden="true"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Access Control Lists</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Define conditional access rules</p>
+                    </div>
+                </div>
+            </a>
             <a href="/admin/email-identities" class="block bg-white dark:bg-gray-800 shadow rounded-lg p-5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gotrs-500">
                 <div class="flex items-start">
                     <div class="flex h-12 w-12 items-center justify-center rounded-md bg-gotrs-50 text-gotrs-600 dark:bg-gotrs-900 dark:text-gotrs-300">
@@ -150,14 +161,14 @@
                     </div>
                 </div>
             </a>
-            <a href="/admin/dynamic/salutation" class="block bg-white dark:bg-gray-800 shadow rounded-lg p-5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gotrs-500">
+            <a href="/admin/generic-agent" class="block bg-white dark:bg-gray-800 shadow rounded-lg p-5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gotrs-500">
                 <div class="flex items-start">
                     <div class="flex h-12 w-12 items-center justify-center rounded-md bg-gotrs-50 text-gotrs-600 dark:bg-gotrs-900 dark:text-gotrs-300">
-                        <i class="fa-solid fa-hand-wave text-xl" aria-hidden="true"></i>
+                        <i class="fa-solid fa-robot text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Salutations</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage email greeting templates</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Generic Agent</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Automated ticket actions and batch jobs</p>
                     </div>
                 </div>
             </a>

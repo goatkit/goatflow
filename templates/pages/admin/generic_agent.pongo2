@@ -1,0 +1,394 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Generic Agent Jobs{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Generic Agent Jobs</h1>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Automated ticket actions that run on a schedule</p>
+                </div>
+                <button onclick="openJobModal()" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600" title="Add new job">
+                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    Add Job
+                </button>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <form method="GET" action="/admin/generic-agent" class="flex flex-wrap gap-4">
+                <div class="flex-1 min-w-[200px]">
+                    <input type="text" name="search" value="{{ SearchQuery }}"
+                           placeholder="Search jobs..."
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                </div>
+                <div>
+                    <select name="valid" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="all" {% if ValidFilter == "all" %}selected{% endif %}>All Status</option>
+                        <option value="valid" {% if ValidFilter == "valid" %}selected{% endif %}>Valid Only</option>
+                        <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>Invalid Only</option>
+                    </select>
+                </div>
+                <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" title="Apply filters">
+                    Filter
+                </button>
+                {% if SearchQuery or ValidFilter != "all" %}
+                <a href="/admin/generic-agent" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg" title="Clear all filters">
+                    Clear
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- Jobs List -->
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Schedule</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for job in Jobs %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{{ job.Name }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                            {% if job.Config.ScheduleDays or job.Config.ScheduleHours or job.Config.ScheduleMinutes %}
+                                <span class="text-xs text-gray-500">
+                                    {% if job.Config.ScheduleDays %}Days: {{ job.Config.ScheduleDays }}{% endif %}
+                                    {% if job.Config.ScheduleHours %} Hours: {{ job.Config.ScheduleHours }}{% endif %}
+                                    {% if job.Config.ScheduleMinutes %} Min: {{ job.Config.ScheduleMinutes }}{% endif %}
+                                </span>
+                            {% else %}
+                                <span class="text-gray-400">Not scheduled</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            {% if job.Valid %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">Valid</span>
+                            {% else %}
+                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">Invalid</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="editJob('{{ job.Name }}')" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="Edit job">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="toggleJobStatus('{{ job.Name }}', {% if job.Valid %}true{% else %}false{% endif %})"
+                                    class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 mr-3"
+                                    title="{% if job.Valid %}Deactivate{% else %}Activate{% endif %}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {% if job.Valid %}
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                                    {% else %}
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    {% endif %}
+                                </svg>
+                            </button>
+                            <button onclick="deleteJob('{{ job.Name }}')" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300" title="Delete job">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                            No generic agent jobs found. Click "Add Job" to create one.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Job Modal -->
+<div id="jobModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900 dark:text-white">Add Job</h2>
+        </div>
+        <form id="jobForm" onsubmit="saveJob(event)">
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="jobOriginalName" name="original_name">
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Job Name *</label>
+                        <input type="text" id="jobName" name="name" required
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                        <select id="jobValid" name="valid"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="true">Valid</option>
+                            <option value="false">Invalid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Schedule</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Days</label>
+                            <input type="text" id="jobScheduleDays" name="schedule_days"
+                                   placeholder="Mon;Tue;Wed or 0-6"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hours</label>
+                            <input type="text" id="jobScheduleHours" name="schedule_hours"
+                                   placeholder="0;6;12;18"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minutes</label>
+                            <input type="text" id="jobScheduleMinutes" name="schedule_minutes"
+                                   placeholder="0;15;30;45"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Configuration (JSON)</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Additional job configuration as JSON key-value pairs.</p>
+                    <textarea id="jobConfig" name="config" rows="8"
+                              placeholder='{"TicketStateMatch": "new", "NewTicketState": "open"}'
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"></textarea>
+                </div>
+            </div>
+
+            <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+                <button type="button" onclick="closeJobModal()"
+                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:text-sm">
+                    Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openJobModal() {
+    document.getElementById('modalTitle').textContent = 'Add Job';
+    document.getElementById('jobForm').reset();
+    document.getElementById('jobOriginalName').value = '';
+    document.getElementById('jobConfig').value = '';
+    const modal = document.getElementById('jobModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function editJob(name) {
+    fetch(`/admin/api/generic-agent/${encodeURIComponent(name)}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const job = result.data;
+                document.getElementById('modalTitle').textContent = 'Edit Job';
+                document.getElementById('jobOriginalName').value = job.name;
+                document.getElementById('jobName').value = job.name;
+                document.getElementById('jobValid').value = job.valid ? 'true' : 'false';
+
+                // Extract schedule fields from config
+                document.getElementById('jobScheduleDays').value = job.config.ScheduleDays || '';
+                document.getElementById('jobScheduleHours').value = job.config.ScheduleHours || '';
+                document.getElementById('jobScheduleMinutes').value = job.config.ScheduleMinutes || '';
+
+                // Remove schedule and valid from config for display
+                const displayConfig = {...job.config};
+                delete displayConfig.ScheduleDays;
+                delete displayConfig.ScheduleHours;
+                delete displayConfig.ScheduleMinutes;
+                delete displayConfig.Valid;
+
+                if (Object.keys(displayConfig).length > 0) {
+                    document.getElementById('jobConfig').value = JSON.stringify(displayConfig, null, 2);
+                } else {
+                    document.getElementById('jobConfig').value = '';
+                }
+
+                const modal = document.getElementById('jobModal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                }
+            } else {
+                showToast(result.error || 'Failed to load job', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Failed to load job', 'error');
+        });
+}
+
+function closeJobModal() {
+    const modal = document.getElementById('jobModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function saveJob(event) {
+    event.preventDefault();
+
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving...';
+
+    const formData = new FormData(event.target);
+    const originalName = formData.get('original_name');
+
+    // Build config object
+    let config = {};
+
+    // Add schedule fields
+    const scheduleDays = formData.get('schedule_days');
+    const scheduleHours = formData.get('schedule_hours');
+    const scheduleMinutes = formData.get('schedule_minutes');
+
+    if (scheduleDays) config.ScheduleDays = scheduleDays;
+    if (scheduleHours) config.ScheduleHours = scheduleHours;
+    if (scheduleMinutes) config.ScheduleMinutes = scheduleMinutes;
+
+    // Parse additional config JSON
+    const configText = document.getElementById('jobConfig').value.trim();
+    if (configText) {
+        try {
+            const additionalConfig = JSON.parse(configText);
+            config = {...config, ...additionalConfig};
+        } catch (e) {
+            showToast('Invalid JSON in configuration', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save';
+            return;
+        }
+    }
+
+    const data = {
+        name: formData.get('name'),
+        valid: formData.get('valid') === 'true',
+        config: config
+    };
+
+    const url = originalName ? `/admin/api/generic-agent/${encodeURIComponent(originalName)}` : '/admin/api/generic-agent';
+    const method = originalName ? 'PUT' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showToast(result.message, 'success');
+            closeJobModal();
+            window.location.reload();
+        } else {
+            showToast(result.error || 'An error occurred', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save';
+        }
+    })
+    .catch(error => {
+        console.error('Save error:', error);
+        showToast('An error occurred: ' + error.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Save';
+    });
+}
+
+function toggleJobStatus(name, currentValid) {
+    const newValid = !currentValid;
+    const action = newValid ? 'activate' : 'deactivate';
+
+    if (confirm(`Are you sure you want to ${action} "${name}"?`)) {
+        fetch(`/admin/api/generic-agent/${encodeURIComponent(name)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ valid: newValid })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showToast(`Job ${action}d successfully`, 'success');
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                showToast(result.error || 'An error occurred', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Toggle error:', error);
+            showToast('An error occurred: ' + error.message, 'error');
+        });
+    }
+}
+
+function deleteJob(name) {
+    if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+        fetch(`/admin/api/generic-agent/${encodeURIComponent(name)}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showToast(result.message, 'success');
+                setTimeout(() => window.location.reload(), 500);
+            } else {
+                showToast(result.error || 'An error occurred', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Delete error:', error);
+            showToast('An error occurred: ' + error.message, 'error');
+        });
+    }
+}
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeJobModal();
+    }
+});
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
+        type === 'error' ? 'bg-red-600' :
+        type === 'success' ? 'bg-green-600' :
+        'bg-blue-600'
+    }`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}
