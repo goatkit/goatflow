@@ -52,6 +52,17 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - NOT operator support for negative match conditions
   - Stop flag to halt further filter processing after match
   - Navigation link added to admin dashboard under System Administration
+- **HTML Structure Validation for Templates**: Centralized HTML tag balance validation in template test suite
+  - `ValidateTagBalance()` function using stack-based approach with `golang.org/x/net/html` tokenizer
+  - Integrated into `TemplateTestHelper.RenderAndValidate()` for automatic validation
+  - All 90+ page templates now validated for missing/mismatched tags on every test run
+  - Catches bugs like missing `</div>` that cause UI elements to become invisible
+  - Files: `internal/template/html_validator.go`, `internal/template/html_validator_test.go`
+- **Scalable Role Users Management**: Search-based user assignment for roles (handles thousands of users)
+  - New API endpoint `GET /admin/roles/:id/users/search?q=xxx` with debounced typeahead
+  - Replaces "load all users" pattern with search-first design (LIMIT 20 results)
+  - Minimum 2 characters required to search, 300ms debounce
+  - Member count display, loading spinner, auto-focus on search input
 - **DBSourceFilter**: Email filter that loads postmaster filters from database and applies them to incoming mail (equivalent to OTRS `PostMaster::PreFilterModule###000-MatchDBSource`)
   - Runs first in filter chain before token extraction filters
   - Supports all X-GOTRS-* headers: Queue, QueueID, Priority, PriorityID, State, Type, Title, CustomerID, CustomerUser, Ignore

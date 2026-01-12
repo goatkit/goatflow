@@ -70,6 +70,7 @@ var (
 	HandleAdminRoleUpdate            = handleAdminRoleUpdate
 	HandleAdminRoleDelete            = handleAdminRoleDelete
 	HandleAdminRoleUsers             = handleAdminRoleUsers
+	HandleAdminRoleUsersSearch       = handleAdminRoleUsersSearch
 	HandleAdminRoleUserAdd           = handleAdminRoleUserAdd
 	HandleAdminRoleUserRemove        = handleAdminRoleUserRemove
 	HandleAdminRolePermissions       = handleAdminRolePermissions

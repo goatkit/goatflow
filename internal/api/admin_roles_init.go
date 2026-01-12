@@ -9,6 +9,7 @@ func init() {
 	routing.RegisterHandler("handleAdminRoleUpdate", HandleAdminRoleUpdate)
 	routing.RegisterHandler("handleAdminRoleDelete", HandleAdminRoleDelete)
 	routing.RegisterHandler("handleAdminRoleUsers", HandleAdminRoleUsers)
+	routing.RegisterHandler("handleAdminRoleUsersSearch", HandleAdminRoleUsersSearch)
 	routing.RegisterHandler("handleAdminRoleUserAdd", HandleAdminRoleUserAdd)
 	routing.RegisterHandler("handleAdminRoleUserRemove", HandleAdminRoleUserRemove)
 	routing.RegisterHandler("handleAdminRolePermissions", HandleAdminRolePermissions)

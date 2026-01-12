@@ -497,18 +497,18 @@ function showToast(message, type) {
 <!-- Datalist for header keys -->
 <datalist id="headerKeysList">
     {% for key in headerKeys %}
-    <option value="{{ key }}">
+    <option value="{{ key }}"></option>
     {% endfor %}
-    <option value="From">
-    <option value="To">
-    <option value="Cc">
-    <option value="Subject">
-    <option value="Body">
-    <option value="Reply-To">
-    <option value="X-Priority">
-    <option value="X-Spam-Status">
-    <option value="Content-Type">
-    <option value="X-Mailer">
-    <option value="Return-Path">
+    <option value="From"></option>
+    <option value="To"></option>
+    <option value="Cc"></option>
+    <option value="Subject"></option>
+    <option value="Body"></option>
+    <option value="Reply-To"></option>
+    <option value="X-Priority"></option>
+    <option value="X-Spam-Status"></option>
+    <option value="Content-Type"></option>
+    <option value="X-Mailer"></option>
+    <option value="Return-Path"></option>
 </datalist>
 {% endblock %}

@@ -992,8 +992,8 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			html, err := helper.RenderTemplate(tt.template, tt.ctx)
-			require.NoError(t, err, "Template %s should render without error", tt.template)
+			// RenderAndValidate renders the template and validates HTML structure
+			html := helper.RenderAndValidate(t, tt.template, tt.ctx)
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
@@ -1067,8 +1067,8 @@ func TestAllAgentTemplatesRender(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			html, err := helper.RenderTemplate(tt.template, tt.ctx)
-			require.NoError(t, err, "Template %s should render without error", tt.template)
+			// RenderAndValidate renders the template and validates HTML structure
+			html := helper.RenderAndValidate(t, tt.template, tt.ctx)
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
@@ -1206,8 +1206,8 @@ func TestAllCustomerTemplatesRender(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			html, err := helper.RenderTemplate(tt.template, tt.ctx)
-			require.NoError(t, err, "Template %s should render without error", tt.template)
+			// RenderAndValidate renders the template and validates HTML structure
+			html := helper.RenderAndValidate(t, tt.template, tt.ctx)
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
@@ -1261,8 +1261,8 @@ func TestAllDashboardTemplatesRender(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			html, err := helper.RenderTemplate(tt.template, tt.ctx)
-			require.NoError(t, err, "Template %s should render without error", tt.template)
+			// RenderAndValidate renders the template and validates HTML structure
+			html := helper.RenderAndValidate(t, tt.template, tt.ctx)
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
@@ -1328,8 +1328,8 @@ func TestAllQueueTemplatesRender(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			html, err := helper.RenderTemplate(tt.template, tt.ctx)
-			require.NoError(t, err, "Template %s should render without error", tt.template)
+			// RenderAndValidate renders the template and validates HTML structure
+			html := helper.RenderAndValidate(t, tt.template, tt.ctx)
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
@@ -1408,8 +1408,8 @@ func TestAllTicketTemplatesRender(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			html, err := helper.RenderTemplate(tt.template, tt.ctx)
-			require.NoError(t, err, "Template %s should render without error", tt.template)
+			// RenderAndValidate renders the template and validates HTML structure
+			html := helper.RenderAndValidate(t, tt.template, tt.ctx)
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}
@@ -1482,8 +1482,8 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			html, err := helper.RenderTemplate(tt.template, tt.ctx)
-			require.NoError(t, err, "Template %s should render without error", tt.template)
+			// RenderAndValidate renders the template and validates HTML structure
+			html := helper.RenderAndValidate(t, tt.template, tt.ctx)
 			require.NotEmpty(t, html, "Template %s should produce output", tt.template)
 		})
 	}

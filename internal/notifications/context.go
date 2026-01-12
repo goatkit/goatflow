@@ -19,7 +19,7 @@ func BuildRenderContext(ctx context.Context, db *sql.DB, customerLogin string, a
 
 	if strings.TrimSpace(customerLogin) != "" {
 		var first, last sql.NullString
-		if err := db.QueryRowContext(ctx, database.ConvertPlaceholders(`SELECT first_name, last_name FROM customer_user WHERE login = $1`), customerLogin).Scan(&first, &last); err == nil {
+		if err := db.QueryRowContext(ctx, database.ConvertPlaceholders(`SELECT first_name, last_name FROM customer_user WHERE login = ?`), customerLogin).Scan(&first, &last); err == nil {
 			rc.CustomerFullName = strings.TrimSpace(strings.TrimSpace(first.String + " " + last.String))
 		}
 		if rc.CustomerFullName == "" {
@@ -29,7 +29,7 @@ func BuildRenderContext(ctx context.Context, db *sql.DB, customerLogin string, a
 
 	if agentID > 0 {
 		var first, last, login sql.NullString
-		if err := db.QueryRowContext(ctx, database.ConvertPlaceholders(`SELECT first_name, last_name, login FROM users WHERE id = $1`), agentID).Scan(&first, &last, &login); err == nil {
+		if err := db.QueryRowContext(ctx, database.ConvertPlaceholders(`SELECT first_name, last_name, login FROM users WHERE id = ?`), agentID).Scan(&first, &last, &login); err == nil {
 			rc.AgentFirstName = strings.TrimSpace(first.String)
 			rc.AgentLastName = strings.TrimSpace(last.String)
 			if rc.AgentFirstName == "" && rc.AgentLastName == "" {

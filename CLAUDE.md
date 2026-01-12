@@ -1,4 +1,174 @@
 
+## ENTITY SELECTION MODAL UX BLUEPRINT - MANDATORY FOR ALL DIALOGS (Jan 12, 2026)
+
+**This is the gold standard for entity selection modals (add users to role, assign agents to queue, etc.)**
+
+Reference implementation: `templates/pages/admin/roles.pongo2` - roleUsersModal
+
+### Modal Structure
+
+```
++----------------------------------------------------------+
+| [Icon] Modal Title                              [X Close] |
+| Optional description/context text                         |
++----------------------------------------------------------+
+| CURRENT MEMBERS                                           |
+| [Filter members...] (local filter, instant)               |
+| +------------------------------------------------------+ |
+| | Member 1                              [Remove]       | |
+| | Member 2                              [Remove]       | |
+| +------------------------------------------------------+ |
++----------------------------------------------------------+
+| ADD NEW MEMBERS                                           |
+| [Search...] (API search, debounced)    [Spinner] [Enter] |
+| +------------------------------------------------------+ |
+| | Search Result 1                       [+ Add]        | |
+| | Search Result 2                       [+ Add]        | |
+| +------------------------------------------------------+ |
++----------------------------------------------------------+
+| [Undo Toast - appears on remove, 5 second timeout]       |
++----------------------------------------------------------+
+```
+
+### API Design Pattern
+
+```go
+// Search endpoint - scalable, never returns all records
+GET /admin/{entity}/:id/{members}/search?q={query}
+
+// Requirements:
+// - Minimum 2 characters required
+// - Maximum 20 results returned
+// - Excludes already-assigned members
+// - Searches multiple fields (name, email, login, etc.)
+// - Returns JSON: [{id, display_name, detail_info}, ...]
+```
+
+### JavaScript Patterns
+
+```javascript
+// 1. DEBOUNCED SEARCH (300ms delay)
+let searchTimeout;
+input.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => performSearch(this.value), 300);
+});
+
+// 2. LOCAL MEMBER CACHE (for filtering and undo)
+let currentMembers = []; // Populated on modal open
+function filterMembers(query) {
+    // Filter cached members client-side - instant response
+}
+
+// 3. OPTIMISTIC UI UPDATES
+async function addMember(id) {
+    // 1. Add to UI immediately
+    appendMemberToList(member);
+    // 2. Clear from search results
+    removeFromSearchResults(id);
+    // 3. KEEP search query (don't clear input)
+    // 4. Call API in background
+    const response = await fetch(...);
+    if (!response.ok) {
+        // 5. Rollback on failure
+        removeMemberFromList(id);
+        showError('Failed to add');
+    }
+}
+
+// 4. UNDO PATTERN FOR DESTRUCTIVE ACTIONS
+async function removeMember(id) {
+    const member = getMemberData(id);
+    // 1. Hide from UI immediately (don't delete)
+    hideMemberRow(id);
+    // 2. Show undo toast
+    showUndoToast(member, () => {
+        // Undo callback - restore UI
+        showMemberRow(id);
+    });
+    // 3. Set delayed actual deletion
+    undoTimeout = setTimeout(async () => {
+        await fetch(`DELETE /api/.../${id}`);
+        actuallyRemoveFromDOM(id);
+    }, 5000);
+}
+
+// 5. KEYBOARD NAVIGATION
+document.addEventListener('keydown', (e) => {
+    if (!modalIsOpen) return;
+    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Enter' && searchHasResults()) {
+        e.preventDefault();
+        addFirstSearchResult();
+    }
+});
+```
+
+### CSS/Visual Patterns
+
+```css
+/* Add button - green on hover */
+.add-btn:hover { @apply bg-green-100 text-green-700; }
+
+/* Remove button - red on hover */
+.remove-btn:hover { @apply bg-red-100 text-red-700; }
+
+/* Row animations */
+.member-row {
+    transition: all 0.2s ease-out;
+}
+.member-row.removing {
+    opacity: 0;
+    transform: translateX(-10px);
+}
+.member-row.adding {
+    animation: slideIn 0.2s ease-out;
+}
+
+/* Undo toast - fixed bottom */
+.undo-toast {
+    @apply fixed bottom-4 right-4 bg-gray-800 text-white 
+           px-4 py-3 rounded-lg shadow-lg flex items-center gap-3;
+}
+```
+
+### UX Requirements Checklist
+
+1. **Header**: Icon + Title + X close button (top-right)
+2. **Member Filter**: Local filtering of cached members (instant)
+3. **Search Input**: 
+   - Minimum 2 characters
+   - 300ms debounce
+   - Loading spinner while searching
+   - "Press Enter to add first result" hint
+4. **Search Results**: Max 20 results, excludes existing members
+5. **Add Action**:
+   - Optimistic UI (instant feedback)
+   - KEEP search query after adding
+   - Green hover state on button
+6. **Remove Action**:
+   - Undo toast with 5-second window
+   - Delayed actual deletion
+   - Red hover state on button
+7. **Keyboard**: Escape to close, Enter to add first result
+8. **Animations**: Slide in/out on add/remove
+9. **Empty States**: Show helpful messages when no members/results
+10. **Error Handling**: Rollback UI on API failure, show toast
+
+### NEVER DO THIS
+
+- Load ALL available entities into the DOM (use search API)
+- Clear search input after adding (user may want to add more)
+- Delete immediately without undo option
+- Use browser confirm() dialogs
+- Block UI during API calls (use optimistic updates)
+- Forget keyboard navigation
+- Skip loading indicators during search
+
+**Every entity selection modal in the product MUST follow this pattern.**
+
+---
+
 ## TESTING INFRASTRUCTURE - MEMORIZE THIS (Jan 11, 2026)
 
 **We have a FULL test stack with a dedicated database.**

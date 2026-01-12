@@ -26,7 +26,7 @@ var rootCmd = &cobra.Command{
 	Use:   "gotrs",
 	Short: "GOTRS CLI - Modern ticketing system management tool",
 	Long: `GOTRS Command Line Interface
-	
+
 A modern replacement for OTRS, built with Go and HTMX.
 This CLI provides utilities for managing your GOTRS installation.`,
 	Version: fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date),
@@ -36,10 +36,10 @@ var synthesizeCmd = &cobra.Command{
 	Use:     "synthesize",
 	Aliases: []string{"synth", "generate-env"},
 	Short:   "Synthesize a new .env file with secure random secrets",
-	Long: `Synthesize generates a new .env configuration file with cryptographically 
+	Long: `Synthesize generates a new .env configuration file with cryptographically
 secure random values for all secrets and sensible defaults for other settings.
 
-This ensures your installation starts with strong, unique credentials instead 
+This ensures your installation starts with strong, unique credentials instead
 of default values that could be security risks.`,
 	RunE: runSynthesize,
 }
@@ -74,7 +74,7 @@ var resetUserCmd = &cobra.Command{
 	Use:   "reset-user",
 	Short: "Reset a user's password and optionally enable their account",
 	Long: `Reset a user's password in the database using bcrypt hashing.
-	
+
 Optionally enables the account by setting valid_id = 1 (OTRS compatible).
 Connects directly to the database using environment variables.`,
 	RunE: runResetUser,
@@ -305,13 +305,13 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 
 	// Ensure user row exists (create minimally if missing)
 	var existing int
-	sel := database.ConvertPlaceholders("SELECT 1 FROM users WHERE login = $1")
+	sel := database.ConvertPlaceholders("SELECT 1 FROM users WHERE login = ?")
 	if err := db.QueryRow(sel, usernameFlag).Scan(&existing); err != nil {
 		// Create minimal user row
 		fmt.Println("👤 Creating minimal user row...")
 		ins := database.ConvertPlaceholders(`
             INSERT INTO users (login, pw, first_name, last_name, valid_id, create_by, change_by)
-            VALUES ($1, '', '', '', 1, 1, 1)`)
+            VALUES (?, '', '', '', 1, 1, 1)`)
 		if _, ie := db.Exec(ins, usernameFlag); ie != nil {
 			// continue; update might still succeed if column set differs
 			fmt.Printf("⚠️  Warning: failed to insert minimal user row: %v\n", ie)
@@ -330,19 +330,19 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 	var sqlArgs []any
 
 	if enableFlag {
-		sqlQuery = database.ConvertPlaceholders(`UPDATE users SET 
-            pw = $1,
+		sqlQuery = database.ConvertPlaceholders(`UPDATE users SET
+            pw = ?,
             valid_id = 1,
             change_time = NOW(),
             change_by = 1
-        WHERE login = $2`)
+        WHERE login = ?`)
 		sqlArgs = []any{string(hash), usernameFlag}
 	} else {
-		sqlQuery = database.ConvertPlaceholders(`UPDATE users SET 
-            pw = $1,
+		sqlQuery = database.ConvertPlaceholders(`UPDATE users SET
+            pw = ?,
             change_time = NOW(),
             change_by = 1
-        WHERE login = $2`)
+        WHERE login = ?`)
 		sqlArgs = []any{string(hash), usernameFlag}
 	}
 
@@ -370,7 +370,7 @@ func runResetUser(cmd *cobra.Command, args []string) error {
 	err = db.QueryRow(database.ConvertPlaceholders(`SELECT login,
 		CASE WHEN pw IS NOT NULL THEN 'SET' ELSE 'NULL' END as password_status,
 		valid_id
-		FROM users WHERE login = $1`), usernameFlag).Scan(&login, &passwordStatus, &validID)
+		FROM users WHERE login = ?`), usernameFlag).Scan(&login, &passwordStatus, &validID)
 
 	if err != nil {
 		return fmt.Errorf("failed to verify update: %w", err)
