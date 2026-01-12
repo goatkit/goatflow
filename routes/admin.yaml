@@ -3,918 +3,953 @@
 apiVersion: v1
 kind: RouteGroup
 metadata:
-  name: admin
-  description: "Administrative routes for system management"
-  namespace: default
-  enabled: true
+    name: admin
+    description: "Administrative routes for system management"
+    namespace: default
+    enabled: true
 spec:
-  prefix: /admin
-  middleware:
-    - auth  # Require authentication
-    - admin  # Require admin role
-  routes:
-    # Admin dashboard
-    - path: /
-      method: GET
-      handler: handleAdminDashboard
-      template: pages/admin/dashboard.pongo2
-      description: "Display admin dashboard with system overview"
-
-    # User management
-    - path: /users
-      method: GET
-      handler: handleAdminUsers
-      template: pages/admin/users.pongo2
-      description: "Display user management page"
-
-    - path: /users/:id
-      method: GET
-      handler: handleAdminUserGet
-      description: "Display user details"
-
-    - path: /users/:id/edit
-      method: GET
-      handler: handleAdminUserEdit
-      description: "Display user edit form"
-
-    - path: /users/:id
-      method: PUT
-      handler: handleAdminUserUpdate
-      description: "Update user"
-
-    - path: /users/:id
-      method: DELETE
-      handler: handleAdminUserDelete
-      description: "Delete user"
-
-    - path: /users
-      method: POST
-      handler: handleAdminUserCreate
-      description: "Create new user"
-
-    - path: /users/:id/groups
-      method: GET
-      handler: handleAdminUserGroups
-      description: "List user groups"
-
-    - path: /users/:id/status
-      handlers:
-        PUT: handleAdminUsersStatus
-        POST: handleAdminUsersStatus
-      description: "Toggle user activation status"
-
-    - path: /password-policy
-      method: GET
-      handler: handleAdminPasswordPolicy
-      description: "Get password policy configuration"
-
-    # Users API
-    - path: /users/list
-      method: GET
-      handler: HandleAdminUsersList
-      description: "Get all users (JSON API)"
-
-    # Group management
-    - path: /groups
-      method: GET
-      handler: handleAdminGroups
-      template: pages/admin/groups.pongo2
-      description: "Display group management page"
-
-    - path: /groups/new
-      method: GET
-      handler: handleCreateGroup
-      template: pages/admin/group_form.pongo2
-      description: "Display new group creation form"
-
-    - path: /groups
-      method: POST
-      handler: handleCreateGroup
-      description: "Create new group"
-
-    - path: /groups/:id
-      method: GET
-      handler: handleGetGroup
-      template: pages/admin/group_view.pongo2
-      description: "Display group details"
-
-    - path: /groups/:id/edit
-      method: GET
-      handler: handleGetGroup
-      template: pages/admin/group_form.pongo2
-      description: "Display group edit form"
-
-    - path: /groups/:id
-      method: PUT
-      handler: handleUpdateGroup
-      description: "Update existing group"
-
-    - path: /groups/:id
-      method: DELETE
-      handler: handleDeleteGroup
-      description: "Delete group"
-
-    - path: /groups/:id/members
-      method: GET
-      handler: handleGroupMembers
-      template: pages/admin/group_members.pongo2
-      description: "Display group members"
-
-    - path: /groups/:id/members
-      method: POST
-      handler: handleAddUserToGroup
-      description: "Add user to group"
-
-    - path: /groups/:id/members/:userId
-      method: DELETE
-      handler: handleRemoveUserFromGroup
-      description: "Remove user from group"
-
-    - path: /groups/:id/permissions
-      method: GET
-      handler: handleGroupPermissions
-      template: pages/admin/group_permissions.pongo2
-      description: "Get queue-centric permissions for a group"
-
-    - path: /groups/:id/permissions
-      method: POST
-      handler: handleSaveGroupPermissions
-      description: "Update queue-centric permissions for a group"
-
-    # Group users API endpoints (for frontend compatibility)
-    - path: /groups/:id/users
-      method: GET
-      handler: HandleAdminGroupsUsers
-      description: "Get group users"
-
-    - path: /groups/:id/users
-      method: POST
-      handler: HandleAdminGroupsAddUser
-      description: "Add user to group"
-
-    - path: /groups/:id/users/:userId
-      method: DELETE
-      handler: HandleAdminGroupsRemoveUser
-      description: "Remove user from group"
-
-    # Queue management
-    - path: /queues
-      method: GET
-      handler: handleAdminQueues
-      template: pages/admin/queues.pongo2
-      description: "Display queue management page"
-
-    - path: /email-identities
-      method: GET
-      handler: handleAdminEmailIdentities
-      template: pages/admin/email_identities.pongo2
-      description: "Manage system addresses, salutations, and signatures"
-
-    # Email queue management
-    - path: /email-queue
-      method: GET
-      handler: handleAdminEmailQueue
-      template: pages/admin/email_queue.pongo2
-      description: "Display email queue management page"
-
-    # Email queue actions
-    - path: /email-queue/retry/:id
-      method: POST
-      handler: handleAdminEmailQueueRetry
-      description: "Retry sending a specific email from the queue"
-
-    - path: /email-queue/delete/:id
-      method: POST
-      handler: handleAdminEmailQueueDelete
-      description: "Delete a specific email from the queue"
-
-    - path: /email-queue/retry-all
-      method: POST
-      handler: handleAdminEmailQueueRetryAll
-      description: "Retry all failed emails in the queue"
-
-    # Priority management
-    - path: /priorities
-      method: GET
-      handler: handleAdminPriorities
-      template: pages/admin/priorities.pongo2
-      description: "Display priority management page"
-
-    # Permission management
-    - path: /permissions
-      method: GET
-      handler: handleAdminPermissions
-      template: pages/admin/permissions.pongo2
-      description: "Display permission management page"
-
-    - path: /permissions/user/:userId
-      method: GET
-      handler: handleGetUserPermissionMatrix
-      description: "Get user permission matrix"
-
-    - path: /permissions/user/:userId
-      method: PUT
-      handler: handleUpdateUserPermissions
-      description: "Update user permissions"
-
-    # Role management
-    - path: /roles
-      method: GET
-      handler: handleAdminRoles
-      template: pages/admin/roles.pongo2
-      description: "Display role management page"
-
-    - path: /roles
-      method: POST
-      handler: handleAdminRoleCreate
-      description: "Create a new role"
-
-    - path: /roles/:id
-      method: GET
-      handler: handleAdminRoleGet
-      description: "Get role details"
-
-    - path: /roles/:id
-      method: PUT
-      handler: handleAdminRoleUpdate
-      description: "Update an existing role"
-
-    - path: /roles/:id
-      method: DELETE
-      handler: handleAdminRoleDelete
-      description: "Delete a role"
-
-    - path: /roles/:id/users
-      method: GET
-      handler: handleAdminRoleUsers
-      template: pages/admin/role_users.pongo2
-      description: "Display users assigned to a role"
-
-    - path: /roles/:id/users
-      method: POST
-      handler: handleAdminRoleUserAdd
-      description: "Add a user to a role"
-
-    - path: /roles/:id/users/:userId
-      method: DELETE
-      handler: handleAdminRoleUserRemove
-      description: "Remove a user from a role"
-
-    - path: /roles/:id/permissions
-      method: GET
-      handler: handleAdminRolePermissions
-      template: pages/admin/role_permissions.pongo2
-      description: "Display and manage role-group permissions"
-
-    - path: /roles/:id/permissions
-      method: POST
-      handler: handleAdminRolePermissionsUpdate
-      description: "Update role-group permissions"
-
-    # State management
-    - path: /states
-      method: GET
-      handler: handleAdminStates
-      template: pages/admin/states.pongo2
-      description: "Display state management page"
-
-    # Type management
-    - path: /types
-      method: GET
-      handler: handleAdminTypes
-      template: pages/admin/types.pongo2
-      description: "Display type management page"
-
-    # Service management
-    - path: /services
-      method: GET
-      handler: handleAdminServices
-      template: pages/admin/services.pongo2
-      description: "Display service management page"
-
-    - path: /services/create
-      method: POST
-      handler: handleAdminServiceCreate
-      description: "Create a new service"
-
-    - path: /services/:id/update
-      method: PUT
-      handler: handleAdminServiceUpdate
-      description: "Update an existing service"
-
-    - path: /services/:id/delete
-      method: DELETE
-      handler: handleAdminServiceDelete
-      description: "Delete a service"
-
-    # SLA management
-    - path: /sla
-      method: GET
-      handler: handleAdminSLA
-      template: pages/admin/sla.pongo2
-      description: "Display SLA management page"
-
-    - path: /sla/create
-      method: POST
-      handler: handleAdminSLACreate
-      description: "Create a new SLA"
-
-    - path: /sla/:id/update
-      method: PUT
-      handler: handleAdminSLAUpdate
-      description: "Update an existing SLA"
-
-    - path: /sla/:id/delete
-      method: DELETE
-      handler: handleAdminSLADelete
-      description: "Delete an SLA"
-
-    # Lookup management
-    - path: /lookups
-      method: GET
-      handler: handleAdminLookups
-      template: pages/admin/lookups.pongo2
-      description: "Display lookup management page"
-
-    # Customer company management
-    - path: /customer/companies
-      method: GET
-      handler: handleAdminCustomerCompanies
-      template: pages/admin/customer_companies.pongo2
-      description: "Display customer companies management"
-
-    - path: /customer/companies/new
-      method: GET
-      handler: handleAdminNewCustomerCompany
-      template: pages/admin/customer_company_form.pongo2
-      description: "Display new customer company form"
-
-    - path: /customer/companies/new
-      method: POST
-      handler: handleAdminCreateCustomerCompany
-      description: "Create new customer company"
-
-    - path: /customer/companies
-      method: POST
-      handler: handleAdminCreateCustomerCompany
-      description: "Create new customer company"
-
-    - path: /customer/companies/:id/edit
-      method: GET
-      handler: handleAdminEditCustomerCompany
-      template: pages/admin/customer_company_form.pongo2
-      description: "Display customer company edit form"
-
-    - path: /customer/companies/:id/edit
-      method: POST
-      handler: handleAdminUpdateCustomerCompany
-      description: "Update customer company"
-
-    - path: /customer/companies/:id
-      method: DELETE
-      handler: handleAdminDeleteCustomerCompany
-      description: "Delete customer company"
-
-    - path: /customer/companies/:id/delete
-      method: POST
-      handler: handleAdminDeleteCustomerCompany
-      description: "Delete customer company (legacy POST route)"
-
-    - path: /customer/companies/:id/activate
-      method: POST
-      handler: handleAdminActivateCustomerCompany
-      description: "Activate customer company"
-
-    - path: /customer/companies/:id/users
-      method: GET
-      handler: handleAdminCustomerCompanyUsers
-      template: pages/admin/customer_company_users.pongo2
-      description: "Display customer company users"
-
-    - path: /customer/companies/:id/tickets
-      method: GET
-      handler: handleAdminCustomerCompanyTickets
-      template: pages/admin/customer_company_tickets.pongo2
-      description: "Display customer company tickets"
-
-    - path: /customer/companies/:id/services
-      method: GET
-      handler: handleAdminCustomerCompanyServices
-      template: pages/admin/customer_company_services.pongo2
-      description: "Display customer company services"
-
-    - path: /customer/companies/:id/services
-      method: POST
-      handler: handleAdminUpdateCustomerCompanyServices
-      description: "Update customer company services"
-
-    - path: /customer/companies/:id/services
-      method: PUT
-      handler: handleAdminUpdateCustomerCompanyServices
-      description: "Update customer company services"
-
-    - path: /customer/companies/:id/portal-settings
-      method: GET
-      handler: handleAdminCustomerPortalSettings
-      description: "Display customer portal settings for a company"
-
-    - path: /customer/companies/:id/portal-settings
-      method: POST
-      handler: handleAdminUpdateCustomerPortalSettings
-      description: "Update customer portal settings for a company"
-
-    - path: /customer/portal/settings
-      handlers:
-        GET: handleAdminCustomerPortalSettings
-        PUT: handleAdminUpdateCustomerPortalSettings
-        POST: handleAdminUpdateCustomerPortalSettings
-      template: pages/admin/customer_portal_settings.pongo2
-      description: "Display and update global customer portal settings"
-
-    - path: /customer/portal/logo/upload
-      method: POST
-      handler: handleAdminUploadCustomerPortalLogo
-      description: "Upload customer portal logo"
-
-    # Customer user management
-    - path: /customer-users
-      method: GET
-      handler: HandleAdminCustomerUsersList
-      template: pages/admin/customer_users.pongo2
-      description: "Display customer user management"
-
-    - path: /customer-users/:id
-      method: GET
-      handler: HandleAdminCustomerUsersGet
-      description: "Get customer user details"
-
-    - path: /customer-users
-      method: POST
-      handler: HandleAdminCustomerUsersCreate
-      description: "Create customer user"
-
-    - path: /customer-users/:id
-      method: PUT
-      handler: HandleAdminCustomerUsersUpdate
-      description: "Update customer user"
-
-    - path: /customer-users/:id
-      method: DELETE
-      handler: HandleAdminCustomerUsersDelete
-      description: "Delete customer user"
-
-    - path: /customer-users/:id/tickets
-      method: GET
-      handler: HandleAdminCustomerUsersTickets
-      description: "Get customer user tickets"
-
-    - path: /customer-users/import
-      method: GET
-      handler: HandleAdminCustomerUsersImportForm
-      description: "Display customer user import form"
-
-    - path: /customer-users/import
-      method: POST
-      handler: HandleAdminCustomerUsersImport
-      description: "Import customer users"
-
-    - path: /customer-users/export
-      method: GET
-      handler: HandleAdminCustomerUsersExport
-      description: "Export customer users"
-
-    - path: /customer-users/bulk-action
-      method: POST
-      handler: HandleAdminCustomerUsersBulkAction
-      description: "Perform customer user bulk action"
-
-    # Customer User Services - individual service assignment
-    - path: /customer-user-services
-      method: GET
-      handler: handleAdminCustomerUserServices
-      template: pages/admin/customer_user_services.pongo2
-      description: "Customer user ↔ service relations management"
-
-    - path: /customer-user-services/customer/:login
-      method: GET
-      handler: handleAdminCustomerUserServicesAllocate
-      description: "Get services for a customer user"
-
-    - path: /customer-user-services/customer/:login
-      method: POST
-      handler: handleAdminCustomerUserServicesUpdate
-      description: "Update services for a customer user"
-
-    - path: /customer-user-services/service/:id
-      method: GET
-      handler: handleAdminServiceCustomerUsersAllocate
-      description: "Get customer users for a service"
-
-    - path: /customer-user-services/service/:id
-      method: POST
-      handler: handleAdminServiceCustomerUsersUpdate
-      description: "Update customer users for a service"
-
-    - path: /customer-user-services/default
-      method: GET
-      handler: handleAdminDefaultServices
-      description: "Get default service assignments"
-
-    - path: /customer-user-services/default
-      method: POST
-      handler: handleAdminDefaultServicesUpdate
-      description: "Update default service assignments"
-
-    # System operations
-    - path: /settings
-      method: GET
-      handler: handleAdminSettings
-      template: pages/under_construction.pongo2
-      description: "Display system configuration page"
-
-    - path: /reports
-      method: GET
-      handler: handleAdminReports
-      template: pages/under_construction.pongo2
-      description: "Display reports overview"
-
-    - path: /logs
-      method: GET
-      handler: handleAdminLogs
-      template: pages/under_construction.pongo2
-      description: "Display audit logs placeholder"
-
-    - path: /backup
-      method: GET
-      handler: handleAdminBackup
-      template: pages/under_construction.pongo2
-      description: "Display backup and restore placeholder"
-
-    # Dynamic Fields management
-    - path: /dynamic-fields
-      method: GET
-      handler: handleAdminDynamicFields
-      description: "List all dynamic fields"
-
-    - path: /dynamic-fields/new
-      method: GET
-      handler: handleAdminDynamicFieldNew
-      description: "Create new dynamic field form"
-
-    - path: /dynamic-fields/screens
-      method: GET
-      handler: handleAdminDynamicFieldScreenConfig
-      description: "Dynamic field screen configuration"
-
-    - path: /dynamic-fields/:id
-      method: GET
-      handler: handleAdminDynamicFieldEdit
-      description: "Edit dynamic field form"
-
-    # Dynamic Fields API routes (for form submissions)
-    - path: /api/dynamic-fields
-      method: POST
-      handler: handleCreateDynamicField
-      description: "Create new dynamic field"
-
-    - path: /api/dynamic-fields/:id
-      method: PUT
-      handler: handleUpdateDynamicField
-      description: "Update existing dynamic field"
-
-    - path: /api/dynamic-fields/:id
-      method: DELETE
-      handler: handleDeleteDynamicField
-      description: "Delete dynamic field"
-
-    - path: /api/dynamic-fields/:id/screens
-      method: PUT
-      handler: handleAdminDynamicFieldScreenConfigSave
-      description: "Save all screen configurations for a field"
-
-    - path: /api/dynamic-fields/:id/screen
-      method: POST
-      handler: handleAdminDynamicFieldScreenConfigSingle
-      description: "Toggle single screen configuration for a field"
-
-    # Response templates management
-    - path: /templates
-      method: GET
-      handler: handleAdminStandardTemplates
-      template: pages/admin/templates.pongo2
-      description: "Display response templates management page"
-
-    - path: /templates/new
-      method: GET
-      handler: handleAdminStandardTemplateNew
-      template: pages/admin/template_form.pongo2
-      description: "Display new template creation form"
-
-    - path: /templates/:id/edit
-      method: GET
-      handler: handleAdminStandardTemplateEdit
-      template: pages/admin/template_form.pongo2
-      description: "Display template edit form"
-
-    - path: /templates/:id/queues
-      method: GET
-      handler: handleAdminStandardTemplateQueues
-      template: pages/admin/template_queues.pongo2
-      description: "Display template queue assignment page"
-
-    # Response templates API
-    - path: /api/templates
-      method: POST
-      handler: handleCreateStandardTemplate
-      description: "Create new response template"
-
-    - path: /api/templates/:id
-      method: PUT
-      handler: handleUpdateStandardTemplate
-      description: "Update existing response template"
-
-    - path: /api/templates/:id
-      method: DELETE
-      handler: handleDeleteStandardTemplate
-      description: "Delete response template"
-
-    - path: /api/templates/:id/queues
-      method: PUT
-      handler: handleUpdateStandardTemplateQueues
-      description: "Update template queue assignments"
-
-    - path: /templates/:id/attachments
-      method: GET
-      handler: handleAdminStandardTemplateAttachments
-      template: pages/admin/template_attachments.pongo2
-      description: "Display template attachment assignment page"
-
-    - path: /api/templates/:id/attachments
-      method: PUT
-      handler: handleUpdateStandardTemplateAttachments
-      description: "Update template attachment assignments"
-
-    # Template Import/Export
-    - path: /templates/import
-      method: GET
-      handler: handleAdminStandardTemplateImport
-      template: pages/admin/template_import.pongo2
-      description: "Display template import page"
-
-    - path: /api/templates/import
-      method: POST
-      handler: handleImportStandardTemplates
-      description: "Import templates from YAML file"
-
-    - path: /api/templates/export
-      method: GET
-      handler: handleExportAllStandardTemplates
-      description: "Export all templates as YAML"
-
-    - path: /api/templates/:id/export
-      method: GET
-      handler: handleExportStandardTemplate
-      description: "Export single template as YAML"
-
-    # Standard attachments management
-    - path: /attachments
-      method: GET
-      handler: handleAdminAttachment
-      template: pages/admin/attachment.pongo2
-      description: "Display standard attachments management page"
-
-    # Attachments API
-    - path: /api/attachments
-      method: POST
-      handler: handleAdminAttachmentCreate
-      description: "Upload/create a new standard attachment"
-
-    - path: /api/attachments/:id
-      method: PUT
-      handler: handleAdminAttachmentUpdate
-      description: "Update an existing standard attachment"
-
-    - path: /api/attachments/:id
-      method: DELETE
-      handler: handleAdminAttachmentDelete
-      description: "Delete a standard attachment"
-
-    - path: /api/attachments/:id/download
-      method: GET
-      handler: handleAdminAttachmentDownload
-      description: "Download a standard attachment file"
-
-    - path: /api/attachments/:id/preview
-      method: GET
-      handler: handleAdminAttachmentPreview
-      description: "Preview a standard attachment inline"
-
-    # Dynamic module system routes
-    - path: /modules
-      method: GET
-      handler: handleAdminDynamicIndex
-      description: "List available dynamic modules"
-
-    - path: /modules/:module
-      handlers:
-        GET: handleAdminDynamicModule
-        POST: handleAdminDynamicModule
-      description: "Serve dynamic module pages and handle record creation"
-
-    - path: /modules/:module/:id
-      handlers:
-        GET: handleAdminDynamicModule
-        POST: handleAdminDynamicModule
-        PUT: handleAdminDynamicModule
-        DELETE: handleAdminDynamicModule
-      description: "Handle dynamic module record operations"
-
-    - path: /modules/:module/:id/:action
-      handlers:
-        GET: handleAdminDynamicModule
-        POST: handleAdminDynamicModule
-      description: "Execute dynamic module actions"
-
-    # Signatures management
-    - path: /signatures
-      method: GET
-      handler: handleAdminSignatures
-      template: pages/admin/signatures.pongo2
-      description: "Display email signatures management page"
-
-    - path: /signatures/new
-      method: GET
-      handler: handleAdminSignatureNew
-      description: "Display new signature form"
-
-    - path: /signatures/:id
-      method: GET
-      handler: handleAdminSignatureEdit
-      description: "Display edit signature form"
-
-    # Signatures API
-    - path: /api/signatures
-      method: POST
-      handler: handleCreateSignature
-      description: "Create a new signature"
-
-    - path: /api/signatures/:id
-      method: PUT
-      handler: handleUpdateSignature
-      description: "Update an existing signature"
-
-    - path: /api/signatures/:id
-      method: DELETE
-      handler: handleDeleteSignature
-      description: "Delete a signature"
-
-    - path: /signatures/export
-      method: GET
-      handler: handleExportSignatures
-      description: "Export all signatures as YAML"
-
-    - path: /signatures/:id/export
-      method: GET
-      handler: handleExportSignature
-      description: "Export single signature as YAML"
-
-    - path: /api/signatures/import
-      method: POST
-      handler: handleImportSignatures
-      description: "Import signatures from YAML file"
-
-    # Postmaster filters management
-    - path: /postmaster-filters
-      method: GET
-      handler: handleAdminPostmasterFilters
-      template: pages/admin/postmaster_filters.pongo2
-      description: "Display postmaster filters management page"
-
-    - path: /postmaster-filters/new
-      method: GET
-      handler: handleAdminPostmasterFilterNew
-      template: pages/admin/postmaster_filter_form.pongo2
-      description: "Display new postmaster filter form"
-
-    - path: /postmaster-filters/:name
-      method: GET
-      handler: handleAdminPostmasterFilterEdit
-      template: pages/admin/postmaster_filter_form.pongo2
-      description: "Display postmaster filter edit form"
-
-    # Postmaster filters API
-    - path: /api/postmaster-filters
-      method: POST
-      handler: handleCreatePostmasterFilter
-      description: "Create a new postmaster filter"
-
-    - path: /api/postmaster-filters/:name
-      method: GET
-      handler: handleAdminPostmasterFilterGet
-      description: "Get postmaster filter details"
-
-    - path: /api/postmaster-filters/:name
-      method: PUT
-      handler: handleUpdatePostmasterFilter
-      description: "Update an existing postmaster filter"
-
-    - path: /api/postmaster-filters/:name
-      method: DELETE
-      handler: handleDeletePostmasterFilter
-      description: "Delete a postmaster filter"
-
-    # Notification Events management
-    - path: /notification-events
-      method: GET
-      handler: handleAdminNotificationEvents
-      template: pages/admin/notification_events.pongo2
-      description: "Display notification events management page"
-
-    - path: /notification-events/new
-      method: GET
-      handler: handleAdminNotificationEventNew
-      template: pages/admin/notification_event_form.pongo2
-      description: "Display new notification event form"
-
-    - path: /notification-events/:id
-      method: GET
-      handler: handleAdminNotificationEventEdit
-      template: pages/admin/notification_event_form.pongo2
-      description: "Display notification event edit form"
-
-    # Notification Events API
-    - path: /api/notification-events
-      method: POST
-      handler: handleCreateNotificationEvent
-      description: "Create a new notification event"
-
-    - path: /api/notification-events/:id
-      method: GET
-      handler: handleAdminNotificationEventGet
-      description: "Get notification event details"
-
-    - path: /api/notification-events/:id
-      method: PUT
-      handler: handleUpdateNotificationEvent
-      description: "Update an existing notification event"
-
-    - path: /api/notification-events/:id
-      method: DELETE
-      handler: handleDeleteNotificationEvent
-      description: "Delete a notification event"
-
-    # ACL management
-    - path: /acl
-      method: GET
-      handler: handleAdminACL
-      template: pages/admin/acl.pongo2
-      description: "Display ACL management page"
-
-    # ACL API
-    - path: /api/acl
-      method: POST
-      handler: handleAdminACLCreate
-      description: "Create a new ACL"
-
-    - path: /api/acl/:id
-      method: GET
-      handler: handleAdminACLGet
-      description: "Get ACL details"
-
-    - path: /api/acl/:id
-      method: PUT
-      handler: handleAdminACLUpdate
-      description: "Update an existing ACL"
-
-    - path: /api/acl/:id
-      method: DELETE
-      handler: handleAdminACLDelete
-      description: "Delete an ACL"
-
-    # Generic Agent Jobs management
-    - path: /generic-agent
-      method: GET
-      handler: handleAdminGenericAgent
-      template: pages/admin/generic_agent.pongo2
-      description: "Display generic agent jobs management page"
-
-    # Generic Agent API
-    - path: /api/generic-agent
-      method: POST
-      handler: handleAdminGenericAgentCreate
-      description: "Create a new generic agent job"
-
-    - path: /api/generic-agent/:name
-      method: GET
-      handler: handleAdminGenericAgentGet
-      description: "Get generic agent job details"
-
-    - path: /api/generic-agent/:name
-      method: PUT
-      handler: handleAdminGenericAgentUpdate
-      description: "Update an existing generic agent job"
-
-    - path: /api/generic-agent/:name
-      method: DELETE
-      handler: handleAdminGenericAgentDelete
-      description: "Delete a generic agent job"
+    prefix: /admin
+    middleware:
+        - auth # Require authentication
+        - admin # Require admin role
+    routes:
+        # Admin dashboard
+        - path: /
+          method: GET
+          handler: handleAdminDashboard
+          template: pages/admin/dashboard.pongo2
+          description: "Display admin dashboard with system overview"
+
+        # User management
+        - path: /users
+          method: GET
+          handler: handleAdminUsers
+          template: pages/admin/users.pongo2
+          description: "Display user management page"
+
+        - path: /users/:id
+          method: GET
+          handler: handleAdminUserGet
+          description: "Display user details"
+
+        - path: /users/:id/edit
+          method: GET
+          handler: handleAdminUserEdit
+          description: "Display user edit form"
+
+        - path: /users/:id
+          method: PUT
+          handler: handleAdminUserUpdate
+          description: "Update user"
+
+        - path: /users/:id
+          method: DELETE
+          handler: handleAdminUserDelete
+          description: "Delete user"
+
+        - path: /users
+          method: POST
+          handler: handleAdminUserCreate
+          description: "Create new user"
+
+        - path: /users/:id/groups
+          method: GET
+          handler: handleAdminUserGroups
+          description: "List user groups"
+
+        - path: /users/:id/status
+          handlers:
+              PUT: handleAdminUsersStatus
+              POST: handleAdminUsersStatus
+          description: "Toggle user activation status"
+
+        - path: /password-policy
+          method: GET
+          handler: handleAdminPasswordPolicy
+          description: "Get password policy configuration"
+
+        # Users API
+        - path: /users/list
+          method: GET
+          handler: HandleAdminUsersList
+          description: "Get all users (JSON API)"
+
+        # Group management
+        - path: /groups
+          method: GET
+          handler: handleAdminGroups
+          template: pages/admin/groups.pongo2
+          description: "Display group management page"
+
+        - path: /groups/new
+          method: GET
+          handler: handleCreateGroup
+          template: pages/admin/group_form.pongo2
+          description: "Display new group creation form"
+
+        - path: /groups
+          method: POST
+          handler: handleCreateGroup
+          description: "Create new group"
+
+        - path: /groups/:id
+          method: GET
+          handler: handleGetGroup
+          template: pages/admin/group_view.pongo2
+          description: "Display group details"
+
+        - path: /groups/:id/edit
+          method: GET
+          handler: handleGetGroup
+          template: pages/admin/group_form.pongo2
+          description: "Display group edit form"
+
+        - path: /groups/:id
+          method: PUT
+          handler: handleUpdateGroup
+          description: "Update existing group"
+
+        - path: /groups/:id
+          method: DELETE
+          handler: handleDeleteGroup
+          description: "Delete group"
+
+        - path: /groups/:id/members
+          method: GET
+          handler: handleGroupMembers
+          template: pages/admin/group_members.pongo2
+          description: "Display group members"
+
+        - path: /groups/:id/members
+          method: POST
+          handler: handleAddUserToGroup
+          description: "Add user to group"
+
+        - path: /groups/:id/members/:userId
+          method: DELETE
+          handler: handleRemoveUserFromGroup
+          description: "Remove user from group"
+
+        - path: /groups/:id/permissions
+          method: GET
+          handler: handleGroupPermissions
+          template: pages/admin/group_permissions.pongo2
+          description: "Get queue-centric permissions for a group"
+
+        - path: /groups/:id/permissions
+          method: POST
+          handler: handleSaveGroupPermissions
+          description: "Update queue-centric permissions for a group"
+
+        # Group users API endpoints (for frontend compatibility)
+        - path: /groups/:id/users
+          method: GET
+          handler: HandleAdminGroupsUsers
+          description: "Get group users"
+
+        - path: /groups/:id/users
+          method: POST
+          handler: HandleAdminGroupsAddUser
+          description: "Add user to group"
+
+        - path: /groups/:id/users/:userId
+          method: DELETE
+          handler: HandleAdminGroupsRemoveUser
+          description: "Remove user from group"
+
+        # Queue management
+        - path: /queues
+          method: GET
+          handler: handleAdminQueues
+          template: pages/admin/queues.pongo2
+          description: "Display queue management page"
+
+        - path: /email-identities
+          method: GET
+          handler: handleAdminEmailIdentities
+          template: pages/admin/email_identities.pongo2
+          description: "Manage system addresses, salutations, and signatures"
+
+        # Email queue management
+        - path: /email-queue
+          method: GET
+          handler: handleAdminEmailQueue
+          template: pages/admin/email_queue.pongo2
+          description: "Display email queue management page"
+
+        # Email queue actions
+        - path: /email-queue/retry/:id
+          method: POST
+          handler: handleAdminEmailQueueRetry
+          description: "Retry sending a specific email from the queue"
+
+        - path: /email-queue/delete/:id
+          method: POST
+          handler: handleAdminEmailQueueDelete
+          description: "Delete a specific email from the queue"
+
+        - path: /email-queue/retry-all
+          method: POST
+          handler: handleAdminEmailQueueRetryAll
+          description: "Retry all failed emails in the queue"
+
+        # Priority management
+        - path: /priorities
+          method: GET
+          handler: handleAdminPriorities
+          template: pages/admin/priorities.pongo2
+          description: "Display priority management page"
+
+        # Permission management
+        - path: /permissions
+          method: GET
+          handler: handleAdminPermissions
+          template: pages/admin/permissions.pongo2
+          description: "Display permission management page"
+
+        - path: /permissions/user/:userId
+          method: GET
+          handler: handleGetUserPermissionMatrix
+          description: "Get user permission matrix"
+
+        - path: /permissions/user/:userId
+          method: PUT
+          handler: handleUpdateUserPermissions
+          description: "Update user permissions"
+
+        # Role management
+        - path: /roles
+          method: GET
+          handler: handleAdminRoles
+          template: pages/admin/roles.pongo2
+          description: "Display role management page"
+
+        - path: /roles
+          method: POST
+          handler: handleAdminRoleCreate
+          description: "Create a new role"
+
+        - path: /roles/:id
+          method: GET
+          handler: handleAdminRoleGet
+          description: "Get role details"
+
+        - path: /roles/:id
+          method: PUT
+          handler: handleAdminRoleUpdate
+          description: "Update an existing role"
+
+        - path: /roles/:id
+          method: DELETE
+          handler: handleAdminRoleDelete
+          description: "Delete a role"
+
+        - path: /roles/:id/users
+          method: GET
+          handler: handleAdminRoleUsers
+          template: pages/admin/role_users.pongo2
+          description: "Display users assigned to a role"
+
+        - path: /roles/:id/users
+          method: POST
+          handler: handleAdminRoleUserAdd
+          description: "Add a user to a role"
+
+        - path: /roles/:id/users/:userId
+          method: DELETE
+          handler: handleAdminRoleUserRemove
+          description: "Remove a user from a role"
+
+        - path: /roles/:id/permissions
+          method: GET
+          handler: handleAdminRolePermissions
+          template: pages/admin/role_permissions.pongo2
+          description: "Display and manage role-group permissions"
+
+        - path: /roles/:id/permissions
+          method: POST
+          handler: handleAdminRolePermissionsUpdate
+          description: "Update role-group permissions"
+
+        # State management
+        - path: /states
+          method: GET
+          handler: handleAdminStates
+          template: pages/admin/states.pongo2
+          description: "Display state management page"
+
+        # Type management
+        - path: /types
+          method: GET
+          handler: handleAdminTypes
+          template: pages/admin/types.pongo2
+          description: "Display type management page"
+
+        # Service management
+        - path: /services
+          method: GET
+          handler: handleAdminServices
+          template: pages/admin/services.pongo2
+          description: "Display service management page"
+
+        - path: /services/create
+          method: POST
+          handler: handleAdminServiceCreate
+          description: "Create a new service"
+
+        - path: /services/:id/update
+          method: PUT
+          handler: handleAdminServiceUpdate
+          description: "Update an existing service"
+
+        - path: /services/:id/delete
+          method: DELETE
+          handler: handleAdminServiceDelete
+          description: "Delete a service"
+
+        # SLA management
+        - path: /sla
+          method: GET
+          handler: handleAdminSLA
+          template: pages/admin/sla.pongo2
+          description: "Display SLA management page"
+
+        - path: /sla/create
+          method: POST
+          handler: handleAdminSLACreate
+          description: "Create a new SLA"
+
+        - path: /sla/:id/update
+          method: PUT
+          handler: handleAdminSLAUpdate
+          description: "Update an existing SLA"
+
+        - path: /sla/:id/delete
+          method: DELETE
+          handler: handleAdminSLADelete
+          description: "Delete an SLA"
+
+        # Lookup management
+        - path: /lookups
+          method: GET
+          handler: handleAdminLookups
+          template: pages/admin/lookups.pongo2
+          description: "Display lookup management page"
+
+        # Customer company management
+        - path: /customer/companies
+          method: GET
+          handler: handleAdminCustomerCompanies
+          template: pages/admin/customer_companies.pongo2
+          description: "Display customer companies management"
+
+        - path: /customer/companies/new
+          method: GET
+          handler: handleAdminNewCustomerCompany
+          template: pages/admin/customer_company_form.pongo2
+          description: "Display new customer company form"
+
+        - path: /customer/companies/new
+          method: POST
+          handler: handleAdminCreateCustomerCompany
+          description: "Create new customer company"
+
+        - path: /customer/companies
+          method: POST
+          handler: handleAdminCreateCustomerCompany
+          description: "Create new customer company"
+
+        - path: /customer/companies/:id/edit
+          method: GET
+          handler: handleAdminEditCustomerCompany
+          template: pages/admin/customer_company_form.pongo2
+          description: "Display customer company edit form"
+
+        - path: /customer/companies/:id/edit
+          method: POST
+          handler: handleAdminUpdateCustomerCompany
+          description: "Update customer company"
+
+        - path: /customer/companies/:id
+          method: DELETE
+          handler: handleAdminDeleteCustomerCompany
+          description: "Delete customer company"
+
+        - path: /customer/companies/:id/delete
+          method: POST
+          handler: handleAdminDeleteCustomerCompany
+          description: "Delete customer company (legacy POST route)"
+
+        - path: /customer/companies/:id/activate
+          method: POST
+          handler: handleAdminActivateCustomerCompany
+          description: "Activate customer company"
+
+        - path: /customer/companies/:id/users
+          method: GET
+          handler: handleAdminCustomerCompanyUsers
+          template: pages/admin/customer_company_users.pongo2
+          description: "Display customer company users"
+
+        - path: /customer/companies/:id/tickets
+          method: GET
+          handler: handleAdminCustomerCompanyTickets
+          template: pages/admin/customer_company_tickets.pongo2
+          description: "Display customer company tickets"
+
+        - path: /customer/companies/:id/services
+          method: GET
+          handler: handleAdminCustomerCompanyServices
+          template: pages/admin/customer_company_services.pongo2
+          description: "Display customer company services"
+
+        - path: /customer/companies/:id/services
+          method: POST
+          handler: handleAdminUpdateCustomerCompanyServices
+          description: "Update customer company services"
+
+        - path: /customer/companies/:id/services
+          method: PUT
+          handler: handleAdminUpdateCustomerCompanyServices
+          description: "Update customer company services"
+
+        - path: /customer/companies/:id/portal-settings
+          method: GET
+          handler: handleAdminCustomerPortalSettings
+          description: "Display customer portal settings for a company"
+
+        - path: /customer/companies/:id/portal-settings
+          method: POST
+          handler: handleAdminUpdateCustomerPortalSettings
+          description: "Update customer portal settings for a company"
+
+        - path: /customer/portal/settings
+          handlers:
+              GET: handleAdminCustomerPortalSettings
+              PUT: handleAdminUpdateCustomerPortalSettings
+              POST: handleAdminUpdateCustomerPortalSettings
+          template: pages/admin/customer_portal_settings.pongo2
+          description: "Display and update global customer portal settings"
+
+        - path: /customer/portal/logo/upload
+          method: POST
+          handler: handleAdminUploadCustomerPortalLogo
+          description: "Upload customer portal logo"
+
+        # Customer user management
+        - path: /customer-users
+          method: GET
+          handler: HandleAdminCustomerUsersList
+          template: pages/admin/customer_users.pongo2
+          description: "Display customer user management"
+
+        - path: /customer-users/:id
+          method: GET
+          handler: HandleAdminCustomerUsersGet
+          description: "Get customer user details"
+
+        - path: /customer-users
+          method: POST
+          handler: HandleAdminCustomerUsersCreate
+          description: "Create customer user"
+
+        - path: /customer-users/:id
+          method: PUT
+          handler: HandleAdminCustomerUsersUpdate
+          description: "Update customer user"
+
+        - path: /customer-users/:id
+          method: DELETE
+          handler: HandleAdminCustomerUsersDelete
+          description: "Delete customer user"
+
+        - path: /customer-users/:id/tickets
+          method: GET
+          handler: HandleAdminCustomerUsersTickets
+          description: "Get customer user tickets"
+
+        - path: /customer-users/import
+          method: GET
+          handler: HandleAdminCustomerUsersImportForm
+          description: "Display customer user import form"
+
+        - path: /customer-users/import
+          method: POST
+          handler: HandleAdminCustomerUsersImport
+          description: "Import customer users"
+
+        - path: /customer-users/export
+          method: GET
+          handler: HandleAdminCustomerUsersExport
+          description: "Export customer users"
+
+        - path: /customer-users/bulk-action
+          method: POST
+          handler: HandleAdminCustomerUsersBulkAction
+          description: "Perform customer user bulk action"
+
+        # Customer User Services - individual service assignment
+        - path: /customer-user-services
+          method: GET
+          handler: handleAdminCustomerUserServices
+          template: pages/admin/customer_user_services.pongo2
+          description: "Customer user ↔ service relations management"
+
+        - path: /customer-user-services/customer/:login
+          method: GET
+          handler: handleAdminCustomerUserServicesAllocate
+          description: "Get services for a customer user"
+
+        - path: /customer-user-services/customer/:login
+          method: POST
+          handler: handleAdminCustomerUserServicesUpdate
+          description: "Update services for a customer user"
+
+        - path: /customer-user-services/service/:id
+          method: GET
+          handler: handleAdminServiceCustomerUsersAllocate
+          description: "Get customer users for a service"
+
+        - path: /customer-user-services/service/:id
+          method: POST
+          handler: handleAdminServiceCustomerUsersUpdate
+          description: "Update customer users for a service"
+
+        - path: /customer-user-services/default
+          method: GET
+          handler: handleAdminDefaultServices
+          description: "Get default service assignments"
+
+        - path: /customer-user-services/default
+          method: POST
+          handler: handleAdminDefaultServicesUpdate
+          description: "Update default service assignments"
+
+        # System operations
+        - path: /settings
+          method: GET
+          handler: handleAdminSettings
+          template: pages/under_construction.pongo2
+          description: "Display system configuration page"
+
+        - path: /reports
+          method: GET
+          handler: handleAdminReports
+          template: pages/under_construction.pongo2
+          description: "Display reports overview"
+
+        - path: /logs
+          method: GET
+          handler: handleAdminLogs
+          template: pages/under_construction.pongo2
+          description: "Display audit logs placeholder"
+
+        - path: /backup
+          method: GET
+          handler: handleAdminBackup
+          template: pages/under_construction.pongo2
+          description: "Display backup and restore placeholder"
+
+        # Dynamic Fields management
+        - path: /dynamic-fields
+          method: GET
+          handler: handleAdminDynamicFields
+          description: "List all dynamic fields"
+
+        - path: /dynamic-fields/new
+          method: GET
+          handler: handleAdminDynamicFieldNew
+          description: "Create new dynamic field form"
+
+        - path: /dynamic-fields/screens
+          method: GET
+          handler: handleAdminDynamicFieldScreenConfig
+          description: "Dynamic field screen configuration"
+
+        - path: /dynamic-fields/:id
+          method: GET
+          handler: handleAdminDynamicFieldEdit
+          description: "Edit dynamic field form"
+
+        # Dynamic Fields API routes (for form submissions)
+        - path: /api/dynamic-fields
+          method: POST
+          handler: handleCreateDynamicField
+          description: "Create new dynamic field"
+
+        - path: /api/dynamic-fields/:id
+          method: PUT
+          handler: handleUpdateDynamicField
+          description: "Update existing dynamic field"
+
+        - path: /api/dynamic-fields/:id
+          method: DELETE
+          handler: handleDeleteDynamicField
+          description: "Delete dynamic field"
+
+        - path: /api/dynamic-fields/:id/screens
+          method: PUT
+          handler: handleAdminDynamicFieldScreenConfigSave
+          description: "Save all screen configurations for a field"
+
+        - path: /api/dynamic-fields/:id/screen
+          method: POST
+          handler: handleAdminDynamicFieldScreenConfigSingle
+          description: "Toggle single screen configuration for a field"
+
+        # Response templates management
+        - path: /templates
+          method: GET
+          handler: handleAdminStandardTemplates
+          template: pages/admin/templates.pongo2
+          description: "Display response templates management page"
+
+        - path: /templates/new
+          method: GET
+          handler: handleAdminStandardTemplateNew
+          template: pages/admin/template_form.pongo2
+          description: "Display new template creation form"
+
+        - path: /templates/:id/edit
+          method: GET
+          handler: handleAdminStandardTemplateEdit
+          template: pages/admin/template_form.pongo2
+          description: "Display template edit form"
+
+        - path: /templates/:id/queues
+          method: GET
+          handler: handleAdminStandardTemplateQueues
+          template: pages/admin/template_queues.pongo2
+          description: "Display template queue assignment page"
+
+        # Response templates API
+        - path: /api/templates
+          method: POST
+          handler: handleCreateStandardTemplate
+          description: "Create new response template"
+
+        - path: /api/templates/:id
+          method: PUT
+          handler: handleUpdateStandardTemplate
+          description: "Update existing response template"
+
+        - path: /api/templates/:id
+          method: DELETE
+          handler: handleDeleteStandardTemplate
+          description: "Delete response template"
+
+        - path: /api/templates/:id/queues
+          method: PUT
+          handler: handleUpdateStandardTemplateQueues
+          description: "Update template queue assignments"
+
+        - path: /templates/:id/attachments
+          method: GET
+          handler: handleAdminStandardTemplateAttachments
+          template: pages/admin/template_attachments.pongo2
+          description: "Display template attachment assignment page"
+
+        - path: /api/templates/:id/attachments
+          method: PUT
+          handler: handleUpdateStandardTemplateAttachments
+          description: "Update template attachment assignments"
+
+        # Template Import/Export
+        - path: /templates/import
+          method: GET
+          handler: handleAdminStandardTemplateImport
+          template: pages/admin/template_import.pongo2
+          description: "Display template import page"
+
+        - path: /api/templates/import
+          method: POST
+          handler: handleImportStandardTemplates
+          description: "Import templates from YAML file"
+
+        - path: /api/templates/export
+          method: GET
+          handler: handleExportAllStandardTemplates
+          description: "Export all templates as YAML"
+
+        - path: /api/templates/:id/export
+          method: GET
+          handler: handleExportStandardTemplate
+          description: "Export single template as YAML"
+
+        # Standard attachments management
+        - path: /attachments
+          method: GET
+          handler: handleAdminAttachment
+          template: pages/admin/attachment.pongo2
+          description: "Display standard attachments management page"
+
+        # Attachments API
+        - path: /api/attachments
+          method: POST
+          handler: handleAdminAttachmentCreate
+          description: "Upload/create a new standard attachment"
+
+        - path: /api/attachments/:id
+          method: PUT
+          handler: handleAdminAttachmentUpdate
+          description: "Update an existing standard attachment"
+
+        - path: /api/attachments/:id
+          method: DELETE
+          handler: handleAdminAttachmentDelete
+          description: "Delete a standard attachment"
+
+        - path: /api/attachments/:id/download
+          method: GET
+          handler: handleAdminAttachmentDownload
+          description: "Download a standard attachment file"
+
+        - path: /api/attachments/:id/preview
+          method: GET
+          handler: handleAdminAttachmentPreview
+          description: "Preview a standard attachment inline"
+
+        # Dynamic module system routes
+        - path: /modules
+          method: GET
+          handler: handleAdminDynamicIndex
+          description: "List available dynamic modules"
+
+        - path: /modules/:module
+          handlers:
+              GET: handleAdminDynamicModule
+              POST: handleAdminDynamicModule
+          description: "Serve dynamic module pages and handle record creation"
+
+        - path: /modules/:module/:id
+          handlers:
+              GET: handleAdminDynamicModule
+              POST: handleAdminDynamicModule
+              PUT: handleAdminDynamicModule
+              DELETE: handleAdminDynamicModule
+          description: "Handle dynamic module record operations"
+
+        - path: /modules/:module/:id/:action
+          handlers:
+              GET: handleAdminDynamicModule
+              POST: handleAdminDynamicModule
+          description: "Execute dynamic module actions"
+
+        # Signatures management
+        - path: /signatures
+          method: GET
+          handler: handleAdminSignatures
+          template: pages/admin/signatures.pongo2
+          description: "Display email signatures management page"
+
+        - path: /signatures/new
+          method: GET
+          handler: handleAdminSignatureNew
+          description: "Display new signature form"
+
+        - path: /signatures/:id
+          method: GET
+          handler: handleAdminSignatureEdit
+          description: "Display edit signature form"
+
+        # Signatures API
+        - path: /api/signatures
+          method: POST
+          handler: handleCreateSignature
+          description: "Create a new signature"
+
+        - path: /api/signatures/:id
+          method: PUT
+          handler: handleUpdateSignature
+          description: "Update an existing signature"
+
+        - path: /api/signatures/:id
+          method: DELETE
+          handler: handleDeleteSignature
+          description: "Delete a signature"
+
+        - path: /signatures/export
+          method: GET
+          handler: handleExportSignatures
+          description: "Export all signatures as YAML"
+
+        - path: /signatures/:id/export
+          method: GET
+          handler: handleExportSignature
+          description: "Export single signature as YAML"
+
+        - path: /api/signatures/import
+          method: POST
+          handler: handleImportSignatures
+          description: "Import signatures from YAML file"
+
+        # Postmaster filters management
+        - path: /postmaster-filters
+          method: GET
+          handler: handleAdminPostmasterFilters
+          template: pages/admin/postmaster_filters.pongo2
+          description: "Display postmaster filters management page"
+
+        - path: /postmaster-filters/new
+          method: GET
+          handler: handleAdminPostmasterFilterNew
+          template: pages/admin/postmaster_filter_form.pongo2
+          description: "Display new postmaster filter form"
+
+        - path: /postmaster-filters/:name
+          method: GET
+          handler: handleAdminPostmasterFilterEdit
+          template: pages/admin/postmaster_filter_form.pongo2
+          description: "Display postmaster filter edit form"
+
+        # Postmaster filters API
+        - path: /api/postmaster-filters
+          method: POST
+          handler: handleCreatePostmasterFilter
+          description: "Create a new postmaster filter"
+
+        - path: /api/postmaster-filters/:name
+          method: GET
+          handler: handleAdminPostmasterFilterGet
+          description: "Get postmaster filter details"
+
+        - path: /api/postmaster-filters/:name
+          method: PUT
+          handler: handleUpdatePostmasterFilter
+          description: "Update an existing postmaster filter"
+
+        - path: /api/postmaster-filters/:name
+          method: DELETE
+          handler: handleDeletePostmasterFilter
+          description: "Delete a postmaster filter"
+
+        # Notification Events management
+        - path: /notification-events
+          method: GET
+          handler: handleAdminNotificationEvents
+          template: pages/admin/notification_events.pongo2
+          description: "Display notification events management page"
+
+        - path: /notification-events/new
+          method: GET
+          handler: handleAdminNotificationEventNew
+          template: pages/admin/notification_event_form.pongo2
+          description: "Display new notification event form"
+
+        - path: /notification-events/:id
+          method: GET
+          handler: handleAdminNotificationEventEdit
+          template: pages/admin/notification_event_form.pongo2
+          description: "Display notification event edit form"
+
+        # Notification Events API
+        - path: /api/notification-events
+          method: POST
+          handler: handleCreateNotificationEvent
+          description: "Create a new notification event"
+
+        - path: /api/notification-events/:id
+          method: GET
+          handler: handleAdminNotificationEventGet
+          description: "Get notification event details"
+
+        - path: /api/notification-events/:id
+          method: PUT
+          handler: handleUpdateNotificationEvent
+          description: "Update an existing notification event"
+
+        - path: /api/notification-events/:id
+          method: DELETE
+          handler: handleDeleteNotificationEvent
+          description: "Delete a notification event"
+
+        # ACL management
+        - path: /acl
+          method: GET
+          handler: handleAdminACL
+          template: pages/admin/acl.pongo2
+          description: "Display ACL management page"
+
+        # ACL API
+        - path: /api/acl
+          method: POST
+          handler: handleAdminACLCreate
+          description: "Create a new ACL"
+
+        - path: /api/acl/:id
+          method: GET
+          handler: handleAdminACLGet
+          description: "Get ACL details"
+
+        - path: /api/acl/:id
+          method: PUT
+          handler: handleAdminACLUpdate
+          description: "Update an existing ACL"
+
+        - path: /api/acl/:id
+          method: DELETE
+          handler: handleAdminACLDelete
+          description: "Delete an ACL"
+
+        # Generic Agent Jobs management
+        - path: /generic-agent
+          method: GET
+          handler: handleAdminGenericAgent
+          template: pages/admin/generic_agent.pongo2
+          description: "Display generic agent jobs management page"
+
+        # Generic Agent API
+        - path: /api/generic-agent
+          method: POST
+          handler: handleAdminGenericAgentCreate
+          description: "Create a new generic agent job"
+
+        - path: /api/generic-agent/:name
+          method: GET
+          handler: handleAdminGenericAgentGet
+          description: "Get generic agent job details"
+
+        - path: /api/generic-agent/:name
+          method: PUT
+          handler: handleAdminGenericAgentUpdate
+          description: "Update an existing generic agent job"
+
+        - path: /api/generic-agent/:name
+          method: DELETE
+          handler: handleAdminGenericAgentDelete
+          description: "Delete a generic agent job"
+
+        # Customer Groups management (customer company to group permissions)
+        - path: /customer-groups
+          method: GET
+          handler: handleAdminCustomerGroups
+          template: pages/admin/customer_groups.pongo2
+          description: "Display customer groups management page"
+
+        - path: /customer-groups/customer/:id
+          method: GET
+          handler: handleAdminCustomerGroupEdit
+          template: pages/admin/customer_group_edit.pongo2
+          description: "Edit group permissions for a customer company"
+
+        - path: /customer-groups/customer/:id
+          method: POST
+          handler: handleAdminCustomerGroupUpdate
+          description: "Update group permissions for a customer company"
+
+        - path: /customer-groups/group/:id
+          method: GET
+          handler: handleAdminCustomerGroupByGroup
+          template: pages/admin/customer_group_by_group.pongo2
+          description: "Edit customer permissions for a group"
+
+        - path: /customer-groups/group/:id
+          method: POST
+          handler: handleAdminCustomerGroupByGroupUpdate
+          description: "Update customer permissions for a group"
+
+        # Customer Groups API
+        - path: /api/customer-groups/permissions
+          method: GET
+          handler: handleGetCustomerGroupPermissions
+          description: "Get customer group permissions"

@@ -1,0 +1,223 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}Customer Groups - {{ t("app.name") }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Page header -->
+    <div class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Customer Group Permissions</h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Manage customer company access to groups and queues</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Bars -->
+    <div class="mb-6 bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Customer Search (server-side) -->
+            <form method="get" action="/admin/customer-groups" class="flex gap-2">
+                <div class="flex-1">
+                    <label for="search" class="sr-only">Search customers</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            id="search"
+                            name="search"
+                            value="{{ Search }}"
+                            class="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:border-gotrs-500 sm:text-sm"
+                            placeholder="Search customers... (use * for all)"
+                        >
+                    </div>
+                </div>
+                <button
+                    type="submit"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+                >
+                    Search
+                </button>
+            </form>
+            <!-- Group Search (client-side) -->
+            <div class="flex gap-2">
+                <div class="flex-1">
+                    <label for="group-search" class="sr-only">Filter groups</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            id="group-search"
+                            class="block w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:border-gotrs-500 sm:text-sm"
+                            placeholder="Filter groups..."
+                        >
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    id="clear-group-filter"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+                >
+                    Clear
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two-column layout: Customers and Groups -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Customers Column -->
+        <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                    <svg class="inline-block h-5 w-5 mr-2 text-gotrs-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    Customer Companies
+                </h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Click a customer to edit their group permissions</p>
+            </div>
+            <ul class="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
+                {% if Customers %}
+                    {% for customer in Customers %}
+                    <li>
+                        <a href="/admin/customer-groups/customer/{{ customer.CustomerID }}" class="block hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gotrs-600 dark:text-gotrs-400 truncate">
+                                        {{ customer.Name }}
+                                    </p>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ customer.CustomerID }}
+                                    </p>
+                                </div>
+                                <div class="ml-4 flex-shrink-0">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        <p class="mt-2">No customer companies found</p>
+                        <p class="text-sm">Try adjusting your search criteria</p>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <!-- Groups Column -->
+        <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                    <svg class="inline-block h-5 w-5 mr-2 text-gotrs-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    Groups
+                </h3>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Click a group to edit which customers have access</p>
+            </div>
+            <ul id="groups-list" class="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
+                {% if Groups %}
+                    {% for group in Groups %}
+                    <li data-group-name="{{ group.Name }}">
+                        <a href="/admin/customer-groups/group/{{ group.ID }}" class="block hover:bg-gray-50 dark:hover:bg-gray-700 px-4 py-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gotrs-600 dark:text-gotrs-400 truncate">
+                                        {{ group.Name }}
+                                    </p>
+                                </div>
+                                <div class="ml-4 flex-shrink-0">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <p class="mt-2">No groups found</p>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="mt-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">About Customer Group Permissions</h3>
+                <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                    <p>Customer group permissions control which tickets customer users can see in the customer portal.</p>
+                    <ul class="list-disc list-inside mt-2 space-y-1">
+                        <li><strong>ro</strong> - Read-only access to tickets in queues assigned to this group</li>
+                        <li><strong>rw</strong> - Read-write access (can create and update tickets)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const groupSearchInput = document.getElementById('group-search');
+    const clearButton = document.getElementById('clear-group-filter');
+    const groupsList = document.getElementById('groups-list');
+
+    if (groupSearchInput && groupsList) {
+        const groupItems = groupsList.querySelectorAll('li[data-group-name]');
+
+        groupSearchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+
+            groupItems.forEach(function(item) {
+                const groupName = item.getAttribute('data-group-name').toLowerCase();
+                if (searchTerm === '' || groupName.includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+
+        if (clearButton) {
+            clearButton.addEventListener('click', function() {
+                groupSearchInput.value = '';
+                groupItems.forEach(function(item) {
+                    item.style.display = '';
+                });
+                groupSearchInput.focus();
+            });
+        }
+    }
+});
+</script>
+{% endblock %}

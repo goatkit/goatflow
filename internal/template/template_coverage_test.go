@@ -77,6 +77,9 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/postmaster_filter_form.pongo2":    true,
 	"pages/admin/acl.pongo2":                       true,
 	"pages/admin/generic_agent.pongo2":             true,
+	"pages/admin/customer_groups.pongo2":           true,
+	"pages/admin/customer_group_edit.pongo2":       true,
+	"pages/admin/customer_group_by_group.pongo2":   true,
 
 	// Agent templates
 	"pages/agent/dashboard.pongo2":   true,

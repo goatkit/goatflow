@@ -265,14 +265,14 @@
                         </div>
                     </div>
                 </a>
-                <a href="/admin/groups" class="block bg-white dark:bg-gray-800 shadow rounded-lg p-5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gotrs-500">
+                <a href="/admin/customer-groups" class="block bg-white dark:bg-gray-800 shadow rounded-lg p-5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gotrs-500">
                     <div class="flex items-start">
                         <div class="flex h-12 w-12 items-center justify-center rounded-md bg-gotrs-50 text-gotrs-600 dark:bg-gotrs-900 dark:text-gotrs-300">
                             <i class="fa-solid fa-people-group text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
                             <h3 class="text-lg font-medium text-gray-900 dark:text-white">Customer Groups</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure shared permissions and access</p>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure customer company group permissions</p>
                         </div>
                     </div>
                 </a>
