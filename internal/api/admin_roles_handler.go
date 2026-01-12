@@ -61,7 +61,7 @@ func handleAdminRoles(c *gin.Context) {
 
 	// Build query - uses MariaDB compatible syntax
 	query := `
-		SELECT 
+		SELECT
 			r.id, r.name, r.comments, r.valid_id,
 			r.create_time, r.create_by, r.change_time, r.change_by,
 			COUNT(DISTINCT ru.user_id) as user_count,
@@ -373,7 +373,7 @@ func handleAdminRoleUpdate(c *gin.Context) {
 
 	// Update the role
 	result, err := db.Exec(database.ConvertPlaceholders(`
-		UPDATE roles 
+		UPDATE roles
 		SET name = COALESCE(NULLIF(?, ''), name),
 		    comments = ?,
 		    valid_id = ?,
@@ -521,10 +521,10 @@ var frontendPermMapping = map[string]string{
 
 func mapDatabaseToFrontendPermissions(rawPermissions []string) []string {
 	var permissions []string
-	
+
 	// Handle special cases where one DB permission maps to multiple frontend permissions
 	permissionMap := make(map[string]bool)
-	
+
 	for _, perm := range rawPermissions {
 		switch perm {
 		case "rw":
@@ -544,12 +544,12 @@ func mapDatabaseToFrontendPermissions(rawPermissions []string) []string {
 			}
 		}
 	}
-	
+
 	// Convert map to slice
 	for perm := range permissionMap {
 		permissions = append(permissions, perm)
 	}
-	
+
 	return permissions
 }
 
@@ -631,8 +631,8 @@ func handleAdminRoleDelete(c *gin.Context) {
 
 	// Soft delete by setting valid_id = 2
 	result, err := db.Exec(database.ConvertPlaceholders(`
-		UPDATE roles 
-		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1 
+		UPDATE roles
+		SET valid_id = 2, change_time = CURRENT_TIMESTAMP, change_by = 1
 		WHERE id = ?
 	`), id)
 
@@ -663,6 +663,9 @@ func handleAdminRoleDelete(c *gin.Context) {
 }
 
 // handleAdminRoleUsers displays and manages users assigned to a role.
+// For scalability with thousands of users, this endpoint:
+// - Returns current role members (usually a small list)
+// - Does NOT return all available users (use search endpoint instead)
 func handleAdminRoleUsers(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -688,7 +691,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 	var comments sql.NullString
 	err = db.QueryRow(database.ConvertPlaceholders(`
 		SELECT id, name, comments, valid_id
-		FROM roles 
+		FROM roles
 		WHERE id = ?
 	`), id).Scan(&role.ID, &role.Name, &comments, &role.ValidID)
 
@@ -743,53 +746,109 @@ func handleAdminRoleUsers(c *gin.Context) {
 		return
 	}
 
-	// Get all available users not in this role
-	availableRows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT id, login, first_name, last_name
-		FROM users
-		WHERE id NOT IN (
-			SELECT user_id FROM role_user WHERE role_id = ?
-		)
-		AND valid_id = 1
-		ORDER BY last_name, first_name
-	`), id)
-
-	var availableUsers []RoleUser
-	if err == nil {
-		defer availableRows.Close()
-		for availableRows.Next() {
-			var u RoleUser
-			err := availableRows.Scan(&u.UserID, &u.Login, &u.FirstName, &u.LastName)
-			if err != nil {
-				continue
-			}
-			u.Email = u.Login
-			availableUsers = append(availableUsers, u)
-		}
-		_ = availableRows.Err() //nolint:errcheck // Iteration errors don't affect UI
-	}
-
 	// Check if it's an API request or page render
 	if c.GetHeader("Accept") == "application/json" || c.Query("format") == "json" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"role": gin.H{
+				"id":   role.ID,
 				"name": role.Name,
 			},
-			"members":   users,
-			"available": availableUsers,
+			"members": users,
+			// Note: 'available' users are NOT returned here for scalability
+			// Use /admin/roles/:id/users/search?q=xxx to search for users to add
 		})
 		return
 	}
 
 	// Render template for browser request
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/role_users.pongo2", pongo2.Context{
-		"Title":          "Role Users - " + role.Name,
-		"Role":           role,
-		"Users":          users,
-		"AvailableUsers": availableUsers,
-		"User":           getUserMapForTemplate(c),
-		"ActivePage":     "admin",
+		"Title":      "Role Users - " + role.Name,
+		"Role":       role,
+		"Users":      users,
+		"User":       getUserMapForTemplate(c),
+		"ActivePage": "admin",
+	})
+}
+
+// handleAdminRoleUsersSearch searches for users that can be added to a role.
+// Supports pagination and search for scalability with large user bases.
+func handleAdminRoleUsersSearch(c *gin.Context) {
+	idStr := c.Param("id")
+	roleID, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid role ID",
+		})
+		return
+	}
+
+	// Get search query
+	query := c.Query("q")
+	if len(query) < 2 {
+		// Require at least 2 characters to search
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"users":   []RoleUser{},
+			"message": "Enter at least 2 characters to search",
+		})
+		return
+	}
+
+	// Limit results for performance
+	limit := 20
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection failed",
+		})
+		return
+	}
+
+	// Search for users not already in this role
+	searchPattern := "%" + query + "%"
+	rows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT id, login, first_name, last_name
+		FROM users
+		WHERE id NOT IN (
+			SELECT user_id FROM role_user WHERE role_id = ?
+		)
+		AND valid_id = 1
+		AND (
+			LOWER(login) LIKE LOWER(?) OR
+			LOWER(first_name) LIKE LOWER(?) OR
+			LOWER(last_name) LIKE LOWER(?) OR
+			LOWER(CONCAT(first_name, ' ', last_name)) LIKE LOWER(?)
+		)
+		ORDER BY last_name, first_name
+		LIMIT ?
+	`), roleID, searchPattern, searchPattern, searchPattern, searchPattern, limit)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Search failed: " + err.Error(),
+		})
+		return
+	}
+	defer rows.Close()
+
+	var users []RoleUser
+	for rows.Next() {
+		var u RoleUser
+		if err := rows.Scan(&u.UserID, &u.Login, &u.FirstName, &u.LastName); err != nil {
+			continue
+		}
+		u.Email = u.Login
+		users = append(users, u)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"users":   users,
 	})
 }
 
@@ -879,7 +938,7 @@ func handleAdminRoleUserRemove(c *gin.Context) {
 
 	// Remove user from role
 	result, err := db.Exec(database.ConvertPlaceholders(`
-		DELETE FROM role_user 
+		DELETE FROM role_user
 		WHERE role_id = ? AND user_id = ?
 	`), roleID, userID)
 
@@ -976,7 +1035,7 @@ func loadRoleByID(db *sql.DB, id int) (*Role, error) {
 
 func loadRoleGroupPermissions(db *sql.DB, roleID int) ([]RoleGroupPermission, error) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT 
+		SELECT
 			g.id, g.name,
 			MAX(CASE WHEN gr.permission_key = 'ro' THEN gr.permission_value ELSE 0 END) as ro,
 			MAX(CASE WHEN gr.permission_key = 'move_into' THEN gr.permission_value ELSE 0 END) as move_into,

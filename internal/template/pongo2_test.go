@@ -63,6 +63,24 @@ func (h *TemplateTestHelper) RenderTemplate(templatePath string, ctx pongo2.Cont
 	return tmpl.Execute(ctx)
 }
 
+// RenderAndValidate renders a template and validates the HTML structure.
+// This ensures all HTML tags are properly balanced and nested.
+func (h *TemplateTestHelper) RenderAndValidate(t *testing.T, templatePath string, ctx pongo2.Context) string {
+	t.Helper()
+
+	// Render the template
+	html, err := h.RenderTemplate(templatePath, ctx)
+	require.NoError(t, err, "template render failed for %s", templatePath)
+	require.NotEmpty(t, html, "template produced empty output for %s", templatePath)
+
+	// Validate HTML structure
+	if err := ValidateHTML(html); err != nil {
+		t.Errorf("HTML structure validation failed for %s: %v", templatePath, err)
+	}
+
+	return html
+}
+
 // HTMLAsserter provides assertions on rendered HTML.
 type HTMLAsserter struct {
 	t    *testing.T

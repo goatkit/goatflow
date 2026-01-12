@@ -173,7 +173,7 @@ func TestCleanupFailedEmails_Integration(t *testing.T) {
 
 	// Verify old email was deleted
 	var count int
-	countQuery := database.ConvertPlaceholders("SELECT COUNT(*) FROM mail_queue WHERE id = $1")
+	countQuery := database.ConvertPlaceholders("SELECT COUNT(*) FROM mail_queue WHERE id = ?")
 	db.QueryRowContext(ctx, countQuery, oldID).Scan(&count)
 	if count != 0 {
 		t.Error("expected old email to be deleted")
@@ -186,7 +186,7 @@ func TestCleanupFailedEmails_Integration(t *testing.T) {
 	}
 
 	// Cleanup test data
-	deleteQuery := database.ConvertPlaceholders("DELETE FROM mail_queue WHERE id = $1")
+	deleteQuery := database.ConvertPlaceholders("DELETE FROM mail_queue WHERE id = ?")
 	db.ExecContext(ctx, deleteQuery, recentID)
 }
 

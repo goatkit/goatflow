@@ -250,6 +250,11 @@ spec:
           template: pages/admin/role_users.pongo2
           description: "Display users assigned to a role"
 
+        - path: /roles/:id/users/search
+          method: GET
+          handler: handleAdminRoleUsersSearch
+          description: "Search for users to add to a role (scalable typeahead)"
+
         - path: /roles/:id/users
           method: POST
           handler: handleAdminRoleUserAdd

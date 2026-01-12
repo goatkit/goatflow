@@ -76,12 +76,12 @@ func (s *DBStore) Add(ctx context.Context, dateScoped bool, offset int64) (int64
 		}
 	}()
 	var current int64
-	row := tx.QueryRowContext(ctx, database.ConvertPlaceholders(`SELECT counter FROM ticket_number_counter WHERE counter_uid = $1 FOR UPDATE`), uid)
+	row := tx.QueryRowContext(ctx, database.ConvertPlaceholders(`SELECT counter FROM ticket_number_counter WHERE counter_uid = ? FOR UPDATE`), uid)
 	scanErr := row.Scan(&current)
 	switch scanErr {
 	case nil:
 		newVal := current + offset
-		if _, err = tx.ExecContext(ctx, database.ConvertPlaceholders(`UPDATE ticket_number_counter SET counter=$2 WHERE counter_uid=$1`), uid, newVal); err != nil {
+		if _, err = tx.ExecContext(ctx, database.ConvertPlaceholders(`UPDATE ticket_number_counter SET counter=? WHERE counter_uid=?`), newVal, uid); err != nil {
 			return 0, err
 		}
 		if err = tx.Commit(); err != nil {
@@ -89,7 +89,7 @@ func (s *DBStore) Add(ctx context.Context, dateScoped bool, offset int64) (int64
 		}
 		return newVal, nil
 	case sql.ErrNoRows:
-		if _, err = tx.ExecContext(ctx, database.ConvertPlaceholders(`INSERT INTO ticket_number_counter (counter, counter_uid, create_time) VALUES ($2, $1, NOW())`), uid, offset); err != nil {
+		if _, err = tx.ExecContext(ctx, database.ConvertPlaceholders(`INSERT INTO ticket_number_counter (counter, counter_uid, create_time) VALUES (?, ?, NOW())`), offset, uid); err != nil {
 			return 0, err
 		}
 		if err = tx.Commit(); err != nil {
