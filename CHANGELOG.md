@@ -33,6 +33,12 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - Added Persian (fa) - 91.3% coverage with RTL and Persian numerals
   - Language configs in `rtl.go` include locale-specific date/time/number/currency formatting
   - `GetEnabledLanguages()` now auto-detects languages based on JSON file existence
+- **Customer Groups Admin**: Full CRUD interface at `/admin/customer-groups` for managing customer company group permissions (OTRS AdminCustomerGroup equivalent)
+  - Two-way management: edit permissions by customer or by group
+  - Permission types: ro (read-only) and rw (read-write) access
+  - Client-side group filtering with server-side customer search
+  - Integration tests with real database
+  - Files: `internal/api/admin_customer_groups_handlers.go`, templates in `templates/pages/admin/customer_group*.pongo2`
 - **Queue Auto Response Admin**: Dynamic module at `/admin/queue-auto-responses` for mapping queues to auto-response templates
   - Lookup display resolution shows queue names and auto-response names instead of IDs
   - i18n translations for all 6 languages (en, de, es, fr, ar, tlh)

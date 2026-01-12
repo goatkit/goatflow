@@ -616,7 +616,7 @@ toolbox-test-api: toolbox-build
 		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
 		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\)'
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\|CustomerGroup\|GroupCustomer\|LoadHelper\|PermissionContext\)'
 
 # Run internal/api tests binding to host-published test DB
 toolbox-test-api-host: toolbox-build
@@ -651,7 +651,7 @@ toolbox-test-api-host: toolbox-build
 		-e TEST_DB_PASSWORD=$(TEST_DB_PASSWORD) \
 		-e GOTRS_TEST_DB_READY=$(GOTRS_TEST_DB_READY) \
 		gotrs-toolbox:latest \
-		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\|AdminCustomerCompan\)'
+		bash -lc 'export PATH=/usr/local/go/bin:$$PATH; go test -buildvcs=false -v ./internal/api -run ^Test\(BuildRoutesManifest\|Queue\|Article\|Search\|Priority\|User\|AdminCustomerCompan\|CustomerGroup\|GroupCustomer\|LoadHelper\|PermissionContext\)'
 
 # Run core tests (cmd/goats + internal/api + internal/service)
 toolbox-test:

@@ -461,6 +461,11 @@ var testedFormTemplates = map[string]bool{
 	"pages/admin/acl.pongo2":           true,
 	"pages/admin/generic_agent.pongo2": true,
 
+	// Customer Groups (customer company ↔ group permissions)
+	"pages/admin/customer_groups.pongo2":         true,
+	"pages/admin/customer_group_edit.pongo2":     true,
+	"pages/admin/customer_group_by_group.pongo2": true,
+
 	// Dev tools (not production, skip strict validation)
 	"pages/dev/database.pongo2": true,
 }

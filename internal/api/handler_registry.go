@@ -470,6 +470,14 @@ func ensureCoreHandlers() {
 		"handleAdminServiceCustomerUsersAllocate": HandleAdminServiceCustomerUsersAllocate,
 		"handleAdminServiceCustomerUsersUpdate":   HandleAdminServiceCustomerUsersUpdate,
 
+		// Customer groups management (customer company ↔ group permissions)
+		"handleAdminCustomerGroups":              handleAdminCustomerGroups,
+		"handleAdminCustomerGroupEdit":           handleAdminCustomerGroupEdit,
+		"handleAdminCustomerGroupUpdate":         handleAdminCustomerGroupUpdate,
+		"handleAdminCustomerGroupByGroup":        handleAdminCustomerGroupByGroup,
+		"handleAdminCustomerGroupByGroupUpdate":  handleAdminCustomerGroupByGroupUpdate,
+		"handleGetCustomerGroupPermissions":      handleGetCustomerGroupPermissions,
+
 		// Email identity API handlers
 		"HandleListSystemAddressesAPI": HandleListSystemAddressesAPI,
 		"HandleCreateSystemAddressAPI": HandleCreateSystemAddressAPI,
