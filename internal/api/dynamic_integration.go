@@ -57,6 +57,10 @@ var dynamicModuleAliases = map[string]dynamicModuleAlias{
 		HandlerName:  "handleAdminModuleQueueAutoResponses",
 		FriendlyPath: "/admin/queue-auto-responses",
 	},
+	"article_color": {
+		HandlerName:  "handleAdminModuleArticleColors",
+		FriendlyPath: "/admin/article-colors",
+	},
 	"salutation": {
 		FriendlyPath: "/admin/modules/salutation",
 	},

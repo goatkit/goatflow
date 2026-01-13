@@ -143,7 +143,7 @@
             <!-- Default: Conversation content remains (articles) -->
             <div class="divide-y divide-gray-200 dark:divide-gray-700">
                 {% for article in notes %}
-                <div class="p-6">
+                <div class="p-6"{% if article.sender_color %} style="border-left: 4px solid {{ article.sender_color }};"{% endif %}>
                     <div class="flex items-start space-x-4">
                         <div class="flex-shrink-0">
                             <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
@@ -232,7 +232,7 @@
                 </div>
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                     {% for article in notes %}
-                    <div class="p-6">
+                    <div class="p-6"{% if article.sender_color %} style="border-left: 4px solid {{ article.sender_color }};"{% endif %}>
                         <div class="flex items-start space-x-4">
                             <div class="flex-shrink-0">
                                 <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
@@ -275,7 +275,7 @@
                                             {% if attachment.content_type and attachment.content_type|slice:":5" == "image" %}
                                             <!-- Image preview -->
                                             <div class="aspect-square mb-1 overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
-                                                <img data-attachment-url="/agent/tickets/{{ ticket.id }}/articles/{{ article.id }}/attachments/{{ attachment.id }}" 
+                                                <img data-attachment-url="/agent/tickets/{{ ticket.id }}/articles/{{ article.id }}/attachments/{{ attachment.id }}"
                                                      alt="{{ attachment.filename }}"
                                                      class="w-full h-full object-cover cursor-pointer attachment-image"
                                                      onclick="showImagePreview(this.src, '{{ attachment.filename }}')"
@@ -301,7 +301,7 @@
                                                 </p>
                                                 <p class="text-gray-500 dark:text-gray-400">{{ attachment.size }}</p>
                                             </div>
-                                            <a href="/agent/tickets/{{ ticket.id }}/articles/{{ article.id }}/attachments/{{ attachment.id }}" 
+                                            <a href="/agent/tickets/{{ ticket.id }}/articles/{{ article.id }}/attachments/{{ attachment.id }}"
                                                download="{{ attachment.filename }}"
                                                class="absolute inset-0 rounded-lg ring-2 ring-transparent hover:ring-blue-500 transition-all"
                                                title="Download {{ attachment.filename }}">
@@ -447,7 +447,7 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <!-- Recipients -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">To</label>
@@ -459,7 +459,7 @@
                             Loading customer users...
                         </div>
                     </div>
-                    
+
                     <!-- Expandable Cc/Bcc -->
                     <div>
                         <button type="button" onclick="toggleCcBcc()" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
@@ -478,18 +478,18 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Subject -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>
                         <input type="text" name="subject" value="Re: {{ ticket.title }}" required
                                class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <!-- Template Selection -->
                     <!-- Template Selection -->
                     {% include "partials/template_selector.pongo2" with QueueID=ticket.queue_id TicketID=ticket.id TemplateType="Answer" TargetEditorID="replyEditorInner" SelectID="replyTemplateSelect" %}
-                    
+
                     <!-- Message with Quote Option -->
                     <div>
                         <div class="flex justify-between items-center mb-2">
@@ -503,7 +503,7 @@
                             {% include "partials/rich_text_editor.pongo2" with EditorID="replyEditorInner" FieldName="body" Placeholder="Write your reply here..." MinHeight="120px" LabelID="replyEditorLabel" %}
                         </div>
                     </div>
-                    
+
                     <!-- Attachments -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Attachments</label>
@@ -511,7 +511,7 @@
                                class="mt-1 w-full text-sm text-gray-900 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300">
                         <div id="reply-template-attachments" class="mt-2"></div>
                     </div>
-                    
+
                     <!-- Time Accounting -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -528,9 +528,9 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
-                    <button type="button" onclick="saveDraft()" 
+                    <button type="button" onclick="saveDraft()"
                             class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
                         Save as Draft
                     </button>
@@ -660,7 +660,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
                     <button type="button" onclick="closeModal('statusModal')"
                             class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
@@ -829,25 +829,25 @@ function togglePendingFields() {
     const rawStates = (statusForm && statusForm.dataset && statusForm.dataset.pendingStates) || '';
     const pendingStates = rawStates.split(',').map(v => v.trim()).filter(Boolean);
     const pendingSet = pendingStates.length > 0 ? new Set(pendingStates) : new Set(['4', '5', '6']);
-    
+
     // Hide all help texts first
     helpTexts.forEach(help => help.style.display = 'none');
-    
+
     // Pending states: 4=pending reminder, 5=pending auto close+, 6=pending auto close-
     if (pendingSet.has(statusSelect.value)) {
         pendingFields.style.display = 'block';
         pendingInput.required = true;
-        
+
         // Set minimum datetime to current time
         const now = new Date();
         // Format as YYYY-MM-DDTHH:MM for datetime-local input
-        const minDateTime = now.getFullYear() + '-' + 
-                          String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+        const minDateTime = now.getFullYear() + '-' +
+                          String(now.getMonth() + 1).padStart(2, '0') + '-' +
                           String(now.getDate()).padStart(2, '0') + 'T' +
                           String(now.getHours()).padStart(2, '0') + ':' +
                           String(now.getMinutes()).padStart(2, '0');
         pendingInput.min = minDateTime;
-        
+
         // Show appropriate help text
         switch(statusSelect.value) {
             case '4':
@@ -860,18 +860,18 @@ function togglePendingFields() {
                 document.getElementById('pending-auto-close-minus-help').style.display = 'block';
                 break;
         }
-        
+
         // Set default time to 1 hour from now
         const defaultTime = new Date(now.getTime() + 60 * 60 * 1000);
-        const defaultDateTime = defaultTime.getFullYear() + '-' + 
-                              String(defaultTime.getMonth() + 1).padStart(2, '0') + '-' + 
+        const defaultDateTime = defaultTime.getFullYear() + '-' +
+                              String(defaultTime.getMonth() + 1).padStart(2, '0') + '-' +
                               String(defaultTime.getDate()).padStart(2, '0') + 'T' +
                               String(defaultTime.getHours()).padStart(2, '0') + ':' +
                               String(defaultTime.getMinutes()).padStart(2, '0');
         if (!pendingInput.value) {
             pendingInput.value = defaultDateTime;
         }
-        
+
     } else {
         pendingFields.style.display = 'none';
         pendingInput.required = false;
@@ -882,14 +882,14 @@ function togglePendingFields() {
 // NOTE: Most functions now come from ticket-zoom.js, avoiding duplication
 // Only keeping essential template-specific functions here
 
-// Initialize pending fields on page load  
+// Initialize pending fields on page load
 document.addEventListener('DOMContentLoaded', function() {
     togglePendingFields();
     // Load attachment images with authentication
     if (typeof loadAttachmentImages === 'function') {
         loadAttachmentImages();
     }
-    
+
     // Function to style tables based on current theme
     function styleArticleTables() {
         document.querySelectorAll('.article-content table').forEach(table => {
@@ -898,50 +898,50 @@ document.addEventListener('DOMContentLoaded', function() {
             const borderColor = isDark ? '#4b5563' : '#d1d5db';
             const headerBg = isDark ? '#374151' : '#f3f4f6';  // Lighter gray in light mode, more contrast in dark
             const evenRowBg = isDark ? 'rgba(31, 41, 55, 0.3)' : '#fafafa';  // Very light gray in light mode
-            
+
             // Style the table
             table.style.borderCollapse = 'collapse';
             table.style.width = '100%';
             table.style.border = `1px solid ${borderColor}`;
-            
+
             // Style all cells
             table.querySelectorAll('th, td').forEach(cell => {
                 cell.style.border = `1px solid ${borderColor}`;
                 cell.style.padding = '0.5rem 0.75rem';
                 cell.style.textAlign = 'left';
             });
-            
+
             // Style header cells
             table.querySelectorAll('th').forEach(th => {
                 th.style.backgroundColor = headerBg;
                 th.style.fontWeight = '600';
             });
-            
+
             // Store row index for hover handling
             table.querySelectorAll('tbody tr').forEach((row, index) => {
                 row.dataset.rowIndex = index;
-                
+
                 if (index % 2 === 1) {
                     row.style.backgroundColor = evenRowBg;
                 } else {
                     row.style.backgroundColor = 'transparent';
                 }
-                
+
                 // Remove old listeners by cloning the node
                 const newRow = row.cloneNode(true);
                 row.parentNode.replaceChild(newRow, row);
-                
+
                 // Add hover effect with fresh listeners
                 newRow.addEventListener('mouseenter', function() {
                     const currentDark = document.documentElement.classList.contains('dark');
                     this.style.backgroundColor = currentDark ? 'rgba(75, 85, 99, 0.4)' : '#e5e7eb';
                 });
-                
+
                 newRow.addEventListener('mouseleave', function() {
                     const currentDark = document.documentElement.classList.contains('dark');
                     const currentEvenBg = currentDark ? 'rgba(31, 41, 55, 0.3)' : '#fafafa';
                     const idx = parseInt(this.dataset.rowIndex);
-                    
+
                     if (idx % 2 === 1) {
                         this.style.backgroundColor = currentEvenBg;
                     } else {
@@ -951,10 +951,10 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
+
     // Apply table styles initially
     styleArticleTables();
-    
+
     // Watch for theme changes and reapply styles
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
@@ -964,25 +964,25 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Observe changes to the document element's class (where dark mode class is toggled)
     observer.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ['class']
     });
-    
+
     // Close dropdowns when clicking outside
     document.addEventListener('click', function(event) {
         const dropdowns = document.querySelectorAll('[id$="Dropdown"]');
         const dropdownButtons = document.querySelectorAll('button[onclick*="toggleDropdown"]');
-        
+
         let clickedInsideDropdown = false;
         dropdownButtons.forEach(button => {
             if (button.contains(event.target)) {
                 clickedInsideDropdown = true;
             }
         });
-        
+
         dropdowns.forEach(dropdown => {
             if (!dropdown.contains(event.target) && !clickedInsideDropdown) {
                 dropdown.classList.add('hidden');
@@ -994,19 +994,19 @@ document.addEventListener('DOMContentLoaded', function() {
 // Form submission functions
 function submitReply(event) {
     event.preventDefault();
-    
+
     // Get form data
     const formData = new FormData(event.target);
-    
+
     // Ensure we have the editor content
     if (replyEditorInstance) {
         const content = TiptapEditor.getContent('replyEditor');
         formData.set('body', content);
     }
-    
+
     // Add the 'to' field (customer email)
     formData.set('to', '{{ ticket.customer_user_id }}');
-    
+
     // Submit the form
     apiFetch(`/agent/tickets/${ticketId}/reply`, {
         method: 'POST',
@@ -1029,16 +1029,16 @@ function submitReply(event) {
 
 function submitNote(event) {
     event.preventDefault();
-    
+
     // Get form data
     const formData = new FormData(event.target);
-    
+
     // Ensure we have the editor content
     if (noteEditorInstance) {
         const content = TiptapEditor.getContent('noteEditor');
         formData.set('body', content);
     }
-    
+
     // Submit the form
     apiFetch(`/agent/tickets/${ticketId}/note`, {
         method: 'POST',
@@ -1061,10 +1061,10 @@ function submitNote(event) {
 
 function submitPhone(event) {
     event.preventDefault();
-    
+
     // Get form data
     const formData = new FormData(event.target);
-    
+
     // Submit the form
     apiFetch(`/agent/tickets/${ticketId}/phone`, {
         method: 'POST',
@@ -1087,9 +1087,9 @@ function submitPhone(event) {
 
 function submitAssign(event) {
     event.preventDefault();
-    
+
     const formData = new FormData(event.target);
-    
+
     apiFetch(`/agent/tickets/${ticketId}/assign`, {
         method: 'POST',
         body: formData
@@ -1111,9 +1111,9 @@ function submitAssign(event) {
 
 function submitPriority(event) {
     event.preventDefault();
-    
+
     const formData = new FormData(event.target);
-    
+
     apiFetch(`/agent/tickets/${ticketId}/priority`, {
         method: 'POST',
         body: formData
@@ -1145,12 +1145,12 @@ function closeModal(modalId) {
 function toggleDropdown(dropdownId) {
     const dropdown = document.getElementById(dropdownId);
     const isHidden = dropdown.classList.contains('hidden');
-    
+
     // Hide all dropdowns first
     document.querySelectorAll('[id$="Dropdown"]').forEach(d => {
         d.classList.add('hidden');
     });
-    
+
     // Show the clicked dropdown if it was hidden
     if (isHidden) {
         dropdown.classList.remove('hidden');
@@ -1160,16 +1160,16 @@ function toggleDropdown(dropdownId) {
 function updateNoteSubject() {
     const noteTypeSelect = document.getElementById('noteTypeSelect');
     const noteSubject = document.getElementById('noteSubject');
-    
+
     // Only update if the subject hasn't been manually edited by the user
     const currentSubject = noteSubject.value;
     const defaultSubjects = ['Email Note', 'Phone Note', 'Internal Note', 'Chat Note', ''];
-    
+
     // If the current subject is one of the defaults or empty, update it
     if (defaultSubjects.includes(currentSubject) || currentSubject === '') {
         const selectedType = noteTypeSelect.value;
         let newSubject = '';
-        
+
         switch(selectedType) {
             case '1':
                 newSubject = 'Email Note';
@@ -1186,7 +1186,7 @@ function updateNoteSubject() {
             default:
                 newSubject = 'Note';
         }
-        
+
         noteSubject.value = newSubject;
     }
 }
@@ -1205,7 +1205,7 @@ function toggleCcBcc() {
 function updateReplyVisibility() {
     const typeSelect = document.getElementById('replyCommunicationType');
     const visibilityCheckbox = document.getElementById('replyVisibility');
-    
+
     // If internal email, uncheck visibility
     if (typeSelect.value === '3') { // Email-Internal
         visibilityCheckbox.checked = false;
@@ -1217,14 +1217,14 @@ function updateReplyVisibility() {
 // Load template content
 function loadTemplate(templateId) {
     if (!templateId) return;
-    
+
     // This would normally fetch from API
     const templates = {
         '1': 'Thank you for contacting us. We have received your request and will respond shortly.\n\nBest regards,\nSupport Team',
         '2': 'Thank you for your inquiry. To assist you better, could you please provide the following information:\n\n1. \n2. \n3. \n\nBest regards,\nSupport Team',
         '3': 'Your issue has been resolved. If you have any further questions, please don\'t hesitate to contact us.\n\nBest regards,\nSupport Team'
     };
-    
+
     if (templates[templateId] && replyEditorInstance) {
         // Set the template content in the editor
         TiptapEditor.setContent('replyEditor', templates[templateId]);
@@ -1235,12 +1235,12 @@ function loadTemplate(templateId) {
 function saveDraft() {
     const formData = new FormData(document.getElementById('replyForm'));
     formData.append('is_draft', '1');
-    
+
     if (replyEditorInstance) {
         const content = TiptapEditor.getContent('replyEditor');
         formData.set('body', content);
     }
-    
+
     // Save draft via API
     apiFetch(`/agent/tickets/${ticketId}/draft`, {
         method: 'POST',
@@ -1262,8 +1262,8 @@ function saveDraft() {
 // Toast notification function
 function showToast(message, type = 'info') {
     // Use existing toast container from base layout
-    const event = new CustomEvent('show-toast', { 
-        detail: { message, type } 
+    const event = new CustomEvent('show-toast', {
+        detail: { message, type }
     });
     document.dispatchEvent(event);
 }
@@ -1278,17 +1278,17 @@ function showImagePreview(src, filename) {
             modal.remove();
         }
     };
-    
+
     // Create image container
     const container = document.createElement('div');
     container.className = 'relative max-w-full max-h-full';
-    
+
     // Create image
     const img = document.createElement('img');
     img.src = src;
     img.alt = filename;
     img.className = 'max-w-full max-h-[90vh] object-contain';
-    
+
     // Create close button
     const closeBtn = document.createElement('button');
     closeBtn.className = 'absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full p-2 hover:bg-opacity-75';
@@ -1296,19 +1296,19 @@ function showImagePreview(src, filename) {
     closeBtn.onclick = function() {
         modal.remove();
     };
-    
+
     // Create filename label
     const label = document.createElement('div');
     label.className = 'absolute bottom-2 left-2 right-2 text-white bg-black bg-opacity-50 rounded px-3 py-1 text-sm truncate';
     label.textContent = filename;
-    
+
     // Assemble modal
     container.appendChild(img);
     container.appendChild(closeBtn);
     container.appendChild(label);
     modal.appendChild(container);
     document.body.appendChild(modal);
-    
+
     // Close on escape key
     const escHandler = function(e) {
         if (e.key === 'Escape') {

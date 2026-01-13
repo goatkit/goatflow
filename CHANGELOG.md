@@ -7,6 +7,10 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
+- **Admin Article Color Module**: Dynamic module at `/admin/article-colors` for managing article sender type colors (OTRS AdminArticleColor equivalent)
+  - Full CRUD for article color configuration (agent, customer, system sender colors)
+  - Dashboard link with palette icon in System Administration section
+  - i18n translations for all 15 languages (en, de, es, fr, pt, pl, ru, zh, ja, ar, he, fa, ur, uk, tlh)
 - **Generic Agent Execution Engine**: Automated ticket processing via scheduled jobs (OTRS GenericAgent equivalent)
   - Job scheduler integration: runs jobs based on ScheduleDays/ScheduleHours/ScheduleMinutes
   - Ticket matching: StateIDs, QueueIDs, PriorityIDs, TypeIDs, LockIDs, OwnerIDs, ServiceIDs, SLAIDs, CustomerID (wildcards), Title, time-based filters (create/change/pending/escalation older/newer minutes)
