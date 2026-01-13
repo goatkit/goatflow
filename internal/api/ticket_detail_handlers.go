@@ -85,6 +85,13 @@ func handleTicketDetail(c *gin.Context) {
 		articles = []models.Article{}
 	}
 
+	// Load sender type colors for article display
+	senderTypeColors, err := articleRepo.GetSenderTypeColors()
+	if err != nil {
+		log.Printf("Error fetching sender type colors: %v", err)
+		senderTypeColors = make(map[int]string)
+	}
+
 	// Convert articles to template format - skip the first article (it's the description)
 	notes := make([]gin.H, 0, len(articles))
 	firstArticleID := 0
@@ -97,11 +104,19 @@ func handleTicketDetail(c *gin.Context) {
 			firstArticleVisibleForCustomer = article.IsVisibleForCustomer == 1
 			continue
 		}
-		// Determine sender type based on CreateBy (simplified logic)
+		// Determine sender type from article's SenderTypeID
 		senderType := "system"
-		if article.CreateBy > 0 {
-			senderType = "agent" // Assume any user > 0 is an agent
+		switch article.SenderTypeID {
+		case 1:
+			senderType = "agent"
+		case 2:
+			senderType = "system"
+		case 3:
+			senderType = "customer"
 		}
+
+		// Get color for this sender type
+		senderColor := senderTypeColors[article.SenderTypeID]
 
 		// Get the body content, preferring HTML over plain text
 		var bodyContent string
@@ -179,6 +194,7 @@ func handleTicketDetail(c *gin.Context) {
 			"time":                    article.CreateTime.Format("2006-01-02 15:04"),
 			"body":                    bodyContent,
 			"sender_type":             senderType,
+			"sender_color":            senderColor,
 			"is_visible_for_customer": article.IsVisibleForCustomer == 1,
 			"create_time":             article.CreateTime.Format("2006-01-02 15:04"),
 			"subject":                 article.Subject,

@@ -85,19 +85,21 @@ func (s *SimpleTicketService) ListTickets(req *models.TicketListRequest) (*model
 
 // SimpleTicketMessage is a simplified message model.
 type SimpleTicketMessage struct {
-	ID          uint                `json:"id"`
-	TicketID    uint                `json:"ticket_id"`
-	Body        string              `json:"body"`
-	Subject     string              `json:"subject"`
-	ContentType string              `json:"content_type"`
-	CreatedBy   uint                `json:"created_by"`
-	AuthorName  string              `json:"author_name"`
-	AuthorEmail string              `json:"author_email"`
-	AuthorType  string              `json:"author_type"` // "Customer", "Agent", "System"
-	IsPublic    bool                `json:"is_public"`
-	IsInternal  bool                `json:"is_internal"`
-	CreatedAt   time.Time           `json:"created_at"`
-	Attachments []*SimpleAttachment `json:"attachments,omitempty"`
+	ID           uint                `json:"id"`
+	TicketID     uint                `json:"ticket_id"`
+	Body         string              `json:"body"`
+	Subject      string              `json:"subject"`
+	ContentType  string              `json:"content_type"`
+	CreatedBy    uint                `json:"created_by"`
+	AuthorName   string              `json:"author_name"`
+	AuthorEmail  string              `json:"author_email"`
+	AuthorType   string              `json:"author_type"` // "Customer", "Agent", "System"
+	SenderTypeID int                 `json:"sender_type_id"`
+	SenderColor  string              `json:"sender_color,omitempty"` // Hex color from article_color
+	IsPublic     bool                `json:"is_public"`
+	IsInternal   bool                `json:"is_internal"`
+	CreatedAt    time.Time           `json:"created_at"`
+	Attachments  []*SimpleAttachment `json:"attachments,omitempty"`
 }
 
 // SimpleAttachment is a simplified attachment model.
@@ -259,19 +261,20 @@ func (s *SimpleTicketService) GetMessages(ticketID uint) ([]*SimpleTicketMessage
 		}
 
 		msg := &SimpleTicketMessage{
-			ID:          uint(articleID),
-			TicketID:    ticketID,
-			Body:        body,
-			Subject:     subject,
-			ContentType: contentType,
-			CreatedBy:   uint(createBy),
-			AuthorName:  authorName,
-			AuthorEmail: fromAddr,
-			AuthorType:  authorType,
-			IsPublic:    isVisible == 1,
-			IsInternal:  isVisible == 0,
-			CreatedAt:   createTime,
-			Attachments: []*SimpleAttachment{},
+			ID:           uint(articleID),
+			TicketID:     ticketID,
+			Body:         body,
+			Subject:      subject,
+			ContentType:  contentType,
+			CreatedBy:    uint(createBy),
+			AuthorName:   authorName,
+			AuthorEmail:  fromAddr,
+			AuthorType:   authorType,
+			SenderTypeID: senderTypeID,
+			IsPublic:     isVisible == 1,
+			IsInternal:   isVisible == 0,
+			CreatedAt:    createTime,
+			Attachments:  []*SimpleAttachment{},
 		}
 
 		dbMessages = append(dbMessages, msg)

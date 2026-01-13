@@ -19,11 +19,11 @@
         border-radius: 4px;
         transition: background-color 0.2s;
     }
-    
+
     .inline-edit-display:hover {
         background-color: rgba(59, 130, 246, 0.1);
     }
-    
+
     .inline-edit-display::after {
         content: '✎';
         margin-left: 4px;
@@ -31,29 +31,29 @@
         opacity: 0;
         transition: opacity 0.2s;
     }
-    
+
     .inline-edit-display:hover::after {
         opacity: 0.5;
     }
-    
+
     .inline-edit-saving {
         opacity: 0.5;
         pointer-events: none;
     }
-    
+
     .inline-edit-success {
         animation: flashGreen 0.5s;
     }
-    
+
     .inline-edit-error {
         animation: flashRed 0.5s;
     }
-    
+
     @keyframes flashGreen {
         0%, 100% { background-color: transparent; }
         50% { background-color: rgba(34, 197, 94, 0.2); }
     }
-    
+
     @keyframes flashRed {
         0%, 100% { background-color: transparent; }
         50% { background-color: rgba(239, 68, 68, 0.2); }
@@ -93,46 +93,46 @@
     <!-- Action Bar -->
     <div class="mb-4 flex justify-between items-center">
         <div class="flex space-x-2">
-            <button onclick="openCreateModal()" 
+            <button onclick="openCreateModal()"
                     class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
                 <i class="fas fa-plus icon-sm mr-2"></i>
                 New {{ module.Singular }}
             </button>
-            
+
             <!-- Bulk Actions (hidden by default) -->
             <div id="bulkActions" class="hidden flex gap-2">
                 <span class="self-center text-sm text-gray-600 dark:text-gray-400">
                     <span id="selectedCount">0</span> selected
                 </span>
                 {% if features.StatusToggle %}
-                <button onclick="bulkToggleStatus()" 
+                <button onclick="bulkToggleStatus()"
                         class="px-3 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors text-sm">
                     <i class="fas fa-toggle-on icon-sm mr-1"></i>
                     Toggle Status
                 </button>
                 {% endif %}
                 {% if features.ExportCSV %}
-                <button onclick="exportSelected()" 
+                <button onclick="exportSelected()"
                         class="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm">
                     <i class="fas fa-file-export icon-sm mr-1"></i>
                     Export Selected
                 </button>
                 {% endif %}
-                <button onclick="bulkDelete()" 
+                <button onclick="bulkDelete()"
                         class="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm">
                     <i class="fas fa-trash icon-sm mr-1"></i>
                     Delete Selected
                 </button>
             </div>
             {% if features.ImportCSV %}
-            <button onclick="openImportModal()" 
+            <button onclick="openImportModal()"
                     class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
                 <i class="fas fa-file-upload icon-sm mr-2"></i>
                 Import CSV
             </button>
             {% endif %}
             {% if features.ExportCSV %}
-            <button onclick="exportToCSV()" 
+            <button onclick="exportToCSV()"
                     class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
                 <i class="fas fa-file-download icon-sm mr-2"></i>
                 Export CSV
@@ -151,7 +151,7 @@
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <i class="fas fa-search icon-sm text-gray-400"></i>
                     </div>
-                    <input type="text" 
+                    <input type="text"
                            id="searchInput"
                            placeholder="Search by name, login, email, group..."
                            value="{{ currentFilters.search|default:'' }}"
@@ -169,66 +169,66 @@
                     {% if module.Name == "state" or module.Name == "users" or module.Name == "queue" %}
                     <!-- Quick filter presets -->
                     <div class="relative" x-data="{ open: false }">
-                        <button @click="open = !open" 
+                        <button @click="open = !open"
                                 class="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 text-sm flex items-center gap-1">
                             <i class="fas fa-filter icon-sm"></i>
                             Quick Filters
                             <i class="fas fa-chevron-down icon-xs"></i>
                         </button>
-                        <div x-show="open" @click.away="open = false" 
+                        <div x-show="open" @click.away="open = false"
                              class="absolute z-10 mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg min-w-[150px]">
                             {% if module.Name == "state" %}
-                            <button onclick="applyQuickFilter('active')" 
+                            <button onclick="applyQuickFilter('active')"
                                     class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Active States
                             </button>
-                            <button onclick="applyQuickFilter('open')" 
+                            <button onclick="applyQuickFilter('open')"
                                     class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Open States
                             </button>
-                            <button onclick="applyQuickFilter('closed')" 
+                            <button onclick="applyQuickFilter('closed')"
                                     class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Closed States
                             </button>
-                            <button onclick="applyQuickFilter('pending')" 
+                            <button onclick="applyQuickFilter('pending')"
                                     class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Pending States
                             </button>
                             {% elif module.Name == "users" %}
-                            <button onclick="applyQuickFilter('active_users')" 
+                            <button onclick="applyQuickFilter('active_users')"
                                     class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Active Users
                             </button>
-                            <button onclick="applyQuickFilter('inactive_users')" 
+                            <button onclick="applyQuickFilter('inactive_users')"
                                     class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Inactive Users
                             </button>
-                            <button onclick="applyQuickFilter('agents')" 
+                            <button onclick="applyQuickFilter('agents')"
                                     class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Agents Only
                             </button>
                             {% elif module.Name == "queue" %}
-                            <button onclick="applyQuickFilter('active_queues')" 
+                            <button onclick="applyQuickFilter('active_queues')"
                                     class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Active Queues
                             </button>
-                            <button onclick="applyQuickFilter('email_queues')" 
+                            <button onclick="applyQuickFilter('email_queues')"
                                     class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Email Queues
                             </button>
                             {% endif %}
                             <hr class="my-1 border-gray-200 dark:border-gray-700">
-                            <button onclick="clearAllFilters()" 
+                            <button onclick="clearAllFilters()"
                                     class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                                 Clear All
                             </button>
                         </div>
                     </div>
                     {% endif %}
-                    
+
                     <!-- Saved Filter Sets -->
                     <div class="relative">
-                        <button onclick="toggleSavedFiltersMenu()" 
+                        <button onclick="toggleSavedFiltersMenu()"
                                 class="flex items-center gap-2 px-3 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors text-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
@@ -239,39 +239,39 @@
                             <div class="p-3">
                                 <div class="flex items-center justify-between mb-3">
                                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Saved Filter Sets</h3>
-                                    <button onclick="saveCurrentFilters()" 
+                                    <button onclick="saveCurrentFilters()"
                                             class="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
                                         Save Current
                                     </button>
                                 </div>
-                                
+
                                 <!-- Saved filters list -->
                                 <div id="savedFiltersList" class="space-y-2 max-h-64 overflow-y-auto mb-3">
                                     <!-- Saved filters will be populated here -->
                                 </div>
-                                
+
                                 <!-- Save new filter form -->
                                 <div id="saveFilterForm" class="hidden border-t border-gray-200 dark:border-gray-700 pt-3">
-                                    <input type="text" 
+                                    <input type="text"
                                            id="filterSetName"
-                                           placeholder="Enter filter set name..." 
+                                           placeholder="Enter filter set name..."
                                            class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white mb-2">
                                     <div class="flex gap-2">
-                                        <button onclick="confirmSaveFilters()" 
+                                        <button onclick="confirmSaveFilters()"
                                                 class="flex-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600">
                                             Save
                                         </button>
-                                        <button onclick="cancelSaveFilters()" 
+                                        <button onclick="cancelSaveFilters()"
                                                 class="flex-1 px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
                                             Cancel
                                         </button>
                                     </div>
                                 </div>
-                                
+
                                 <div class="pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
                                     <div class="flex items-center justify-between">
                                         <span id="filterSetCount">0 saved filter sets</span>
-                                        <button onclick="clearAllFilterSets()" 
+                                        <button onclick="clearAllFilterSets()"
                                                 class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
                                             Clear All
                                         </button>
@@ -280,10 +280,10 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Column Visibility Toggle -->
                     <div class="relative">
-                        <button onclick="toggleColumnMenu()" 
+                        <button onclick="toggleColumnMenu()"
                                 class="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -297,7 +297,7 @@
                                     {% for field in fields %}
                                     {% if field.ShowInList %}
                                     <label class="flex items-center">
-                                        <input type="checkbox" 
+                                        <input type="checkbox"
                                                class="column-toggle rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                                                data-column="{{ field.Name }}"
                                                checked
@@ -309,7 +309,7 @@
                                     {% for field in computedFields %}
                                     {% if field.ShowInList %}
                                     <label class="flex items-center">
-                                        <input type="checkbox" 
+                                        <input type="checkbox"
                                                class="column-toggle rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                                                data-column="{{ field.Name }}"
                                                checked
@@ -320,15 +320,15 @@
                                     {% endfor %}
                                 </div>
                                 <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex gap-2">
-                                    <button onclick="showAllColumns()" 
+                                    <button onclick="showAllColumns()"
                                             class="flex-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
                                         Show All
                                     </button>
-                                    <button onclick="hideAllColumns()" 
+                                    <button onclick="hideAllColumns()"
                                             class="flex-1 px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
                                         Hide All
                                     </button>
-                                    <button onclick="resetColumns()" 
+                                    <button onclick="resetColumns()"
                                             class="flex-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600">
                                         Reset
                                     </button>
@@ -336,7 +336,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     {% if filters %}
                         {% for filter in filters %}
                         {% if filter.Type == "date_range" %}
@@ -345,13 +345,13 @@
                                 <label class="text-xs text-gray-600 dark:text-gray-400">{{ filter.Label }}:</label>
                                 {% set from_key = "filter_" + filter.Field + "_from" %}
                                 {% set to_key = "filter_" + filter.Field + "_to" %}
-                                <input type="date" 
+                                <input type="date"
                                        id="{{ filter.Field }}FilterFrom"
                                        value="{{ currentFilters[from_key]|default:'' }}"
                                        onchange="filterTable()"
                                        class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
                                 <span class="text-xs text-gray-600 dark:text-gray-400">to</span>
-                                <input type="date" 
+                                <input type="date"
                                        id="{{ filter.Field }}FilterTo"
                                        value="{{ currentFilters[to_key]|default:'' }}"
                                        onchange="filterTable()"
@@ -361,9 +361,9 @@
                             <!-- Multi-select filter -->
                             {% set filter_key = "filter_" + filter.Field %}
                             {% set current_value = currentFilters[filter_key]|default:"" %}
-                            <select id="{{ filter.Field|lower }}Filter" 
+                            <select id="{{ filter.Field|lower }}Filter"
                                     multiple
-                                    onchange="filterTable()" 
+                                    onchange="filterTable()"
                                     class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm min-w-[150px]">
                                 {% if filter.Options %}
                                     {% for option in filter.Options %}
@@ -377,8 +377,8 @@
                             <!-- Regular select filter -->
                             {% set filter_key = "filter_" + filter.Field %}
                             {% set current_value = currentFilters[filter_key]|default:"" %}
-                            <select id="{{ filter.Field|lower }}Filter" 
-                                    onchange="filterTable()" 
+                            <select id="{{ filter.Field|lower }}Filter"
+                                    onchange="filterTable()"
                                     class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
                                 {% if filter.Options %}
                                     {% for option in filter.Options %}
@@ -410,13 +410,13 @@
             </div>
         </div>
         {% endif %}
-        
+
         <div class="overflow-x-auto">
             <table id="dataTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead class="bg-gray-50 dark:bg-gray-700">
                     <tr>
                         <th class="px-3 py-3 text-left">
-                            <input type="checkbox" id="selectAll" onclick="toggleSelectAll()" 
+                            <input type="checkbox" id="selectAll" onclick="toggleSelectAll()"
                                    class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
                         </th>
                         {% if allFields %}
@@ -453,13 +453,13 @@
                 </thead>
                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {% for item in items %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {% if module.Name == 'mail_account' %}cursor-pointer{% endif %}" 
-                        data-id="{{ item.id }}" 
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {% if module.Name == 'mail_account' %}cursor-pointer{% endif %}"
+                        data-id="{{ item.id }}"
                         data-valid_id="{{ item.valid_id|default:'1' }}"
                         data-group_id="{{ item.group_id|default:'' }}"
                         {% if module.Name == 'mail_account' %}onclick="handleMailAccountRowSelect('{{ item.id }}', this, event)"{% endif %}>
                         <td class="px-3 py-4">
-                            <input type="checkbox" class="item-checkbox rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500" 
+                            <input type="checkbox" class="item-checkbox rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
                                    value="{{ item.id }}" onchange="updateBulkActions()">
                         </td>
                         {% if allFields %}
@@ -519,14 +519,14 @@
                                 {% else %}
                                     {% if field.Type == "string" and field.Name != "id" and field.Name != "login" %}
                                     <div class="inline-edit-container">
-                                        <span class="inline-edit-display" 
-                                              data-field="{{ field.Name }}" 
+                                        <span class="inline-edit-display"
+                                              data-field="{{ field.Name }}"
                                               data-item-id="{{ item.id }}"
                                               data-value="{{ item[field.Name]|default:'' }}"
                                               ondblclick="startInlineEdit(this)">
                                             {{ item[field.Name]|default:"-" }}
                                         </span>
-                                        <input type="text" 
+                                        <input type="text"
                                                class="inline-edit-input hidden px-2 py-1 border border-blue-400 rounded text-sm dark:bg-gray-700 dark:text-white"
                                                value="{{ item[field.Name]|default:'' }}"
                                                onblur="saveInlineEdit(this)"
@@ -587,14 +587,14 @@
                                 {% else %}
                                     {% if field.Type == "string" and field.Name != "id" and field.Name != "login" %}
                                     <div class="inline-edit-container">
-                                        <span class="inline-edit-display" 
-                                              data-field="{{ field.Name }}" 
+                                        <span class="inline-edit-display"
+                                              data-field="{{ field.Name }}"
                                               data-item-id="{{ item.id }}"
                                               data-value="{{ item[field.Name]|default:'' }}"
                                               ondblclick="startInlineEdit(this)">
                                             {{ item[field.Name]|default:"-" }}
                                         </span>
-                                        <input type="text" 
+                                        <input type="text"
                                                class="inline-edit-input hidden px-2 py-1 border border-blue-400 rounded text-sm dark:bg-gray-700 dark:text-white"
                                                value="{{ item[field.Name]|default:'' }}"
                                                onblur="saveInlineEdit(this)"
@@ -630,27 +630,27 @@
                             {% endif %}
                         {% endif %}
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button onclick="editItem('{{ item.id }}')" 
+                            <button onclick="editItem('{{ item.id }}')"
                                     title="Edit"
                                     class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-2">
                                 <i class="fas fa-edit icon-sm"></i>
                             </button>
                             {% if features.SoftDelete %}
                                 {% if item.valid_id == 1 %}
-                                <button onclick="toggleStatus('{{ item.id }}', '{{ item.valid_id }}')" 
+                                <button onclick="toggleStatus('{{ item.id }}', '{{ item.valid_id }}')"
                                         title="Disable"
                                         class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300">
                                     <i class="fas fa-times-circle icon-sm"></i>
                                 </button>
                                 {% else %}
-                                <button onclick="toggleStatus('{{ item.id }}', '{{ item.valid_id }}')" 
+                                <button onclick="toggleStatus('{{ item.id }}', '{{ item.valid_id }}')"
                                         title="Enable"
                                         class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
                                     <i class="fas fa-check-circle icon-sm"></i>
                                 </button>
                                 {% endif %}
                             {% else %}
-                                <button onclick="deleteItem('{{ item.id }}')" 
+                                <button onclick="deleteItem('{{ item.id }}')"
                                         title="Delete"
                                         class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
                                     <i class="fas fa-trash icon-sm"></i>
@@ -705,19 +705,19 @@
         <div class="mt-4 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 <div class="text-sm text-gray-700 dark:text-gray-300">
-                    Showing 
+                    Showing
                     <span class="font-medium">{{ (pagination.page - 1) * pagination.pageSize + 1 }}</span>
-                    to 
+                    to
                     <span class="font-medium">{{ (pagination.page - 1) * pagination.pageSize + items|length }}</span>
-                    of 
+                    of
                     <span class="font-medium">{{ pagination.totalCount }}</span>
                     results
                 </div>
-                
+
                 <!-- Page size selector -->
                 <div class="flex items-center gap-2">
                     <label for="pageSize" class="text-sm text-gray-700 dark:text-gray-300">{{ t("admin.common.pagination.show") }}</label>
-                    <select id="pageSize" onchange="changePageSize(this.value)" 
+                    <select id="pageSize" onchange="changePageSize(this.value)"
                             class="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
                         <option value="10" {% if pagination.pageSize == 10 %}selected{% endif %}>10</option>
                         <option value="25" {% if pagination.pageSize == 25 %}selected{% endif %}>25</option>
@@ -727,21 +727,21 @@
                     <span class="text-sm text-gray-700 dark:text-gray-300">{{ t("admin.common.pagination.per_page") }}</span>
                 </div>
             </div>
-            
+
             <div class="flex items-center gap-1">
                 <!-- Previous button -->
                 {% if pagination.hasPrev %}
-                <button onclick="goToPage({{ pagination.page - 1 }})" 
+                <button onclick="goToPage({{ pagination.page - 1 }})"
                         class="px-3 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-md hover:bg-gray-50 dark:hover:bg-gray-600">
                     {{ t("admin.common.pagination.previous") }}
                 </button>
                 {% else %}
-                <button disabled 
+                <button disabled
                         class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded-l-md cursor-not-allowed">
                     {{ t("admin.common.pagination.previous") }}
                 </button>
                 {% endif %}
-                
+
                 <!-- Page numbers -->
                 {% for pageNum in pagination.pageRange %}
                     {% if pageNum == pagination.page %}
@@ -749,21 +749,21 @@
                         {{ pageNum }}
                     </button>
                     {% else %}
-                    <button onclick="goToPage({{ pageNum }})" 
+                    <button onclick="goToPage({{ pageNum }})"
                             class="px-3 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
                         {{ pageNum }}
                     </button>
                     {% endif %}
                 {% endfor %}
-                
+
                 <!-- Next button -->
                 {% if pagination.hasNext %}
-                <button onclick="goToPage({{ pagination.page + 1 }})" 
+                <button onclick="goToPage({{ pagination.page + 1 }})"
                         class="px-3 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-r-md hover:bg-gray-50 dark:hover:bg-gray-600">
                     {{ t("admin.common.pagination.next") }}
                 </button>
                 {% else %}
-                <button disabled 
+                <button disabled
                         class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded-r-md cursor-not-allowed">
                     {{ t("admin.common.pagination.next") }}
                 </button>
@@ -884,7 +884,7 @@
                                     <input type="password" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
                                         placeholder="{{ field.Placeholder|default:'' }}"
                                         class="mt-1 block w-full pr-10 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
-                                    <button type="button" onclick="togglePassword('{{ field.Name }}')" 
+                                    <button type="button" onclick="togglePassword('{{ field.Name }}')"
                                         class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                                         <i id="{{ field.Name }}_eye_toggle" class="fas fa-eye icon-sm"></i>
                                     </button>
@@ -978,7 +978,7 @@
                         </div>
                         {% endif %}
                         {% endfor %}
-                        
+
                         {% if module.Name == "users" %}
                         <!-- Groups assignment for users -->
                         <div>
@@ -1110,7 +1110,7 @@
             <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
         </div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
+
         <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
@@ -1142,7 +1142,7 @@
 </div>
 
 <script>
-// Dynamic module configuration passed from server  
+// Dynamic module configuration passed from server
 var moduleConfig;
 try {
     moduleConfig = JSON.parse('{{ config_json|escapejs }}');
@@ -1165,7 +1165,8 @@ var friendlyAliases = {
     'package_repository': '/admin/package-repositories',
     'follow_up_possible': '/admin/follow-up-options',
     'link_state': '/admin/link-states',
-    'link_type': '/admin/link-types'
+    'link_type': '/admin/link-types',
+    'article_color': '/admin/article-colors'
 };
 if (friendlyAliases[moduleName]) {
     var friendlyPath = friendlyAliases[moduleName];
@@ -1352,7 +1353,7 @@ function openCreateModal() {
 function editItem(id) {
     currentEditId = id;
     document.getElementById('modalTitle').textContent = 'Edit {{ module.Singular }}';
-    
+
     fetch(`${API_BASE}/${id}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -1406,7 +1407,7 @@ function editItem(id) {
             {% endif %}
             {% endif %}
             {% endfor %}
-            
+
             // Handle groups for users module
             if (moduleName === 'users' && data.data.Groups) {
                 // First load the groups, then select the user's groups
@@ -1425,7 +1426,7 @@ function editItem(id) {
                     }
                 });
             }
-            
+
             if (moduleName === 'mail_account') {
                 setTypeaheadValue('queue_id', data.data['queue_id']);
             }
@@ -1468,18 +1469,18 @@ function editItem(id) {
 function saveItem(event) {
     event.preventDefault();
     syncAllTypeaheadFields();
-    
+
     const formData = new FormData(document.getElementById('moduleForm'));
     const url = currentEditId ? `${API_BASE}/${currentEditId}` : API_BASE;
     const method = currentEditId ? 'PUT' : 'POST';
-    
+
     // Handle multi-select groups for users module
     if (moduleName === 'users') {
         const groupSelect = document.getElementById('groups');
         if (groupSelect) {
             // Remove any existing groups entries from formData
             formData.delete('groups');
-            
+
             // Collect selected group IDs
             const selectedGroups = [];
             for (let option of groupSelect.options) {
@@ -1487,14 +1488,14 @@ function saveItem(event) {
                     selectedGroups.push(option.value);
                 }
             }
-            
+
             // Add as comma-separated string
             if (selectedGroups.length > 0) {
                 formData.append('groups', selectedGroups.join(','));
             }
         }
     }
-    
+
     fetch(url, {
         method: method,
         headers: {
@@ -1537,17 +1538,17 @@ function saveItem(event) {
 function showConfirmModal(title, message, onConfirm) {
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
-    
+
     const confirmBtn = document.getElementById('confirmButton');
     // Remove old event listeners by cloning the button
     const newConfirmBtn = confirmBtn.cloneNode(true);
     confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-    
+
     newConfirmBtn.addEventListener('click', function() {
         closeConfirmModal();
         onConfirm();
     });
-    
+
     document.getElementById('confirmModal').classList.remove('hidden');
 }
 
@@ -1680,7 +1681,7 @@ function updateClearButton() {
 function filterTable() {
     // For server-side filtering, collect all filter values and reload page with parameters
     const url = new URL(window.location);
-    
+
     // Clear existing filter parameters but preserve other URL params
     const params = new URLSearchParams(url.search);
     // Remove old filter parameters
@@ -1689,13 +1690,13 @@ function filterTable() {
             params.delete(key);
         }
     }
-    
+
     // Add search parameter if present
     const searchInput = document.getElementById('searchInput');
     if (searchInput && searchInput.value.trim() !== '') {
         params.set('search', searchInput.value.trim());
     }
-    
+
     // Add filter parameters from dynamic configuration
     if (moduleConfig.filters) {
         for (const filter of moduleConfig.filters) {
@@ -1729,23 +1730,23 @@ function filterTable() {
             }
         }
     }
-    
+
     // Legacy support for users module
     if (moduleName === 'users') {
         const statusFilter = document.getElementById('statusFilter');
         if (statusFilter && statusFilter.value !== '') {
             params.set('filter_valid_id', statusFilter.value);
         }
-        
+
         const groupFilter = document.getElementById('groupFilter');
         if (groupFilter && groupFilter.value !== '') {
             params.set('filter_group', groupFilter.value);
         }
     }
-    
+
     // Reset to page 1 when filtering
     params.set('page', '1');
-    
+
     // Update URL and reload page with filter parameters
     url.search = params.toString();
     window.location.href = url.toString();
@@ -1771,7 +1772,7 @@ function changePageSize(size) {
 
 function openModal() {
     document.getElementById('moduleModal').classList.remove('hidden');
-    
+
     // Load groups if this is the users module
     if (moduleName === 'users') {
         loadGroups();
@@ -1806,7 +1807,7 @@ function showToast(message, type = 'info') {
     toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white shadow-lg transition-opacity duration-500 ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'}`;
     toast.textContent = message;
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 500);
@@ -1817,7 +1818,7 @@ function showToast(message, type = 'info') {
 function togglePassword(fieldName) {
     const input = document.getElementById(fieldName);
     const eyeToggleIcon = document.getElementById(fieldName + '_eye_toggle');
-    
+
     if (input.type === 'password') {
         input.type = 'text';
         if (eyeToggleIcon) {
@@ -1837,14 +1838,14 @@ function togglePassword(fieldName) {
 // Format datetime to local timezone
 function formatLocalDateTime(utcDateStr) {
     if (!utcDateStr || utcDateStr === '-') return '-';
-    
+
     try {
         // Parse the UTC date string
         const date = new Date(utcDateStr);
-        
+
         // Check if date is valid
         if (isNaN(date.getTime())) return utcDateStr;
-        
+
         // Format options for local timezone
         const options = {
             year: 'numeric',
@@ -1854,17 +1855,17 @@ function formatLocalDateTime(utcDateStr) {
             minute: '2-digit',
             hour12: true
         };
-        
+
         // Format to local timezone
         const localStr = date.toLocaleString(undefined, options);
-        
+
         // Add relative time (e.g., "2 hours ago")
         const now = new Date();
         const diffMs = now - date;
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
-        
+
         let relativeTime = '';
         if (diffDays > 365) {
             relativeTime = Math.floor(diffDays / 365) + ' year' + (Math.floor(diffDays / 365) > 1 ? 's' : '') + ' ago';
@@ -1879,7 +1880,7 @@ function formatLocalDateTime(utcDateStr) {
         } else {
             relativeTime = 'just now';
         }
-        
+
         // Return formatted string with tooltip showing relative time
         return `<span title="${relativeTime}">${localStr}</span>`;
     } catch (e) {
@@ -1901,10 +1902,10 @@ function formatAllDateTimes() {
 document.addEventListener('DOMContentLoaded', function() {
     // Format all datetime fields to local timezone
     formatAllDateTimes();
-    
+
     // Initialize clear button visibility
     updateClearButton();
-    
+
     // Setup file list handlers
     document.querySelectorAll('input[type="file"][multiple]').forEach(input => {
         input.addEventListener('change', function() {
@@ -1924,7 +1925,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Don't restore filter values from URL - they're already set server-side
     // restoreFiltersFromURL();
 });
@@ -1969,7 +1970,7 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// View configuration details function for sysconfig module  
+// View configuration details function for sysconfig module
 function viewConfigDetails(configName) {
     // Show detailed information about a configuration setting
     fetch(`${API_BASE}/${encodeURIComponent(configName)}/details`, {
@@ -1997,7 +1998,7 @@ function viewConfigDetails(configName) {
                     </div>
                 </div>
             `;
-            
+
             showConfirmModal('Configuration Details', html, null);
         } else {
             showToast('Error loading configuration details: ' + (data.error || 'Unknown error'), 'error');
@@ -2012,7 +2013,7 @@ function viewConfigDetails(configName) {
 // Reset configuration to default function for sysconfig module
 function resetToDefault(configName) {
     showConfirmModal(
-        'Reset Configuration', 
+        'Reset Configuration',
         `Are you sure you want to reset "${configName}" to its default value? This action cannot be undone.`,
         function() {
             fetch(`${API_BASE}/${encodeURIComponent(configName)}/reset`, {
@@ -2044,13 +2045,13 @@ function exportToCSV() {
     // Build URL with current filters
     const url = new URL(window.location);
     const params = new URLSearchParams(url.search);
-    
+
     // Add export format parameter
     params.set('format', 'csv');
-    
+
     // Create download URL
     const exportUrl = `${window.location.pathname}/export?${params.toString()}`;
-    
+
     // Trigger download
     window.location.href = exportUrl;
 }
@@ -2059,14 +2060,14 @@ function exportToCSV() {
 function applyQuickFilter(preset) {
     const url = new URL(window.location);
     const params = new URLSearchParams(url.search);
-    
+
     // Clear existing filters
     for (const key of [...params.keys()]) {
         if (key.startsWith('filter_')) {
             params.delete(key);
         }
     }
-    
+
     // Apply preset filters based on the selected preset
     switch(preset) {
         // State presets
@@ -2085,7 +2086,7 @@ function applyQuickFilter(preset) {
             params.set('filter_type_id', '3');
             params.set('filter_valid_id', '1');
             break;
-            
+
         // User presets
         case 'active_users':
             params.set('filter_valid_id', '1');
@@ -2097,7 +2098,7 @@ function applyQuickFilter(preset) {
             params.set('filter_group_id', '1,2'); // Assuming groups 1 and 2 are agent groups
             params.set('filter_valid_id', '1');
             break;
-            
+
         // Queue presets
         case 'active_queues':
             params.set('filter_valid_id', '1');
@@ -2107,7 +2108,7 @@ function applyQuickFilter(preset) {
             params.set('filter_valid_id', '1');
             break;
     }
-    
+
     // Apply the filters
     url.search = params.toString();
     window.location.href = url.toString();
@@ -2117,14 +2118,14 @@ function applyQuickFilter(preset) {
 function clearAllFilters() {
     const url = new URL(window.location);
     const params = new URLSearchParams(url.search);
-    
+
     // Remove all filter parameters and search
     for (const key of [...params.keys()]) {
         if (key.startsWith('filter_') || key === 'search') {
             params.delete(key);
         }
     }
-    
+
     url.search = params.toString();
     window.location.href = url.toString();
 }
@@ -2141,14 +2142,14 @@ function updateBulkActions() {
     const selected = document.querySelectorAll('.item-checkbox:checked');
     const bulkActions = document.getElementById('bulkActions');
     const selectedCount = document.getElementById('selectedCount');
-    
+
     if (selected.length > 0) {
         bulkActions.classList.remove('hidden');
         selectedCount.textContent = selected.length;
     } else {
         bulkActions.classList.add('hidden');
     }
-    
+
     // Update select all checkbox state
     const selectAll = document.getElementById('selectAll');
     const allCheckboxes = document.querySelectorAll('.item-checkbox');
@@ -2164,7 +2165,7 @@ function getSelectedIds() {
 function bulkToggleStatus() {
     const ids = getSelectedIds();
     if (ids.length === 0) return;
-    
+
     showConfirmModal(
         'Toggle Status',
         `Are you sure you want to toggle the status of ${ids.length} item(s)?`,
@@ -2203,7 +2204,7 @@ function bulkToggleStatus() {
 function bulkDelete() {
     const ids = getSelectedIds();
     if (ids.length === 0) return;
-    
+
     showConfirmModal(
         'Delete Items',
         `Are you sure you want to delete ${ids.length} item(s)? This action cannot be undone.`,
@@ -2228,13 +2229,13 @@ function bulkDelete() {
 function exportSelected() {
     const ids = getSelectedIds();
     if (ids.length === 0) return;
-    
+
     // Build URL with selected IDs
     const url = new URL(window.location);
     const params = new URLSearchParams(url.search);
     params.set('format', 'csv');
     params.set('ids', ids.join(','));
-    
+
     const exportUrl = `${window.location.pathname}/export?${params.toString()}`;
     window.location.href = exportUrl;
 }
@@ -2287,19 +2288,19 @@ function toggleColumn(columnName) {
 function applyColumnVisibility() {
     Object.keys(columnVisibility).forEach(columnName => {
         const isVisible = columnVisibility[columnName];
-        
+
         // Toggle header visibility
         const headers = document.querySelectorAll(`th[data-column="${columnName}"]`);
         headers.forEach(header => {
             header.style.display = isVisible ? '' : 'none';
         });
-        
+
         // Toggle cell visibility
         const cells = document.querySelectorAll(`td[data-column="${columnName}"]`);
         cells.forEach(cell => {
             cell.style.display = isVisible ? '' : 'none';
         });
-        
+
         // Update checkbox state
         const checkbox = document.querySelector(`.column-toggle[data-column="${columnName}"]`);
         if (checkbox) {
@@ -2388,7 +2389,7 @@ function getCurrentFilterState() {
         search: document.getElementById('searchInput')?.value || '',
         filters: {}
     };
-    
+
     // Collect all filter values
     if (moduleConfig.filters) {
         moduleConfig.filters.forEach(filter => {
@@ -2414,7 +2415,7 @@ function getCurrentFilterState() {
             }
         });
     }
-    
+
     // Add any legacy filter values (for users module fallback)
     const statusFilter = document.getElementById('statusFilter');
     const groupFilter = document.getElementById('groupFilter');
@@ -2424,7 +2425,7 @@ function getCurrentFilterState() {
     if (groupFilter && groupFilter.value) {
         state.filters.group = groupFilter.value;
     }
-    
+
     return state;
 }
 
@@ -2441,12 +2442,12 @@ function saveCurrentFilters() {
 function confirmSaveFilters() {
     const nameInput = document.getElementById('filterSetName');
     const name = nameInput?.value.trim();
-    
+
     if (!name) {
         alert('{{ t("admin.common.filters.name_required") }}');
         return;
     }
-    
+
     // Check if name already exists
     if (savedFilterSets.some(set => set.name === name)) {
         if (!confirm(`Filter set "${name}" already exists. Replace it?`)) {
@@ -2455,24 +2456,24 @@ function confirmSaveFilters() {
         // Remove existing
         savedFilterSets = savedFilterSets.filter(set => set.name !== name);
     }
-    
+
     // Save current filter state
     const filterSet = {
         name: name,
         state: getCurrentFilterState(),
         created: new Date().toISOString()
     };
-    
+
     savedFilterSets.push(filterSet);
     saveFilterSetsToStorage();
     updateSavedFiltersList();
-    
+
     // Hide form
     const form = document.getElementById('saveFilterForm');
     if (form) {
         form.classList.add('hidden');
     }
-    
+
     showToast('Filter set saved successfully', 'success');
 }
 
@@ -2486,19 +2487,19 @@ function cancelSaveFilters() {
 function applyFilterSet(name) {
     const filterSet = savedFilterSets.find(set => set.name === name);
     if (!filterSet) return;
-    
+
     const state = filterSet.state;
-    
+
     // Apply search
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
         searchInput.value = state.search || '';
     }
-    
+
     // Apply filters
     Object.keys(state.filters).forEach(field => {
         const value = state.filters[field];
-        
+
         if (typeof value === 'object' && value.from !== undefined) {
             // Date range
             const fromInput = document.getElementById(field + 'FilterFrom');
@@ -2515,14 +2516,14 @@ function applyFilterSet(name) {
             }
         } else {
             // Regular select
-            const element = document.getElementById(field.toLowerCase() + 'Filter') || 
+            const element = document.getElementById(field.toLowerCase() + 'Filter') ||
                           document.getElementById(field + 'Filter');
             if (element) {
                 element.value = value;
             }
         }
     });
-    
+
     // Apply legacy filters
     if (state.filters.status) {
         const statusFilter = document.getElementById('statusFilter');
@@ -2532,10 +2533,10 @@ function applyFilterSet(name) {
         const groupFilter = document.getElementById('groupFilter');
         if (groupFilter) groupFilter.value = state.filters.group;
     }
-    
+
     // Trigger filter update
     filterTable();
-    
+
     // Close menu
     const menu = document.getElementById('savedFiltersMenu');
     if (menu) {
@@ -2568,22 +2569,22 @@ function saveFilterSetsToStorage() {
 function updateSavedFiltersList() {
     const listContainer = document.getElementById('savedFiltersList');
     const countSpan = document.getElementById('filterSetCount');
-    
+
     if (!listContainer) return;
-    
+
     if (savedFilterSets.length === 0) {
         listContainer.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No saved filter sets</div>';
     } else {
         listContainer.innerHTML = savedFilterSets.map(set => `
             <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-600 group">
-                <button onclick="applyFilterSet('${set.name.replace(/'/g, "\\'")}')" 
+                <button onclick="applyFilterSet('${set.name.replace(/'/g, "\\'")}')"
                         class="flex-1 text-left text-sm text-gray-700 dark:text-gray-300">
                     <div class="font-medium">${set.name}</div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">
                         ${new Date(set.created).toLocaleDateString()}
                     </div>
                 </button>
-                <button onclick="deleteFilterSet('${set.name.replace(/'/g, "\\'")}')" 
+                <button onclick="deleteFilterSet('${set.name.replace(/'/g, "\\'")}')"
                         class="ml-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -2592,7 +2593,7 @@ function updateSavedFiltersList() {
             </div>
         `).join('');
     }
-    
+
     if (countSpan) {
         countSpan.textContent = `${savedFilterSets.length} saved filter set${savedFilterSets.length !== 1 ? 's' : ''}`;
     }
@@ -2602,8 +2603,8 @@ function showToast(message, type = 'info') {
     // Simple toast notification - you can enhance this
     const toast = document.createElement('div');
     toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-md text-white z-50 ${
-        type === 'success' ? 'bg-green-500' : 
-        type === 'error' ? 'bg-red-500' : 
+        type === 'success' ? 'bg-green-500' :
+        type === 'error' ? 'bg-red-500' :
         'bg-blue-500'
     }`;
     toast.textContent = message;
@@ -2767,16 +2768,16 @@ function startInlineEdit(displayElement) {
     if (currentEditingElement) {
         saveInlineEdit(currentEditingElement.nextElementSibling);
     }
-    
+
     const container = displayElement.parentElement;
     const inputElement = container.querySelector('.inline-edit-input');
-    
+
     // Hide display, show input
     displayElement.classList.add('hidden');
     inputElement.classList.remove('hidden');
     inputElement.focus();
     inputElement.select();
-    
+
     currentEditingElement = displayElement;
 }
 
@@ -2787,24 +2788,24 @@ function saveInlineEdit(inputElement) {
     const itemId = displayElement.dataset.itemId;
     const oldValue = displayElement.dataset.value;
     const newValue = inputElement.value.trim();
-    
+
     // If value hasn't changed, just cancel
     if (newValue === oldValue) {
         cancelInlineEdit(inputElement);
         return;
     }
-    
+
     // Show saving state
     displayElement.classList.add('inline-edit-saving');
     displayElement.textContent = 'Saving...';
     displayElement.classList.remove('hidden');
     inputElement.classList.add('hidden');
-    
+
     // Make API call to save
     const url = `${window.location.pathname}/${itemId}`;
     const data = {};
     data[field] = newValue;
-    
+
     fetch(url, {
         method: 'PUT',
         headers: {
@@ -2826,12 +2827,12 @@ function saveInlineEdit(inputElement) {
         inputElement.value = newValue;
         displayElement.classList.remove('inline-edit-saving');
         displayElement.classList.add('inline-edit-success');
-        
+
         // Remove success animation after delay
         setTimeout(() => {
             displayElement.classList.remove('inline-edit-success');
         }, 500);
-        
+
         showToast('Field updated successfully', 'success');
     })
     .catch(error => {
@@ -2840,12 +2841,12 @@ function saveInlineEdit(inputElement) {
         inputElement.value = oldValue;
         displayElement.classList.remove('inline-edit-saving');
         displayElement.classList.add('inline-edit-error');
-        
+
         // Remove error animation after delay
         setTimeout(() => {
             displayElement.classList.remove('inline-edit-error');
         }, 500);
-        
+
         showToast('Failed to save changes', 'error');
     })
     .finally(() => {
@@ -2857,12 +2858,12 @@ function cancelInlineEdit(inputElement) {
     const container = inputElement.parentElement;
     const displayElement = container.querySelector('.inline-edit-display');
     const oldValue = displayElement.dataset.value;
-    
+
     // Revert input value and hide
     inputElement.value = oldValue;
     inputElement.classList.add('hidden');
     displayElement.classList.remove('hidden');
-    
+
     currentEditingElement = null;
 }
 

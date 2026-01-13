@@ -244,7 +244,7 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	// Update ticket's change_time when an article is added
 	// Use left-to-right placeholders so MySQL '?' binding matches arg order
 	updateTicketQuery := database.ConvertPlaceholders(`
-		UPDATE ticket 
+		UPDATE ticket
 		SET change_time = ?, change_by = ?
 		WHERE id = ?`)
 
@@ -316,7 +316,7 @@ func deriveBodyMeta(contentType string) (string, string) {
 // GetByID retrieves an article by its ID (joins MIME content).
 func (r *ArticleRepository) GetByID(id uint) (*models.Article, error) {
 	query := database.ConvertPlaceholders(`
-		SELECT 
+		SELECT
 			a.id, a.ticket_id, a.article_sender_type_id,
 			a.communication_channel_id, a.is_visible_for_customer,
 			adm.a_subject, adm.a_body, adm.a_content_type, adm.content_path,
@@ -413,7 +413,7 @@ func (r *ArticleRepository) GetHTMLBodyContent(articleID uint) (string, error) {
 // GetByTicketID retrieves all articles for a specific ticket.
 func (r *ArticleRepository) GetByTicketID(ticketID uint, includeInternal bool) ([]models.Article, error) {
 	query := database.ConvertPlaceholders(`
-		SELECT 
+		SELECT
 			a.id, a.ticket_id, a.article_sender_type_id,
 			a.communication_channel_id, a.is_visible_for_customer,
 			adm.a_subject, adm.a_body, adm.a_content_type,
@@ -546,7 +546,7 @@ func (r *ArticleRepository) Update(article *models.Article) error {
 	// Update ticket's change_time when an article is updated
 	// Use left-to-right placeholders so MySQL '?' binding matches arg order
 	updateTicketQuery := database.ConvertPlaceholders(`
-		UPDATE ticket 
+		UPDATE ticket
 		SET change_time = ?, change_by = ?
 		WHERE id = ?`)
 
@@ -570,7 +570,7 @@ func (r *ArticleRepository) Delete(id uint, userID uint) error {
 
 	// Soft delete the article
 	query := database.ConvertPlaceholders(`
-		UPDATE article 
+		UPDATE article
 		SET valid_id = 0, change_time = ?, change_by = ?
 		WHERE id = ?`)
 
@@ -590,7 +590,7 @@ func (r *ArticleRepository) Delete(id uint, userID uint) error {
 
 	// Update ticket's change_time
 	updateTicketQuery := database.ConvertPlaceholders(`
-		UPDATE ticket 
+		UPDATE ticket
 		SET change_time = ?, change_by = ?
 		WHERE id = ?`)
 
@@ -621,7 +621,7 @@ func (r *ArticleRepository) GetLatestArticleForTicket(ticketID uint) (*models.Ar
 	}
 	//nolint:gosec // articleTypeExpr, commChannelExpr, selectValid are from schema detection, not user input
 	query := fmt.Sprintf(`
-		SELECT 
+		SELECT
 			a.id, a.ticket_id, %s AS article_type_id, a.article_sender_type_id,
 			%s AS communication_channel_id, a.is_visible_for_customer,
 			COALESCE(adm.a_subject, '') AS subject,
@@ -701,7 +701,7 @@ func (r *ArticleRepository) GetLatestCustomerArticleForTicket(ticketID uint) (*m
 	}
 	//nolint:gosec // articleTypeExpr, commChannelExpr, selectValid are from schema detection, not user input
 	query := fmt.Sprintf(`
-		SELECT 
+		SELECT
 			a.id, a.ticket_id, %s AS article_type_id, a.article_sender_type_id,
 			%s AS communication_channel_id, a.is_visible_for_customer,
 			COALESCE(adm.a_subject, '') AS subject,
@@ -815,8 +815,8 @@ func (r *ArticleRepository) FindTicketByMessageID(ctx context.Context, messageID
 // CountArticlesForTicket counts the number of articles for a ticket.
 func (r *ArticleRepository) CountArticlesForTicket(ticketID uint, includeInternal bool) (int, error) {
 	query := database.ConvertPlaceholders(`
-		SELECT COUNT(*) 
-		FROM article 
+		SELECT COUNT(*)
+		FROM article
 		WHERE ticket_id = ? AND valid_id = 1`)
 
 	if !includeInternal {
@@ -868,7 +868,7 @@ func (r *ArticleRepository) CreateAttachment(attachment *models.Attachment) erro
 // GetAttachmentsByArticleID retrieves all attachments for an article.
 func (r *ArticleRepository) GetAttachmentsByArticleID(articleID uint) ([]models.Attachment, error) {
 	query := database.ConvertPlaceholders(`
-		SELECT 
+		SELECT
 			id, article_id, filename, content_type, content_size,
 			content_id, content_alternative, disposition, content,
 			create_time, create_by, change_time, change_by
@@ -915,7 +915,7 @@ func (r *ArticleRepository) GetAttachmentsByArticleID(articleID uint) ([]models.
 // GetAttachmentByID retrieves a specific attachment.
 func (r *ArticleRepository) GetAttachmentByID(id uint) (*models.Attachment, error) {
 	query := database.ConvertPlaceholders(`
-		SELECT 
+		SELECT
 			id, article_id, filename, content_type, content_size,
 			content_id, content_alternative, disposition, content,
 			create_time, create_by, change_time, change_by
@@ -980,4 +980,37 @@ func (r *ArticleRepository) GetArticleWithAttachments(id uint) (*models.Article,
 
 	article.Attachments = attachments
 	return article, nil
+}
+
+// GetSenderTypeColors returns a map of sender_type_id to hex color.
+// Colors are looked up by matching article_sender_type.name to article_color.name.
+func (r *ArticleRepository) GetSenderTypeColors() (map[int]string, error) {
+	query := database.ConvertPlaceholders(`
+		SELECT ast.id, COALESCE(ac.color, '') as color
+		FROM article_sender_type ast
+		LEFT JOIN article_color ac ON LOWER(ast.name) = LOWER(ac.name)
+		WHERE ast.valid_id = 1`)
+
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	colors := make(map[int]string)
+	for rows.Next() {
+		var id int
+		var color string
+		if err := rows.Scan(&id, &color); err != nil {
+			return nil, err
+		}
+		if color != "" {
+			colors[id] = color
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return colors, nil
 }

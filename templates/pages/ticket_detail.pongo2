@@ -161,14 +161,14 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                 </nav>
                 <h1 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ Ticket.subject }}</h1>
                 <div class="mt-2 flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                         {% if Ticket.status == 'open' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                         {% elif Ticket.status == 'pending' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
                         {% elif Ticket.status == 'closed' %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200
                         {% else %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200{% endif %}">
                         {{ Ticket.status|title }}
                     </span>
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
                         {% if Ticket.priority == 'critical' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
                         {% elif Ticket.priority == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
                         {% elif Ticket.priority == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
@@ -330,7 +330,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                 </div>
             </div>
 
-            
+
 
             <!-- Ticket Notes/History -->
             {% if Ticket.notes and Ticket.notes|length > 0 %}
@@ -380,7 +380,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                                         </div>
                                         {% endif %}
                                         <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                                            <div class="rounded-lg p-4 shadow-sm {{ card_classes }}">
+                                            <div class="rounded-lg p-4 shadow-sm {{ card_classes }}"{% if note.sender_color %} style="border-left: 4px solid {{ note.sender_color }};"{% endif %}>
                                                 <div class="flex flex-wrap items-center gap-2 justify-between mb-3">
                                                     <span class="{{ badge_classes }}">
                                                         {{ badge_text }}
@@ -774,7 +774,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
     <div class="flex min-h-screen items-center justify-center px-4 py-12">
         <!-- Background overlay -->
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="hideAssignDialog()"></div>
-        
+
         <!-- Dialog -->
         <div class="relative z-50 w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -782,7 +782,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                     {{ t("tickets.assign_agent")|default:"Assign Agent" }} {{ t("tickets.to")|default:"to" }} {{ t("tickets.ticket")|default:"Ticket" }} #{{ Ticket.tn }}
                 </h3>
             </div>
-            
+
             <form id="assignAgentForm" class="p-6">
                 <!-- Agent Selection -->
                 <div class="mb-4">
@@ -797,7 +797,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                         {{ t("tickets.agents_with_permissions_only")|default:"Only agents with permissions for this queue are shown" }}
                     </p>
                 </div>
-                
+
                 <!-- Action buttons -->
                 <div class="flex justify-end gap-3">
                     <button type="button" onclick="hideAssignDialog()"
@@ -819,7 +819,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
     <div class="flex min-h-screen items-center justify-center px-4 py-12">
         <!-- Background overlay -->
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="hideCloseDialog()"></div>
-        
+
         <!-- Dialog -->
         <div class="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -827,7 +827,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                     {{ t("tickets.close")|default:"Close" }} {{ t("tickets.ticket")|default:"Ticket" }} - {{ Ticket.tn }}
                 </h3>
             </div>
-            
+
             <form id="closeTicketForm" class="p-6">
                 <!-- State Selection -->
                 <div class="mb-4">
@@ -1005,7 +1005,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
     <div class="flex min-h-screen items-center justify-center px-4 py-12">
         <!-- Background overlay -->
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="hideReopenDialog()"></div>
-        
+
         <!-- Dialog -->
         <div class="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -1013,7 +1013,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                     {{ t("tickets.reopen") }} {{ t("tickets.ticket")|default:"Ticket" }} - {{ Ticket.tn }}
                 </h3>
             </div>
-            
+
             <form id="reopenTicketForm" class="p-6">
                 <!-- Target State Selection -->
                 <div class="mb-4">
@@ -1323,18 +1323,18 @@ function hideCloseDialog() {
 // Handle close ticket form submission
 document.getElementById('closeTicketForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const closeState = document.getElementById('closeState').value;
     const resolution = document.getElementById('resolution').value;
     const closeNotes = document.getElementById('closeNotes').value;
     const timeUnits = document.getElementById('timeUnits').value;
     const notifyCustomer = document.getElementById('notifyCustomer').checked;
-    
+
     if (!closeNotes.trim()) {
         showNotification('Please enter close notes', 'error');
         return;
     }
-    
+
     // Collect ticket dynamic field values
     const dynamicFields = {};
     this.querySelectorAll('[name^="DynamicField_"]').forEach(input => {
@@ -1348,7 +1348,7 @@ document.getElementById('closeTicketForm').addEventListener('submit', function(e
             dynamicFields[name] = input.value;
         }
     });
-    
+
     // Collect article dynamic field values
     const articleDynamicFields = {};
     this.querySelectorAll('[name^="ArticleDynamicField_"]').forEach(input => {
@@ -1362,12 +1362,12 @@ document.getElementById('closeTicketForm').addEventListener('submit', function(e
             articleDynamicFields[name] = input.value;
         }
     });
-    
+
     const submitBtn = this.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.textContent = 'Closing...';
     submitBtn.disabled = true;
-    
+
     apiFetch(`/api/tickets/${ticketId}/close`, {
         method: 'POST',
         headers: {
@@ -1405,22 +1405,22 @@ document.getElementById('closeTicketForm').addEventListener('submit', function(e
 // Handle reopen ticket form submission
 document.getElementById('reopenTicketForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const reopenState = document.getElementById('reopenState').value;
     const reopenReason = document.getElementById('reopenReason').value;
     const reopenNotes = document.getElementById('reopenNotes').value;
     const notifyCustomerReopen = document.getElementById('notifyCustomerReopen').checked;
-    
+
     if (!reopenReason.trim()) {
         showNotification('Please enter a reason for reopening', 'error');
         return;
     }
-    
+
     const submitBtn = this.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.textContent = 'Reopening...';
     submitBtn.disabled = true;
-    
+
     apiFetch(`/api/tickets/${ticketId}/reopen`, {
         method: 'POST',
         headers: {
@@ -1473,7 +1473,7 @@ function hideReopenDialog() {
 function assignTicket() {
     // Show the assign agent dialog
     document.getElementById('assignAgentDialog').classList.remove('hidden');
-    
+
     // Load available agents
     const queueId = {{ Ticket.queue_id }};
     apiFetch(`/api/v1/queues/${queueId}/agents`)
@@ -1481,7 +1481,7 @@ function assignTicket() {
         .then(data => {
             const select = document.getElementById('assignAgent');
             select.innerHTML = '<option value="">Select an agent...</option>';
-            
+
             if (data.success && data.agents && data.agents.length > 0) {
                 data.agents.forEach(agent => {
                     const option = document.createElement('option');
@@ -1509,22 +1509,22 @@ function hideAssignDialog() {
 // Handle assign agent form submission
 document.getElementById('assignAgentForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const agentId = document.getElementById('assignAgent').value;
-    
+
     if (!agentId) {
         showNotification('Please select an agent', 'error');
         return;
     }
-    
+
     const submitBtn = this.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.textContent = 'Assigning...';
     submitBtn.disabled = true;
-    
+
     const formData = new FormData();
     formData.append('user_id', agentId);
-    
+
     apiFetch(`/agent/tickets/${ticketId}/assign`, {
         method: 'POST',
         body: formData

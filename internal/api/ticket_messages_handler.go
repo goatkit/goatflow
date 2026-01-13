@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -10,7 +11,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
 
@@ -59,6 +62,20 @@ func handleGetTicketMessages(c *gin.Context) {
 		// For other errors, return 500
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to retrieve messages"})
 		return
+	}
+
+	// Load sender type colors and apply to messages
+	if db, dbErr := database.GetDB(); dbErr == nil {
+		articleRepo := repository.NewArticleRepository(db)
+		if senderColors, colorErr := articleRepo.GetSenderTypeColors(); colorErr == nil {
+			for _, msg := range messages {
+				if color, ok := senderColors[msg.SenderTypeID]; ok {
+					msg.SenderColor = color
+				}
+			}
+		} else {
+			log.Printf("Error loading sender type colors: %v", colorErr)
+		}
 	}
 
 	// Check if this is an HTMX request
@@ -274,8 +291,8 @@ func renderSimpleMessageHTML(msg *service.SimpleTicketMessage, ticketID uint) st
 				attachmentID := extractAttachmentID(att.URL)
 				thumbnailURL := fmt.Sprintf("/api/tickets/%d/attachments/%s/thumbnail", ticketID, attachmentID)
 				thumbnailHTML = fmt.Sprintf(`
-					<div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all" 
-					     onclick="previewAttachment('%s', '%s', '%s')" 
+					<div class="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
+					     onclick="previewAttachment('%s', '%s', '%s')"
 					     title="Click to preview">
 						<img src="%s" alt="%s" class="w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
 						<div class="w-full h-full items-center justify-center hidden">
@@ -284,7 +301,7 @@ func renderSimpleMessageHTML(msg *service.SimpleTicketMessage, ticketID uint) st
 					</div>`, att.URL, att.Filename, att.ContentType, thumbnailURL, att.Filename, getAttachmentIcon(att.ContentType))
 			} else {
 				thumbnailHTML = fmt.Sprintf(`
-					<div class="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-gray-500 transition-all" 
+					<div class="w-16 h-16 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-gray-500 transition-all"
 					     onclick="previewAttachment('%s', '%s', '%s')"
 					     title="Click to preview">
 						%s
@@ -338,8 +355,14 @@ func renderSimpleMessageHTML(msg *service.SimpleTicketMessage, ticketID uint) st
 		processedBody = strings.ReplaceAll(msg.Body, "\n", "<br>")
 	}
 
+	// Apply sender color as left border if available
+	borderStyle := ""
+	if msg.SenderColor != "" {
+		borderStyle = fmt.Sprintf("border-left: 4px solid %s;", msg.SenderColor)
+	}
+
 	return fmt.Sprintf(`
-	<div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+	<div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4" style="%s">
 		<div class="flex items-start justify-between">
 			<div class="flex items-center">
 				<div class="flex-shrink-0">
@@ -365,6 +388,7 @@ func renderSimpleMessageHTML(msg *service.SimpleTicketMessage, ticketID uint) st
 		</div>
 		%s
 	</div>`,
+		borderStyle,
 		initials,
 		msg.AuthorName,
 		msg.AuthorEmail,
