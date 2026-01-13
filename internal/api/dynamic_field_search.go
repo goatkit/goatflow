@@ -112,7 +112,6 @@ func BuildDynamicFieldFilterSQL(filters []DynamicFieldFilter, startArgNum int) (
 
 	conditions := make([]string, 0, len(filters))
 	args := make([]interface{}, 0, len(filters)*2)
-	argNum := startArgNum
 
 	for i, filter := range filters {
 		// Get field info if we only have name
@@ -127,10 +126,9 @@ func BuildDynamicFieldFilterSQL(filters []DynamicFieldFilter, startArgNum int) (
 		}
 
 		alias := fmt.Sprintf("dfv%d", i)
-		joinCondition := fmt.Sprintf("EXISTS (SELECT 1 FROM dynamic_field_value %s WHERE %s.object_id = t.id AND %s.field_id = $%d",
-			alias, alias, alias, argNum)
+		joinCondition := fmt.Sprintf("EXISTS (SELECT 1 FROM dynamic_field_value %s WHERE %s.object_id = t.id AND %s.field_id = ?",
+			alias, alias, alias)
 		args = append(args, field.ID)
-		argNum++
 
 		// Determine which value column to use based on field type
 		valueCol := fmt.Sprintf("%s.value_text", alias)
@@ -152,42 +150,34 @@ func BuildDynamicFieldFilterSQL(filters []DynamicFieldFilter, startArgNum int) (
 					joinCondition += fmt.Sprintf(" AND (%s = 0 OR %s IS NULL)", valueCol, valueCol)
 				}
 			} else {
-				joinCondition += fmt.Sprintf(" AND %s = $%d", valueCol, argNum)
+				joinCondition += fmt.Sprintf(" AND %s = ?", valueCol)
 				args = append(args, filter.Value)
-				argNum++
 			}
 		case "ne":
-			joinCondition += fmt.Sprintf(" AND (%s != $%d OR %s IS NULL)", valueCol, argNum, valueCol)
+			joinCondition += fmt.Sprintf(" AND (%s != ? OR %s IS NULL)", valueCol, valueCol)
 			args = append(args, filter.Value)
-			argNum++
 		case "contains":
-			joinCondition += fmt.Sprintf(" AND %s LIKE $%d", valueCol, argNum)
+			joinCondition += fmt.Sprintf(" AND %s LIKE ?", valueCol)
 			args = append(args, "%"+filter.Value+"%")
-			argNum++
 		case "gt":
-			joinCondition += fmt.Sprintf(" AND %s > $%d", valueCol, argNum)
+			joinCondition += fmt.Sprintf(" AND %s > ?", valueCol)
 			args = append(args, filter.Value)
-			argNum++
 		case "lt":
-			joinCondition += fmt.Sprintf(" AND %s < $%d", valueCol, argNum)
+			joinCondition += fmt.Sprintf(" AND %s < ?", valueCol)
 			args = append(args, filter.Value)
-			argNum++
 		case "gte":
-			joinCondition += fmt.Sprintf(" AND %s >= $%d", valueCol, argNum)
+			joinCondition += fmt.Sprintf(" AND %s >= ?", valueCol)
 			args = append(args, filter.Value)
-			argNum++
 		case "lte":
-			joinCondition += fmt.Sprintf(" AND %s <= $%d", valueCol, argNum)
+			joinCondition += fmt.Sprintf(" AND %s <= ?", valueCol)
 			args = append(args, filter.Value)
-			argNum++
 		case "in":
 			// Split value by comma for IN clause
 			values := strings.Split(filter.Value, ",")
 			placeholders := make([]string, len(values))
 			for j, v := range values {
-				placeholders[j] = fmt.Sprintf("$%d", argNum)
+				placeholders[j] = "?"
 				args = append(args, strings.TrimSpace(v))
-				argNum++
 			}
 			joinCondition += fmt.Sprintf(" AND %s IN (%s)", valueCol, strings.Join(placeholders, ","))
 		case "notin":
@@ -195,24 +185,25 @@ func BuildDynamicFieldFilterSQL(filters []DynamicFieldFilter, startArgNum int) (
 			values := strings.Split(filter.Value, ",")
 			placeholders := make([]string, len(values))
 			for j, v := range values {
-				placeholders[j] = fmt.Sprintf("$%d", argNum)
+				placeholders[j] = "?"
 				args = append(args, strings.TrimSpace(v))
-				argNum++
 			}
 			joinCondition += fmt.Sprintf(" AND %s NOT IN (%s)", valueCol, strings.Join(placeholders, ","))
 		case "empty":
-			// Field value is empty or doesn't exist
+			// Field value is empty or doesn't exist - reuse the field.ID already added
+			// We need to remove the last arg and rebuild the condition
+			args = args[:len(args)-1] // Remove the field.ID we just added
 			joinCondition = fmt.Sprintf(
 				"NOT EXISTS (SELECT 1 FROM dynamic_field_value %s WHERE %s.object_id = t.id "+
-					"AND %s.field_id = $%d AND %s IS NOT NULL AND %s != '')",
-				alias, alias, alias, argNum-1, valueCol, valueCol)
+					"AND %s.field_id = ? AND %s IS NOT NULL AND %s != '')",
+				alias, alias, alias, valueCol, valueCol)
+			args = append(args, field.ID)
 		case "notempty":
 			joinCondition += fmt.Sprintf(" AND %s IS NOT NULL AND %s != ''", valueCol, valueCol)
 		default:
 			// Default to equals
-			joinCondition += fmt.Sprintf(" AND %s = $%d", valueCol, argNum)
+			joinCondition += fmt.Sprintf(" AND %s = ?", valueCol)
 			args = append(args, filter.Value)
-			argNum++
 		}
 
 		joinCondition += ")"

@@ -36,10 +36,9 @@ func GetTemplatesForQueue(queueID int, templateType string) ([]TemplateForAgent,
 		  AND t.valid_id = 1
 	`
 	args := []interface{}{queueID}
-	argCount := 2
 
 	if templateType != "" {
-		query += fmt.Sprintf(" AND t.template_type LIKE $%d", argCount)
+		query += " AND t.template_type LIKE ?"
 		args = append(args, "%"+templateType+"%")
 	}
 

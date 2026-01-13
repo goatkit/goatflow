@@ -289,25 +289,22 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 			case "title", "customer_user_id", "customer_id":
 				// String fields
 				if strVal, ok := value.(string); ok {
-					updateFields = append(updateFields, fmt.Sprintf("%s = $%d", column, argIndex))
+					updateFields = append(updateFields, fmt.Sprintf("%s = ?", column))
 					args = append(args, strVal)
-					argIndex++
 				}
 			case "queue_id", "type_id", "state_id", "priority_id", "user_id", "ticket_lock_id":
 				// Integer fields
 				if floatVal, ok := value.(float64); ok {
-					updateFields = append(updateFields, fmt.Sprintf("%s = $%d", column, argIndex))
+					updateFields = append(updateFields, fmt.Sprintf("%s = ?", column))
 					args = append(args, int(floatVal))
-					argIndex++
 				}
 			case "responsible_user_id":
 				// Nullable integer field
 				if value == nil {
 					updateFields = append(updateFields, column+" = NULL")
 				} else if floatVal, ok := value.(float64); ok {
-					updateFields = append(updateFields, fmt.Sprintf("%s = $%d", column, argIndex))
+					updateFields = append(updateFields, fmt.Sprintf("%s = ?", column))
 					args = append(args, int(floatVal))
-					argIndex++
 				}
 			}
 		}
@@ -315,18 +312,16 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 
 	// Always update change_time and change_by
 	updateFields = append(updateFields, "change_time = NOW()")
-	updateFields = append(updateFields, fmt.Sprintf("change_by = $%d", argIndex))
+	updateFields = append(updateFields, "change_by = ?")
 	args = append(args, userID)
-	argIndex++
 
 	// Add ticket ID to args
 	args = append(args, ticketID)
 
 	// Execute UPDATE query
 	updateQuery := fmt.Sprintf(
-		"UPDATE ticket SET %s WHERE id = $%d",
+		"UPDATE ticket SET %s WHERE id = ?",
 		strings.Join(updateFields, ", "),
-		argIndex,
 	)
 
 	_, err = db.Exec(database.ConvertPlaceholders(updateQuery), args...)

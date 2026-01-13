@@ -69,24 +69,20 @@ func handleAdminACL(c *gin.Context) {
 	`
 
 	var args []interface{}
-	argCount := 1
 
 	if searchQuery != "" {
-		query += fmt.Sprintf(" AND (LOWER(name) LIKE $%d OR LOWER(description) LIKE $%d OR LOWER(comments) LIKE $%d)", argCount, argCount+1, argCount+2)
+		query += " AND (LOWER(name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(comments) LIKE ?)"
 		searchPattern := "%" + strings.ToLower(searchQuery) + "%"
 		args = append(args, searchPattern, searchPattern, searchPattern)
-		argCount += 3
 	}
 
 	if validFilter != "all" {
 		if validFilter == "valid" {
-			query += fmt.Sprintf(" AND valid_id = $%d", argCount)
+			query += " AND valid_id = ?"
 			args = append(args, 1)
-			argCount++
 		} else if validFilter == "invalid" {
-			query += fmt.Sprintf(" AND valid_id = $%d", argCount)
+			query += " AND valid_id = ?"
 			args = append(args, 2)
-			argCount++
 		}
 	}
 
@@ -102,7 +98,7 @@ func handleAdminACL(c *gin.Context) {
 	}
 	query += fmt.Sprintf(" ORDER BY %s %s", sortBy, sortOrder)
 
-	rows, err := db.Query(query, args...)
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch ACLs")
 		return

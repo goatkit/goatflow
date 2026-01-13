@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
@@ -49,26 +48,22 @@ func HandleAdminTickets(c *gin.Context) {
 	`
 
 	var args []interface{}
-	argCount := 0
 
 	// Apply filters
 	if statusFilter != "" && statusFilter != "all" {
-		argCount++
-		query += fmt.Sprintf(" AND ts.name = $%d", argCount)
+		query += " AND ts.name = ?"
 		args = append(args, statusFilter)
 	}
 
 	if queueFilter != "" && queueFilter != "all" {
-		argCount++
-		query += fmt.Sprintf(" AND q.name = $%d", argCount)
+		query += " AND q.name = ?"
 		args = append(args, queueFilter)
 	}
 
 	if searchQuery != "" {
-		argCount++
-		query += fmt.Sprintf(" AND (LOWER(t.tn) LIKE LOWER($%d) OR LOWER(t.title) LIKE LOWER($%d))", argCount, argCount)
+		query += " AND (LOWER(t.tn) LIKE LOWER(?) OR LOWER(t.title) LIKE LOWER(?))"
 		searchStr := "%" + searchQuery + "%"
-		args = append(args, searchStr)
+		args = append(args, searchStr, searchStr)
 	}
 
 	// Count total for pagination (parameterized, cross-DB)
@@ -81,21 +76,17 @@ func HandleAdminTickets(c *gin.Context) {
     `
 
 	var countArgs []interface{}
-	countArgCount := 0
 	if statusFilter != "" && statusFilter != "all" {
-		countArgCount++
-		countQuery += fmt.Sprintf(" AND ts.name = $%d", countArgCount)
+		countQuery += " AND ts.name = ?"
 		countArgs = append(countArgs, statusFilter)
 	}
 	if queueFilter != "" && queueFilter != "all" {
-		countArgCount++
-		countQuery += fmt.Sprintf(" AND q.name = $%d", countArgCount)
+		countQuery += " AND q.name = ?"
 		countArgs = append(countArgs, queueFilter)
 	}
 	if searchQuery != "" {
-		countArgCount++
-		countQuery += fmt.Sprintf(" AND (LOWER(t.tn) LIKE LOWER($%d) OR LOWER(t.title) LIKE LOWER($%d))", countArgCount, countArgCount)
-		countArgs = append(countArgs, "%"+searchQuery+"%")
+		countQuery += " AND (LOWER(t.tn) LIKE LOWER(?) OR LOWER(t.title) LIKE LOWER(?))"
+		countArgs = append(countArgs, "%"+searchQuery+"%", "%"+searchQuery+"%")
 	}
 
 	var totalCount int
@@ -104,7 +95,7 @@ func HandleAdminTickets(c *gin.Context) {
 	}
 
 	// Add ordering and pagination
-	query += " ORDER BY t.create_time DESC LIMIT $" + strconv.Itoa(argCount+1) + " OFFSET $" + strconv.Itoa(argCount+2)
+	query += " ORDER BY t.create_time DESC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 
 	// Execute query

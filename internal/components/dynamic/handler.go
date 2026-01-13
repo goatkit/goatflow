@@ -521,7 +521,7 @@ func (h *DynamicModuleHandler) handleList(c *gin.Context, config *ModuleConfig) 
 	offset := (page - 1) * pageSize
 
 	// Add ordering and pagination to query
-	query := baseQuery + " ORDER BY id DESC LIMIT $" + strconv.Itoa(len(args)+1) + " OFFSET $" + strconv.Itoa(len(args)+2)
+	query := baseQuery + " ORDER BY id DESC LIMIT ? OFFSET ?"
 	args = append(args, pageSize, offset)
 
 	rows, err := h.query(query, args...)
@@ -822,7 +822,7 @@ func (h *DynamicModuleHandler) handleExport(c *gin.Context, config *ModuleConfig
 		placeholders := make([]string, len(ids))
 		args := make([]interface{}, len(ids))
 		for i, id := range ids {
-			placeholders[i] = fmt.Sprintf("$%d", i+1)
+			placeholders[i] = "?"
 			args[i] = strings.TrimSpace(id)
 		}
 		query += " WHERE id IN (" + strings.Join(placeholders, ", ") + ")"
@@ -997,23 +997,23 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 		// Check for audit fields
 		if field.DBColumn == "create_by" {
 			columns = append(columns, field.DBColumn)
-			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			placeholders = append(placeholders, "?")
 			values = append(values, currentUserID)
 		} else if field.DBColumn == "change_by" {
 			columns = append(columns, field.DBColumn)
-			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			placeholders = append(placeholders, "?")
 			values = append(values, currentUserID)
 		} else if field.DBColumn == "create_time" {
 			columns = append(columns, field.DBColumn)
-			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			placeholders = append(placeholders, "?")
 			values = append(values, time.Now())
 		} else if field.DBColumn == "change_time" {
 			columns = append(columns, field.DBColumn)
-			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			placeholders = append(placeholders, "?")
 			values = append(values, time.Now())
 		} else if field.DBColumn == "valid_id" {
 			columns = append(columns, field.DBColumn)
-			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			placeholders = append(placeholders, "?")
 			values = append(values, field.Default)
 			validIncluded = true
 		} else if field.ShowInForm {
@@ -1025,29 +1025,29 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 					// Hash the password in Go using SHA256
 					if strValue, ok := value.(string); ok && strValue != "" {
 						hashedPassword := hashPassword(strValue)
-						placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+						placeholders = append(placeholders, "?")
 						values = append(values, hashedPassword)
 					} else {
-						placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+						placeholders = append(placeholders, "?")
 						values = append(values, value)
 					}
 				} else {
-					placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+					placeholders = append(placeholders, "?")
 					values = append(values, value)
 				}
 			} else if field.Default != nil {
 				columns = append(columns, field.DBColumn)
-				placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+				placeholders = append(placeholders, "?")
 				values = append(values, field.Default)
 			}
 		} else if value, exists := data[field.Name]; exists {
 			// Support hidden/virtual fields that populate real columns (e.g., mail_account.trusted)
 			columns = append(columns, field.DBColumn)
-			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			placeholders = append(placeholders, "?")
 			values = append(values, value)
 		} else if field.Default != nil {
 			columns = append(columns, field.DBColumn)
-			placeholders = append(placeholders, fmt.Sprintf("$%d", len(values)+1))
+			placeholders = append(placeholders, "?")
 			values = append(values, field.Default)
 		}
 	}
@@ -1153,7 +1153,7 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 
 		// Always update change_by if it exists
 		if field.DBColumn == "change_by" {
-			sets = append(sets, fmt.Sprintf("%s = $%d", field.DBColumn, len(values)+1))
+			sets = append(sets, fmt.Sprintf("%s = ?", field.DBColumn))
 			values = append(values, currentUserID)
 		} else if field.DBColumn == "change_time" {
 			// Update change_time to current timestamp
@@ -1166,28 +1166,27 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 					if strValue, ok := value.(string); ok && strValue != "" {
 						// Hash the password in Go using SHA256
 						hashedPassword := hashPassword(strValue)
-						sets = append(sets, fmt.Sprintf("%s = $%d", field.DBColumn, len(values)+1))
+						sets = append(sets, fmt.Sprintf("%s = ?", field.DBColumn))
 						values = append(values, hashedPassword)
 					}
 					// Skip updating password if empty (preserves existing password)
 				} else {
-					sets = append(sets, fmt.Sprintf("%s = $%d", field.DBColumn, len(values)+1))
+					sets = append(sets, fmt.Sprintf("%s = ?", field.DBColumn))
 					values = append(values, value)
 				}
 			}
 		} else if value, exists := data[field.Name]; exists {
 			// Allow hidden/non-form fields from transforms (e.g., trusted) to be persisted
-			sets = append(sets, fmt.Sprintf("%s = $%d", field.DBColumn, len(values)+1))
+			sets = append(sets, fmt.Sprintf("%s = ?", field.DBColumn))
 			values = append(values, value)
 		}
 	}
 
 	values = append(values, id)
 
-	query := fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d",
+	query := fmt.Sprintf("UPDATE %s SET %s WHERE id = ?",
 		config.Module.Table,
-		strings.Join(sets, ", "),
-		len(values))
+		strings.Join(sets, ", "))
 
 	_, err := h.exec(query, values...)
 	if err != nil {
@@ -2232,15 +2231,15 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 		for _, field := range config.Fields {
 			if field.Searchable {
 				// Add condition for the direct field value (LOWER for case-insensitive search)
-				searchConditions = append(searchConditions, "LOWER("+config.Module.Table+"."+field.DBColumn+") LIKE LOWER($"+fmt.Sprintf("%d", len(args)+1)+")")
+				searchConditions = append(searchConditions, "LOWER("+config.Module.Table+"."+field.DBColumn+") LIKE LOWER(?)")
 				args = append(args, "%"+searchValue+"%")
 
 				// If this field has a lookup configuration, also search in the display value
 				if field.LookupTable != "" && field.LookupDisplay != "" {
 					// Add a subquery condition to search in the lookup table's display column
-					subquery := fmt.Sprintf("%s.%s IN (SELECT %s FROM %s WHERE LOWER(%s) LIKE LOWER($%d))",
+					subquery := fmt.Sprintf("%s.%s IN (SELECT %s FROM %s WHERE LOWER(%s) LIKE LOWER(?))",
 						config.Module.Table, field.DBColumn, field.LookupKey,
-						field.LookupTable, field.LookupDisplay, len(args)+1)
+						field.LookupTable, field.LookupDisplay)
 					searchConditions = append(searchConditions, subquery)
 					args = append(args, "%"+searchValue+"%")
 				}
@@ -2265,11 +2264,11 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 		switch filter.Type {
 		case "select":
 			// For select filters, do exact match
-			conditions = append(conditions, filter.Field+" = $"+fmt.Sprintf("%d", len(args)+1))
+			conditions = append(conditions, filter.Field+" = ?")
 			args = append(args, filterValue)
 		case "text":
 			// For text filters, do case-insensitive LIKE search
-			conditions = append(conditions, "LOWER("+filter.Field+") LIKE LOWER($"+fmt.Sprintf("%d", len(args)+1)+")")
+			conditions = append(conditions, "LOWER("+filter.Field+") LIKE LOWER(?)")
 			args = append(args, "%"+filterValue+"%")
 		case "date_range":
 			// Handle date range filters - expect from and to parameters
@@ -2277,11 +2276,11 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 			toDate := c.Query("filter_" + filter.Field + "_to")
 
 			if fromDate != "" {
-				conditions = append(conditions, filter.Field+" >= $"+fmt.Sprintf("%d", len(args)+1))
+				conditions = append(conditions, filter.Field+" >= ?")
 				args = append(args, fromDate)
 			}
 			if toDate != "" {
-				conditions = append(conditions, filter.Field+" <= $"+fmt.Sprintf("%d", len(args)+1))
+				conditions = append(conditions, filter.Field+" <= ?")
 				args = append(args, toDate+" 23:59:59")
 			}
 		case "multi_select":
@@ -2293,7 +2292,7 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 				// For users, we need to join with user_groups table
 				placeholders := make([]string, len(values))
 				for i, val := range values {
-					placeholders[i] = "$" + fmt.Sprintf("%d", len(args)+1)
+					placeholders[i] = "?"
 					args = append(args, strings.TrimSpace(val))
 				}
 				// Add subquery condition for users in selected groups
@@ -2302,14 +2301,14 @@ func (h *DynamicModuleHandler) buildFilterWhereClause(c *gin.Context, config *Mo
 				// Regular multi-select for other fields
 				placeholders := make([]string, len(values))
 				for i, val := range values {
-					placeholders[i] = "$" + fmt.Sprintf("%d", len(args)+1)
+					placeholders[i] = "?"
 					args = append(args, strings.TrimSpace(val))
 				}
 				conditions = append(conditions, filter.Field+" IN ("+strings.Join(placeholders, ", ")+")")
 			}
 		default:
 			// Default to exact match
-			conditions = append(conditions, filter.Field+" = $"+fmt.Sprintf("%d", len(args)+1))
+			conditions = append(conditions, filter.Field+" = ?")
 			args = append(args, filterValue)
 		}
 	}

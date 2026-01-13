@@ -155,28 +155,26 @@ func switchBackend(ctx context.Context, db *sql.DB, targetBackend string, opts *
 
 	// Get articles to migrate
 	query := `
-		SELECT DISTINCT a.id, a.ticket_id 
+		SELECT DISTINCT a.id, a.ticket_id
 		FROM article a
 		JOIN ticket t ON t.id = a.ticket_id
 		WHERE 1=1`
 
-	args := []interface{}{}
-	argNum := 1
+	var args []interface{}
 
 	if opts.ClosedBefore != "" {
-		query += fmt.Sprintf(" AND t.change_time < $%d AND t.ticket_state_id IN (5, 6)", argNum)
+		query += " AND t.change_time < ? AND t.ticket_state_id IN (5, 6)"
 		args = append(args, opts.ClosedBefore)
-		argNum++
 	}
 
 	if opts.CreatedAfter != "" {
-		query += fmt.Sprintf(" AND t.create_time > $%d", argNum)
+		query += " AND t.create_time > ?"
 		args = append(args, opts.CreatedAfter)
 	}
 
 	query += " ORDER BY a.id"
 
-	rows, err := db.QueryContext(ctx, query, args...)
+	rows, err := db.QueryContext(ctx, database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return fmt.Errorf("failed to query articles: %w", err)
 	}

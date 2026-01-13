@@ -77,30 +77,26 @@ func handleAdminAttachment(c *gin.Context) {
 	`
 
 	var args []interface{}
-	argCount := 1
 
 	if searchQuery != "" {
-		query += fmt.Sprintf(
-			" AND (LOWER(name) LIKE $%d OR LOWER(filename) LIKE $%d OR LOWER(comments) LIKE $%d)",
-			argCount, argCount+1, argCount+2)
+		query += " AND (LOWER(name) LIKE ? OR LOWER(filename) LIKE ? OR LOWER(comments) LIKE ?)"
 		searchPattern := "%" + strings.ToLower(searchQuery) + "%"
 		args = append(args, searchPattern, searchPattern, searchPattern)
-		argCount += 3
 	}
 
 	if validFilter != "all" {
 		if validFilter == "valid" {
-			query += fmt.Sprintf(" AND valid_id = $%d", argCount)
+			query += " AND valid_id = ?"
 			args = append(args, 1)
 		} else if validFilter == "invalid" {
-			query += fmt.Sprintf(" AND valid_id = $%d", argCount)
+			query += " AND valid_id = ?"
 			args = append(args, 2)
 		}
 	}
 
 	query += " ORDER BY name ASC"
 
-	rows, err := db.Query(query, args...)
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to fetch attachments")
 		return
@@ -246,49 +242,41 @@ func handleAdminAttachmentUpdate(c *gin.Context) {
 	}
 
 	updates := []string{"change_time = CURRENT_TIMESTAMP", "change_by = 1"}
-	args := []interface{}{}
-	argCount := 1
+	var args []interface{}
 
 	if name := c.PostForm("name"); name != "" {
-		updates = append(updates, fmt.Sprintf("name = $%d", argCount))
+		updates = append(updates, "name = ?")
 		args = append(args, name)
-		argCount++
 	}
 
 	if comments := c.PostForm("comments"); comments != "" {
-		updates = append(updates, fmt.Sprintf("comments = $%d", argCount))
+		updates = append(updates, "comments = ?")
 		args = append(args, comments)
-		argCount++
 	} else if c.PostForm("clear_comments") == "1" {
-		updates = append(updates, fmt.Sprintf("comments = $%d", argCount))
+		updates = append(updates, "comments = ?")
 		args = append(args, nil)
-		argCount++
 	}
 
 	if validIDStr := c.PostForm("valid_id"); validIDStr != "" {
 		if parsedValidID, err := strconv.Atoi(validIDStr); err == nil {
-			updates = append(updates, fmt.Sprintf("valid_id = $%d", argCount))
+			updates = append(updates, "valid_id = ?")
 			args = append(args, parsedValidID)
-			argCount++
 		}
 	}
 
 	if content, header, err := readFormFile(c, "file"); err == nil {
-		updates = append(updates, fmt.Sprintf("filename = $%d", argCount))
+		updates = append(updates, "filename = ?")
 		args = append(args, header.Filename)
-		argCount++
-		updates = append(updates, fmt.Sprintf("content_type = $%d", argCount))
+		updates = append(updates, "content_type = ?")
 		args = append(args, header.Header.Get("Content-Type"))
-		argCount++
-		updates = append(updates, fmt.Sprintf("content = $%d", argCount))
+		updates = append(updates, "content = ?")
 		args = append(args, content)
-		argCount++
 	}
 
 	args = append(args, id)
 	query := fmt.Sprintf(
-		"UPDATE standard_attachment SET %s WHERE id = $%d",
-		strings.Join(updates, ", "), argCount)
+		"UPDATE standard_attachment SET %s WHERE id = ?",
+		strings.Join(updates, ", "))
 
 	result, err := db.Exec(database.ConvertPlaceholders(query), args...)
 	if err != nil {

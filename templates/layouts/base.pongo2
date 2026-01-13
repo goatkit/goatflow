@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ t("app.title") }}{% endblock %}</title>
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    
+
     <!-- Dark mode detection script (must be inline to avoid flash) -->
     <script>
         // Set dark mode class before Tailwind loads to prevent flash
@@ -17,19 +17,19 @@
             document.documentElement.classList.remove('dark')
         }
     </script>
-    
+
     <!-- Tailwind CSS (production build) -->
     <link rel="stylesheet" href="/static/css/output.css">
-    
+
     <!-- Font Awesome Icons (vendored for air-gapped environments) -->
     <link rel="stylesheet" href="/static/css/fontawesome/all.min.css">
-    
+
     <!-- Alpine.js for interactivity (vendored) -->
     <script defer src="/static/js/alpine.min.js"></script>
-    
+
     <!-- HTMX for dynamic updates (vendored) -->
     <script src="/static/js/htmx.min.js"></script>
-    
+
     <!-- HTMX configuration for authentication -->
     <script>
         // Configure HTMX to include credentials for authentication
@@ -38,16 +38,17 @@
             console.log('HTMX configured with withCredentials:', htmx.config.withCredentials);
         }
     </script>
-    
+
     <!-- HTMX extensions (vendored) -->
     <script src="/static/js/htmx-json-enc.js"></script>
-    
+
     <!-- Common utilities -->
     <script src="/static/js/common.js"></script>
     <!-- GoatKit typeahead enhancement -->
     <script src="/static/js/goatkit-typeahead.js"></script>
     <script src="/static/js/goatkit-autocomplete.js"></script>
     <script src="/static/js/goatkit-validate.js"></script>
+    <script src="/static/js/entity-selector.js"></script>
         <!-- Validation i18n (only current language) -->
         <script id="gk-validation-msgs" type="application/json">{
             "lang": "{{ getLang()|default:"en" }}",
@@ -59,52 +60,52 @@
                 "validation.summary": "{{ t("validation.summary_title")|default:"Please correct the following:" }}"
             }
         }</script>
-    
+
     <!-- Custom styles -->
     <style>
         /* Smooth transitions for dark mode */
         * {
             transition: background-color 0.2s, border-color 0.2s;
         }
-        
+
         /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
         }
-        
+
         ::-webkit-scrollbar-track {
             background: transparent;
         }
-        
+
         ::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 4px;
         }
-        
+
         .dark ::-webkit-scrollbar-thumb {
             background: #475569;
         }
-        
+
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
-        
+
         .dark ::-webkit-scrollbar-thumb:hover {
             background: #64748b;
         }
-        
+
         /* Details/Summary arrow rotation */
         details[open] .details-arrow {
             transform: rotate(90deg);
         }
-        
+
         /* Hide default summary marker */
         summary::-webkit-details-marker {
             display: none;
         }
     </style>
-    
+
     {% block head %}{% endblock %}
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-900">
@@ -183,7 +184,7 @@
                         <button type="button" onclick="toggleDarkMode()" class="rounded-md p-1 text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200">
                             <i class="fas fa-moon icon-md"></i>
                         </button>
-                        
+
                         <!-- User menu -->
                         <div class="relative ml-3" x-data="{ open: false }">
                             <button @click="open = !open" type="button" class="flex rounded-full bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
@@ -347,9 +348,9 @@
             }
         })
     </script>
-    
+
     {% block scripts %}{% endblock %}
-    
+
     {% block script %}{% endblock %}
 </body>
 </html>

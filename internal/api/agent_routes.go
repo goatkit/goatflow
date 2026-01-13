@@ -127,7 +127,6 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		`
 
 		args := []interface{}{}
-		argCount := 0
 
 		// Apply status filter
 		if status == "open" {
@@ -146,8 +145,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 
 		// Apply queue filter
 		if queue != "all" {
-			argCount++
-			query += fmt.Sprintf(" AND t.queue_id = $%d", argCount)
+			query += " AND t.queue_id = ?"
 			args = append(args, queue)
 		} else {
 			// Check if user is admin
@@ -164,21 +162,19 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 				// Admin sees all queues - no filter needed
 			} else {
 				// Regular agents see only queues they have access to through group membership
-				argCount++
-				query += fmt.Sprintf(` AND t.queue_id IN (
+				query += ` AND t.queue_id IN (
 					SELECT DISTINCT q2.id FROM queue q2
 					WHERE q2.group_id IN (
-						SELECT group_id FROM group_user WHERE user_id = $%d
+						SELECT group_id FROM group_user WHERE user_id = ?
 					)
-				)`, argCount)
+				)`
 				args = append(args, userID)
 			}
 		}
 
 		// Apply assignee filter
 		if assignee == "me" {
-			argCount++
-			query += fmt.Sprintf(" AND t.responsible_user_id = $%d", argCount)
+			query += " AND t.responsible_user_id = ?"
 			args = append(args, userID)
 		} else if assignee == "unassigned" {
 			query += " AND t.responsible_user_id IS NULL"
@@ -187,24 +183,16 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		// Apply search
 		if search != "" {
 			pattern := "%" + search + "%"
-			argCount++
-			first := argCount
-			argCount++
-			second := argCount
-			argCount++
-			third := argCount
-			query += fmt.Sprintf(" AND (LOWER(t.tn) LIKE LOWER($%d) OR LOWER(t.title) LIKE LOWER($%d) OR LOWER(c.login) LIKE LOWER($%d))",
-				first, second, third)
+			query += " AND (LOWER(t.tn) LIKE LOWER(?) OR LOWER(t.title) LIKE LOWER(?) OR LOWER(c.login) LIKE LOWER(?))"
 			args = append(args, pattern, pattern, pattern)
 		}
 
 		// Apply dynamic field filters
 		if len(dfFilters) > 0 {
-			dfSQL, dfArgs, err := BuildDynamicFieldFilterSQL(dfFilters, argCount+1)
+			dfSQL, dfArgs, err := BuildDynamicFieldFilterSQL(dfFilters, 0)
 			if err == nil && dfSQL != "" {
 				query += dfSQL
 				args = append(args, dfArgs...)
-				argCount += len(dfArgs)
 			}
 		}
 
@@ -262,11 +250,9 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 		sortBy := c.DefaultQuery("sort", "create_time")
 		sortOrder := c.DefaultQuery("order", "desc")
 		query += fmt.Sprintf(" ORDER BY t.%s %s", sanitizeSortColumn(sortBy), sortOrder)
-		argCount++
-		query += fmt.Sprintf(" LIMIT $%d", argCount)
+		query += " LIMIT ?"
 		args = append(args, perPage)
-		argCount++
-		query += fmt.Sprintf(" OFFSET $%d", argCount)
+		query += " OFFSET ?"
 		args = append(args, offset)
 
 		// Execute query

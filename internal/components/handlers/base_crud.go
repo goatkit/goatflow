@@ -306,10 +306,10 @@ func (h *BaseCRUDHandler) buildInsertQuery() string {
 	columns := []string{}
 	placeholders := []string{}
 
-	for i, field := range h.Config.Fields {
+	for _, field := range h.Config.Fields {
 		if field.DBColumn != "id" {
 			columns = append(columns, field.DBColumn)
-			placeholders = append(placeholders, fmt.Sprintf("$%d", i+1))
+			placeholders = append(placeholders, "?")
 		}
 	}
 
@@ -326,16 +326,15 @@ func (h *BaseCRUDHandler) buildInsertQuery() string {
 
 func (h *BaseCRUDHandler) buildUpdateQuery() string {
 	sets := []string{}
-	for i, field := range h.Config.Fields {
+	for _, field := range h.Config.Fields {
 		if field.DBColumn != "id" {
-			sets = append(sets, fmt.Sprintf("%s = $%d", field.DBColumn, i+1))
+			sets = append(sets, fmt.Sprintf("%s = ?", field.DBColumn))
 		}
 	}
 
-	return fmt.Sprintf("UPDATE %s SET %s WHERE id = $%d",
+	return fmt.Sprintf("UPDATE %s SET %s WHERE id = ?",
 		h.Config.TableName,
-		joinStrings(sets, ", "),
-		len(h.Config.Fields))
+		joinStrings(sets, ", "))
 }
 
 func (h *BaseCRUDHandler) buildSearchQuery(searchTerm string) string {

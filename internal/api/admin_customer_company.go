@@ -42,29 +42,20 @@ func handleAdminCustomerCompanies(db *sql.DB) gin.HandlerFunc {
 			WHERE 1=1
 		`
 
-		args := make([]interface{}, 0)
-		argPos := 0
+		var args []interface{}
 
 		if search != "" {
-			likeClauses := make([]string, 0, 3)
 			searchTerm := "%" + search + "%"
-			columns := []string{"cc.name", "cc.customer_id", "cc.city"}
-			for _, col := range columns {
-				argPos++
-				likeClauses = append(likeClauses, fmt.Sprintf("LOWER(%s) LIKE LOWER($%d)", col, argPos))
-				args = append(args, searchTerm)
-			}
-			query += " AND (" + strings.Join(likeClauses, " OR ") + ")"
+			query += " AND (LOWER(cc.name) LIKE LOWER(?) OR LOWER(cc.customer_id) LIKE LOWER(?) OR LOWER(cc.city) LIKE LOWER(?))"
+			args = append(args, searchTerm, searchTerm, searchTerm)
 		}
 
 		switch validFilter {
 		case "valid":
-			argPos++
-			query += fmt.Sprintf(" AND cc.valid_id = $%d", argPos)
+			query += " AND cc.valid_id = ?"
 			args = append(args, 1)
 		case "invalid":
-			argPos++
-			query += fmt.Sprintf(" AND cc.valid_id != $%d", argPos)
+			query += " AND cc.valid_id != ?"
 			args = append(args, 1)
 		}
 

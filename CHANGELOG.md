@@ -76,6 +76,13 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 
 ### Fixed
 - **Dynamic Module Lookup Display**: Fixed template rendering to show lookup display values (e.g., queue names) instead of raw IDs for integer foreign key fields in both `allFields` and regular `fields` template sections
+- **Remaining $N Placeholder Conversion**: Fixed remaining `$%d` format-string placeholders that were missed in the v0.5.1 SQL portability refactor, causing `ConvertPlaceholders: $N placeholders are not allowed` panics
+  - `internal/api/admin_attachment_handler.go` - handleAdminAttachmentUpdate
+  - `internal/api/agent_templates_handlers.go` - GetTemplatesForQueue
+  - `internal/api/admin_customer_company.go` - search query construction
+  - `internal/api/v1/handlers_tickets.go` - handleUpdateTicket
+  - `internal/repository/article_repository.go` - Create placeholder generation
+  - `cmd/gotrs-storage/main.go` - storage migration query construction
 
 ### Internal
 - **Lookup Display Tests**: Added unit tests for `processLookups`, `coerceString`, and lookup field configuration in `handler_lookup_test.go`

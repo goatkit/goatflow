@@ -540,72 +540,59 @@ func (router *APIRouter) handleUpdateTicket(c *gin.Context) {
 	// Build dynamic UPDATE query
 	var setClauses []string
 	var args []interface{}
-	argCounter := 1
 
 	if updateRequest.Title != nil {
-		setClauses = append(setClauses, fmt.Sprintf("title = $%d", argCounter))
+		setClauses = append(setClauses, "title = ?")
 		args = append(args, *updateRequest.Title)
-		argCounter++
 	}
 	if updateRequest.QueueID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("queue_id = $%d", argCounter))
+		setClauses = append(setClauses, "queue_id = ?")
 		args = append(args, *updateRequest.QueueID)
-		argCounter++
 	}
 	if updateRequest.TypeID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("%s = $%d", database.TicketTypeColumn(), argCounter))
+		setClauses = append(setClauses, fmt.Sprintf("%s = ?", database.TicketTypeColumn()))
 		args = append(args, *updateRequest.TypeID)
-		argCounter++
 	}
 	if updateRequest.StateID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("ticket_state_id = $%d", argCounter))
+		setClauses = append(setClauses, "ticket_state_id = ?")
 		args = append(args, *updateRequest.StateID)
-		argCounter++
 	}
 	if updateRequest.PriorityID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("ticket_priority_id = $%d", argCounter))
+		setClauses = append(setClauses, "ticket_priority_id = ?")
 		args = append(args, *updateRequest.PriorityID)
-		argCounter++
 	}
 	if updateRequest.CustomerUserID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("customer_user_id = $%d", argCounter))
+		setClauses = append(setClauses, "customer_user_id = ?")
 		args = append(args, *updateRequest.CustomerUserID)
-		argCounter++
 	}
 	if updateRequest.CustomerID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("customer_id = $%d", argCounter))
+		setClauses = append(setClauses, "customer_id = ?")
 		args = append(args, *updateRequest.CustomerID)
-		argCounter++
 	}
 	if updateRequest.ResponsibleUserID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("responsible_user_id = $%d", argCounter))
+		setClauses = append(setClauses, "responsible_user_id = ?")
 		args = append(args, *updateRequest.ResponsibleUserID)
-		argCounter++
 	}
 	if updateRequest.OwnerID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("user_id = $%d", argCounter))
+		setClauses = append(setClauses, "user_id = ?")
 		args = append(args, *updateRequest.OwnerID)
-		argCounter++
 	}
 	if updateRequest.LockID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("ticket_lock_id = $%d", argCounter))
+		setClauses = append(setClauses, "ticket_lock_id = ?")
 		args = append(args, *updateRequest.LockID)
-		argCounter++
 	}
 
 	// Always update change_time and change_by
 	setClauses = append(setClauses, "change_time = NOW()")
-	setClauses = append(setClauses, fmt.Sprintf("change_by = $%d", argCounter))
+	setClauses = append(setClauses, "change_by = ?")
 	args = append(args, userID)
-	argCounter++
 
 	// Add ticket ID for WHERE clause
 	args = append(args, ticketID)
 
 	updateQuery := database.ConvertPlaceholders(fmt.Sprintf(
-		"UPDATE ticket SET %s WHERE id = $%d",
+		"UPDATE ticket SET %s WHERE id = ?",
 		strings.Join(setClauses, ", "),
-		argCounter,
 	))
 
 	// Execute update

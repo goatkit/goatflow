@@ -282,7 +282,6 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 		`
 
 		args := []interface{}{userID, username}
-		argCount := 2
 
 		// Apply status filter
 		if status == "open" {
@@ -293,10 +292,8 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 
 		// Apply search
 		if search != "" {
-			argCount++
-			query += fmt.Sprintf(" AND (LOWER(t.tn) LIKE LOWER($%d) OR LOWER(t.title) LIKE LOWER($%d))",
-				argCount, argCount)
-			args = append(args, "%"+search+"%")
+			query += " AND (LOWER(t.tn) LIKE LOWER(?) OR LOWER(t.title) LIKE LOWER(?))"
+			args = append(args, "%"+search+"%", "%"+search+"%")
 		}
 
 		// Add ordering

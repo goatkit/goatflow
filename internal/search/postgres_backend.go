@@ -105,18 +105,15 @@ func (pb *PostgresBackend) searchTickets(ctx context.Context, query SearchQuery)
 	`)
 
 	args := []interface{}{query.Query}
-	paramCount := 1
 
 	// Add filters
 	if queueFilter, ok := query.Filters["queue_id"]; ok {
-		paramCount++
-		sqlQuery += fmt.Sprintf(" AND t.queue_id = $%d", paramCount)
+		sqlQuery += " AND t.queue_id = ?"
 		args = append(args, queueFilter)
 	}
 
 	if stateFilter, ok := query.Filters["state_id"]; ok {
-		paramCount++
-		sqlQuery += fmt.Sprintf(" AND t.ticket_state_id = $%d", paramCount)
+		sqlQuery += " AND t.ticket_state_id = ?"
 		args = append(args, stateFilter)
 	}
 

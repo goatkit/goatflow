@@ -229,48 +229,41 @@ func HandleListTicketsAPI(c *gin.Context) {
 		WHERE 1=1`
 
 	args := []interface{}{}
-	argIndex := 1
 
 	// Add filters to query
 	if stateIDs, ok := filters["state_id"].([]int); ok {
 		placeholders := []string{}
 		for _, sid := range stateIDs {
-			placeholders = append(placeholders, fmt.Sprintf("$%d", argIndex))
+			placeholders = append(placeholders, "?")
 			args = append(args, sid)
-			argIndex++
 		}
 		query += fmt.Sprintf(" AND t.ticket_state_id IN (%s)", strings.Join(placeholders, ","))
 	}
 
 	if queueID, ok := filters["queue_id"].(int); ok {
-		query += fmt.Sprintf(" AND t.queue_id = $%d", argIndex)
+		query += " AND t.queue_id = ?"
 		args = append(args, queueID)
-		argIndex++
 	}
 
 	if priorityID, ok := filters["priority_id"].(int); ok {
-		query += fmt.Sprintf(" AND t.ticket_priority_id = $%d", argIndex)
+		query += " AND t.ticket_priority_id = ?"
 		args = append(args, priorityID)
-		argIndex++
 	}
 
 	if customerUserID, ok := filters["customer_user_id"].(string); ok && customerUserID != "" {
-		query += fmt.Sprintf(" AND t.customer_user_id = $%d", argIndex)
+		query += " AND t.customer_user_id = ?"
 		args = append(args, customerUserID)
-		argIndex++
 	}
 
 	if responsibleUserID, ok := filters["responsible_user_id"].(int); ok {
-		query += fmt.Sprintf(" AND t.responsible_user_id = $%d", argIndex)
+		query += " AND t.responsible_user_id = ?"
 		args = append(args, responsibleUserID)
-		argIndex++
 	}
 
 	// Add search condition
 	if search != "" {
-		query += fmt.Sprintf(" AND (LOWER(t.title) LIKE LOWER($%d) OR t.tn = $%d)", argIndex, argIndex+1)
+		query += " AND (LOWER(t.title) LIKE LOWER(?) OR t.tn = ?)"
 		args = append(args, "%"+search+"%", search)
-		argIndex += 2
 	}
 
 	// Get total count
@@ -287,7 +280,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 
 	// Add sorting and pagination
 	query += fmt.Sprintf(" ORDER BY %s %s", sortColumn, strings.ToUpper(sortOrder))
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+	query += " LIMIT ? OFFSET ?"
 	args = append(args, perPage, offset)
 
 	// Execute main query

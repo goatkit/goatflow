@@ -272,88 +272,8 @@ input[name="permissions"]:disabled + span {
     </div>
 </div>
 
-<!-- Manage Role Users Modal -->
-<div id="roleUsersModal" class="hidden fixed z-10 inset-0 overflow-y-auto">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeRoleUsersModal()"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
-                    Manage Role Users: <span id="roleUsersTitle" class="font-bold"></span>
-                </h3>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Current Members -->
-                    <div>
-                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Current Members <span id="memberCount" class="text-gray-500">(0)</span>
-                        </h4>
-                        <div class="border border-gray-300 dark:border-gray-600 rounded-md max-h-64 overflow-y-auto">
-                            <ul id="currentMembersList" class="divide-y divide-gray-200 dark:divide-gray-700">
-                                <!-- Members will be populated here -->
-                            </ul>
-                        </div>
-                    </div>
-
-                    <!-- Add Users - Search Based -->
-                    <div>
-                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Add Users</h4>
-                        <!-- Search Input -->
-                        <div class="relative mb-2">
-                            <input type="text"
-                                   id="userSearchInput"
-                                   placeholder="Search by name or login..."
-                                   class="w-full px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gotrs-500"
-                                   autocomplete="off">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                            </div>
-                            <div id="searchSpinner" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center">
-                                <svg class="animate-spin h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                            </div>
-                        </div>
-                        <!-- Search Results -->
-                        <div class="border border-gray-300 dark:border-gray-600 rounded-md max-h-48 overflow-y-auto">
-                            <ul id="searchResultsList" class="divide-y divide-gray-200 dark:divide-gray-700">
-                                <li class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                                    Type at least 2 characters to search
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-md p-3">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-blue-700 dark:text-blue-300">
-                                Search for users to add, or click existing members to remove them
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" onclick="closeRoleUsersModal()"
-                        class="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:w-auto sm:text-sm">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Manage Role Users Modal - Using GoatKit Entity Selector Component -->
+{% include "partials/components/entity_selector.pongo2" with es_id="roleUsersModal" es_title="Manage Role Users" es_icon="fa-users" es_search_endpoint="/admin/roles/{parentId}/users/search" es_members_endpoint="/admin/roles/{parentId}/users" es_add_endpoint="/admin/roles/{parentId}/users" es_remove_endpoint="/admin/roles/{parentId}/users/{entityId}" es_display_primary="login" es_display_secondary="first_name last_name" %}
 
 <!-- Toast Container -->
 <div id="toast-container" class="fixed bottom-0 right-0 p-6 z-50 pointer-events-none"></div>
@@ -561,229 +481,31 @@ function toggleRoleStatus(roleId, currentValidId) {
     });
 }
 
-// View and manage role users
-let currentManagedRoleId = null;
-let userSearchTimeout = null;
-
+// View and manage role users - delegates to EntitySelector component
 function viewRoleUsers(roleId) {
-    currentManagedRoleId = roleId;
-
-    // Clear previous search
-    const searchInput = document.getElementById('userSearchInput');
-    if (searchInput) {
-        searchInput.value = '';
-    }
-    resetSearchResults();
-
-    // Fetch role users data - must include Accept header to get JSON instead of HTML page
-    fetch(`/admin/roles/${roleId}/users`, {
-        headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-        .then(handleFetchResponse)
-        .then(data => {
-            if (data.success) {
-                // Update modal title
-                document.getElementById('roleUsersTitle').textContent = data.role.name;
-
-                // Update member count and populate list
-                populateMembersList(data.members || []);
-
-                // Show modal and set up search handler
-                document.getElementById('roleUsersModal').classList.remove('hidden');
-                setupUserSearch();
-            } else {
-                showToast('error', data.error || 'Failed to load role users');
+    // The EntitySelector is initialized by the macro with id="roleUsersModal"
+    // We just need to open it with the role ID
+    if (window.roleUsersModalSelector) {
+        // Fetch role name for the title
+        fetch(`/admin/roles/${roleId}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
+        .then(handleFetchResponse)
+        .then(data => {
+            const roleName = data.role ? data.role.Name : '';
+            window.roleUsersModalSelector.open(roleId, roleName);
+        })
         .catch(error => {
-            console.error('Error in viewRoleUsers:', error);
-            showToast('error', 'Failed to load role users');
-        });
-}
-
-// Populate the current members list
-function populateMembersList(members) {
-    const membersList = document.getElementById('currentMembersList');
-    const memberCount = document.getElementById('memberCount');
-
-    memberCount.textContent = `(${members.length})`;
-    membersList.innerHTML = '';
-
-    if (members.length > 0) {
-        members.forEach(user => {
-            const li = document.createElement('li');
-            li.className = 'px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer';
-            li.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-900 dark:text-white">${escapeHtml(user.login)}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(user.first_name)} ${escapeHtml(user.last_name)}</p>
-                    </div>
-                    <svg class="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </div>
-            `;
-            li.onclick = () => removeUserFromRole(user.user_id);
-            membersList.appendChild(li);
+            console.error('Error fetching role:', error);
+            // Open anyway with just the ID
+            window.roleUsersModalSelector.open(roleId, '');
         });
     } else {
-        membersList.innerHTML = '<li class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No members</li>';
+        console.error('EntitySelector not initialized for roleUsersModal');
     }
-}
-
-// HTML escape helper
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Reset search results to initial state
-function resetSearchResults() {
-    const resultsList = document.getElementById('searchResultsList');
-    resultsList.innerHTML = '<li class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Type at least 2 characters to search</li>';
-}
-
-// Set up user search with debounce
-function setupUserSearch() {
-    const searchInput = document.getElementById('userSearchInput');
-
-    // Remove any existing listeners
-    const newInput = searchInput.cloneNode(true);
-    searchInput.parentNode.replaceChild(newInput, searchInput);
-
-    newInput.addEventListener('input', function() {
-        const query = this.value.trim();
-
-        // Clear previous timeout
-        if (userSearchTimeout) {
-            clearTimeout(userSearchTimeout);
-        }
-
-        if (query.length < 2) {
-            resetSearchResults();
-            return;
-        }
-
-        // Debounce: wait 300ms after user stops typing
-        userSearchTimeout = setTimeout(() => {
-            searchUsers(query);
-        }, 300);
-    });
-
-    // Focus the search input
-    newInput.focus();
-}
-
-// Search for users via API
-function searchUsers(query) {
-    const spinner = document.getElementById('searchSpinner');
-    const resultsList = document.getElementById('searchResultsList');
-
-    spinner.classList.remove('hidden');
-
-    fetch(`/admin/roles/${currentManagedRoleId}/users/search?q=${encodeURIComponent(query)}`, {
-        headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(handleFetchResponse)
-    .then(data => {
-        spinner.classList.add('hidden');
-        resultsList.innerHTML = '';
-
-        if (data.success && data.users && data.users.length > 0) {
-            data.users.forEach(user => {
-                const li = document.createElement('li');
-                li.className = 'px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer';
-                li.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-900 dark:text-white">${escapeHtml(user.login)}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">${escapeHtml(user.first_name)} ${escapeHtml(user.last_name)}</p>
-                        </div>
-                        <svg class="h-4 w-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                    </div>
-                `;
-                li.onclick = () => addUserToRole(user.user_id);
-                resultsList.appendChild(li);
-            });
-        } else if (data.message) {
-            resultsList.innerHTML = `<li class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">${escapeHtml(data.message)}</li>`;
-        } else {
-            resultsList.innerHTML = '<li class="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No users found</li>';
-        }
-    })
-    .catch(error => {
-        spinner.classList.add('hidden');
-        console.error('Search error:', error);
-        resultsList.innerHTML = '<li class="px-3 py-4 text-center text-sm text-red-500 dark:text-red-400">Search failed</li>';
-    });
-}
-
-// Add user to role
-function addUserToRole(userId) {
-    fetch(`/admin/roles/${currentManagedRoleId}/users`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_id: userId })
-    })
-    .then(handleFetchResponse)
-    .then(data => {
-        if (data.success) {
-            showToast('success', 'User added to role');
-            // Refresh the members list and clear search
-            viewRoleUsers(currentManagedRoleId);
-        } else {
-            showToast('error', data.error || 'Failed to add user');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('error', 'Failed to add user');
-    });
-}
-
-// Remove user from role
-function removeUserFromRole(userId) {
-    fetch(`/admin/roles/${currentManagedRoleId}/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(handleFetchResponse)
-    .then(data => {
-        if (data.success) {
-            showToast('success', 'User removed from role');
-            // Refresh the members list
-            viewRoleUsers(currentManagedRoleId);
-        } else {
-            showToast('error', data.error || 'Failed to remove user');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('error', 'Failed to remove user');
-    });
-}
-
-// Close role users modal
-function closeRoleUsersModal() {
-    document.getElementById('roleUsersModal').classList.add('hidden');
-    document.getElementById('userSearchInput').value = '';
-    resetSearchResults();
-    currentManagedRoleId = null;
 }
 
 // Toast notification function

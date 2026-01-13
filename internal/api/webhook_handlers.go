@@ -326,21 +326,17 @@ func HandleUpdateWebhookAPI(c *gin.Context) {
 	// Build update query dynamically
 	updateParts := []string{"change_time = NOW()", "change_by = ?"}
 	args := []interface{}{userID}
-	paramCount := 1
 
 	if req.Name != "" {
-		paramCount++
-		updateParts = append(updateParts, fmt.Sprintf("name = $%d", paramCount))
+		updateParts = append(updateParts, "name = ?")
 		args = append(args, req.Name)
 	}
 	if req.URL != "" {
-		paramCount++
-		updateParts = append(updateParts, fmt.Sprintf("url = $%d", paramCount))
+		updateParts = append(updateParts, "url = ?")
 		args = append(args, req.URL)
 	}
 	if req.Secret != "" {
-		paramCount++
-		updateParts = append(updateParts, fmt.Sprintf("secret = $%d", paramCount))
+		updateParts = append(updateParts, "secret = ?")
 		args = append(args, req.Secret)
 	}
 	if len(req.Events) > 0 {
@@ -349,23 +345,19 @@ func HandleUpdateWebhookAPI(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid events format"})
 			return
 		}
-		paramCount++
-		updateParts = append(updateParts, fmt.Sprintf("events = $%d", paramCount))
+		updateParts = append(updateParts, "events = ?")
 		args = append(args, string(eventsJSON))
 	}
 	if req.Active != nil {
-		paramCount++
-		updateParts = append(updateParts, fmt.Sprintf("active = $%d", paramCount))
+		updateParts = append(updateParts, "active = ?")
 		args = append(args, *req.Active)
 	}
 	if req.RetryCount > 0 {
-		paramCount++
-		updateParts = append(updateParts, fmt.Sprintf("retry_count = $%d", paramCount))
+		updateParts = append(updateParts, "retry_count = ?")
 		args = append(args, req.RetryCount)
 	}
 	if req.TimeoutSeconds > 0 {
-		paramCount++
-		updateParts = append(updateParts, fmt.Sprintf("timeout_seconds = $%d", paramCount))
+		updateParts = append(updateParts, "timeout_seconds = ?")
 		args = append(args, req.TimeoutSeconds)
 	}
 	if req.Headers != nil {
@@ -374,17 +366,15 @@ func HandleUpdateWebhookAPI(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid headers format"})
 			return
 		}
-		paramCount++
-		updateParts = append(updateParts, fmt.Sprintf("headers = $%d", paramCount))
+		updateParts = append(updateParts, "headers = ?")
 		args = append(args, string(headersJSON))
 	}
 
-	paramCount++
 	args = append(args, webhookID)
 
 	updateQuery := database.ConvertPlaceholders(
-		fmt.Sprintf("UPDATE webhooks SET %s WHERE id = $%d",
-			strings.Join(updateParts, ", "), paramCount),
+		fmt.Sprintf("UPDATE webhooks SET %s WHERE id = ?",
+			strings.Join(updateParts, ", ")),
 	)
 
 	_, err = db.Exec(updateQuery, args...)

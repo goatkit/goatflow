@@ -137,14 +137,10 @@ func (r *ArticleRepository) Create(article *models.Article) error {
 	cols = append(cols, "is_visible_for_customer", "create_time", "create_by", "change_time", "change_by")
 	args = append(args, article.IsVisibleForCustomer, now, article.CreateBy, now, article.ChangeBy)
 
-	// Build placeholders according to current DB
+	// Build placeholders - use ? and let ConvertPlaceholders handle DB-specific conversion
 	placeholders := make([]string, len(cols))
 	for i := range cols {
-		if database.IsMySQL() {
-			placeholders[i] = "?"
-		} else {
-			placeholders[i] = fmt.Sprintf("$%d", i+1)
-		}
+		placeholders[i] = "?"
 	}
 	articleQuery := fmt.Sprintf("INSERT INTO article (%s) VALUES (%s) RETURNING id", strings.Join(cols, ", "), strings.Join(placeholders, ", "))
 	articleQuery = database.ConvertPlaceholders(articleQuery)

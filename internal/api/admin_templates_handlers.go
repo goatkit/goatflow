@@ -105,27 +105,23 @@ func ListStandardTemplates(
 	`
 
 	var args []interface{}
-	argCount := 1
 
 	if search != "" {
-		query += fmt.Sprintf(" AND (LOWER(t.name) LIKE $%d OR LOWER(t.comments) LIKE $%d)", argCount, argCount+1)
+		query += " AND (LOWER(t.name) LIKE ? OR LOWER(t.comments) LIKE ?)"
 		searchPattern := "%" + strings.ToLower(search) + "%"
 		args = append(args, searchPattern, searchPattern)
-		argCount += 2
 	}
 
 	if validFilter == "valid" {
-		query += fmt.Sprintf(" AND t.valid_id = $%d", argCount)
+		query += " AND t.valid_id = ?"
 		args = append(args, 1)
-		argCount++
 	} else if validFilter == "invalid" {
-		query += fmt.Sprintf(" AND t.valid_id != $%d", argCount)
+		query += " AND t.valid_id != ?"
 		args = append(args, 1)
-		argCount++
 	}
 
 	if typeFilter != "" && typeFilter != "all" {
-		query += fmt.Sprintf(" AND t.template_type LIKE $%d", argCount)
+		query += " AND t.template_type LIKE ?"
 		args = append(args, "%"+typeFilter+"%")
 	}
 

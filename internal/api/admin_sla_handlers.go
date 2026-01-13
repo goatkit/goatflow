@@ -70,21 +70,19 @@ func handleAdminSLA(c *gin.Context) {
 	`
 
 	var args []interface{}
-	argCount := 1
 
 	if searchQuery != "" {
-		query += fmt.Sprintf(" AND (LOWER(s.name) LIKE $%d OR LOWER(s.comments) LIKE $%d)", argCount, argCount+1)
+		query += " AND (LOWER(s.name) LIKE ? OR LOWER(s.comments) LIKE ?)"
 		searchPattern := "%" + strings.ToLower(searchQuery) + "%"
 		args = append(args, searchPattern, searchPattern)
-		argCount += 2
 	}
 
 	if validFilter != "all" {
 		if validFilter == "valid" {
-			query += fmt.Sprintf(" AND s.valid_id = $%d", argCount)
+			query += " AND s.valid_id = ?"
 			args = append(args, 1)
 		} else if validFilter == "invalid" {
-			query += fmt.Sprintf(" AND s.valid_id = $%d", argCount)
+			query += " AND s.valid_id = ?"
 			args = append(args, 2)
 		}
 	}
