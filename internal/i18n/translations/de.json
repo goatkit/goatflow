@@ -1608,6 +1608,10 @@
         "no_templates": "Keine Vorlagen für diese Queue verfügbar"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "Neues Telefon-Ticket",
+            "email_ticket": "Neues E-Mail-Ticket"
+        },
         "actions": "Aktionen",
         "add_comment": "Kommentar hinzufügen",
         "additional_fields": "Zusätzliche Felder",

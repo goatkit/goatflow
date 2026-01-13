@@ -1656,6 +1656,10 @@
         "no_templates": "אין תבניות זמינות לתור זה"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "כרטיס טלפון חדש",
+            "email_ticket": "כרטיס דוא\"ל חדש"
+        },
         "actions": "פעולות",
         "add_comment": "הוסף תגובה",
         "additional_fields": "שדות נוספים",

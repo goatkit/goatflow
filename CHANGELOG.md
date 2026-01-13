@@ -7,6 +7,12 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
+- **Phone/Email Ticket Creation Entry Points**: Separate navigation links for creating phone and email tickets (mirrors OTRS AgentTicketPhone/AgentTicketEmail)
+  - Two direct links in top navigation and agent dashboard quick actions
+  - URL parameter `?type=phone|email` pre-selects interaction type on the new ticket form
+  - Form displays colored left border based on interaction type (colors loaded from `article_color` database table)
+  - i18n translations for all 15 languages: `tickets.new.phone_ticket`, `tickets.new.email_ticket`
+  - Files: `internal/api/agent_ticket_new_handler.go`, `templates/pages/tickets/new.pongo2`, `templates/layouts/base.pongo2`, `templates/pages/agent/dashboard.pongo2`
 - **Admin Article Color Module**: Dynamic module at `/admin/article-colors` for managing article sender type colors (OTRS AdminArticleColor equivalent)
   - Full CRUD for article color configuration (agent, customer, system sender colors)
   - Dashboard link with palette icon in System Administration section
@@ -79,6 +85,11 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - **http-call Script**: `scripts/http-call.sh` now uses JSON API login to extract `access_token` via Bearer authentication instead of cookie-based session handling
 
 ### Fixed
+- **Customer Typeahead Race Condition**: Fixed GoatKit autocomplete initialization timing issue where the input was set up before seed data was loaded
+  - Added retry logic in `setupInput()` to load seeds on-demand if not yet available
+  - Added late seed loading in `refresh()` to check for seed data at query time
+  - Restores customer user search, auto queue selection, and customer info panel on new ticket form
+  - File: `static/js/goatkit-autocomplete.js`
 - **Dynamic Module Lookup Display**: Fixed template rendering to show lookup display values (e.g., queue names) instead of raw IDs for integer foreign key fields in both `allFields` and regular `fields` template sections
 - **Remaining $N Placeholder Conversion**: Fixed remaining `$%d` format-string placeholders that were missed in the v0.5.1 SQL portability refactor, causing `ConvertPlaceholders: $N placeholders are not allowed` panics
   - `internal/api/admin_attachment_handler.go` - handleAdminAttachmentUpdate

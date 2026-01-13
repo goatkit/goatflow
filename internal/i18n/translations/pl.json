@@ -2207,6 +2207,10 @@
         "no_templates": "Brak dostępnych szablonów dla tej kolejki"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "Nowe Zgłoszenie Telefoniczne",
+            "email_ticket": "Nowe Zgłoszenie E-mail"
+        },
         "actions": "Akcje",
         "add_comment": "Dodaj komentarz",
         "additional_fields": "Dodatkowe pola",

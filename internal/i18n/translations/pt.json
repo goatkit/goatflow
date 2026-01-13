@@ -2207,6 +2207,10 @@
         "no_templates": "Nenhum modelo disponível para esta fila"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "Novo Chamado Telefônico",
+            "email_ticket": "Novo Chamado por E-mail"
+        },
         "actions": "Ações",
         "add_comment": "Adicionar Comentário",
         "additional_fields": "Campos Adicionais",

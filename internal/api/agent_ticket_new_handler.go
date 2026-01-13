@@ -17,10 +17,21 @@ import (
 // HandleAgentNewTicket displays the agent ticket creation form with necessary data.
 func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Parse pre-selected interaction type from URL query parameter
+		interactionType := c.Query("type")
+		if interactionType == "" {
+			interactionType = "phone" // default
+		}
+		// Validate it's a known type
+		validTypes := map[string]bool{"phone": true, "email": true}
+		if !validTypes[interactionType] {
+			interactionType = "phone"
+		}
+
 		skipDB := htmxHandlerSkipDB() || strings.TrimSpace(os.Getenv("SKIP_DB_WAIT")) == "1"
 		// Test-mode fallback for when database access is intentionally skipped
 		if skipDB {
-			renderTicketCreationFallback(c, "email")
+			renderTicketCreationFallback(c, interactionType)
 			return
 		}
 
@@ -87,6 +98,13 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 			dynamicFields = dfFields
 		}
 
+		// Get article colors for interaction type styling
+		articleColors, err := getArticleColors(db)
+		if err != nil {
+			log.Printf("Warning: failed to load article colors: %v", err)
+			articleColors = make(map[string]string)
+		}
+
 		// Render the form with data
 		renderer := getPongo2Renderer()
 		if renderer != nil {
@@ -108,9 +126,11 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 				"TicketStates":      stateOptions,
 				"TicketStateLookup": stateLookup,
 				"DynamicFields":     dynamicFields,
+				"PreSelectedType":   interactionType,
+				"ArticleColors":     articleColors,
 			})
 		} else {
-			renderTicketCreationFallback(c, "email")
+			renderTicketCreationFallback(c, interactionType)
 		}
 	}
 }
@@ -118,9 +138,9 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 // getQueuesForAgent gets queues available for agent ticket creation.
 func getQueuesForAgent(db *sql.DB) ([]gin.H, error) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT id, name 
-		FROM queue 
-		WHERE valid_id = 1 
+		SELECT id, name
+		FROM queue
+		WHERE valid_id = 1
 		ORDER BY name
 	`))
 	if err != nil {
@@ -146,9 +166,9 @@ func getQueuesForAgent(db *sql.DB) ([]gin.H, error) {
 // getTypesForAgent gets ticket types available for agent ticket creation.
 func getTypesForAgent(db *sql.DB) ([]gin.H, error) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT id, name 
-		FROM ticket_type 
-		WHERE valid_id = 1 
+		SELECT id, name
+		FROM ticket_type
+		WHERE valid_id = 1
 		ORDER BY name
 	`))
 	if err != nil {
@@ -174,9 +194,9 @@ func getTypesForAgent(db *sql.DB) ([]gin.H, error) {
 // getPrioritiesForAgent gets priorities available for agent ticket creation.
 func getPrioritiesForAgent(db *sql.DB) ([]gin.H, error) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT id, name 
-		FROM ticket_priority 
-		WHERE valid_id = 1 
+		SELECT id, name
+		FROM ticket_priority
+		WHERE valid_id = 1
 		ORDER BY id
 	`))
 	if err != nil {
@@ -203,9 +223,9 @@ func getPrioritiesForAgent(db *sql.DB) ([]gin.H, error) {
 // getServicesForAgent gets services available for agent ticket creation.
 func getServicesForAgent(db *sql.DB) ([]gin.H, error) {
 	rows, err := db.Query(database.ConvertPlaceholders(`
-		SELECT id, name 
-		FROM service 
-		WHERE valid_id = 1 
+		SELECT id, name
+		FROM service
+		WHERE valid_id = 1
 		ORDER BY name
 	`))
 	if err != nil {
@@ -409,4 +429,31 @@ func queuePermissionRank(key string) int {
 	default:
 		return 4
 	}
+}
+
+// getArticleColors returns all article colors from the database as a map of name -> color.
+func getArticleColors(db *sql.DB) (map[string]string, error) {
+	rows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT LOWER(name), color
+		FROM article_color
+	`))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	colors := make(map[string]string)
+	for rows.Next() {
+		var name, color string
+		if err := rows.Scan(&name, &color); err != nil {
+			return nil, err
+		}
+		if color != "" {
+			colors[name] = color
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return colors, nil
 }

@@ -1608,6 +1608,10 @@
         "no_templates": "No templates available for this queue"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "New Phone Ticket",
+            "email_ticket": "New Email Ticket"
+        },
         "actions": "Actions",
         "add_comment": "Add Comment",
         "additional_fields": "Additional Fields",

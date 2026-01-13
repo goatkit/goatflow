@@ -226,7 +226,7 @@
         <!-- Main Content -->
         <div class="lg:col-span-2">
             <!-- Articles -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow"{% if first_article_sender_color %} style="border-left: 4px solid {{ first_article_sender_color }};"{% endif %}>
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Conversation</h2>
                 </div>

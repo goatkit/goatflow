@@ -171,6 +171,12 @@
                             <a href="{{ queuesHref }}" rel="nofollow" class="{% if ActivePage == 'queues' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
                                 {{ navQueues }}
                             </a>
+                            <a href="/tickets/new?type=phone" class="border-transparent text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                                <i class="fa-solid fa-phone mr-1"></i> {{ t("tickets.new.phone_ticket") }}
+                            </a>
+                            <a href="/tickets/new?type=email" class="border-transparent text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                                <i class="fa-solid fa-envelope mr-1"></i> {{ t("tickets.new.email_ticket") }}
+                            </a>
                             {% endif %}
                             {% if not isCustomer and (User and (User.Role == "Admin" or User.IsInAdminGroup or IsInAdminGroup)) %}
                             <a href="/admin" class="{% if ActivePage == 'admin' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
@@ -226,6 +232,12 @@
                             {% if not isCustomer %}
                             <a href="{{ queuesHref }}" class="block border-l-4 px-3 py-2 text-base font-medium {% if ActivePage == 'queues' %}bg-gray-100 border-gotrs-500 text-gray-900 dark:bg-gray-900 dark:text-white{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 dark:text-gray-300 dark:hover:text-white{% endif %}">
                                 {{ navQueues }}
+                            </a>
+                            <a href="/tickets/new?type=phone" class="block border-l-4 px-3 py-2 text-base font-medium border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 dark:text-gray-300 dark:hover:text-white">
+                                <i class="fa-solid fa-phone mr-2"></i> {{ t("tickets.new.phone_ticket") }}
+                            </a>
+                            <a href="/tickets/new?type=email" class="block border-l-4 px-3 py-2 text-base font-medium border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 dark:text-gray-300 dark:hover:text-white">
+                                <i class="fa-solid fa-envelope mr-2"></i> {{ t("tickets.new.email_ticket") }}
                             </a>
                             {% endif %}
                         {% if not isCustomer and (User and (User.Role == "Admin" or User.IsInAdminGroup or IsInAdminGroup)) %}

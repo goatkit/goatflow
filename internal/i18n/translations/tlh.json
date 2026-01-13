@@ -1608,6 +1608,10 @@
         "no_templates": "tlheghvamvaD ra'mey tu'be'lu'"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "ghogh HablI' chaw' chu'",
+            "email_ticket": "QIn chaw' chu'"
+        },
         "actions": "ta'mey",
         "add_comment": "QIn chel",
         "additional_fields": "yoSmey chel",

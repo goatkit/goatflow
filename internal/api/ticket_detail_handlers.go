@@ -92,16 +92,18 @@ func handleTicketDetail(c *gin.Context) {
 		senderTypeColors = make(map[int]string)
 	}
 
-	// Convert articles to template format - skip the first article (it's the description)
+	// Convert articles to template format - skip the first article (shown separately with description)
 	notes := make([]gin.H, 0, len(articles))
 	firstArticleID := 0
 	firstArticleVisibleForCustomer := false
+	firstArticleSenderColor := ""
 	noteBodiesJSON := make([]string, 0, len(articles))
 	for i, article := range articles {
-		// Skip the first article as it's already shown in the description section
+		// Skip the first article as it's shown in the ticket info section
 		if i == 0 {
 			firstArticleID = article.ID
 			firstArticleVisibleForCustomer = article.IsVisibleForCustomer == 1
+			firstArticleSenderColor = senderTypeColors[article.SenderTypeID]
 			continue
 		}
 		// Determine sender type from article's SenderTypeID
@@ -522,6 +524,7 @@ func handleTicketDetail(c *gin.Context) {
 		"time_by_article":                    perArticleMinutes,
 		"first_article_id":                   firstArticleID,
 		"first_article_visible_for_customer": firstArticleVisibleForCustomer,
+		"first_article_sender_color":         firstArticleSenderColor,
 		"age":                                age,
 		"status_id":                          ticket.TicketStateID,
 	}

@@ -1607,6 +1607,10 @@
         "no_templates": "此队列无可用模板"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "新建电话工单",
+            "email_ticket": "新建邮件工单"
+        },
         "actions": "操作",
         "add_comment": "添加备注",
         "additional_fields": "附加字段",

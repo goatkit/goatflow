@@ -305,7 +305,7 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
                 {% set description_badge_classes = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200" %}
             {% endif %}
             <!-- Ticket Description -->
-            <div class="{{ description_card_classes }}">
+            <div class="{{ description_card_classes }}"{% if Ticket.first_article_sender_color %} style="border-left: 4px solid {{ Ticket.first_article_sender_color }};"{% endif %}>
                 <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
                     <h2 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("tickets.description") }}</h2>
                     <span class="{{ description_badge_classes }}">

@@ -1607,6 +1607,10 @@
         "no_templates": "هیچ قالبی برای این صف در دسترس نیست"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "تیکت تلفنی جدید",
+            "email_ticket": "تیکت ایمیلی جدید"
+        },
         "actions": "عملیات",
         "add_comment": "افزودن نظر",
         "additional_fields": "فیلدهای اضافی",

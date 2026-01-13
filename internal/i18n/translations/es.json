@@ -1608,6 +1608,10 @@
         "no_templates": "No hay plantillas disponibles para esta cola"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "Nuevo Ticket Telefónico",
+            "email_ticket": "Nuevo Ticket de Correo"
+        },
         "actions": "Acciones",
         "add_comment": "Agregar Comentario",
         "additional_fields": "Campos Adicionales",

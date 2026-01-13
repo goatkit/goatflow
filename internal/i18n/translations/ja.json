@@ -1607,6 +1607,10 @@
         "no_templates": "このキューで利用可能なテンプレートはありません"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "新規電話チケット",
+            "email_ticket": "新規メールチケット"
+        },
         "actions": "アクション",
         "add_comment": "コメントを追加",
         "additional_fields": "追加フィールド",

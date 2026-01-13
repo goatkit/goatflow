@@ -1656,6 +1656,10 @@
         "no_templates": "لا توجد قوالب متاحة لهذه القائمة"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "تذكرة هاتفية جديدة",
+            "email_ticket": "تذكرة بريد إلكتروني جديدة"
+        },
         "actions": "الإجراءات",
         "add_comment": "إضافة تعليق",
         "additional_fields": "حقول إضافية",

@@ -1607,6 +1607,10 @@
         "no_templates": "Aucun modèle disponible pour cette file d'attente"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "Nouveau Ticket Téléphonique",
+            "email_ticket": "Nouveau Ticket E-mail"
+        },
         "actions": "Actions",
         "add_comment": "Ajouter un commentaire",
         "additional_fields": "Champs supplémentaires",

@@ -15,7 +15,7 @@
         </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 shadow rounded-lg" x-data="{ }">
+    <div id="ticket-form-container" class="bg-white dark:bg-gray-800 shadow rounded-lg transition-all duration-200" x-data="{ }" style="border-left: 4px solid transparent;">
     <form method="post" action="/api/tickets" hx-post="/api/tickets" hx-target="#form-messages" hx-swap="innerHTML" hx-encoding="multipart/form-data" enctype="multipart/form-data" data-gk-validate class="space-y-6 p-6">
             <div id="form-messages"></div>
 
@@ -78,8 +78,8 @@
                         <label for="interaction_type" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.initial_interaction") }}</label>
                         <div class="mt-2">
                             <select name="interaction_type" id="interaction_type" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
-                                <option value="email">{{ t("tickets_form.interaction.email") }} ({{ t("tickets_form.customer_visible") }})</option>
-                                <option value="phone" selected>{{ t("tickets_form.interaction.phone") }} ({{ t("tickets_form.customer_visible") }})</option>
+                                <option value="email" {% if PreSelectedType == "email" %}selected{% endif %}>{{ t("tickets_form.interaction.email") }} ({{ t("tickets_form.customer_visible") }})</option>
+                                <option value="phone" {% if PreSelectedType == "phone" or not PreSelectedType %}selected{% endif %}>{{ t("tickets_form.interaction.phone") }} ({{ t("tickets_form.customer_visible") }})</option>
                                 <option value="internal_note">{{ t("tickets_form.interaction.internal_note") }} ({{ t("tickets_form.private") }})</option>
                                 <option value="external_note">{{ t("tickets_form.interaction.external_note") }} ({{ t("tickets_form.customer_visible") }})</option>
                             </select>
@@ -168,9 +168,34 @@
         "lastName": "{{ customerUser.LastName|escapejs }}",
         "customerId": "{{ customerUser.CustomerID|default:customerUser.CustomerId|default:""|escapejs }}",
         "preferredQueueId": "{{ customerUser.PreferredQueueID|default:customerUser.PreferredQueueId|default:"" }}",
-        "preferredQueueName": "{{ customerUser.PreferredQueueName|default:customerUser.PreferredQueueName|default:""|escapejs }}"
+        "preferredQueueName": "{{ customerUser.PreferredQueueName|default:""|escapejs }}"
     }{% if not loop.last %},{% endif %}{% endfor %}
 ]</script>
+<script>
+// Debug: enable GK_DEBUG for autocomplete tracing
+window.GK_DEBUG = true;
+// Debug: verify seed loaded - remove after fixing
+console.log('[NEW-TICKET] CustomerUsers count from template: {{ CustomerUsers|length }}');
+document.addEventListener('DOMContentLoaded', function() {
+    var seedEl = document.querySelector('script[data-gk-seed="customer-user"]');
+    if (seedEl) {
+        try {
+            var data = JSON.parse(seedEl.textContent.replace(/,(\s*[\]}])/g, '$1'));
+            console.log('[NEW-TICKET] Seed parsed successfully, count:', data.length);
+        } catch (e) {
+            console.error('[NEW-TICKET] Seed parse error:', e.message);
+        }
+    } else {
+        console.warn('[NEW-TICKET] No seed element found');
+    }
+    console.log('[NEW-TICKET] GoatKitSeeds:', window.GoatKitSeeds);
+    var input = document.getElementById('customer_user_input');
+    console.log('[NEW-TICKET] Input element:', input);
+    if (input) {
+        console.log('[NEW-TICKET] Input data-gk-autocomplete:', input.dataset.gkAutocomplete);
+    }
+});
+</script>
 
 <!-- Handle form response and file uploads -->
 <script>
@@ -323,13 +348,13 @@
 
         fileList.appendChild(list);
     });
-    
-    
+
+
     document.body.addEventListener('htmx:beforeRequest', function(evt) {
         // Clear any previous messages
         document.getElementById('form-messages').innerHTML = '';
     });
-    
+
     document.body.addEventListener('htmx:afterRequest', function(evt) {
         if (evt.detail.xhr.status === 201) {
             // Success - show success message and redirect
@@ -367,7 +392,7 @@
             } catch (e) {
                 // Use default message
             }
-            
+
             document.getElementById('form-messages').innerHTML = `
                 <div class="rounded-md bg-red-50 dark:bg-red-900/20 p-4 mb-4">
                     <div class="flex">
@@ -386,9 +411,55 @@
             `;
         }
     });
-    
+
     // Tiptap editor initialized by partial include
     document.addEventListener('DOMContentLoaded', function() {
+        // Interaction type color styling - visual feedback based on article type
+        (function setupInteractionTypeColors(){
+            var interactionSelect = document.getElementById('interaction_type');
+            var formContainer = document.getElementById('ticket-form-container');
+            if (!interactionSelect || !formContainer) return;
+
+            // Article colors from database (name -> hex color)
+            var articleColors = {
+                {% for name, color in ArticleColors %}'{{ name }}': '{{ color }}',
+                {% endfor %}
+            };
+
+            // Map interaction types to article color names
+            // Phone/Email are agent-initiated communications
+            // Internal note is system/internal
+            // External note is agent communication
+            var typeToColorName = {
+                'phone': 'agent',
+                'email': 'agent',
+                'internal_note': 'system',
+                'external_note': 'agent'
+            };
+
+            // Fallback colors if database colors not configured
+            var fallbackColors = {
+                'agent': '#3b82f6',       // blue-500
+                'system': '#f59e0b',      // amber-500
+                'customer': '#10b981'     // emerald-500
+            };
+
+            function getColorForType(interactionType) {
+                var colorName = typeToColorName[interactionType] || 'agent';
+                return articleColors[colorName] || fallbackColors[colorName] || 'transparent';
+            }
+
+            function updateFormColor() {
+                var selectedType = interactionSelect.value;
+                var color = getColorForType(selectedType);
+                formContainer.style.borderLeftColor = color;
+            }
+
+            interactionSelect.addEventListener('change', updateFormColor);
+            // Apply initial color based on pre-selected type
+            updateFormColor();
+        })();
+
         // Map customer users from seed for auto-fill behaviors
         (function setupCustomerUserGlue(){
             try {

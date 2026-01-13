@@ -1625,6 +1625,10 @@
         "no_templates": "اس قطار کے لیے کوئی ٹیمپلیٹ دستیاب نہیں"
     },
     "tickets": {
+        "new": {
+            "phone_ticket": "نیا فون ٹکٹ",
+            "email_ticket": "نیا ای میل ٹکٹ"
+        },
         "actions": "اعمال",
         "add_comment": "تبصرہ شامل کریں",
         "additional_fields": "اضافی فیلڈز",
