@@ -24,7 +24,7 @@
                 },
                 "help": {
                     "queue_id": "受信メッセージをこのキューに割り当てます。",
-                    "allow_trusted_headers": "このメールボックスでX-Znuny-Dest / X-GOTRSヘッダーによるキュー上書きを許可します。",
+                    "allow_trusted_headers": "このメールボックスでX-OTRS-Queue / X-GOTRSヘッダーによるキュー上書きを許可します。",
                     "poll_interval_seconds": "このメールボックスのスケジューラー間隔を上書きします。0でグローバル設定を継承します。",
                     "valid_id": "このメールボックスを有効にするか選択します。"
                 },
@@ -753,7 +753,9 @@
                 "Dropdown": "ドロップダウン",
                 "Multiselect": "複数選択",
                 "Date": "日付",
-                "DateTime": "日時"
+                "DateTime": "日時",
+                "WebserviceDropdown": "Webサービスドロップダウン",
+                "WebserviceMultiselect": "Webサービス複数選択"
             },
             "import_export": {
                 "export": "エクスポート",
@@ -769,7 +771,7 @@
                 "overwrite_existing": "既存の設定を上書き",
                 "overwrite_description": "チェックすると、同じ名前の既存フィールドが更新されます。それ以外の場合はスキップされます。",
                 "upload_file": "YAMLファイルをアップロード",
-                "upload_description": "GOTRSまたはZnunyからエクスポートされたYAMLファイルを選択して、ダイナミックフィールド設定をインポートします。",
+                "upload_description": "GOTRSまたはOTRSからエクスポートされたYAMLファイルを選択して、ダイナミックフィールド設定をインポートします。",
                 "upload_and_preview": "アップロードしてプレビュー",
                 "choose_file": "ファイルを選択",
                 "no_file_selected": "ファイルが選択されていません",
@@ -1132,7 +1134,9 @@
         "invalid": "無効",
         "view_all": "すべて表示",
         "warning": "警告",
-        "yes": "はい"
+        "yes": "はい",
+        "no_results": "結果が見つかりません",
+        "multiselect_hint": "入力して検索し、複数の値を選択してください"
     },
     "customer": {
         "company": "会社",

@@ -24,7 +24,7 @@
                 },
                 "help": {
                     "queue_id": "Eingehende Nachrichten dieser Queue zuweisen.",
-                    "allow_trusted_headers": "Queue-Überschreibungen von X-Znuny-Dest / X-GOTRS-Headern für dieses Postfach akzeptieren.",
+                    "allow_trusted_headers": "Queue-Überschreibungen von X-OTRS-Queue / X-GOTRS-Headern für dieses Postfach akzeptieren.",
                     "poll_interval_seconds": "Scheduler-Intervall für dieses Postfach überschreiben. 0 lassen, um das globale Intervall zu verwenden.",
                     "valid_id": "Wählen Sie, ob dieses Postfach aktiv ist."
                 },
@@ -753,7 +753,9 @@
                 "Dropdown": "Dropdown",
                 "Multiselect": "Mehrfachauswahl",
                 "Date": "Datum",
-                "DateTime": "Datum/Uhrzeit"
+                "DateTime": "Datum/Uhrzeit",
+                "WebserviceDropdown": "Webservice-Dropdown",
+                "WebserviceMultiselect": "Webservice-Mehrfachauswahl"
             },
             "import_export": {
                 "export": "Exportieren",
@@ -769,7 +771,7 @@
                 "overwrite_existing": "Vorhandene Konfigurationen überschreiben",
                 "overwrite_description": "Wenn aktiviert, werden vorhandene Felder mit demselben Namen aktualisiert. Andernfalls werden sie übersprungen.",
                 "upload_file": "YAML-Datei hochladen",
-                "upload_description": "Wählen Sie eine aus GOTRS oder Znuny exportierte YAML-Datei aus, um dynamische Feldkonfigurationen zu importieren.",
+                "upload_description": "Wählen Sie eine aus GOTRS oder OTRS exportierte YAML-Datei aus, um dynamische Feldkonfigurationen zu importieren.",
                 "upload_and_preview": "Hochladen und Vorschau",
                 "choose_file": "Datei auswählen",
                 "no_file_selected": "Keine Datei ausgewählt",
@@ -1133,7 +1135,9 @@
         "invalid": "Ungültig",
         "view_all": "Alle anzeigen",
         "warning": "Warnung",
-        "yes": "Ja"
+        "yes": "Ja",
+        "no_results": "Keine Ergebnisse gefunden",
+        "multiselect_hint": "Tippen Sie zum Suchen und wählen Sie mehrere Werte"
     },
     "customer": {
         "company": "Firma",

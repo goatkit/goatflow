@@ -277,7 +277,7 @@
                                 </div>
                                 <div id="template-variable-categories" class="flex flex-wrap gap-2"></div>
                                 <div id="template-variable-list" class="space-y-2 max-h-72 overflow-y-auto pr-1 text-sm"></div>
-                                <p class="text-[11px] text-gray-500 dark:text-gray-400">Tokens follow Znuny smart-tag rules. Unsupported tags render as dashes.</p>
+                                <p class="text-[11px] text-gray-500 dark:text-gray-400">Tokens follow OTRS smart-tag rules. Unsupported tags render as dashes.</p>
                             </aside>
                         </div>
                         <div>

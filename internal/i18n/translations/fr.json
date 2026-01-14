@@ -24,7 +24,7 @@
                 },
                 "help": {
                     "queue_id": "Assigner les messages entrants à cette file d'attente.",
-                    "allow_trusted_headers": "Accepter les substitutions de file d'attente depuis les en-têtes X-Znuny-Dest / X-GOTRS pour cette boîte aux lettres.",
+                    "allow_trusted_headers": "Accepter les substitutions de file d'attente depuis les en-têtes X-OTRS-Queue / X-GOTRS pour cette boîte aux lettres.",
                     "poll_interval_seconds": "Remplacer l'intervalle du planificateur pour cette boîte aux lettres. Laisser 0 pour hériter de la cadence globale.",
                     "valid_id": "Choisir si cette boîte aux lettres est active."
                 },
@@ -753,7 +753,9 @@
                 "Dropdown": "Liste déroulante",
                 "Multiselect": "Sélection multiple",
                 "Date": "Date",
-                "DateTime": "Date/Heure"
+                "DateTime": "Date/Heure",
+                "WebserviceDropdown": "Liste déroulante Service Web",
+                "WebserviceMultiselect": "Sélection multiple Service Web"
             },
             "import_export": {
                 "export": "Exporter",
@@ -769,7 +771,7 @@
                 "overwrite_existing": "Écraser les configurations existantes",
                 "overwrite_description": "Si coché, les champs existants avec le même nom seront mis à jour. Sinon, ils seront ignorés.",
                 "upload_file": "Télécharger le fichier YAML",
-                "upload_description": "Sélectionnez un fichier YAML exporté depuis GOTRS ou Znuny pour importer les configurations de champs dynamiques.",
+                "upload_description": "Sélectionnez un fichier YAML exporté depuis GOTRS ou OTRS pour importer les configurations de champs dynamiques.",
                 "upload_and_preview": "Télécharger et prévisualiser",
                 "choose_file": "Choisir un fichier",
                 "no_file_selected": "Aucun fichier sélectionné",
@@ -1132,7 +1134,9 @@
         "invalid": "Invalide",
         "view_all": "Voir tout",
         "warning": "Avertissement",
-        "yes": "Oui"
+        "yes": "Oui",
+        "no_results": "Aucun résultat trouvé",
+        "multiselect_hint": "Tapez pour rechercher et sélectionnez plusieurs valeurs"
     },
     "customer": {
         "company": "Société",

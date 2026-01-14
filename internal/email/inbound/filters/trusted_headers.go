@@ -12,7 +12,7 @@ import (
 )
 
 // TrustedHeadersFilter captures X-GOTRS-* overrides when the mailbox allows trusted headers.
-// It mirrors the Znuny PostMaster behavior where select headers may override routing metadata.
+// It mirrors the OTRS PostMaster behavior where select headers may override routing metadata.
 type TrustedHeadersFilter struct {
 	logger       *log.Logger
 	extraHeaders []string

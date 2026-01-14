@@ -202,7 +202,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	priorityID := getPriorityID(req.Priority)
 	visible := true
 	// Agent-created tickets (phone/email) have sender type "agent" - the agent is recording/sending
-	// This matches Znuny/OTRS behavior where AgentTicketPhone/AgentTicketEmail articles are from the agent
+	// This matches OTRS behavior where AgentTicketPhone/AgentTicketEmail articles are from the agent
 	createInput := service.CreateTicketInput{
 		Title:                         ticketTitle,
 		QueueID:                       int(queueID),

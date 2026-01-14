@@ -24,7 +24,7 @@
                 },
                 "help": {
                     "queue_id": "הקצה הודעות נכנסות לתור זה.",
-                    "allow_trusted_headers": "קבל עקיפות תור מכותרות X-Znuny-Dest / X-GOTRS עבור תיבת דואר זו.",
+                    "allow_trusted_headers": "קבל עקיפות תור מכותרות X-OTRS-Queue / X-GOTRS עבור תיבת דואר זו.",
                     "poll_interval_seconds": "דרוס את מרווח המתזמן עבור תיבת דואר זו. השאר 0 לרשת את הקדימה הגלובלית.",
                     "valid_id": "בחר האם תיבת דואר זו פעילה."
                 },
@@ -753,7 +753,9 @@
                 "Dropdown": "רשימה נפתחת",
                 "Multiselect": "רשימה מרובה",
                 "Date": "תאריך",
-                "DateTime": "תאריך/שעה"
+                "DateTime": "תאריך/שעה",
+                "WebserviceDropdown": "רשימה נפתחת שירות רשת",
+                "WebserviceMultiselect": "בחירה מרובה שירות רשת"
             },
             "import_export": {
                 "export": "ייצוא",
@@ -769,7 +771,7 @@
                 "overwrite_existing": "החלף תצורות קיימות",
                 "overwrite_description": "אם מסומן, שדות קיימים עם אותו שם יעודכנו. אחרת, הם ידולגו.",
                 "upload_file": "העלה קובץ YAML",
-                "upload_description": "בחר קובץ YAML שיוצא מ-GOTRS או Znuny לייבוא תצורות שדות דינמיים.",
+                "upload_description": "בחר קובץ YAML שיוצא מ-GOTRS או OTRS לייבוא תצורות שדות דינמיים.",
                 "upload_and_preview": "העלה וצפה בתצוגה מקדימה",
                 "choose_file": "בחר קובץ",
                 "no_file_selected": "לא נבחר קובץ",
@@ -1132,7 +1134,9 @@
         "invalid": "לא תקף",
         "view_all": "צפה בהכל",
         "warning": "אזהרה",
-        "yes": "כן"
+        "yes": "כן",
+        "no_results": "לא נמצאו תוצאות",
+        "multiselect_hint": "הקלד לחיפוש ובחר ערכים מרובים"
     },
     "customer": {
         "company": "חברה",

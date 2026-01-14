@@ -13,7 +13,7 @@ import (
 
 const defaultBodyTokenLimit = 256 * 1024
 
-// BodyTokenFilter scans decoded text parts for Znuny-style ticket tokens.
+// BodyTokenFilter scans decoded text parts for OTRS-style ticket tokens.
 type BodyTokenFilter struct {
 	logger *log.Logger
 	limit  int64

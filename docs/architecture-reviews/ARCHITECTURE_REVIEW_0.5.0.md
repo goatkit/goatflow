@@ -263,7 +263,7 @@ type TicketService interface {
 - ✅ Production-ready CI/CD
 - ✅ Comprehensive testing
 
-### vs. OTRS/Znuny
+### vs. OTRS
 - ✅ Modern tech stack (Go vs Perl)
 - ✅ Container-native deployment
 - ✅ Dynamic modules (zero duplication)

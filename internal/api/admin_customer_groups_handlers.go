@@ -1,7 +1,7 @@
 package api
 
 // Admin customer group handlers - manages customer company to group permissions.
-// Matches OTRS/Znuny AdminCustomerGroup functionality.
+// Matches OTRS AdminCustomerGroup functionality.
 
 import (
 	"database/sql"

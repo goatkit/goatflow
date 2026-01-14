@@ -24,7 +24,7 @@
                 },
                 "help": {
                     "queue_id": "Asignar mensajes entrantes a esta cola.",
-                    "allow_trusted_headers": "Aceptar anulaciones de cola desde cabeceras X-Znuny-Dest / X-GOTRS para este buzón.",
+                    "allow_trusted_headers": "Aceptar anulaciones de cola desde cabeceras X-OTRS-Queue / X-GOTRS para este buzón.",
                     "poll_interval_seconds": "Anular el intervalo del planificador para este buzón. Dejar en 0 para heredar la cadencia global.",
                     "valid_id": "Elegir si este buzón está activo."
                 },
@@ -753,7 +753,9 @@
                 "Dropdown": "Lista Desplegable",
                 "Multiselect": "Selección Múltiple",
                 "Date": "Fecha",
-                "DateTime": "Fecha/Hora"
+                "DateTime": "Fecha/Hora",
+                "WebserviceDropdown": "Desplegable de Servicio Web",
+                "WebserviceMultiselect": "Selección Múltiple de Servicio Web"
             },
             "import_export": {
                 "export": "Exportar",
@@ -769,7 +771,7 @@
                 "overwrite_existing": "Sobrescribir configuraciones existentes",
                 "overwrite_description": "Si está marcado, los campos existentes con el mismo nombre serán actualizados. De lo contrario, serán omitidos.",
                 "upload_file": "Subir archivo YAML",
-                "upload_description": "Seleccione un archivo YAML exportado desde GOTRS o Znuny para importar configuraciones de campos dinámicos.",
+                "upload_description": "Seleccione un archivo YAML exportado desde GOTRS o OTRS para importar configuraciones de campos dinámicos.",
                 "upload_and_preview": "Subir y previsualizar",
                 "choose_file": "Elegir archivo",
                 "no_file_selected": "Ningún archivo seleccionado",
@@ -1133,7 +1135,9 @@
         "invalid": "Inválido",
         "view_all": "Ver Todo",
         "warning": "Advertencia",
-        "yes": "Sí"
+        "yes": "Sí",
+        "no_results": "No se encontraron resultados",
+        "multiselect_hint": "Escriba para buscar y seleccione varios valores"
     },
     "customer": {
         "company": "Empresa",

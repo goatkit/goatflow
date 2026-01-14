@@ -24,7 +24,7 @@
                 },
                 "help": {
                     "queue_id": "پیام‌های ورودی را به این صف اختصاص دهید.",
-                    "allow_trusted_headers": "قبول پیش‌فرض‌های صف از هدرهای X-Znuny-Dest / X-GOTRS برای این صندوق.",
+                    "allow_trusted_headers": "قبول پیش‌فرض‌های صف از هدرهای X-OTRS-Queue / X-GOTRS برای این صندوق.",
                     "poll_interval_seconds": "Override کردن فاصله زمانی scheduler برای این صندوق.",
                     "valid_id": "انتخاب کنید که آیا این صندوق فعال است."
                 },
@@ -753,7 +753,9 @@
                 "Dropdown": "لیست کشویی",
                 "Multiselect": "چند انتخابی",
                 "Date": "تاریخ",
-                "DateTime": "تاریخ/زمان"
+                "DateTime": "تاریخ/زمان",
+                "WebserviceDropdown": "لیست کشویی وب سرویس",
+                "WebserviceMultiselect": "چند انتخابی وب سرویس"
             },
             "import_export": {
                 "export": "صادرات",
@@ -769,7 +771,7 @@
                 "overwrite_existing": "بازنویسی پیکربندی‌های موجود",
                 "overwrite_description": "اگر علامت‌گذاری شود، فیلدهای موجود با همان نام به‌روزرسانی می‌شوند. در غیر این صورت، نادیده گرفته می‌شوند.",
                 "upload_file": "بارگذاری فایل YAML",
-                "upload_description": "یک فایل YAML صادر شده از GOTRS یا Znuny را برای واردات پیکربندی فیلدهای پویا انتخاب کنید.",
+                "upload_description": "یک فایل YAML صادر شده از GOTRS یا OTRS را برای واردات پیکربندی فیلدهای پویا انتخاب کنید.",
                 "upload_and_preview": "بارگذاری و پیش‌نمایش",
                 "choose_file": "انتخاب فایل",
                 "no_file_selected": "فایلی انتخاب نشده",
@@ -1132,7 +1134,9 @@
         "invalid": "نامعتبر",
         "view_all": "مشاهده همه",
         "warning": "هشدار",
-        "yes": "بله"
+        "yes": "بله",
+        "no_results": "نتیجه‌ای یافت نشد",
+        "multiselect_hint": "برای جستجو تایپ کنید و چندین مقدار انتخاب کنید"
     },
     "customer": {
         "company": "شرکت",

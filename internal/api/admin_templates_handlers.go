@@ -43,7 +43,7 @@ type TemplateTypeOption struct {
 	Label string `json:"label"`
 }
 
-// ValidTemplateTypes returns all available template types matching Znuny.
+// ValidTemplateTypes returns all available template types matching OTRS.
 func ValidTemplateTypes() []TemplateTypeOption {
 	return []TemplateTypeOption{
 		{Key: "Answer", Label: "Answer"},
@@ -94,7 +94,7 @@ func ListStandardTemplates(
 	}
 
 	query := `
-		SELECT 
+		SELECT
 			t.id, t.name, t.text, t.content_type, t.template_type,
 			t.comments, t.valid_id, t.create_time, t.create_by,
 			t.change_time, t.change_by,
@@ -269,7 +269,7 @@ func CreateStandardTemplate(t *StandardTemplate, userID int) (int, error) {
 	}
 
 	query := `
-		INSERT INTO standard_template 
+		INSERT INTO standard_template
 			(name, text, content_type, template_type, comments, valid_id,
 			 create_time, create_by, change_time, change_by)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -323,7 +323,7 @@ func UpdateStandardTemplate(t *StandardTemplate, userID int) error {
 	}
 
 	query := `
-		UPDATE standard_template 
+		UPDATE standard_template
 		SET name = ?, text = ?, content_type = ?, template_type = ?,
 			comments = ?, valid_id = ?, change_time = ?, change_by = ?
 		WHERE id = ?
@@ -425,7 +425,7 @@ func SetTemplateQueues(templateID int, queueIDs []int, userID int) error {
 	now := time.Now()
 	for _, queueID := range queueIDs {
 		_, err = db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO queue_standard_template 
+			INSERT INTO queue_standard_template
 				(queue_id, standard_template_id, create_time, create_by, change_time, change_by)
 			VALUES (?, ?, ?, ?, ?, ?)
 		`), queueID, templateID, now, userID, now, userID)
@@ -527,7 +527,7 @@ func SetTemplateAttachments(templateID int, attachmentIDs []int, userID int) err
 	now := time.Now()
 	for _, attachmentID := range attachmentIDs {
 		_, err = db.Exec(database.ConvertPlaceholders(`
-			INSERT INTO standard_template_attachment 
+			INSERT INTO standard_template_attachment
 				(standard_attachment_id, standard_template_id, create_time, create_by, change_time, change_by)
 			VALUES (?, ?, ?, ?, ?, ?)
 		`), attachmentID, templateID, now, userID, now, userID)

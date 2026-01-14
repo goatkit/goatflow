@@ -24,7 +24,7 @@
                 },
                 "help": {
                     "queue_id": "将入站消息分配到此队列。",
-                    "allow_trusted_headers": "为此邮箱接受来自X-Znuny-Dest / X-GOTRS头的队列覆盖。",
+                    "allow_trusted_headers": "为此邮箱接受来自X-OTRS-Queue / X-GOTRS头的队列覆盖。",
                     "poll_interval_seconds": "覆盖此邮箱的计划间隔。留空为0则继承全局周期。",
                     "valid_id": "选择此邮箱是否激活。"
                 },
@@ -753,7 +753,9 @@
                 "Dropdown": "下拉菜单",
                 "Multiselect": "多选",
                 "Date": "日期",
-                "DateTime": "日期/时间"
+                "DateTime": "日期/时间",
+                "WebserviceDropdown": "Web服务下拉列表",
+                "WebserviceMultiselect": "Web服务多选"
             },
             "import_export": {
                 "export": "导出",
@@ -769,7 +771,7 @@
                 "overwrite_existing": "覆盖现有配置",
                 "overwrite_description": "如果选中，同名的现有字段将被更新。否则，它们将被跳过。",
                 "upload_file": "上传YAML文件",
-                "upload_description": "选择从GOTRS或Znuny导出的YAML文件以导入动态字段配置。",
+                "upload_description": "选择从GOTRS或OTRS导出的YAML文件以导入动态字段配置。",
                 "upload_and_preview": "上传并预览",
                 "choose_file": "选择文件",
                 "no_file_selected": "未选择文件",
@@ -1132,7 +1134,9 @@
         "invalid": "无效",
         "view_all": "查看全部",
         "warning": "警告",
-        "yes": "是"
+        "yes": "是",
+        "no_results": "未找到结果",
+        "multiselect_hint": "输入搜索并选择多个值"
     },
     "customer": {
         "company": "公司",

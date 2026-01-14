@@ -24,7 +24,7 @@
                 },
                 "help": {
                     "queue_id": "el QInmey tlheghvamDaq lan.",
-                    "allow_trusted_headers": "tlhegh choH nachDaq X-Znuny-Dest / X-GOTRS lajchu' QIn paqvamvaD.",
+                    "allow_trusted_headers": "tlhegh choH nachDaq X-OTRS-Queue / X-GOTRS lajchu' QIn paqvamvaD.",
                     "poll_interval_seconds": "QIn paqvamvaD Qapla'moHwI' poH choH. pagh lo' Hoch tlhoS.",
                     "valid_id": "QIn paq Qap 'e' wIv."
                 },
@@ -753,7 +753,9 @@
                 "Dropdown": "pumwI'",
                 "Multiselect": "law' wIv",
                 "Date": "jaj",
-                "DateTime": "jaj/poH"
+                "DateTime": "jaj/poH",
+                "WebserviceDropdown": "Webservice pumwI'",
+                "WebserviceMultiselect": "Webservice law' wIv"
             },
             "import_export": {
                 "export": "ngeH",
@@ -769,7 +771,7 @@
                 "overwrite_existing": "taH chenmoHwI' choH",
                 "overwrite_description": "wIv chugh, rap pong ghaj taH yItlhegh choHlu'. pagh chugh, lojlu'.",
                 "upload_file": "YAML teywI' ngeH",
-                "upload_description": "GOTRS pagh Znuny vo' YAML teywI' yIwIv yItlhegh DuHIvDI' chenmoHwI' Hev.",
+                "upload_description": "GOTRS pagh OTRS vo' YAML teywI' yIwIv yItlhegh DuHIvDI' chenmoHwI' Hev.",
                 "upload_and_preview": "ngeH 'ej cha'",
                 "choose_file": "teywI' yIwIv",
                 "no_file_selected": "teywI' wIvbe'lu'",
@@ -1133,7 +1135,9 @@
         "invalid": "mojbe'",
         "view_all": "Hoch legh",
         "warning": "yIqIm",
-        "yes": "HIja'"
+        "yes": "HIja'",
+        "no_results": "pagh tu'lu'",
+        "multiselect_hint": "yISam 'ej law' wIv"
     },
     "customer": {
         "company": "tuq",

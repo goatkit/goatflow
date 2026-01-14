@@ -24,7 +24,7 @@
                 },
                 "help": {
                     "queue_id": "تعيين الرسائل الواردة لهذه القائمة.",
-                    "allow_trusted_headers": "قبول تجاوزات القائمة من رؤوس X-Znuny-Dest / X-GOTRS لهذا الصندوق.",
+                    "allow_trusted_headers": "قبول تجاوزات القائمة من رؤوس X-OTRS-Queue / X-GOTRS لهذا الصندوق.",
                     "poll_interval_seconds": "تجاوز فاصل المجدول لهذا الصندوق. اترك 0 لوراثة الإيقاع العام.",
                     "valid_id": "اختر ما إذا كان هذا الصندوق نشطًا."
                 },
@@ -739,7 +739,9 @@
                 "Dropdown": "قائمة منسدلة",
                 "Multiselect": "اختيار متعدد",
                 "Date": "تاريخ",
-                "DateTime": "تاريخ/وقت"
+                "DateTime": "تاريخ/وقت",
+                "WebserviceDropdown": "قائمة منسدلة خدمة الويب",
+                "WebserviceMultiselect": "اختيار متعدد خدمة الويب"
             },
             "import_export": {
                 "export": "تصدير",
@@ -755,7 +757,7 @@
                 "overwrite_existing": "الكتابة فوق التكوينات الموجودة",
                 "overwrite_description": "إذا تم التحديد، سيتم تحديث الحقول الموجودة بنفس الاسم. وإلا سيتم تخطيها.",
                 "upload_file": "رفع ملف YAML",
-                "upload_description": "حدد ملف YAML المصدر من GOTRS أو Znuny لاستيراد تكوينات الحقول الديناميكية.",
+                "upload_description": "حدد ملف YAML المصدر من GOTRS أو OTRS لاستيراد تكوينات الحقول الديناميكية.",
                 "upload_and_preview": "رفع ومعاينة",
                 "choose_file": "اختر ملف",
                 "no_file_selected": "لم يتم اختيار ملف",
@@ -1284,7 +1286,9 @@
         "invalid": "غير صالح",
         "view_all": "عرض الكل",
         "warning": "تحذير",
-        "yes": "نعم"
+        "yes": "نعم",
+        "no_results": "لم يتم العثور على نتائج",
+        "multiselect_hint": "اكتب للبحث وحدد قيم متعددة"
     },
     "customer": {
         "company": "الشركة",

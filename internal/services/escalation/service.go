@@ -11,7 +11,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// Service handles ticket escalation index calculation matching OTRS/Znuny behavior.
+// Service handles ticket escalation index calculation matching OTRS behavior.
 type Service struct {
 	db              *sql.DB
 	calendarService *CalendarService
