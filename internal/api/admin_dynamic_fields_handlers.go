@@ -1,10 +1,12 @@
 package api
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -368,8 +370,13 @@ func isHTMXRequest(c *gin.Context) bool {
 func RegisterDynamicFieldRoutes(router *gin.RouterGroup, adminRouter *gin.RouterGroup) {
 	adminRouter.GET("/dynamic-fields", handleAdminDynamicFields)
 	adminRouter.GET("/dynamic-fields/new", handleAdminDynamicFieldNew)
-	adminRouter.GET("/dynamic-fields/:id", handleAdminDynamicFieldEdit)
+	adminRouter.GET("/dynamic-fields/export", handleAdminDynamicFieldExportPage)
+	adminRouter.POST("/dynamic-fields/export", handleAdminDynamicFieldExportAction)
+	adminRouter.GET("/dynamic-fields/import", handleAdminDynamicFieldImportPage)
+	adminRouter.POST("/dynamic-fields/import", handleAdminDynamicFieldImportAction)
+	adminRouter.POST("/dynamic-fields/import/confirm", handleAdminDynamicFieldImportConfirm)
 	adminRouter.GET("/dynamic-fields/screens", handleAdminDynamicFieldScreenConfig)
+	adminRouter.GET("/dynamic-fields/:id", handleAdminDynamicFieldEdit)
 
 	router.POST("/dynamic-fields", handleCreateDynamicField)
 	router.PUT("/dynamic-fields/:id", handleUpdateDynamicField)
@@ -392,7 +399,7 @@ func GetDynamicFieldsForScreen(objectType, screenKey string) ([]DynamicField, er
 		       df.create_time, df.create_by, df.change_time, df.change_by,
 		       COALESCE(sc.config_value, 0) as screen_config
 		FROM dynamic_field df
-		LEFT JOIN dynamic_field_screen_config sc 
+		LEFT JOIN dynamic_field_screen_config sc
 		  ON df.id = sc.field_id AND sc.screen_key = ?
 		WHERE df.object_type = ? AND df.valid_id = 1
 		  AND COALESCE(sc.config_value, 0) > 0
@@ -548,4 +555,257 @@ func handleAdminDynamicFieldScreenConfigSingle(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "config_value": input.ConfigValue})
+}
+
+// handleAdminDynamicFieldExportPage shows the export page with field checkboxes.
+func handleAdminDynamicFieldExportPage(c *gin.Context) {
+	renderer := shared.GetGlobalRenderer()
+
+	fieldsGrouped, err := GetDynamicFieldsGroupedByObjectType()
+	if err != nil {
+		if renderer != nil {
+			renderer.HTML(c, http.StatusInternalServerError, "error.html", gin.H{
+				"Error": "Failed to load dynamic fields",
+			})
+		} else {
+			c.String(http.StatusInternalServerError, "Failed to load dynamic fields")
+		}
+		return
+	}
+
+	if renderer == nil {
+		c.String(http.StatusOK, "<h1>Export Dynamic Fields</h1>")
+		return
+	}
+
+	renderer.HTML(c, http.StatusOK, "pages/admin/dynamic_field_export.pongo2", gin.H{
+		"Title":         "Export Dynamic Field Configuration",
+		"FieldsGrouped": fieldsGrouped,
+		"ObjectTypes":   ValidObjectTypes(),
+		"ActivePage":    "admin",
+	})
+}
+
+// handleAdminDynamicFieldExportAction generates and returns a YAML export file.
+func handleAdminDynamicFieldExportAction(c *gin.Context) {
+	// Get selected fields from form
+	fieldNames := c.PostFormArray("field_config")
+	screenNames := c.PostFormArray("screen_config")
+
+	if len(fieldNames) == 0 && len(screenNames) == 0 {
+		c.Redirect(http.StatusFound, "/admin/dynamic-fields/export?error=no_selection")
+		return
+	}
+
+	// Combine unique field names
+	allFields := make(map[string]bool)
+	for _, name := range fieldNames {
+		allFields[name] = true
+	}
+	for _, name := range screenNames {
+		allFields[name] = true
+	}
+
+	var exportFields []string
+	for name := range allFields {
+		exportFields = append(exportFields, name)
+	}
+
+	// Export with screens only if screen configs were selected
+	includeScreens := len(screenNames) > 0
+
+	yamlData, err := ExportDynamicFieldsYAML(exportFields, includeScreens)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to export: " + err.Error()})
+		return
+	}
+
+	// Generate filename with timestamp
+	filename := fmt.Sprintf("Export_DynamicFields_%s.yml", time.Now().Format("2006-01-02_15-04-05"))
+
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	c.Header("Content-Type", "application/x-yaml")
+	c.Data(http.StatusOK, "application/x-yaml", yamlData)
+}
+
+// handleAdminDynamicFieldImportPage shows the import page.
+func handleAdminDynamicFieldImportPage(c *gin.Context) {
+	renderer := shared.GetGlobalRenderer()
+
+	if renderer == nil {
+		c.String(http.StatusOK, "<h1>Import Dynamic Fields</h1>")
+		return
+	}
+
+	renderer.HTML(c, http.StatusOK, "pages/admin/dynamic_field_import.pongo2", gin.H{
+		"Title":      "Import Dynamic Field Configuration",
+		"ActivePage": "admin",
+		"ShowUpload": true,
+	})
+}
+
+// handleAdminDynamicFieldImportAction processes the uploaded YAML file and shows preview.
+func handleAdminDynamicFieldImportAction(c *gin.Context) {
+	renderer := shared.GetGlobalRenderer()
+
+	file, err := c.FormFile("yaml_file")
+	if err != nil {
+		if renderer != nil {
+			renderer.HTML(c, http.StatusBadRequest, "pages/admin/dynamic_field_import.pongo2", gin.H{
+				"Title":      "Import Dynamic Field Configuration",
+				"ActivePage": "admin",
+				"ShowUpload": true,
+				"Error":      "Please select a file to upload",
+			})
+		} else {
+			c.String(http.StatusBadRequest, "Please select a file to upload")
+		}
+		return
+	}
+
+	// Open and read the file
+	f, err := file.Open()
+	if err != nil {
+		if renderer != nil {
+			renderer.HTML(c, http.StatusBadRequest, "pages/admin/dynamic_field_import.pongo2", gin.H{
+				"Title":      "Import Dynamic Field Configuration",
+				"ActivePage": "admin",
+				"ShowUpload": true,
+				"Error":      "Failed to read uploaded file",
+			})
+		} else {
+			c.String(http.StatusBadRequest, "Failed to read uploaded file")
+		}
+		return
+	}
+	defer f.Close()
+
+	data := make([]byte, file.Size)
+	_, err = f.Read(data)
+	if err != nil {
+		if renderer != nil {
+			renderer.HTML(c, http.StatusBadRequest, "pages/admin/dynamic_field_import.pongo2", gin.H{
+				"Title":      "Import Dynamic Field Configuration",
+				"ActivePage": "admin",
+				"ShowUpload": true,
+				"Error":      "Failed to read file content",
+			})
+		} else {
+			c.String(http.StatusBadRequest, "Failed to read file content")
+		}
+		return
+	}
+
+	// Parse the YAML
+	export, err := ParseDynamicFieldsYAML(data)
+	if err != nil {
+		if renderer != nil {
+			renderer.HTML(c, http.StatusBadRequest, "pages/admin/dynamic_field_import.pongo2", gin.H{
+				"Title":      "Import Dynamic Field Configuration",
+				"ActivePage": "admin",
+				"ShowUpload": true,
+				"Error":      "Invalid YAML file: " + err.Error(),
+			})
+		} else {
+			c.String(http.StatusBadRequest, "Invalid YAML file: "+err.Error())
+		}
+		return
+	}
+
+	// Get import preview
+	preview, err := GetImportPreview(export)
+	if err != nil {
+		if renderer != nil {
+			renderer.HTML(c, http.StatusInternalServerError, "pages/admin/dynamic_field_import.pongo2", gin.H{
+				"Title":      "Import Dynamic Field Configuration",
+				"ActivePage": "admin",
+				"ShowUpload": true,
+				"Error":      "Failed to generate preview: " + err.Error(),
+			})
+		} else {
+			c.String(http.StatusInternalServerError, "Failed to generate preview")
+		}
+		return
+	}
+
+	// Store the YAML data in session/cache for the confirm step
+	// For simplicity, we'll encode it in a hidden field
+	yamlBase64 := base64.StdEncoding.EncodeToString(data)
+
+	if renderer == nil {
+		c.String(http.StatusOK, "<h1>Import Preview</h1>")
+		return
+	}
+
+	renderer.HTML(c, http.StatusOK, "pages/admin/dynamic_field_import.pongo2", gin.H{
+		"Title":           "Import Dynamic Field Configuration",
+		"ActivePage":      "admin",
+		"ShowUpload":      false,
+		"ShowPreview":     true,
+		"Preview":         preview,
+		"YAMLData":        yamlBase64,
+		"HasScreenConfig": export.DynamicFieldScreens != nil && len(export.DynamicFieldScreens) > 0,
+	})
+}
+
+// handleAdminDynamicFieldImportConfirm performs the actual import.
+func handleAdminDynamicFieldImportConfirm(c *gin.Context) {
+	renderer := shared.GetGlobalRenderer()
+
+	// Get the base64-encoded YAML data
+	yamlBase64 := c.PostForm("yaml_data")
+	if yamlBase64 == "" {
+		c.Redirect(http.StatusFound, "/admin/dynamic-fields/import?error=missing_data")
+		return
+	}
+
+	yamlData, err := base64.StdEncoding.DecodeString(yamlBase64)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/admin/dynamic-fields/import?error=invalid_data")
+		return
+	}
+
+	// Parse the YAML again
+	export, err := ParseDynamicFieldsYAML(yamlData)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/admin/dynamic-fields/import?error=invalid_yaml")
+		return
+	}
+
+	// Get selected fields
+	selectedFields := c.PostFormArray("field_config")
+	selectedScreens := c.PostFormArray("screen_config")
+	overwrite := c.PostForm("overwrite") == "1"
+	userID := getUserID(c)
+
+	// Perform import
+	result, err := ImportDynamicFields(export, selectedFields, selectedScreens, overwrite, userID)
+	if err != nil {
+		if renderer != nil {
+			renderer.HTML(c, http.StatusInternalServerError, "pages/admin/dynamic_field_import.pongo2", gin.H{
+				"Title":      "Import Dynamic Field Configuration",
+				"ActivePage": "admin",
+				"ShowUpload": true,
+				"Error":      "Import failed: " + err.Error(),
+			})
+		} else {
+			c.String(http.StatusInternalServerError, "Import failed: "+err.Error())
+		}
+		return
+	}
+
+	// Show results
+	if renderer == nil {
+		c.String(http.StatusOK, fmt.Sprintf("Created: %d, Updated: %d, Skipped: %d",
+			len(result.Created), len(result.Updated), len(result.Skipped)))
+		return
+	}
+
+	renderer.HTML(c, http.StatusOK, "pages/admin/dynamic_field_import.pongo2", gin.H{
+		"Title":       "Import Dynamic Field Configuration",
+		"ActivePage":  "admin",
+		"ShowUpload":  false,
+		"ShowResults": true,
+		"Result":      result,
+	})
 }

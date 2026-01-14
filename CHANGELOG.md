@@ -78,6 +78,12 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - Supports all X-GOTRS-* headers: Queue, QueueID, Priority, PriorityID, State, Type, Title, CustomerID, CustomerUser, Ignore
   - Comprehensive test coverage for VIP routing, spam filtering, NOT matches, multi-match conditions, and stop flag behavior
 - **PostmasterFilter Repository**: Database repository for `postmaster_filter` table with YAML serialization for match/set rules
+- **Dynamic Fields Import/Export**: Admin UI for importing and exporting dynamic field configurations (OTRS AdminDynamicFieldConfigurationImportExport equivalent)
+  - Export: Select multiple dynamic fields and download as YAML file with complete field definitions
+  - Import: Upload YAML file or paste YAML content directly, with preview before confirmation
+  - Handles all dynamic field types: Text, Textarea, Checkbox, Date, DateTime, Dropdown, Multiselect
+  - Routes: `/admin/dynamic-fields/export`, `/admin/dynamic-fields/import`, `/admin/dynamic-fields/import/confirm`
+  - Files: `internal/api/admin_dynamic_fields_handlers.go`, `templates/pages/admin/dynamic_field_export.pongo2`, `templates/pages/admin/dynamic_field_import.pongo2`
 
 ### Changed
 - **Translation Coverage Test Output**: `TestTranslationCompleteness` now prints a formatted ASCII table showing all language coverage with checkmarks for 100% complete languages

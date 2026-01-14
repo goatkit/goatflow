@@ -1,0 +1,203 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("admin.dynamic_fields.import_export.export_title") }} - GOTRS Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Page header -->
+    <div class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("admin.dynamic_fields.import_export.export_title") }}</h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ t("admin.dynamic_fields.import_export.export_hint") }}</p>
+            </div>
+            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex gap-3">
+                <a href="/admin/dynamic-fields"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+                >
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ t("common.back") }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="mb-6">
+        <div class="relative">
+            <input type="text" id="filterFields"
+                class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white dark:bg-gray-800 dark:border-gray-600 placeholder-gray-500 focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 sm:text-sm"
+                placeholder="{{ t('admin.dynamic_fields.import_export.filter_placeholder') }}"
+            >
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <form action="/admin/dynamic-fields/export" method="POST">
+        <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700" id="fieldsTable">
+                    <thead class="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <label class="flex items-center justify-center cursor-pointer">
+                                    <input type="checkbox" id="selectAllFields" class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded">
+                                    <span class="ml-2">{{ t("admin.dynamic_fields.import_export.select_all_fields") }}</span>
+                                </label>
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <label class="flex items-center justify-center cursor-pointer">
+                                    <input type="checkbox" id="selectAllScreens" class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded">
+                                    <span class="ml-2">{{ t("admin.dynamic_fields.import_export.select_all_screens") }}</span>
+                                </label>
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                {{ t("admin.dynamic_fields.field_name") }}
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                {{ t("admin.dynamic_fields.field_label") }}
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                {{ t("admin.dynamic_fields.field_type") }}
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                {{ t("admin.dynamic_fields.object_type") }}
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                {{ t("admin.dynamic_fields.field_order") }}
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                {{ t("common.status") }}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for objectType in ObjectTypes %}
+                            {% for field in FieldsGrouped[objectType] %}
+                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 field-row" data-name="{{ field.Name|lower }}">
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <input type="checkbox" name="field_config" value="{{ field.Name }}"
+                                        class="field-checkbox h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded" checked>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <input type="checkbox" name="screen_config" value="{{ field.Name }}"
+                                        class="screen-checkbox h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded" checked>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                    {{ field.Name }}
+                                    {% if field.InternalField == 1 %}
+                                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                        {{ t("admin.dynamic_fields.internal_field") }}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                    {{ field.Label }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {% if field.FieldType == 'Text' %}bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100{% endif %}
+                                        {% if field.FieldType == 'TextArea' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100{% endif %}
+                                        {% if field.FieldType == 'Dropdown' %}bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100{% endif %}
+                                        {% if field.FieldType == 'Multiselect' %}bg-pink-100 text-pink-800 dark:bg-pink-800 dark:text-pink-100{% endif %}
+                                        {% if field.FieldType == 'Checkbox' %}bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100{% endif %}
+                                        {% if field.FieldType == 'Date' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100{% endif %}
+                                        {% if field.FieldType == 'DateTime' %}bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100{% endif %}
+                                    ">
+                                        {{ t("admin.dynamic_fields.field_types." + field.FieldType) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                    {{ t("admin.dynamic_fields.object_types." + field.ObjectType) }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                    {{ field.FieldOrder }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {% if field.ValidID == 1 %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
+                                        {{ t("admin.dynamic_fields.valid") }}
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
+                                        {{ t("admin.dynamic_fields.invalid") }}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-6 flex items-center justify-end gap-3">
+            <a href="/admin/dynamic-fields"
+                class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+            >
+                {{ t("common.cancel") }}
+            </a>
+            <button type="submit"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+            >
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                {{ t("admin.dynamic_fields.import_export.export") }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Select all fields checkbox
+    const selectAllFields = document.getElementById('selectAllFields');
+    const fieldCheckboxes = document.querySelectorAll('.field-checkbox');
+
+    selectAllFields.addEventListener('change', function() {
+        fieldCheckboxes.forEach(cb => {
+            if (cb.closest('.field-row').style.display !== 'none') {
+                cb.checked = this.checked;
+            }
+        });
+    });
+
+    // Select all screens checkbox
+    const selectAllScreens = document.getElementById('selectAllScreens');
+    const screenCheckboxes = document.querySelectorAll('.screen-checkbox');
+
+    selectAllScreens.addEventListener('change', function() {
+        screenCheckboxes.forEach(cb => {
+            if (cb.closest('.field-row').style.display !== 'none') {
+                cb.checked = this.checked;
+            }
+        });
+    });
+
+    // Filter functionality
+    const filterInput = document.getElementById('filterFields');
+    const rows = document.querySelectorAll('.field-row');
+
+    filterInput.addEventListener('input', function() {
+        const filter = this.value.toLowerCase();
+        rows.forEach(row => {
+            const name = row.getAttribute('data-name');
+            if (name.includes(filter)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
