@@ -83,8 +83,8 @@ func createTestServiceForCustomerUser(t *testing.T, name string) (int, bool) {
 	return id, true
 }
 
-// createTestCustomerUser creates a test customer user in the database.
-func createTestCustomerUser(t *testing.T, login string) bool {
+// createTestCustomerUserForServices creates a test customer user in the database for service tests.
+func createTestCustomerUserForServices(t *testing.T, login string) bool {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
 		t.Logf("GetDB failed: err=%v, db=%v", err, db)
@@ -183,7 +183,7 @@ func TestAdminCustomerUserServicesAllocate(t *testing.T) {
 		}
 
 		testLogin := fmt.Sprintf("test_cus_%d", time.Now().UnixNano())
-		if !createTestCustomerUser(t, testLogin) {
+		if !createTestCustomerUserForServices(t, testLogin) {
 			t.Skip("Could not create test customer user")
 		}
 
@@ -210,7 +210,7 @@ func TestAdminCustomerUserServicesAllocate(t *testing.T) {
 		}
 
 		testLogin := fmt.Sprintf("test_cus_%d", time.Now().UnixNano())
-		if !createTestCustomerUser(t, testLogin) {
+		if !createTestCustomerUserForServices(t, testLogin) {
 			t.Skip("Could not create test customer user")
 		}
 
@@ -286,7 +286,7 @@ func TestAdminServiceCustomerUsersAllocate(t *testing.T) {
 		}
 
 		testLogin := fmt.Sprintf("test_cus_%d", time.Now().UnixNano())
-		if !createTestCustomerUser(t, testLogin) {
+		if !createTestCustomerUserForServices(t, testLogin) {
 			t.Skip("Could not create test customer user")
 		}
 
@@ -523,7 +523,7 @@ func TestDefaultServicesFallbackLogic(t *testing.T) {
 
 		// Create test customer
 		testLogin := fmt.Sprintf("test_explicit_%d", time.Now().UnixNano())
-		if !createTestCustomerUser(t, testLogin) {
+		if !createTestCustomerUserForServices(t, testLogin) {
 			t.Skip("Could not create test customer user")
 		}
 
@@ -588,7 +588,7 @@ func TestDefaultServicesFallbackLogic(t *testing.T) {
 
 		// Create test customer with NO explicit services
 		testLogin := fmt.Sprintf("test_noservices_%d", time.Now().UnixNano())
-		if !createTestCustomerUser(t, testLogin) {
+		if !createTestCustomerUserForServices(t, testLogin) {
 			t.Skip("Could not create test customer user")
 		}
 

@@ -266,7 +266,6 @@ func HandleUpdateTicketAPI(c *gin.Context) {
 	// Build UPDATE query dynamically
 	var updateFields []string
 	var args []interface{}
-	argIndex := 1
 
 	// Map of allowed fields and their database columns
 	fieldMapping := map[string]string{
