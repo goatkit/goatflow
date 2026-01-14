@@ -916,6 +916,36 @@
         "lookups": {
             "description": "Gérer les données de référence"
         },
+        "customer_user_groups": {
+            "title": "Groupes d'Utilisateurs Client",
+            "description": "Gérer l'accès des utilisateurs client individuels aux groupes et files d'attente",
+            "customer_users": "Utilisateurs Client",
+            "groups": "Groupes",
+            "click_user_to_edit": "Cliquez sur un utilisateur client pour modifier ses permissions de groupe",
+            "click_group_to_edit": "Cliquez sur un groupe pour modifier quels utilisateurs client y ont accès",
+            "search_users": "Rechercher des utilisateurs client",
+            "search_placeholder": "Rechercher des utilisateurs... (* pour tous)",
+            "filter_groups": "Filtrer les groupes",
+            "filter_groups_placeholder": "Filtrer les groupes...",
+            "no_users_found": "Aucun utilisateur client trouvé",
+            "no_groups_found": "Aucun groupe trouvé",
+            "adjust_search": "Essayez d'ajuster vos critères de recherche",
+            "help_title": "À propos des Permissions de Groupes d'Utilisateurs Client",
+            "help_description": "Les permissions de groupes d'utilisateurs client contrôlent quels tickets les utilisateurs client individuels peuvent voir dans le portail client.",
+            "help_ro": "Accès en lecture seule aux tickets dans les files d'attente assignées à ce groupe",
+            "help_rw": "Accès en lecture et écriture (peut créer et mettre à jour des tickets)",
+            "edit_user_title": "Permissions de Groupe de l'Utilisateur Client",
+            "edit_group_title": "Permissions d'Utilisateurs Client du Groupe",
+            "login": "Identifiant",
+            "group": "Groupe",
+            "customer_user": "Utilisateur Client",
+            "group_permissions": "Permissions de Groupe",
+            "user_permissions": "Permissions d'Utilisateur",
+            "select_groups_for_user": "Sélectionnez les groupes auxquels cet utilisateur client a accès",
+            "select_users_for_group": "Sélectionnez les utilisateurs client qui ont accès à ce groupe",
+            "manage_users_for_group": "Gérer les permissions d'utilisateurs client pour ce groupe",
+            "no_groups_available": "Aucun groupe disponible"
+        },
         "common": {
             "actions": {
                 "cancel": "Annuler",

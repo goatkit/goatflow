@@ -1,0 +1,112 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("admin.customer_user_groups.edit_user_title") }}: {% if CustomerUser.FirstName or CustomerUser.LastName %}{{ CustomerUser.FirstName }} {{ CustomerUser.LastName }}{% else %}{{ CustomerUser.Login }}{% endif %} - {{ t("app.name") }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Page header with breadcrumb -->
+    <div class="mb-8">
+        <nav class="flex mb-4" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                <li class="inline-flex items-center">
+                    <a href="/admin/customer-user-groups" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-gotrs-600 dark:text-gray-400 dark:hover:text-white">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        {{ t("admin.customer_user_groups.title") }}
+                    </a>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="ml-1 text-sm font-medium text-gray-500 md:ml-2 dark:text-gray-400">
+                            {% if CustomerUser.FirstName or CustomerUser.LastName %}{{ CustomerUser.FirstName }} {{ CustomerUser.LastName }}{% else %}{{ CustomerUser.Login }}{% endif %}
+                        </span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                    {% if CustomerUser.FirstName or CustomerUser.LastName %}{{ CustomerUser.FirstName }} {{ CustomerUser.LastName }}{% else %}{{ CustomerUser.Login }}{% endif %}
+                </h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    {{ t("admin.customer_user_groups.login") }}: {{ CustomerUser.Login }}
+                    {% if CustomerUser.Email %} | {{ t("common.email") }}: {{ CustomerUser.Email }}{% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permissions Form -->
+    <form method="post" action="/admin/customer-user-groups/user/{{ CustomerUser.Login }}" class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">{{ t("admin.customer_user_groups.group_permissions") }}</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin.customer_user_groups.select_groups_for_user") }}</p>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            {{ t("admin.customer_user_groups.group") }}
+                        </th>
+                        {% for perm in PermissionTypes %}
+                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            {{ perm }}
+                        </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% if Groups %}
+                        {% for group in Groups %}
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                {{ group.Name }}
+                            </td>
+                            {% for perm in PermissionTypes %}
+                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                                <input
+                                    type="checkbox"
+                                    name="permissions[{{ group.ID }}][{{ perm }}]"
+                                    value="1"
+                                    {% if group.Permissions[perm] %}checked{% endif %}
+                                    class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded"
+                                >
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="{{ PermissionTypes|length|add:1 }}" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                                {{ t("admin.customer_user_groups.no_groups_available") }}
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="px-4 py-4 sm:px-6 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+            <a
+                href="/admin/customer-user-groups"
+                class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+            >
+                {{ t("common.cancel") }}
+            </a>
+            <button
+                type="submit"
+                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+            >
+                {{ t("common.save") }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

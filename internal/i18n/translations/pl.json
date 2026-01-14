@@ -916,6 +916,36 @@
         "lookups": {
             "description": "Zarządzanie danymi odnośników"
         },
+        "customer_user_groups": {
+            "title": "Grupy Użytkowników Klienta",
+            "description": "Zarządzaj dostępem indywidualnych użytkowników klienta do grup i kolejek",
+            "customer_users": "Użytkownicy Klienta",
+            "groups": "Grupy",
+            "click_user_to_edit": "Kliknij użytkownika klienta, aby edytować jego uprawnienia grupowe",
+            "click_group_to_edit": "Kliknij grupę, aby edytować, którzy użytkownicy klienta mają dostęp",
+            "search_users": "Szukaj użytkowników klienta",
+            "search_placeholder": "Szukaj użytkowników... (* dla wszystkich)",
+            "filter_groups": "Filtruj grupy",
+            "filter_groups_placeholder": "Filtruj grupy...",
+            "no_users_found": "Nie znaleziono użytkowników klienta",
+            "no_groups_found": "Nie znaleziono grup",
+            "adjust_search": "Spróbuj dostosować kryteria wyszukiwania",
+            "help_title": "O Uprawnieniach Grup Użytkowników Klienta",
+            "help_description": "Uprawnienia grup użytkowników klienta kontrolują, które zgłoszenia indywidualni użytkownicy klienta mogą widzieć w portalu klienta.",
+            "help_ro": "Dostęp tylko do odczytu do zgłoszeń w kolejkach przypisanych do tej grupy",
+            "help_rw": "Dostęp do odczytu i zapisu (może tworzyć i aktualizować zgłoszenia)",
+            "edit_user_title": "Uprawnienia Grupowe Użytkownika Klienta",
+            "edit_group_title": "Uprawnienia Użytkowników Klienta Grupy",
+            "login": "Login",
+            "group": "Grupa",
+            "customer_user": "Użytkownik Klienta",
+            "group_permissions": "Uprawnienia Grupy",
+            "user_permissions": "Uprawnienia Użytkownika",
+            "select_groups_for_user": "Wybierz, do których grup ten użytkownik klienta ma dostęp",
+            "select_users_for_group": "Wybierz, którzy użytkownicy klienta mają dostęp do tej grupy",
+            "manage_users_for_group": "Zarządzaj uprawnieniami użytkowników klienta dla tej grupy",
+            "no_groups_available": "Brak dostępnych grup"
+        },
         "common": {
             "actions": {
                 "cancel": "Anuluj",

@@ -916,6 +916,36 @@
         "lookups": {
             "description": "Gerenciar dados de consulta"
         },
+        "customer_user_groups": {
+            "title": "Grupos de Usuários Cliente",
+            "description": "Gerenciar o acesso de usuários cliente individuais a grupos e filas",
+            "customer_users": "Usuários Cliente",
+            "groups": "Grupos",
+            "click_user_to_edit": "Clique em um usuário cliente para editar suas permissões de grupo",
+            "click_group_to_edit": "Clique em um grupo para editar quais usuários cliente têm acesso",
+            "search_users": "Pesquisar usuários cliente",
+            "search_placeholder": "Pesquisar usuários... (* para todos)",
+            "filter_groups": "Filtrar grupos",
+            "filter_groups_placeholder": "Filtrar grupos...",
+            "no_users_found": "Nenhum usuário cliente encontrado",
+            "no_groups_found": "Nenhum grupo encontrado",
+            "adjust_search": "Tente ajustar seus critérios de pesquisa",
+            "help_title": "Sobre Permissões de Grupos de Usuários Cliente",
+            "help_description": "As permissões de grupos de usuários cliente controlam quais tickets os usuários cliente individuais podem ver no portal do cliente.",
+            "help_ro": "Acesso somente leitura a tickets em filas atribuídas a este grupo",
+            "help_rw": "Acesso de leitura e escrita (pode criar e atualizar tickets)",
+            "edit_user_title": "Permissões de Grupo do Usuário Cliente",
+            "edit_group_title": "Permissões de Usuário Cliente do Grupo",
+            "login": "Login",
+            "group": "Grupo",
+            "customer_user": "Usuário Cliente",
+            "group_permissions": "Permissões de Grupo",
+            "user_permissions": "Permissões de Usuário",
+            "select_groups_for_user": "Selecione a quais grupos este usuário cliente tem acesso",
+            "select_users_for_group": "Selecione quais usuários cliente têm acesso a este grupo",
+            "manage_users_for_group": "Gerenciar permissões de usuários cliente para este grupo",
+            "no_groups_available": "Nenhum grupo disponível"
+        },
         "common": {
             "actions": {
                 "cancel": "Cancelar",

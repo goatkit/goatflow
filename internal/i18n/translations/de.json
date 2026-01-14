@@ -917,6 +917,36 @@
         "lookups": {
             "description": "Nachschlagedaten verwalten"
         },
+        "customer_user_groups": {
+            "title": "Kundenbenutzer-Gruppen",
+            "description": "Individuelle Kundenbenutzer-Zugriffsrechte auf Gruppen und Queues verwalten",
+            "customer_users": "Kundenbenutzer",
+            "groups": "Gruppen",
+            "click_user_to_edit": "Klicken Sie auf einen Kundenbenutzer, um seine Gruppenberechtigungen zu bearbeiten",
+            "click_group_to_edit": "Klicken Sie auf eine Gruppe, um zu bearbeiten, welche Kundenbenutzer Zugriff haben",
+            "search_users": "Kundenbenutzer suchen",
+            "search_placeholder": "Benutzer suchen... (* für alle)",
+            "filter_groups": "Gruppen filtern",
+            "filter_groups_placeholder": "Gruppen filtern...",
+            "no_users_found": "Keine Kundenbenutzer gefunden",
+            "no_groups_found": "Keine Gruppen gefunden",
+            "adjust_search": "Versuchen Sie, Ihre Suchkriterien anzupassen",
+            "help_title": "Über Kundenbenutzer-Gruppenberechtigungen",
+            "help_description": "Kundenbenutzer-Gruppenberechtigungen steuern, welche Tickets einzelne Kundenbenutzer im Kundenportal sehen können.",
+            "help_ro": "Lesezugriff auf Tickets in Queues, die dieser Gruppe zugeordnet sind",
+            "help_rw": "Lese- und Schreibzugriff (kann Tickets erstellen und aktualisieren)",
+            "edit_user_title": "Kundenbenutzer-Gruppenberechtigungen",
+            "edit_group_title": "Gruppen-Kundenbenutzer-Berechtigungen",
+            "login": "Anmeldename",
+            "group": "Gruppe",
+            "customer_user": "Kundenbenutzer",
+            "group_permissions": "Gruppenberechtigungen",
+            "user_permissions": "Benutzerberechtigungen",
+            "select_groups_for_user": "Wählen Sie, auf welche Gruppen dieser Kundenbenutzer Zugriff hat",
+            "select_users_for_group": "Wählen Sie, welche Kundenbenutzer Zugriff auf diese Gruppe haben",
+            "manage_users_for_group": "Kundenbenutzer-Berechtigungen für diese Gruppe verwalten",
+            "no_groups_available": "Keine Gruppen verfügbar"
+        },
         "common": {
             "actions": {
                 "cancel": "Abbrechen",

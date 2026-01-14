@@ -916,6 +916,36 @@
         "lookups": {
             "description": "ルックアップデータの管理"
         },
+        "customer_user_groups": {
+            "title": "顧客ユーザーグループ",
+            "description": "個々の顧客ユーザーのグループとキューへのアクセスを管理",
+            "customer_users": "顧客ユーザー",
+            "groups": "グループ",
+            "click_user_to_edit": "顧客ユーザーをクリックしてグループ権限を編集",
+            "click_group_to_edit": "グループをクリックしてアクセス可能な顧客ユーザーを編集",
+            "search_users": "顧客ユーザーを検索",
+            "search_placeholder": "ユーザーを検索...（*で全て表示）",
+            "filter_groups": "グループをフィルター",
+            "filter_groups_placeholder": "グループをフィルター...",
+            "no_users_found": "顧客ユーザーが見つかりません",
+            "no_groups_found": "グループが見つかりません",
+            "adjust_search": "検索条件を調整してください",
+            "help_title": "顧客ユーザーグループ権限について",
+            "help_description": "顧客ユーザーグループ権限は、個々の顧客ユーザーがカスタマーポータルで閲覧できるチケットを制御します。",
+            "help_ro": "このグループに割り当てられたキュー内のチケットへの読み取り専用アクセス",
+            "help_rw": "読み取り/書き込みアクセス（チケットの作成と更新が可能）",
+            "edit_user_title": "顧客ユーザーグループ権限",
+            "edit_group_title": "グループ顧客ユーザー権限",
+            "login": "ログイン",
+            "group": "グループ",
+            "customer_user": "顧客ユーザー",
+            "group_permissions": "グループ権限",
+            "user_permissions": "ユーザー権限",
+            "select_groups_for_user": "この顧客ユーザーがアクセスできるグループを選択",
+            "select_users_for_group": "このグループにアクセスできる顧客ユーザーを選択",
+            "manage_users_for_group": "このグループの顧客ユーザー権限を管理",
+            "no_groups_available": "利用可能なグループがありません"
+        },
         "common": {
             "actions": {
                 "cancel": "キャンセル",
