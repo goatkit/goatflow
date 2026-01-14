@@ -571,6 +571,31 @@ spec:
           handler: handleAdminDynamicFieldScreenConfig
           description: "Dynamic field screen configuration"
 
+        - path: /dynamic-fields/export
+          method: GET
+          handler: handleAdminDynamicFieldExportPage
+          description: "Export dynamic fields page"
+
+        - path: /dynamic-fields/export
+          method: POST
+          handler: handleAdminDynamicFieldExportAction
+          description: "Export selected dynamic fields to YAML"
+
+        - path: /dynamic-fields/import
+          method: GET
+          handler: handleAdminDynamicFieldImportPage
+          description: "Import dynamic fields page"
+
+        - path: /dynamic-fields/import
+          method: POST
+          handler: handleAdminDynamicFieldImportAction
+          description: "Upload and preview YAML file for import"
+
+        - path: /dynamic-fields/import/confirm
+          method: POST
+          handler: handleAdminDynamicFieldImportConfirm
+          description: "Confirm and execute dynamic fields import"
+
         - path: /dynamic-fields/:id
           method: GET
           handler: handleAdminDynamicFieldEdit

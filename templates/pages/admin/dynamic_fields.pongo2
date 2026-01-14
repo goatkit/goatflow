@@ -11,14 +11,30 @@
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Dynamic Fields Management</h1>
                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Manage custom dynamic fields for tickets, articles, and customer data (OTRS AdminDynamicField equivalent)</p>
             </div>
-            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex gap-3">
+            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex flex-wrap gap-3">
+                <a href="/admin/dynamic-fields/import"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+                >
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    {{ t("admin.dynamic_fields.import_export.import") }}
+                </a>
+                <a href="/admin/dynamic-fields/export"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+                >
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    {{ t("admin.dynamic_fields.import_export.export") }}
+                </a>
                 <a href="/admin/dynamic-fields/screens"
                     class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
                 >
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
                     </svg>
-                    Screen Config
+                    {{ t("admin.dynamic_fields.screen_config") }}
                 </a>
                 <a href="/admin/dynamic-fields/new"
                     class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
@@ -26,7 +42,7 @@
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
-                    Add Dynamic Field
+                    {{ t("admin.dynamic_fields.add_field") }}
                 </a>
             </div>
         </div>
@@ -95,7 +111,7 @@
                                     {{ field.Label }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                         {% if field.FieldType == 'Text' %}bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100{% endif %}
                                         {% if field.FieldType == 'TextArea' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100{% endif %}
                                         {% if field.FieldType == 'Dropdown' %}bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100{% endif %}
@@ -179,7 +195,7 @@
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             {% for fieldType in FieldTypes %}
             <div class="flex items-center space-x-2">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                     {% if fieldType == 'Text' %}bg-blue-100 text-blue-800{% endif %}
                     {% if fieldType == 'TextArea' %}bg-indigo-100 text-indigo-800{% endif %}
                     {% if fieldType == 'Dropdown' %}bg-purple-100 text-purple-800{% endif %}
