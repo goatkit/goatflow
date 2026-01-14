@@ -84,6 +84,13 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - Handles all dynamic field types: Text, Textarea, Checkbox, Date, DateTime, Dropdown, Multiselect
   - Routes: `/admin/dynamic-fields/export`, `/admin/dynamic-fields/import`, `/admin/dynamic-fields/import/confirm`
   - Files: `internal/api/admin_dynamic_fields_handlers.go`, `templates/pages/admin/dynamic_field_export.pongo2`, `templates/pages/admin/dynamic_field_import.pongo2`
+- **Dynamic Fields Auto-Configuration**: Simplified field creation with automatic default configuration (OTRS AdminDynamicFieldAutoConfig equivalent)
+  - Auto-config checkbox for supported field types: Text, TextArea, Checkbox, Date, DateTime
+  - Automatically applies sensible defaults (MaxLength=200 for Text, Rows=4/Cols=60 for TextArea, YearsInPast/Future=5 for dates)
+  - Hides type-specific configuration UI when auto-config is enabled
+  - Auto-enabled by default for new fields of supported types
+  - Dropdown and Multiselect still require manual PossibleValues configuration
+  - Files: `internal/api/dynamic_field_types.go`, `templates/pages/admin/dynamic_field_form.pongo2`
 
 ### Changed
 - **Translation Coverage Test Output**: `TestTranslationCompleteness` now prints a formatted ASCII table showing all language coverage with checkmarks for 100% complete languages

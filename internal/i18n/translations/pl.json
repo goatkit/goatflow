@@ -789,7 +789,10 @@
                 "errors": "Błędy",
                 "screens_imported": "Zaimportowano konfiguracje ekranów",
                 "back_to_list": "Powrót do pól dynamicznych"
-            }
+            },
+            "use_auto_config": "Użyj automatycznej konfiguracji",
+            "auto_config_description": "Zastosuj rozsądne ustawienia domyślne dla tego typu pola",
+            "no_configuration_needed": "Ten typ pola użyje automatycznej konfiguracji domyślnej. Nie są wymagane dodatkowe ustawienia."
         },
         "dashboard": "Panel administratora",
         "dashboard_description": "Przegląd administracji systemu",

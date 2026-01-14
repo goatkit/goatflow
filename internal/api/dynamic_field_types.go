@@ -274,3 +274,47 @@ func (df *DynamicField) GetValueColumn() string {
 		return "value_text"
 	}
 }
+
+// SupportsAutoConfig returns true if the field type can use automatic configuration
+// with sensible defaults, without requiring manual configuration input.
+// Dropdown and Multiselect require PossibleValues and cannot use auto-config.
+func SupportsAutoConfig(fieldType string) bool {
+	switch fieldType {
+	case DFTypeText, DFTypeTextArea, DFTypeCheckbox, DFTypeDate, DFTypeDateTime:
+		return true
+	default:
+		return false
+	}
+}
+
+// DefaultDynamicFieldConfig returns sensible default configuration for each field type.
+// Used when auto-config mode is enabled to skip manual configuration.
+func DefaultDynamicFieldConfig(fieldType string) *DynamicFieldConfig {
+	switch fieldType {
+	case DFTypeText:
+		return &DynamicFieldConfig{
+			MaxLength: 200,
+		}
+	case DFTypeTextArea:
+		return &DynamicFieldConfig{
+			Rows: 4,
+			Cols: 60,
+		}
+	case DFTypeCheckbox:
+		return &DynamicFieldConfig{
+			DefaultValue: "0",
+		}
+	case DFTypeDate:
+		return &DynamicFieldConfig{
+			YearsInPast:   5,
+			YearsInFuture: 5,
+		}
+	case DFTypeDateTime:
+		return &DynamicFieldConfig{
+			YearsInPast:   5,
+			YearsInFuture: 5,
+		}
+	default:
+		return &DynamicFieldConfig{}
+	}
+}

@@ -789,7 +789,10 @@
                 "errors": "Fehler",
                 "screens_imported": "Bildschirmkonfigurationen importiert",
                 "back_to_list": "Zurück zu Dynamische Felder"
-            }
+            },
+            "use_auto_config": "Automatische Konfiguration verwenden",
+            "auto_config_description": "Sinnvolle Standardeinstellungen für diesen Feldtyp anwenden",
+            "no_configuration_needed": "Dieser Feldtyp verwendet automatische Standardkonfiguration. Keine zusätzlichen Einstellungen erforderlich."
         },
         "dashboard": "Admin-Dashboard",
         "dashboard_description": "Übersicht der Systemadministration",

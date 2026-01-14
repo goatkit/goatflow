@@ -332,3 +332,110 @@ func TestDynamicFieldConfig_NilConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, df.ConfigRaw)
 }
+
+func TestSupportsAutoConfig(t *testing.T) {
+	tests := []struct {
+		fieldType string
+		want      bool
+	}{
+		{DFTypeText, true},
+		{DFTypeTextArea, true},
+		{DFTypeCheckbox, true},
+		{DFTypeDate, true},
+		{DFTypeDateTime, true},
+		{DFTypeDropdown, false},
+		{DFTypeMultiselect, false},
+		{"InvalidType", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.fieldType, func(t *testing.T) {
+			got := SupportsAutoConfig(tt.fieldType)
+			assert.Equal(t, tt.want, got, "SupportsAutoConfig(%s)", tt.fieldType)
+		})
+	}
+}
+
+func TestDefaultDynamicFieldConfig(t *testing.T) {
+	tests := []struct {
+		fieldType string
+		check     func(*testing.T, *DynamicFieldConfig)
+	}{
+		{
+			fieldType: DFTypeText,
+			check: func(t *testing.T, c *DynamicFieldConfig) {
+				assert.Equal(t, 200, c.MaxLength, "Text should have MaxLength=200")
+			},
+		},
+		{
+			fieldType: DFTypeTextArea,
+			check: func(t *testing.T, c *DynamicFieldConfig) {
+				assert.Equal(t, 4, c.Rows, "TextArea should have Rows=4")
+				assert.Equal(t, 60, c.Cols, "TextArea should have Cols=60")
+			},
+		},
+		{
+			fieldType: DFTypeCheckbox,
+			check: func(t *testing.T, c *DynamicFieldConfig) {
+				assert.Equal(t, "0", c.DefaultValue, "Checkbox should default to unchecked")
+			},
+		},
+		{
+			fieldType: DFTypeDate,
+			check: func(t *testing.T, c *DynamicFieldConfig) {
+				assert.Equal(t, 5, c.YearsInPast, "Date should have YearsInPast=5")
+				assert.Equal(t, 5, c.YearsInFuture, "Date should have YearsInFuture=5")
+			},
+		},
+		{
+			fieldType: DFTypeDateTime,
+			check: func(t *testing.T, c *DynamicFieldConfig) {
+				assert.Equal(t, 5, c.YearsInPast, "DateTime should have YearsInPast=5")
+				assert.Equal(t, 5, c.YearsInFuture, "DateTime should have YearsInFuture=5")
+			},
+		},
+		{
+			fieldType: DFTypeDropdown,
+			check: func(t *testing.T, c *DynamicFieldConfig) {
+				// Dropdown returns empty config (requires manual PossibleValues)
+				assert.Empty(t, c.PossibleValues, "Dropdown should have empty PossibleValues")
+			},
+		},
+		{
+			fieldType: DFTypeMultiselect,
+			check: func(t *testing.T, c *DynamicFieldConfig) {
+				// Multiselect returns empty config (requires manual PossibleValues)
+				assert.Empty(t, c.PossibleValues, "Multiselect should have empty PossibleValues")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.fieldType, func(t *testing.T) {
+			config := DefaultDynamicFieldConfig(tt.fieldType)
+			require.NotNil(t, config, "DefaultDynamicFieldConfig should never return nil")
+			tt.check(t, config)
+		})
+	}
+}
+
+func TestDefaultDynamicFieldConfig_ValidatesWithField(t *testing.T) {
+	// Verify that auto-config defaults produce valid fields for supported types
+	supportedTypes := []string{DFTypeText, DFTypeTextArea, DFTypeCheckbox, DFTypeDate, DFTypeDateTime}
+
+	for _, fieldType := range supportedTypes {
+		t.Run(fieldType, func(t *testing.T) {
+			config := DefaultDynamicFieldConfig(fieldType)
+			field := &DynamicField{
+				Name:       "AutoConfigTest",
+				Label:      "Auto Config Test",
+				FieldType:  fieldType,
+				ObjectType: DFObjectTicket,
+				Config:     config,
+			}
+
+			err := field.Validate()
+			assert.NoError(t, err, "Field with auto-config defaults should pass validation")
+		})
+	}
+}

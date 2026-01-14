@@ -789,7 +789,10 @@
                 "errors": "错误",
                 "screens_imported": "已导入屏幕配置",
                 "back_to_list": "返回动态字段"
-            }
+            },
+            "use_auto_config": "使用自动配置",
+            "auto_config_description": "为此字段类型应用合理的默认设置",
+            "no_configuration_needed": "此字段类型将使用自动默认配置。无需额外设置。"
         },
         "dashboard": "管理控制台",
         "dashboard_description": "系统管理概览",

@@ -789,7 +789,10 @@
                 "errors": "Errores",
                 "screens_imported": "Configuraciones de pantalla importadas",
                 "back_to_list": "Volver a campos dinámicos"
-            }
+            },
+            "use_auto_config": "Usar configuración automática",
+            "auto_config_description": "Aplicar configuración predeterminada para este tipo de campo",
+            "no_configuration_needed": "Este tipo de campo usará configuración automática predeterminada. No se requieren ajustes adicionales."
         },
         "dashboard": "Panel de Administración",
         "dashboard_description": "Resumen de la administración del sistema",

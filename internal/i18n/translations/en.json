@@ -789,7 +789,10 @@
                 "errors": "Errors",
                 "screens_imported": "Screen configurations imported",
                 "back_to_list": "Back to Dynamic Fields"
-            }
+            },
+            "use_auto_config": "Use automatic configuration",
+            "auto_config_description": "Apply sensible default settings for this field type",
+            "no_configuration_needed": "This field type will use automatic default configuration. No additional settings are required."
         },
         "dashboard": "Admin Dashboard",
         "dashboard_description": "Overview of system administration",

@@ -285,53 +285,68 @@ func parseDynamicFieldForm(c *gin.Context) (*DynamicField, error) {
 		validID = 1
 	}
 
-	config := &DynamicFieldConfig{
-		DefaultValue: c.PostForm("default_value"),
-	}
+	// Check if auto-config mode is enabled for supported field types
+	autoConfig := c.PostForm("auto_config") == "1"
 
-	switch fieldType {
-	case DFTypeDropdown, DFTypeMultiselect:
-		possibleValues := c.PostForm("possible_values")
-		if possibleValues != "" {
-			lines := strings.Split(possibleValues, "\n")
-			values := make(map[string]string)
-			for _, line := range lines {
-				line = strings.TrimSpace(line)
-				if line != "" {
-					if strings.Contains(line, "=") {
-						parts := strings.SplitN(line, "=", 2)
-						values[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
-					} else {
-						values[line] = line
+	var config *DynamicFieldConfig
+
+	if autoConfig && SupportsAutoConfig(fieldType) {
+		// Use automatic default configuration
+		config = DefaultDynamicFieldConfig(fieldType)
+		// Preserve any default value that was set
+		if defaultVal := c.PostForm("default_value"); defaultVal != "" {
+			config.DefaultValue = defaultVal
+		}
+	} else {
+		// Manual configuration - parse all type-specific fields
+		config = &DynamicFieldConfig{
+			DefaultValue: c.PostForm("default_value"),
+		}
+
+		switch fieldType {
+		case DFTypeDropdown, DFTypeMultiselect:
+			possibleValues := c.PostForm("possible_values")
+			if possibleValues != "" {
+				lines := strings.Split(possibleValues, "\n")
+				values := make(map[string]string)
+				for _, line := range lines {
+					line = strings.TrimSpace(line)
+					if line != "" {
+						if strings.Contains(line, "=") {
+							parts := strings.SplitN(line, "=", 2)
+							values[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+						} else {
+							values[line] = line
+						}
 					}
 				}
+				config.PossibleValues = values
 			}
-			config.PossibleValues = values
-		}
-		if c.PostForm("possible_none") == "1" {
-			config.PossibleNone = 1
-		}
-		if c.PostForm("translatable_values") == "1" {
-			config.TranslatableValues = 1
-		}
+			if c.PostForm("possible_none") == "1" {
+				config.PossibleNone = 1
+			}
+			if c.PostForm("translatable_values") == "1" {
+				config.TranslatableValues = 1
+			}
 
-	case DFTypeDate, DFTypeDateTime:
-		config.YearsInPast, _ = strconv.Atoi(c.PostForm("years_in_past"))     //nolint:errcheck // Defaults to 0
-		config.YearsInFuture, _ = strconv.Atoi(c.PostForm("years_in_future")) //nolint:errcheck // Defaults to 0
-		config.DateRestriction = c.PostForm("date_restriction")
+		case DFTypeDate, DFTypeDateTime:
+			config.YearsInPast, _ = strconv.Atoi(c.PostForm("years_in_past"))     //nolint:errcheck // Defaults to 0
+			config.YearsInFuture, _ = strconv.Atoi(c.PostForm("years_in_future")) //nolint:errcheck // Defaults to 0
+			config.DateRestriction = c.PostForm("date_restriction")
 
-	case DFTypeText:
-		if regexStr := c.PostForm("regex_list"); regexStr != "" {
-			config.RegExList = []RegEx{{Value: regexStr}}
-		}
-		config.Link = c.PostForm("link")
+		case DFTypeText:
+			if regexStr := c.PostForm("regex_list"); regexStr != "" {
+				config.RegExList = []RegEx{{Value: regexStr}}
+			}
+			config.Link = c.PostForm("link")
 
-	case DFTypeTextArea:
-		if rows := c.PostForm("rows"); rows != "" {
-			config.Rows, _ = strconv.Atoi(rows) //nolint:errcheck // Defaults to 0
-		}
-		if cols := c.PostForm("cols"); cols != "" {
-			config.Cols, _ = strconv.Atoi(cols) //nolint:errcheck // Defaults to 0
+		case DFTypeTextArea:
+			if rows := c.PostForm("rows"); rows != "" {
+				config.Rows, _ = strconv.Atoi(rows) //nolint:errcheck // Defaults to 0
+			}
+			if cols := c.PostForm("cols"); cols != "" {
+				config.Cols, _ = strconv.Atoi(cols) //nolint:errcheck // Defaults to 0
+			}
 		}
 	}
 

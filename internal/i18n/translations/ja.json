@@ -789,7 +789,10 @@
                 "errors": "エラー",
                 "screens_imported": "インポートされた画面設定",
                 "back_to_list": "ダイナミックフィールドに戻る"
-            }
+            },
+            "use_auto_config": "自動設定を使用",
+            "auto_config_description": "このフィールドタイプに適切なデフォルト設定を適用",
+            "no_configuration_needed": "このフィールドタイプは自動デフォルト設定を使用します。追加の設定は不要です。"
         },
         "dashboard": "管理ダッシュボード",
         "dashboard_description": "システム管理の概要",

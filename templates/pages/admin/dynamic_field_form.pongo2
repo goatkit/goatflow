@@ -46,7 +46,7 @@
             <!-- Basic Information -->
             <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Basic Information</h3>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Name -->
                     <div>
@@ -160,11 +160,36 @@
                         </select>
                     </div>
                 </div>
+
+                <!-- Auto-Config Option (only for supported field types) -->
+                <div x-show="supportsAutoConfig()" class="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <label class="flex items-center">
+                        <input
+                            type="checkbox"
+                            name="auto_config"
+                            value="1"
+                            x-model="autoConfig"
+                            class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"
+                        >
+                        <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("admin.dynamic_fields.use_auto_config") }}</span>
+                    </label>
+                    <p class="mt-1 ml-6 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.auto_config_description") }}</p>
+                </div>
             </div>
 
             <!-- Type-Specific Configuration -->
             <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Field Configuration</h3>
+
+                <!-- Auto-config info message -->
+                <div x-show="autoConfig && supportsAutoConfig()" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div class="flex">
+                        <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                        </svg>
+                        <p class="ml-3 text-sm text-blue-700 dark:text-blue-300">{{ t("admin.dynamic_fields.no_configuration_needed") }}</p>
+                    </div>
+                </div>
 
                 <!-- Default Value (all types) -->
                 <div class="mb-6">
@@ -180,159 +205,162 @@
                     >
                 </div>
 
-                <!-- Dropdown/Multiselect Options -->
-                <div x-show="fieldType === 'Dropdown' || fieldType === 'Multiselect'" class="space-y-4">
-                    <div>
-                        <label for="possible_values" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Possible Values <span class="text-red-500">*</span>
-                        </label>
-                        <textarea
-                            name="possible_values"
-                            id="possible_values"
-                            rows="6"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm font-mono"
-                            placeholder="Option1&#10;Option2&#10;key=Display Value"
-                        >{% if Field.Config and Field.Config.PossibleValues %}{% for key, value in Field.Config.PossibleValues %}{% if key == value %}{{ value }}{% else %}{{ key }}={{ value }}{% endif %}
+                <!-- Type-specific configuration (hidden when auto-config enabled for supported types) -->
+                <div x-show="!autoConfig || !supportsAutoConfig()">
+                    <!-- Dropdown/Multiselect Options -->
+                    <div x-show="fieldType === 'Dropdown' || fieldType === 'Multiselect'" class="space-y-4">
+                        <div>
+                            <label for="possible_values" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Possible Values <span class="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                name="possible_values"
+                                id="possible_values"
+                                rows="6"
+                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm font-mono"
+                                placeholder="Option1&#10;Option2&#10;key=Display Value"
+                            >{% if Field.Config and Field.Config.PossibleValues %}{% for key, value in Field.Config.PossibleValues %}{% if key == value %}{{ value }}{% else %}{{ key }}={{ value }}{% endif %}
 {% endfor %}{% endif %}</textarea>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">One option per line. Use key=value format for different display text.</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">One option per line. Use key=value format for different display text.</p>
+                        </div>
+
+                        <div class="flex items-center space-x-6">
+                            <label class="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    name="possible_none"
+                                    value="1"
+                                    {% if Field.Config and Field.Config.PossibleNone == 1 %}checked{% endif %}
+                                    class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"
+                                >
+                                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Allow empty selection</span>
+                            </label>
+
+                            <label class="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    name="translatable_values"
+                                    value="1"
+                                    {% if Field.Config and Field.Config.TranslatableValues == 1 %}checked{% endif %}
+                                    class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"
+                                >
+                                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Values are translatable</span>
+                            </label>
+                        </div>
                     </div>
 
-                    <div class="flex items-center space-x-6">
-                        <label class="flex items-center">
-                            <input
-                                type="checkbox"
-                                name="possible_none"
-                                value="1"
-                                {% if Field.Config and Field.Config.PossibleNone == 1 %}checked{% endif %}
-                                class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"
-                            >
-                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Allow empty selection</span>
-                        </label>
-
-                        <label class="flex items-center">
-                            <input
-                                type="checkbox"
-                                name="translatable_values"
-                                value="1"
-                                {% if Field.Config and Field.Config.TranslatableValues == 1 %}checked{% endif %}
-                                class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"
-                            >
-                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Values are translatable</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Text Field Options -->
-                <div x-show="fieldType === 'Text'" class="space-y-4">
-                    <div>
-                        <label for="regex_list" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Validation Pattern (RegEx)
-                        </label>
-                        <input
-                            type="text"
-                            name="regex_list"
-                            id="regex_list"
-                            value="{% if Field.Config and Field.Config.RegExList %}{{ Field.Config.RegExList.0.Value }}{% endif %}"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm font-mono"
-                            placeholder="^[A-Z]{2}[0-9]{6}$"
-                        >
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional regular expression for validation</p>
-                    </div>
-
-                    <div>
-                        <label for="link" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Link Template
-                        </label>
-                        <input
-                            type="text"
-                            name="link"
-                            id="link"
-                            value="{% if Field.Config %}{{ Field.Config.Link }}{% endif %}"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                            placeholder="https://example.com/lookup?id=[% Data.Value | uri %]"
-                        >
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Template to create clickable links from field values</p>
-                    </div>
-                </div>
-
-                <!-- TextArea Options -->
-                <div x-show="fieldType === 'TextArea'" class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label for="rows" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Rows
-                        </label>
-                        <input
-                            type="number"
-                            name="rows"
-                            id="rows"
-                            value="{% if Field.Config and Field.Config.Rows %}{{ Field.Config.Rows }}{% else %}4{% endif %}"
-                            min="2"
-                            max="20"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                        >
-                    </div>
-
-                    <div>
-                        <label for="cols" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Columns
-                        </label>
-                        <input
-                            type="number"
-                            name="cols"
-                            id="cols"
-                            value="{% if Field.Config and Field.Config.Cols %}{{ Field.Config.Cols }}{% else %}60{% endif %}"
-                            min="20"
-                            max="200"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                        >
-                    </div>
-                </div>
-
-                <!-- Date/DateTime Options -->
-                <div x-show="fieldType === 'Date' || fieldType === 'DateTime'" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
+                    <!-- Text Field Options -->
+                    <div x-show="fieldType === 'Text'" class="space-y-4">
                         <div>
-                            <label for="years_in_past" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Years in Past
+                            <label for="regex_list" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Validation Pattern (RegEx)
+                            </label>
+                            <input
+                                type="text"
+                                name="regex_list"
+                                id="regex_list"
+                                value="{% if Field.Config and Field.Config.RegExList %}{{ Field.Config.RegExList.0.Value }}{% endif %}"
+                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm font-mono"
+                                placeholder="^[A-Z]{2}[0-9]{6}$"
+                            >
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional regular expression for validation</p>
+                        </div>
+
+                        <div>
+                            <label for="link" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Link Template
+                            </label>
+                            <input
+                                type="text"
+                                name="link"
+                                id="link"
+                                value="{% if Field.Config %}{{ Field.Config.Link }}{% endif %}"
+                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                placeholder="https://example.com/lookup?id=[% Data.Value | uri %]"
+                            >
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Template to create clickable links from field values</p>
+                        </div>
+                    </div>
+
+                    <!-- TextArea Options -->
+                    <div x-show="fieldType === 'TextArea'" class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="rows" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Rows
                             </label>
                             <input
                                 type="number"
-                                name="years_in_past"
-                                id="years_in_past"
-                                value="{% if Field.Config and Field.Config.YearsInPast %}{{ Field.Config.YearsInPast }}{% else %}5{% endif %}"
-                                min="0"
+                                name="rows"
+                                id="rows"
+                                value="{% if Field.Config and Field.Config.Rows %}{{ Field.Config.Rows }}{% else %}4{% endif %}"
+                                min="2"
+                                max="20"
                                 class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
                             >
                         </div>
 
                         <div>
-                            <label for="years_in_future" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Years in Future
+                            <label for="cols" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Columns
                             </label>
                             <input
                                 type="number"
-                                name="years_in_future"
-                                id="years_in_future"
-                                value="{% if Field.Config and Field.Config.YearsInFuture %}{{ Field.Config.YearsInFuture }}{% else %}5{% endif %}"
-                                min="0"
+                                name="cols"
+                                id="cols"
+                                value="{% if Field.Config and Field.Config.Cols %}{{ Field.Config.Cols }}{% else %}60{% endif %}"
+                                min="20"
+                                max="200"
                                 class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
                             >
                         </div>
                     </div>
 
-                    <div>
-                        <label for="date_restriction" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Date Restriction
-                        </label>
-                        <select
-                            name="date_restriction"
-                            id="date_restriction"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                        >
-                            <option value="" {% if not Field.Config or not Field.Config.DateRestriction %}selected{% endif %}>None</option>
-                            <option value="DisablePastDates" {% if Field.Config and Field.Config.DateRestriction == 'DisablePastDates' %}selected{% endif %}>Disable Past Dates</option>
-                            <option value="DisableFutureDates" {% if Field.Config and Field.Config.DateRestriction == 'DisableFutureDates' %}selected{% endif %}>Disable Future Dates</option>
-                        </select>
+                    <!-- Date/DateTime Options -->
+                    <div x-show="fieldType === 'Date' || fieldType === 'DateTime'" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="years_in_past" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Years in Past
+                                </label>
+                                <input
+                                    type="number"
+                                    name="years_in_past"
+                                    id="years_in_past"
+                                    value="{% if Field.Config and Field.Config.YearsInPast %}{{ Field.Config.YearsInPast }}{% else %}5{% endif %}"
+                                    min="0"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                >
+                            </div>
+
+                            <div>
+                                <label for="years_in_future" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Years in Future
+                                </label>
+                                <input
+                                    type="number"
+                                    name="years_in_future"
+                                    id="years_in_future"
+                                    value="{% if Field.Config and Field.Config.YearsInFuture %}{{ Field.Config.YearsInFuture }}{% else %}5{% endif %}"
+                                    min="0"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                >
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="date_restriction" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Date Restriction
+                            </label>
+                            <select
+                                name="date_restriction"
+                                id="date_restriction"
+                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            >
+                                <option value="" {% if not Field.Config or not Field.Config.DateRestriction %}selected{% endif %}>None</option>
+                                <option value="DisablePastDates" {% if Field.Config and Field.Config.DateRestriction == 'DisablePastDates' %}selected{% endif %}>Disable Past Dates</option>
+                                <option value="DisableFutureDates" {% if Field.Config and Field.Config.DateRestriction == 'DisableFutureDates' %}selected{% endif %}>Disable Future Dates</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -357,8 +385,26 @@
 
 <script>
 function dynamicFieldForm() {
+    const isNew = {{ IsNew|yesno:"true,false" }};
+    const initialFieldType = '{{ Field.FieldType }}' || 'Text';
+    const autoConfigTypes = ['Text', 'TextArea', 'Checkbox', 'Date', 'DateTime'];
+
     return {
-        fieldType: '{{ Field.FieldType }}' || 'Text'
+        fieldType: initialFieldType,
+        autoConfig: isNew && autoConfigTypes.includes(initialFieldType),
+
+        supportsAutoConfig() {
+            return autoConfigTypes.includes(this.fieldType);
+        },
+
+        init() {
+            // Watch for field type changes to auto-enable for supported types on new fields
+            this.$watch('fieldType', (newType) => {
+                if (isNew) {
+                    this.autoConfig = autoConfigTypes.includes(newType);
+                }
+            });
+        }
     };
 }
 

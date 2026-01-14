@@ -789,7 +789,10 @@
                 "errors": "Qagh",
                 "screens_imported": "Hevlu'ta' HaSta chenmoHwI'",
                 "back_to_list": "yItlhegh DuHIvDI' chegh"
-            }
+            },
+            "use_auto_config": "chenmoHwI' motlh lo'",
+            "auto_config_description": "yItlhegh Segh motlh chenmoHwI' lo'",
+            "no_configuration_needed": "yItlhegh Segh chenmoHwI' motlh lo'. pagh chenmoHwI' chel neH."
         },
         "dashboard": "SeHwI' HaSta",
         "dashboard_description": "pat SeH legh",

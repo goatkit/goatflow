@@ -789,7 +789,10 @@
                 "errors": "Erreurs",
                 "screens_imported": "Configurations d'écran importées",
                 "back_to_list": "Retour aux champs dynamiques"
-            }
+            },
+            "use_auto_config": "Utiliser la configuration automatique",
+            "auto_config_description": "Appliquer les paramètres par défaut pour ce type de champ",
+            "no_configuration_needed": "Ce type de champ utilisera la configuration automatique par défaut. Aucun paramètre supplémentaire n'est requis."
         },
         "dashboard": "Tableau de bord administrateur",
         "dashboard_description": "Vue d'ensemble de l'administration système",

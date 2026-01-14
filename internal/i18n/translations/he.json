@@ -789,7 +789,10 @@
                 "errors": "שגיאות",
                 "screens_imported": "תצורות מסך שיובאו",
                 "back_to_list": "חזרה לשדות דינמיים"
-            }
+            },
+            "use_auto_config": "השתמש בהגדרה אוטומטית",
+            "auto_config_description": "החל הגדרות ברירת מחדל סבירות לסוג שדה זה",
+            "no_configuration_needed": "סוג שדה זה ישתמש בהגדרה אוטומטית ברירת מחדל. לא נדרשות הגדרות נוספות."
         },
         "dashboard": "לוח בקרה מנהל",
         "dashboard_description": "סקירה כללית של ניהול מערכת",
