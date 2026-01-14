@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// SubjectTokenFilter extracts Znuny-style "[Ticket#123]" tokens from the Subject header.
+// SubjectTokenFilter extracts OTRS-style "[Ticket#123]" tokens from the Subject header.
 type SubjectTokenFilter struct {
 	logger  *log.Logger
 	decoder *mime.WordDecoder
@@ -26,7 +26,7 @@ func NewSubjectTokenFilter(logger *log.Logger) *SubjectTokenFilter {
 // ID implements Filter.
 func (f *SubjectTokenFilter) ID() string { return "followup_subject_token" }
 
-// Apply scans the subject for Znuny-style ticket tokens and stores the ticket number annotation.
+// Apply scans the subject for OTRS-style ticket tokens and stores the ticket number annotation.
 func (f *SubjectTokenFilter) Apply(ctx context.Context, m *MessageContext) error {
 	if m == nil || m.Message == nil || len(m.Message.Raw) == 0 {
 		return nil

@@ -347,6 +347,186 @@
                             </div>
                         </div>
 
+                    <!-- WebserviceDropdown/WebserviceMultiselect Options -->
+                    <div x-show="fieldType === 'WebserviceDropdown' || fieldType === 'WebserviceMultiselect'" class="space-y-4">
+                        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+                            <p class="text-sm text-blue-700 dark:text-blue-300">
+                                {{ t("admin.dynamic_fields.webservice.info") }}
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Webservice Selection -->
+                            <div>
+                                <label for="webservice" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.dynamic_fields.webservice.webservice") }} <span class="text-red-500">*</span>
+                                </label>
+                                <select
+                                    name="webservice"
+                                    id="webservice"
+                                    x-model="webservice"
+                                    @change="loadInvokers()"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                >
+                                    <option value="">{{ t("common.select") }}...</option>
+                                    {% for ws in Webservices %}
+                                    <option value="{{ ws.Name }}" {% if Field.Config and Field.Config.Webservice == ws.Name %}selected{% endif %}>{{ ws.Name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.webservice_hint") }}</p>
+                            </div>
+
+                            <!-- Search Invoker -->
+                            <div>
+                                <label for="invoker_search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.dynamic_fields.webservice.invoker_search") }} <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="invoker_search"
+                                    id="invoker_search"
+                                    value="{% if Field.Config %}{{ Field.Config.InvokerSearch }}{% endif %}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    placeholder="Search"
+                                >
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.invoker_search_hint") }}</p>
+                            </div>
+
+                            <!-- Get Invoker -->
+                            <div>
+                                <label for="invoker_get" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.dynamic_fields.webservice.invoker_get") }}
+                                </label>
+                                <input
+                                    type="text"
+                                    name="invoker_get"
+                                    id="invoker_get"
+                                    value="{% if Field.Config %}{{ Field.Config.InvokerGet }}{% endif %}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    placeholder="Get"
+                                >
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.invoker_get_hint") }}</p>
+                            </div>
+
+                            <!-- Stored Value -->
+                            <div>
+                                <label for="stored_value" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.dynamic_fields.webservice.stored_value") }} <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="stored_value"
+                                    id="stored_value"
+                                    value="{% if Field.Config %}{{ Field.Config.StoredValue }}{% endif %}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    placeholder="ID"
+                                >
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.stored_value_hint") }}</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- Displayed Values -->
+                            <div>
+                                <label for="displayed_values" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.dynamic_fields.webservice.displayed_values") }} <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="displayed_values"
+                                    id="displayed_values"
+                                    value="{% if Field.Config %}{{ Field.Config.DisplayedValues }}{% endif %}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    placeholder="Name, Code"
+                                >
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.displayed_values_hint") }}</p>
+                            </div>
+
+                            <!-- Displayed Values Separator -->
+                            <div>
+                                <label for="displayed_values_separator" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.dynamic_fields.webservice.separator") }}
+                                </label>
+                                <input
+                                    type="text"
+                                    name="displayed_values_separator"
+                                    id="displayed_values_separator"
+                                    value="{% if Field.Config and Field.Config.DisplayedValuesSeparator %}{{ Field.Config.DisplayedValuesSeparator }}{% else %} - {% endif %}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    placeholder=" - "
+                                >
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.separator_hint") }}</p>
+                            </div>
+
+                            <!-- Autocomplete Min Length -->
+                            <div>
+                                <label for="autocomplete_min_length" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.dynamic_fields.webservice.autocomplete_min") }}
+                                </label>
+                                <input
+                                    type="number"
+                                    name="autocomplete_min_length"
+                                    id="autocomplete_min_length"
+                                    value="{% if Field.Config and Field.Config.AutocompleteMinLength %}{{ Field.Config.AutocompleteMinLength }}{% else %}3{% endif %}"
+                                    min="1"
+                                    max="10"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                >
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.autocomplete_min_hint") }}</p>
+                            </div>
+
+                            <!-- Result Limit -->
+                            <div>
+                                <label for="limit" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.dynamic_fields.webservice.limit") }}
+                                </label>
+                                <input
+                                    type="number"
+                                    name="limit"
+                                    id="limit"
+                                    value="{% if Field.Config and Field.Config.Limit %}{{ Field.Config.Limit }}{% else %}20{% endif %}"
+                                    min="1"
+                                    max="100"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                >
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.limit_hint") }}</p>
+                            </div>
+
+                            <!-- Cache TTL -->
+                            <div>
+                                <label for="cache_ttl" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.dynamic_fields.webservice.cache_ttl") }}
+                                </label>
+                                <input
+                                    type="number"
+                                    name="cache_ttl"
+                                    id="cache_ttl"
+                                    value="{% if Field.Config and Field.Config.CacheTTL %}{{ Field.Config.CacheTTL }}{% else %}60{% endif %}"
+                                    min="0"
+                                    max="3600"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                >
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.cache_ttl_hint") }}</p>
+                            </div>
+                        </div>
+
+                        {% if not IsNew %}
+                        <!-- Test Button -->
+                        <div class="mt-4">
+                            <button
+                                type="button"
+                                onclick="testWebserviceConfig({{ Field.ID }})"
+                                class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                            >
+                                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                {{ t("admin.dynamic_fields.webservice.test") }}
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+
                         <div>
                             <label for="date_restriction" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Date Restriction

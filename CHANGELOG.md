@@ -91,6 +91,18 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - Auto-enabled by default for new fields of supported types
   - Dropdown and Multiselect still require manual PossibleValues configuration
   - Files: `internal/api/dynamic_field_types.go`, `templates/pages/admin/dynamic_field_form.pongo2`
+- **GenericInterface Webservice Framework**: Full implementation of OTRS GenericInterface for external webservice integration
+  - **Webservice Repository**: CRUD operations for `gi_webservice_config` table with YAML config serialization, history tracking, and restore functionality
+  - **GenericInterface Service**: Core execution engine with transport abstraction, invoker routing, and request/response data mapping
+  - **REST Transport**: Full HTTP REST support with GET/POST/PUT/DELETE, path parameter substitution (`:id`), query params, JSON body, Basic/APIKey authentication, custom headers
+  - **SOAP Transport**: Full SOAP 1.1 support with envelope construction, SOAPAction header handling, namespace prefixes, fault parsing, Basic authentication
+  - **WebserviceDropdown/WebserviceMultiselect Dynamic Fields**: New field types for autocomplete-based selection backed by external webservices
+  - **WebserviceFieldService**: Autocomplete search, display value retrieval, result caching, multi-value support for multiselect fields
+  - **OTRS-Compatible Response Format**: `StoredValue`/`DisplayValue` JSON field names matching OTRS expected format
+  - **Admin UI**: Webservice management at `/admin/webservices` with create/edit/delete, connection testing, and configuration history
+  - **AJAX Endpoints**: `/admin/api/dynamic-fields/:id/autocomplete` for field autocomplete, `/admin/api/dynamic-fields/:id/webservice-test` for config testing
+  - **Comprehensive Integration Tests**: Mock REST and SOAP servers as fixtures, tests for transport execution, authentication, fault handling, data mapping, caching, and full service invocation
+  - Files: `internal/repository/webservice_repository.go`, `internal/service/genericinterface/service.go`, `internal/service/genericinterface/transport_rest.go`, `internal/service/genericinterface/transport_soap.go`, `internal/service/genericinterface/webservice_field.go`, `internal/api/admin_webservice_handlers.go`, `internal/api/admin_dynamic_field_webservice_ajax.go`
 
 ### Changed
 - **Translation Coverage Test Output**: `TestTranslationCompleteness` now prints a formatted ASCII table showing all language coverage with checkmarks for 100% complete languages
@@ -230,7 +242,7 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - Test workflow: Containerized test execution via `make test`, coverage generation and upload to Codecov.
   - All workflows now use correct Dockerfile targets and container-first approach.
 - **Codecov Integration**: Coverage reporting with OIDC authentication for private repositories.
-- **Admin Templates Module**: Full CRUD functionality for standard response templates (Znuny AdminTemplate equivalent). Supports 8 template types (Answer, Create, Email, Forward, Note, PhoneCall, ProcessManagement, Snippet). Queue assignment UI for associating templates with specific queues. Attachment assignment UI for associating standard attachments with templates. Admin list page with search, filter by type/status, and sortable columns. Create/edit form with multi-select template type checkboxes, content type selector (HTML/Markdown). YAML import/export for template backup and migration. Agent integration with template selector in ticket reply/note modals with variable substitution (customer name, ticket number, queue, etc.). Template attachments auto-populate when template selected. 18 unit tests (type parsing, variable substitution, struct validation). Playwright E2E tests for admin UI. Self-registering handlers via init() pattern.
+- **Admin Templates Module**: Full CRUD functionality for standard response templates (OTRS AdminTemplate equivalent). Supports 8 template types (Answer, Create, Email, Forward, Note, PhoneCall, ProcessManagement, Snippet). Queue assignment UI for associating templates with specific queues. Attachment assignment UI for associating standard attachments with templates. Admin list page with search, filter by type/status, and sortable columns. Create/edit form with multi-select template type checkboxes, content type selector (HTML/Markdown). YAML import/export for template backup and migration. Agent integration with template selector in ticket reply/note modals with variable substitution (customer name, ticket number, queue, etc.). Template attachments auto-populate when template selected. 18 unit tests (type parsing, variable substitution, struct validation). Playwright E2E tests for admin UI. Self-registering handlers via init() pattern.
 - **Admin Roles Module**: Full CRUD functionality for role management with database abstraction layer support. Includes role listing, create, update, soft delete, user-role assignments (add/remove users), and group permissions management. All queries use `database.ConvertPlaceholders()` for MySQL/PostgreSQL compatibility and `database.GetAdapter().InsertWithReturning()` for cross-database INSERT operations.
 - **Self-Registering Handler Architecture**: Handlers now register via `init()` calls to `routing.RegisterHandler()`, eliminating manual registration in main.go. Test validates all YAML handlers are registered.
 - **SLA Admin UX Improvements**: Time fields now use unit dropdowns (Minutes/Hours/Days) instead of raw minutes input, with automatic conversion.
@@ -295,7 +307,7 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - Auth middleware, YAML fallback guards, and legacy route middleware now respect `GOTRS_DISABLE_TEST_AUTH_BYPASS`, preventing unauthenticated access to admin surfaces during regression runs.
 - SQL placeholder conversion issues for MySQL compatibility in user and group repositories.
 - User title field length validation to prevent varchar(50) constraint violations.
-- Admin groups overview now renders the `comments` column so descriptions entered in Znuny/OTRS appear in the group list UI.
+- Admin groups overview now renders the `comments` column so descriptions entered in OTRS appear in the group list UI.
 - Admin groups membership links now launch the modal and load data through `/members`, restoring the key icon and member count actions.
 - Queue-centric group permissions view with HTML + JSON endpoints for `/admin/groups/:id/permissions`.
 
@@ -338,7 +350,7 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - Comprehensive ticket creation & validation test suite.
 - Agent ticket creation auto-selects preferred queues pulled from customer and customer-user group permissions, with info panel surfacing the resolved queue name.
 - Playwright acceptance harness (`test-acceptance-playwright`) with queue preference coverage, configurable artifact directories, and resilient base URL resolution.
-- Consolidated schema alignment with Znuny: added `ticket_number_counter`, surrogate primary key for `acl_sync`, `acl_ticket_attribute_relations`, `activity`, `article_color`, `permission_groups`, `translation`, `calendar_appointment_plugin`, `pm_process_preferences`, `smime_keys`, `oauth2_token_config`/`oauth2_token`, and `mention` tables via migration `000001_schema_alignment`.
+- Consolidated schema alignment with OTRS: added `ticket_number_counter`, surrogate primary key for `acl_sync`, `acl_ticket_attribute_relations`, `activity`, `article_color`, `permission_groups`, `translation`, `calendar_appointment_plugin`, `pm_process_preferences`, `smime_keys`, `oauth2_token_config`/`oauth2_token`, and `mention` tables via migration `000001_schema_alignment`.
 
 ### Changed
 - Refactored customer user inline autocomplete logic on ticket creation form to generic GoatKit modules (removal of large inline JS block in `templates/pages/tickets/new.pongo2`).
@@ -347,7 +359,7 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - Ticket creation now relies on repository ticket number generator (post framework introduction).
 - Dockerfile optimized for builds (layer caching / user customization notes).
 - Activity stream handling cleaned (duplicate handlers removed).
-- Added surrogate primary key to `acl_sync` as part of consolidated migration `000001_schema_alignment` to stay aligned with Znuny upstream schema.
+- Added surrogate primary key to `acl_sync` as part of consolidated migration `000001_schema_alignment` to stay aligned with OTRS upstream schema.
 - Ticket list + queue detail defaults to `not_closed`, populating status dropdowns from live state tables and excluding closed types when requested.
 - Login screen auto-focuses and selects the username field on load for quicker keyboard entry.
 - Coverage targets (`make test-coverage*`) now run through the toolbox inside containers, spin up DB/cache services, and delegate execution to `scripts/run_coverage.sh` for filtered package selection.

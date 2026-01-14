@@ -9,7 +9,7 @@ import (
 )
 
 // NormalizeHistoryName converts the raw ticket_history.name field into a human readable label.
-// Znuny/OTRS stores structured payloads using double-percent (%%) delimiters; when those
+// OTRS stores structured payloads using double-percent (%%) delimiters; when those
 // appear we decode the payload based on the reported history type and fall back to a
 // reasonable string otherwise. This allows imported tickets to render meaningful events.
 func NormalizeHistoryName(entry models.TicketHistoryEntry) string {

@@ -270,7 +270,7 @@ func generateFileID() string {
 
 // (Legacy GOTRS layout removed)
 
-// GenerateOTRSStoragePath creates an OTRS/Znuny‑style path for storing files
+// GenerateOTRSStoragePath creates an OTRS-style path for storing files
 // Format: var/article/{year}/{month}/{day}/{ticket_id}/{article_id}/{filename}
 // Note: We do not add a timestamp suffix here as uniqueness is provided by article_id scoping.
 func GenerateOTRSStoragePath(ticketID int, articleID int, filename string) string {

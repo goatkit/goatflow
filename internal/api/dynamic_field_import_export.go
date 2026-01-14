@@ -9,7 +9,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
-// DynamicFieldExport represents the full export structure (Znuny-compatible format).
+// DynamicFieldExport represents the full export structure (OTRS-compatible format).
 type DynamicFieldExport struct {
 	DynamicFields       map[string]DynamicFieldExportItem `yaml:"DynamicFields"`
 	DynamicFieldScreens map[string]map[string]int         `yaml:"DynamicFieldScreens,omitempty"`
@@ -48,7 +48,7 @@ type ImportPreviewItem struct {
 	WillOverwrite bool  `json:"will_overwrite"`
 }
 
-// ExportDynamicFields exports the specified dynamic fields to a Znuny-compatible format.
+// ExportDynamicFields exports the specified dynamic fields to an OTRS-compatible format.
 func ExportDynamicFields(fieldNames []string, includeScreens bool) (*DynamicFieldExport, error) {
 	db, err := database.GetDB()
 	if err != nil {

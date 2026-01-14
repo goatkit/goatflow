@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// EmailAccount mirrors Znuny's mail_account table plus derived metadata for the inbound poller.
+// EmailAccount mirrors OTRS's mail_account table plus derived metadata for the inbound poller.
 type EmailAccount struct {
 	ID                  int       `json:"id" db:"id"`
 	Login               string    `json:"login" db:"login"`

@@ -104,6 +104,177 @@
                 />
                 <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
 
+                {% elif df.Field.FieldType == "WebserviceDropdown" %}
+                <div class="webservice-field"
+                     x-data="webserviceField({
+                         fieldId: {{ df.Field.ID }},
+                         fieldName: '{{ df.Field.Name }}',
+                         minLength: {{ df.Field.Config.AutocompleteMinLength|default:3 }},
+                         queryDelay: {{ df.Field.Config.QueryDelay|default:300 }},
+                         limit: {{ df.Field.Config.Limit|default:20 }},
+                         multiselect: false,
+                         initialValue: '{{ df.Value|default:"" }}',
+                         initialDisplay: '{{ df.DisplayValue|default:"" }}'
+                     })">
+                    {# Hidden field stores the actual value #}
+                    <input type="hidden"
+                           name="DynamicField_{{ df.Field.Name }}"
+                           id="DynamicField_{{ df.Field.Name }}_value"
+                           x-model="selectedValue"
+                           {% if df.ConfigValue == 2 %}required{% endif %} />
+
+                    {# Autocomplete input #}
+                    <div class="relative">
+                        <input type="text"
+                               id="DynamicField_{{ df.Field.Name }}"
+                               x-model="searchTerm"
+                               @input.debounce="search()"
+                               @focus="showDropdown = true"
+                               @blur="hideDropdown()"
+                               @keydown.down.prevent="highlightNext()"
+                               @keydown.up.prevent="highlightPrev()"
+                               @keydown.enter.prevent="selectHighlighted()"
+                               @keydown.escape="showDropdown = false"
+                               placeholder="{{ t('common.search') }}..."
+                               autocomplete="off"
+                               class="block w-full rounded-md border-0 py-1.5 px-3 pr-10 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6" />
+
+                        {# Loading indicator #}
+                        <div x-show="loading" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+
+                        {# Clear button #}
+                        <button x-show="selectedValue && !loading"
+                                @click.prevent="clearSelection()"
+                                type="button"
+                                class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                            <svg class="h-4 w-4 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+
+                        {# Dropdown results #}
+                        <ul x-show="showDropdown && results.length > 0"
+                            x-cloak
+                            class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-700 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                            <template x-for="(result, index) in results" :key="result.value">
+                                <li @click="selectResult(result)"
+                                    @mouseenter="highlightedIndex = index"
+                                    :class="{'bg-gotrs-600 text-white': highlightedIndex === index, 'text-gray-900 dark:text-white': highlightedIndex !== index}"
+                                    class="cursor-pointer select-none relative py-2 pl-3 pr-9">
+                                    <span x-text="result.label" class="block truncate"></span>
+                                </li>
+                            </template>
+                        </ul>
+
+                        {# No results message #}
+                        <div x-show="showDropdown && noResults && searchTerm.length >= minLength"
+                             x-cloak
+                             class="absolute z-10 mt-1 w-full rounded-md bg-white dark:bg-gray-700 py-2 px-3 text-sm text-gray-500 dark:text-gray-400 shadow-lg ring-1 ring-black ring-opacity-5">
+                            {{ t("common.no_results") }}
+                        </div>
+                    </div>
+                </div>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+
+                {% elif df.Field.FieldType == "WebserviceMultiselect" %}
+                <div class="webservice-field"
+                     x-data="webserviceField({
+                         fieldId: {{ df.Field.ID }},
+                         fieldName: '{{ df.Field.Name }}',
+                         minLength: {{ df.Field.Config.AutocompleteMinLength|default:3 }},
+                         queryDelay: {{ df.Field.Config.QueryDelay|default:300 }},
+                         limit: {{ df.Field.Config.Limit|default:20 }},
+                         multiselect: true,
+                         initialValue: '{{ df.Value|default:"" }}',
+                         initialDisplay: '{{ df.DisplayValue|default:"" }}'
+                     })">
+                    {# Hidden field stores the actual values (comma-separated) #}
+                    <input type="hidden"
+                           name="DynamicField_{{ df.Field.Name }}"
+                           id="DynamicField_{{ df.Field.Name }}_value"
+                           x-model="selectedValue"
+                           {% if df.ConfigValue == 2 %}required{% endif %} />
+
+                    {# Selected items display #}
+                    <div x-show="selectedItems.length > 0" class="flex flex-wrap gap-2 mb-2">
+                        <template x-for="item in selectedItems" :key="item.value">
+                            <span class="inline-flex items-center gap-x-1 rounded-md bg-gotrs-100 dark:bg-gotrs-900 px-2 py-1 text-xs font-medium text-gotrs-700 dark:text-gotrs-300">
+                                <span x-text="item.label"></span>
+                                <button type="button"
+                                        @click.prevent="removeItem(item)"
+                                        class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gotrs-200 dark:hover:bg-gotrs-800">
+                                    <svg class="h-3.5 w-3.5" viewBox="0 0 14 14" fill="currentColor">
+                                        <path d="M4 4l6 6m0-6l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                            </span>
+                        </template>
+                    </div>
+
+                    {# Autocomplete input #}
+                    <div class="relative">
+                        <input type="text"
+                               id="DynamicField_{{ df.Field.Name }}"
+                               x-model="searchTerm"
+                               @input.debounce="search()"
+                               @focus="showDropdown = true"
+                               @blur="hideDropdown()"
+                               @keydown.down.prevent="highlightNext()"
+                               @keydown.up.prevent="highlightPrev()"
+                               @keydown.enter.prevent="selectHighlighted()"
+                               @keydown.escape="showDropdown = false"
+                               @keydown.backspace="handleBackspace($event)"
+                               placeholder="{{ t('common.search') }}..."
+                               autocomplete="off"
+                               class="block w-full rounded-md border-0 py-1.5 px-3 pr-10 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6" />
+
+                        {# Loading indicator #}
+                        <div x-show="loading" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+
+                        {# Dropdown results #}
+                        <ul x-show="showDropdown && results.length > 0"
+                            x-cloak
+                            class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-700 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                            <template x-for="(result, index) in results" :key="result.value">
+                                <li @click="selectResult(result)"
+                                    @mouseenter="highlightedIndex = index"
+                                    :class="{
+                                        'bg-gotrs-600 text-white': highlightedIndex === index,
+                                        'text-gray-900 dark:text-white': highlightedIndex !== index,
+                                        'opacity-50': isSelected(result.value)
+                                    }"
+                                    class="cursor-pointer select-none relative py-2 pl-3 pr-9">
+                                    <span x-text="result.label" class="block truncate"></span>
+                                    <span x-show="isSelected(result.value)" class="absolute inset-y-0 right-0 flex items-center pr-4">
+                                        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </span>
+                                </li>
+                            </template>
+                        </ul>
+
+                        {# No results message #}
+                        <div x-show="showDropdown && noResults && searchTerm.length >= minLength"
+                             x-cloak
+                             class="absolute z-10 mt-1 w-full rounded-md bg-white dark:bg-gray-700 py-2 px-3 text-sm text-gray-500 dark:text-gray-400 shadow-lg ring-1 ring-black ring-opacity-5">
+                            {{ t("common.no_results") }}
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("common.multiselect_hint") }}</p>
+                </div>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+
                 {% else %}
                 {# Fallback for unknown types #}
                 <input type="text"
@@ -130,7 +301,7 @@ function dynamicFieldsValidation() {
         validateField(field) {
             const name = field.name.replace('[]', '');
             this.errors[name] = '';
-            
+
             // Required validation
             if (field.hasAttribute('required')) {
                 if (field.type === 'select-multiple') {
@@ -143,7 +314,7 @@ function dynamicFieldsValidation() {
                     return false;
                 }
             }
-            
+
             // Pattern validation for text fields
             const pattern = field.getAttribute('data-pattern');
             if (pattern && field.value) {
@@ -157,14 +328,14 @@ function dynamicFieldsValidation() {
                     console.warn('Invalid regex pattern:', pattern);
                 }
             }
-            
+
             // Maxlength visual feedback (browser handles actual limit)
             const maxlength = field.getAttribute('maxlength');
             if (maxlength && field.value.length > parseInt(maxlength)) {
                 this.errors[name] = `Maximum ${maxlength} characters allowed`;
                 return false;
             }
-            
+
             return true;
         },
         validateAll() {
@@ -176,6 +347,139 @@ function dynamicFieldsValidation() {
                 }
             });
             return valid;
+        }
+    }
+}
+
+// Webservice field autocomplete component
+function webserviceField(config) {
+    return {
+        fieldId: config.fieldId,
+        fieldName: config.fieldName,
+        minLength: config.minLength || 3,
+        queryDelay: config.queryDelay || 300,
+        limit: config.limit || 20,
+        multiselect: config.multiselect || false,
+
+        searchTerm: config.initialDisplay || '',
+        selectedValue: config.initialValue || '',
+        selectedItems: [],
+        results: [],
+        loading: false,
+        showDropdown: false,
+        noResults: false,
+        highlightedIndex: -1,
+        searchTimeout: null,
+
+        init() {
+            // Parse initial values for multiselect
+            if (this.multiselect && this.selectedValue) {
+                const values = this.selectedValue.split(',');
+                const labels = (config.initialDisplay || '').split(',');
+                for (let i = 0; i < values.length; i++) {
+                    if (values[i]) {
+                        this.selectedItems.push({
+                            value: values[i].trim(),
+                            label: labels[i] ? labels[i].trim() : values[i].trim()
+                        });
+                    }
+                }
+                this.searchTerm = '';
+            }
+        },
+
+        async search() {
+            if (this.searchTerm.length < this.minLength) {
+                this.results = [];
+                this.noResults = false;
+                return;
+            }
+
+            this.loading = true;
+            this.noResults = false;
+
+            try {
+                const response = await fetch(`/admin/api/dynamic-fields/${this.fieldId}/autocomplete?term=${encodeURIComponent(this.searchTerm)}&limit=${this.limit}`);
+                if (!response.ok) {
+                    throw new Error('Search failed');
+                }
+                const data = await response.json();
+                this.results = data || [];
+                this.noResults = this.results.length === 0;
+                this.highlightedIndex = -1;
+            } catch (error) {
+                console.error('Webservice field search error:', error);
+                this.results = [];
+                this.noResults = true;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        selectResult(result) {
+            if (this.multiselect) {
+                if (!this.isSelected(result.value)) {
+                    this.selectedItems.push(result);
+                    this.updateMultiselectValue();
+                }
+                this.searchTerm = '';
+                this.results = [];
+            } else {
+                this.selectedValue = result.value;
+                this.searchTerm = result.label;
+                this.showDropdown = false;
+                this.results = [];
+            }
+        },
+
+        clearSelection() {
+            this.selectedValue = '';
+            this.searchTerm = '';
+            this.results = [];
+        },
+
+        removeItem(item) {
+            this.selectedItems = this.selectedItems.filter(i => i.value !== item.value);
+            this.updateMultiselectValue();
+        },
+
+        updateMultiselectValue() {
+            this.selectedValue = this.selectedItems.map(i => i.value).join(',');
+        },
+
+        isSelected(value) {
+            return this.selectedItems.some(i => i.value === value);
+        },
+
+        hideDropdown() {
+            // Delay to allow click events to fire
+            setTimeout(() => {
+                this.showDropdown = false;
+            }, 200);
+        },
+
+        highlightNext() {
+            if (this.results.length === 0) return;
+            this.highlightedIndex = (this.highlightedIndex + 1) % this.results.length;
+        },
+
+        highlightPrev() {
+            if (this.results.length === 0) return;
+            this.highlightedIndex = this.highlightedIndex <= 0 ? this.results.length - 1 : this.highlightedIndex - 1;
+        },
+
+        selectHighlighted() {
+            if (this.highlightedIndex >= 0 && this.highlightedIndex < this.results.length) {
+                this.selectResult(this.results[this.highlightedIndex]);
+            }
+        },
+
+        handleBackspace(event) {
+            // For multiselect: if input is empty and backspace pressed, remove last item
+            if (this.multiselect && this.searchTerm === '' && this.selectedItems.length > 0) {
+                this.selectedItems.pop();
+                this.updateMultiselectValue();
+            }
         }
     }
 }

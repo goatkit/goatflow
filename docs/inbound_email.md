@@ -1,11 +1,11 @@
-# Inbound Email Architecture (Znuny Parity)
+# Inbound Email Architecture (OTRS Parity)
 
-This document captures the inbound-email plan for GOTRS based on the proven Znuny/OTRS PostMaster
+This document captures the inbound-email plan for GOTRS based on the proven OTRS PostMaster
 pipeline. The goal is to collect mail from POP3/IMAP mailboxes, run them through a PostMaster-style
-processor, and create or update tickets just as Znuny does.
+processor, and create or update tickets just as OTRS does.
 
 ## 1. Goals
-- Reach feature parity with Znuny's inbound flow so that existing OTRS/Znuny deployments can migrate
+- Reach feature parity with OTRS's inbound flow so that existing OTRS deployments can migrate
   without losing automation.
 - Keep the outbound pipeline untouched (already functional) while layering reusable inbound services.
 - Make every step testable and configurable (filters, queue dispatch, follow-up rules, loop
@@ -59,7 +59,7 @@ surfaces via metrics so operators can act.
 - Responsibilities:
   - Honor TLS requirements.
   - Preserve folder context: `IMAPFolder` defaults to `INBOX` and is carried into `AccountSnapshot` and message metadata (`imap_folder`).
-  - Default to Znuny's destructive fetch: POP3 issues `DELE`, IMAP expunges or moves processed
+  - Default to OTRS's destructive fetch: POP3 issues `DELE`, IMAP expunges or moves processed
     messages so the remote mailbox is drained without keeping local cursor state.
   - Delete/move only after PostMaster reports success; failures leave the message for the next poll.
   - Convert bytes to `FetchedMessage` (raw RFC822 + metadata such as UID, envelope timestamps).
@@ -71,12 +71,12 @@ surfaces via metrics so operators can act.
   1. Loads active accounts from repository.
   2. Picks the right connector (POP3, IMAP, future Graph/OAuth) per account.
   3. Emits `FetchedMessage` objects onto a work queue processed concurrently (default worker pool per
-     account or global fan-out, similar to Znuny's daemon).
+     account or global fan-out, similar to OTRS's daemon).
   4. Persists fetch metrics (success/failure, auth errors).
 
 ### 3.4 PostMaster Processor
 - Package: `internal/email/inbound/postmaster`.
-- Mirrors Znuny's `Kernel::System::PostMaster` responsibilities:
+- Mirrors OTRS's `Kernel::System::PostMaster` responsibilities:
   1. Parse raw mail via a structured parser (we already use `github.com/emersion/go-message`).
   2. Build `GetParam`-style map containing headers, addresses, attachments, body text, and derived
      metadata (Message-ID, References, thread tokens, attachments).
@@ -88,7 +88,7 @@ surfaces via metrics so operators can act.
   7. Request autoresponses (auto-reply, bounce, reject) from notification service as needed.
 
 ### 3.5 Filters and Hooks
-- Config root: `email.postmaster.filters` to mimic Znuny's `%PostMaster::PreFilterModule%`.
+- Config root: `email.postmaster.filters` to mimic OTRS's `%PostMaster::PreFilterModule%`.
 - Hook interface:
   ```go
   type Filter interface {
@@ -107,7 +107,7 @@ surfaces via metrics so operators can act.
   policies like dynamic field overrides).
 
 ### 3.6 Follow-Up Detection
-- Strategy registry mirroring Znuny's `FollowUpCheck::*` modules:
+- Strategy registry mirroring OTRS's `FollowUpCheck::*` modules:
   - Subject token stripping (`Re: [Ticket#2025012345]`).
   - References header search.
   - Body tag search.
@@ -122,7 +122,7 @@ surfaces via metrics so operators can act.
   strips Message-ID brackets, and asks the article repository for a ticket owning those message IDs.
   When a match is found the inbound email is appended to that ticket (subject to the same queue
   policy checks) so replies without the `[Ticket#]` token remain threaded correctly.
-- Body tag follow-ups mirror Znuny’s body-search strategy: a dedicated filter decodes the first
+- Body tag follow-ups mirror OTRS’s body-search strategy: a dedicated filter decodes the first
   readable text part (plain preferred, HTML falls back to stripped text) and extracts `[Ticket#]`
   markers embedded in the message content, enabling signatures or templates that embed the token
   outside the subject line to remain threaded.
@@ -137,19 +137,19 @@ surfaces via metrics so operators can act.
   subject/body/header formats without depending on the `[Ticket#]` token.
 - Each strategy returns `(ticketID, followUpType)`; the processor picks the first confident match,
   falling back to "new ticket".
-- Queue configuration (similar to Znuny's follow-up option) will be stored per queue so we know
+- Queue configuration (similar to OTRS's follow-up option) will be stored per queue so we know
   whether to accept follow-ups, force new ticket, or reject.
 
 ### 3.7 Loop Protection & Bounce Handling
 - Loop guard store (DB table `mail_loop_protection` keyed by Message-ID + sender) to prevent GOTRS
   from replying repeatedly to autoresponders.
 - Bounce detection filter sets `isBounce=true`; follow-up logic uses queue settings and config
-  `postmaster.bounceAsFollowUp` to mimic Znuny's `PostmasterBounceEmailAsFollowUp`.
+  `postmaster.bounceAsFollowUp` to mimic OTRS's `PostmasterBounceEmailAsFollowUp`.
 
 ### 3.8 Trusted Headers
 - Per-account boolean `allow_trusted_headers` decides whether we honor inbound `X-GOTRS-*` overrides
   (queue, priority, state, dynamic fields). Default false except for service-to-service mailboxes.
-- When enabled, dynamic field definitions are reflected into allowed header names, same as Znuny's
+- When enabled, dynamic field definitions are reflected into allowed header names, same as OTRS's
   addition of `X-OTRS-DynamicField-*`.
 - Operators may supply additional header names in `email.inbound.trustedHeaders`; every match is
   exposed to downstream filters as `postmaster.trusted_header.<header-name>` annotations so custom
@@ -188,14 +188,14 @@ surfaces via metrics so operators can act.
 - Each module implemented as Go plugin (not Go plugins; standard Go interfaces). Config is parsed at
   startup and provided to the scheduler + processor.
 
-### 3.10 Message Retention Strategy (Znuny parity)
+### 3.10 Message Retention Strategy (OTRS parity)
 - POP3 accounts delete messages immediately after a successful PostMaster run (`DELE` during the
   same session). If processing fails we leave the message on the server so the next poll retries.
 - IMAP accounts default to destructive handling as well: after processing we mark the UID as
   `\Deleted` and issue `Expunge` (or move to an operator-defined "Processed" folder) before closing
   the session.
 - Because everything is deleted on the remote side, we do **not** persist local cursor metadata or
-  introduce new tables. This satisfies schema-freeze requirements while matching Znuny behavior.
+  introduce new tables. This satisfies schema-freeze requirements while matching OTRS behavior.
 - If a tenant needs "leave copy on server", we can satisfy it later by storing the last UID in
   existing columns such as `mail_account.comments` or in filesystem state (`var/state/mail_account`)
   without new migrations.
@@ -214,7 +214,7 @@ surfaces via metrics so operators can act.
   before promotion, and CI alerts if obvious demo secrets leak into committed config samples.
 
 ### 3.12 Dispatching & Multi-Tenant Routing
-- `mail_account.dispatching_mode` mirrors Znuny's `DispatchingBy` flag. Two modes ship initially:
+- `mail_account.dispatching_mode` mirrors OTRS's `DispatchingBy` flag. Two modes ship initially:
   - `queue`: mailbox always injects its configured `queue_id` as the default destination; PreFilter
     modules can override later, but the queue dropdown in the admin UI is authoritative.
   - `from`: the mailbox skips the stored queue and asks a dedicated dispatch filter to resolve the
@@ -247,7 +247,7 @@ surfaces via metrics so operators can act.
 - **UI support**: Admin → Email → Mailboxes now surfaces a `Dispatching Mode` selector plus two
   metadata controls: `Allow Trusted Headers` and `Poll Interval (seconds)`. Selecting `from`
   automatically disables the queue dropdown (the backend sets `queue_id = 0`) and dispatching rules
-  take over. The trusted toggle keeps Znuny-style header overrides explicit per mailbox, and the
+  take over. The trusted toggle keeps OTRS-style header overrides explicit per mailbox, and the
   optional poll interval writes to `mail_account.comments` metadata so operators can fine-tune busy
   accounts without touching scheduler config.
 - **Fallbacks**: If no rule matches we fall back to the account's stored `queue_id` so the message
@@ -275,6 +275,6 @@ surfaces via metrics so operators can act.
    path.
 4. Add filters/follow-up gradually until parity.
 
-This design mirrors Znuny's architecture so teams migrating from Znuny know where to hook in their
+This design mirrors OTRS's architecture so teams migrating from OTRS know where to hook in their
 existing automations while staying idiomatic to GOTRS (Go packages, containerized scheduler,
 pluggable services).

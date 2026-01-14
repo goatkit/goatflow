@@ -983,3 +983,70 @@ spec:
           method: GET
           handler: handleGetCustomerGroupPermissions
           description: "Get customer group permissions"
+
+        # GenericInterface Web Services management
+        - path: /webservices
+          method: GET
+          handler: handleAdminWebservices
+          template: pages/admin/webservices.pongo2
+          description: "Display web services management page"
+
+        - path: /webservices/new
+          method: GET
+          handler: handleAdminWebserviceNew
+          template: pages/admin/webservice_form.pongo2
+          description: "Display new web service form"
+
+        - path: /webservices/:id
+          method: GET
+          handler: handleAdminWebserviceEdit
+          template: pages/admin/webservice_form.pongo2
+          description: "Display web service edit form"
+
+        - path: /webservices/:id/history
+          method: GET
+          handler: handleAdminWebserviceHistory
+          template: pages/admin/webservice_history.pongo2
+          description: "Display web service configuration history"
+
+        # Web Services API
+        - path: /api/webservices
+          method: POST
+          handler: handleCreateWebservice
+          description: "Create a new web service"
+
+        - path: /api/webservices/:id
+          method: GET
+          handler: handleAdminWebserviceGet
+          description: "Get web service details"
+
+        - path: /api/webservices/:id
+          method: PUT
+          handler: handleUpdateWebservice
+          description: "Update an existing web service"
+
+        - path: /api/webservices/:id
+          method: DELETE
+          handler: handleDeleteWebservice
+          description: "Delete a web service"
+
+        - path: /api/webservices/:id/test
+          method: POST
+          handler: handleTestWebservice
+          description: "Test web service connection"
+
+        - path: /api/webservices/:id/history/:historyId/restore
+          method: POST
+          handler: handleRestoreWebserviceHistory
+          description: "Restore web service from history"
+
+        # Dynamic Field Webservice autocomplete endpoint
+        - path: /api/dynamic-fields/:id/autocomplete
+          method: GET
+          handler: handleDynamicFieldAutocomplete
+          description: "Autocomplete for webservice-backed dynamic fields"
+
+        - path: /api/dynamic-fields/:id/webservice-test
+          method: POST
+          handler: handleDynamicFieldWebserviceTest
+          description: "Test webservice configuration for a dynamic field"

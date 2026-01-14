@@ -1,0 +1,299 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{% if IsNew %}{{ t("admin.webservices.new") }}{% else %}{{ t("admin.webservices.edit") }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8" x-data="webserviceForm()">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="flex justify-between items-center">
+                <div>
+                    <nav class="flex mb-2" aria-label="Breadcrumb">
+                        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                            <li class="inline-flex items-center">
+                                <a href="/admin/webservices" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">{{ t("admin.webservices.title") }}</a>
+                            </li>
+                            <li>
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+                                    <span class="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">{% if IsNew %}{{ t("admin.webservices.new") }}{% else %}{{ Webservice.Name }}{% endif %}</span>
+                                </div>
+                            </li>
+                        </ol>
+                    </nav>
+                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{% if IsNew %}{{ t("admin.webservices.new") }}{% else %}{{ t("admin.webservices.edit") }}: {{ Webservice.Name }}{% endif %}</h1>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form -->
+        <form @submit.prevent="saveWebservice()" class="p-6 space-y-6">
+            <!-- Basic Settings -->
+            <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.webservices.basic_settings") }}</h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.name") }} *</label>
+                        <input type="text" x-model="formData.name" required
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                               placeholder="{{ t('admin.webservices.name_placeholder') }}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("common.status") }}</label>
+                        <select x-model="formData.valid_id"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="1">{{ t("common.valid") }}</option>
+                            <option value="2">{{ t("common.invalid") }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.description") }}</label>
+                    <textarea x-model="formData.description" rows="2"
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                              placeholder="{{ t('admin.webservices.description_placeholder') }}"></textarea>
+                </div>
+
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.remote_system") }}</label>
+                    <input type="text" x-model="formData.remote_system"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                           placeholder="{{ t('admin.webservices.remote_system_placeholder') }}">
+                </div>
+            </div>
+
+            <!-- Transport Settings -->
+            <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.webservices.transport_settings") }}</h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.transport") }}</label>
+                        <select x-model="formData.config.Requester.Transport.Type"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="HTTP::REST">REST</option>
+                            <option value="HTTP::SOAP">SOAP</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.host") }} *</label>
+                        <input type="url" x-model="formData.config.Requester.Transport.Config.Host"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                               placeholder="https://api.example.com">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.default_command") }}</label>
+                        <select x-model="formData.config.Requester.Transport.Config.DefaultCommand"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.timeout") }}</label>
+                        <input type="number" x-model="formData.config.Requester.Transport.Config.Timeout"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                               placeholder="30" min="1" max="300">
+                        <p class="mt-1 text-xs text-gray-500">{{ t("admin.webservices.timeout_hint") }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Authentication Settings -->
+            <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.webservices.authentication") }}</h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.auth_type") }}</label>
+                        <select x-model="formData.config.Requester.Transport.Config.Authentication.AuthType"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="">{{ t("common.none") }}</option>
+                            <option value="BasicAuth">{{ t("admin.webservices.auth_basic") }}</option>
+                            <option value="APIKey">{{ t("admin.webservices.auth_apikey") }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Basic Auth Fields -->
+                <template x-if="formData.config.Requester.Transport.Config.Authentication.AuthType === 'BasicAuth'">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.auth_user") }}</label>
+                            <input type="text" x-model="formData.config.Requester.Transport.Config.Authentication.BasicAuthUser"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.auth_password") }}</label>
+                            <input type="password" x-model="formData.config.Requester.Transport.Config.Authentication.BasicAuthPassword"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                        </div>
+                    </div>
+                </template>
+
+                <!-- API Key Fields -->
+                <template x-if="formData.config.Requester.Transport.Config.Authentication.AuthType === 'APIKey'">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.apikey_header") }}</label>
+                            <input type="text" x-model="formData.config.Requester.Transport.Config.Authentication.APIKeyHeader"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                                   placeholder="X-API-Key">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.apikey_value") }}</label>
+                            <input type="password" x-model="formData.config.Requester.Transport.Config.Authentication.APIKey"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Debugger Settings -->
+            <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.webservices.debugger") }}</h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.debug_threshold") }}</label>
+                        <select x-model="formData.config.Debugger.DebugThreshold"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="error">Error</option>
+                            <option value="notice">Notice</option>
+                            <option value="info">Info</option>
+                            <option value="debug">Debug</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="flex items-center mt-6">
+                            <input type="checkbox" x-model="testMode"
+                                   class="rounded border-gray-300 text-gotrs-600 focus:ring-gotrs-500 dark:border-gray-600 dark:bg-gray-700">
+                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ t("admin.webservices.test_mode") }}</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-4">
+                <a href="/admin/webservices" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                    {{ t("common.cancel") }}
+                </a>
+                {% if not IsNew %}
+                <button type="button" @click="testConnection()" class="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700">
+                    {{ t("admin.webservices.test_connection") }}
+                </button>
+                {% endif %}
+                <button type="submit" class="px-4 py-2 text-white bg-gotrs-600 rounded-lg hover:bg-gotrs-700" :disabled="saving">
+                    <span x-show="!saving">{{ t("common.save") }}</span>
+                    <span x-show="saving">{{ t("common.saving") }}...</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function webserviceForm() {
+    return {
+        saving: false,
+        testMode: {% if Webservice and Webservice.Config and Webservice.Config.Debugger.TestMode == "1" %}true{% else %}false{% endif %},
+        formData: {
+            name: '{{ Webservice.Name|default:"" }}',
+            description: '{% if Webservice and Webservice.Config %}{{ Webservice.Config.Description|default:"" }}{% endif %}',
+            remote_system: '{% if Webservice and Webservice.Config %}{{ Webservice.Config.RemoteSystem|default:"" }}{% endif %}',
+            valid_id: {{ Webservice.ValidID|default:1 }},
+            config: {
+                Debugger: {
+                    DebugThreshold: '{% if Webservice and Webservice.Config %}{{ Webservice.Config.Debugger.DebugThreshold|default:"error" }}{% else %}error{% endif %}',
+                    TestMode: '{% if Webservice and Webservice.Config %}{{ Webservice.Config.Debugger.TestMode|default:"0" }}{% else %}0{% endif %}'
+                },
+                Requester: {
+                    Transport: {
+                        Type: '{% if Webservice and Webservice.Config %}{{ Webservice.Config.Requester.Transport.Type|default:"HTTP::REST" }}{% else %}HTTP::REST{% endif %}',
+                        Config: {
+                            Host: '{% if Webservice and Webservice.Config %}{{ Webservice.Config.Requester.Transport.Config.Host|default:"" }}{% endif %}',
+                            DefaultCommand: '{% if Webservice and Webservice.Config %}{{ Webservice.Config.Requester.Transport.Config.DefaultCommand|default:"GET" }}{% else %}GET{% endif %}',
+                            Timeout: '{% if Webservice and Webservice.Config %}{{ Webservice.Config.Requester.Transport.Config.Timeout|default:"30" }}{% else %}30{% endif %}',
+                            Authentication: {
+                                AuthType: '{% if Webservice and Webservice.Config %}{{ Webservice.Config.Requester.Transport.Config.Authentication.AuthType|default:"" }}{% endif %}',
+                                BasicAuthUser: '{% if Webservice and Webservice.Config %}{{ Webservice.Config.Requester.Transport.Config.Authentication.BasicAuthUser|default:"" }}{% endif %}',
+                                BasicAuthPassword: '',
+                                APIKey: '',
+                                APIKeyHeader: '{% if Webservice and Webservice.Config %}{{ Webservice.Config.Requester.Transport.Config.Authentication.APIKeyHeader|default:"X-API-Key" }}{% else %}X-API-Key{% endif %}'
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        async saveWebservice() {
+            this.saving = true;
+
+            // Update test mode
+            this.formData.config.Debugger.TestMode = this.testMode ? '1' : '0';
+
+            // Update description in config
+            this.formData.config.Description = this.formData.description;
+            this.formData.config.RemoteSystem = this.formData.remote_system;
+
+            const isNew = {{ IsNew|yesno:"true,false" }};
+            const url = isNew ? '/admin/api/webservices' : '/admin/api/webservices/{{ Webservice.ID|default:0 }}';
+            const method = isNew ? 'POST' : 'PUT';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(this.formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    window.location.href = '/admin/webservices';
+                } else {
+                    alert('Error: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error saving webservice: ' + error.message);
+            } finally {
+                this.saving = false;
+            }
+        },
+
+        async testConnection() {
+            try {
+                const response = await fetch('/admin/api/webservices/{{ Webservice.ID|default:0 }}/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Connection test successful!');
+                } else {
+                    alert('Connection test failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error testing connection: ' + error.message);
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

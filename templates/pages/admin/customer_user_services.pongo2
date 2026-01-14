@@ -30,14 +30,14 @@
                             <i class="fas fa-globe mr-2 text-gotrs-primary"></i>Default Services
                         </h2>
                         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            Services available to all customers who don't have explicit assignments (Znuny-compatible &lt;DEFAULT&gt;)
+                            Services available to all customers who don't have explicit assignments (OTRS-compatible &lt;DEFAULT&gt;)
                         </p>
                     </div>
                     <div class="flex items-center gap-4">
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
                             {{ DefaultServicesCount }} default service{% if DefaultServicesCount != 1 %}s{% endif %}
                         </span>
-                        <button onclick="openDefaultServices()" 
+                        <button onclick="openDefaultServices()"
                                 class="px-4 py-2 bg-gotrs-primary text-white rounded-lg hover:bg-gotrs-primary-dark">
                             <i class="fas fa-edit mr-1"></i>Configure
                         </button>
@@ -50,10 +50,10 @@
         <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg mb-6 p-4">
             <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div class="relative w-full sm:w-96">
-                    <input type="text" 
+                    <input type="text"
                            id="searchInput"
                            value="{{ Search }}"
-                           placeholder="Search customer users or services..." 
+                           placeholder="Search customer users or services..."
                            class="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gotrs-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
                            hx-get="/admin/customer-user-services"
                            hx-trigger="keyup changed delay:300ms"
@@ -66,7 +66,7 @@
                 <div class="flex items-center gap-2">
                     <span class="text-sm text-gray-500 dark:text-gray-400">View:</span>
                     <div class="inline-flex rounded-lg border border-gray-300 dark:border-gray-600">
-                        <button type="button" 
+                        <button type="button"
                                 onclick="setView('customers')"
                                 class="px-4 py-2 text-sm font-medium rounded-l-lg {% if View == 'customers' %}bg-gotrs-primary text-white{% else %}bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600{% endif %}">
                             <i class="fas fa-users mr-1"></i>Customer Users
@@ -213,7 +213,7 @@ function openDefaultServices() {
     currentMode = 'default';
     currentId = null;
     document.getElementById('modalTitle').textContent = 'Configure Default Services';
-    
+
     fetch('/admin/customer-user-services/default')
         .then(r => r.json())
         .then(data => {
@@ -222,8 +222,8 @@ function openDefaultServices() {
                     <div class="flex items-start">
                         <i class="fas fa-info-circle text-blue-500 mt-0.5 mr-3"></i>
                         <div class="text-sm text-blue-700 dark:text-blue-300">
-                            <p class="font-medium mb-1">Default Services (Znuny-compatible)</p>
-                            <p>Services selected here will be available to customers who don't have any explicit service assignments. This uses the <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">&lt;DEFAULT&gt;</code> pseudo-user pattern for compatibility with Znuny migrations.</p>
+                            <p class="font-medium mb-1">Default Services (OTRS-compatible)</p>
+                            <p>Services selected here will be available to customers who don't have any explicit service assignments. This uses the <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">&lt;DEFAULT&gt;</code> pseudo-user pattern for compatibility with OTRS migrations.</p>
                         </div>
                     </div>
                 </div>
@@ -233,11 +233,11 @@ function openDefaultServices() {
                         <button type="button" onclick="toggleAllDefaultServices()" class="text-xs text-gotrs-primary hover:underline">Toggle All</button>
                     </div>
             `;
-            
+
             data.services.forEach(service => {
                 html += `
                     <label class="flex items-center p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                        <input type="checkbox" name="default_services" value="${service.id}" ${service.assigned ? 'checked' : ''} 
+                        <input type="checkbox" name="default_services" value="${service.id}" ${service.assigned ? 'checked' : ''}
                                class="default-service-checkbox rounded border-gray-300 dark:border-gray-600 text-gotrs-primary focus:ring-gotrs-primary">
                         <span class="ml-3 text-gray-700 dark:text-gray-300">${service.name}</span>
                         ${service.comments ? `<span class="ml-2 text-xs text-gray-400">(${service.comments})</span>` : ''}
@@ -245,7 +245,7 @@ function openDefaultServices() {
                 `;
             });
             html += '</div>';
-            
+
             document.getElementById('modalContent').innerHTML = html;
             document.getElementById('allocationModal').classList.remove('hidden');
         })
@@ -264,7 +264,7 @@ function selectCustomerUser(login) {
     currentMode = 'customer';
     currentId = login;
     document.getElementById('modalTitle').textContent = 'Assign Services to Customer User';
-    
+
     fetch('/admin/customer-user-services/customer/' + encodeURIComponent(login))
         .then(r => r.json())
         .then(data => {
@@ -280,11 +280,11 @@ function selectCustomerUser(login) {
                         <button type="button" onclick="toggleAllServices()" class="text-xs text-gotrs-primary hover:underline">Toggle All</button>
                     </div>
             `;
-            
+
             data.services.forEach(service => {
                 html += `
                     <label class="flex items-center p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                        <input type="checkbox" name="services" value="${service.id}" ${service.assigned ? 'checked' : ''} 
+                        <input type="checkbox" name="services" value="${service.id}" ${service.assigned ? 'checked' : ''}
                                class="service-checkbox rounded border-gray-300 dark:border-gray-600 text-gotrs-primary focus:ring-gotrs-primary">
                         <span class="ml-3 text-gray-700 dark:text-gray-300">${service.name}</span>
                         ${service.comments ? `<span class="ml-2 text-xs text-gray-400">(${service.comments})</span>` : ''}
@@ -292,7 +292,7 @@ function selectCustomerUser(login) {
                 `;
             });
             html += '</div>';
-            
+
             document.getElementById('modalContent').innerHTML = html;
             document.getElementById('allocationModal').classList.remove('hidden');
         })
@@ -305,7 +305,7 @@ function selectService(id) {
     currentMode = 'service';
     currentId = id;
     document.getElementById('modalTitle').textContent = 'Assign Customer Users to Service';
-    
+
     fetch('/admin/customer-user-services/service/' + id)
         .then(r => r.json())
         .then(data => {
@@ -321,11 +321,11 @@ function selectService(id) {
                         <button type="button" onclick="toggleAllCustomers()" class="text-xs text-gotrs-primary hover:underline">Toggle All</button>
                     </div>
             `;
-            
+
             data.customer_users.forEach(user => {
                 html += `
                     <label class="flex items-center p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                        <input type="checkbox" name="customer_users" value="${user.login}" ${user.assigned ? 'checked' : ''} 
+                        <input type="checkbox" name="customer_users" value="${user.login}" ${user.assigned ? 'checked' : ''}
                                class="customer-checkbox rounded border-gray-300 dark:border-gray-600 text-gotrs-primary focus:ring-gotrs-primary">
                         <span class="ml-3 text-gray-700 dark:text-gray-300">${user.first_name} ${user.last_name}</span>
                         <span class="ml-2 text-xs text-gray-400">(${user.email})</span>
@@ -334,7 +334,7 @@ function selectService(id) {
                 `;
             });
             html += '</div>';
-            
+
             document.getElementById('modalContent').innerHTML = html;
             document.getElementById('allocationModal').classList.remove('hidden');
         })
@@ -363,7 +363,7 @@ function closeModal() {
 
 function saveAllocation() {
     let url, data;
-    
+
     if (currentMode === 'customer') {
         const services = [...document.querySelectorAll('.service-checkbox:checked')].map(cb => cb.value);
         url = '/admin/customer-user-services/customer/' + encodeURIComponent(currentId);
@@ -377,7 +377,7 @@ function saveAllocation() {
         url = '/admin/customer-user-services/default';
         data = { services: services };
     }
-    
+
     fetch(url, {
         method: 'POST',
         headers: {

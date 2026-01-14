@@ -24,7 +24,7 @@
                 },
                 "help": {
                     "queue_id": "ان باؤنڈ پیغامات کو اس قطار میں تفویض کریں۔",
-                    "allow_trusted_headers": "اس میل باکس کے لیے X-Znuny-Dest / X-GOTRS ہیڈرز سے قطار کی اوور رائیڈز قبول کریں۔",
+                    "allow_trusted_headers": "اس میل باکس کے لیے X-OTRS-Queue / X-GOTRS ہیڈرز سے قطار کی اوور رائیڈز قبول کریں۔",
                     "poll_interval_seconds": "اس میل باکس کے لیے شیڈیولر وقفے کو اوور رائیڈ کریں۔ عالمی تال وراثت کے لیے 0 چھوڑیں۔",
                     "valid_id": "منتخب کریں کہ یہ میل باکس فعال ہے یا نہیں۔"
                 },
@@ -771,7 +771,9 @@
                 "Dropdown": "ڈراپ ڈاؤن",
                 "Multiselect": "کثیر انتخاب",
                 "Date": "تاریخ",
-                "DateTime": "تاریخ/وقت"
+                "DateTime": "تاریخ/وقت",
+                "WebserviceDropdown": "ویب سروس ڈراپ ڈاؤن",
+                "WebserviceMultiselect": "ویب سروس ملٹی سلیکٹ"
             },
             "import_export": {
                 "export": "برآمد",
@@ -787,7 +789,7 @@
                 "overwrite_existing": "موجودہ ترتیبات کو اوور رائٹ کریں",
                 "overwrite_description": "اگر نشان زد کیا گیا، تو اسی نام والے موجودہ فیلڈز کو اپ ڈیٹ کیا جائے گا۔ بصورت دیگر، انہیں چھوڑ دیا جائے گا۔",
                 "upload_file": "YAML فائل اپ لوڈ کریں",
-                "upload_description": "متحرک فیلڈ ترتیبات درآمد کرنے کے لیے GOTRS یا Znuny سے برآمد شدہ YAML فائل منتخب کریں۔",
+                "upload_description": "متحرک فیلڈ ترتیبات درآمد کرنے کے لیے GOTRS یا OTRS سے برآمد شدہ YAML فائل منتخب کریں۔",
                 "upload_and_preview": "اپ لوڈ کریں اور پیش نظارہ",
                 "choose_file": "فائل منتخب کریں",
                 "no_file_selected": "کوئی فائل منتخب نہیں",
@@ -1150,7 +1152,9 @@
         "invalid": "غیر درست",
         "view_all": "سب دیکھیں",
         "warning": "انتباہ",
-        "yes": "ہاں"
+        "yes": "ہاں",
+        "no_results": "کوئی نتائج نہیں ملے",
+        "multiselect_hint": "تلاش کرنے کے لیے ٹائپ کریں اور متعدد قدریں منتخب کریں"
     },
     "customer": {
         "company": "کمپنی",

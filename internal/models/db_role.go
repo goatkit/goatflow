@@ -41,7 +41,7 @@ type DBGroupRole struct {
 	ChangeBy        int       `json:"change_by"`
 }
 
-// Permission types (Znuny-compatible).
+// Permission types (OTRS-compatible).
 var PermissionTypes = []string{
 	"ro",        // Read-only access
 	"move_into", // Move tickets into queue

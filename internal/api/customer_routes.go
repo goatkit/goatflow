@@ -115,16 +115,16 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 
 		// Count open tickets for this customer
 		row := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT COUNT(*) FROM ticket 
-			WHERE customer_user_id = ? 
+			SELECT COUNT(*) FROM ticket
+			WHERE customer_user_id = ?
 			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2))
 		`), username)
 		_ = row.Scan(&stats.OpenTickets) //nolint:errcheck // Count defaults to 0
 
 		// Count closed tickets for this customer
 		row = db.QueryRow(database.ConvertPlaceholders(`
-			SELECT COUNT(*) FROM ticket 
-			WHERE customer_user_id = ? 
+			SELECT COUNT(*) FROM ticket
+			WHERE customer_user_id = ?
 			AND ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)
 		`), username)
 		_ = row.Scan(&stats.ClosedTickets) //nolint:errcheck // Count defaults to 0
@@ -134,7 +134,7 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		// Get last ticket date
 		var lastDate sql.NullTime
 		row = db.QueryRow(database.ConvertPlaceholders(`
-			SELECT MAX(create_time) FROM ticket 
+			SELECT MAX(create_time) FROM ticket
 			WHERE customer_user_id = ?
 		`), username)
 		_ = row.Scan(&lastDate) //nolint:errcheck // Defaults to null
@@ -147,10 +147,10 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		// Note: For MySQL compatibility, placeholder order must match order of appearance in query
 		// ? = userID (for unread_count subquery), ? = username (for WHERE clause)
 		rows, err := db.Query(database.ConvertPlaceholders(`
-			SELECT t.id, t.tn, t.title, 
+			SELECT t.id, t.tn, t.title,
 				   ts.name as state,
 				   tp.name as priority,
-				   CASE 
+				   CASE
 				       WHEN tp.name LIKE '%very low%' THEN '#03c4f0'
 				       WHEN tp.name LIKE '%low%' THEN '#83bfc8'
 				       WHEN tp.name LIKE '%normal%' THEN '#cdcdcd'
@@ -261,7 +261,7 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 			SELECT t.id, t.tn, t.title,
 				   ts.name as state,
 				   tp.name as priority,
-				   CASE 
+				   CASE
 				       WHEN tp.name LIKE '%very low%' THEN '#03c4f0'
 				       WHEN tp.name LIKE '%low%' THEN '#83bfc8'
 				       WHEN tp.name LIKE '%normal%' THEN '#cdcdcd'
@@ -405,7 +405,7 @@ func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 		// Fall back to <DEFAULT> services if no explicit assignments and config allows it
 		if len(services) == 0 {
 			// Check config for Ticket::Service::Default::UnknownCustomer equivalent
-			useDefaults := true // Default to true for Znuny compatibility
+			useDefaults := true // Default to true for OTRS compatibility
 			if appCfg := config.Get(); appCfg != nil {
 				useDefaults = appCfg.Ticket.Service.DefaultUnknownCustomer
 			}
@@ -441,7 +441,7 @@ func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 
 		// Get priorities customer can select
 		prRows, err := db.Query(database.ConvertPlaceholders(`
-			SELECT id, name FROM ticket_priority 
+			SELECT id, name FROM ticket_priority
 			WHERE valid_id = 1 AND name NOT IN ('1 very low', '5 very high')
 			ORDER BY id
 		`))
@@ -684,8 +684,8 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT t.id, t.tn, t.title,
 			       ts.name as state, ts.id as state_id,
-			       tp.name as priority, 
-				   CASE 
+			       tp.name as priority,
+				   CASE
 				       WHEN tp.name LIKE '%very low%' THEN '#03c4f0'
 				       WHEN tp.name LIKE '%low%' THEN '#83bfc8'
 				       WHEN tp.name LIKE '%normal%' THEN '#cdcdcd'
@@ -734,7 +734,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			LEFT JOIN article_data_mime adm ON a.id = adm.article_id
 			LEFT JOIN article_sender_type ast ON a.article_sender_type_id = ast.id
 			LEFT JOIN users u ON a.create_by = u.id
-			WHERE a.ticket_id = ? 
+			WHERE a.ticket_id = ?
 			  AND a.is_visible_for_customer = 1
 			ORDER BY a.create_time ASC
 		`), ticket.ID)
@@ -847,7 +847,7 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		var exists bool
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT EXISTS(
-				SELECT 1 FROM ticket 
+				SELECT 1 FROM ticket
 				WHERE id = ? AND customer_user_id = ?
 			)
 		`), ticketID, username).Scan(&exists)
@@ -922,7 +922,7 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		// Update ticket state to open if it was pending
 		//nolint:errcheck // Best-effort state update
 		_, _ = db.Exec(database.ConvertPlaceholders(`
-			UPDATE ticket 
+			UPDATE ticket
 			SET ticket_state_id = 4, change_time = NOW(), change_by = ?
 			WHERE id = ? AND ticket_state_id IN (6, 7)
 		`), ticketID, systemUserID)
@@ -945,7 +945,7 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 		// Verify customer owns this ticket and it's not already closed
 		var stateID int
 		err := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT ticket_state_id FROM ticket 
+			SELECT ticket_state_id FROM ticket
 			WHERE id = ? AND customer_user_id = ?
 		`), ticketID, username).Scan(&stateID)
 
@@ -965,7 +965,7 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 
 		// Close the ticket (args must match SQL text order: change_by first, then id)
 		_, err = db.Exec(database.ConvertPlaceholders(`
-			UPDATE ticket 
+			UPDATE ticket
 			SET ticket_state_id = 2, change_time = NOW(), change_by = ?
 			WHERE id = ?
 		`), systemUserID, ticketID)

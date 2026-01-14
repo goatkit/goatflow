@@ -2,7 +2,7 @@
 
 ## Overview
 
-GOTRS provides comprehensive compatibility with OTRS/Znuny systems through the `gotrs-migrate` tool, enabling seamless migration of production OTRS databases to GOTRS. This guide documents the complete migration process, capabilities, and results.
+GOTRS provides comprehensive compatibility with OTRS systems through the `gotrs-migrate` tool, enabling seamless migration of production OTRS databases to GOTRS. This guide documents the complete migration process, capabilities, and results.
 
 ## Migration Tool: `gotrs-migrate`
 
@@ -222,7 +222,7 @@ For technical support or migration assistance, refer to the GOTRS documentation 
 
 ## Mounting an Existing OTRS Filesystem (Attachments)
 
-GOTRS now uses the OTRS/Znuny filesystem layout for attachments:
+GOTRS now uses the OTRS filesystem layout for attachments:
 
 - var/article/YYYY/MM/DD/<TicketID>/<ArticleID>/<filename>
 

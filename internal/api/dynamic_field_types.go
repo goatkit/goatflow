@@ -10,13 +10,15 @@ import (
 
 // Field type constants matching OTRS.
 const (
-	DFTypeText        = "Text"
-	DFTypeTextArea    = "TextArea"
-	DFTypeCheckbox    = "Checkbox"
-	DFTypeDropdown    = "Dropdown"
-	DFTypeMultiselect = "Multiselect"
-	DFTypeDate        = "Date"
-	DFTypeDateTime    = "DateTime"
+	DFTypeText                 = "Text"
+	DFTypeTextArea             = "TextArea"
+	DFTypeCheckbox             = "Checkbox"
+	DFTypeDropdown             = "Dropdown"
+	DFTypeMultiselect          = "Multiselect"
+	DFTypeDate                 = "Date"
+	DFTypeDateTime             = "DateTime"
+	DFTypeWebserviceDropdown   = "WebserviceDropdown"
+	DFTypeWebserviceMultiselect = "WebserviceMultiselect"
 )
 
 // Object type constants matching OTRS.
@@ -44,6 +46,8 @@ func ValidFieldTypes() []string {
 		DFTypeMultiselect,
 		DFTypeDate,
 		DFTypeDateTime,
+		DFTypeWebserviceDropdown,
+		DFTypeWebserviceMultiselect,
 	}
 }
 
@@ -81,6 +85,29 @@ type DynamicFieldConfig struct {
 	YearsInFuture   int    `yaml:"YearsInFuture,omitempty"`
 	DateRestriction string `yaml:"DateRestriction,omitempty"` // none, DisablePastDates, DisableFutureDates
 	YearsPeriod     int    `yaml:"YearsPeriod,omitempty"`
+
+	// WebserviceDropdown/WebserviceMultiselect - OTRS compatible
+	Webservice               string                      `yaml:"Webservice,omitempty"`               // Webservice name
+	InvokerSearch            string                      `yaml:"InvokerSearch,omitempty"`            // Invoker for search/autocomplete
+	InvokerGet               string                      `yaml:"InvokerGet,omitempty"`               // Invoker for get-by-id
+	Backend                  string                      `yaml:"Backend,omitempty"`                  // Backend type (DirectRequest, etc.)
+	StoredValue              string                      `yaml:"StoredValue,omitempty"`              // Field key to store (e.g., "ID")
+	DisplayedValues          string                      `yaml:"DisplayedValues,omitempty"`          // Fields to display (comma-sep, e.g., "Name,Code")
+	DisplayedValuesSeparator string                      `yaml:"DisplayedValuesSeparator,omitempty"` // Separator for display (e.g., " - ")
+	SearchKeys               string                      `yaml:"SearchKeys,omitempty"`               // Fields to search (comma-sep)
+	AutocompleteMinLength    int                         `yaml:"AutocompleteMinLength,omitempty"`    // Min chars before autocomplete (default: 3)
+	QueryDelay               int                         `yaml:"QueryDelay,omitempty"`               // Delay in ms before query (default: 500)
+	CacheTTL                 int                         `yaml:"CacheTTL,omitempty"`                 // Cache TTL in seconds (default: 60)
+	Limit                    int                         `yaml:"Limit,omitempty"`                    // Result limit (default: 20)
+	AdditionalDFStorage      []AdditionalDFStorageConfig `yaml:"AdditionalDFStorage,omitempty"`      // Auto-fill other fields from response
+}
+
+// AdditionalDFStorageConfig defines auto-fill behavior for webservice fields.
+// When a webservice returns data, additional fields can be populated from the response.
+type AdditionalDFStorageConfig struct {
+	Type         string `yaml:"Type"`         // "Backend" (store in DB) or "Frontend" (display only)
+	DynamicField string `yaml:"DynamicField"` // Target field name (without DynamicField_ prefix)
+	Key          string `yaml:"Key"`          // Source key from webservice response
 }
 
 // RegEx represents a regex validation pattern (OTRS format).
@@ -230,6 +257,19 @@ func (df *DynamicField) validateConfigForType() error {
 	case DFTypeDropdown, DFTypeMultiselect:
 		if len(df.Config.PossibleValues) == 0 {
 			return fmt.Errorf("%s field requires at least one possible value", df.FieldType)
+		}
+	case DFTypeWebserviceDropdown, DFTypeWebserviceMultiselect:
+		if df.Config.Webservice == "" {
+			return fmt.Errorf("%s field requires a webservice to be configured", df.FieldType)
+		}
+		if df.Config.InvokerSearch == "" {
+			return fmt.Errorf("%s field requires a search invoker to be configured", df.FieldType)
+		}
+		if df.Config.StoredValue == "" {
+			return fmt.Errorf("%s field requires a stored value field to be configured", df.FieldType)
+		}
+		if df.Config.DisplayedValues == "" {
+			return fmt.Errorf("%s field requires displayed values to be configured", df.FieldType)
 		}
 	}
 	return nil

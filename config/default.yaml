@@ -14,251 +14,251 @@
 #       secret: ${DEV_JWT_SECRET}
 
 app:
-  name: GOTRS
-  version: 0.1.0
-  env: development  # development, staging, production
-  debug: true
-  timezone: UTC
+    name: GOTRS
+    version: 0.1.0
+    env: development # development, staging, production
+    debug: true
+    timezone: UTC
 
 server:
-  host: 0.0.0.0
-  port: 8080
-  read_timeout: 30s
-  write_timeout: 30s
-  shutdown_timeout: 10s
-  cors:
-    enabled: true
-    origins:
-      - http://localhost:3000
-      - http://localhost:5173
-    methods:
-      - GET
-      - POST
-      - PUT
-      - DELETE
-      - PATCH
-      - OPTIONS
-    headers:
-      - Authorization
-      - Content-Type
-      - X-Request-ID
+    host: 0.0.0.0
+    port: 8080
+    read_timeout: 30s
+    write_timeout: 30s
+    shutdown_timeout: 10s
+    cors:
+        enabled: true
+        origins:
+            - http://localhost:3000
+            - http://localhost:5173
+        methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+            - OPTIONS
+        headers:
+            - Authorization
+            - Content-Type
+            - X-Request-ID
 
 database:
-  host: postgres
-  port: 5432
-  name: gotrs
-  user: gotrs            # Non-secret default username
-  password: ""  # Blank; set in config/config.yaml or via DB_PASSWORD env
-  ssl_mode: disable
-  max_open_conns: 25
-  max_idle_conns: 25
-  conn_max_lifetime: 5m
-  log_queries: true
-  migrations:
-    auto_migrate: true
-    path: /app/migrations
+    host: postgres
+    port: 5432
+    name: gotrs
+    user: gotrs # Non-secret default username
+    password: "" # Blank; set in config/config.yaml or via DB_PASSWORD env
+    ssl_mode: disable
+    max_open_conns: 25
+    max_idle_conns: 25
+    conn_max_lifetime: 5m
+    log_queries: true
+    migrations:
+        auto_migrate: true
+        path: /app/migrations
 
 valkey:
-  host: valkey
-  port: 6379
-  password: ""
-  db: 0
-  max_retries: 3
-  pool_size: 10
-  min_idle_conns: 5
-  session:
-    prefix: "session:"
-    ttl: 24h
-  cache:
-    prefix: "cache:"
-    ttl: 5m
+    host: valkey
+    port: 6379
+    password: ""
+    db: 0
+    max_retries: 3
+    pool_size: 10
+    min_idle_conns: 5
+    session:
+        prefix: "session:"
+        ttl: 24h
+    cache:
+        prefix: "cache:"
+        ttl: 5m
 
 auth:
-  jwt:
-    # Placeholder only; override with GOTRS_JWT_SECRET or config/config.yaml
-    secret: "development-placeholder-not-for-production"
-    issuer: gotrs
-    audience: gotrs-api
-    access_token_ttl: 15m
-    refresh_token_ttl: 168h
-  session:
-    cookie_name: gotrs_session
-    secure: false  # Set to true in production with HTTPS
-    http_only: true
-    same_site: lax
-    max_age: 57600  # 16 hours total lifetime (fallback)
-    SessionMaxTime: 57600      # (16 hours)
-    SessionMaxIdleTime: 7200   # idle (2 hours)
-  password:
-    min_length: 8
-    require_uppercase: true
-    require_lowercase: true
-    require_number: true
-    require_special: false
-    bcrypt_cost: 10
+    jwt:
+        # Placeholder only; override with GOTRS_JWT_SECRET or config/config.yaml
+        secret: "development-placeholder-not-for-production"
+        issuer: gotrs
+        audience: gotrs-api
+        access_token_ttl: 15m
+        refresh_token_ttl: 168h
+    session:
+        cookie_name: gotrs_session
+        secure: false # Set to true in production with HTTPS
+        http_only: true
+        same_site: lax
+        max_age: 57600 # 16 hours total lifetime (fallback)
+        SessionMaxTime: 57600 # (16 hours)
+        SessionMaxIdleTime: 7200 # idle (2 hours)
+    password:
+        min_length: 8
+        require_uppercase: true
+        require_lowercase: true
+        require_number: true
+        require_special: false
+        bcrypt_cost: 10
 
 email:
-  enabled: true
-  from: noreply@gotrs.local
-  from_name: GOTRS System
-  smtp:
-    host: mailhog
-    port: 1025
-    user: ""
-    password: ""
-    auth_type: none  # none, plain, login, cram-md5
-    tls: false
-    skip_verify: true
-  templates:
-    path: /app/templates/email
-  queue:
-    workers: 2
-    buffer_size: 100
-    retry_attempts: 3
-    retry_delay: 5s
-  inbound:
     enabled: true
-    poll_interval: 2m
-    worker_count: 2
-    max_accounts: 5
-    trusted_headers:
-      - X-GOTRS-TicketNumber
-      - X-OTRS-TicketNumber
+    from: noreply@gotrs.local
+    from_name: GOTRS System
+    smtp:
+        host: mailhog
+        port: 1025
+        user: ""
+        password: ""
+        auth_type: none # none, plain, login, cram-md5
+        tls: false
+        skip_verify: true
+    templates:
+        path: /app/templates/email
+    queue:
+        workers: 2
+        buffer_size: 100
+        retry_attempts: 3
+        retry_delay: 5s
+    inbound:
+        enabled: true
+        poll_interval: 2m
+        worker_count: 2
+        max_accounts: 5
+        trusted_headers:
+            - X-GOTRS-TicketNumber
+            - X-OTRS-TicketNumber
 
 storage:
-  type: local  # local, s3
-  local:
-    path: /app/storage
-    public_path: /app/storage/public
-    # Layout fixed to OTRS:
-    #   var/article/YYYY/MM/DD/<ticket>/<article>/<filename>
-  s3:
-    bucket: ""
-    region: ""
-    access_key: ""
-    secret_key: ""
-    endpoint: ""
-  attachments:
-    max_size: 10485760  # 10MB in bytes
-    allowed_types:
-      - image/jpeg
-      - image/png
-      - image/gif
-      - image/webp
-      - image/svg+xml
-      - image/avif
-      - image/tiff
-      - image/bmp
-      - image/x-icon
-      - image/vnd.microsoft.icon
-      - image/heic
-      - image/heif
-      - image/apng
-      - application/pdf
-      - text/plain
-      - application/msword
-      - application/vnd.openxmlformats-officedocument.wordprocessingml.document
-      - application/vnd.ms-excel
-      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    type: local # local, s3
+    local:
+        path: /app/storage
+        public_path: /app/storage/public
+        # Layout fixed to OTRS:
+        #   var/article/YYYY/MM/DD/<ticket>/<article>/<filename>
+    s3:
+        bucket: ""
+        region: ""
+        access_key: ""
+        secret_key: ""
+        endpoint: ""
+    attachments:
+        max_size: 10485760 # 10MB in bytes
+        allowed_types:
+            - image/jpeg
+            - image/png
+            - image/gif
+            - image/webp
+            - image/svg+xml
+            - image/avif
+            - image/tiff
+            - image/bmp
+            - image/x-icon
+            - image/vnd.microsoft.icon
+            - image/heic
+            - image/heif
+            - image/apng
+            - application/pdf
+            - text/plain
+            - application/msword
+            - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+            - application/vnd.ms-excel
+            - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 
 ticket:
-  # Ticket settings (OTRS-compatible defaults)
-  default_priority: 3        # 3 = normal (OTRS priority IDs)
-  default_state: 1           # 1 = new (OTRS state IDs)
-  default_queue: 1           # 1 = Raw (OTRS queue IDs)
-  default_lock: 1            # 1 = unlock (OTRS lock IDs)
-  auto_assign: false
+    # Ticket settings (OTRS-compatible defaults)
+    default_priority: 3 # 3 = normal (OTRS priority IDs)
+    default_state: 1 # 1 = new (OTRS state IDs)
+    default_queue: 1 # 1 = Raw (OTRS queue IDs)
+    default_lock: 1 # 1 = unlock (OTRS lock IDs)
+    auto_assign: false
 
-  # Service settings (Znuny-compatible)
-  service:
-    # Enable default services for customers without explicit assignments
-    # Uses <DEFAULT> pseudo-user in service_customer_user table (Znuny pattern)
-    default_unknown_customer: true
+    # Service settings (OTRS-compatible)
+    service:
+        # Enable default services for customers without explicit assignments
+        # Uses <DEFAULT> pseudo-user in service_customer_user table (OTRS pattern)
+        default_unknown_customer: true
 
-  # SLA configuration
-  sla:
-    enabled: false
-    first_response: 4h
-    resolution: 24h
+    # SLA configuration
+    sla:
+        enabled: false
+        first_response: 4h
+        resolution: 24h
 
-  # Notification settings
-  notifications:
-    customer_create: true
-    customer_update: true
-    agent_assign: true
-    agent_mention: true
+    # Notification settings
+    notifications:
+        customer_create: true
+        customer_update: true
+        agent_assign: true
+        agent_mention: true
 
-  frontend:
-    agent_ticket_note:
-      required_time_units: false
+    frontend:
+        agent_ticket_note:
+            required_time_units: false
 
 logging:
-  level: debug  # debug, info, warn, error
-  format: json  # json, text
-  output: stdout  # stdout, file, both
-  file:
-    path: /app/logs
-    filename: gotrs.log
-    max_size: 100  # MB
-    max_backups: 7
-    max_age: 30  # days
-    compress: true
-  fields:
-    - timestamp
-    - level
-    - message
-    - request_id
-    - user_id
-    - ip
+    level: debug # debug, info, warn, error
+    format: json # json, text
+    output: stdout # stdout, file, both
+    file:
+        path: /app/logs
+        filename: gotrs.log
+        max_size: 100 # MB
+        max_backups: 7
+        max_age: 30 # days
+        compress: true
+    fields:
+        - timestamp
+        - level
+        - message
+        - request_id
+        - user_id
+        - ip
 
 metrics:
-  enabled: true
-  prometheus:
     enabled: true
-    port: 9090
-    path: /metrics
-  opentelemetry:
-    enabled: false
-    endpoint: ""
-    service_name: gotrs
-    trace_ratio: 0.1
+    prometheus:
+        enabled: true
+        port: 9090
+        path: /metrics
+    opentelemetry:
+        enabled: false
+        endpoint: ""
+        service_name: gotrs
+        trace_ratio: 0.1
 
 rate_limiting:
-  enabled: true
-  requests_per_minute: 60
-  burst: 10
-  exclude_paths:
-    - /health
-    - /metrics
+    enabled: true
+    requests_per_minute: 60
+    burst: 10
+    exclude_paths:
+        - /health
+        - /metrics
 
 features:
-  registration: true
-  social_login: false
-  two_factor_auth: false
-  api_keys: true
-  webhooks: false
-  ldap: false
-  saml: false
-  knowledge_base: false
-  customer_portal: true
-  agent_collision_detection: true
+    registration: true
+    social_login: false
+    two_factor_auth: false
+    api_keys: true
+    webhooks: false
+    ldap: false
+    saml: false
+    knowledge_base: false
+    customer_portal: true
+    agent_collision_detection: true
 
 maintenance:
-  mode: false
-  message: "System is under maintenance. Please try again later."
-  allowed_ips:
-    - 127.0.0.1
+    mode: false
+    message: "System is under maintenance. Please try again later."
+    allowed_ips:
+        - 127.0.0.1
 
 # Integration settings
 integrations:
-  slack:
-    enabled: false
-    webhook_url: ""
-  teams:
-    enabled: false
-    webhook_url: ""
-  webhook:
-    enabled: false
-    endpoints: []
-    timeout: 10s
-    retry_attempts: 3
+    slack:
+        enabled: false
+        webhook_url: ""
+    teams:
+        enabled: false
+        webhook_url: ""
+    webhook:
+        enabled: false
+        endpoints: []
+        timeout: 10s
+        retry_attempts: 3

@@ -28,7 +28,7 @@ INSERT INTO ticket_state_type (id, name, comments, create_time, create_by, chang
 (5, 'closed', 'All closed state types', CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 ON CONFLICT (id) DO NOTHING;
 
--- Colors align with Znuny upstream defaults
+-- Colors align with OTRS upstream defaults
 INSERT INTO ticket_priority (id, name, valid_id, color, create_time, create_by, change_time, change_by) VALUES
 (1, '1 very low', 1, '#03c4f0', CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
 (2, '2 low', 1, '#83bfc8', CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1),
@@ -93,7 +93,7 @@ INSERT INTO salutation (id, name, text, content_type, comments, valid_id, create
 (1, 'Default', 'Dear Customer,', 'text/plain', 'Default salutation', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 ON CONFLICT (id) DO NOTHING;
 
--- Signatures  
+-- Signatures
 INSERT INTO signature (id, name, text, content_type, comments, valid_id, create_time, create_by, change_time, change_by) VALUES
 (1, 'Default', 'Your Support Team', 'text/plain', 'Default signature', 1, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP, 1)
 ON CONFLICT (id) DO NOTHING;

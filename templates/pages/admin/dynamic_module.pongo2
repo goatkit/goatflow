@@ -949,7 +949,7 @@
                                 {% if field.Name == "allow_trusted_headers" %}
                                     {% set help_inline = true %}
                                     <div class="mt-2 flex items-center justify-between gap-3">
-                                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ field.Help|default:"Accept queue overrides from X-Znuny-Dest / X-GOTRS headers for this mailbox." }}</span>
+                                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ field.Help|default:"Accept queue overrides from X-OTRS-Queue / X-GOTRS headers for this mailbox." }}</span>
                                         <input type="checkbox" id="{{ field.Name }}" name="{{ field.Name }}" value="1"
                                             class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
                                     </div>
