@@ -995,6 +995,36 @@
         "lookups": {
             "description": "Manage lookup data"
         },
+        "customer_user_groups": {
+            "title": "Customer User Groups",
+            "description": "Manage individual customer user access to groups and queues",
+            "customer_users": "Customer Users",
+            "groups": "Groups",
+            "click_user_to_edit": "Click a customer user to edit their group permissions",
+            "click_group_to_edit": "Click a group to edit which customer users have access",
+            "search_users": "Search customer users",
+            "search_placeholder": "Search users... (use * for all)",
+            "filter_groups": "Filter groups",
+            "filter_groups_placeholder": "Filter groups...",
+            "no_users_found": "No customer users found",
+            "no_groups_found": "No groups found",
+            "adjust_search": "Try adjusting your search criteria",
+            "help_title": "About Customer User Group Permissions",
+            "help_description": "Customer user group permissions control which tickets individual customer users can see in the customer portal, overriding company-level permissions.",
+            "help_ro": "Read-only access to tickets in queues assigned to this group",
+            "help_rw": "Read-write access (can create and update tickets)",
+            "edit_user_title": "Customer User Group Permissions",
+            "edit_group_title": "Group Customer User Permissions",
+            "login": "Login",
+            "group": "Group",
+            "customer_user": "Customer User",
+            "group_permissions": "Group Permissions",
+            "user_permissions": "User Permissions",
+            "select_groups_for_user": "Select which groups this customer user has access to",
+            "select_users_for_group": "Select which customer users have access to this group",
+            "manage_users_for_group": "Manage customer user permissions for this group",
+            "no_groups_available": "No groups available"
+        },
         "common": {
             "actions": {
                 "cancel": "Cancel",

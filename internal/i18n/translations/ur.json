@@ -934,6 +934,36 @@
         "lookups": {
             "description": "تلاش کے ڈیٹا کا انتظام کریں"
         },
+        "customer_user_groups": {
+            "title": "گاہک صارف ↔ گروپس",
+            "description": "انفرادی گاہک صارفین کو گروپس میں تفویض کریں اور ان کی اجازتوں کا انتظام کریں",
+            "customer_users": "گاہک صارفین",
+            "groups": "گروپس",
+            "search_users": "گاہک صارفین تلاش کریں...",
+            "filter_groups": "گروپس فلٹر کریں...",
+            "no_users_found": "کوئی گاہک صارف نہیں ملا",
+            "no_groups_found": "کوئی گروپ نہیں ملا",
+            "edit_user_groups": "صارف کے گروپس میں ترمیم کریں",
+            "edit_group_users": "گروپ کے صارفین میں ترمیم کریں",
+            "permissions_for_user": "صارف کے لیے اجازتیں",
+            "permissions_for_group": "گروپ کے لیے اجازتیں",
+            "select_groups": "اس صارف کے لیے گروپس منتخب کریں",
+            "select_users": "اس گروپ کے لیے صارفین منتخب کریں",
+            "permission_ro": "صرف پڑھنے کے لیے",
+            "permission_rw": "پڑھنے/لکھنے کے لیے",
+            "ro_hint": "اس گروپ میں ٹکٹس دیکھ سکتا ہے",
+            "rw_hint": "اس گروپ میں ٹکٹس بنا اور ترمیم کر سکتا ہے",
+            "save_success": "اجازتیں کامیابی سے محفوظ ہو گئیں",
+            "save_error": "اجازتیں محفوظ کرنے میں ناکامی",
+            "no_permissions": "کوئی اجازتیں سیٹ نہیں ہیں",
+            "back_to_list": "فہرست پر واپس جائیں",
+            "user_count": "صارفین",
+            "group_count": "گروپس",
+            "click_to_edit": "ترمیم کے لیے کلک کریں",
+            "active_permissions": "فعال اجازتیں",
+            "all_groups": "تمام گروپس",
+            "assigned_groups": "تفویض شدہ گروپس"
+        },
         "common": {
             "actions": {
                 "cancel": "منسوخ کریں",

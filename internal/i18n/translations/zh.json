@@ -916,6 +916,36 @@
         "lookups": {
             "description": "管理查找数据"
         },
+        "customer_user_groups": {
+            "title": "客户用户组",
+            "description": "管理单个客户用户对组和队列的访问权限",
+            "customer_users": "客户用户",
+            "groups": "组",
+            "click_user_to_edit": "点击客户用户以编辑其组权限",
+            "click_group_to_edit": "点击组以编辑哪些客户用户有访问权限",
+            "search_users": "搜索客户用户",
+            "search_placeholder": "搜索用户...（使用*显示全部）",
+            "filter_groups": "筛选组",
+            "filter_groups_placeholder": "筛选组...",
+            "no_users_found": "未找到客户用户",
+            "no_groups_found": "未找到组",
+            "adjust_search": "请尝试调整搜索条件",
+            "help_title": "关于客户用户组权限",
+            "help_description": "客户用户组权限控制单个客户用户可以在客户门户中看到哪些工单。",
+            "help_ro": "对分配给此组的队列中的工单具有只读访问权限",
+            "help_rw": "读写访问权限（可以创建和更新工单）",
+            "edit_user_title": "客户用户组权限",
+            "edit_group_title": "组的客户用户权限",
+            "login": "登录名",
+            "group": "组",
+            "customer_user": "客户用户",
+            "group_permissions": "组权限",
+            "user_permissions": "用户权限",
+            "select_groups_for_user": "选择此客户用户可以访问的组",
+            "select_users_for_group": "选择哪些客户用户可以访问此组",
+            "manage_users_for_group": "管理此组的客户用户权限",
+            "no_groups_available": "没有可用的组"
+        },
         "common": {
             "actions": {
                 "cancel": "取消",

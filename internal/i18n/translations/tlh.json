@@ -917,6 +917,36 @@
         "lookups": {
             "description": "nej De' SeH"
         },
+        "customer_user_groups": {
+            "title": "mach lo'wI' ↔ ghommey",
+            "description": "mach lo'wI' wa'DIch ghommeyDaq lan 'ej chaw'mey SeH",
+            "customer_users": "mach lo'wI'mey",
+            "groups": "ghommey",
+            "search_users": "mach lo'wI'mey nej...",
+            "filter_groups": "ghommey wIv...",
+            "no_users_found": "mach lo'wI' tu'be'lu'",
+            "no_groups_found": "ghom tu'be'lu'",
+            "edit_user_groups": "lo'wI' ghommey choH",
+            "edit_group_users": "ghom lo'wI'mey choH",
+            "permissions_for_user": "lo'wI'vaD chaw'mey",
+            "permissions_for_group": "ghomvaD chaw'mey",
+            "select_groups": "lo'wI'vamvaD ghommey wIv",
+            "select_users": "ghomvamvaD lo'wI'mey wIv",
+            "permission_ro": "laD neH",
+            "permission_rw": "laD/ghItlh",
+            "ro_hint": "ghomvamDaq chaw'mey leghlaH",
+            "rw_hint": "ghomvamDaq chaw'mey chenmoHlaH choHlaH je",
+            "save_success": "chaw'mey choqlu'ta' Qapla'",
+            "save_error": "chaw'mey choqlaHbe'",
+            "no_permissions": "chaw'mey cherbe'lu'",
+            "back_to_list": "tetlh chegh",
+            "user_count": "lo'wI'mey",
+            "group_count": "ghommey",
+            "click_to_edit": "choHmeH qIp",
+            "active_permissions": "Qap chaw'mey",
+            "all_groups": "Hoch ghommey",
+            "assigned_groups": "lanlu'bogh ghommey"
+        },
         "common": {
             "actions": {
                 "cancel": "qIl",

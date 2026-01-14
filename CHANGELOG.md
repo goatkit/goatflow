@@ -49,6 +49,13 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - Client-side group filtering with server-side customer search
   - Integration tests with real database
   - Files: `internal/api/admin_customer_groups_handlers.go`, templates in `templates/pages/admin/customer_group*.pongo2`
+- **Customer User Groups Admin**: Full CRUD interface at `/admin/customer-user-groups` for managing individual customer user group permissions (OTRS AdminCustomerUserGroup equivalent)
+  - Two-way management: edit permissions by customer user or by group
+  - Permission types: ro (read-only) and rw (read-write) access for portal ticket visibility
+  - Client-side group filtering with server-side customer user search (login, name, email)
+  - Uses `group_customer_user` table from OTRS baseline schema
+  - Comprehensive integration tests (11 test cases)
+  - Files: `internal/api/admin_customer_user_groups_handlers.go`, templates in `templates/pages/admin/customer_user_group*.pongo2`
 - **Queue Auto Response Admin**: Dynamic module at `/admin/queue-auto-responses` for mapping queues to auto-response templates
   - Lookup display resolution shows queue names and auto-response names instead of IDs
   - i18n translations for all 6 languages (en, de, es, fr, ar, tlh)

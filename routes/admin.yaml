@@ -984,6 +984,41 @@ spec:
           handler: handleGetCustomerGroupPermissions
           description: "Get customer group permissions"
 
+        # Customer User Groups management (individual customer user to group permissions)
+        - path: /customer-user-groups
+          method: GET
+          handler: handleAdminCustomerUserGroups
+          template: pages/admin/customer_user_groups.pongo2
+          description: "Display customer user groups management page"
+
+        - path: /customer-user-groups/user/:id
+          method: GET
+          handler: handleAdminCustomerUserGroupEdit
+          template: pages/admin/customer_user_group_edit.pongo2
+          description: "Edit group permissions for a customer user"
+
+        - path: /customer-user-groups/user/:id
+          method: POST
+          handler: handleAdminCustomerUserGroupUpdate
+          description: "Update group permissions for a customer user"
+
+        - path: /customer-user-groups/group/:id
+          method: GET
+          handler: handleAdminCustomerUserGroupByGroup
+          template: pages/admin/customer_user_group_by_group.pongo2
+          description: "Edit customer user permissions for a group"
+
+        - path: /customer-user-groups/group/:id
+          method: POST
+          handler: handleAdminCustomerUserGroupByGroupUpdate
+          description: "Update customer user permissions for a group"
+
+        # Customer User Groups API
+        - path: /api/customer-user-groups/permissions
+          method: GET
+          handler: handleGetCustomerUserGroupPermissions
+          description: "Get customer user group permissions"
+
         # GenericInterface Web Services management
         - path: /webservices
           method: GET
