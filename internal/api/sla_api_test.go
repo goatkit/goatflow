@@ -57,7 +57,7 @@ func TestSLAAPI(t *testing.T) {
 			INSERT INTO sla (name, calendar_name, first_response_time, first_response_notify,
 				update_time, update_notify, solution_time, solution_notify,
 				valid_id, create_time, create_by, change_time, change_by)
-			VALUES 
+			VALUES
 				(?, NULL, 60, 50, 120, 100, 480, 400, 1, NOW(), 1, NOW(), 1),
 				(?, NULL, 30, 25, 60, 50, 240, 200, 1, NOW(), 1, NOW(), 1)
 		`)
@@ -510,7 +510,7 @@ func insertTestSLA(t *testing.T, db *sql.DB, params insertSLAParams) int {
 			valid_id, create_time, create_by, change_time, change_by
 		) VALUES (
 			?, ?, ?, ?, ?, ?, ?, ?,
-			?, NOW(), ?0, NOW(), ?1
+			?, NOW(), ?, NOW(), ?
 		) RETURNING id
 	`)
 

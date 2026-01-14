@@ -5,7 +5,7 @@ START TRANSACTION;
 
 -- Ensure auxiliary test groups exist
 INSERT IGNORE INTO groups (id, name, comments, valid_id, create_time, create_by, change_time, change_by)
-VALUES 
+VALUES
 (4, 'support', 'Frontline support team', 1, NOW(), 1, NOW(), 1),
 (5, 'testgroup', 'Integration test group', 1, NOW(), 1, NOW(), 1);
 
@@ -146,6 +146,13 @@ INSERT IGNORE INTO queue (
         NOW(),
         1
     );
+
+-- Seed test roles for admin role permissions tests
+INSERT IGNORE INTO roles (id, name, comments, valid_id, create_time, create_by, change_time, change_by)
+VALUES
+    (1, 'Admin', 'System administrators with full access', 1, NOW(), 1, NOW(), 1),
+    (2, 'Agent', 'Standard support agents', 1, NOW(), 1, NOW(), 1),
+    (3, 'Supervisor', 'Team supervisors with elevated permissions', 1, NOW(), 1, NOW(), 1);
 
 -- Seed a deterministic test user referenced by admin integration tests
 INSERT IGNORE INTO users (id, login, pw, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)

@@ -201,26 +201,4 @@ func TestAdminRolePermissionsUI(t *testing.T) {
 	})
 }
 
-// Helper function to check if string contains substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsAt(s, substr, 0))
-}
-
-func containsAt(s, substr string, start int) bool {
-	if start+len(substr) > len(s) {
-		return false
-	}
-	for i := start; i <= len(s)-len(substr); i++ {
-		match := true
-		for j := 0; j < len(substr); j++ {
-			if s[i+j] != substr[j] {
-				match = false
-				break
-			}
-		}
-		if match {
-			return true
-		}
-	}
-	return false
-}
+// Note: contains() helper is defined in admin_customer_companies_test.go

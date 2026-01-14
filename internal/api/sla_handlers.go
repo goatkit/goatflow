@@ -74,12 +74,10 @@ func HandleListSLAsAPI(c *gin.Context) {
 		WHERE 1=1
 	`)
 	args := []interface{}{}
-	paramCount := 0
 
 	// Filter by valid status
 	if validFilter := c.Query("valid"); validFilter == "true" {
-		paramCount++
-		query += database.ConvertPlaceholders(` AND valid_id = $` + strconv.Itoa(paramCount))
+		query += database.ConvertPlaceholders(` AND valid_id = ?`)
 		args = append(args, 1)
 	}
 
@@ -418,7 +416,7 @@ func HandleUpdateSLAAPI(c *gin.Context) {
 	}
 
 	updateQuery := database.ConvertPlaceholders(`
-		UPDATE sla 
+		UPDATE sla
 		SET name = ?, calendar_name = ?,
 			first_response_time = ?, first_response_notify = ?,
 			update_time = ?, update_notify = ?,
@@ -500,7 +498,7 @@ func HandleDeleteSLAAPI(c *gin.Context) {
 	// Check if SLA is used by any tickets
 	var ticketCount int
 	ticketQuery := database.ConvertPlaceholders(`
-		SELECT COUNT(*) FROM tickets 
+		SELECT COUNT(*) FROM tickets
 		WHERE sla_id = ?
 	`)
 	row2 := db.QueryRow(ticketQuery, slaID)
@@ -516,7 +514,7 @@ func HandleDeleteSLAAPI(c *gin.Context) {
 
 	// Soft delete SLA (OTRS style - set valid_id = 2)
 	deleteQuery := database.ConvertPlaceholders(`
-		UPDATE sla 
+		UPDATE sla
 		SET valid_id = 2, change_time = NOW(), change_by = ?
 		WHERE id = ?
 	`)
@@ -565,7 +563,7 @@ func HandleSLAMetricsAPI(c *gin.Context) {
 	// Check if SLA exists
 	var slaName string
 	checkQuery := database.ConvertPlaceholders(`
-		SELECT name FROM sla 
+		SELECT name FROM sla
 		WHERE id = ? AND valid_id = 1
 	`)
 	err = db.QueryRow(checkQuery, slaID).Scan(&slaName)
@@ -577,7 +575,7 @@ func HandleSLAMetricsAPI(c *gin.Context) {
 	// Get SLA metrics
 	// This is a simplified version - in production, you'd calculate actual response times
 	metricsQuery := database.ConvertPlaceholders(`
-		SELECT 
+		SELECT
 			COUNT(*) as total_tickets,
 			SUM(CASE WHEN first_response_time IS NOT NULL THEN 1 ELSE 0 END) as met_first_response,
 			SUM(CASE WHEN solution_time IS NOT NULL THEN 1 ELSE 0 END) as met_solution

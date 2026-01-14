@@ -728,7 +728,7 @@ func handleAdminRoleUsers(c *gin.Context) {
 	}
 	defer rows.Close()
 
-	var users []RoleUser
+	users := []RoleUser{} // Initialize to empty array (not nil) for JSON marshaling
 	for rows.Next() {
 		var u RoleUser
 		err := rows.Scan(&u.UserID, &u.Login, &u.FirstName, &u.LastName)

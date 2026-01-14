@@ -466,6 +466,20 @@ var testedFormTemplates = map[string]bool{
 	"pages/admin/customer_group_edit.pongo2":     true,
 	"pages/admin/customer_group_by_group.pongo2": true,
 
+	// Customer User Groups (customer user ↔ group permissions)
+	"pages/admin/customer_user_groups.pongo2":         true,
+	"pages/admin/customer_user_group_edit.pongo2":     true,
+	"pages/admin/customer_user_group_by_group.pongo2": true,
+
+	// Dynamic Field Import/Export
+	"pages/admin/dynamic_field_export.pongo2": true,
+	"pages/admin/dynamic_field_import.pongo2": true,
+
+	// Webservices
+	"pages/admin/webservices.pongo2":        true,
+	"pages/admin/webservice_form.pongo2":    true,
+	"pages/admin/webservice_history.pongo2": true,
+
 	// Dev tools (not production, skip strict validation)
 	"pages/dev/database.pongo2": true,
 }

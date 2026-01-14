@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -56,28 +55,25 @@ func HandleListTicketStatesAPI(c *gin.Context) {
 		WHERE 1=1
 	`)
 	args := []interface{}{}
-	paramCount := 0
 
 	// Filter by type (open, closed, pending)
 	if typeFilter := c.Query("type"); typeFilter != "" {
-		paramCount++
 		switch typeFilter {
 		case "open":
-			query += database.ConvertPlaceholders(` AND ts.type_id = $` + strconv.Itoa(paramCount))
+			query += database.ConvertPlaceholders(` AND ts.type_id = ?`)
 			args = append(args, 1)
 		case "closed":
-			query += database.ConvertPlaceholders(` AND ts.type_id = $` + strconv.Itoa(paramCount))
+			query += database.ConvertPlaceholders(` AND ts.type_id = ?`)
 			args = append(args, 2)
 		case "pending":
-			query += database.ConvertPlaceholders(` AND ts.type_id = $` + strconv.Itoa(paramCount))
+			query += database.ConvertPlaceholders(` AND ts.type_id = ?`)
 			args = append(args, 3)
 		}
 	}
 
 	// Filter by valid status
 	if validFilter := c.Query("valid"); validFilter == "true" {
-		paramCount++
-		query += database.ConvertPlaceholders(` AND ts.valid_id = $` + strconv.Itoa(paramCount))
+		query += database.ConvertPlaceholders(` AND ts.valid_id = ?`)
 		args = append(args, 1)
 	}
 

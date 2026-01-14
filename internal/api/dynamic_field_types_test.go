@@ -271,7 +271,7 @@ func TestDynamicField_IsInternal(t *testing.T) {
 
 func TestValidFieldTypes(t *testing.T) {
 	types := ValidFieldTypes()
-	assert.Len(t, types, 7)
+	assert.Len(t, types, 9)
 	assert.Contains(t, types, DFTypeText)
 	assert.Contains(t, types, DFTypeTextArea)
 	assert.Contains(t, types, DFTypeCheckbox)
@@ -279,6 +279,8 @@ func TestValidFieldTypes(t *testing.T) {
 	assert.Contains(t, types, DFTypeMultiselect)
 	assert.Contains(t, types, DFTypeDate)
 	assert.Contains(t, types, DFTypeDateTime)
+	assert.Contains(t, types, DFTypeWebserviceDropdown)
+	assert.Contains(t, types, DFTypeWebserviceMultiselect)
 }
 
 func TestValidObjectTypes(t *testing.T) {

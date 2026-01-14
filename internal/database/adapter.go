@@ -223,9 +223,10 @@ func prepareQueryForMySQL(query string, args []interface{}) (string, []interface
 		return removeReturningClause(query), args
 	}
 
-	// Has $N placeholders - expand args for repeats, then convert
+	// Has $N placeholders - expand args for repeats, then convert $N to ?
 	expandedArgs := remapArgsForRepeatedPlaceholders(query, args)
-	convertedQuery := ConvertPlaceholders(query)
+	// Replace all $N placeholders with ? (don't use ConvertPlaceholders as it rejects $N)
+	convertedQuery := re.ReplaceAllString(query, "?")
 	return removeReturningClause(convertedQuery), expandedArgs
 }
 

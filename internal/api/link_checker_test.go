@@ -54,6 +54,9 @@ func TestAllLinksReturn200(t *testing.T) {
 			"/customer/profile":               {http.StatusServiceUnavailable: {}},
 			"/customer":                       {http.StatusServiceUnavailable: {}},
 			"/customer/tickets":               {http.StatusServiceUnavailable: {}},
+			"/admin/auto-responses":           {http.StatusServiceUnavailable: {}}, // Requires DB
+			"/admin/queue-auto-responses":     {http.StatusServiceUnavailable: {}}, // Requires DB
+			"/admin/article-colors":           {http.StatusServiceUnavailable: {}}, // Requires DB
 		}
 
 		if strings.HasPrefix(trimmed, "/tickets/") && status == http.StatusNotFound {
@@ -127,6 +130,10 @@ func TestAllLinksReturn200(t *testing.T) {
 
 		addLink := func(method, link string) {
 			if link == "" || link == "#" || strings.HasPrefix(link, "http") {
+				return
+			}
+			// Skip template literals (JavaScript ${...} syntax)
+			if strings.Contains(link, "${") {
 				return
 			}
 			if idx := strings.IndexAny(link, "?#"); idx != -1 {

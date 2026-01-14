@@ -192,6 +192,9 @@ ticket:
         agent_ticket_note:
             required_time_units: false
 
+    bulk_actions:
+        max_select_all: 1000 # Maximum tickets that can be selected via "Select all matching"
+
 logging:
     level: debug # debug, info, warn, error
     format: json # json, text

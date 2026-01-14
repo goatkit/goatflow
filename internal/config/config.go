@@ -199,6 +199,9 @@ type TicketConfig struct {
 			RequiredTimeUnits bool `mapstructure:"required_time_units"`
 		} `mapstructure:"agent_ticket_note"`
 	} `mapstructure:"frontend"`
+	BulkActions struct {
+		MaxSelectAll int `mapstructure:"max_select_all"`
+	} `mapstructure:"bulk_actions"`
 }
 
 type LoggingConfig struct {

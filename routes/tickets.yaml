@@ -3,80 +3,80 @@
 apiVersion: v1
 kind: RouteGroup
 metadata:
-  name: tickets
-  description: "Ticket management routes"
-  namespace: default
-  enabled: true
+    name: tickets
+    description: "Ticket management routes"
+    namespace: default
+    enabled: true
 spec:
-  prefix: /tickets
-  middleware:
-    - auth  # Require authentication for ticket access
-  routes:
-    # Tickets list page - shows all tickets with filtering
-    - path: /
-      method: GET
-      handler: handleAgentTickets
-      template: pages/tickets/list.pongo2
-      description: "Display tickets list with search and filtering"
+    prefix: /tickets
+    middleware:
+        - auth # Require authentication for ticket access
+    routes:
+        # Tickets list page - shows all tickets with filtering and bulk actions
+        - path: /
+          method: GET
+          handler: handleAgentTickets
+          template: pages/agent/tickets.pongo2
+          description: "Display tickets list with search, filtering, and bulk actions"
 
-    # Note: ticket detail is served from unified /ticket/:id route.
-    # See basic.yaml; compatibility.yaml keeps legacy redirects.
-    # Do not register a duplicate /tickets/:id handler here to avoid conflicts.
+        # Note: ticket detail is served from unified /ticket/:id route.
+        # See basic.yaml; compatibility.yaml keeps legacy redirects.
+        # Do not register a duplicate /tickets/:id handler here to avoid conflicts.
 
-    # New ticket creation form
-    - path: /new
-      method: GET
-      handler: HandleAgentNewTicket
-      template: pages/tickets/new.pongo2
-      middleware:
-        - auth
-      description: "Display new ticket creation form"
+        # New ticket creation form
+        - path: /new
+          method: GET
+          handler: HandleAgentNewTicket
+          template: pages/tickets/new.pongo2
+          middleware:
+              - auth
+          description: "Display new ticket creation form"
 
-    # Create new ticket API
-    - path: /
-      method: POST
-      handler: HandleAgentCreateTicket
-      description: "Process new ticket creation"
+        # Create new ticket API
+        - path: /
+          method: POST
+          handler: HandleAgentCreateTicket
+          description: "Process new ticket creation"
 
-    # Update ticket status API
-    - path: /:id/status
-      method: PUT
-      handler: handleAgentTicketStatus
-      description: "Update ticket status via HTMX"
+        # Update ticket status API
+        - path: /:id/status
+          method: PUT
+          handler: handleAgentTicketStatus
+          description: "Update ticket status via HTMX"
 
-    # Add comment/reply to ticket
-    - path: /:id/comments
-      method: POST
-      handler: handleAgentTicketNote
-      description: "Add new comment/reply to ticket"
+        # Add comment/reply to ticket
+        - path: /:id/comments
+          method: POST
+          handler: handleAgentTicketNote
+          description: "Add new comment/reply to ticket"
 
-    # Ticket attachment upload
-    - path: /:id/attachments
-      method: POST
-      handler: handleAgentTicketReply
-      description: "Upload file attachment to ticket"
+        # Ticket attachment upload
+        - path: /:id/attachments
+          method: POST
+          handler: handleAgentTicketReply
+          description: "Upload file attachment to ticket"
 
-    # Search tickets API
-    - path: /api/search
-      method: GET
-      handler: handleAgentSearch
-      description: "Search tickets with filters"
+        # Search tickets API
+        - path: /api/search
+          method: GET
+          handler: handleAgentSearch
+          description: "Search tickets with filters"
 
-    # Ticket priority update
-    - path: /:id/priority
-      method: PUT
-      handler: handleAgentTicketPriority
-      description: "Update ticket priority"
+        # Ticket priority update
+        - path: /:id/priority
+          method: PUT
+          handler: handleAgentTicketPriority
+          description: "Update ticket priority"
 
-    # Ticket assignment
-    - path: /:id/assign
-      method: PUT
-      handler: handleAgentTicketAssign
-      description: "Assign ticket to agent"
+        # Ticket assignment
+        - path: /:id/assign
+          method: PUT
+          handler: handleAgentTicketAssign
+          description: "Assign ticket to agent"
 
-    # Customer info panel (partial)
-    - path: /customer-info/:login
-      method: GET
-      handler: HandleCustomerInfoPanel
-      template: partials/tickets/customer_info.pongo2
-      description: "Return customer info panel partial for selected login"
+        # Customer info panel (partial)
+        - path: /customer-info/:login
+          method: GET
+          handler: HandleCustomerInfoPanel
+          template: partials/tickets/customer_info.pongo2
+          description: "Return customer info panel partial for selected login"

@@ -21,9 +21,21 @@ func NewAuthHelper(browser *BrowserHelper) *AuthHelper {
 
 // Login performs login with the given credentials
 func (a *AuthHelper) Login(email, password string) error {
+	// Check if already logged in - skip re-login to avoid timeout waiting for login form
+	if a.IsLoggedIn() {
+		return nil
+	}
+
 	// Navigate to login page
 	if err := a.browser.NavigateTo("/login"); err != nil {
 		return fmt.Errorf("failed to navigate to login: %w", err)
+	}
+
+	// Check again after navigation - /login may redirect if already authenticated
+	currentURL := a.browser.Page.URL()
+	if strings.Contains(currentURL, "/dashboard") || strings.Contains(currentURL, "/tickets") {
+		// Already logged in and redirected
+		return nil
 	}
 
 	// Wait for login form

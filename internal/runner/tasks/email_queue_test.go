@@ -149,7 +149,7 @@ func TestCleanupFailedEmails_Integration(t *testing.T) {
 	oldTime := time.Now().Add(-8 * 24 * time.Hour)
 	insertQuery := database.ConvertPlaceholders(`
 		INSERT INTO mail_queue (recipient, raw_message, attempts, create_time)
-		VALUES ($1, $2, $3, $4)
+		VALUES (?, ?, ?, ?)
 	`)
 	result, err := db.ExecContext(ctx, insertQuery, "old@test.com", []byte("test message"), MaxRetries, oldTime)
 	if err != nil {

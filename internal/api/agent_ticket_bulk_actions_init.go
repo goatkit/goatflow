@@ -11,4 +11,5 @@ func init() {
 	routing.GlobalHandlerMap["handleBulkTicketLock"] = AgentHandlerExports.HandleBulkTicketLock
 	routing.GlobalHandlerMap["handleBulkTicketMerge"] = AgentHandlerExports.HandleBulkTicketMerge
 	routing.GlobalHandlerMap["handleGetBulkActionOptions"] = AgentHandlerExports.HandleGetBulkActionOptions
+	routing.GlobalHandlerMap["handleGetFilteredTicketIds"] = AgentHandlerExports.HandleGetFilteredTicketIds
 }

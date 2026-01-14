@@ -137,6 +137,11 @@ spec:
           handler: handleGetBulkActionOptions
           description: "Get options for bulk action modals"
 
+        - path: /api/tickets/ids
+          method: GET
+          handler: handleGetFilteredTicketIds
+          description: "Get all ticket IDs matching current filter for bulk selection"
+
         # Agent queues
         - path: /queues
           method: GET

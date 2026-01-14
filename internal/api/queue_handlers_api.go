@@ -373,33 +373,28 @@ func handleUpdateQueue(c *gin.Context) {
 	// Build update matching test arg order: (change_by, name?, comments?, unlock_timeout?, id)
 	query := `UPDATE queue SET change_by = ?, change_time = CURRENT_TIMESTAMP`
 	args := []interface{}{1}
-	argCount := 2
 	resp := gin.H{"id": id}
 	if input.Name != nil {
-		query += `, name = $` + strconv.Itoa(argCount)
+		query += `, name = ?`
 		args = append(args, *input.Name)
 		resp["name"] = *input.Name
-		argCount++
 	}
 	if input.Comments != nil {
-		query += `, comments = $` + strconv.Itoa(argCount)
+		query += `, comments = ?`
 		args = append(args, *input.Comments)
 		resp["comments"] = *input.Comments
-		argCount++
 	}
 	if input.UnlockTimeout != nil {
-		query += `, unlock_timeout = $` + strconv.Itoa(argCount)
+		query += `, unlock_timeout = ?`
 		args = append(args, *input.UnlockTimeout)
 		resp["unlock_timeout"] = *input.UnlockTimeout
-		argCount++
 	}
 	if input.ValidID != nil {
-		query += `, valid_id = $` + strconv.Itoa(argCount)
+		query += `, valid_id = ?`
 		args = append(args, *input.ValidID)
 		resp["valid_id"] = *input.ValidID
-		argCount++
 	}
-	query += ` WHERE id = $` + strconv.Itoa(argCount)
+	query += ` WHERE id = ?`
 	args = append(args, id)
 
 	result, err := db.Exec(database.ConvertPlaceholders(query), args...)

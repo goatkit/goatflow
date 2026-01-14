@@ -77,9 +77,17 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/postmaster_filter_form.pongo2":    true,
 	"pages/admin/acl.pongo2":                       true,
 	"pages/admin/generic_agent.pongo2":             true,
-	"pages/admin/customer_groups.pongo2":           true,
-	"pages/admin/customer_group_edit.pongo2":       true,
-	"pages/admin/customer_group_by_group.pongo2":   true,
+	"pages/admin/customer_groups.pongo2":              true,
+	"pages/admin/customer_group_edit.pongo2":         true,
+	"pages/admin/customer_group_by_group.pongo2":     true,
+	"pages/admin/customer_user_groups.pongo2":        true,
+	"pages/admin/customer_user_group_edit.pongo2":    true,
+	"pages/admin/customer_user_group_by_group.pongo2": true,
+	"pages/admin/dynamic_field_export.pongo2":        true,
+	"pages/admin/dynamic_field_import.pongo2":        true,
+	"pages/admin/webservices.pongo2":                 true,
+	"pages/admin/webservice_form.pongo2":             true,
+	"pages/admin/webservice_history.pongo2":          true,
 
 	// Agent templates
 	"pages/agent/dashboard.pongo2":   true,
@@ -985,6 +993,110 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 				ctx["Types"] = []map[string]interface{}{sampleType()}
 				ctx["HeaderFields"] = []string{"From", "To", "Subject", "X-Priority"}
 				ctx["SetFields"] = []string{"Queue", "State", "Priority", "Type"}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/customer_user_groups",
+			template: "pages/admin/customer_user_groups.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["CustomerUsers"] = []map[string]interface{}{sampleUser()}
+				ctx["Groups"] = []map[string]interface{}{sampleGroup()}
+				ctx["Search"] = ""
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/customer_user_group_edit",
+			template: "pages/admin/customer_user_group_edit.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["CustomerUser"] = sampleUser()
+				ctx["Groups"] = []map[string]interface{}{sampleGroup()}
+				ctx["AssignedGroups"] = []int{1}
+				ctx["PermissionTypes"] = []string{"ro", "rw", "move_into", "create", "note", "owner", "priority"}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/customer_user_group_by_group",
+			template: "pages/admin/customer_user_group_by_group.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Group"] = sampleGroup()
+				ctx["CustomerUsers"] = []map[string]interface{}{sampleUser()}
+				ctx["AssignedCustomerUsers"] = []string{"testuser"}
+				ctx["PermissionTypes"] = []string{"ro", "rw", "move_into", "create", "note", "owner", "priority"}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/dynamic_field_export",
+			template: "pages/admin/dynamic_field_export.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Fields"] = []map[string]interface{}{sampleDynamicField()}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/dynamic_field_import",
+			template: "pages/admin/dynamic_field_import.pongo2",
+			ctx:      adminContext(),
+		},
+		{
+			name:     "admin/webservices",
+			template: "pages/admin/webservices.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Webservices"] = []map[string]interface{}{
+					{
+						"ID":          1,
+						"Name":        "TestWebservice",
+						"Description": "Test webservice",
+						"ValidID":     1,
+					},
+				}
+				ctx["Search"] = ""
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/webservice_form",
+			template: "pages/admin/webservice_form.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["IsNew"] = true
+				ctx["Webservice"] = map[string]interface{}{
+					"ID":          0,
+					"Name":        "",
+					"Description": "",
+					"ValidID":     1,
+				}
+				ctx["ValidOptions"] = []map[string]interface{}{
+					{"ID": 1, "Name": "valid"},
+					{"ID": 2, "Name": "invalid"},
+				}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/webservice_history",
+			template: "pages/admin/webservice_history.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Webservice"] = map[string]interface{}{
+					"ID":   1,
+					"Name": "TestWebservice",
+				}
+				ctx["History"] = []map[string]interface{}{
+					{
+						"ID":         1,
+						"CreateTime": time.Now(),
+						"CreateBy":   1,
+					},
+				}
 				return ctx
 			}(),
 		},

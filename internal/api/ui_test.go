@@ -507,12 +507,12 @@ func TestPageLoadPerformance(t *testing.T) {
 		{
 			name:      "Queue page size is reasonable",
 			route:     "/queues",
-			maxSizeKB: 35, // Allow some growth for new features
+			maxSizeKB: 40, // Increased for webservice/GenericInterface features
 		},
 		{
 			name:      "Admin page size is reasonable",
 			route:     "/admin",
-			maxSizeKB: 50, // Increased for templates/attachments modules
+			maxSizeKB: 65, // Increased for webservices, signatures, generic-agent modules
 		},
 	}
 

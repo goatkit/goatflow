@@ -66,16 +66,22 @@ func (r *HandlerRegistry) RegisterMiddleware(name string, middleware gin.Handler
 }
 
 // Get retrieves a handler by name.
+// Falls back to GlobalHandlerMap if not found in registry (for init-registered handlers).
 func (r *HandlerRegistry) Get(name string) (gin.HandlerFunc, error) {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
-
 	handler, exists := r.handlers[name]
-	if !exists {
-		return nil, fmt.Errorf("handler %s not found", name)
+	r.mu.RUnlock()
+
+	if exists {
+		return handler, nil
 	}
 
-	return handler, nil
+	// Fallback to GlobalHandlerMap for handlers registered via init()
+	if handler, exists := GlobalHandlerMap[name]; exists {
+		return handler, nil
+	}
+
+	return nil, fmt.Errorf("handler %s not found", name)
 }
 
 // GetMiddleware retrieves middleware by name.

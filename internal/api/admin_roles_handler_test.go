@@ -489,7 +489,9 @@ func TestAdminRoleUsers(t *testing.T) {
 		assert.NoError(t, err)
 		assert.True(t, response["success"].(bool))
 		assert.NotNil(t, response["role"])
-		assert.NotNil(t, response["available"])
+		// Note: 'available' is NOT returned by this endpoint for scalability reasons
+		// Use /admin/roles/:id/users/search?q=xxx to search for users to add
+		assert.NotNil(t, response["members"])
 	})
 
 	t.Run("GET /admin/roles/:id/users with non-existent ID returns 404", func(t *testing.T) {

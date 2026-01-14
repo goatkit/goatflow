@@ -3,6 +3,52 @@
 {% block title %}Ticket Management - GOTRS{% endblock %}
 
 {% block content %}
+<!-- Floating Bulk Actions Bar (appears when tickets are selected) -->
+{% if Tickets %}
+<div id="floating-bulk-actions" class="fixed bottom-0 left-0 right-0 z-50 transform translate-y-full transition-transform duration-300 ease-in-out">
+    <div class="bg-gray-800 dark:bg-gray-900 shadow-lg border-t border-gray-700">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <span id="floating-selected-count" class="text-sm font-medium text-white">
+                        <span class="inline-flex items-center justify-center w-6 h-6 bg-blue-600 rounded-full mr-2">0</span>
+                        tickets selected
+                    </span>
+                    <div class="h-6 w-px bg-gray-600"></div>
+                    <button onclick="bulkAssign()" class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        Assign
+                    </button>
+                    <button onclick="bulkChangeStatus()" class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Change Status
+                    </button>
+                    <button onclick="bulkChangePriority()" class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-md transition-colors">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+                        </svg>
+                        Change Priority
+                    </button>
+                    <button onclick="bulkMerge()" class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                        Merge
+                    </button>
+                </div>
+                <button onclick="clearAllSelections()" class="text-sm text-gray-400 hover:text-white transition-colors">
+                    Clear selection
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="mb-6 sm:flex sm:items-center sm:justify-between">
@@ -152,15 +198,15 @@
     </div>
 
     <!-- Ticket List -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+    <div id="ticket-list-container" class="bg-white dark:bg-gray-800 rounded-lg shadow transition-all duration-300">
         <div class="overflow-x-auto">
-            <table class="w-full">
+            <table class="w-full table-fixed">
                 <thead class="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                        <th class="px-6 py-3 text-left">
+                        <th class="w-10 px-2 py-2 text-left">
                             <input type="checkbox" id="select-all" class="rounded dark:bg-gray-600">
                         </th>
-                        <th class="px-6 py-3 text-left">
+                        <th class="w-24 px-2 py-2 text-left">
                             <a href="?sort=tn&order={% if CurrentFilters.sort == 'tn' and CurrentFilters.order == 'asc' %}desc{% else %}asc{% endif %}&{{ request.GET.urlencode }}"
                                class="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-white">
                                 Ticket #
@@ -169,7 +215,7 @@
                                 {% endif %}
                             </a>
                         </th>
-                        <th class="px-6 py-3 text-left">
+                        <th class="px-2 py-2 text-left" style="width: 20%;">
                             <a href="?sort=title&order={% if CurrentFilters.sort == 'title' and CurrentFilters.order == 'asc' %}desc{% else %}asc{% endif %}&{{ request.GET.urlencode }}"
                                class="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-white">
                                 Title
@@ -178,28 +224,28 @@
                                 {% endif %}
                             </a>
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th class="w-28 px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Customer
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th class="w-24 px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Queue
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th class="w-24 px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             State
                         </th>
-                        <th class="px-6 py-3 text-left">
+                        <th class="w-20 px-2 py-2 text-left">
                             <a href="?sort=priority&order={% if CurrentFilters.sort == 'priority' and CurrentFilters.order == 'asc' %}desc{% else %}asc{% endif %}&{{ request.GET.urlencode }}"
                                class="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-white">
-                                Priority
+                                Prio
                                 {% if CurrentFilters.sort == 'priority' %}
                                     {% if CurrentFilters.order == 'asc' %}↑{% else %}↓{% endif %}
                                 {% endif %}
                             </a>
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th class="w-24 px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Assigned
                         </th>
-                        <th class="px-6 py-3 text-left">
+                        <th class="w-20 px-2 py-2 text-left">
                             <a href="?sort=create_time&order={% if CurrentFilters.sort == 'create_time' and CurrentFilters.order == 'asc' %}desc{% else %}asc{% endif %}&{{ request.GET.urlencode }}"
                                class="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-white">
                                 Age
@@ -208,10 +254,10 @@
                                 {% endif %}
                             </a>
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Articles
+                        <th class="w-12 px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            #
                         </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th class="w-20 px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Actions
                         </th>
                     </tr>
@@ -219,34 +265,31 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     {% for ticket in Tickets %}
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4">
+                        <td class="px-2 py-2">
                             <input type="checkbox" class="ticket-select rounded dark:bg-gray-600" value="{{ ticket.id }}">
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-							<a href="/ticket/{{ ticket.tn }}" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium">
+                        <td class="px-2 py-2 whitespace-nowrap">
+							<a href="/ticket/{{ ticket.tn }}" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium text-sm">
                                 #{{ ticket.tn }}
                             </a>
                         </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-900 dark:text-white truncate max-w-xs" title="{{ ticket.title }}">
+                        <td class="px-2 py-2">
+                            <div class="text-sm text-gray-900 dark:text-white truncate cursor-help" title="{{ ticket.title }}">
                                 {{ ticket.title }}
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900 dark:text-white">
+                        <td class="px-2 py-2">
+                            <div class="text-sm text-gray-900 dark:text-white truncate cursor-help" title="{{ ticket.customer|default:'-' }}{% if ticket.company %} ({{ ticket.company }}){% endif %}">
                                 {{ ticket.customer|default:"-" }}
                             </div>
-                            {% if ticket.company %}
-                            <div class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ ticket.company }}
+                        </td>
+                        <td class="px-2 py-2">
+                            <div class="text-sm text-gray-900 dark:text-white truncate cursor-help" title="{{ ticket.queue }}">
+                                {{ ticket.queue }}
                             </div>
-                            {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {{ ticket.queue }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                        <td class="px-2 py-2 whitespace-nowrap">
+                            <span class="px-1.5 inline-flex text-xs leading-5 font-semibold rounded-full
                                 {% if 'new' in ticket.state|lower %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% endif %}
                                 {% if 'open' in ticket.state|lower %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200{% endif %}
                                 {% if 'pending' in ticket.state|lower %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}
@@ -255,37 +298,33 @@
                                 {{ ticket.state }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-sm font-medium" {% if ticket.priority_color %}style="color: {{ ticket.priority_color }}"{% endif %}>
+                        <td class="px-2 py-2 whitespace-nowrap">
+                            <span class="text-xs font-medium" {% if ticket.priority_color %}style="color: {{ ticket.priority_color }}"{% endif %}>
                                 {{ ticket.priority }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {{ ticket.assigned_to|default:"Unassigned" }}
+                        <td class="px-2 py-2">
+                            <div class="text-sm text-gray-900 dark:text-white truncate cursor-help" title="{{ ticket.assigned_to|default:'Unassigned' }}">
+                                {{ ticket.assigned_to|default:"-" }}
+                            </div>
                         </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    {% if ticket.created_at_iso %}<span data-relative-time data-mode="since" data-direction="past" data-timestamp="{{ ticket.created_at_iso }}">{{ ticket.age }}</span>{% else %}{{ ticket.age }}{% endif %}
-                                </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                            {% if ticket.created_at_iso %}<span data-relative-time data-mode="since" data-direction="past" data-timestamp="{{ ticket.created_at_iso }}">{{ ticket.age }}</span>{% else %}{{ ticket.age }}{% endif %}
+                        </td>
+                        <td class="px-2 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 text-center">
                             {{ ticket.article_count }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div class="flex items-center justify-end space-x-2">
+                        <td class="px-2 py-2 whitespace-nowrap text-right">
+                            <div class="flex items-center justify-end space-x-1">
                                 <button onclick="quickAssign({{ ticket.id }})" title="Quick Assign"
-                                        class="text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        class="text-blue-600 hover:text-blue-700 dark:text-blue-400 p-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                     </svg>
                                 </button>
-                                <button onclick="quickReply({{ ticket.id }})" title="Quick Reply"
-                                        class="text-green-600 hover:text-green-700 dark:text-green-400">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
-                                    </svg>
-                                </button>
 								<a href="/ticket/{{ ticket.tn }}" title="View Details"
-                                   class="text-gray-600 hover:text-gray-700 dark:text-gray-400">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                   class="text-gray-600 hover:text-gray-700 dark:text-gray-400 p-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                                     </svg>
@@ -295,7 +334,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="11" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <td colspan="11" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                             No tickets found matching your criteria
                         </td>
                     </tr>
@@ -304,28 +343,21 @@
             </table>
         </div>
 
-        <!-- Bulk Actions -->
+        <!-- Bulk Selection Controls -->
         {% if Tickets %}
-        <div class="px-6 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+        <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">
-                        With selected:
+                    <button id="select-all-matching" onclick="selectAllMatching()"
+                            class="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline">
+                        Select all {{ Pagination.TotalCount }} matching tickets
+                    </button>
+                    <span class="text-xs text-gray-400">|</span>
+                    <span id="selection-info" class="text-xs text-gray-500 dark:text-gray-400">
+                        Select tickets to use bulk actions
                     </span>
-                    <button onclick="bulkAssign()" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                        Assign
-                    </button>
-                    <button onclick="bulkChangeStatus()" class="text-sm text-green-600 hover:text-green-700 dark:text-green-400">
-                        Change Status
-                    </button>
-                    <button onclick="bulkChangePriority()" class="text-sm text-orange-600 hover:text-orange-700 dark:text-orange-400">
-                        Change Priority
-                    </button>
-                    <button onclick="bulkMerge()" class="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400">
-                        Merge
-                    </button>
                 </div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">
+                <div class="text-xs text-gray-500 dark:text-gray-400">
                     Showing {{ Tickets|length }} of {{ Pagination.TotalCount }} tickets
                 </div>
             </div>
@@ -600,13 +632,50 @@
 </div>
 
 <script>
-// Selected tickets storage
-let selectedTicketIds = [];
+// Selected tickets storage - persisted in sessionStorage for cross-page selections
+const STORAGE_KEY = 'gotrs_bulk_selected_tickets';
 
-// Select all checkbox
+// Load persisted selections from sessionStorage
+function loadPersistedSelections() {
+    try {
+        const stored = sessionStorage.getItem(STORAGE_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+// Save selections to sessionStorage
+function savePersistedSelections(ticketIds) {
+    try {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(ticketIds));
+    } catch (e) {
+        console.warn('Failed to persist selections:', e);
+    }
+}
+
+// Initialize with persisted selections
+let selectedTicketIds = loadPersistedSelections();
+
+// On page load, restore checkbox states from persisted selections
+document.addEventListener('DOMContentLoaded', function() {
+    const persisted = loadPersistedSelections();
+    if (persisted.length > 0) {
+        document.querySelectorAll('.ticket-select').forEach(cb => {
+            if (persisted.includes(parseInt(cb.value))) {
+                cb.checked = true;
+            }
+        });
+        updateSelectedCount();
+    }
+});
+
+// Select all checkbox - only selects visible tickets on current page
 document.getElementById('select-all').addEventListener('change', function() {
     const checkboxes = document.querySelectorAll('.ticket-select');
-    checkboxes.forEach(cb => cb.checked = this.checked);
+    checkboxes.forEach(cb => {
+        cb.checked = this.checked;
+    });
     updateSelectedCount();
 });
 
@@ -616,21 +685,135 @@ document.querySelectorAll('.ticket-select').forEach(cb => {
 });
 
 function updateSelectedCount() {
-    selectedTicketIds = getSelectedTickets();
+    // Merge current page selections with persisted cross-page selections
+    const currentPageSelected = [];
+    const currentPageTicketIds = [];
+
+    document.querySelectorAll('.ticket-select').forEach(cb => {
+        const ticketId = parseInt(cb.value);
+        currentPageTicketIds.push(ticketId);
+        if (cb.checked) {
+            currentPageSelected.push(ticketId);
+        }
+    });
+
+    // Get persisted selections that are NOT on current page (preserve cross-page)
+    const persisted = loadPersistedSelections();
+    const crossPageSelections = persisted.filter(id => !currentPageTicketIds.includes(id));
+
+    // Combine: cross-page selections + current page selections
+    selectedTicketIds = [...crossPageSelections, ...currentPageSelected];
+
+    // Save to sessionStorage
+    savePersistedSelections(selectedTicketIds);
+
     const count = selectedTicketIds.length;
+
     // Update all ticket count spans
     document.querySelectorAll('[id$="-ticket-count"]').forEach(el => {
         el.textContent = count;
     });
+
+    // Show/hide floating bulk actions bar and add/remove bottom padding
+    const floatingBar = document.getElementById('floating-bulk-actions');
+    const ticketListContainer = document.getElementById('ticket-list-container');
+
+    if (floatingBar) {
+        if (count > 0) {
+            floatingBar.classList.remove('translate-y-full');
+            // Add bottom margin to prevent bar from covering last rows
+            if (ticketListContainer) {
+                ticketListContainer.classList.add('mb-16');
+            }
+            // Update the text with count
+            const textNode = document.getElementById('floating-selected-count');
+            if (textNode) {
+                const pageInfo = crossPageSelections.length > 0
+                    ? ` (${currentPageSelected.length} on this page)`
+                    : '';
+                textNode.innerHTML = `<span class="inline-flex items-center justify-center w-6 h-6 bg-blue-600 rounded-full mr-2">${count}</span> ticket${count !== 1 ? 's' : ''} selected${pageInfo}`;
+            }
+        } else {
+            floatingBar.classList.add('translate-y-full');
+            // Remove bottom margin
+            if (ticketListContainer) {
+                ticketListContainer.classList.remove('mb-16');
+            }
+        }
+    }
 }
 
-// Get selected tickets
-function getSelectedTickets() {
-    const selected = [];
+// Clear all ticket selections (including cross-page)
+function clearAllSelections() {
     document.querySelectorAll('.ticket-select:checked').forEach(cb => {
-        selected.push(parseInt(cb.value));
+        cb.checked = false;
     });
-    return selected;
+    const selectAll = document.getElementById('select-all');
+    if (selectAll) {
+        selectAll.checked = false;
+    }
+    // Clear persisted selections
+    selectedTicketIds = [];
+    savePersistedSelections([]);
+    updateSelectedCount();
+}
+
+// Get selected tickets (all, including cross-page)
+function getSelectedTickets() {
+    return selectedTicketIds;
+}
+
+// Select all tickets matching current filter (across all pages)
+async function selectAllMatching() {
+    const btn = document.getElementById('select-all-matching');
+    const originalText = btn.textContent;
+    btn.textContent = 'Loading...';
+    btn.disabled = true;
+
+    try {
+        // Build query string from current URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryString = urlParams.toString();
+
+        const response = await fetch(`/agent/api/tickets/ids?${queryString}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch ticket IDs');
+        }
+
+        const data = await response.json();
+
+        if (data.ticket_ids && data.ticket_ids.length > 0) {
+            // Add all fetched IDs to selection
+            selectedTicketIds = data.ticket_ids;
+            savePersistedSelections(selectedTicketIds);
+
+            // Check boxes on current page that match
+            document.querySelectorAll('.ticket-select').forEach(cb => {
+                if (selectedTicketIds.includes(parseInt(cb.value))) {
+                    cb.checked = true;
+                }
+            });
+
+            updateSelectedCount();
+
+            // Show info about selection
+            let message = `Selected ${data.count} tickets`;
+            if (data.limited) {
+                message += ` (limited to ${data.max_limit}, ${data.total_count} total match)`;
+                showToast(true, 'Selection Limited', `Selected first ${data.max_limit} of ${data.total_count} matching tickets`);
+            } else {
+                showToast(true, 'All Selected', `Selected all ${data.count} matching tickets`);
+            }
+        } else {
+            showToast(false, 'No Tickets', 'No tickets match the current filter');
+        }
+    } catch (error) {
+        console.error('Error selecting all matching:', error);
+        showToast(false, 'Error', 'Failed to select all matching tickets');
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
 }
 
 // Modal helpers

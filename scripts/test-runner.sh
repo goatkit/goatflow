@@ -134,38 +134,45 @@ sleep 2
 step "4/6  Unit Tests"
 
 log "Running Go unit tests..."
-if make toolbox-test > "$UNIT_LOG" 2>&1; then
+
+# Helper to parse unit test results from log file
+parse_unit_test_results() {
+    local log_file="$1"
+
     # Parse package results from output
-    UNIT_PACKAGES_PASSED=$(grep -c "^ok" "$UNIT_LOG" 2>/dev/null || true)
+    UNIT_PACKAGES_PASSED=$(grep -c "^ok" "$log_file" 2>/dev/null || true)
     UNIT_PACKAGES_PASSED=${UNIT_PACKAGES_PASSED:-0}
-    UNIT_PACKAGES_FAILED=$(grep -c "^FAIL" "$UNIT_LOG" 2>/dev/null || true)
+    UNIT_PACKAGES_FAILED=$(grep -c "^FAIL" "$log_file" 2>/dev/null || true)
     UNIT_PACKAGES_FAILED=${UNIT_PACKAGES_FAILED:-0}
 
-    # Count individual test functions (--- PASS: TestXxx and --- FAIL: TestXxx)
-    UNIT_TESTS_PASSED=$(grep -c "^--- PASS:" "$UNIT_LOG" 2>/dev/null || true)
-    UNIT_TESTS_PASSED=${UNIT_TESTS_PASSED:-0}
-    UNIT_TESTS_FAILED=$(grep -c "^--- FAIL:" "$UNIT_LOG" 2>/dev/null || true)
+    # Count ALL tests including subtests using "=== RUN" lines
+    # This gives the true total of all test cases executed
+    UNIT_TESTS_RUN=$(grep -c "^=== RUN" "$log_file" 2>/dev/null || true)
+    UNIT_TESTS_RUN=${UNIT_TESTS_RUN:-0}
+
+    # Count failures (--- FAIL: lines indicate actual failures)
+    UNIT_TESTS_FAILED=$(grep -c "^--- FAIL:" "$log_file" 2>/dev/null || true)
     UNIT_TESTS_FAILED=${UNIT_TESTS_FAILED:-0}
-    UNIT_TESTS_RUN=$((UNIT_TESTS_PASSED + UNIT_TESTS_FAILED))
+
+    # Passed = total run minus failures
+    UNIT_TESTS_PASSED=$((UNIT_TESTS_RUN - UNIT_TESTS_FAILED))
+}
+
+if make test-unit > "$UNIT_LOG" 2>&1; then
+    parse_unit_test_results "$UNIT_LOG"
 
     if [ "$UNIT_PACKAGES_FAILED" = "0" ] || [ -z "$UNIT_PACKAGES_FAILED" ]; then
         UNIT_PACKAGES_FAILED=0
-        success "Unit tests: $UNIT_TESTS_PASSED tests passed ($UNIT_PACKAGES_PASSED packages)"
+        if [ "$UNIT_TESTS_FAILED" = "0" ]; then
+            success "Unit tests: $UNIT_TESTS_PASSED tests passed ($UNIT_PACKAGES_PASSED packages)"
+        else
+            fail "Unit tests: $UNIT_TESTS_PASSED passed, $UNIT_TESTS_FAILED failed ($UNIT_PACKAGES_PASSED packages)"
+        fi
     else
         fail "Unit tests: $UNIT_TESTS_PASSED passed, $UNIT_TESTS_FAILED failed ($UNIT_PACKAGES_FAILED packages failed)"
     fi
 else
-    # Even on failure, parse what we can
-    UNIT_PACKAGES_PASSED=$(grep -c "^ok" "$UNIT_LOG" 2>/dev/null || true)
-    UNIT_PACKAGES_PASSED=${UNIT_PACKAGES_PASSED:-0}
-    UNIT_PACKAGES_FAILED=$(grep -c "^FAIL" "$UNIT_LOG" 2>/dev/null || true)
-    UNIT_PACKAGES_FAILED=${UNIT_PACKAGES_FAILED:-0}
-    UNIT_TESTS_PASSED=$(grep -c "^--- PASS:" "$UNIT_LOG" 2>/dev/null || true)
-    UNIT_TESTS_PASSED=${UNIT_TESTS_PASSED:-0}
-    UNIT_TESTS_FAILED=$(grep -c "^--- FAIL:" "$UNIT_LOG" 2>/dev/null || true)
-    UNIT_TESTS_FAILED=${UNIT_TESTS_FAILED:-0}
-    UNIT_TESTS_RUN=$((UNIT_TESTS_PASSED + UNIT_TESTS_FAILED))
-
+    parse_unit_test_results "$UNIT_LOG"
     fail "Unit tests failed: $UNIT_TESTS_PASSED passed, $UNIT_TESTS_FAILED failed - see $UNIT_LOG"
 fi
 
@@ -175,30 +182,55 @@ fi
 step "5/6  E2E Playwright Tests"
 
 log "Running Playwright browser tests..."
+
+# Helper to parse E2E test results from log file
+parse_e2e_test_results() {
+    local log_file="$1"
+
+    # Check for build failure first
+    E2E_BUILD_FAILED=0
+    if grep -q "\[build failed\]" "$log_file" 2>/dev/null; then
+        E2E_BUILD_FAILED=1
+    fi
+
+    # Count ALL tests including subtests using "=== RUN" lines
+    E2E_RUN=$(grep -c "^=== RUN" "$log_file" 2>/dev/null || true)
+    E2E_RUN=${E2E_RUN:-0}
+
+    # Count failures and skips
+    E2E_FAILED=$(grep -c "^--- FAIL:" "$log_file" 2>/dev/null || true)
+    E2E_FAILED=${E2E_FAILED:-0}
+    E2E_SKIPPED=$(grep -c "^--- SKIP:" "$log_file" 2>/dev/null || true)
+    E2E_SKIPPED=${E2E_SKIPPED:-0}
+
+    # Passed = total run minus failures minus skipped
+    E2E_PASSED=$((E2E_RUN - E2E_FAILED - E2E_SKIPPED))
+    # Guard against negative (shouldn't happen but be safe)
+    if [ "$E2E_PASSED" -lt 0 ]; then
+        E2E_PASSED=0
+    fi
+}
+
 if make test-e2e-playwright-go \
     BASE_URL=http://backend-test:8080 \
     PLAYWRIGHT_NETWORK=gotrs-ce_gotrs-network \
     TEST_USERNAME="${TEST_USERNAME:-root@localhost}" \
     TEST_PASSWORD="${TEST_PASSWORD}" > "$E2E_LOG" 2>&1; then
-    
-    # Parse results
-    E2E_PASSED=$(grep -c "^--- PASS:" "$E2E_LOG" 2>/dev/null || true)
-    E2E_PASSED=${E2E_PASSED:-0}
-    E2E_FAILED=$(grep -c "^--- FAIL:" "$E2E_LOG" 2>/dev/null || true)
-    E2E_FAILED=${E2E_FAILED:-0}
-    E2E_SKIPPED=$(grep -c "^--- SKIP:" "$E2E_LOG" 2>/dev/null || true)
-    E2E_SKIPPED=${E2E_SKIPPED:-0}
-    
-    success "E2E tests: $E2E_PASSED passed, $E2E_SKIPPED skipped"
+
+    parse_e2e_test_results "$E2E_LOG"
+
+    if [ "$E2E_FAILED" = "0" ]; then
+        success "E2E tests: $E2E_PASSED passed, $E2E_SKIPPED skipped"
+    else
+        fail "E2E tests: $E2E_PASSED passed, $E2E_FAILED failed, $E2E_SKIPPED skipped"
+    fi
 else
-    E2E_PASSED=$(grep -c "^--- PASS:" "$E2E_LOG" 2>/dev/null || true)
-    E2E_PASSED=${E2E_PASSED:-0}
-    E2E_FAILED=$(grep -c "^--- FAIL:" "$E2E_LOG" 2>/dev/null || true)
-    E2E_FAILED=${E2E_FAILED:-0}
-    E2E_SKIPPED=$(grep -c "^--- SKIP:" "$E2E_LOG" 2>/dev/null || true)
-    E2E_SKIPPED=${E2E_SKIPPED:-0}
-    
-    fail "E2E tests: $E2E_PASSED passed, $E2E_FAILED failed, $E2E_SKIPPED skipped"
+    parse_e2e_test_results "$E2E_LOG"
+    if [ "$E2E_BUILD_FAILED" = "1" ]; then
+        fail "E2E tests: BUILD FAILED - see $E2E_LOG"
+    else
+        fail "E2E tests: $E2E_PASSED passed, $E2E_FAILED failed, $E2E_SKIPPED skipped"
+    fi
 fi
 
 #########################################
@@ -220,21 +252,21 @@ if [ -f "$CONTAINER_LOG" ]; then
     HTTP_500_COUNT=${HTTP_500_COUNT:-0}
     WARNING_COUNT=$(grep -c "WARNING\|level=warn" "$CONTAINER_LOG" 2>/dev/null || true)
     WARNING_COUNT=${WARNING_COUNT:-0}
-    
+
     if [ "$ERROR_COUNT" = "0" ] || [ -z "$ERROR_COUNT" ]; then
         ERROR_COUNT=0
         success "No ERROR/PANIC in container logs"
     else
         warning "Found $ERROR_COUNT ERROR/PANIC messages in logs"
     fi
-    
+
     if [ "$HTTP_500_COUNT" = "0" ] || [ -z "$HTTP_500_COUNT" ]; then
         HTTP_500_COUNT=0
         success "No HTTP 500 errors in container logs"
     else
         fail "Found $HTTP_500_COUNT HTTP 500 errors"
     fi
-    
+
     if [ "$WARNING_COUNT" != "0" ] && [ -n "$WARNING_COUNT" ]; then
         warning "Found $WARNING_COUNT warnings (review $CONTAINER_LOG)"
     fi
@@ -254,20 +286,29 @@ echo -e "${CYAN}═════════════════════�
 echo ""
 
 # Calculate totals
-TOTAL_TESTS_RUN=$((UNIT_TESTS_RUN + E2E_PASSED + E2E_FAILED + E2E_SKIPPED))
+# E2E_RUN is set by parse_e2e_test_results, default to sum if not set
+E2E_RUN=${E2E_RUN:-$((E2E_PASSED + E2E_FAILED + E2E_SKIPPED))}
+TOTAL_TESTS_RUN=$((UNIT_TESTS_RUN + E2E_RUN))
 TOTAL_TESTS_PASSED=$((UNIT_TESTS_PASSED + E2E_PASSED))
 TOTAL_TESTS_FAILED=$((UNIT_TESTS_FAILED + E2E_FAILED))
+TOTAL_TESTS_SKIPPED=$((E2E_SKIPPED))
 TOTAL_PACKAGES_FAILED=$((UNIT_PACKAGES_FAILED))
 
 # Checklist style summary
 echo "  Test Results:"
-if [ "$UNIT_PACKAGES_FAILED" = "0" ]; then
-    echo -e "    ${GREEN}[✓]${NC} Unit Tests          ${UNIT_TESTS_PASSED} passed, ${UNIT_TESTS_FAILED} failed (${UNIT_PACKAGES_PASSED} packages)"
+if [ "$UNIT_TESTS_FAILED" = "0" ] && [ "$UNIT_PACKAGES_FAILED" = "0" ]; then
+    echo -e "    ${GREEN}[✓]${NC} Unit Tests          ${UNIT_TESTS_PASSED} passed (${UNIT_PACKAGES_PASSED} packages)"
+elif [ "$UNIT_PACKAGES_FAILED" = "0" ]; then
+    echo -e "    ${RED}[✗]${NC} Unit Tests          ${UNIT_TESTS_PASSED} passed, ${UNIT_TESTS_FAILED} failed (${UNIT_PACKAGES_PASSED} packages)"
 else
     echo -e "    ${RED}[✗]${NC} Unit Tests          ${UNIT_TESTS_PASSED} passed, ${UNIT_TESTS_FAILED} failed (${UNIT_PACKAGES_FAILED} packages failed)"
 fi
 
-if [ "$E2E_FAILED" = "0" ]; then
+if [ "${E2E_BUILD_FAILED:-0}" = "1" ]; then
+    echo -e "    ${RED}[✗]${NC} E2E Playwright      BUILD FAILED"
+    # Count build failure as a failure for total
+    TOTAL_TESTS_FAILED=$((TOTAL_TESTS_FAILED + 1))
+elif [ "$E2E_FAILED" = "0" ]; then
     echo -e "    ${GREEN}[✓]${NC} E2E Playwright      ${E2E_PASSED} passed, ${E2E_SKIPPED} skipped"
 else
     echo -e "    ${RED}[✗]${NC} E2E Playwright      ${E2E_PASSED} passed, ${E2E_FAILED} failed, ${E2E_SKIPPED} skipped"
@@ -281,7 +322,7 @@ fi
 
 echo ""
 echo "  ─────────────────────────────────────────────────────────"
-echo -e "  ${CYAN}TOTAL:${NC} ${TOTAL_TESTS_PASSED} passed, ${TOTAL_TESTS_FAILED} failed, ${E2E_SKIPPED} skipped (${TOTAL_TESTS_RUN} tests executed)"
+echo -e "  ${CYAN}TOTAL:${NC} ${TOTAL_TESTS_PASSED} passed, ${TOTAL_TESTS_FAILED} failed, ${TOTAL_TESTS_SKIPPED} skipped (${TOTAL_TESTS_RUN} tests)"
 echo "  ─────────────────────────────────────────────────────────"
 
 # Extract and display translation coverage table

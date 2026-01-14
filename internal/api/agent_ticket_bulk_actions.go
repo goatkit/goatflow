@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/history"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
@@ -605,6 +606,147 @@ func recordBulkMergeHistory(c *gin.Context, targetTicketID int, sourceTicketIDs 
 
 	_ = recorder.Record(c.Request.Context(), nil, targetTicket, nil,
 		history.TypeMerged, message, int(userID))
+}
+
+// handleGetFilteredTicketIds returns all ticket IDs matching the current filter
+// This is used for "select all matching" bulk selection functionality
+func handleGetFilteredTicketIds(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get user ID from context
+		userIDInterface, exists := c.Get("user_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
+			return
+		}
+
+		userID := uint(0)
+		switch v := userIDInterface.(type) {
+		case uint:
+			userID = v
+		case int:
+			userID = uint(v)
+		case float64:
+			userID = uint(v)
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+			return
+		}
+
+		// Get filter parameters (same as handleAgentTickets)
+		status := c.DefaultQuery("status", "not_closed")
+		queue := c.DefaultQuery("queue", "all")
+		assignee := c.DefaultQuery("assignee", "all")
+		search := c.Query("search")
+
+		// Build query - only select ticket IDs
+		query := `
+			SELECT DISTINCT t.id
+			FROM ticket t
+			LEFT JOIN customer_user c ON t.customer_user_id = c.login
+			LEFT JOIN customer_company cc ON t.customer_id = cc.customer_id
+			LEFT JOIN queue q ON t.queue_id = q.id
+			LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
+			WHERE 1=1
+		`
+
+		args := []interface{}{}
+
+		// Apply status filter
+		if status == "open" {
+			query += " AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2))"
+		} else if status == "pending" {
+			query += " AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (4, 5))"
+		} else if status == "closed" {
+			query += " AND t.ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)"
+		} else if status == "not_closed" {
+			query += " AND t.ticket_state_id NOT IN (SELECT id FROM ticket_state WHERE type_id = 3)"
+		}
+
+		// Apply queue filter
+		if queue != "all" {
+			query += " AND t.queue_id = ?"
+			args = append(args, queue)
+		} else {
+			// Check if user is admin
+			var isAdmin bool
+			adminCheckErr := db.QueryRow(database.ConvertPlaceholders(`
+				SELECT EXISTS(
+					SELECT 1 FROM group_user gu
+					JOIN groups g ON gu.group_id = g.id
+					WHERE gu.user_id = ? AND g.name = 'admin'
+				)
+			`), userID).Scan(&isAdmin)
+
+			if adminCheckErr == nil && isAdmin {
+				// Admin sees all queues - no filter needed
+			} else {
+				// Regular agents see only queues they have access to
+				query += ` AND t.queue_id IN (
+					SELECT DISTINCT q2.id FROM queue q2
+					WHERE q2.group_id IN (
+						SELECT group_id FROM group_user WHERE user_id = ?
+					)
+				)`
+				args = append(args, userID)
+			}
+		}
+
+		// Apply assignee filter
+		if assignee == "me" {
+			query += " AND t.responsible_user_id = ?"
+			args = append(args, userID)
+		} else if assignee == "unassigned" {
+			query += " AND t.responsible_user_id IS NULL"
+		}
+
+		// Apply search
+		if search != "" {
+			pattern := "%" + search + "%"
+			query += " AND (LOWER(t.tn) LIKE LOWER(?) OR LOWER(t.title) LIKE LOWER(?) OR LOWER(c.login) LIKE LOWER(?))"
+			args = append(args, pattern, pattern, pattern)
+		}
+
+		// Get max select all limit from config (default 1000)
+		maxSelectAll := 1000
+		if cfg := config.Get(); cfg != nil && cfg.Ticket.BulkActions.MaxSelectAll > 0 {
+			maxSelectAll = cfg.Ticket.BulkActions.MaxSelectAll
+		}
+		query += fmt.Sprintf(" LIMIT %d", maxSelectAll)
+
+		// Execute query
+		rows, err := db.Query(database.ConvertPlaceholders(query), args...)
+		if err != nil {
+			log.Printf("Error fetching filtered ticket IDs: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tickets"})
+			return
+		}
+		defer rows.Close()
+
+		ticketIDs := make([]int, 0)
+		for rows.Next() {
+			var id int
+			if err := rows.Scan(&id); err == nil {
+				ticketIDs = append(ticketIDs, id)
+			}
+		}
+
+		// Get total count (without limit) for info
+		countQuery := strings.Replace(query, "SELECT DISTINCT t.id", "SELECT COUNT(DISTINCT t.id)", 1)
+		countQuery = strings.Split(countQuery, "LIMIT")[0] // Remove LIMIT clause
+
+		var totalCount int
+		if err := db.QueryRow(database.ConvertPlaceholders(countQuery), args...).Scan(&totalCount); err != nil {
+			totalCount = len(ticketIDs)
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"ticket_ids":  ticketIDs,
+			"count":       len(ticketIDs),
+			"total_count": totalCount,
+			"limited":     totalCount > maxSelectAll,
+			"max_limit":   maxSelectAll,
+		})
+	}
 }
 
 // handleGetBulkActionOptions returns options for bulk action modals

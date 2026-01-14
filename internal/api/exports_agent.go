@@ -44,13 +44,14 @@ var AgentHandlerExports = struct {
 	HandleAgentQueueLock       gin.HandlerFunc
 	HandleAgentCustomers       gin.HandlerFunc
 	// Bulk ticket actions
-	HandleBulkTicketStatus     gin.HandlerFunc
-	HandleBulkTicketPriority   gin.HandlerFunc
-	HandleBulkTicketQueue      gin.HandlerFunc
-	HandleBulkTicketAssign     gin.HandlerFunc
-	HandleBulkTicketLock       gin.HandlerFunc
-	HandleBulkTicketMerge      gin.HandlerFunc
-	HandleGetBulkActionOptions gin.HandlerFunc
+	HandleBulkTicketStatus      gin.HandlerFunc
+	HandleBulkTicketPriority    gin.HandlerFunc
+	HandleBulkTicketQueue       gin.HandlerFunc
+	HandleBulkTicketAssign      gin.HandlerFunc
+	HandleBulkTicketLock        gin.HandlerFunc
+	HandleBulkTicketMerge       gin.HandlerFunc
+	HandleGetBulkActionOptions  gin.HandlerFunc
+	HandleGetFilteredTicketIds  gin.HandlerFunc
 }{
 	HandleAgentTickets:         wrapDBHandler(handleAgentTickets),
 	HandleAgentTicketReply:     wrapDBHandler(handleAgentTicketReply),
@@ -73,13 +74,14 @@ var AgentHandlerExports = struct {
 	HandleAgentQueueLock:       wrapDBHandler(handleAgentQueueLock),
 	HandleAgentCustomers:       wrapDBHandler(handleAgentCustomers),
 	// Bulk ticket actions
-	HandleBulkTicketStatus:     wrapDBHandler(handleBulkTicketStatus),
-	HandleBulkTicketPriority:   wrapDBHandler(handleBulkTicketPriority),
-	HandleBulkTicketQueue:      wrapDBHandler(handleBulkTicketQueue),
-	HandleBulkTicketAssign:     wrapDBHandler(handleBulkTicketAssign),
-	HandleBulkTicketLock:       wrapDBHandler(handleBulkTicketLock),
-	HandleBulkTicketMerge:      wrapDBHandler(handleBulkTicketMerge),
-	HandleGetBulkActionOptions: wrapDBHandler(handleGetBulkActionOptions),
+	HandleBulkTicketStatus:      wrapDBHandler(handleBulkTicketStatus),
+	HandleBulkTicketPriority:    wrapDBHandler(handleBulkTicketPriority),
+	HandleBulkTicketQueue:       wrapDBHandler(handleBulkTicketQueue),
+	HandleBulkTicketAssign:      wrapDBHandler(handleBulkTicketAssign),
+	HandleBulkTicketLock:        wrapDBHandler(handleBulkTicketLock),
+	HandleBulkTicketMerge:       wrapDBHandler(handleBulkTicketMerge),
+	HandleGetBulkActionOptions:  wrapDBHandler(handleGetBulkActionOptions),
+	HandleGetFilteredTicketIds:  wrapDBHandler(handleGetFilteredTicketIds),
 }
 
 // Provide package-level handler variables for tests and direct routing.
