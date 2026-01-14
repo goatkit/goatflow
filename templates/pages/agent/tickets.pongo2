@@ -8,7 +8,7 @@
     <div class="mb-6 sm:flex sm:items-center sm:justify-between">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Ticket Management</h1>
         <div class="mt-4 sm:mt-0">
-            <a href="/tickets/new" 
+            <a href="/tickets/new"
                class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
                 <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
@@ -103,7 +103,7 @@
                                 {{ field.Label }}
                             </label>
                             {% if field.FieldType == "Dropdown" or field.FieldType == "Multiselect" %}
-                            <select name="df_{{ field.Name }}" 
+                            <select name="df_{{ field.Name }}"
                                     class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
                                 <option value="">-- Any --</option>
                                 {% for option in field.Options %}
@@ -121,7 +121,7 @@
                             </select>
                             {% elif field.FieldType == "Date" or field.FieldType == "DateTime" %}
                             <div class="flex space-x-2">
-                                <input type="date" name="df_{{ field.Name }}_gte" 
+                                <input type="date" name="df_{{ field.Name }}_gte"
                                        value="{{ CurrentDFFilters['df_' + field.Name + '_gte'] }}"
                                        placeholder="From"
                                        class="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
@@ -246,7 +246,7 @@
                             {{ ticket.queue }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
                                 {% if 'new' in ticket.state|lower %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% endif %}
                                 {% if 'open' in ticket.state|lower %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200{% endif %}
                                 {% if 'pending' in ticket.state|lower %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}
@@ -402,71 +402,557 @@
     </div>
 </div>
 
+<!-- Bulk Action Modals -->
+<!-- Status Modal -->
+<div id="bulk-status-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('bulk-status-modal')"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form id="bulk-status-form" onsubmit="submitBulkStatus(event)">
+                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("bulk_actions.change_status_title") }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        <span id="status-ticket-count">0</span> {{ t("bulk_actions.tickets_selected") }}
+                    </p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("bulk_actions.new_status") }}</label>
+                            <select id="bulk-status-select" name="status_id" required
+                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                <option value="">{{ t("bulk_actions.select_status") }}</option>
+                            </select>
+                        </div>
+                        <div id="pending-time-container" class="hidden">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("bulk_actions.pending_until") }}</label>
+                            <input type="datetime-local" id="bulk-pending-until" name="pending_until"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 sm:ml-3 sm:w-auto sm:text-sm">
+                        {{ t("bulk_actions.apply") }}
+                    </button>
+                    <button type="button" onclick="closeModal('bulk-status-modal')" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        {{ t("common.cancel") }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Priority Modal -->
+<div id="bulk-priority-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('bulk-priority-modal')"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form id="bulk-priority-form" onsubmit="submitBulkPriority(event)">
+                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("bulk_actions.change_priority_title") }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        <span id="priority-ticket-count">0</span> {{ t("bulk_actions.tickets_selected") }}
+                    </p>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("bulk_actions.new_priority") }}</label>
+                        <select id="bulk-priority-select" name="priority_id" required
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="">{{ t("bulk_actions.select_priority") }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-orange-600 text-base font-medium text-white hover:bg-orange-700 sm:ml-3 sm:w-auto sm:text-sm">
+                        {{ t("bulk_actions.apply") }}
+                    </button>
+                    <button type="button" onclick="closeModal('bulk-priority-modal')" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        {{ t("common.cancel") }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Queue Modal -->
+<div id="bulk-queue-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('bulk-queue-modal')"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form id="bulk-queue-form" onsubmit="submitBulkQueue(event)">
+                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("bulk_actions.move_to_queue_title") }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        <span id="queue-ticket-count">0</span> {{ t("bulk_actions.tickets_selected") }}
+                    </p>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("bulk_actions.target_queue") }}</label>
+                        <select id="bulk-queue-select" name="queue_id" required
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="">{{ t("bulk_actions.select_queue") }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 sm:ml-3 sm:w-auto sm:text-sm">
+                        {{ t("bulk_actions.move") }}
+                    </button>
+                    <button type="button" onclick="closeModal('bulk-queue-modal')" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        {{ t("common.cancel") }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Modal -->
+<div id="bulk-assign-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('bulk-assign-modal')"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form id="bulk-assign-form" onsubmit="submitBulkAssign(event)">
+                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("bulk_actions.assign_title") }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        <span id="assign-ticket-count">0</span> {{ t("bulk_actions.tickets_selected") }}
+                    </p>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("bulk_actions.assign_to") }}</label>
+                        <select id="bulk-assign-select" name="user_id" required
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="">{{ t("bulk_actions.select_agent") }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 sm:ml-3 sm:w-auto sm:text-sm">
+                        {{ t("bulk_actions.assign") }}
+                    </button>
+                    <button type="button" onclick="closeModal('bulk-assign-modal')" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        {{ t("common.cancel") }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Merge Modal -->
+<div id="bulk-merge-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal('bulk-merge-modal')"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <form id="bulk-merge-form" onsubmit="submitBulkMerge(event)">
+                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("bulk_actions.merge_title") }}</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                        <span id="merge-ticket-count">0</span> {{ t("bulk_actions.tickets_selected") }}
+                    </p>
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3 mb-4">
+                        <p class="text-sm text-yellow-800 dark:text-yellow-200">
+                            {{ t("bulk_actions.merge_warning") }}
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("bulk_actions.merge_into") }}</label>
+                        <select id="bulk-merge-target" name="target_ticket_id" required
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <option value="">{{ t("bulk_actions.select_target") }}</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("bulk_actions.merge_target_hint") }}</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-purple-600 text-base font-medium text-white hover:bg-purple-700 sm:ml-3 sm:w-auto sm:text-sm">
+                        {{ t("bulk_actions.merge") }}
+                    </button>
+                    <button type="button" onclick="closeModal('bulk-merge-modal')" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        {{ t("common.cancel") }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Result Toast -->
+<div id="bulk-result-toast" class="fixed bottom-4 right-4 z-50 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 max-w-sm">
+        <div class="flex items-start">
+            <div id="toast-icon" class="flex-shrink-0"></div>
+            <div class="ml-3">
+                <p id="toast-title" class="text-sm font-medium text-gray-900 dark:text-white"></p>
+                <p id="toast-message" class="mt-1 text-sm text-gray-500 dark:text-gray-400"></p>
+            </div>
+            <button onclick="hideToast()" class="ml-4 flex-shrink-0 text-gray-400 hover:text-gray-500">
+                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+// Selected tickets storage
+let selectedTicketIds = [];
+
 // Select all checkbox
 document.getElementById('select-all').addEventListener('change', function() {
     const checkboxes = document.querySelectorAll('.ticket-select');
     checkboxes.forEach(cb => cb.checked = this.checked);
+    updateSelectedCount();
 });
 
-// Quick actions
-function quickAssign(ticketId) {
-    // TODO: Show assign modal
-    alert('Assign ticket ' + ticketId);
+// Individual checkbox change
+document.querySelectorAll('.ticket-select').forEach(cb => {
+    cb.addEventListener('change', updateSelectedCount);
+});
+
+function updateSelectedCount() {
+    selectedTicketIds = getSelectedTickets();
+    const count = selectedTicketIds.length;
+    // Update all ticket count spans
+    document.querySelectorAll('[id$="-ticket-count"]').forEach(el => {
+        el.textContent = count;
+    });
 }
 
-function quickReply(ticketId) {
-    // TODO: Show reply modal
-    alert('Reply to ticket ' + ticketId);
-}
-
-// Bulk actions
+// Get selected tickets
 function getSelectedTickets() {
     const selected = [];
     document.querySelectorAll('.ticket-select:checked').forEach(cb => {
-        selected.push(cb.value);
+        selected.push(parseInt(cb.value));
     });
     return selected;
 }
 
+// Modal helpers
+function openModal(modalId) {
+    document.getElementById(modalId).classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('[id$="-modal"]:not(.hidden)').forEach(modal => {
+            modal.classList.add('hidden');
+        });
+        document.body.style.overflow = '';
+    }
+});
+
+// Toast notification
+function showToast(success, title, message) {
+    const toast = document.getElementById('bulk-result-toast');
+    const iconEl = document.getElementById('toast-icon');
+    const titleEl = document.getElementById('toast-title');
+    const messageEl = document.getElementById('toast-message');
+
+    if (success) {
+        iconEl.innerHTML = '<svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+    } else {
+        iconEl.innerHTML = '<svg class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+    }
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    toast.classList.remove('hidden');
+
+    // Auto-hide after 5 seconds
+    setTimeout(hideToast, 5000);
+}
+
+function hideToast() {
+    document.getElementById('bulk-result-toast').classList.add('hidden');
+}
+
+// Load options for selects
+async function loadOptions(type, selectId) {
+    try {
+        const response = await fetch(`/agent/api/bulk-options?type=${type}`);
+        const data = await response.json();
+        const select = document.getElementById(selectId);
+
+        // Clear existing options except first
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+
+        const items = data[type + 's'] || data[type] || [];
+        items.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = item.name || item.login;
+            if (item.isPending) {
+                option.dataset.pending = 'true';
+            }
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error(`Failed to load ${type} options:`, error);
+    }
+}
+
+// Bulk action openers
 function bulkAssign() {
     const tickets = getSelectedTickets();
     if (tickets.length === 0) {
-        alert('Please select at least one ticket');
+        showToast(false, 'No Selection', 'Please select at least one ticket');
         return;
     }
-    // TODO: Show bulk assign modal
-    alert('Assign ' + tickets.length + ' tickets');
+    selectedTicketIds = tickets;
+    document.getElementById('assign-ticket-count').textContent = tickets.length;
+    loadOptions('agent', 'bulk-assign-select');
+    openModal('bulk-assign-modal');
 }
 
 function bulkChangeStatus() {
     const tickets = getSelectedTickets();
     if (tickets.length === 0) {
-        alert('Please select at least one ticket');
+        showToast(false, 'No Selection', 'Please select at least one ticket');
         return;
     }
-    // TODO: Show bulk status modal
-    alert('Change status for ' + tickets.length + ' tickets');
+    selectedTicketIds = tickets;
+    document.getElementById('status-ticket-count').textContent = tickets.length;
+    loadOptions('status', 'bulk-status-select');
+    openModal('bulk-status-modal');
 }
 
 function bulkChangePriority() {
     const tickets = getSelectedTickets();
     if (tickets.length === 0) {
-        alert('Please select at least one ticket');
+        showToast(false, 'No Selection', 'Please select at least one ticket');
         return;
     }
-    // TODO: Show bulk priority modal
-    alert('Change priority for ' + tickets.length + ' tickets');
+    selectedTicketIds = tickets;
+    document.getElementById('priority-ticket-count').textContent = tickets.length;
+    loadOptions('priority', 'bulk-priority-select');
+    openModal('bulk-priority-modal');
+}
+
+function bulkChangeQueue() {
+    const tickets = getSelectedTickets();
+    if (tickets.length === 0) {
+        showToast(false, 'No Selection', 'Please select at least one ticket');
+        return;
+    }
+    selectedTicketIds = tickets;
+    document.getElementById('queue-ticket-count').textContent = tickets.length;
+    loadOptions('queue', 'bulk-queue-select');
+    openModal('bulk-queue-modal');
 }
 
 function bulkMerge() {
     const tickets = getSelectedTickets();
     if (tickets.length < 2) {
-        alert('Please select at least two tickets to merge');
+        showToast(false, 'Not Enough Tickets', 'Please select at least two tickets to merge');
         return;
     }
-    // TODO: Show merge modal
-    alert('Merge ' + tickets.length + ' tickets');
+    selectedTicketIds = tickets;
+    document.getElementById('merge-ticket-count').textContent = tickets.length;
+
+    // Populate merge target dropdown with selected tickets
+    const select = document.getElementById('bulk-merge-target');
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+
+    // Get ticket info from the table
+    tickets.forEach(ticketId => {
+        const row = document.querySelector(`input.ticket-select[value="${ticketId}"]`).closest('tr');
+        const tn = row.querySelector('td:nth-child(2) a').textContent.trim();
+        const title = row.querySelector('td:nth-child(3) div').textContent.trim();
+        const option = document.createElement('option');
+        option.value = ticketId;
+        option.textContent = `${tn} - ${title.substring(0, 40)}${title.length > 40 ? '...' : ''}`;
+        select.appendChild(option);
+    });
+
+    openModal('bulk-merge-modal');
+}
+
+// Quick actions
+function quickAssign(ticketId) {
+    selectedTicketIds = [ticketId];
+    document.getElementById('assign-ticket-count').textContent = '1';
+    loadOptions('agent', 'bulk-assign-select');
+    openModal('bulk-assign-modal');
+}
+
+function quickReply(ticketId) {
+    // Navigate to ticket detail with reply panel open
+    const row = document.querySelector(`input.ticket-select[value="${ticketId}"]`).closest('tr');
+    const tn = row.querySelector('td:nth-child(2) a').textContent.trim().replace('#', '');
+    window.location.href = `/ticket/${tn}?action=reply`;
+}
+
+// Handle pending state visibility
+document.getElementById('bulk-status-select').addEventListener('change', function() {
+    const option = this.options[this.selectedIndex];
+    const pendingContainer = document.getElementById('pending-time-container');
+    if (option.dataset.pending === 'true') {
+        pendingContainer.classList.remove('hidden');
+        document.getElementById('bulk-pending-until').required = true;
+    } else {
+        pendingContainer.classList.add('hidden');
+        document.getElementById('bulk-pending-until').required = false;
+    }
+});
+
+// Form submissions
+async function submitBulkStatus(event) {
+    event.preventDefault();
+    const statusId = document.getElementById('bulk-status-select').value;
+    const pendingUntil = document.getElementById('bulk-pending-until').value;
+
+    try {
+        const response = await fetch('/agent/tickets/bulk/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ticket_ids: selectedTicketIds,
+                status_id: parseInt(statusId),
+                pending_until: pendingUntil ? new Date(pendingUntil).getTime() / 1000 : 0
+            })
+        });
+
+        const result = await response.json();
+        closeModal('bulk-status-modal');
+
+        if (result.success) {
+            showToast(true, 'Status Updated', `Successfully updated ${result.succeeded} ticket(s)`);
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showToast(false, 'Partial Success', `Updated ${result.succeeded} of ${result.total} tickets. ${result.failed} failed.`);
+        }
+    } catch (error) {
+        showToast(false, 'Error', 'Failed to update status');
+    }
+}
+
+async function submitBulkPriority(event) {
+    event.preventDefault();
+    const priorityId = document.getElementById('bulk-priority-select').value;
+
+    try {
+        const response = await fetch('/agent/tickets/bulk/priority', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ticket_ids: selectedTicketIds,
+                priority_id: parseInt(priorityId)
+            })
+        });
+
+        const result = await response.json();
+        closeModal('bulk-priority-modal');
+
+        if (result.success) {
+            showToast(true, 'Priority Updated', `Successfully updated ${result.succeeded} ticket(s)`);
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showToast(false, 'Partial Success', `Updated ${result.succeeded} of ${result.total} tickets. ${result.failed} failed.`);
+        }
+    } catch (error) {
+        showToast(false, 'Error', 'Failed to update priority');
+    }
+}
+
+async function submitBulkQueue(event) {
+    event.preventDefault();
+    const queueId = document.getElementById('bulk-queue-select').value;
+
+    try {
+        const response = await fetch('/agent/tickets/bulk/queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ticket_ids: selectedTicketIds,
+                queue_id: parseInt(queueId)
+            })
+        });
+
+        const result = await response.json();
+        closeModal('bulk-queue-modal');
+
+        if (result.success) {
+            showToast(true, 'Queue Updated', `Successfully moved ${result.succeeded} ticket(s)`);
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showToast(false, 'Partial Success', `Moved ${result.succeeded} of ${result.total} tickets. ${result.failed} failed.`);
+        }
+    } catch (error) {
+        showToast(false, 'Error', 'Failed to move tickets');
+    }
+}
+
+async function submitBulkAssign(event) {
+    event.preventDefault();
+    const userId = document.getElementById('bulk-assign-select').value;
+
+    try {
+        const response = await fetch('/agent/tickets/bulk/assign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ticket_ids: selectedTicketIds,
+                user_id: parseInt(userId)
+            })
+        });
+
+        const result = await response.json();
+        closeModal('bulk-assign-modal');
+
+        if (result.success) {
+            showToast(true, 'Tickets Assigned', `Successfully assigned ${result.succeeded} ticket(s)`);
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showToast(false, 'Partial Success', `Assigned ${result.succeeded} of ${result.total} tickets. ${result.failed} failed.`);
+        }
+    } catch (error) {
+        showToast(false, 'Error', 'Failed to assign tickets');
+    }
+}
+
+async function submitBulkMerge(event) {
+    event.preventDefault();
+    const targetId = document.getElementById('bulk-merge-target').value;
+
+    try {
+        const response = await fetch('/agent/tickets/bulk/merge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ticket_ids: selectedTicketIds,
+                target_ticket_id: parseInt(targetId)
+            })
+        });
+
+        const result = await response.json();
+        closeModal('bulk-merge-modal');
+
+        if (result.success) {
+            showToast(true, 'Tickets Merged', `Successfully merged ${result.succeeded} ticket(s) into ${result.target_ticket}`);
+            setTimeout(() => window.location.reload(), 1500);
+        } else {
+            showToast(false, 'Partial Success', `Merged ${result.succeeded} of ${result.total} tickets. ${result.failed} failed.`);
+        }
+    } catch (error) {
+        showToast(false, 'Error', 'Failed to merge tickets');
+    }
 }
 </script>
 {% endblock %}

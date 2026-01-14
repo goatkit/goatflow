@@ -43,6 +43,14 @@ var AgentHandlerExports = struct {
 	HandleAgentQueueView       gin.HandlerFunc
 	HandleAgentQueueLock       gin.HandlerFunc
 	HandleAgentCustomers       gin.HandlerFunc
+	// Bulk ticket actions
+	HandleBulkTicketStatus     gin.HandlerFunc
+	HandleBulkTicketPriority   gin.HandlerFunc
+	HandleBulkTicketQueue      gin.HandlerFunc
+	HandleBulkTicketAssign     gin.HandlerFunc
+	HandleBulkTicketLock       gin.HandlerFunc
+	HandleBulkTicketMerge      gin.HandlerFunc
+	HandleGetBulkActionOptions gin.HandlerFunc
 }{
 	HandleAgentTickets:         wrapDBHandler(handleAgentTickets),
 	HandleAgentTicketReply:     wrapDBHandler(handleAgentTicketReply),
@@ -64,6 +72,14 @@ var AgentHandlerExports = struct {
 	HandleAgentQueueView:       wrapDBHandler(handleAgentQueueView),
 	HandleAgentQueueLock:       wrapDBHandler(handleAgentQueueLock),
 	HandleAgentCustomers:       wrapDBHandler(handleAgentCustomers),
+	// Bulk ticket actions
+	HandleBulkTicketStatus:     wrapDBHandler(handleBulkTicketStatus),
+	HandleBulkTicketPriority:   wrapDBHandler(handleBulkTicketPriority),
+	HandleBulkTicketQueue:      wrapDBHandler(handleBulkTicketQueue),
+	HandleBulkTicketAssign:     wrapDBHandler(handleBulkTicketAssign),
+	HandleBulkTicketLock:       wrapDBHandler(handleBulkTicketLock),
+	HandleBulkTicketMerge:      wrapDBHandler(handleBulkTicketMerge),
+	HandleGetBulkActionOptions: wrapDBHandler(handleGetBulkActionOptions),
 }
 
 // Provide package-level handler variables for tests and direct routing.

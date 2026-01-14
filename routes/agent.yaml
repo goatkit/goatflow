@@ -3,163 +3,199 @@
 apiVersion: v1
 kind: RouteGroup
 metadata:
-  name: agent
-  description: "Agent-specific routes for ticket management"
-  namespace: default
-  enabled: true
+    name: agent
+    description: "Agent-specific routes for ticket management"
+    namespace: default
+    enabled: true
 spec:
-  prefix: /agent
-  middleware:
-    - auth  # Require authentication for agent access
-  routes:
-    # Agent tickets list page
-    - path: /tickets
-      method: GET
-      handler: handleAgentTickets
-      template: pages/agent/tickets.pongo2
-      description: "Display agent tickets list with full functionality"
+    prefix: /agent
+    middleware:
+        - auth # Require authentication for agent access
+    routes:
+        # Agent tickets list page
+        - path: /tickets
+          method: GET
+          handler: handleAgentTickets
+          template: pages/agent/tickets.pongo2
+          description: "Display agent tickets list with full functionality"
 
-    # Agent ticket zoom view - shows full ticket with S/MIME articles
-    # GET /agent/tickets/:id is a legacy redirect.
-    # See routes/compatibility.yaml for redirect logic
-    # Do not register a direct GET handler here to avoid duplicates.
+        # Agent ticket zoom view - shows full ticket with S/MIME articles
+        # GET /agent/tickets/:id is a legacy redirect.
+        # See routes/compatibility.yaml for redirect logic
+        # Do not register a direct GET handler here to avoid duplicates.
 
-    # Agent ticket reply (customer reply)
-    - path: /tickets/:id/reply
-      method: POST
-      handler: handleAgentTicketReply
-      description: "Process customer reply to ticket"
+        # Agent ticket reply (customer reply)
+        - path: /tickets/:id/reply
+          method: POST
+          handler: handleAgentTicketReply
+          description: "Process customer reply to ticket"
 
-    # Agent internal note
-    - path: /tickets/:id/note
-      method: POST
-      handler: handleAgentTicketNote
-      description: "Add internal note to ticket"
+        # Agent internal note
+        - path: /tickets/:id/note
+          method: POST
+          handler: handleAgentTicketNote
+          description: "Add internal note to ticket"
 
-    # Agent phone call record
-    - path: /tickets/:id/phone
-      method: POST
-      handler: handleAgentTicketPhone
-      description: "Record phone call for ticket"
+        # Agent phone call record
+        - path: /tickets/:id/phone
+          method: POST
+          handler: handleAgentTicketPhone
+          description: "Record phone call for ticket"
 
-    # Update ticket status
-    - path: /tickets/:id/status
-      method: POST
-      handler: handleAgentTicketStatus
-      description: "Update ticket status"
+        # Update ticket status
+        - path: /tickets/:id/status
+          method: POST
+          handler: handleAgentTicketStatus
+          description: "Update ticket status"
 
-    # Assign ticket to agent
-    - path: /tickets/:id/assign
-      method: POST
-      handler: handleAgentTicketAssign
-      description: "Assign ticket to specific agent"
+        # Assign ticket to agent
+        - path: /tickets/:id/assign
+          method: POST
+          handler: handleAgentTicketAssign
+          description: "Assign ticket to specific agent"
 
-    # Update ticket priority
-    - path: /tickets/:id/priority
-      method: POST
-      handler: handleAgentTicketPriority
-      description: "Update ticket priority"
+        # Update ticket priority
+        - path: /tickets/:id/priority
+          method: POST
+          handler: handleAgentTicketPriority
+          description: "Update ticket priority"
 
-    # Update ticket queue
-    - path: /tickets/:id/queue
-      method: POST
-      handler: handleAgentTicketQueue
-      description: "Move ticket to different queue"
+        # Update ticket queue
+        - path: /tickets/:id/queue
+          method: POST
+          handler: handleAgentTicketQueue
+          description: "Move ticket to different queue"
 
-    # Merge tickets
-    - path: /tickets/:id/merge
-      method: POST
-      handler: handleAgentTicketMerge
-      description: "Merge ticket with another ticket"
+        # Merge tickets
+        - path: /tickets/:id/merge
+          method: POST
+          handler: handleAgentTicketMerge
+          description: "Merge ticket with another ticket"
 
-    # Split ticket - using existing handler for now
-    - path: /tickets/:id/split
-      method: POST
-      handler: handleAgentTicketNote
-      description: "Split ticket into multiple tickets (temporary)"
+        # Split ticket - using existing handler for now
+        - path: /tickets/:id/split
+          method: POST
+          handler: handleAgentTicketNote
+          description: "Split ticket into multiple tickets (temporary)"
 
-    # Customer users for ticket
-    - path: /tickets/:id/customer-users
-      method: GET
-      handler: handleTicketCustomerUsers
-      description: "Get customer users associated with ticket"
+        # Customer users for ticket
+        - path: /tickets/:id/customer-users
+          method: GET
+          handler: handleTicketCustomerUsers
+          description: "Get customer users associated with ticket"
 
-    # Ticket zoom fragments (HTMX)
-    - path: /tickets/:id/history
-      method: GET
-      handler: handleTicketHistoryFragment
-      description: "HTMX fragment: ticket history"
+        # Ticket zoom fragments (HTMX)
+        - path: /tickets/:id/history
+          method: GET
+          handler: handleTicketHistoryFragment
+          description: "HTMX fragment: ticket history"
 
-    - path: /tickets/:id/links
-      method: GET
-      handler: handleTicketLinksFragment
-      description: "HTMX fragment: ticket links"
+        - path: /tickets/:id/links
+          method: GET
+          handler: handleTicketLinksFragment
+          description: "HTMX fragment: ticket links"
 
-    # Save draft for ticket
-    - path: /tickets/:id/draft
-      method: POST
-      handler: handleAgentTicketDraft
-      description: "Save draft reply for ticket"
+        # Save draft for ticket
+        - path: /tickets/:id/draft
+          method: POST
+          handler: handleAgentTicketDraft
+          description: "Save draft reply for ticket"
 
-    # Agent queues
-    - path: /queues
-      method: GET
-      handler: handleAgentQueues
-      template: pages/agent/queues.pongo2
-      description: "Display agent queues"
+        # Bulk ticket actions
+        - path: /tickets/bulk/status
+          method: POST
+          handler: handleBulkTicketStatus
+          description: "Bulk update ticket status"
 
-    # Agent dashboard
-    - path: /dashboard
-      method: GET
-      handler: handleAgentDashboard
-      template: pages/agent/dashboard.pongo2
-      description: "Display agent dashboard with assigned tickets"
+        - path: /tickets/bulk/priority
+          method: POST
+          handler: handleBulkTicketPriority
+          description: "Bulk update ticket priority"
 
-    # Agent templates API - for template selection in ticket forms
-    - path: /api/templates
-      method: GET
-      handler: handleGetAgentTemplates
-      description: "Get templates for a queue (query params: queue_id, type)"
+        - path: /tickets/bulk/queue
+          method: POST
+          handler: handleBulkTicketQueue
+          description: "Bulk move tickets to queue"
 
-    - path: /api/templates/:id
-      method: GET
-      handler: handleGetAgentTemplate
-      description: "Get a single template with variable substitution"
+        - path: /tickets/bulk/assign
+          method: POST
+          handler: handleBulkTicketAssign
+          description: "Bulk assign tickets to agent"
 
-    # Agent signatures API - for automatic signature loading
-    - path: /api/signatures/queue/:queue_id
-      method: GET
-      handler: handleGetQueueSignature
-      description: "Get a queue signature with variable substitution"
+        - path: /tickets/bulk/lock
+          method: POST
+          handler: handleBulkTicketLock
+          description: "Bulk lock/unlock tickets"
 
-    # User preferences API
-    - path: /api/preferences/session-timeout
-      method: GET
-      handler: HandleGetSessionTimeout
-      description: "Get current session timeout preference"
+        - path: /tickets/bulk/merge
+          method: POST
+          handler: handleBulkTicketMerge
+          description: "Bulk merge tickets into target"
 
-    - path: /api/preferences/session-timeout
-      method: POST
-      handler: HandleSetSessionTimeout
-      description: "Update session timeout preference"
+        - path: /api/bulk-options
+          method: GET
+          handler: handleGetBulkActionOptions
+          description: "Get options for bulk action modals"
 
-    - path: /api/preferences/language
-      method: GET
-      handler: HandleGetLanguage
-      description: "Get current language preference and available languages"
+        # Agent queues
+        - path: /queues
+          method: GET
+          handler: handleAgentQueues
+          template: pages/agent/queues.pongo2
+          description: "Display agent queues"
 
-    - path: /api/preferences/language
-      method: POST
-      handler: HandleSetLanguage
-      description: "Update language preference"
+        # Agent dashboard
+        - path: /dashboard
+          method: GET
+          handler: handleAgentDashboard
+          template: pages/agent/dashboard.pongo2
+          description: "Display agent dashboard with assigned tickets"
 
-    # User profile API
-    - path: /api/profile
-      method: GET
-      handler: HandleGetProfile
-      description: "Get current user's profile information"
+        # Agent templates API - for template selection in ticket forms
+        - path: /api/templates
+          method: GET
+          handler: handleGetAgentTemplates
+          description: "Get templates for a queue (query params: queue_id, type)"
 
-    - path: /api/profile
-      method: POST
-      handler: HandleUpdateProfile
-      description: "Update current user's profile information"
+        - path: /api/templates/:id
+          method: GET
+          handler: handleGetAgentTemplate
+          description: "Get a single template with variable substitution"
+
+        # Agent signatures API - for automatic signature loading
+        - path: /api/signatures/queue/:queue_id
+          method: GET
+          handler: handleGetQueueSignature
+          description: "Get a queue signature with variable substitution"
+
+        # User preferences API
+        - path: /api/preferences/session-timeout
+          method: GET
+          handler: HandleGetSessionTimeout
+          description: "Get current session timeout preference"
+
+        - path: /api/preferences/session-timeout
+          method: POST
+          handler: HandleSetSessionTimeout
+          description: "Update session timeout preference"
+
+        - path: /api/preferences/language
+          method: GET
+          handler: HandleGetLanguage
+          description: "Get current language preference and available languages"
+
+        - path: /api/preferences/language
+          method: POST
+          handler: HandleSetLanguage
+          description: "Update language preference"
+
+        # User profile API
+        - path: /api/profile
+          method: GET
+          handler: HandleGetProfile
+          description: "Get current user's profile information"
+
+        - path: /api/profile
+          method: POST
+          handler: HandleUpdateProfile
+          description: "Update current user's profile information"
