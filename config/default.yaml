@@ -265,3 +265,8 @@ integrations:
         endpoints: []
         timeout: 10s
         retry_attempts: 3
+
+# Background task runner settings
+runner:
+    session_cleanup:
+        interval: 5m # How often to run session cleanup task

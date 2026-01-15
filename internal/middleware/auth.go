@@ -1,14 +1,37 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
+
+// Session service singleton for middleware (avoids import cycle with shared package)
+var (
+	middlewareSessionService *service.SessionService
+	middlewareSessionOnce    sync.Once
+)
+
+func getMiddlewareSessionService() *service.SessionService {
+	middlewareSessionOnce.Do(func() {
+		db, err := database.GetDB()
+		if err != nil {
+			return
+		}
+		repo := repository.NewSessionRepository(db)
+		middlewareSessionService = service.NewSessionService(repo)
+	})
+	return middlewareSessionService
+}
 
 type AuthMiddleware struct {
 	jwtManager *auth.JWTManager
@@ -62,6 +85,29 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 			}
 			m.unauthorizedResponse(c, "Invalid or expired token")
 			return
+		}
+
+		// Validate session exists in database (session was not killed)
+		sessionID, cookieErr := c.Cookie("session_id")
+		log.Printf("DEBUG: auth middleware - session_id cookie: '%s', err: %v", sessionID, cookieErr)
+		if cookieErr == nil && sessionID != "" {
+			sessionSvc := getMiddlewareSessionService()
+			log.Printf("DEBUG: auth middleware - sessionSvc nil? %v", sessionSvc == nil)
+			if sessionSvc != nil {
+				session, err := sessionSvc.GetSession(sessionID)
+				log.Printf("DEBUG: auth middleware - GetSession result: session=%v, err=%v", session != nil, err)
+				if err != nil || session == nil {
+					// Session was killed or doesn't exist - clear cookies and reject
+					log.Printf("DEBUG: auth middleware - session terminated, rejecting request")
+					c.SetCookie("auth_token", "", -1, "/", "", false, true)
+					c.SetCookie("access_token", "", -1, "/", "", false, true)
+					c.SetCookie("session_id", "", -1, "/", "", false, true)
+					m.unauthorizedResponse(c, "Session has been terminated")
+					return
+				}
+				// Update last request time for session activity tracking
+				_ = sessionSvc.TouchSession(sessionID)
+			}
 		}
 
 		// Set user information in context

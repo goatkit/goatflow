@@ -1002,6 +1002,29 @@
             "statuses": {
                 "invalid": "无效",
                 "valid": "有效"
+            },
+            "sessions": {
+                "title": "会话管理",
+                "description": "查看和管理活跃用户会话",
+                "user": "用户",
+                "type": "类型",
+                "created": "创建时间",
+                "last_request": "最后活动",
+                "ip_address": "IP地址",
+                "browser": "浏览器",
+                "kill": "终止会话",
+                "kill_all": "终止所有会话",
+                "confirm_kill": "您确定要终止此会话吗？",
+                "confirm_kill_all": "您确定要终止所有会话吗？用户将被注销。",
+                "no_sessions": "没有活跃会话",
+                "killed": "会话已成功终止",
+                "kill_failed": "终止会话失败",
+                "warning_logout_all": "这将注销除您之外的所有用户。",
+                "active_sessions": "活跃会话",
+                "type_agent": "代理",
+                "type_customer": "客户",
+                "kill_user_sessions": "终止用户所有会话",
+                "confirm_kill_user": "您确定要终止此用户的所有会话吗？"
             }
         }
     },

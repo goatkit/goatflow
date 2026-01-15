@@ -33,6 +33,7 @@ type Config struct {
 	Features     FeaturesConfig     `mapstructure:"features"`
 	Maintenance  MaintenanceConfig  `mapstructure:"maintenance"`
 	Integrations IntegrationsConfig `mapstructure:"integrations"`
+	Runner       RunnerConfig       `mapstructure:"runner"`
 }
 
 type AppConfig struct {
@@ -275,6 +276,13 @@ type IntegrationsConfig struct {
 		Timeout       time.Duration `mapstructure:"timeout"`
 		RetryAttempts int           `mapstructure:"retry_attempts"`
 	} `mapstructure:"webhook"`
+}
+
+// RunnerConfig contains configuration for background task runner.
+type RunnerConfig struct {
+	SessionCleanup struct {
+		Interval time.Duration `mapstructure:"interval"`
+	} `mapstructure:"session_cleanup"`
 }
 
 // Load initializes the configuration with hot reload support.

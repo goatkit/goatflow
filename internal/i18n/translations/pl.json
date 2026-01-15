@@ -1003,6 +1003,29 @@
         "statuses": {
             "invalid": "Nieważny",
             "valid": "Ważny"
+        },
+        "sessions": {
+            "title": "Zarządzanie sesjami",
+            "description": "Przeglądaj i zarządzaj aktywnymi sesjami użytkowników",
+            "user": "Użytkownik",
+            "type": "Typ",
+            "created": "Utworzono",
+            "last_request": "Ostatnia aktywność",
+            "ip_address": "Adres IP",
+            "browser": "Przeglądarka",
+            "kill": "Zakończ sesję",
+            "kill_all": "Zakończ wszystkie sesje",
+            "confirm_kill": "Czy na pewno chcesz zakończyć tę sesję?",
+            "confirm_kill_all": "Czy na pewno chcesz zakończyć WSZYSTKIE sesje? Użytkownicy zostaną wylogowani.",
+            "no_sessions": "Brak aktywnych sesji",
+            "killed": "Sesja została pomyślnie zakończona",
+            "kill_failed": "Nie udało się zakończyć sesji",
+            "warning_logout_all": "Spowoduje to wylogowanie wszystkich użytkowników oprócz Ciebie.",
+            "active_sessions": "Aktywne sesje",
+            "type_agent": "Agent",
+            "type_customer": "Klient",
+            "kill_user_sessions": "Zakończ wszystkie sesje użytkownika",
+            "confirm_kill_user": "Czy na pewno chcesz zakończyć wszystkie sesje tego użytkownika?"
         }
     },
     "agent": {

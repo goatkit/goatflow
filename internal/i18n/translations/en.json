@@ -1082,6 +1082,30 @@
         "statuses": {
             "invalid": "Invalid",
             "valid": "Valid"
+        },
+        "sessions": {
+            "title": "Session Management",
+            "description": "View and manage active user sessions",
+            "user": "User",
+            "type": "Type",
+            "created": "Created",
+            "last_request": "Last Activity",
+            "ip_address": "IP Address",
+            "browser": "Browser",
+            "kill": "Kill Session",
+            "kill_all": "Kill All Sessions",
+            "confirm_kill": "Are you sure you want to terminate this session?",
+            "confirm_kill_all": "Are you sure you want to terminate ALL sessions? Users will be logged out.",
+            "no_sessions": "No active sessions",
+            "killed": "Session terminated successfully",
+            "kill_failed": "Failed to terminate session",
+            "warning_logout_all": "This will log out all users except yourself.",
+            "active_sessions": "Active Sessions",
+            "type_agent": "Agent",
+            "type_customer": "Customer",
+            "kill_user_sessions": "Kill All User Sessions",
+            "confirm_kill_user": "Are you sure you want to terminate all sessions for this user?",
+            "current_session": "Your current session"
         }
     },
     "agent": {

@@ -1003,6 +1003,29 @@
         "statuses": {
             "invalid": "無効",
             "valid": "有効"
+        },
+        "sessions": {
+            "title": "セッション管理",
+            "description": "アクティブなユーザーセッションの表示と管理",
+            "user": "ユーザー",
+            "type": "タイプ",
+            "created": "作成日時",
+            "last_request": "最終アクティビティ",
+            "ip_address": "IPアドレス",
+            "browser": "ブラウザ",
+            "kill": "セッションを終了",
+            "kill_all": "すべてのセッションを終了",
+            "confirm_kill": "このセッションを終了してもよろしいですか？",
+            "confirm_kill_all": "すべてのセッションを終了してもよろしいですか？ユーザーはログアウトされます。",
+            "no_sessions": "アクティブなセッションはありません",
+            "killed": "セッションを正常に終了しました",
+            "kill_failed": "セッションの終了に失敗しました",
+            "warning_logout_all": "これにより、あなた以外のすべてのユーザーがログアウトされます。",
+            "active_sessions": "アクティブセッション",
+            "type_agent": "エージェント",
+            "type_customer": "カスタマー",
+            "kill_user_sessions": "ユーザーのすべてのセッションを終了",
+            "confirm_kill_user": "このユーザーのすべてのセッションを終了してもよろしいですか？"
         }
     },
     "agent": {

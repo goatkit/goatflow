@@ -1004,6 +1004,29 @@
         "statuses": {
             "invalid": "Ungültig",
             "valid": "Gültig"
+        },
+        "sessions": {
+            "title": "Sitzungsverwaltung",
+            "description": "Aktive Benutzersitzungen anzeigen und verwalten",
+            "user": "Benutzer",
+            "type": "Typ",
+            "created": "Erstellt",
+            "last_request": "Letzte Aktivität",
+            "ip_address": "IP-Adresse",
+            "browser": "Browser",
+            "kill": "Sitzung Beenden",
+            "kill_all": "Alle Sitzungen Beenden",
+            "confirm_kill": "Sind Sie sicher, dass Sie diese Sitzung beenden möchten?",
+            "confirm_kill_all": "Sind Sie sicher, dass Sie ALLE Sitzungen beenden möchten? Benutzer werden abgemeldet.",
+            "no_sessions": "Keine aktiven Sitzungen",
+            "killed": "Sitzung erfolgreich beendet",
+            "kill_failed": "Sitzung konnte nicht beendet werden",
+            "warning_logout_all": "Dies meldet alle Benutzer außer Ihnen ab.",
+            "active_sessions": "Aktive Sitzungen",
+            "type_agent": "Agent",
+            "type_customer": "Kunde",
+            "kill_user_sessions": "Alle Benutzersitzungen Beenden",
+            "confirm_kill_user": "Sind Sie sicher, dass Sie alle Sitzungen dieses Benutzers beenden möchten?"
         }
     },
     "agent": {

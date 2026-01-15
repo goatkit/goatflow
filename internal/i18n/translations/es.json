@@ -1004,6 +1004,29 @@
         "statuses": {
             "invalid": "Inválido",
             "valid": "Válido"
+        },
+        "sessions": {
+            "title": "Gestión de Sesiones",
+            "description": "Ver y gestionar las sesiones activas de usuarios",
+            "user": "Usuario",
+            "type": "Tipo",
+            "created": "Creado",
+            "last_request": "Última Actividad",
+            "ip_address": "Dirección IP",
+            "browser": "Navegador",
+            "kill": "Cerrar Sesión",
+            "kill_all": "Cerrar Todas las Sesiones",
+            "confirm_kill": "¿Está seguro de que desea cerrar esta sesión?",
+            "confirm_kill_all": "¿Está seguro de que desea cerrar TODAS las sesiones? Los usuarios serán desconectados.",
+            "no_sessions": "No hay sesiones activas",
+            "killed": "Sesión cerrada correctamente",
+            "kill_failed": "Error al cerrar la sesión",
+            "warning_logout_all": "Esto desconectará a todos los usuarios excepto a usted.",
+            "active_sessions": "Sesiones Activas",
+            "type_agent": "Agente",
+            "type_customer": "Cliente",
+            "kill_user_sessions": "Cerrar Todas las Sesiones del Usuario",
+            "confirm_kill_user": "¿Está seguro de que desea cerrar todas las sesiones de este usuario?"
         }
     },
     "agent": {
