@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -100,6 +101,24 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		sessionTimeout := constants.DefaultSessionTimeout
 		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
 		c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
+
+		// Create session record in database for admin session management
+		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+			sessionID, err := sessionSvc.CreateSession(
+				int(user.ID),
+				user.Login,
+				"Customer",
+				c.ClientIP(),
+				c.Request.UserAgent(),
+			)
+			if err != nil {
+				// Log error but don't fail login - session tracking is non-critical
+				log.Printf("Failed to create customer session record: %v", err)
+			} else {
+				// Store session ID in a cookie for logout cleanup
+				c.SetCookie("session_id", sessionID, sessionTimeout, "/", "", false, true)
+			}
+		}
 
 		redirectTo := "/customer/tickets"
 		cfg := sysconfig.DefaultCustomerPortalConfig()

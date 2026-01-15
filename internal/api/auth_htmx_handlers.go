@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -172,6 +173,24 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
 		c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
 
+		// Create session record in database for admin session management
+		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+			sessionID, err := sessionSvc.CreateSession(
+				int(userID),
+				username,
+				"User",
+				c.ClientIP(),
+				c.Request.UserAgent(),
+			)
+			if err != nil {
+				// Log error but don't fail login - session tracking is non-critical
+				log.Printf("Failed to create session record: %v", err)
+			} else {
+				// Store session ID in a cookie for logout cleanup
+				c.SetCookie("session_id", sessionID, sessionTimeout, "/", "", false, true)
+			}
+		}
+
 		if c.GetHeader("HX-Request") == "true" {
 			c.Header("HX-Redirect", "/dashboard")
 			c.JSON(http.StatusOK, gin.H{
@@ -261,12 +280,24 @@ func handleDemoCustomerLogin(c *gin.Context) {
 
 // handleLogout handles logout requests.
 func handleLogout(c *gin.Context) {
+	// Delete session record from database
+	if sessionID, err := c.Cookie("session_id"); err == nil && sessionID != "" {
+		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+			if err := sessionSvc.KillSession(sessionID); err != nil {
+				log.Printf("Failed to delete session record: %v", err)
+			}
+		}
+	}
+
+	// Clear all auth cookies
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
 	c.SetCookie("auth_token", "", -1, "/", "", false, true)
 	c.SetCookie("token", "", -1, "/", "", false, true)
+	c.SetCookie("session_id", "", -1, "/", "", false, true)
 	c.SetCookie("access_token", "", -1, "/customer", "", false, true)
 	c.SetCookie("auth_token", "", -1, "/customer", "", false, true)
 	c.SetCookie("token", "", -1, "/customer", "", false, true)
+	c.SetCookie("session_id", "", -1, "/customer", "", false, true)
 	c.Redirect(http.StatusFound, loginRedirectPath(c))
 }
 

@@ -503,6 +503,10 @@ func runRunner(db *sql.DB) {
 	emailTask := tasks.NewEmailQueueTask(db, &emailCfg.Email)
 	registry.Register(emailTask)
 
+	// Register session cleanup task
+	sessionCleanupTask := tasks.NewSessionCleanupTask(db)
+	registry.Register(sessionCleanupTask)
+
 	log.Printf("Registered %d background tasks", len(registry.All()))
 
 	// Create and start runner

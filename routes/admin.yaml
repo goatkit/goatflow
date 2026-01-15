@@ -1085,3 +1085,25 @@ spec:
           method: POST
           handler: handleDynamicFieldWebserviceTest
           description: "Test webservice configuration for a dynamic field"
+
+        # Session Management
+        - path: /sessions
+          method: GET
+          handler: handleAdminSessions
+          template: pages/admin/sessions.pongo2
+          description: "Display session management page"
+
+        - path: /api/sessions/:id
+          method: DELETE
+          handler: handleKillSession
+          description: "Terminate a specific session"
+
+        - path: /api/sessions/user/:user_id
+          method: DELETE
+          handler: handleKillUserSessions
+          description: "Terminate all sessions for a user"
+
+        - path: /api/sessions
+          method: DELETE
+          handler: handleKillAllSessions
+          description: "Terminate all sessions (emergency)"

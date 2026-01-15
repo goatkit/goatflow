@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -159,6 +160,29 @@ var HandleAuthLogin = func(c *gin.Context) {
 		c.Set("auth_provider", provider)
 	}
 
+	// Create session record in database for admin session management
+	log.Printf("DEBUG: HandleAuthLogin - attempting to create session for user %s (ID: %d)", username, user.ID)
+	sessionSvc := shared.GetSessionService()
+	if sessionSvc == nil {
+		log.Printf("DEBUG: HandleAuthLogin - session service is nil!")
+	} else {
+		sessionID, err := sessionSvc.CreateSession(
+			int(user.ID),
+			username,
+			user.Role,
+			c.ClientIP(),
+			c.Request.UserAgent(),
+		)
+		if err != nil {
+			// Log error but don't fail login - session tracking is non-critical
+			log.Printf("Failed to create session record: %v", err)
+		} else {
+			log.Printf("DEBUG: HandleAuthLogin - session created: %s", sessionID)
+			// Store session ID in a cookie for logout cleanup
+			c.SetCookie("session_id", sessionID, sessionTimeout, "/", "", false, true)
+		}
+	}
+
 	redirectTarget := "/dashboard"
 	if strings.EqualFold(user.Role, "customer") {
 		redirectTarget = "/customer/tickets"
@@ -181,10 +205,20 @@ var HandleAuthLogin = func(c *gin.Context) {
 
 // HandleAuthLogout handles user logout.
 var HandleAuthLogout = func(c *gin.Context) {
+	// Delete session record from database
+	if sessionID, err := c.Cookie("session_id"); err == nil && sessionID != "" {
+		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+			if err := sessionSvc.KillSession(sessionID); err != nil {
+				log.Printf("Failed to delete session record: %v", err)
+			}
+		}
+	}
+
 	// Clear cookies
 	c.SetCookie("auth_token", "", -1, "/", "", false, true)
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
 	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
+	c.SetCookie("session_id", "", -1, "/", "", false, true)
 
 	// Redirect to login
 	c.Redirect(http.StatusSeeOther, "/login")

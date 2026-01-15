@@ -88,6 +88,7 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/webservices.pongo2":                 true,
 	"pages/admin/webservice_form.pongo2":             true,
 	"pages/admin/webservice_history.pongo2":          true,
+	"pages/admin/sessions.pongo2":                    true,
 
 	// Agent templates
 	"pages/agent/dashboard.pongo2":   true,
@@ -1097,6 +1098,27 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 						"CreateBy":   1,
 					},
 				}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/sessions",
+			template: "pages/admin/sessions.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Sessions"] = []map[string]interface{}{
+					{
+						"SessionID":   "abc123def456",
+						"UserID":      1,
+						"UserLogin":   "admin",
+						"UserType":    "User",
+						"CreateTime":  time.Now().Add(-1 * time.Hour),
+						"LastRequest": time.Now().Add(-5 * time.Minute),
+						"RemoteAddr":  "192.168.1.100",
+						"UserAgent":   "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+					},
+				}
+				ctx["SessionCount"] = 1
 				return ctx
 			}(),
 		},

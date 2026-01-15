@@ -7,6 +7,17 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
+- **Admin Session Management**: Full session management interface at `/admin/sessions` (OTRS AdminSession equivalent)
+  - View all active user sessions with user details, IP address, browser info, login time, last activity
+  - Kill individual sessions to force user logout
+  - Kill all sessions for a specific user
+  - Kill all sessions (emergency action with confirmation)
+  - Current session indicator (asterisk) to avoid self-logout
+  - Session enforcement in auth middleware - killed sessions immediately invalidate
+  - Background session cleanup task via runner (configurable interval, default 5 minutes)
+  - Cleans up sessions exceeding max age (7 days) and idle sessions (2 hours)
+  - Configuration: `runner.session_cleanup.interval` in YAML config
+  - Files: `internal/api/admin_session_handlers.go`, `internal/repository/session_repository.go`, `internal/service/session_service.go`, `internal/runner/tasks/session_cleanup.go`, `templates/pages/admin/sessions.pongo2`
 - **Phone/Email Ticket Creation Entry Points**: Separate navigation links for creating phone and email tickets (mirrors OTRS AgentTicketPhone/AgentTicketEmail)
   - Two direct links in top navigation and agent dashboard quick actions
   - URL parameter `?type=phone|email` pre-selects interaction type on the new ticket form

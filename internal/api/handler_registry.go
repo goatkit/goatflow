@@ -128,15 +128,23 @@ func ensureCoreHandlers() {
 		"handleStaticFiles": HandleStaticFiles,
 		"handleLogout":      handleLogout,
 		"handleCustomerLogout": func(c *gin.Context) {
+			// Delete session record from database
+			if sessionID, err := c.Cookie("session_id"); err == nil && sessionID != "" {
+				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+					_ = sessionSvc.KillSession(sessionID) // Best effort, don't fail logout
+				}
+			}
 			// clear all auth cookies and redirect to customer login
 			// Clear for root path
 			c.SetCookie("auth_token", "", -1, "/", "", false, true)
 			c.SetCookie("access_token", "", -1, "/", "", false, true)
 			c.SetCookie("token", "", -1, "/", "", false, true)
+			c.SetCookie("session_id", "", -1, "/", "", false, true)
 			// Also clear for /customer path in case proxy scoped cookies
 			c.SetCookie("auth_token", "", -1, "/customer", "", false, true)
 			c.SetCookie("access_token", "", -1, "/customer", "", false, true)
 			c.SetCookie("token", "", -1, "/customer", "", false, true)
+			c.SetCookie("session_id", "", -1, "/customer", "", false, true)
 			c.Header("HX-Redirect", "/customer/login")
 			c.Redirect(http.StatusSeeOther, "/customer/login")
 		},

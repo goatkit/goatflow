@@ -137,6 +137,32 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 				return
 			}
 
+			// Validate session exists in database (session was not killed)
+			if sessionID, cookieErr := c.Cookie("session_id"); cookieErr == nil && sessionID != "" {
+				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+					session, sessionErr := sessionSvc.GetSession(sessionID)
+					if sessionErr != nil || session == nil {
+						// Session was killed - clear all cookies and reject
+						c.SetCookie("auth_token", "", -1, "/", "", false, true)
+						c.SetCookie("access_token", "", -1, "/", "", false, true)
+						c.SetCookie("session_id", "", -1, "/", "", false, true)
+						if wantsHTMLResponse(c) {
+							loginPath := "/login"
+							if strings.HasPrefix(path, "/customer") {
+								loginPath = "/customer/login"
+							}
+							c.Redirect(http.StatusSeeOther, loginPath)
+						} else {
+							c.JSON(http.StatusUnauthorized, gin.H{"error": "Session has been terminated"})
+						}
+						c.Abort()
+						return
+					}
+					// Update last request time for session activity tracking
+					_ = sessionSvc.TouchSession(sessionID)
+				}
+			}
+
 			// Store user info in context (normalize and enrich)
 			c.Set("user_email", claims.Email)
 			c.Set("user_role", claims.Role)

@@ -1004,6 +1004,29 @@
         "statuses": {
             "invalid": "valbe'",
             "valid": "val"
+        },
+        "sessions": {
+            "title": "mIw SeHwI'",
+            "description": "lo'wI' mIwmey legh 'ej SeH",
+            "user": "lo'wI'",
+            "type": "Segh",
+            "created": "chenmoHlu'",
+            "last_request": "Qav vang",
+            "ip_address": "IP Daq",
+            "browser": "HaSta leghwI'",
+            "kill": "mIw HoH",
+            "kill_all": "Hoch mIwmey HoH",
+            "confirm_kill": "mIwvam DaHoH'a' neH'a'?",
+            "confirm_kill_all": "Hoch mIwmey DaHoH'a' neH'a'? lo'wI'pu' mej.",
+            "no_sessions": "mIw tu'lu'be'",
+            "killed": "mIw HoHlu'pu' QaQ",
+            "kill_failed": "mIw HoHlaHbe'",
+            "warning_logout_all": "Hoch lo'wI'pu' mej, SoH neH pagh.",
+            "active_sessions": "mIwmey taH",
+            "type_agent": "Duy",
+            "type_customer": "je'wI'",
+            "kill_user_sessions": "lo'wI' Hoch mIwmey HoH",
+            "confirm_kill_user": "lo'wI'vam Hoch mIwmey DaHoH'a' neH'a'?"
         }
     },
     "agent": {
