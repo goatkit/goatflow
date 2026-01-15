@@ -364,9 +364,32 @@ document.addEventListener("DOMContentLoaded", () => {
     let failureCount = 0;
 
     function formatShortDuration(ms) {
-        const totalMinutes = Math.max(0, Math.round(Math.abs(ms) / 60000));
-        if (totalMinutes >= 60) {
-            const hours = Math.floor(totalMinutes / 60);
+        const totalSeconds = Math.max(0, Math.round(Math.abs(ms) / 1000));
+        const totalMinutes = Math.floor(totalSeconds / 60);
+        const totalHours = Math.floor(totalMinutes / 60);
+        const totalDays = Math.floor(totalHours / 24);
+
+        // For very long durations, use years/months/weeks/days
+        if (totalDays >= 365) {
+            const years = Math.floor(totalDays / 365);
+            return `${years} year${years !== 1 ? "s" : ""}`;
+        }
+        if (totalDays >= 60) {
+            const months = Math.floor(totalDays / 30);
+            return `${months} month${months !== 1 ? "s" : ""}`;
+        }
+        if (totalDays >= 14) {
+            const weeks = Math.floor(totalDays / 7);
+            return `${weeks} week${weeks !== 1 ? "s" : ""}`;
+        }
+        if (totalDays >= 2) {
+            return `${totalDays} days`;
+        }
+        if (totalDays === 1) {
+            return "1 day";
+        }
+        if (totalHours >= 1) {
+            const hours = totalHours;
             const minutes = totalMinutes % 60;
             if (minutes === 0) {
                 return `${hours}h`;
@@ -376,8 +399,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (totalMinutes >= 1) {
             return `${totalMinutes}m`;
         }
-        const totalSeconds = Math.max(1, Math.round(Math.abs(ms) / 1000));
-        return `${totalSeconds}s`;
+        return `${Math.max(1, totalSeconds)}s`;
     }
 
     function formatSnoozeLabel(minutes) {
