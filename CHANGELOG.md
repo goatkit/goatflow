@@ -123,6 +123,7 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - Files: `internal/repository/webservice_repository.go`, `internal/service/genericinterface/service.go`, `internal/service/genericinterface/transport_rest.go`, `internal/service/genericinterface/transport_soap.go`, `internal/service/genericinterface/webservice_field.go`, `internal/api/admin_webservice_handlers.go`, `internal/api/admin_dynamic_field_webservice_ajax.go`
 
 ### Changed
+- **Humanized Duration Display**: Reminder toast notifications now show overdue/due times in human-readable format (e.g., "4 months" instead of "3390h 20m") for periods exceeding 2 days
 - **Translation Coverage Test Output**: `TestTranslationCompleteness` now prints a formatted ASCII table showing all language coverage with checkmarks for 100% complete languages
 - **Test Runner Enhancement**: `scripts/test-runner.sh` now tracks individual test counts (not just packages) and displays the i18n coverage table in the summary output
 - **http-call Script**: `scripts/http-call.sh` now uses JSON API login to extract `access_token` via Bearer authentication instead of cookie-based session handling
