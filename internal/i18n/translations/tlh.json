@@ -1110,7 +1110,27 @@
             "click_to_edit": "choHmeH qIp",
             "active_permissions": "Qap chaw'mey",
             "all_groups": "Hoch ghommey",
-            "assigned_groups": "lanlu'bogh ghommey"
+            "assigned_groups": "lanlu'bogh ghommey",
+            "adjust_search": "nejwI' wIvmeymaj choHmeH nID",
+            "click_group_to_edit": "ghom qIp 'ej mach lo'wI' chaw' choH",
+            "click_user_to_edit": "mach lo'wI' qIp 'ej ghom chaw'mey choH",
+            "customer_user": "mach lo'wI'",
+            "edit_group_title": "ghom mach lo'wI' chaw'mey",
+            "edit_user_title": "mach lo'wI' ghom chaw'mey",
+            "filter_groups_placeholder": "ghommey wIv...",
+            "group": "ghom",
+            "group_permissions": "ghom chaw'mey",
+            "help_description": "mach lo'wI' ghom chaw'mey SeH nuq chaw'mey mach lo'wI'mey leghlaH mach portal. tuq chaw'mey qaw.",
+            "help_ro": "laD neH chaw' ghomvam qoch chaw'meyDaq",
+            "help_rw": "laD/ghItlh chaw' (chaw'mey chenmoHlaH choHlaH je)",
+            "help_title": "mach lo'wI' ghom chaw'mey",
+            "login": "'el",
+            "manage_users_for_group": "ghomvamvaD mach lo'wI' chaw'mey SeH",
+            "no_groups_available": "ghom tu'be'lu'",
+            "search_placeholder": "lo'wI'mey nej... (* lo' Hoch)",
+            "select_groups_for_user": "mach lo'wI'vamvaD ghommey wIv",
+            "select_users_for_group": "ghomvamvaD mach lo'wI'mey wIv",
+            "user_permissions": "lo'wI' chaw'mey"
         },
         "common": {
             "actions": {

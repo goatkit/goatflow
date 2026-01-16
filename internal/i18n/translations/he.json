@@ -1864,7 +1864,8 @@
         "save_search": "שמור חיפוש",
         "saved_searches": "חיפושים שמורים",
         "search": "חיפוש",
-        "search_placeholder": "חיפוש..."
+        "search_placeholder": "חיפוש...",
+        "search_results": "תוצאות חיפוש"
     },
     "services": {
         "add_new": "הוסף שירות",
@@ -2029,6 +2030,13 @@
         "attachments": "קבצים מצורפים",
         "bulk": "בתפזורת",
         "caller": "מתקשר",
+        "comment_placeholder": "הקלד את התגובה שלך כאן...",
+        "comments": "תגובות",
+        "created_at": "נוצר ב",
+        "created_by": "נוצר על ידי",
+        "created_on": "נוצר בתאריך",
+        "customer": "לקוח",
+        "filter_form_label": "סנן כרטיסים",
         "change_owner": "שנה בעלים",
         "change_queue": "שנה תור",
         "change_state": "שנה מצב",
