@@ -3,6 +3,58 @@
  */
 
 /**
+ * Copy text to clipboard and show toast notification
+ * @param {string} text - The text to copy to clipboard
+ * @param {boolean} showNotification - Whether to show toast notification (default: true)
+ */
+function copyToClipboard(text, showNotification = true) {
+    const notify = function (success) {
+        if (showNotification && typeof showToast === "function") {
+            showToast(
+                success ? "Copied to clipboard" : "Failed to copy",
+                success ? "success" : "error",
+            );
+        }
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+            .writeText(text)
+            .then(function () {
+                notify(true);
+            })
+            .catch(function (err) {
+                console.error("Failed to copy: ", err);
+                fallbackCopy(text, notify);
+            });
+    } else {
+        fallbackCopy(text, notify);
+    }
+}
+
+/**
+ * Fallback copy method using execCommand for older browsers
+ * @param {string} text - The text to copy
+ * @param {function} notify - Callback function to notify success/failure
+ */
+function fallbackCopy(text, notify) {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.style.position = "fixed";
+    area.style.left = "-9999px";
+    document.body.appendChild(area);
+    area.select();
+    try {
+        document.execCommand("copy");
+        if (notify) notify(true);
+    } catch (e) {
+        console.error("Fallback copy failed: ", e);
+        if (notify) notify(false);
+    }
+    document.body.removeChild(area);
+}
+
+/**
  * Enhanced fetch wrapper that automatically includes credentials for API calls
  */
 function apiFetch(url, options = {}) {

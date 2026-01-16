@@ -1086,7 +1086,15 @@ func handleUpdateTemplateAssociations(
 	}
 
 	if isHTMXRequest(c) {
-		c.Header("HX-Redirect", "/admin/templates")
+		// Check referer to determine where to redirect back to
+		referer := c.GetHeader("Referer")
+		redirectURL := "/admin/templates"
+		if strings.Contains(referer, "/admin/queue-templates") || strings.Contains(referer, "/queues/") {
+			redirectURL = "/admin/queue-templates"
+		} else if strings.Contains(referer, "/admin/template-attachments") || strings.Contains(referer, "/attachments/") {
+			redirectURL = "/admin/template-attachments"
+		}
+		c.Header("HX-Redirect", redirectURL)
 		c.Status(http.StatusOK)
 		return
 	}

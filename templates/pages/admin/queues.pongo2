@@ -30,13 +30,13 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
                 <label for="searchQueue" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
-                <input type="text" id="searchQueue" 
+                <input type="text" id="searchQueue"
                     class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm dark:text-white"
                     placeholder="Search queues..." onkeyup="filterQueues()">
             </div>
             <div>
                 <label for="filterGroup" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Group</label>
-                <select id="filterGroup" 
+                <select id="filterGroup"
                     class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm dark:text-white"
                     onchange="filterQueues()">
                     <option value="">All Groups</option>
@@ -47,7 +47,7 @@
             </div>
             <div>
                 <label for="filterStatus" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                <select id="filterStatus" 
+                <select id="filterStatus"
                     class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm dark:text-white"
                     onchange="filterQueues()">
                     <option value="">All</option>
@@ -57,7 +57,7 @@
             </div>
         </div>
         <div class="mt-4 flex justify-end">
-            <button onclick="clearFilters()" 
+            <button onclick="clearFilters()"
                 class="text-sm text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-200">
                 Clear filters
             </button>
@@ -91,8 +91,8 @@
             </thead>
             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700" id="queuesTableBody">
                 {% for queue in Queues %}
-                <tr class="queue-row hover:bg-gray-50 dark:hover:bg-gray-700" 
-                    data-id="{{ queue.ID }}" 
+                <tr class="queue-row hover:bg-gray-50 dark:hover:bg-gray-700"
+                    data-id="{{ queue.ID }}"
                     data-name="{{ queue.Name|lower }}"
                     data-group="{{ queue.GroupID }}"
                     data-status="{{ queue.ValidID }}">
@@ -148,7 +148,7 @@
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="viewQueueDetails({{ queue.ID }})" 
+                        <button onclick="viewQueueDetails({{ queue.ID }})"
                             class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-200 mr-3"
                             title="View details">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -156,14 +156,14 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                         </button>
-                        <button onclick="editQueue({{ queue.ID }})" 
+                        <button onclick="editQueue({{ queue.ID }})"
                             class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-200 mr-3"
                             title="Edit">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                         </button>
-                        <button onclick="toggleQueueStatus({{ queue.ID }}, {{ queue.ValidID }})" 
+                        <button onclick="toggleQueueStatus({{ queue.ID }}, {{ queue.ValidID }})"
                             class="{% if queue.ValidID == 1 %}text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-200{% else %}text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-200{% endif %}"
                             title="{% if queue.ValidID == 1 %}Disable{% else %}Enable{% endif %}">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,7 +179,7 @@
                 {% endfor %}
             </tbody>
         </table>
-        
+
         <!-- Empty state -->
         {% if not Queues %}
         <div class="text-center py-12">
@@ -189,7 +189,7 @@
             <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No queues</h3>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by creating a new queue.</p>
             <div class="mt-6">
-                <button onclick="openQueueModal()" 
+                <button onclick="openQueueModal()"
                     class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
                     <svg class="-ml-1 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
@@ -207,28 +207,28 @@
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
+
         <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
             <form id="queueForm" onsubmit="saveQueue(event)">
                 <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4" id="queue-modal-title">
                         Add Queue
                     </h3>
-                    
+
                     <input type="hidden" id="queueId" name="id">
-                    
+
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <!-- Basic Information -->
                         <div class="sm:col-span-2">
                             <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Basic Information</h4>
                         </div>
-                        
+
                         <div>
                             <label for="queueName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name *</label>
                             <input type="text" name="name" id="queueName" required
                                 class="mt-1 focus:ring-gotrs-500 focus:border-gotrs-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
                         </div>
-                        
+
                         <div>
                             <label for="queueGroup" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Group *</label>
                             <select name="group_id" id="queueGroup" required
@@ -239,13 +239,13 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        
+
                         <div class="sm:col-span-2">
                             <label for="queueComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Comments</label>
                             <textarea name="comments" id="queueComments" rows="2"
                                 class="mt-1 focus:ring-gotrs-500 focus:border-gotrs-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"></textarea>
                         </div>
-                        
+
                         <!-- Email Settings -->
                         <div class="sm:col-span-2 mt-4 flex items-center justify-between">
                             <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Email Settings</h4>
@@ -253,7 +253,7 @@
                                 Manage email identities
                             </a>
                         </div>
-                        
+
                         <div>
                             <label for="queueSystemAddress" class="block text-sm font-medium text-gray-700 dark:text-gray-300">System Address</label>
                             <select name="system_address_id" id="queueSystemAddress"
@@ -264,7 +264,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        
+
                         <div>
                             <label for="queueSalutation" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Salutation</label>
                             <select name="salutation_id" id="queueSalutation"
@@ -282,7 +282,7 @@
                                 No salutation selected
                             </div>
                         </div>
-                        
+
                         <div>
                             <label for="queueSignature" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Signature</label>
                             <select name="signature_id" id="queueSignature"
@@ -300,12 +300,12 @@
                                 No signature selected
                             </div>
                         </div>
-                        
+
                         <!-- Ticket Settings -->
                         <div class="sm:col-span-2 mt-4">
                             <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Ticket Settings</h4>
                         </div>
-                        
+
                         <div>
                             <label for="queueUnlockTimeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Unlock Timeout (minutes)
@@ -314,7 +314,7 @@
                             <input type="number" name="unlock_timeout" id="queueUnlockTimeout" min="0" value="0"
                                 class="mt-1 focus:ring-gotrs-500 focus:border-gotrs-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
                         </div>
-                        
+
                         <div>
                             <label for="queueFollowUp" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Follow-up Option</label>
                             <select name="follow_up_id" id="queueFollowUp"
@@ -324,7 +324,7 @@
                                 <option value="3">New ticket</option>
                             </select>
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 <input type="checkbox" name="follow_up_lock" id="queueFollowUpLock" value="1"
@@ -332,7 +332,7 @@
                                 Lock follow-ups to owner
                             </label>
                         </div>
-                        
+
                         <div>
                             <label for="queueValidID" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
                             <select name="valid_id" id="queueValidID"
@@ -343,7 +343,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button type="submit"
                         class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">
@@ -364,7 +364,7 @@
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
+
         <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
             <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
                 <div class="flex items-start justify-between mb-4">
@@ -377,7 +377,7 @@
                         </svg>
                     </button>
                 </div>
-                
+
                 <div id="queueDetailsContent">
                     <!-- Queue details will be loaded here -->
                 </div>
@@ -391,7 +391,7 @@
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
+
         <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
@@ -406,7 +406,7 @@
                         </h3>
                         <div class="mt-2">
                             <p class="text-sm text-gray-500 dark:text-gray-400">
-                                Are you sure you want to delete the queue "<span id="deleteQueueName"></span>"? 
+                                Are you sure you want to delete the queue "<span id="deleteQueueName"></span>"?
                                 All tickets in this queue will need to be reassigned. This action cannot be undone.
                             </p>
                         </div>
@@ -473,11 +473,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const savedSearch = sessionStorage.getItem('queueSearch');
     const savedGroup = sessionStorage.getItem('queueGroup');
     const savedStatus = sessionStorage.getItem('queueStatus');
-    
+
     if (savedSearch) document.getElementById('searchQueue').value = savedSearch;
     if (savedGroup) document.getElementById('filterGroup').value = savedGroup;
     if (savedStatus) document.getElementById('filterStatus').value = savedStatus;
-    
+
     const salutationSelect = document.getElementById('queueSalutation');
     if (salutationSelect) {
         salutationSelect.addEventListener('change', updateSalutationPreview);
@@ -496,32 +496,32 @@ function filterQueues() {
     const search = document.getElementById('searchQueue').value.toLowerCase();
     const group = document.getElementById('filterGroup').value;
     const status = document.getElementById('filterStatus').value;
-    
+
     // Save to session storage
     sessionStorage.setItem('queueSearch', search);
     sessionStorage.setItem('queueGroup', group);
     sessionStorage.setItem('queueStatus', status);
-    
+
     const rows = document.querySelectorAll('.queue-row');
     rows.forEach(row => {
         const name = row.dataset.name;
         const rowGroup = row.dataset.group;
         const rowStatus = row.dataset.status;
-        
+
         let show = true;
-        
+
         if (search && !name.includes(search)) {
             show = false;
         }
-        
+
         if (group && rowGroup !== group) {
             show = false;
         }
-        
+
         if (status && rowStatus !== status) {
             show = false;
         }
-        
+
         row.style.display = show ? '' : 'none';
     });
 }
@@ -530,11 +530,11 @@ function clearFilters() {
     document.getElementById('searchQueue').value = '';
     document.getElementById('filterGroup').value = '';
     document.getElementById('filterStatus').value = '';
-    
+
     sessionStorage.removeItem('queueSearch');
     sessionStorage.removeItem('queueGroup');
     sessionStorage.removeItem('queueStatus');
-    
+
     filterQueues();
 }
 
@@ -545,13 +545,13 @@ function sortQueues(field) {
         currentSort.field = field;
         currentSort.direction = 'asc';
     }
-    
+
     const tbody = document.getElementById('queuesTableBody');
     const rows = Array.from(tbody.querySelectorAll('tr'));
-    
+
     rows.sort((a, b) => {
         let aVal, bVal;
-        
+
         if (field === 'id') {
             aVal = parseInt(a.dataset.id);
             bVal = parseInt(b.dataset.id);
@@ -559,14 +559,14 @@ function sortQueues(field) {
             aVal = a.dataset.name;
             bVal = b.dataset.name;
         }
-        
+
         if (currentSort.direction === 'asc') {
             return aVal > bVal ? 1 : -1;
         } else {
             return aVal < bVal ? 1 : -1;
         }
     });
-    
+
     rows.forEach(row => tbody.appendChild(row));
 }
 
@@ -592,7 +592,7 @@ async function editQueue(id) {
         const data = await apiFetch(`/api/queues/${id}`);
         if (data && data.data) {
             const queue = data.data;
-            
+
             document.getElementById('queueId').value = queue.id;
             document.getElementById('queueName').value = queue.name;
             document.getElementById('queueGroup').value = queue.group_id;
@@ -606,7 +606,7 @@ async function editQueue(id) {
             document.getElementById('queueValidID').value = queue.valid_id || 1;
             updateSalutationPreview();
             updateSignaturePreview();
-            
+
             document.getElementById('queueModal').classList.remove('hidden');
         } else {
             showToast('Failed to load queue details', 'error');
@@ -619,7 +619,7 @@ async function editQueue(id) {
 async function saveQueue(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
-    
+
     const data = {
         name: formData.get('name'),
         group_id: parseInt(formData.get('group_id')),
@@ -632,17 +632,17 @@ async function saveQueue(event) {
         follow_up_lock: formData.get('follow_up_lock') === '1' ? 1 : 0,
         valid_id: parseInt(formData.get('valid_id')) || 1
     };
-    
+
     const url = currentEditId ? `/api/v1/queues/${currentEditId}` : '/api/v1/queues';
     const method = currentEditId ? 'PUT' : 'POST';
-    
+
     try {
         const response = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        
+
         if (response.ok) {
             // If backend returns created object, optimistically inject row for faster UI
             try {
@@ -696,9 +696,7 @@ async function viewQueueDetails(id) {
     try {
         const response = await fetch(`/queues/${id}/meta`, {
             headers: {
-                'Accept': 'text/html',
-                'HX-Request': 'true',
-                'X-Requested-With': 'XMLHttpRequest'
+                'Accept': 'text/html'
             }
         });
         if (!response.ok) {
@@ -738,11 +736,11 @@ function closeQueueDetailsModal() {
 async function toggleQueueStatus(id, currentStatus) {
     const newStatus = currentStatus === 1 ? 2 : 1;
     const action = newStatus === 1 ? 'enable' : 'disable';
-    
+
     if (!confirm(`Are you sure you want to ${action} this queue?`)) {
         return;
     }
-    
+
     try {
         await apiFetch(`/api/queues/${id}/status`, {
             method: 'PUT',
@@ -781,14 +779,14 @@ async function confirmDeleteQueue() {
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
-        type === 'error' ? 'bg-red-600' : 
-        type === 'success' ? 'bg-green-600' : 
+        type === 'error' ? 'bg-red-600' :
+        type === 'success' ? 'bg-green-600' :
         'bg-blue-600'
     }`;
     toast.textContent = message;
-    
+
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.remove();
     }, 3000);

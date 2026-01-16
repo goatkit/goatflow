@@ -121,6 +121,22 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - **AJAX Endpoints**: `/admin/api/dynamic-fields/:id/autocomplete` for field autocomplete, `/admin/api/dynamic-fields/:id/webservice-test` for config testing
   - **Comprehensive Integration Tests**: Mock REST and SOAP servers as fixtures, tests for transport execution, authentication, fault handling, data mapping, caching, and full service invocation
   - Files: `internal/repository/webservice_repository.go`, `internal/service/genericinterface/service.go`, `internal/service/genericinterface/transport_rest.go`, `internal/service/genericinterface/transport_soap.go`, `internal/service/genericinterface/webservice_field.go`, `internal/api/admin_webservice_handlers.go`, `internal/api/admin_dynamic_field_webservice_ajax.go`
+- **Admin Queue Templates**: Full CRUD interface at `/admin/queue-templates` for managing queue↔template assignments (OTRS AdminQueueTemplates equivalent)
+  - Two-column overview showing all queues and templates with assignment counts
+  - Queue-side editing: assign templates to a queue at `/admin/queues/:id/templates`
+  - Links to existing template-side editing at `/admin/templates/:id/queues`
+  - Smart redirect back to overview after saving assignments
+  - Dashboard navigation link with link icon
+  - i18n translations for all 15 languages
+  - Files: `internal/api/admin_queue_templates_handlers.go`, `templates/pages/admin/queue_templates.pongo2`, `templates/pages/admin/queue_templates_edit.pongo2`
+- **Admin Template Attachments**: Full CRUD interface at `/admin/template-attachments` for managing template↔attachment assignments (OTRS AdminTemplateAttachment equivalent)
+  - Two-column overview showing all templates and attachments with assignment counts
+  - Attachment-side editing: assign templates to an attachment at `/admin/attachments/:id/templates`
+  - Links to existing template-side editing at `/admin/templates/:id/attachments`
+  - Smart redirect back to overview after saving assignments
+  - Dashboard navigation link with file-circle-plus icon
+  - i18n translations for all 15 languages
+  - Files: `internal/api/admin_template_attachments_handlers.go`, `templates/pages/admin/template_attachments_overview.pongo2`, `templates/pages/admin/attachment_templates_edit.pongo2`
 
 ### Changed
 - **Humanized Duration Display**: Reminder toast notifications now show overdue/due times in human-readable format (e.g., "4 months" instead of "3390h 20m") for periods exceeding 2 days
@@ -142,6 +158,9 @@ The format is based on Keep a Changelog and this project (currently) does not ye
   - `internal/api/v1/handlers_tickets.go` - handleUpdateTicket
   - `internal/repository/article_repository.go` - Create placeholder generation
   - `cmd/gotrs-storage/main.go` - storage migration query construction
+- **Template Type Chips Display**: Fixed comma-separated template types (e.g., "Answer,Note,Snippet") to display as individual colored chips instead of a single unstyled text string
+  - Uses pongo2 `|split:","` filter to iterate and render each type with its corresponding color
+  - Applied to all template-related admin pages: queue_templates, queue_templates_edit, template_attachments_overview, attachment_templates_edit
 
 ### Internal
 - **Lookup Display Tests**: Added unit tests for `processLookups`, `coerceString`, and lookup field configuration in `handler_lookup_test.go`

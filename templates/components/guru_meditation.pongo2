@@ -38,7 +38,7 @@
 /* Amiga Topaz font approximation using CSS */
 /* Using only fallback fonts - no broken base64 font */
 .amiga-font {
-    font-family: 'Courier New', 'Lucida Console', 'Monaco', 
+    font-family: 'Courier New', 'Lucida Console', 'Monaco',
                  'Fixedsys', 'Terminal', 'Courier New', monospace;
     font-size: 16px;
     line-height: 1.2;
@@ -51,12 +51,12 @@
 
 /* Amiga Guru Meditation styling */
 @keyframes guru-flash {
-    0%, 100% { 
+    0%, 100% {
         border-color: #ff0000;
         box-shadow: 0 0 20px #ff0000, inset 0 0 20px rgba(255,0,0,0.1);
         background-color: #000000;
     }
-    50% { 
+    50% {
         border-color: #880000;
         box-shadow: 0 0 5px #880000;
         background-color: #000000;
@@ -113,7 +113,7 @@
 function showGuruMeditation(errorCode, message, details) {
     const guru = document.getElementById('guru-meditation');
     if (!guru) return;
-    
+
     // Update error content
     const codeEl = document.getElementById('guru-code');
     const msgEl = document.getElementById('guru-message');
@@ -121,38 +121,38 @@ function showGuruMeditation(errorCode, message, details) {
     const taskEl = document.getElementById('guru-task');
     const locationEl = document.getElementById('guru-location');
     const timeEl = document.getElementById('guru-time');
-    
+
     if (errorCode && codeEl) {
         codeEl.textContent = errorCode;
     }
-    
+
     if (message && msgEl) {
         msgEl.textContent = message.toUpperCase();
     }
-    
+
     if (details) {
         if (detailsEl) detailsEl.style.display = 'block';
         if (details.task && taskEl) taskEl.textContent = details.task.toUpperCase();
         if (details.location && locationEl) locationEl.textContent = details.location;
         if (timeEl) timeEl.textContent = new Date().toISOString().replace('T', ' ').substring(0, 19);
     }
-    
+
     // Show the meditation
     guru.style.display = 'block';
-    
+
     // Authentic Amiga beep sound (simple square wave)
     try {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
-        
+
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        
+
         oscillator.type = 'square';
         oscillator.frequency.value = 880; // A5 note
         gainNode.gain.value = 0.1;
-        
+
         oscillator.start();
         oscillator.stop(audioContext.currentTime + 0.1); // Short beep
     } catch(e) {}
@@ -184,15 +184,14 @@ function copyGuruMeditation() {
         if (time) parts.push(`TIME: ${time}`);
     }
     const text = parts.filter(Boolean).join('\n');
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).catch(function() {});
+    // Use consolidated copyToClipboard from common.js
+    if (typeof copyToClipboard === 'function') {
+        copyToClipboard(text, false);
     } else {
-        const area = document.createElement('textarea');
-        area.value = text;
-        document.body.appendChild(area);
-        area.select();
-        try { document.execCommand('copy'); } catch (e) {}
-        document.body.removeChild(area);
+        // Fallback if common.js not loaded
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).catch(function() {});
+        }
     }
 }
 
@@ -215,19 +214,19 @@ let recoveryCheckInterval = null;
 document.addEventListener('htmx:responseError', function(evt) {
     const status = evt.detail.xhr.status;
     const response = evt.detail.xhr.responseText;
-    
+
     // Check if this looks like a server restart/unavailable situation
-    const isServerDown = status === 503 || status === 502 || status === 504 || 
+    const isServerDown = status === 503 || status === 502 || status === 504 ||
                         (status === 500 && (response.includes('connection') || response.includes('timeout'))) ||
                         response.includes('Database') || response.includes('database') ||
                         response.includes('connection refused') || response.includes('connect:');
-    
+
     if (isServerDown && !autoRecoveryActive) {
         // Start auto-recovery instead of showing Guru Meditation
         startAutoRecovery();
         return;
     }
-    
+
     // For non-retryable errors or when auto-recovery is already active, show Guru Meditation
     // Generate Amiga-style error codes
     let errorCode = '00000000.00000000';
@@ -237,11 +236,11 @@ document.addEventListener('htmx:responseError', function(evt) {
     else if (status === 401) errorCode = '00000401.NOACCESS'; // Unauthorized
     else if (status === 403) errorCode = '00000403.FORBIDDEN'; // Forbidden
     else errorCode = `0000${('0000' + status).slice(-4)}.HTTPERR0`;
-    
+
     // Parse error message and details
     let message = `HTTP ${status} ERROR`;
     let details = null;
-    
+
     try {
         const data = JSON.parse(response);
         if (data.guru_meditation) {
@@ -266,17 +265,17 @@ document.addEventListener('htmx:responseError', function(evt) {
             message = response.substring(0, 100).toUpperCase();
         }
     }
-    
+
     showGuruMeditation(errorCode, message, details);
 });
 
 function startAutoRecovery() {
     if (autoRecoveryActive) return;
     autoRecoveryActive = true;
-    
+
     // Show subtle recovery indicator
     showRecoveryIndicator();
-    
+
     // Check server status every 5 seconds
     recoveryCheckInterval = setInterval(async () => {
         try {

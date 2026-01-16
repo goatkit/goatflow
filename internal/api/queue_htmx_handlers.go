@@ -644,6 +644,6 @@ func handleQueueMetaPartial(c *gin.Context) {
 
 	getPongo2Renderer().HTML(c, http.StatusOK, "components/queue_meta.pongo2", pongo2.Context{
 		"QueueMeta":          queueMeta,
-		"QueueMetaShowTitle": true,
+		"QueueMetaShowTitle": false,
 	})
 }

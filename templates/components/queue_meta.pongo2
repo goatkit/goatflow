@@ -8,7 +8,7 @@
         {% endif %}
     </div>
     {% endif %}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Status</p>
             <p class="mt-1 text-base font-semibold text-gray-900 dark:text-white">
@@ -17,23 +17,48 @@
         </div>
         <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Tickets</p>
-            <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ QueueMeta.TicketCount|default:0 }}</p>
+            <a href="/queues/{{ QueueMeta.ID }}" class="mt-1 text-2xl font-semibold text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 hover:underline">
+                {{ QueueMeta.TicketCount|default:0 }}
+            </a>
         </div>
         <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Group</p>
-            <p class="mt-1 text-base font-semibold text-gray-900 dark:text-white">{{ QueueMeta.GroupName|default:"Unassigned" }}</p>
-        </div>
-        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">System Address</p>
-            {% if QueueMeta.SystemAddressEmail %}
-            {% if QueueMeta.SystemAddressDisplay %}
-            <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ QueueMeta.SystemAddressDisplay }}</p>
-            {% endif %}
-            <p class="mt-1 font-mono text-sm text-gray-900 dark:text-gray-100">{{ QueueMeta.SystemAddressEmail }}</p>
+            {% if QueueMeta.GroupID %}
+            <a href="/admin/groups?highlight={{ QueueMeta.GroupID }}" class="mt-1 text-base font-semibold text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 hover:underline">
+                {{ QueueMeta.GroupName|default:"Unassigned" }}
+            </a>
             {% else %}
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Not configured</p>
+            <p class="mt-1 text-base font-semibold text-gray-900 dark:text-white">{{ QueueMeta.GroupName|default:"Unassigned" }}</p>
             {% endif %}
         </div>
+    </div>
+    <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">System Address</p>
+        {% if QueueMeta.SystemAddressEmail %}
+        <div class="mt-1 flex items-center justify-between">
+            <div>
+                {% if QueueMeta.SystemAddressDisplay %}
+                <p class="text-sm text-gray-900 dark:text-white">{{ QueueMeta.SystemAddressDisplay }}</p>
+                {% endif %}
+                {% if QueueMeta.SystemAddressID %}
+                <a href="/admin/modules/email_identity/edit/{{ QueueMeta.SystemAddressID }}" class="font-mono text-sm text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 hover:underline">
+                    {{ QueueMeta.SystemAddressEmail }}
+                </a>
+                {% else %}
+                <p class="font-mono text-sm text-gray-900 dark:text-gray-100">{{ QueueMeta.SystemAddressEmail }}</p>
+                {% endif %}
+            </div>
+            <button type="button" onclick="copyToClipboard('{{ QueueMeta.SystemAddressEmail }}')"
+                class="ml-2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="Copy to clipboard">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+            </button>
+        </div>
+        {% else %}
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Not configured</p>
+        {% endif %}
     </div>
     {% if QueueMeta.Comment %}
     <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">

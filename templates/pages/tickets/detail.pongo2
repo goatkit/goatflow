@@ -12,7 +12,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Ticket Header -->
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
         <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
@@ -78,7 +78,7 @@
             </h3>
         </div>
         <div class="px-4 py-5 sm:p-6">
-            <div class="space-y-4" id="messages-container" 
+            <div class="space-y-4" id="messages-container"
                  hx-get="/api/tickets/{{ TicketID }}/messages"
                  hx-trigger="load"
                  hx-swap="innerHTML">
@@ -87,11 +87,11 @@
                     <span class="text-sm text-gray-500 dark:text-gray-400">{{ t("common.loading") }}...</span>
                 </div>
             </div>
-            
+
             <!-- Add Comment Form -->
             <div class="mt-6">
-                <form hx-post="/agent/tickets/{{ TicketID }}/note" 
-                      hx-target="#messages-container" 
+                <form hx-post="/agent/tickets/{{ TicketID }}/note"
+                      hx-target="#messages-container"
                       hx-swap="beforeend"
                       hx-reset="true">
                     <label id="commentEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -120,8 +120,8 @@ function previewAttachment(url, filename, contentType) {
         showAdvancedImageViewer(url, filename, contentType);
     } else if (contentType === 'application/pdf') {
         showPDFViewer(url, filename);
-    } else if (contentType.startsWith('text/') || 
-               contentType === 'application/json' || 
+    } else if (contentType.startsWith('text/') ||
+               contentType === 'application/json' ||
                contentType === 'application/xml' ||
                contentType === 'application/javascript') {
         showCodeViewer(url, filename, contentType);
@@ -129,8 +129,8 @@ function previewAttachment(url, filename, contentType) {
         showVideoPlayer(url, filename, contentType);
     } else if (contentType.startsWith('audio/')) {
         showAudioPlayer(url, filename, contentType);
-    } else if (contentType.includes('word') || 
-               contentType.includes('excel') || 
+    } else if (contentType.includes('word') ||
+               contentType.includes('excel') ||
                contentType.includes('powerpoint') ||
                contentType.includes('officedocument')) {
         showOfficeViewer(url, filename, contentType);
@@ -201,7 +201,7 @@ function showAdvancedImageViewer(url, filename, contentType) {
                 </div>
                 <!-- Image Container -->
                 <div class="overflow-auto max-w-full max-h-screen p-16" id="imageContainer">
-                    <img id="viewerImage" src="${url}" alt="${filename}" 
+                    <img id="viewerImage" src="${url}" alt="${filename}"
                          class="transition-transform duration-200 cursor-move"
                          style="transform: scale(1) rotate(0deg);"
                          draggable="false">
@@ -218,7 +218,7 @@ function showAdvancedImageViewer(url, filename, contentType) {
         </div>
     `;
     document.body.appendChild(modal);
-    
+
     // Initialize image controls
     const img = document.getElementById('viewerImage');
     const container = document.getElementById('imageContainer');
@@ -226,34 +226,34 @@ function showAdvancedImageViewer(url, filename, contentType) {
     let rotation = 0;
     let isDragging = false;
     let startX, startY, scrollLeft, scrollTop;
-    
+
     // Set dimensions when loaded
     img.onload = function() {
         document.getElementById('imageDimensions').textContent = `${this.naturalWidth} × ${this.naturalHeight}px`;
     };
-    
+
     // Zoom functions
     window.zoomImage = function(delta) {
         scale = Math.max(0.1, Math.min(5, scale + delta));
         updateTransform();
     };
-    
+
     window.resetZoom = function() {
         scale = 1;
         rotation = 0;
         updateTransform();
     };
-    
+
     window.rotateImage = function(degrees) {
         rotation += degrees;
         updateTransform();
     };
-    
+
     function updateTransform() {
         img.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
         document.getElementById('zoomLevel').textContent = `${Math.round(scale * 100)}%`;
     }
-    
+
     // Pan functionality
     container.addEventListener('mousedown', (e) => {
         isDragging = true;
@@ -263,17 +263,17 @@ function showAdvancedImageViewer(url, filename, contentType) {
         scrollLeft = container.scrollLeft;
         scrollTop = container.scrollTop;
     });
-    
+
     container.addEventListener('mouseleave', () => {
         isDragging = false;
         container.classList.remove('cursor-grabbing');
     });
-    
+
     container.addEventListener('mouseup', () => {
         isDragging = false;
         container.classList.remove('cursor-grabbing');
     });
-    
+
     container.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         e.preventDefault();
@@ -284,7 +284,7 @@ function showAdvancedImageViewer(url, filename, contentType) {
         container.scrollLeft = scrollLeft - walkX;
         container.scrollTop = scrollTop - walkY;
     });
-    
+
     // Fullscreen
     window.toggleFullscreen = function(btn) {
         if (!document.fullscreenElement) {
@@ -328,7 +328,7 @@ function showCodeViewer(url, filename, contentType) {
         .then(code => {
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 z-50 overflow-hidden';
-            
+
             // Determine language from content type or file extension
             let language = 'plaintext';
             if (filename.endsWith('.js')) language = 'javascript';
@@ -342,7 +342,7 @@ function showCodeViewer(url, filename, contentType) {
             else if (filename.endsWith('.xml')) language = 'xml';
             else if (filename.endsWith('.sh')) language = 'bash';
             else if (filename.endsWith('.sql')) language = 'sql';
-            
+
             modal.innerHTML = `
                 <div class="absolute inset-0 bg-black bg-opacity-75" onclick="this.parentElement.remove()"></div>
                 <div class="absolute inset-4 bg-gray-900 rounded-lg shadow-2xl flex flex-col">
@@ -369,10 +369,15 @@ function showCodeViewer(url, filename, contentType) {
                 </div>
             `;
             document.body.appendChild(modal);
-            
+
             window.copyCode = function() {
-                navigator.clipboard.writeText(code);
-                alert('Code copied to clipboard!');
+                // Use consolidated copyToClipboard from common.js
+                if (typeof copyToClipboard === 'function') {
+                    copyToClipboard(code, true);
+                } else {
+                    navigator.clipboard.writeText(code);
+                    alert('Code copied to clipboard!');
+                }
             };
         });
 }
@@ -443,7 +448,7 @@ function showAudioPlayer(url, filename, contentType) {
 function showOfficeViewer(url, filename, contentType) {
     const encodedUrl = encodeURIComponent(window.location.origin + url);
     const viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodedUrl}`;
-    
+
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 z-50 overflow-hidden';
     modal.innerHTML = `

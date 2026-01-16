@@ -442,8 +442,10 @@ var testedFormTemplates = map[string]bool{
 	"pages/admin/signature_form.pongo2":           true,
 	"pages/admin/template_form.pongo2":            true,
 	"pages/admin/template_import.pongo2":          true,
-	"pages/admin/template_queues.pongo2":          true,
-	"pages/admin/template_attachments.pongo2":     true,
+	"pages/admin/template_queues.pongo2":             true,
+	"pages/admin/template_attachments.pongo2":        true,
+	"pages/admin/queue_templates_edit.pongo2":        true,
+	"pages/admin/attachment_templates_edit.pongo2":   true,
 
 	// Search/Filter forms (GET only)
 	"pages/queues.pongo2":                   true,
