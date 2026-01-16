@@ -1213,23 +1213,7 @@ test-stack-up:
 # Reset admin password in test database using gotrs CLI via backend container
 # This ensures the admin user exists with a known password for E2E tests
 test-setup-admin:
-	@if [ -z "$${TEST_PASSWORD:-}" ]; then \
-		printf "TEST_PASSWORD not set, skipping admin setup\n"; \
-	else \
-		printf "Setting up test admin user...\n"; \
-		$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml -f docker-compose.test.yaml \
-			exec -T backend-test gotrs reset-user \
-			--username="$${TEST_USERNAME:-root@localhost}" \
-			--password="$$TEST_PASSWORD" \
-			--enable || { \
-				printf "Admin setup via gotrs failed, trying direct SQL...\n"; \
-				PW_HASH=$$(echo -n "$$TEST_PASSWORD" | sha256sum | cut -d' ' -f1); \
-				$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml exec -T mariadb-test \
-					mariadb --ssl=0 -u "$${TEST_DB_MYSQL_USER:-otrs}" -p"$${TEST_DB_MYSQL_PASSWORD}" "$${TEST_DB_MYSQL_NAME:-otrs_test}" \
-					-e "UPDATE users SET pw = '$$PW_HASH', valid_id = 1 WHERE login = '$${TEST_USERNAME:-root@localhost}';"; \
-			}; \
-		printf "Test admin user ready\n"; \
-	fi
+	@./scripts/setup-test-admin.sh
 
 test-stack-wait:
 	@printf "⏳ Waiting for test backend health at %s/health...\n" "$(TEST_BACKEND_BASE_URL)"
