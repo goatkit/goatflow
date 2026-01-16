@@ -155,6 +155,16 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 - **http-call Script**: `scripts/http-call.sh` now uses JSON API login to extract `access_token` via Bearer authentication instead of cookie-based session handling
 
 ### Fixed
+- **Pending Reminder Snooze Buttons**: Fixed "response.json is not a function" error when clicking sleep/snooze buttons on pending reminder toast notifications
+  - `snoozeReminder()` was using `apiFetch()` then calling `response.json()` on the result
+  - But `apiFetch()` returns parsed JSON data, not a Response object
+  - Fixed by using plain `fetch()` with proper credentials and Accept headers
+  - File: `static/js/common.js`
+- **Escalation History Recording**: Fixed "Field 'type_id' doesn't have a default value" error when recording escalation events
+  - INSERT into `ticket_history` was missing required columns: `type_id`, `queue_id`, `owner_id`, `priority_id`, `state_id`
+  - Fixed by fetching current ticket values before inserting history record
+  - Added integration test `TestRecordEscalationEventIntegration` to prevent regression
+  - File: `internal/services/escalation/check.go`
 - **Customer Typeahead Race Condition**: Fixed GoatKit autocomplete initialization timing issue where the input was set up before seed data was loaded
   - Added retry logic in `setupInput()` to load seeds on-demand if not yet available
   - Added late seed loading in `refresh()` to check for seed data at query time

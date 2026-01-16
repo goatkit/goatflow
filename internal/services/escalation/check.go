@@ -328,13 +328,24 @@ func (s *CheckService) recordEscalationEvent(ctx context.Context, ticketID int, 
 		return
 	}
 
-	// Insert history record
+	// Get ticket's current state for required history fields
 	query = database.ConvertPlaceholders(`
-		INSERT INTO ticket_history (ticket_id, article_id, history_type_id, name, create_time, create_by, change_time, change_by)
-		VALUES (?, NULL, ?, ?, NOW(), 1, NOW(), 1)
+		SELECT type_id, queue_id, user_id, ticket_priority_id, ticket_state_id
+		FROM ticket WHERE id = ?
+	`)
+	var typeID, queueID, ownerID, priorityID, stateID int
+	if err := s.db.QueryRowContext(ctx, query, ticketID).Scan(&typeID, &queueID, &ownerID, &priorityID, &stateID); err != nil {
+		s.logger.Printf("Failed to get ticket %d for history: %v", ticketID, err)
+		return
+	}
+
+	// Insert history record with all required fields
+	query = database.ConvertPlaceholders(`
+		INSERT INTO ticket_history (ticket_id, article_id, history_type_id, name, type_id, queue_id, owner_id, priority_id, state_id, create_time, create_by, change_time, change_by)
+		VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW(), 1)
 	`)
 	historyName := fmt.Sprintf("%%%%%s%%%%triggered", eventName)
-	if _, err := s.db.ExecContext(ctx, query, ticketID, historyTypeID, historyName); err != nil {
+	if _, err := s.db.ExecContext(ctx, query, ticketID, historyTypeID, historyName, typeID, queueID, ownerID, priorityID, stateID); err != nil {
 		s.logger.Printf("Failed to record history for ticket %d: %v", ticketID, err)
 	}
 }

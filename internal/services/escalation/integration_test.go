@@ -410,6 +410,88 @@ func ensureEscalatingTicket(t *testing.T, db *sql.DB) int {
 	return ticketID
 }
 
+func TestRecordEscalationEventIntegration(t *testing.T) {
+	if err := database.InitTestDB(); err != nil {
+		t.Skip("Database not available")
+	}
+	defer database.CloseTestDB()
+
+	db, err := database.GetDB()
+	require.NoError(t, err)
+	require.NotNil(t, db)
+
+	ctx := context.Background()
+
+	t.Run("RecordEscalationEvent_IncludesAllRequiredFields", func(t *testing.T) {
+		calSvc := NewCalendarService(db)
+		require.NoError(t, calSvc.LoadCalendars(ctx))
+
+		checkSvc := NewCheckService(db, calSvc, nil)
+
+		// Ensure the escalation history type exists
+		ensureEscalationHistoryType(t, db, "EscalationResponseTimeStart")
+
+		// Create a test ticket with all required fields populated
+		ticketID := ensureTestTicket(t, db)
+
+		// Get the ticket's current values for verification
+		var typeID, queueID, ownerID, priorityID, stateID int
+		query := database.ConvertPlaceholders(`
+			SELECT type_id, queue_id, user_id, ticket_priority_id, ticket_state_id
+			FROM ticket WHERE id = ?
+		`)
+		err := db.QueryRowContext(ctx, query, ticketID).Scan(&typeID, &queueID, &ownerID, &priorityID, &stateID)
+		require.NoError(t, err, "Should be able to read ticket fields")
+
+		// Record an escalation event
+		checkSvc.recordEscalationEvent(ctx, ticketID, "EscalationResponseTimeStart")
+
+		// Verify the history record was created with all required fields
+		var historyID int
+		var histTypeID, histQueueID, histOwnerID, histPriorityID, histStateID int
+		verifyQuery := database.ConvertPlaceholders(`
+			SELECT th.id, th.type_id, th.queue_id, th.owner_id, th.priority_id, th.state_id
+			FROM ticket_history th
+			JOIN ticket_history_type tht ON th.history_type_id = tht.id
+			WHERE th.ticket_id = ? AND tht.name = ?
+			ORDER BY th.id DESC LIMIT 1
+		`)
+		err = db.QueryRowContext(ctx, verifyQuery, ticketID, "EscalationResponseTimeStart").Scan(
+			&historyID, &histTypeID, &histQueueID, &histOwnerID, &histPriorityID, &histStateID,
+		)
+		require.NoError(t, err, "Should find history record with escalation event")
+
+		// Verify the history record has the correct values from the ticket
+		assert.Equal(t, typeID, histTypeID, "History type_id should match ticket")
+		assert.Equal(t, queueID, histQueueID, "History queue_id should match ticket")
+		assert.Equal(t, ownerID, histOwnerID, "History owner_id should match ticket")
+		assert.Equal(t, priorityID, histPriorityID, "History priority_id should match ticket")
+		assert.Equal(t, stateID, histStateID, "History state_id should match ticket")
+
+		t.Logf("Successfully recorded escalation event with all required fields for ticket %d", ticketID)
+	})
+}
+
+func ensureEscalationHistoryType(t *testing.T, db *sql.DB, name string) {
+	t.Helper()
+
+	// Check if the history type exists
+	var id int
+	query := database.ConvertPlaceholders(`SELECT id FROM ticket_history_type WHERE name = ?`)
+	err := db.QueryRow(query, name).Scan(&id)
+	if err == nil {
+		return // Already exists
+	}
+
+	// Insert the history type
+	insertQuery := database.ConvertPlaceholders(`
+		INSERT INTO ticket_history_type (name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (?, 1, NOW(), 1, NOW(), 1)
+	`)
+	_, err = db.Exec(insertQuery, name)
+	require.NoError(t, err, "Should be able to create history type")
+}
+
 func ensureTimeWorkingHoursConfig(t *testing.T, db *sql.DB) {
 	t.Helper()
 
