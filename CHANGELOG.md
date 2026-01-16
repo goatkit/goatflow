@@ -2,9 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on Keep a Changelog and this project (currently) does not yet use semantic versioning; versions will be tagged once the ticket vertical slice lands.
+The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.6.0] - 2026-01-16
 
 ### Added
 - **Admin System Maintenance Module**: Full CRUD interface at `/admin/system-maintenance` for scheduling maintenance windows (OTRS AdminSystemMaintenance equivalent)
