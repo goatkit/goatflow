@@ -4,9 +4,12 @@
 
 set -e
 
+echo "=== Test Admin Setup ==="
+echo "TEST_PASSWORD length: ${#TEST_PASSWORD}"
+
 if [ -z "${TEST_PASSWORD:-}" ]; then
-    echo "TEST_PASSWORD not set, skipping admin setup"
-    exit 0
+    echo "ERROR: TEST_PASSWORD not set, cannot setup admin user"
+    exit 1
 fi
 
 echo "Setting up test admin user..."
@@ -28,7 +31,7 @@ echo "gotrs CLI not available, using direct SQL..."
 
 # Calculate password hash
 PW_HASH=$(printf '%s' "$TEST_PASSWORD" | sha256sum | awk '{print $1}')
-echo "Password hash: ${PW_HASH:0:16}..."
+echo "Password hash (first 16 chars): ${PW_HASH:0:16}..."
 
 # Set variables with defaults
 DB_USER="${TEST_DB_MYSQL_USER:-otrs}"
@@ -43,7 +46,14 @@ fi
 
 echo "Connecting to database as user: $DB_USER"
 
+# Check current user status before update
+echo "Checking current user status..."
+$COMPOSE_CMD -f docker-compose.yml -f docker-compose.testdb.yml exec -T mariadb-test \
+    mariadb --ssl=0 -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" \
+    -e "SELECT id, login, valid_id, SUBSTRING(pw, 1, 16) as pw_prefix FROM users WHERE login = '$USERNAME';" 2>/dev/null || echo "(query failed)"
+
 # Run SQL update
+echo "Updating user password and enabling..."
 if ! $COMPOSE_CMD -f docker-compose.yml -f docker-compose.testdb.yml exec -T mariadb-test \
     mariadb --ssl=0 -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" \
     -e "UPDATE users SET pw = '$PW_HASH', valid_id = 1 WHERE login = '$USERNAME';"; then
@@ -52,6 +62,11 @@ if ! $COMPOSE_CMD -f docker-compose.yml -f docker-compose.testdb.yml exec -T mar
 fi
 
 # Verify the update
+echo "Verifying user after update..."
+$COMPOSE_CMD -f docker-compose.yml -f docker-compose.testdb.yml exec -T mariadb-test \
+    mariadb --ssl=0 -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" \
+    -e "SELECT id, login, valid_id, SUBSTRING(pw, 1, 16) as pw_prefix FROM users WHERE login = '$USERNAME';" 2>/dev/null || echo "(query failed)"
+
 VERIFY=$($COMPOSE_CMD -f docker-compose.yml -f docker-compose.testdb.yml exec -T mariadb-test \
     mariadb --ssl=0 -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" \
     -N -e "SELECT valid_id FROM users WHERE login = '$USERNAME';" 2>/dev/null || echo "")
@@ -68,4 +83,4 @@ else
     exit 1
 fi
 
-echo "Test admin user ready"
+echo "=== Test Admin Setup Complete ==="
