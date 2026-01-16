@@ -1,0 +1,167 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("admin.modules.queue_templates.assign_templates") }}: {{ Queue.Name }} - GOTRS Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8" data-testid="queue-templates-edit-page">
+    <!-- Page header -->
+    <div class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white" data-testid="page-title">{{ t("admin.modules.queue_templates.assign_templates") }}</h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    {{ t("admin.modules.queue_templates.assign_to") }} "<span class="font-semibold">{{ Queue.Name }}</span>"
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <a href="/admin/queue-templates"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ t("admin.modules.queue_templates.back_to_overview") }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Queue Info Card -->
+    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg mb-6 p-4">
+        <div class="flex items-center">
+            <svg class="h-8 w-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            <div>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ Queue.Name }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("admin.modules.queue_templates.queue_label") }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Assignment Form -->
+    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+        <form
+            id="templateAssignmentForm"
+            method="POST"
+            action="/admin/api/queues/{{ Queue.ID }}/templates"
+            hx-put="/admin/api/queues/{{ Queue.ID }}/templates"
+            hx-swap="none"
+            class="p-6"
+        >
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin.modules.queue_templates.select_templates") }}</h3>
+                    <div class="flex space-x-2">
+                        <button type="button" onclick="selectAll()"
+                            class="text-sm text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300"
+                        >
+                            {{ t("labels.select_all") }}
+                        </button>
+                        <span class="text-gray-300 dark:text-gray-600">|</span>
+                        <button type="button" onclick="selectNone()"
+                            class="text-sm text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300"
+                        >
+                            {{ t("labels.deselect_all") }}
+                        </button>
+                    </div>
+                </div>
+
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    {{ t("admin.modules.queue_templates.help_text") }}
+                </p>
+
+                {% if Templates %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-2 border border-gray-200 dark:border-gray-700 rounded-md">
+                    {% for template in Templates %}
+                    <label class="relative flex items-start py-2 px-3 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                        <div class="min-w-0 flex-1 text-sm flex items-center">
+                            <input
+                                type="checkbox"
+                                name="template_ids"
+                                value="{{ template.ID }}"
+                                {% if template.Selected %}checked{% endif %}
+                                class="template-checkbox focus:ring-gotrs-500 h-4 w-4 text-gotrs-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
+                            >
+                            {% for ttype in template.TemplateType|split:"," %}
+                            <span class="ml-1 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                {% if ttype == 'Answer' %}bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100{% elif ttype == 'Create' %}bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100{% elif ttype == 'Email' %}bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100{% elif ttype == 'Forward' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100{% elif ttype == 'Note' %}bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100{% elif ttype == 'PhoneCall' %}bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100{% elif ttype == 'Snippet' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100{% else %}bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100{% endif %}
+                            ">{{ ttype }}</span>
+                            {% endfor %}
+                            <span class="font-medium text-gray-700 dark:text-gray-300">{{ template.Name }}</span>
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p class="mt-2">{{ t("admin.modules.queue_templates.no_templates") }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Selection Counter -->
+                <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                    <span id="selectedCount">0</span> {{ t("admin.modules.queue_templates.templates_selected") }}
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <a href="/admin/queue-templates"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600"
+                >
+                    {{ t("common.cancel") }}
+                </a>
+                <button type="submit"
+                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+                >
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {{ t("admin.modules.queue_templates.save_assignments") }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function selectAll() {
+        document.querySelectorAll('.template-checkbox').forEach(cb => cb.checked = true);
+        updateCount();
+    }
+
+    function selectNone() {
+        document.querySelectorAll('.template-checkbox').forEach(cb => cb.checked = false);
+        updateCount();
+    }
+
+    function updateCount() {
+        const count = document.querySelectorAll('.template-checkbox:checked').length;
+        document.getElementById('selectedCount').textContent = count;
+    }
+
+    // Initialize counter
+    updateCount();
+
+    // Update counter on checkbox change
+    document.querySelectorAll('.template-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateCount);
+    });
+
+    // Handle form submission response
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+        if (event.detail.xhr.status >= 400) {
+            try {
+                const response = JSON.parse(event.detail.xhr.responseText);
+                alert('Error: ' + (response.error || 'Unknown error'));
+            } catch (e) {
+                alert('Error: ' + event.detail.xhr.statusText);
+            }
+        }
+    });
+</script>
+{% endblock %}

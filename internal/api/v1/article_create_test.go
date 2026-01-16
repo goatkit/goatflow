@@ -359,14 +359,21 @@ func TestAddArticle_Permissions(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, db)
 
+	// Clean up any leftover data from previous failed test runs
+	db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=0"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id = (SELECT id FROM ticket WHERE tn = 'PERM-TEST-001'))"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id = (SELECT id FROM ticket WHERE tn = 'PERM-TEST-001')"))
+	db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE tn = 'PERM-TEST-001'"))
+	db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=1"))
+
 	// Insert test ticket owned by test.customer
 	_, err = db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO ticket (tn, title, queue_id, ticket_state_id, ticket_priority_id, 
-			user_id, responsible_user_id, ticket_lock_id, type_id, customer_user_id, 
-			timeout, until_time, escalation_time, escalation_update_time, 
+		INSERT INTO ticket (tn, title, queue_id, ticket_state_id, ticket_priority_id,
+			user_id, responsible_user_id, ticket_lock_id, type_id, customer_user_id,
+			timeout, until_time, escalation_time, escalation_update_time,
 			escalation_response_time, escalation_solution_time,
 			create_time, create_by, change_time, change_by)
-		VALUES ('PERM-TEST-001', 'Permission test ticket', 1, 1, 3, 
+		VALUES ('PERM-TEST-001', 'Permission test ticket', 1, 1, 3,
 			1, 1, 1, 1, 'test.customer',
 			0, 0, 0, 0, 0, 0,
 			NOW(), 1, NOW(), 1)
@@ -383,8 +390,11 @@ func TestAddArticle_Permissions(t *testing.T) {
 
 	// Clean up after test
 	t.Cleanup(func() {
+		db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=0"))
+		db.Exec(database.ConvertPlaceholders("DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id = ?)"), testTicketID)
 		db.Exec(database.ConvertPlaceholders("DELETE FROM article WHERE ticket_id = ?"), testTicketID)
 		db.Exec(database.ConvertPlaceholders("DELETE FROM ticket WHERE id = ?"), testTicketID)
+		db.Exec(database.ConvertPlaceholders("SET FOREIGN_KEY_CHECKS=1"))
 	})
 
 	tests := []struct {

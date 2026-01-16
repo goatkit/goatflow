@@ -684,6 +684,24 @@ spec:
           handler: handleUpdateStandardTemplateAttachments
           description: "Update template attachment assignments"
 
+        # Queue-Templates Management (overview and queue-side)
+        - path: /queue-templates
+          method: GET
+          handler: handleAdminQueueTemplates
+          template: pages/admin/queue_templates.pongo2
+          description: "Queue-Template relations overview"
+
+        - path: /queues/:id/templates
+          method: GET
+          handler: handleAdminQueueTemplatesEdit
+          template: pages/admin/queue_templates_edit.pongo2
+          description: "Assign templates to a queue"
+
+        - path: /api/queues/:id/templates
+          method: PUT
+          handler: handleUpdateQueueTemplates
+          description: "Update queue template assignments"
+
         # Template Import/Export
         - path: /templates/import
           method: GET
@@ -705,6 +723,24 @@ spec:
           method: GET
           handler: handleExportStandardTemplate
           description: "Export single template as YAML"
+
+        # Template-Attachments Management (overview and attachment-side)
+        - path: /template-attachments
+          method: GET
+          handler: handleAdminTemplateAttachments
+          template: pages/admin/template_attachments_overview.pongo2
+          description: "Template-Attachment relations overview"
+
+        - path: /attachments/:id/templates
+          method: GET
+          handler: handleAdminAttachmentTemplatesEdit
+          template: pages/admin/attachment_templates_edit.pongo2
+          description: "Assign templates to an attachment"
+
+        - path: /api/attachments/:id/templates
+          method: PUT
+          handler: handleUpdateAttachmentTemplates
+          description: "Update attachment template assignments"
 
         # Standard attachments management
         - path: /attachments

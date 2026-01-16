@@ -63,8 +63,12 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/sla.pongo2":                       true,
 	"pages/admin/state.pongo2":                     true,
 	"pages/admin/states.pongo2":                    true,
-	"pages/admin/template_attachments.pongo2":      true,
-	"pages/admin/template_form.pongo2":             true,
+	"pages/admin/template_attachments.pongo2":         true,
+	"pages/admin/template_attachments_overview.pongo2": true,
+	"pages/admin/attachment_templates_edit.pongo2":    true,
+	"pages/admin/queue_templates.pongo2":              true,
+	"pages/admin/queue_templates_edit.pongo2":         true,
+	"pages/admin/template_form.pongo2":                true,
 	"pages/admin/template_import.pongo2":           true,
 	"pages/admin/template_queues.pongo2":           true,
 	"pages/admin/templates.pongo2":                 true,
@@ -902,6 +906,67 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 					"Name": "Test Template",
 				}
 				ctx["Attachments"] = []map[string]interface{}{}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/template_attachments_overview",
+			template: "pages/admin/template_attachments_overview.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Templates"] = []map[string]interface{}{
+					{"ID": 1, "Name": "Test Template", "TemplateType": "Answer", "AttachmentCount": 2},
+				}
+				ctx["Attachments"] = []map[string]interface{}{
+					{"ID": 1, "Name": "Test Attachment", "Filename": "test.pdf", "TemplateCount": 1},
+				}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/attachment_templates_edit",
+			template: "pages/admin/attachment_templates_edit.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Attachment"] = map[string]interface{}{
+					"ID":       1,
+					"Name":     "Test Attachment",
+					"Filename": "test.pdf",
+				}
+				ctx["Templates"] = []map[string]interface{}{
+					{"ID": 1, "Name": "Test Template", "TemplateType": "Answer"},
+				}
+				ctx["AssignedTemplateIDs"] = []int{1}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/queue_templates",
+			template: "pages/admin/queue_templates.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Queues"] = []map[string]interface{}{
+					{"ID": 1, "Name": "Test Queue", "TemplateCount": 3},
+				}
+				ctx["Templates"] = []map[string]interface{}{
+					{"ID": 1, "Name": "Test Template", "TemplateType": "Answer", "QueueCount": 2},
+				}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/queue_templates_edit",
+			template: "pages/admin/queue_templates_edit.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Queue"] = map[string]interface{}{
+					"ID":   1,
+					"Name": "Test Queue",
+				}
+				ctx["Templates"] = []map[string]interface{}{
+					{"ID": 1, "Name": "Test Template", "TemplateType": "Answer"},
+				}
+				ctx["AssignedTemplateIDs"] = []int{1}
 				return ctx
 			}(),
 		},
