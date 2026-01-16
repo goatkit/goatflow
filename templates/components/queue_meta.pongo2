@@ -41,7 +41,7 @@
                 <p class="text-sm text-gray-900 dark:text-white">{{ QueueMeta.SystemAddressDisplay }}</p>
                 {% endif %}
                 {% if QueueMeta.SystemAddressID %}
-                <a href="/admin/modules/email_identity/edit/{{ QueueMeta.SystemAddressID }}" class="font-mono text-sm text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 hover:underline">
+                <a href="/admin/email-identities?tab=system-addresses" class="font-mono text-sm text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300 hover:underline">
                     {{ QueueMeta.SystemAddressEmail }}
                 </a>
                 {% else %}

@@ -344,7 +344,7 @@ echo "    • E2E tests:     $E2E_LOG"
 echo "    • Container log: $CONTAINER_LOG"
 echo ""
 
-if [ "$TOTAL_TESTS_FAILED" = "0" ]; then
+if [ "$TOTAL_TESTS_FAILED" = "0" ] && [ "$TOTAL_PACKAGES_FAILED" = "0" ]; then
     echo -e "  ${GREEN}══════════════════════════════════════════════════════════${NC}"
     echo -e "  ${GREEN}       ALL ${TOTAL_TESTS_PASSED} TESTS PASSED                           ${NC}"
     echo -e "  ${GREEN}══════════════════════════════════════════════════════════${NC}"
@@ -352,9 +352,22 @@ if [ "$TOTAL_TESTS_FAILED" = "0" ]; then
     exit 0
 else
     echo -e "  ${RED}══════════════════════════════════════════════════════════${NC}"
-    echo -e "  ${RED}       ${TOTAL_TESTS_FAILED} TESTS FAILED                                 ${NC}"
+    if [ "$TOTAL_PACKAGES_FAILED" != "0" ] && [ "$TOTAL_TESTS_FAILED" = "0" ]; then
+        echo -e "  ${RED}       ${TOTAL_PACKAGES_FAILED} PACKAGES FAILED TO BUILD                  ${NC}"
+    elif [ "$TOTAL_PACKAGES_FAILED" != "0" ]; then
+        echo -e "  ${RED}       ${TOTAL_TESTS_FAILED} TESTS FAILED, ${TOTAL_PACKAGES_FAILED} PACKAGES FAILED       ${NC}"
+    else
+        echo -e "  ${RED}       ${TOTAL_TESTS_FAILED} TESTS FAILED                                 ${NC}"
+    fi
     echo -e "  ${RED}══════════════════════════════════════════════════════════${NC}"
     echo ""
+
+    # Show failed package details (build errors)
+    if [ "$TOTAL_PACKAGES_FAILED" != "0" ]; then
+        echo "  Failed packages (build errors):"
+        grep -E "^FAIL\s+github.com" "$UNIT_LOG" 2>/dev/null | head -10 | sed 's/^/    /' || true
+        echo ""
+    fi
 
     # Show failed test details
     if [ "$UNIT_TESTS_FAILED" != "0" ]; then

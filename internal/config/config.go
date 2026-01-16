@@ -256,9 +256,12 @@ type FeaturesConfig struct {
 }
 
 type MaintenanceConfig struct {
-	Mode       bool     `mapstructure:"mode"`
-	Message    string   `mapstructure:"message"`
-	AllowedIPs []string `mapstructure:"allowed_ips"`
+	Mode                      bool     `mapstructure:"mode"`
+	Message                   string   `mapstructure:"message"`
+	AllowedIPs                []string `mapstructure:"allowed_ips"`
+	TimeNotifyUpcomingMinutes int      `mapstructure:"time_notify_upcoming_minutes"` // Minutes before maintenance to show notification
+	DefaultNotifyMessage      string   `mapstructure:"default_notify_message"`       // Default notification message
+	DefaultLoginMessage       string   `mapstructure:"default_login_message"`        // Default login page message
 }
 
 type IntegrationsConfig struct {

@@ -7,6 +7,16 @@ The format is based on Keep a Changelog and this project (currently) does not ye
 ## [Unreleased]
 
 ### Added
+- **Admin System Maintenance Module**: Full CRUD interface at `/admin/system-maintenance` for scheduling maintenance windows (OTRS AdminSystemMaintenance equivalent)
+  - Schedule maintenance periods with start/stop times (epoch timestamps)
+  - Display notifications to logged-in users via banner when maintenance is active or upcoming
+  - Login page message display when ShowLoginMessage is enabled
+  - Session management: view and kill agent/customer sessions during maintenance
+  - Configurable notification timing via `maintenance.time_notify_upcoming_minutes` (default: 30 minutes)
+  - Default messages configurable: `maintenance.default_notify_message`, `maintenance.default_login_message`
+  - Full i18n support for all 15 languages with proper native translations
+  - Date format: "from {start} until {stop}" with translated prepositions
+  - Files: `internal/models/system_maintenance.go`, `internal/repository/system_maintenance_repository.go`, `internal/api/admin_system_maintenance_handlers.go`, `templates/pages/admin/system_maintenance*.pongo2`
 - **Admin Session Management**: Full session management interface at `/admin/sessions` (OTRS AdminSession equivalent)
   - View all active user sessions with user details, IP address, browser info, login time, last activity
   - Kill individual sessions to force user logout

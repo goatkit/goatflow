@@ -9,9 +9,12 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/config"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
 // Pongo2Renderer is a custom Gin renderer using Pongo2.
@@ -143,6 +146,9 @@ func (r *Pongo2Renderer) Render(c *gin.Context, code int, name string, data inte
 		}
 	}
 
+	// Check for active/upcoming maintenance and add to context
+	r.addMaintenanceContext(ctx)
+
 	// Add the data
 	switch v := data.(type) {
 	case pongo2.Context:
@@ -241,4 +247,41 @@ func (r *Pongo2Renderer) getUserFromContext(c *gin.Context) *models.User {
 	}
 
 	return user
+}
+
+// addMaintenanceContext checks for active/upcoming maintenance and adds to template context.
+func (r *Pongo2Renderer) addMaintenanceContext(ctx pongo2.Context) {
+	db, err := database.GetDB()
+	if err != nil {
+		fmt.Printf("DEBUG addMaintenanceContext: GetDB error: %v\n", err)
+		return
+	}
+
+	repo := repository.NewSystemMaintenanceRepository(db)
+
+	// Check active maintenance
+	active, err := repo.IsActive()
+	fmt.Printf("DEBUG addMaintenanceContext: IsActive returned active=%v, err=%v\n", active != nil, err)
+	if err == nil && active != nil {
+		// Use default message from config if not set in record
+		if active.NotifyMessage == nil || *active.NotifyMessage == "" {
+			cfg := config.Get()
+			if cfg.Maintenance.DefaultNotifyMessage != "" {
+				defaultMsg := cfg.Maintenance.DefaultNotifyMessage
+				active.NotifyMessage = &defaultMsg
+			}
+		}
+		ctx["MaintenanceActive"] = active
+		fmt.Printf("DEBUG addMaintenanceContext: Set MaintenanceActive in context\n")
+	}
+
+	// Check upcoming - get minutes from config
+	cfg := config.Get()
+	upcomingMinutes := cfg.Maintenance.TimeNotifyUpcomingMinutes
+	if upcomingMinutes == 0 {
+		upcomingMinutes = 30 // Fallback if config not set
+	}
+	if coming, err := repo.IsComing(upcomingMinutes); err == nil && coming != nil {
+		ctx["MaintenanceComing"] = coming
+	}
 }

@@ -1,0 +1,475 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{% if IsNew %}{{ t("admin.system_maintenance.create_new") }}{% else %}{{ t("admin.system_maintenance.edit") }}{% endif %} - {{ t("app.name") }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Page header -->
+    <div class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                    {% if IsNew %}{{ t("admin.system_maintenance.create_new") }}{% else %}{{ t("admin.system_maintenance.edit") }}{% endif %}
+                </h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    {{ t("admin.system_maintenance.form_description") }}
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <a href="/admin/system-maintenance"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                >
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ t("common.back_to_list") }}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Form Column -->
+        <div class="lg:col-span-2">
+            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+                <form id="maintenanceForm" class="space-y-6 p-6">
+                    <!-- Time Period -->
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.system_maintenance.time_period") }}</h3>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Start Date -->
+                            <div>
+                                <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.system_maintenance.start_date") }} <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    name="start_date"
+                                    id="start_date"
+                                    required
+                                    {% if not IsNew %}value="{{ Maintenance.StartDateInput }}"{% endif %}
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                >
+                            </div>
+
+                            <!-- Stop Date -->
+                            <div>
+                                <label for="stop_date" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.system_maintenance.stop_date") }} <span class="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    name="stop_date"
+                                    id="stop_date"
+                                    required
+                                    {% if not IsNew %}value="{{ Maintenance.StopDateInput }}"{% endif %}
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comments -->
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.system_maintenance.details") }}</h3>
+
+                        <div>
+                            <label for="comments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {{ t("admin.system_maintenance.comment") }} <span class="text-red-500">*</span>
+                            </label>
+                            <textarea
+                                name="comments"
+                                id="comments"
+                                rows="3"
+                                required
+                                maxlength="250"
+                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                placeholder="{{ t("admin.system_maintenance.comment_placeholder") }}"
+                            >{% if not IsNew %}{{ Maintenance.Comments }}{% endif %}</textarea>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.system_maintenance.comment_help") }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Notification Messages -->
+                    <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.system_maintenance.notifications") }}</h3>
+
+                        <div class="space-y-4">
+                            <!-- Notify Message -->
+                            <div>
+                                <label for="notify_message" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.system_maintenance.notify_message") }}
+                                </label>
+                                <textarea
+                                    name="notify_message"
+                                    id="notify_message"
+                                    rows="2"
+                                    maxlength="250"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    placeholder="{{ t("admin.system_maintenance.notify_placeholder") }}"
+                                >{% if not IsNew %}{{ Maintenance.NotifyMessage }}{% endif %}</textarea>
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.system_maintenance.notify_help") }}</p>
+                            </div>
+
+                            <!-- Login Message -->
+                            <div>
+                                <label for="login_message" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.system_maintenance.login_message") }}
+                                </label>
+                                <textarea
+                                    name="login_message"
+                                    id="login_message"
+                                    rows="2"
+                                    maxlength="250"
+                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    placeholder="{{ t("admin.system_maintenance.login_placeholder") }}"
+                                >{% if not IsNew %}{{ Maintenance.LoginMessage }}{% endif %}</textarea>
+                            </div>
+
+                            <!-- Show Login Message checkbox -->
+                            <div class="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    name="show_login_message"
+                                    id="show_login_message"
+                                    value="1"
+                                    {% if not IsNew and Maintenance.ShowLoginMessage == 1 %}checked{% endif %}
+                                    class="h-4 w-4 text-gotrs-600 border-gray-300 rounded focus:ring-gotrs-500 dark:border-gray-600 dark:bg-gray-700"
+                                >
+                                <label for="show_login_message" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                                    {{ t("admin.system_maintenance.show_login_message") }}
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Validity -->
+                    <div class="pb-6">
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.system_maintenance.validity") }}</h3>
+
+                        <div class="max-w-xs">
+                            <label for="valid_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {{ t("common.status") }}
+                            </label>
+                            <select
+                                name="valid_id"
+                                id="valid_id"
+                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            >
+                                <option value="1" {% if IsNew or Maintenance.ValidID == 1 %}selected{% endif %}>{{ t("common.valid") }}</option>
+                                <option value="2" {% if not IsNew and Maintenance.ValidID == 2 %}selected{% endif %}>{{ t("common.invalid") }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <a href="/admin/system-maintenance"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600"
+                        >
+                            {{ t("common.cancel") }}
+                        </a>
+                        <button type="submit"
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+                        >
+                            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            {% if IsNew %}{{ t("common.create") }}{% else %}{{ t("common.save") }}{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Side Column - Session Management (Edit mode only) -->
+        {% if not IsNew %}
+        <div class="lg:col-span-1">
+            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+                <div class="p-6">
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.system_maintenance.sessions") }}</h3>
+
+                    <!-- Session counts -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-blue-50 dark:bg-blue-900 rounded-lg p-4">
+                            <p class="text-sm font-medium text-blue-600 dark:text-blue-400">{{ t("admin.system_maintenance.agent_sessions") }}</p>
+                            <p class="text-2xl font-bold text-blue-800 dark:text-blue-200">{{ AgentCount }}</p>
+                        </div>
+                        <div class="bg-green-50 dark:bg-green-900 rounded-lg p-4">
+                            <p class="text-sm font-medium text-green-600 dark:text-green-400">{{ t("admin.system_maintenance.customer_sessions") }}</p>
+                            <p class="text-2xl font-bold text-green-800 dark:text-green-200">{{ CustomerCount }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Kill All Sessions Button -->
+                    <button
+                        type="button"
+                        onclick="confirmKillAllSessions()"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 mb-4"
+                    >
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                        {{ t("admin.system_maintenance.kill_all_sessions") }}
+                    </button>
+
+                    <!-- Session List -->
+                    {% if Sessions %}
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
+                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">{{ t("admin.sessions.active_sessions") }}</h4>
+                        <div class="space-y-2 max-h-64 overflow-y-auto">
+                            {% for session in Sessions %}
+                            <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded" id="session-row-{{ session.SessionID }}">
+                                <div class="flex items-center min-w-0">
+                                    <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gotrs-600 flex items-center justify-center">
+                                        <span class="text-xs font-medium text-white">{{ session.UserLogin|first|upper }}</span>
+                                    </div>
+                                    <div class="ml-2 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                            {{ session.UserLogin }}{% if session.SessionID == CurrentSessionID %}<sup class="text-gotrs-600" title="{{ t("admin.sessions.current_session") }}">*</sup>{% endif %}
+                                        </p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                                            {% if session.UserType == "Agent" %}
+                                            <span class="text-blue-600">{{ t("admin.sessions.type_agent") }}</span>
+                                            {% else %}
+                                            <span class="text-green-600">{{ t("admin.sessions.type_customer") }}</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                                {% if session.SessionID != CurrentSessionID %}
+                                <button
+                                    onclick="killSession('{{ session.SessionID }}', '{{ session.UserLogin }}')"
+                                    title="{{ t("admin.sessions.kill") }}"
+                                    class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("admin.sessions.no_sessions") }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Kill All Sessions Confirmation Modal -->
+<div id="killAllModal" class="hidden fixed z-20 inset-0 overflow-y-auto" aria-labelledby="kill-all-modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeKillAllModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="kill-all-modal-title">
+                            {{ t("admin.system_maintenance.kill_all_sessions") }}
+                        </h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                {{ t("admin.sessions.confirm_kill_all") }}
+                            </p>
+                            <p class="mt-2 text-sm text-red-600 dark:text-red-400">
+                                {{ t("admin.sessions.warning_logout_all") }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                    type="button"
+                    onclick="executeKillAllSessions()"
+                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                    {{ t("admin.system_maintenance.kill_all_sessions") }}
+                </button>
+                <button
+                    type="button"
+                    onclick="closeKillAllModal()"
+                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                    {{ t("common.cancel") }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const isNew = {% if IsNew %}true{% else %}false{% endif %};
+const maintenanceId = {% if not IsNew %}{{ Maintenance.ID }}{% else %}0{% endif %};
+
+document.getElementById('maintenanceForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = {
+        start_date: document.getElementById('start_date').value,
+        stop_date: document.getElementById('stop_date').value,
+        comments: document.getElementById('comments').value,
+        notify_message: document.getElementById('notify_message').value || null,
+        login_message: document.getElementById('login_message').value || null,
+        show_login_message: document.getElementById('show_login_message').checked ? 1 : 0,
+        valid_id: parseInt(document.getElementById('valid_id').value)
+    };
+
+    // Validate start before stop
+    if (new Date(formData.start_date) >= new Date(formData.stop_date)) {
+        showToast('error', '{{ t("admin.system_maintenance.validation_start_after_stop") }}');
+        return;
+    }
+
+    const url = isNew ? '/admin/api/system-maintenance' : `/admin/api/system-maintenance/${maintenanceId}`;
+    const method = isNew ? 'POST' : 'PUT';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData),
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('success', isNew ? '{{ t("admin.system_maintenance.created") }}' : '{{ t("admin.system_maintenance.updated") }}');
+            setTimeout(() => {
+                window.location.href = '/admin/system-maintenance';
+            }, 1000);
+        } else {
+            showToast('error', data.error || 'Failed to save maintenance record');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('error', 'Failed to save maintenance record. Please try again.');
+    });
+});
+
+function killSession(sessionId, userLogin) {
+    if (!confirm(`Kill session for ${userLogin}?`)) return;
+
+    fetch(`/admin/api/sessions/${encodeURIComponent(sessionId)}`, {
+        method: 'DELETE',
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const row = document.getElementById(`session-row-${sessionId}`);
+            if (row) {
+                row.style.transition = 'opacity 0.3s';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 300);
+            }
+            showToast('success', `Session for "${userLogin}" terminated.`);
+        } else {
+            showToast('error', data.error || 'Failed to kill session');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('error', 'Failed to kill session. Please try again.');
+    });
+}
+
+function confirmKillAllSessions() {
+    document.getElementById('killAllModal').classList.remove('hidden');
+}
+
+function closeKillAllModal() {
+    document.getElementById('killAllModal').classList.add('hidden');
+}
+
+function executeKillAllSessions() {
+    fetch('/admin/api/sessions', {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ confirm: true }),
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeKillAllModal();
+            showToast('success', `All sessions (${data.count}) terminated.`);
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast('error', data.error || 'Failed to kill all sessions');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('error', 'Failed to kill all sessions. Please try again.');
+    });
+}
+
+// Toast notification function
+function showToast(type, message) {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+
+    const toast = document.createElement('div');
+    toast.className = `transform transition-all duration-300 translate-x-full max-w-sm w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden`;
+
+    const iconColor = type === 'success' ? 'text-green-500' : 'text-red-500';
+    const icon = type === 'success'
+        ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />'
+        : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />';
+
+    toast.innerHTML = `
+        <div class="p-4">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <svg class="h-6 w-6 ${iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        ${icon}
+                    </svg>
+                </div>
+                <div class="ml-3 w-0 flex-1 pt-0.5">
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                        ${message}
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.transform = 'translateX(0)';
+    }, 100);
+
+    setTimeout(() => {
+        toast.style.transform = 'translateX(100%)';
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'fixed bottom-0 right-0 p-6 space-y-4 z-50';
+    document.body.appendChild(container);
+    return container;
+}
+</script>
+{% endblock %}

@@ -93,6 +93,8 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/webservice_form.pongo2":             true,
 	"pages/admin/webservice_history.pongo2":          true,
 	"pages/admin/sessions.pongo2":                    true,
+	"pages/admin/system_maintenance.pongo2":          true,
+	"pages/admin/system_maintenance_form.pongo2":     true,
 
 	// Agent templates
 	"pages/agent/dashboard.pongo2":   true,
@@ -1187,6 +1189,44 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 				return ctx
 			}(),
 		},
+		{
+			name:     "admin/system_maintenance",
+			template: "pages/admin/system_maintenance.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["MaintenanceRecords"] = []map[string]interface{}{
+					{
+						"ID":               1,
+						"StartDate":        time.Now().Add(1 * time.Hour).Unix(),
+						"StopDate":         time.Now().Add(3 * time.Hour).Unix(),
+						"Comments":         "Scheduled maintenance",
+						"NotifyMessage":    "System will be down for maintenance",
+						"LoginMessage":     "Please try again later",
+						"ShowLoginMessage": 1,
+						"ValidID":          1,
+						"CreateTime":       time.Now(),
+						"ChangeTime":       time.Now(),
+					},
+				}
+				ctx["ActiveCount"] = 0
+				ctx["UpcomingCount"] = 1
+				ctx["TotalCount"] = 1
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/system_maintenance_form",
+			template: "pages/admin/system_maintenance_form.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["IsNew"] = true
+				ctx["Maintenance"] = nil
+				ctx["Sessions"] = []map[string]interface{}{}
+				ctx["AgentCount"] = 0
+				ctx["CustomerCount"] = 0
+				return ctx
+			}(),
+		},
 	}
 
 	for _, tt := range tests {
@@ -1743,5 +1783,161 @@ func TestAllPageTemplatesHaveCoverage(t *testing.T) {
 	if len(stale) > 0 {
 		t.Errorf("The following entries in AllPageTemplates map reference non-existent templates:\n%s",
 			strings.Join(stale, "\n"))
+	}
+}
+
+// =============================================================================
+// DYNAMIC TEMPLATE RENDER TEST
+// =============================================================================
+
+// universalContext creates a rich context with all common variables that templates might need.
+// This allows templates to render without errors even if they access various context variables.
+func universalContext() pongo2.Context {
+	now := time.Now()
+	ctx := pongo2.Context{
+		// Base context
+		"t":           func(key string, args ...interface{}) string { return key },
+		"CurrentYear": now.Year(),
+		"Config":      map[string]interface{}{"AppName": "GOTRS", "Maintenance": map[string]interface{}{"DefaultLoginMessage": ""}},
+		"Labels":      map[string]string{}, // Empty map, pongo2 will return empty string for missing keys
+
+		// User context
+		"User": map[string]interface{}{
+			"ID": 1, "Username": "admin", "Login": "admin", "IsAdmin": true,
+			"FirstName": "Admin", "LastName": "User", "Email": "admin@example.com",
+		},
+		"Customer": map[string]interface{}{
+			"ID": 1, "Email": "customer@example.com", "FirstName": "Customer", "LastName": "User",
+		},
+		"CurrentSessionID": "session123",
+
+		// Common form flags
+		"IsNew":  true,
+		"Error":  "",
+		"Errors": map[string]string{},
+		"Search": "",
+		"Status": "",
+
+		// Common list/table data (empty slices)
+		"Tickets":            []map[string]interface{}{},
+		"Articles":           []map[string]interface{}{},
+		"Queues":             []map[string]interface{}{},
+		"States":             []map[string]interface{}{},
+		"Priorities":         []map[string]interface{}{},
+		"Types":              []map[string]interface{}{},
+		"Services":           []map[string]interface{}{},
+		"Users":              []map[string]interface{}{},
+		"Groups":             []map[string]interface{}{},
+		"Roles":              []map[string]interface{}{},
+		"Companies":          []map[string]interface{}{},
+		"CustomerUsers":      []map[string]interface{}{},
+		"DynamicFields":      []map[string]interface{}{},
+		"Attachments":        []map[string]interface{}{},
+		"Templates":          []map[string]interface{}{},
+		"Signatures":         []map[string]interface{}{},
+		"SLAs":               []map[string]interface{}{},
+		"Emails":             []map[string]interface{}{},
+		"Sessions":           []map[string]interface{}{},
+		"MaintenanceRecords": []map[string]interface{}{},
+		"Lookups":            []map[string]interface{}{},
+		"ACLs":               []map[string]interface{}{},
+		"GenericAgents":      []map[string]interface{}{},
+		"Webservices":        []map[string]interface{}{},
+		"NotificationEvents": []map[string]interface{}{},
+		"PostmasterFilters":  []map[string]interface{}{},
+		"KBArticles":         []map[string]interface{}{},
+		"Permissions":        []map[string]interface{}{},
+		"Members":            []map[string]interface{}{},
+		"FieldTypes":         []string{"Text", "Textarea", "Dropdown"},
+		"ValidOptions":       []map[string]interface{}{{"ID": 1, "Name": "valid"}, {"ID": 2, "Name": "invalid"}},
+		"ArticleTypes":       []map[string]interface{}{{"ID": 1, "Name": "note-internal"}},
+
+		// Counts
+		"TotalCount":     0,
+		"ActiveCount":    0,
+		"UpcomingCount":  0,
+		"SessionCount":   0,
+		"AgentCount":     0,
+		"CustomerCount":  0,
+		"MemberCount":    0,
+		"TicketCount":    0,
+
+		// Common single-object contexts (nil-safe)
+		"Ticket":       nil,
+		"Maintenance":  nil,
+		"Company":      nil,
+		"Group":        nil,
+		"Role":         nil,
+		"Queue":        nil,
+		"Priority":     nil,
+		"State":        nil,
+		"Type":         nil,
+		"Service":      nil,
+		"SLA":          nil,
+		"Field":        nil,
+		"Attachment":   nil,
+		"Template":     nil,
+		"Signature":    nil,
+		"Webservice":   nil,
+		"Filter":       nil,
+		"Notification": nil,
+		"ACL":          nil,
+		"GenericAgent": nil,
+		"Event":        nil,
+		"Settings":     map[string]interface{}{},
+		"Stats":        map[string]interface{}{"pending": 0, "failed": 0},
+
+		// Boolean flags
+		"CanEdit":            true,
+		"CanDelete":          true,
+		"ShowLoginMessage":   false,
+		"AllowRegistration":  true,
+		"RequireApproval":    false,
+	}
+	return ctx
+}
+
+// TestAllTemplatesRenderDynamically discovers all page templates and attempts to render them
+// with a universal context. This catches basic rendering errors without needing per-template test entries.
+func TestAllTemplatesRenderDynamically(t *testing.T) {
+	helper := NewTemplateTestHelper(t)
+
+	// Walk templates directory and collect all page templates
+	var allTemplates []string
+	err := filepath.Walk(helper.TemplateDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() || !strings.HasSuffix(path, ".pongo2") {
+			return nil
+		}
+
+		relPath, _ := filepath.Rel(helper.TemplateDir, path)
+
+		// Only check page templates (skip partials and layouts)
+		if strings.HasPrefix(relPath, "pages/") {
+			allTemplates = append(allTemplates, relPath)
+		}
+
+		return nil
+	})
+	require.NoError(t, err)
+
+	// Create universal context once
+	ctx := universalContext()
+
+	// Test each template
+	for _, tmpl := range allTemplates {
+		t.Run(tmpl, func(t *testing.T) {
+			html, err := helper.RenderTemplate(tmpl, ctx)
+			if err != nil {
+				t.Errorf("Template %s failed to render: %v", tmpl, err)
+				return
+			}
+			if html == "" {
+				t.Errorf("Template %s rendered empty output", tmpl)
+			}
+		})
 	}
 }

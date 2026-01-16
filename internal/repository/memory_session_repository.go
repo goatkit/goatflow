@@ -136,3 +136,20 @@ func (r *MemorySessionRepository) DeleteExpired(maxAge time.Duration) (int, erro
 	}
 	return count, nil
 }
+
+// DeleteByMaxAge removes all sessions created more than maxAge ago.
+// This enforces the maximum session lifetime regardless of activity.
+func (r *MemorySessionRepository) DeleteByMaxAge(maxAge time.Duration) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	cutoff := time.Now().Add(-maxAge)
+	count := 0
+	for sessionID, session := range r.sessions {
+		if session.CreateTime.Before(cutoff) {
+			delete(r.sessions, sessionID)
+			count++
+		}
+	}
+	return count, nil
+}

@@ -110,6 +110,48 @@
 </head>
 <body class="h-full bg-gray-50 dark:bg-gray-900">
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 rounded-md">{{ t("common.skip_to_content")|default:"Skip to content" }}</a>
+
+    <!-- System Maintenance Notifications -->
+    {% if MaintenanceActive %}
+    <div class="bg-red-600 text-white" role="alert">
+        <div class="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between flex-wrap">
+                <div class="flex items-center">
+                    <span class="flex p-2 rounded-lg bg-red-800">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </span>
+                    <p class="ml-3 font-medium">
+                        <span class="font-bold">{{ t("notifications.maintenance_active") }}:</span>
+                        {{ MaintenanceActive.GetNotifyMessage }}
+                        <span class="ml-2 text-red-200">({{ t("common.from") }} {{ MaintenanceActive.StartDateFormatted }} {{ t("common.until") }} {{ MaintenanceActive.StopDateFormatted }})</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% elif MaintenanceComing %}
+    <div class="bg-yellow-500 text-yellow-900" role="alert">
+        <div class="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between flex-wrap">
+                <div class="flex items-center">
+                    <span class="flex p-2 rounded-lg bg-yellow-600">
+                        <svg class="h-5 w-5 text-yellow-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </span>
+                    <p class="ml-3 font-medium">
+                        <span class="font-bold">{{ t("notifications.maintenance_upcoming") }}:</span>
+                        {{ t("common.from") }} {{ MaintenanceComing.StartDateFormatted }} {{ t("common.until") }} {{ MaintenanceComing.StopDateFormatted }}
+                        {% if MaintenanceComing.GetNotifyMessage %}<span class="ml-2">({{ MaintenanceComing.GetNotifyMessage }})</span>{% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="min-h-full">
     {% set isAdmin = ActivePage and ActivePage|lower == "admin" %}
     {% set isCustomer = User and User.Role and User.Role|lower == "customer" %}

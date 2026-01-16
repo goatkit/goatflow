@@ -251,6 +251,10 @@ maintenance:
     message: "System is under maintenance. Please try again later."
     allowed_ips:
         - 127.0.0.1
+    # System maintenance notification settings
+    time_notify_upcoming_minutes: 30 # Show notification X minutes before scheduled maintenance
+    default_notify_message: "We are performing scheduled maintenance."
+    default_login_message: "The system is currently undergoing maintenance."
 
 # Integration settings
 integrations:

@@ -11,10 +11,13 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/config"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/lookups"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/version"
 )
 
@@ -107,6 +110,9 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 			ctx["User"] = user
 		}
 	}
+
+	// Check for active/upcoming maintenance and add to context
+	addMaintenanceContext(ctx)
 
 	// Get the template (fallback for tests when templates missing)
 	if r == nil || r.templateSet == nil {
@@ -217,3 +223,36 @@ func SetGlobalRenderer(renderer *TemplateRenderer) {
 }
 
 var globalTemplateRenderer *TemplateRenderer
+
+// addMaintenanceContext checks for active/upcoming maintenance and adds to template context.
+func addMaintenanceContext(ctx pongo2.Context) {
+	db, err := database.GetDB()
+	if err != nil || db == nil {
+		return
+	}
+
+	repo := repository.NewSystemMaintenanceRepository(db)
+
+	// Check active maintenance
+	if active, err := repo.IsActive(); err == nil && active != nil {
+		// Use default message from config if not set in record
+		if active.NotifyMessage == nil || *active.NotifyMessage == "" {
+			cfg := config.Get()
+			if cfg != nil && cfg.Maintenance.DefaultNotifyMessage != "" {
+				defaultMsg := cfg.Maintenance.DefaultNotifyMessage
+				active.NotifyMessage = &defaultMsg
+			}
+		}
+		ctx["MaintenanceActive"] = active
+	}
+
+	// Check upcoming - get minutes from config
+	cfg := config.Get()
+	upcomingMinutes := 30 // Default fallback
+	if cfg != nil && cfg.Maintenance.TimeNotifyUpcomingMinutes > 0 {
+		upcomingMinutes = cfg.Maintenance.TimeNotifyUpcomingMinutes
+	}
+	if coming, err := repo.IsComing(upcomingMinutes); err == nil && coming != nil {
+		ctx["MaintenanceComing"] = coming
+	}
+}

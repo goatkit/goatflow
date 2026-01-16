@@ -1143,3 +1143,42 @@ spec:
           method: DELETE
           handler: handleKillAllSessions
           description: "Terminate all sessions (emergency)"
+
+        # System Maintenance Management
+        - path: /system-maintenance
+          method: GET
+          handler: handleAdminSystemMaintenance
+          template: pages/admin/system_maintenance.pongo2
+          description: "Display system maintenance list"
+
+        - path: /system-maintenance/new
+          method: GET
+          handler: handleAdminSystemMaintenanceNew
+          template: pages/admin/system_maintenance_form.pongo2
+          description: "Display create maintenance form"
+
+        - path: /system-maintenance/:id/edit
+          method: GET
+          handler: handleAdminSystemMaintenanceEdit
+          template: pages/admin/system_maintenance_form.pongo2
+          description: "Display edit maintenance form"
+
+        - path: /api/system-maintenance
+          method: POST
+          handler: handleCreateSystemMaintenance
+          description: "Create new maintenance record"
+
+        - path: /api/system-maintenance/:id
+          method: GET
+          handler: handleGetSystemMaintenance
+          description: "Get maintenance record details"
+
+        - path: /api/system-maintenance/:id
+          method: PUT
+          handler: handleUpdateSystemMaintenance
+          description: "Update maintenance record"
+
+        - path: /api/system-maintenance/:id
+          method: DELETE
+          handler: handleDeleteSystemMaintenance
+          description: "Delete maintenance record"
