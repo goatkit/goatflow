@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Generic Agent Jobs{% endblock %}
+{% block title %}{{ t("admin.modules.generic_agent.title") }}{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -9,14 +9,14 @@
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">Generic Agent Jobs</h1>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Automated ticket actions that run on a schedule</p>
+                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ t("admin.modules.generic_agent.title") }}</h1>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin.modules.generic_agent.description") }}</p>
                 </div>
-                <button onclick="openJobModal()" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600" title="Add new job">
+                <button onclick="openJobModal()" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600" title="{{ t("admin.modules.generic_agent.add_job") }}">
                     <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                     </svg>
-                    Add Job
+                    {{ t("admin.modules.generic_agent.add_job") }}
                 </button>
             </div>
         </div>
@@ -26,22 +26,22 @@
             <form method="GET" action="/admin/generic-agent" class="flex flex-wrap gap-4">
                 <div class="flex-1 min-w-[200px]">
                     <input type="text" name="search" value="{{ SearchQuery }}"
-                           placeholder="Search jobs..."
+                           placeholder="{{ t("admin.modules.generic_agent.placeholders.search") }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
                 </div>
                 <div>
                     <select name="valid" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        <option value="all" {% if ValidFilter == "all" %}selected{% endif %}>All Status</option>
-                        <option value="valid" {% if ValidFilter == "valid" %}selected{% endif %}>Valid Only</option>
-                        <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>Invalid Only</option>
+                        <option value="all" {% if ValidFilter == "all" %}selected{% endif %}>{{ t("admin.modules.generic_agent.filter.all_status") }}</option>
+                        <option value="valid" {% if ValidFilter == "valid" %}selected{% endif %}>{{ t("admin.modules.generic_agent.filter.valid_only") }}</option>
+                        <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>{{ t("admin.modules.generic_agent.filter.invalid_only") }}</option>
                     </select>
                 </div>
-                <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" title="Apply filters">
-                    Filter
+                <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" title="{{ t("admin.modules.generic_agent.actions.filter") }}">
+                    {{ t("admin.modules.generic_agent.actions.filter") }}
                 </button>
                 {% if SearchQuery or ValidFilter != "all" %}
-                <a href="/admin/generic-agent" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg" title="Clear all filters">
-                    Clear
+                <a href="/admin/generic-agent" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg" title="{{ t("admin.modules.generic_agent.actions.clear") }}">
+                    {{ t("admin.modules.generic_agent.actions.clear") }}
                 </a>
                 {% endif %}
             </form>
@@ -52,10 +52,10 @@
             <table class="w-full">
                 <thead class="bg-gray-50 dark:bg-gray-900">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Schedule</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ t("admin.modules.generic_agent.fields.name") }}</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ t("admin.modules.generic_agent.fields.schedule") }}</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ t("admin.modules.generic_agent.fields.status") }}</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ t("common.actions") }}</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -65,30 +65,30 @@
                         <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
                             {% if job.Config.ScheduleDays or job.Config.ScheduleHours or job.Config.ScheduleMinutes %}
                                 <span class="text-xs text-gray-500">
-                                    {% if job.Config.ScheduleDays %}Days: {{ job.Config.ScheduleDays }}{% endif %}
-                                    {% if job.Config.ScheduleHours %} Hours: {{ job.Config.ScheduleHours }}{% endif %}
-                                    {% if job.Config.ScheduleMinutes %} Min: {{ job.Config.ScheduleMinutes }}{% endif %}
+                                    {% if job.Config.ScheduleDays %}{{ t("admin.modules.generic_agent.fields.days") }}: {{ job.Config.ScheduleDays }}{% endif %}
+                                    {% if job.Config.ScheduleHours %} {{ t("admin.modules.generic_agent.fields.hours") }}: {{ job.Config.ScheduleHours }}{% endif %}
+                                    {% if job.Config.ScheduleMinutes %} {{ t("admin.modules.generic_agent.fields.minutes") }}: {{ job.Config.ScheduleMinutes }}{% endif %}
                                 </span>
                             {% else %}
-                                <span class="text-gray-400">Not scheduled</span>
+                                <span class="text-gray-400">{{ t("admin.modules.generic_agent.messages.not_scheduled") }}</span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm">
                             {% if job.Valid %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">Valid</span>
+                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">{{ t("common.valid") }}</span>
                             {% else %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">Invalid</span>
+                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">{{ t("common.invalid") }}</span>
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button onclick="editJob('{{ job.Name }}')" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="Edit job">
+                            <button onclick="editJob('{{ job.Name }}')" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="{{ t("admin.modules.generic_agent.edit_job") }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                 </svg>
                             </button>
                             <button onclick="toggleJobStatus('{{ job.Name }}', {% if job.Valid %}true{% else %}false{% endif %})"
                                     class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300 mr-3"
-                                    title="{% if job.Valid %}Deactivate{% else %}Activate{% endif %}">
+                                    title="{% if job.Valid %}{{ t("admin.modules.generic_agent.actions.deactivate") }}{% else %}{{ t("admin.modules.generic_agent.actions.activate") }}{% endif %}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     {% if job.Valid %}
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
@@ -97,7 +97,7 @@
                                     {% endif %}
                                 </svg>
                             </button>
-                            <button onclick="deleteJob('{{ job.Name }}')" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300" title="Delete job">
+                            <button onclick="deleteJob('{{ job.Name }}')" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300" title="{{ t("common.delete") }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                                 </svg>
@@ -107,7 +107,7 @@
                     {% empty %}
                     <tr>
                         <td colspan="4" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                            No generic agent jobs found. Click "Add Job" to create one.
+                            {{ t("admin.modules.generic_agent.messages.no_jobs") }}
                         </td>
                     </tr>
                     {% endfor %}
@@ -121,7 +121,7 @@
 <div id="jobModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900 dark:text-white">Add Job</h2>
+            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("admin.modules.generic_agent.add_job") }}</h2>
         </div>
         <form id="jobForm" onsubmit="saveJob(event)">
             <div class="p-6 space-y-4">
@@ -129,47 +129,47 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Job Name *</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.modules.generic_agent.fields.name") }} *</label>
                         <input type="text" id="jobName" name="name" required
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.modules.generic_agent.fields.status") }}</label>
                         <select id="jobValid" name="valid"
                                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                            <option value="true">Valid</option>
-                            <option value="false">Invalid</option>
+                            <option value="true">{{ t("common.valid") }}</option>
+                            <option value="false">{{ t("common.invalid") }}</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Schedule</h3>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">{{ t("admin.modules.generic_agent.fields.schedule") }}</h3>
                     <div class="grid grid-cols-3 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Days</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.modules.generic_agent.fields.days") }}</label>
                             <input type="text" id="jobScheduleDays" name="schedule_days"
-                                   placeholder="Mon;Tue;Wed or 0-6"
+                                   placeholder="{{ t("admin.modules.generic_agent.placeholders.days") }}"
                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Hours</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.modules.generic_agent.fields.hours") }}</label>
                             <input type="text" id="jobScheduleHours" name="schedule_hours"
-                                   placeholder="0;6;12;18"
+                                   placeholder="{{ t("admin.modules.generic_agent.placeholders.hours") }}"
                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minutes</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.modules.generic_agent.fields.minutes") }}</label>
                             <input type="text" id="jobScheduleMinutes" name="schedule_minutes"
-                                   placeholder="0;15;30;45"
+                                   placeholder="{{ t("admin.modules.generic_agent.placeholders.minutes") }}"
                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                         </div>
                     </div>
                 </div>
 
                 <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Configuration (JSON)</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Additional job configuration as JSON key-value pairs.</p>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">{{ t("admin.modules.generic_agent.fields.config") }}</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">{{ t("admin.modules.generic_agent.help.config") }}</p>
                     <textarea id="jobConfig" name="config" rows="8"
                               placeholder='{"TicketStateMatch": "new", "NewTicketState": "open"}'
                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"></textarea>
@@ -179,11 +179,11 @@
             <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
                 <button type="button" onclick="closeJobModal()"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    Cancel
+                    {{ t("common.cancel") }}
                 </button>
                 <button type="submit"
                         class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:text-sm">
-                    Save
+                    {{ t("common.save") }}
                 </button>
             </div>
         </form>
@@ -191,8 +191,24 @@
 </div>
 
 <script>
+// Translated strings for JavaScript
+const i18n = {
+    addJob: '{{ t("admin.modules.generic_agent.add_job") }}',
+    editJob: '{{ t("admin.modules.generic_agent.edit_job") }}',
+    saving: '{{ t("common.saving") }}',
+    save: '{{ t("common.save") }}',
+    loadFailed: '{{ t("admin.modules.generic_agent.messages.load_failed") }}',
+    invalidJson: '{{ t("admin.modules.generic_agent.messages.invalid_json") }}',
+    errorOccurred: '{{ t("admin.modules.generic_agent.messages.error_occurred") }}',
+    confirmActivate: '{{ t("admin.modules.generic_agent.messages.confirm_activate") }}',
+    confirmDeactivate: '{{ t("admin.modules.generic_agent.messages.confirm_deactivate") }}',
+    jobActivated: '{{ t("admin.modules.generic_agent.messages.job_activated") }}',
+    jobDeactivated: '{{ t("admin.modules.generic_agent.messages.job_deactivated") }}',
+    confirmDelete: '{{ t("admin.modules.generic_agent.messages.confirm_delete") }}'
+};
+
 function openJobModal() {
-    document.getElementById('modalTitle').textContent = 'Add Job';
+    document.getElementById('modalTitle').textContent = i18n.addJob;
     document.getElementById('jobForm').reset();
     document.getElementById('jobOriginalName').value = '';
     document.getElementById('jobConfig').value = '';
@@ -203,12 +219,12 @@ function openJobModal() {
 }
 
 function editJob(name) {
-    fetch(`/admin/api/generic-agent/${encodeURIComponent(name)}`)
+    fetch('/admin/api/generic-agent/' + encodeURIComponent(name))
         .then(response => response.json())
         .then(result => {
             if (result.success) {
                 const job = result.data;
-                document.getElementById('modalTitle').textContent = 'Edit Job';
+                document.getElementById('modalTitle').textContent = i18n.editJob;
                 document.getElementById('jobOriginalName').value = job.name;
                 document.getElementById('jobName').value = job.name;
                 document.getElementById('jobValid').value = job.valid ? 'true' : 'false';
@@ -236,12 +252,12 @@ function editJob(name) {
                     modal.classList.remove('hidden');
                 }
             } else {
-                showToast(result.error || 'Failed to load job', 'error');
+                showToast(result.error || i18n.loadFailed, 'error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            showToast('Failed to load job', 'error');
+            showToast(i18n.loadFailed, 'error');
         });
 }
 
@@ -257,7 +273,7 @@ function saveJob(event) {
 
     const submitBtn = event.target.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Saving...';
+    submitBtn.textContent = i18n.saving;
 
     const formData = new FormData(event.target);
     const originalName = formData.get('original_name');
@@ -281,9 +297,9 @@ function saveJob(event) {
             const additionalConfig = JSON.parse(configText);
             config = {...config, ...additionalConfig};
         } catch (e) {
-            showToast('Invalid JSON in configuration', 'error');
+            showToast(i18n.invalidJson, 'error');
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Save';
+            submitBtn.textContent = i18n.save;
             return;
         }
     }
@@ -294,7 +310,7 @@ function saveJob(event) {
         config: config
     };
 
-    const url = originalName ? `/admin/api/generic-agent/${encodeURIComponent(originalName)}` : '/admin/api/generic-agent';
+    const url = originalName ? '/admin/api/generic-agent/' + encodeURIComponent(originalName) : '/admin/api/generic-agent';
     const method = originalName ? 'PUT' : 'POST';
 
     fetch(url, {
@@ -311,25 +327,26 @@ function saveJob(event) {
             closeJobModal();
             window.location.reload();
         } else {
-            showToast(result.error || 'An error occurred', 'error');
+            showToast(result.error || i18n.errorOccurred, 'error');
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Save';
+            submitBtn.textContent = i18n.save;
         }
     })
     .catch(error => {
         console.error('Save error:', error);
-        showToast('An error occurred: ' + error.message, 'error');
+        showToast(i18n.errorOccurred + ': ' + error.message, 'error');
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Save';
+        submitBtn.textContent = i18n.save;
     });
 }
 
 function toggleJobStatus(name, currentValid) {
     const newValid = !currentValid;
-    const action = newValid ? 'activate' : 'deactivate';
+    const confirmMsg = newValid ? i18n.confirmActivate : i18n.confirmDeactivate;
+    const successMsg = newValid ? i18n.jobActivated : i18n.jobDeactivated;
 
-    if (confirm(`Are you sure you want to ${action} "${name}"?`)) {
-        fetch(`/admin/api/generic-agent/${encodeURIComponent(name)}`, {
+    if (confirm(confirmMsg.replace('{name}', name))) {
+        fetch('/admin/api/generic-agent/' + encodeURIComponent(name), {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -339,22 +356,22 @@ function toggleJobStatus(name, currentValid) {
         .then(response => response.json())
         .then(result => {
             if (result.success) {
-                showToast(`Job ${action}d successfully`, 'success');
+                showToast(successMsg, 'success');
                 setTimeout(() => window.location.reload(), 500);
             } else {
-                showToast(result.error || 'An error occurred', 'error');
+                showToast(result.error || i18n.errorOccurred, 'error');
             }
         })
         .catch(error => {
             console.error('Toggle error:', error);
-            showToast('An error occurred: ' + error.message, 'error');
+            showToast(i18n.errorOccurred + ': ' + error.message, 'error');
         });
     }
 }
 
 function deleteJob(name) {
-    if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-        fetch(`/admin/api/generic-agent/${encodeURIComponent(name)}`, {
+    if (confirm(i18n.confirmDelete.replace('{name}', name))) {
+        fetch('/admin/api/generic-agent/' + encodeURIComponent(name), {
             method: 'DELETE'
         })
         .then(response => response.json())
@@ -363,12 +380,12 @@ function deleteJob(name) {
                 showToast(result.message, 'success');
                 setTimeout(() => window.location.reload(), 500);
             } else {
-                showToast(result.error || 'An error occurred', 'error');
+                showToast(result.error || i18n.errorOccurred, 'error');
             }
         })
         .catch(error => {
             console.error('Delete error:', error);
-            showToast('An error occurred: ' + error.message, 'error');
+            showToast(i18n.errorOccurred + ': ' + error.message, 'error');
         });
     }
 }
