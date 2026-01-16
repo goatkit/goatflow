@@ -183,6 +183,10 @@ step "5/6  E2E Playwright Tests"
 
 log "Running Playwright browser tests..."
 
+# Debug: Show E2E environment variables (lengths only for secrets)
+echo "[E2E-DEBUG] TEST_USERNAME=${TEST_USERNAME:-root@localhost}"
+echo "[E2E-DEBUG] TEST_PASSWORD length: ${#TEST_PASSWORD}"
+
 # Helper to parse E2E test results from log file
 parse_e2e_test_results() {
     local log_file="$1"
