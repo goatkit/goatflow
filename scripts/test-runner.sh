@@ -181,6 +181,11 @@ fi
 #########################################
 step "5/6  E2E Playwright Tests"
 
+# Re-run test-setup-admin to restore admin user after unit tests may have modified it
+# Unit tests can overwrite user ID 1 (root@localhost) during HandleAdminUserUpdate tests
+log "Restoring admin user for E2E tests..."
+make test-setup-admin >> "$MAIN_LOG" 2>&1 || warning "Failed to restore admin user"
+
 log "Running Playwright browser tests..."
 
 # Debug: Show E2E environment variables (lengths only for secrets)
