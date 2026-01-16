@@ -117,7 +117,7 @@ fi
 step "3/6  Starting Test Stack"
 
 log "Starting test containers..."
-make test-stack-up >> "$MAIN_LOG" 2>&1
+make test-stack-up 2>&1 | tee -a "$MAIN_LOG"
 success "Test stack started"
 
 # Capture container logs in background
