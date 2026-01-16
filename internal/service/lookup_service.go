@@ -175,13 +175,13 @@ func (s *LookupService) buildFormDataWithLang(lang string) *models.TicketFormDat
 		{ID: 3, Value: "high", Label: "High", Order: 3, Active: true},
 		{ID: 4, Value: "urgent", Label: "Urgent", Order: 4, Active: true},
 	}
-	// Default statuses (workflow order new->closed)
+	// Default statuses (OTRS standard workflow states)
 	result.Statuses = []models.LookupItem{
 		{ID: 1, Value: "new", Label: "New", Order: 1, Active: true},
 		{ID: 2, Value: "open", Label: "Open", Order: 2, Active: true},
-		{ID: 3, Value: "pending", Label: "Pending", Order: 3, Active: true},
-		{ID: 4, Value: "resolved", Label: "Resolved", Order: 4, Active: true},
-		{ID: 5, Value: "closed", Label: "Closed", Order: 5, Active: true},
+		{ID: 3, Value: "closed successful", Label: "Closed Successful", Order: 3, Active: true},
+		{ID: 4, Value: "closed unsuccessful", Label: "Closed Unsuccessful", Order: 4, Active: true},
+		{ID: 5, Value: "pending reminder", Label: "Pending Reminder", Order: 5, Active: true},
 	}
 	return result
 }
