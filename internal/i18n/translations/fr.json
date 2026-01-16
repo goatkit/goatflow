@@ -1364,6 +1364,11 @@
         "yes": "Oui",
         "no_results": "Aucun résultat trouvé",
         "multiselect_hint": "Tapez pour rechercher et sélectionnez plusieurs valeurs",
+        "saving": "Enregistrement...",
+        "filter": "Filtrer",
+        "all_status": "Tous les statuts",
+        "valid_only": "Valides uniquement",
+        "invalid_only": "Invalides uniquement",
         "from": "de",
         "until": "jusqu'à",
         "back_to_list": "Retour à la liste"

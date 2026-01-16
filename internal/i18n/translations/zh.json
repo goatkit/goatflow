@@ -1390,6 +1390,11 @@
         "yes": "是",
         "no_results": "未找到结果",
         "multiselect_hint": "输入搜索并选择多个值",
+        "saving": "保存中...",
+        "filter": "筛选",
+        "all_status": "所有状态",
+        "valid_only": "仅有效",
+        "invalid_only": "仅无效",
         "from": "从",
         "until": "至",
         "back_to_list": "返回列表"

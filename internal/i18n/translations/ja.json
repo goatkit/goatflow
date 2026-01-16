@@ -1364,6 +1364,11 @@
         "yes": "はい",
         "no_results": "結果が見つかりません",
         "multiselect_hint": "入力して検索し、複数の値を選択してください",
+        "saving": "保存中...",
+        "filter": "フィルター",
+        "all_status": "すべてのステータス",
+        "valid_only": "有効のみ",
+        "invalid_only": "無効のみ",
         "from": "から",
         "until": "まで",
         "back_to_list": "一覧に戻る"

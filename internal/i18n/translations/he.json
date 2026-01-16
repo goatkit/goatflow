@@ -1364,6 +1364,11 @@
         "yes": "כן",
         "no_results": "לא נמצאו תוצאות",
         "multiselect_hint": "הקלד לחיפוש ובחר ערכים מרובים",
+        "saving": "שומר...",
+        "filter": "סנן",
+        "all_status": "כל הסטטוסים",
+        "valid_only": "תקין בלבד",
+        "invalid_only": "לא תקין בלבד",
         "from": "מ",
         "until": "עד",
         "back_to_list": "חזרה לרשימה"

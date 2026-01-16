@@ -1364,6 +1364,11 @@
         "yes": "HIja'",
         "no_results": "pagh tu'lu'",
         "multiselect_hint": "yISam 'ej law' wIv",
+        "saving": "pollu'...",
+        "filter": "wIv",
+        "all_status": "Hoch Dotlh",
+        "valid_only": "QaQ neH",
+        "invalid_only": "Qapbe' neH",
         "from": "vo'",
         "until": "'op",
         "back_to_list": "tetlh chegh"

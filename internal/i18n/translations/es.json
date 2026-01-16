@@ -1364,6 +1364,11 @@
         "yes": "Sí",
         "no_results": "No se encontraron resultados",
         "multiselect_hint": "Escriba para buscar y seleccione varios valores",
+        "saving": "Guardando...",
+        "filter": "Filtrar",
+        "all_status": "Todos los Estados",
+        "valid_only": "Solo Válidos",
+        "invalid_only": "Solo Inválidos",
         "from": "desde",
         "until": "hasta",
         "back_to_list": "Volver a la lista"
