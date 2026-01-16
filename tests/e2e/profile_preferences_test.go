@@ -188,7 +188,7 @@ func TestProfilePreferencesPage(t *testing.T) {
 
 		// Select a language (German)
 		languageSelect := browser.Page.Locator("#language-select")
-		err = languageSelect.SelectOption(playwright.SelectOptionValues{
+		_, err = languageSelect.SelectOption(playwright.SelectOptionValues{
 			Values: &[]string{"de"},
 		})
 		if err != nil {
@@ -236,7 +236,7 @@ func TestProfilePreferencesPage(t *testing.T) {
 
 		// Select a timeout value (1 hour)
 		timeoutSelect := browser.Page.Locator("#session-timeout")
-		err = timeoutSelect.SelectOption(playwright.SelectOptionValues{
+		_, err = timeoutSelect.SelectOption(playwright.SelectOptionValues{
 			Values: &[]string{"3600"},
 		})
 		require.NoError(t, err)
