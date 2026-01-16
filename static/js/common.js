@@ -487,9 +487,14 @@ document.addEventListener("DOMContentLoaded", () => {
             button.textContent = "...";
         }
 
-        apiFetch(`/api/tickets/${reminder.ticket_id}/status`, {
+        // Use plain fetch since apiFetch returns parsed JSON, not Response object
+        fetch(`/api/tickets/${reminder.ticket_id}/status`, {
             method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                Accept: "application/json",
+            },
             body: params,
         })
             .then(async (response) => {
