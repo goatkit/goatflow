@@ -2105,7 +2105,31 @@
         "pending_until_help": "このチケットが自動的に再オープンする日時を指定。",
         "pending_required": "保留ステートには必須",
         "target_ticket_number": "ターゲットチケット番号",
-        "merge_target_placeholder": "マージ先のチケット番号を入力"
+        "merge_target_placeholder": "マージ先のチケット番号を入力",
+        "pending_reminder": {
+            "overdue": "リマインダー期限切れ",
+            "scheduled": "リマインダー予定",
+            "not_scheduled": "リマインダー未設定",
+            "was_scheduled_for": "リマインダーは次の時間に予定されていました",
+            "will_reopen_at": "チケットは次の時間に再オープンされます",
+            "ago": "前",
+            "in": "後",
+            "no_time_scheduled": "リマインダー時間が設定されていません。",
+            "title": "保留中リマインダー",
+            "help": "チケットは指定された時間に「オープン」状態に戻ります。"
+        },
+        "auto_close": {
+            "overdue": "自動クローズ期限切れ",
+            "scheduled": "自動クローズ予定",
+            "should_have_closed_at": "チケットは次の時間に自動クローズされるべきでした",
+            "will_close_at": "チケットは自動的にクローズされます",
+            "while_pending": "自動クローズ保留中の状態で",
+            "at": "時間",
+            "plus_title": "自動クローズ保留中+",
+            "plus_help": "指定時間までに顧客からの返信がない場合、チケットは自動的にクローズされます。",
+            "minus_title": "自動クローズ保留中-",
+            "minus_help": "活動に関係なく、指定時間にチケットは自動的にクローズされます。"
+        }
     },
     "tickets_form": {
         "subject_placeholder": "問題の簡単な要約...",
@@ -2173,6 +2197,21 @@
         "title": "敬称",
         "title_placeholder": "例：様、博士",
         "username": "ユーザー名"
+    },
+    "queue_access": {
+        "denied": "このキューにアクセスする権限がありません",
+        "no_queues": "アクセスできるキューがありません",
+        "error": "キュー権限の確認に失敗しました",
+        "permission_required": "キューアクセス権限が必要です",
+        "types": {
+            "ro": "読み取り専用",
+            "rw": "読み取り/書き込み",
+            "create": "チケット作成",
+            "move_into": "チケット移動先",
+            "note": "メモ追加",
+            "owner": "担当者になる",
+            "priority": "優先度変更"
+        }
     },
     "validation": {
         "alpha": "文字のみを含む必要があります",

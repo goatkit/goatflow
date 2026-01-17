@@ -10,7 +10,8 @@ metadata:
 spec:
     prefix: /tickets
     middleware:
-        - auth # Require authentication for ticket access
+        - auth
+        - queue_ro # Require read access to at least one queue
     routes:
         # Tickets list page - shows all tickets with filtering and bulk actions
         - path: /
@@ -30,30 +31,43 @@ spec:
           template: pages/tickets/new.pongo2
           middleware:
               - auth
+              - queue_create # Require create access to at least one queue
           description: "Display new ticket creation form"
 
         # Create new ticket API
         - path: /
           method: POST
           handler: HandleAgentCreateTicket
+          middleware:
+              - auth
+              - queue_access_create # Require create access to target queue
           description: "Process new ticket creation"
 
         # Update ticket status API
         - path: /:id/status
           method: PUT
           handler: handleAgentTicketStatus
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access to ticket's queue
           description: "Update ticket status via HTMX"
 
         # Add comment/reply to ticket
         - path: /:id/comments
           method: POST
           handler: handleAgentTicketNote
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission for ticket's queue
           description: "Add new comment/reply to ticket"
 
         # Ticket attachment upload
         - path: /:id/attachments
           method: POST
           handler: handleAgentTicketReply
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission for ticket's queue
           description: "Upload file attachment to ticket"
 
         # Search tickets API
@@ -66,12 +80,18 @@ spec:
         - path: /:id/priority
           method: PUT
           handler: handleAgentTicketPriority
+          middleware:
+              - auth
+              - ticket_access_priority # Require priority permission for ticket's queue
           description: "Update ticket priority"
 
         # Ticket assignment
         - path: /:id/assign
           method: PUT
           handler: handleAgentTicketAssign
+          middleware:
+              - auth
+              - ticket_access_owner # Require owner permission for ticket's queue
           description: "Assign ticket to agent"
 
         # Customer info panel (partial)

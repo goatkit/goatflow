@@ -10,7 +10,8 @@ metadata:
 spec:
     prefix: /agent
     middleware:
-        - auth # Require authentication for agent access
+        - auth
+        - queue_ro # Require read access to at least one queue
     routes:
         # Agent tickets list page
         - path: /tickets
@@ -28,108 +29,165 @@ spec:
         - path: /tickets/:id/reply
           method: POST
           handler: handleAgentTicketReply
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
           description: "Process customer reply to ticket"
 
         # Agent internal note
         - path: /tickets/:id/note
           method: POST
           handler: handleAgentTicketNote
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
           description: "Add internal note to ticket"
 
         # Agent phone call record
         - path: /tickets/:id/phone
           method: POST
           handler: handleAgentTicketPhone
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
           description: "Record phone call for ticket"
 
         # Update ticket status
         - path: /tickets/:id/status
           method: POST
           handler: handleAgentTicketStatus
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access
           description: "Update ticket status"
 
         # Assign ticket to agent
         - path: /tickets/:id/assign
           method: POST
           handler: handleAgentTicketAssign
+          middleware:
+              - auth
+              - ticket_access_owner # Require owner permission
           description: "Assign ticket to specific agent"
 
         # Update ticket priority
         - path: /tickets/:id/priority
           method: POST
           handler: handleAgentTicketPriority
+          middleware:
+              - auth
+              - ticket_access_priority # Require priority permission
           description: "Update ticket priority"
 
         # Update ticket queue
         - path: /tickets/:id/queue
           method: POST
           handler: handleAgentTicketQueue
+          middleware:
+              - auth
+              - ticket_access_move_into # Require move_into permission on source
           description: "Move ticket to different queue"
 
         # Merge tickets
         - path: /tickets/:id/merge
           method: POST
           handler: handleAgentTicketMerge
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access
           description: "Merge ticket with another ticket"
 
         # Split ticket - using existing handler for now
         - path: /tickets/:id/split
           method: POST
           handler: handleAgentTicketNote
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access
           description: "Split ticket into multiple tickets (temporary)"
 
         # Customer users for ticket
         - path: /tickets/:id/customer-users
           method: GET
           handler: handleTicketCustomerUsers
+          middleware:
+              - auth
+              - ticket_access_ro # Require read access
           description: "Get customer users associated with ticket"
 
         # Ticket zoom fragments (HTMX)
         - path: /tickets/:id/history
           method: GET
           handler: handleTicketHistoryFragment
+          middleware:
+              - auth
+              - ticket_access_ro # Require read access
           description: "HTMX fragment: ticket history"
 
         - path: /tickets/:id/links
           method: GET
           handler: handleTicketLinksFragment
+          middleware:
+              - auth
+              - ticket_access_ro # Require read access
           description: "HTMX fragment: ticket links"
 
         # Save draft for ticket
         - path: /tickets/:id/draft
           method: POST
           handler: handleAgentTicketDraft
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
           description: "Save draft reply for ticket"
 
         # Bulk ticket actions
         - path: /tickets/bulk/status
           method: POST
           handler: handleBulkTicketStatus
+          middleware:
+              - auth
+              - queue_rw # Require read-write on at least one queue
           description: "Bulk update ticket status"
 
         - path: /tickets/bulk/priority
           method: POST
           handler: handleBulkTicketPriority
+          middleware:
+              - auth
+              - queue_rw # Require read-write on at least one queue
           description: "Bulk update ticket priority"
 
         - path: /tickets/bulk/queue
           method: POST
           handler: handleBulkTicketQueue
+          middleware:
+              - auth
+              - queue_rw # Require read-write on at least one queue
           description: "Bulk move tickets to queue"
 
         - path: /tickets/bulk/assign
           method: POST
           handler: handleBulkTicketAssign
+          middleware:
+              - auth
+              - queue_rw # Require read-write on at least one queue
           description: "Bulk assign tickets to agent"
 
         - path: /tickets/bulk/lock
           method: POST
           handler: handleBulkTicketLock
+          middleware:
+              - auth
+              - queue_rw # Require read-write on at least one queue
           description: "Bulk lock/unlock tickets"
 
         - path: /tickets/bulk/merge
           method: POST
           handler: handleBulkTicketMerge
+          middleware:
+              - auth
+              - queue_rw # Require read-write on at least one queue
           description: "Bulk merge tickets into target"
 
         - path: /api/bulk-options

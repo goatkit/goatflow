@@ -221,7 +221,7 @@ func isUniqueTNError(err error) bool {
 // GetByID retrieves a ticket by its ID.
 func (r *TicketRepository) GetByID(id uint) (*models.Ticket, error) {
 	query := `
-		SELECT 
+		SELECT
 			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
@@ -273,7 +273,7 @@ func (r *TicketRepository) GetByID(id uint) (*models.Ticket, error) {
 // GetByTN retrieves a ticket by its ticket number.
 func (r *TicketRepository) GetByTN(tn string) (*models.Ticket, error) {
 	query := `
-		SELECT 
+		SELECT
 			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
@@ -436,7 +436,7 @@ func (r *TicketRepository) List(req *models.TicketListRequest) (*models.TicketLi
 	WHERE 1=1`
 	countQuery := `SELECT COUNT(*) ` + baseQuery
 	selectQuery := `
-		SELECT 
+		SELECT
 			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
@@ -497,6 +497,16 @@ func (r *TicketRepository) List(req *models.TicketListRequest) (*models.TicketLi
 	if req.EndDate != nil {
 		filters = append(filters, " AND t.create_time <= ?")
 		args = append(args, *req.EndDate)
+	}
+
+	// Filter by accessible queue IDs (permission filtering)
+	if len(req.AccessibleQueueIDs) > 0 {
+		placeholders := make([]string, len(req.AccessibleQueueIDs))
+		for i, qid := range req.AccessibleQueueIDs {
+			placeholders[i] = "?"
+			args = append(args, qid)
+		}
+		filters = append(filters, " AND t.queue_id IN ("+strings.Join(placeholders, ",")+")")
 	}
 
 	filterString := strings.Join(filters, "")
@@ -582,7 +592,7 @@ func (r *TicketRepository) List(req *models.TicketListRequest) (*models.TicketLi
 // GetTicketsByCustomer retrieves all tickets for a specific customer.
 func (r *TicketRepository) GetTicketsByCustomer(customerID uint, includeArchived bool) ([]models.Ticket, error) {
 	query := `
-		SELECT 
+		SELECT
 			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
@@ -627,7 +637,7 @@ func (r *TicketRepository) GetTicketsByCustomer(customerID uint, includeArchived
 // GetTicketsByOwner retrieves all tickets assigned to a specific user.
 func (r *TicketRepository) GetTicketsByOwner(ownerID uint, includeArchived bool) ([]models.Ticket, error) {
 	query := `
-		SELECT 
+		SELECT
 			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
@@ -672,7 +682,7 @@ func (r *TicketRepository) GetTicketsByOwner(ownerID uint, includeArchived bool)
 // GetTicketWithRelations retrieves a ticket with all related data.
 func (r *TicketRepository) GetTicketWithRelations(id uint) (*models.Ticket, error) {
 	query := `
-		SELECT 
+		SELECT
 			t.id, t.tn, t.title, t.queue_id, t.ticket_lock_id, t.type_id,
 			t.service_id, t.sla_id, t.user_id, t.responsible_user_id,
 			t.customer_id, t.customer_user_id, t.ticket_state_id,
@@ -751,7 +761,7 @@ func (r *TicketRepository) GetTicketWithRelations(id uint) (*models.Ticket, erro
 // LockTicket locks a ticket for a specific user.
 func (r *TicketRepository) LockTicket(ticketID uint, userID uint, lockType int) error {
 	query := `
-		UPDATE ticket 
+		UPDATE ticket
 		SET ticket_lock_id = ?, user_id = ?, change_time = ?, change_by = ?
 		WHERE id = ? AND ticket_lock_id = ?`
 
@@ -787,7 +797,7 @@ func (r *TicketRepository) LockTicket(ticketID uint, userID uint, lockType int) 
 // UnlockTicket unlocks a ticket.
 func (r *TicketRepository) UnlockTicket(ticketID uint, userID uint) error {
 	query := `
-		UPDATE ticket 
+		UPDATE ticket
 		SET ticket_lock_id = ?, change_time = ?, change_by = ?
 		WHERE id = ?`
 
@@ -808,7 +818,7 @@ func (r *TicketRepository) UnlockTicket(ticketID uint, userID uint) error {
 // ArchiveTicket archives a ticket.
 func (r *TicketRepository) ArchiveTicket(ticketID uint, userID uint) error {
 	query := `
-		UPDATE ticket 
+		UPDATE ticket
 		SET archive_flag = 1, change_time = ?, change_by = ?
 		WHERE id = ?`
 
@@ -822,7 +832,7 @@ func (r *TicketRepository) ArchiveTicket(ticketID uint, userID uint) error {
 // RestoreTicket restores an archived ticket.
 func (r *TicketRepository) RestoreTicket(ticketID uint, userID uint) error {
 	query := `
-		UPDATE ticket 
+		UPDATE ticket
 		SET archive_flag = 0, change_time = ?, change_by = ?
 		WHERE id = ?`
 
@@ -836,7 +846,7 @@ func (r *TicketRepository) RestoreTicket(ticketID uint, userID uint) error {
 // UpdateStatus updates the status of a ticket.
 func (r *TicketRepository) UpdateStatus(ticketID uint, stateID uint, userID uint) error {
 	query := `
-		UPDATE ticket 
+		UPDATE ticket
 		SET ticket_state_id = ?, change_time = ?, change_by = ?
 		WHERE id = ?`
 
@@ -850,7 +860,7 @@ func (r *TicketRepository) UpdateStatus(ticketID uint, stateID uint, userID uint
 // UpdatePriority updates the priority of a ticket.
 func (r *TicketRepository) UpdatePriority(ticketID uint, priorityID uint, userID uint) error {
 	query := `
-		UPDATE ticket 
+		UPDATE ticket
 		SET ticket_priority_id = ?, change_time = ?, change_by = ?
 		WHERE id = ?`
 
@@ -864,7 +874,7 @@ func (r *TicketRepository) UpdatePriority(ticketID uint, priorityID uint, userID
 // UpdateQueue transfers a ticket to a different queue.
 func (r *TicketRepository) UpdateQueue(ticketID uint, queueID uint, userID uint) error {
 	query := `
-		UPDATE ticket 
+		UPDATE ticket
 		SET queue_id = ?, change_time = ?, change_by = ?
 		WHERE id = ?`
 
@@ -1015,7 +1025,7 @@ func (r *TicketRepository) GetTicketPriorities() ([]models.TicketPriority, error
 func (r *TicketRepository) GetByTicketNumber(ticketNumber string) (*models.Ticket, error) {
 	var ticket models.Ticket
 	query := `
-		SELECT 
+		SELECT
 			id, tn, title, queue_id, ticket_lock_id, type_id,
 			service_id, sla_id, user_id, responsible_user_id, customer_id,
 			customer_user_id, ticket_state_id, ticket_priority_id, until_time,
@@ -1077,7 +1087,7 @@ func (r *TicketRepository) Count() (int, error) {
 func (r *TicketRepository) CountByStatus(status string) (int, error) {
 	var count int
 	query := `
-		SELECT COUNT(*) 
+		SELECT COUNT(*)
 		FROM ticket t
 		JOIN ticket_state ts ON t.ticket_state_id = ts.id
 		WHERE ts.name = ?

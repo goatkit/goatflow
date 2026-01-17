@@ -46,11 +46,78 @@ func handleQueues(c *gin.Context) {
 	search := strings.TrimSpace(c.Query("search"))
 	searchLower := strings.ToLower(search)
 
+	// Get user ID and check if admin
+	userID := uint(0)
+	if val, exists := c.Get("user_id"); exists {
+		switch v := val.(type) {
+		case uint:
+			userID = v
+		case int:
+			userID = uint(v)
+		case int64:
+			userID = uint(v)
+		case uint64:
+			userID = uint(v)
+		}
+	}
+
+	// Check if user is admin (admins see all queues)
+	isAdmin := false
+	if userID > 0 {
+		var adminCheck bool
+		adminErr := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT EXISTS(
+				SELECT 1 FROM group_user gu
+				JOIN groups g ON gu.group_id = g.id
+				WHERE gu.user_id = ? AND g.name = 'admin'
+			)
+		`), userID).Scan(&adminCheck)
+		if adminErr == nil && adminCheck {
+			isAdmin = true
+		}
+	}
+
 	queueRepo := repository.NewQueueRepository(db)
-	queues, err := queueRepo.List()
-	if err != nil {
-		sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch queues")
-		return
+	var queues []*models.Queue
+
+	if isAdmin {
+		// Admin sees all queues
+		queues, err = queueRepo.List()
+		if err != nil {
+			sendErrorResponse(c, http.StatusInternalServerError, "Failed to fetch queues")
+			return
+		}
+	} else {
+		// Non-admin: only show queues user has access to through group membership
+		// Get accessible queue IDs first
+		accessibleQueueIDs := []uint{}
+		rows, qErr := db.Query(database.ConvertPlaceholders(`
+			SELECT DISTINCT q.id FROM queue q
+			WHERE q.group_id IN (
+				SELECT group_id FROM group_user WHERE user_id = ?
+			)
+			ORDER BY q.name
+		`), userID)
+		if qErr == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var qid uint
+				if err := rows.Scan(&qid); err == nil {
+					accessibleQueueIDs = append(accessibleQueueIDs, qid)
+				}
+			}
+			if err := rows.Err(); err != nil {
+				log.Printf("error iterating accessible queue IDs: %v", err)
+			}
+		}
+
+		// Now fetch queue details for accessible IDs
+		for _, qid := range accessibleQueueIDs {
+			q, qErr := queueRepo.GetByID(qid)
+			if qErr == nil {
+				queues = append(queues, q)
+			}
+		}
 	}
 
 	// Build stats: map queueID -> counts

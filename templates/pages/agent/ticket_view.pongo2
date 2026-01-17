@@ -178,23 +178,23 @@
             <div class="font-medium">
                 {% if ticket.pending_reminder_has_time %}
                     {% if ticket.pending_reminder_overdue %}
-                        Reminder overdue
+                        {{ t("tickets.pending_reminder.overdue")|default:"Reminder overdue" }}
                     {% else %}
-                        Reminder scheduled
+                        {{ t("tickets.pending_reminder.scheduled")|default:"Reminder scheduled" }}
                     {% endif %}
                 {% else %}
-                    Reminder not scheduled
+                    {{ t("tickets.pending_reminder.not_scheduled")|default:"Reminder not scheduled" }}
                 {% endif %}
             </div>
             <p class="mt-1">
                 {% if ticket.pending_reminder_has_time %}
                     {% if ticket.pending_reminder_overdue %}
-                        Reminder was scheduled for <span class="font-semibold">{{ ticket.pending_reminder_at }}</span>{% if ticket.pending_reminder_relative and ticket.pending_reminder_at_iso %} (<span data-relative-time data-mode="duration" data-direction="past" data-timestamp="{{ ticket.pending_reminder_at_iso }}">{{ ticket.pending_reminder_relative }}</span> ago){% elif ticket.pending_reminder_relative %} ({{ ticket.pending_reminder_relative }} ago){% endif %}.
+                        {{ t("tickets.pending_reminder.was_scheduled_for")|default:"Reminder was scheduled for" }} <span class="font-semibold">{{ ticket.pending_reminder_at }}</span>{% if ticket.pending_reminder_relative and ticket.pending_reminder_at_iso %} (<span data-relative-time data-mode="duration" data-direction="past" data-timestamp="{{ ticket.pending_reminder_at_iso }}">{{ ticket.pending_reminder_relative }}</span> {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% elif ticket.pending_reminder_relative %} ({{ ticket.pending_reminder_relative }} {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% endif %}.
                     {% else %}
-                        Ticket will re-open at <span class="font-semibold">{{ ticket.pending_reminder_at }}</span>{% if ticket.pending_reminder_relative and ticket.pending_reminder_at_iso %} (in <span data-relative-time data-mode="duration" data-direction="future" data-timestamp="{{ ticket.pending_reminder_at_iso }}">{{ ticket.pending_reminder_relative }}</span>){% elif ticket.pending_reminder_relative %} (in {{ ticket.pending_reminder_relative }}){% endif %}.
+                        {{ t("tickets.pending_reminder.will_reopen_at")|default:"Ticket will re-open at" }} <span class="font-semibold">{{ ticket.pending_reminder_at }}</span>{% if ticket.pending_reminder_relative and ticket.pending_reminder_at_iso %} ({{ t("tickets.pending_reminder.in")|default:"in" }} <span data-relative-time data-mode="duration" data-direction="future" data-timestamp="{{ ticket.pending_reminder_at_iso }}">{{ ticket.pending_reminder_relative }}</span>){% elif ticket.pending_reminder_relative %} ({{ t("tickets.pending_reminder.in")|default:"in" }} {{ ticket.pending_reminder_relative }}){% endif %}.
                     {% endif %}
                 {% else %}
-                    {{ ticket.pending_reminder_message|default:"No reminder time scheduled." }}
+                    {{ ticket.pending_reminder_message|default:t("tickets.pending_reminder.no_time_scheduled")|default:"No reminder time scheduled." }}
                 {% endif %}
             </p>
         </div>
@@ -206,16 +206,16 @@
         <div class="rounded-md border p-4 text-sm {% if ticket.auto_close_overdue %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-900 dark:text-red-100{% else %}border-amber-200 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100{% endif %}">
             <div class="font-medium">
                 {% if ticket.auto_close_overdue %}
-                    Auto-close overdue
+                    {{ t("tickets.auto_close.overdue")|default:"Auto-close overdue" }}
                 {% else %}
-                    Auto-close scheduled
+                    {{ t("tickets.auto_close.scheduled")|default:"Auto-close scheduled" }}
                 {% endif %}
             </div>
             <p class="mt-1">
                 {% if ticket.auto_close_overdue %}
-                    Ticket should have auto-closed at <span class="font-semibold">{{ ticket.auto_close_at }}</span>{% if ticket.auto_close_relative and ticket.auto_close_at_iso %} (<span data-relative-time data-mode="duration" data-direction="past" data-timestamp="{{ ticket.auto_close_at_iso }}">{{ ticket.auto_close_relative }}</span> ago){% elif ticket.auto_close_relative %} ({{ ticket.auto_close_relative }} ago){% endif %}.
+                    {{ t("tickets.auto_close.should_have_closed_at")|default:"Ticket should have auto-closed at" }} <span class="font-semibold">{{ ticket.auto_close_at }}</span>{% if ticket.auto_close_relative and ticket.auto_close_at_iso %} (<span data-relative-time data-mode="duration" data-direction="past" data-timestamp="{{ ticket.auto_close_at_iso }}">{{ ticket.auto_close_relative }}</span> {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% elif ticket.auto_close_relative %} ({{ ticket.auto_close_relative }} {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% endif %}.
                 {% else %}
-                    Ticket will auto-close{% if ticket.auto_close_pending %} while in pending auto close state{% endif %} at <span class="font-semibold">{{ ticket.auto_close_at }}</span>{% if ticket.auto_close_relative and ticket.auto_close_at_iso %} (in <span data-relative-time data-mode="duration" data-direction="future" data-timestamp="{{ ticket.auto_close_at_iso }}">{{ ticket.auto_close_relative }}</span>){% elif ticket.auto_close_relative %} (in {{ ticket.auto_close_relative }}){% endif %}.
+                    {{ t("tickets.auto_close.will_close_at")|default:"Ticket will auto-close" }}{% if ticket.auto_close_pending %} {{ t("tickets.auto_close.while_pending")|default:"while in pending auto close state" }}{% endif %} {{ t("tickets.auto_close.at")|default:"at" }} <span class="font-semibold">{{ ticket.auto_close_at }}</span>{% if ticket.auto_close_relative and ticket.auto_close_at_iso %} ({{ t("tickets.pending_reminder.in")|default:"in" }} <span data-relative-time data-mode="duration" data-direction="future" data-timestamp="{{ ticket.auto_close_at_iso }}">{{ ticket.auto_close_relative }}</span>){% elif ticket.auto_close_relative %} ({{ t("tickets.pending_reminder.in")|default:"in" }} {{ ticket.auto_close_relative }}){% endif %}.
                 {% endif %}
             </p>
         </div>
@@ -649,13 +649,13 @@
                         </div>
                         <div id="pending-help-text" class="text-sm text-gray-600 dark:text-gray-400">
                             <div id="pending-reminder-help" style="display: none;">
-                                <strong>Pending Reminder:</strong> Ticket will return to "open" state at specified time.
+                                <strong>{{ t("tickets.pending_reminder.title")|default:"Pending Reminder" }}:</strong> {{ t("tickets.pending_reminder.help")|default:"Ticket will return to \"open\" state at specified time." }}
                             </div>
                             <div id="pending-auto-close-plus-help" style="display: none;">
-                                <strong>Pending Auto Close+:</strong> Ticket will close automatically if no customer response by specified time.
+                                <strong>{{ t("tickets.auto_close.plus_title")|default:"Pending Auto Close+" }}:</strong> {{ t("tickets.auto_close.plus_help")|default:"Ticket will close automatically if no customer response by specified time." }}
                             </div>
                             <div id="pending-auto-close-minus-help" style="display: none;">
-                                <strong>Pending Auto Close-:</strong> Ticket will close automatically at specified time regardless of activity.
+                                <strong>{{ t("tickets.auto_close.minus_title")|default:"Pending Auto Close-" }}:</strong> {{ t("tickets.auto_close.minus_help")|default:"Ticket will close automatically at specified time regardless of activity." }}
                             </div>
                         </div>
                     </div>
