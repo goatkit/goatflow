@@ -379,7 +379,6 @@ function initTiptapEditor(elementId, options = {}) {
 
         // Get all toolbar sections
         const toolbarSections = toolbar.querySelectorAll(".flex.gap-1");
-        const actionsSection = toolbar.querySelector(".flex.gap-1:last-child");
 
         if (currentMode === "markdown") {
             // Hide all sections except the last one (Actions) which contains mode toggle, undo, redo, clear format
