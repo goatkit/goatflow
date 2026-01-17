@@ -4,6 +4,52 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.1] - 2026-01-17
+
+### Added
+- **Pending Reminder/Auto-Close i18n**: Full internationalization for pending reminder and auto-close ticket state popups
+  - Added translation keys for `tickets.pending_reminder.*` (overdue, scheduled, not_scheduled, was_scheduled_for, will_reopen_at, ago, in, no_time_scheduled, title, help)
+  - Added translation keys for `tickets.auto_close.*` (overdue, scheduled, should_have_closed_at, will_close_at, while_pending, at, plus_title, plus_help, minus_title, minus_help)
+  - Translations added for all 15 supported languages including RTL languages (Arabic, Hebrew, Persian, Urdu)
+  - Files: `internal/i18n/translations/*.json`, `templates/pages/ticket_detail.pongo2`, `templates/pages/agent/ticket_view.pongo2`
+- **Group-Based Queue Permission Enforcement**: Security-first middleware-layer enforcement of group-based queue permissions (Issue #160, OTRS-compatible)
+  - **Architecture**: Permissions enforced at routing/middleware layer, not in handlers - secure by default
+  - Permission types: `ro` (read-only), `rw` (full access - supersedes all), `create`, `move_into`, `note`, `owner`, `priority`
+  - **Middleware Registration** (`internal/routing/handlers.go`):
+    - `queue_ro`, `queue_rw`, `queue_create` - require access to at least one queue
+    - `queue_access_*` - check specific queue from URL/query param
+    - `ticket_access_*` - check ticket's queue from ticket ID/number in URL
+  - **Route Protection** (YAML declarative): Routes declare required permissions in `middleware` list
+    - `/ticket/:id` requires `ticket_access_ro`
+    - `/tickets/:id/note` requires `ticket_access_note`
+    - `/ticket/new` requires `queue_create`
+    - Dashboard/ticket list require `queue_ro`
+  - Queue Access Service (`internal/service/queue_access_service.go`): Core permission logic combining direct (group_user) and role-based (role_user → group_role) permissions
+  - Context enrichment: Middleware sets `is_queue_admin` and `accessible_queue_ids` for downstream handlers
+  - Ticket ID/number support: Middleware handles both numeric IDs and ticket numbers (tn field)
+  - Full i18n support for queue permission messages in all 15 languages
+  - Unit tests for service and middleware
+
+### Changed
+- **OTRS-Compatible Template Variable Substitution**: Unmatched template variables (`<OTRS_*>` and `<GOTRS_*>`) are now replaced with `-` instead of left unchanged
+  - Matches OTRS behavior for cleaner rendered output
+  - Handles both raw tags (`<GOTRS_VAR>`) and HTML-encoded tags (`&lt;GOTRS_VAR&gt;`)
+  - Files: `internal/api/agent_templates_handlers.go`
+
+### Fixed
+- **Template Selector Editor Mode**: Fixed HTML templates not switching the rich text editor to HTML/richtext mode
+  - Added HTML content auto-detection when `content_type` is incorrectly set to `text/plain`
+  - Detects HTML tags in content and switches editor mode accordingly
+  - File: `templates/partials/template_selector.pongo2`
+- **Note Submission "Please enter note content" Error**: Fixed form submission failing with content validation error
+  - Issue was that programmatic `setContent()` in TipTap editor didn't trigger the `onUpdate` callback
+  - Added explicit manual sync to hidden textarea after setting template content
+  - File: `static/js/tiptap-editor.js`
+- **Template Variable Substitution for HTML-Encoded Tags**: Fixed GOTRS/OTRS variables not being substituted when stored as HTML entities
+  - Template content in database had `&lt;GOTRS_*&gt;` instead of `<GOTRS_*>`
+  - Now handles both raw and HTML-encoded template variable formats
+  - File: `internal/api/agent_templates_handlers.go`
+
 ## [0.6.0] - 2026-01-16
 
 ### Added

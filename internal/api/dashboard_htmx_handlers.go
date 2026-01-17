@@ -90,7 +90,7 @@ func handleDashboard(c *gin.Context) {
 		"avgResponseTime": "N/A", // Would require more complex calculation
 	}
 
-	// Get recent tickets from database
+	// Get recent tickets from database (filtered by queue permissions)
 	// ticketRepo already created above
 	listReq := &models.TicketListRequest{
 		Page:      1,
@@ -98,6 +98,23 @@ func handleDashboard(c *gin.Context) {
 		SortBy:    "create_time",
 		SortOrder: "desc",
 	}
+
+	// Queue permission filtering - use context values from middleware
+	isQueueAdmin := false
+	if val, exists := c.Get("is_queue_admin"); exists {
+		if admin, ok := val.(bool); ok {
+			isQueueAdmin = admin
+		}
+	}
+
+	if !isQueueAdmin {
+		if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
+			if queueIDs, ok := accessibleQueueIDs.([]uint); ok {
+				listReq.AccessibleQueueIDs = queueIDs
+			}
+		}
+	}
+
 	ticketResponse, err := ticketRepo.List(listReq)
 	tickets := []models.Ticket{}
 	if err == nil && ticketResponse != nil {
@@ -229,6 +246,30 @@ func handleDashboardStats(c *gin.Context) {
 		return
 	}
 
+	// Queue permission filtering - use context values from middleware
+	var queueFilter string
+	var queueArgs []interface{}
+
+	isQueueAdmin := false
+	if val, exists := c.Get("is_queue_admin"); exists {
+		if admin, ok := val.(bool); ok {
+			isQueueAdmin = admin
+		}
+	}
+
+	if !isQueueAdmin {
+		if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
+			if queueIDs, ok := accessibleQueueIDs.([]uint); ok && len(queueIDs) > 0 {
+				placeholders := make([]string, len(queueIDs))
+				for i, qid := range queueIDs {
+					placeholders[i] = "?"
+					queueArgs = append(queueArgs, qid)
+				}
+				queueFilter = " AND queue_id IN (" + strings.Join(placeholders, ",") + ")"
+			}
+		}
+	}
+
 	var openTickets, pendingTickets, closedToday int
 
 	// Get actual ticket state IDs from database instead of hardcoded values
@@ -237,24 +278,25 @@ func handleDashboardStats(c *gin.Context) {
 	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'pending'").Scan(&pendingStateID) //nolint:errcheck // Defaults to 0
 	_ = db.QueryRow("SELECT id FROM ticket_state WHERE name = 'closed'").Scan(&closedStateID)   //nolint:errcheck // Defaults to 0
 
-	// Count open tickets
+	// Count open tickets (with queue filter)
 	if openStateID > 0 {
-		_ = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?", openStateID).Scan(&openTickets) //nolint:errcheck // Defaults to 0
+		query := "SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?" + queueFilter
+		args := append([]interface{}{openStateID}, queueArgs...)
+		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&openTickets) //nolint:errcheck // Defaults to 0
 	}
 
-	// Count pending tickets
+	// Count pending tickets (with queue filter)
 	if pendingStateID > 0 {
-		_ = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?", pendingStateID).Scan(&pendingTickets) //nolint:errcheck // Defaults to 0
+		query := "SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ?" + queueFilter
+		args := append([]interface{}{pendingStateID}, queueArgs...)
+		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&pendingTickets) //nolint:errcheck // Defaults to 0
 	}
 
-	// Count tickets closed today
+	// Count tickets closed today (with queue filter)
 	if closedStateID > 0 {
-		row := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT COUNT(*) FROM ticket
-			WHERE ticket_state_id = ?
-			AND DATE(change_time) = CURDATE()
-		`), closedStateID)
-		_ = row.Scan(&closedToday) //nolint:errcheck // Defaults to 0
+		query := `SELECT COUNT(*) FROM ticket WHERE ticket_state_id = ? AND DATE(change_time) = CURDATE()` + queueFilter
+		args := append([]interface{}{closedStateID}, queueArgs...)
+		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&closedToday) //nolint:errcheck // Defaults to 0
 	}
 
 	// Return HTML for HTMX
@@ -299,6 +341,23 @@ func handleRecentTickets(c *gin.Context) {
 		SortBy:    "create_time",
 		SortOrder: "desc",
 	}
+
+	// SECURITY: Queue permission filtering - use context values from middleware
+	isQueueAdmin := false
+	if val, exists := c.Get("is_queue_admin"); exists {
+		if admin, ok := val.(bool); ok {
+			isQueueAdmin = admin
+		}
+	}
+
+	if !isQueueAdmin {
+		if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
+			if queueIDs, ok := accessibleQueueIDs.([]uint); ok {
+				listReq.AccessibleQueueIDs = queueIDs
+			}
+		}
+	}
+
 	ticketResponse, err := ticketRepo.List(listReq)
 	tickets := []models.Ticket{}
 	if err == nil && ticketResponse != nil {
@@ -422,8 +481,25 @@ func dashboard_queue_status(c *gin.Context) {
 		return
 	}
 
-	// Query queues with ticket counts by state
-	rows, err := db.Query(`
+	// Queue permission filtering - use context values from middleware
+	var accessibleQueueIDs []uint
+	isQueueAdmin := false
+	if val, exists := c.Get("is_queue_admin"); exists {
+		if admin, ok := val.(bool); ok {
+			isQueueAdmin = admin
+		}
+	}
+
+	if !isQueueAdmin {
+		if queueIDs, exists := c.Get("accessible_queue_ids"); exists {
+			if ids, ok := queueIDs.([]uint); ok {
+				accessibleQueueIDs = ids
+			}
+		}
+	}
+
+	// Build query with optional queue filtering
+	query := `
 		SELECT q.id, q.name,
 		       SUM(CASE WHEN t.ticket_state_id = 1 THEN 1 ELSE 0 END) as new_count,
 		       SUM(CASE WHEN t.ticket_state_id = 2 THEN 1 ELSE 0 END) as open_count,
@@ -431,10 +507,25 @@ func dashboard_queue_status(c *gin.Context) {
 		       SUM(CASE WHEN t.ticket_state_id = 4 THEN 1 ELSE 0 END) as closed_count
 		FROM queue q
 		LEFT JOIN ticket t ON t.queue_id = q.id
-		WHERE q.valid_id = 1
+		WHERE q.valid_id = 1`
+
+	var args []interface{}
+	if len(accessibleQueueIDs) > 0 {
+		placeholders := make([]string, len(accessibleQueueIDs))
+		for i, qid := range accessibleQueueIDs {
+			placeholders[i] = "?"
+			args = append(args, qid)
+		}
+		query += " AND q.id IN (" + strings.Join(placeholders, ",") + ")"
+	}
+
+	query += `
 		GROUP BY q.id, q.name
 		ORDER BY q.name
-		LIMIT 10`)
+		LIMIT 10`
+
+	// Query queues with ticket counts by state
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 
 	if err != nil {
 		// Return JSON error on query failure

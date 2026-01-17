@@ -3,239 +3,290 @@
 apiVersion: v1
 kind: RouteGroup
 metadata:
-  name: api-v1-public
-  description: "REST API v1 public endpoints"
-  namespace: default
-  enabled: true
+    name: api-v1-public
+    description: "REST API v1 public endpoints"
+    namespace: default
+    enabled: true
 spec:
-  prefix: /api/v1
-  middleware: []  # No auth required
-  routes:
-    # Authentication endpoints (public)
-    - path: /auth/login
-      method: POST
-      handler: HandleLoginAPI
-      description: "Authenticate user and return JWT tokens"
+    prefix: /api/v1
+    middleware: [] # No auth required
+    routes:
+        # Authentication endpoints (public)
+        - path: /auth/login
+          method: POST
+          handler: HandleLoginAPI
+          description: "Authenticate user and return JWT tokens"
 ---
 # API v1 Protected Routes Configuration
 apiVersion: v1
 kind: RouteGroup
 metadata:
-  name: api-v1-protected
-  description: "REST API v1 protected endpoints"
-  namespace: default
-  enabled: true
+    name: api-v1-protected
+    description: "REST API v1 protected endpoints"
+    namespace: default
+    enabled: true
 spec:
-  prefix: /api/v1
-  middleware:
-    - auth
-  routes:
-    - path: /tickets
-      method: GET
-      handler: HandleListTicketsAPI
-      description: "List tickets"
-    - path: /tickets
-      method: POST
-      handler: HandleCreateTicketAPI
-      description: "Create ticket"
-    - path: /tickets/:id
-      method: GET
-      handler: HandleGetTicketAPI
-      description: "Get ticket by ID"
-    - path: /tickets/:id
-      method: PUT
-      handler: HandleUpdateTicketAPI
-      description: "Update ticket"
-    - path: /tickets/:id
-      method: DELETE
-      handler: HandleDeleteTicketAPI
-      description: "Delete ticket"
-    - path: /tickets/:id/reopen
-      method: POST
-      handler: HandleReopenTicketAPI
-      description: "Reopen ticket"
-    # Time accounting endpoint
-    - path: /tickets/:id/time
-      method: POST
-      handler: handleAddTicketTime
-      description: "Add time accounting entry to ticket"
-    # Article endpoints
-    - path: /tickets/:id/articles
-      method: GET
-      handler: HandleListArticlesAPI
-      description: "Get ticket articles"
-    - path: /tickets/:id/articles
-      method: POST
-      handler: HandleCreateArticleAPI
-      description: "Add article to ticket"
-    - path: /tickets/:id/articles/:article_id
-      method: GET
-      handler: HandleGetArticleAPI
-      description: "Get specific article"
-    # Internal notes endpoints
-    - path: /tickets/:id/internal-notes
-      method: GET
-      handler: HandleGetInternalNotes
-      description: "Get internal notes for a ticket"
-    - path: /tickets/:id/internal-notes
-      method: POST
-      handler: HandleCreateInternalNote
-      description: "Create internal note for a ticket"
-    - path: /tickets/:id/internal-notes/:note_id
-      method: PUT
-      handler: HandleUpdateInternalNote
-      description: "Update internal note"
-    - path: /tickets/:id/internal-notes/:note_id
-      method: DELETE
-      handler: HandleDeleteInternalNote
-      description: "Delete internal note"
-    # User endpoints
-    - path: /users
-      method: GET
-      handler: HandleListUsersAPI
-      description: "List users"
-    - path: /users/:id
-      method: GET
-      handler: HandleGetUserAPI
-      description: "Get user by ID"
-    - path: /users/me
-      method: GET
-      handler: HandleUserMeAPI
-      description: "Get current user"
-    # Group endpoints
-    - path: /groups
-      method: GET
-      handler: HandleListGroupsAPI
-      description: "List groups"
-    # Queue endpoints
-    - path: /queues
-      method: GET
-      handler: HandleListQueuesAPI
-      description: "List queues"
-    - path: /queues/:id
-      method: GET
-      handler: HandleGetQueueAPI
-      description: "Get queue by ID"
-    - path: /queues/:id/agents
-      method: GET
-      handler: HandleGetQueueAgentsAPI
-      description: "Get agents with permissions for queue"
-    # Priority endpoints
-    - path: /priorities
-      method: GET
-      handler: HandleListPrioritiesAPI
-      description: "List priorities"
-    - path: /priorities/:id
-      method: GET
-      handler: HandleGetPriorityAPI
-      description: "Get priority by ID"
-    # Types and states (add missing endpoints)
-    - path: /types
-      method: GET
-      handler: HandleListTypesAPI
-      description: "List ticket types"
-    - path: /states
-      method: GET
-      handler: HandleListStatesAPI
-      description: "List ticket states"
-    # Search endpoints
-    - path: /search
-      method: POST
-      handler: HandleSearchAPI
-      description: "Search tickets"
-    - path: /search/suggestions
-      method: GET
-      handler: HandleSearchSuggestionsAPI
-      description: "Search suggestions"
-    - path: /search/reindex
-      method: POST
-      handler: HandleReindexAPI
-      description: "Trigger search reindex"
-    - path: /search/health
-      method: GET
-      handler: HandleSearchHealthAPI
-      description: "Search health"
-    # User mutations
-    - path: /users
-      method: POST
-      handler: HandleCreateUserAPI
-      description: "Create user"
-    - path: /users/:id
-      method: PUT
-      handler: HandleUpdateUserAPI
-      description: "Update user"
-    - path: /users/:id
-      method: DELETE
-      handler: HandleDeleteUserAPI
-      description: "Delete user"
-    # Article mutations
-    - path: /tickets/:id/articles/:article_id
-      method: PUT
-      handler: HandleUpdateArticleAPI
-      description: "Update article"
-    - path: /tickets/:id/articles/:article_id
-      method: DELETE
-      handler: HandleDeleteArticleAPI
-      description: "Delete article"
-    # Queue mutations and extras
-    - path: /queues
-      method: POST
-      handler: HandleCreateQueueAPI
-      description: "Create queue"
-    - path: /queues/:id
-      method: PUT
-      handler: HandleUpdateQueueAPI
-      description: "Update queue"
-    - path: /queues/:id
-      method: DELETE
-      handler: HandleDeleteQueueAPI
-      description: "Delete queue"
-    - path: /queues/:id/stats
-      method: GET
-      handler: HandleGetQueueStatsAPI
-      description: "Queue ticket statistics"
-    - path: /queues/:id/groups
-      method: POST
-      handler: HandleAssignQueueGroupAPI
-      description: "Assign group to queue"
-    - path: /queues/:id/groups/:group_id
-      method: DELETE
-      handler: HandleRemoveQueueGroupAPI
-      description: "Remove group from queue"
-    # Email identity endpoints
-    - path: /system-addresses
-      method: GET
-      handler: HandleListSystemAddressesAPI
-      description: "List system addresses"
-    - path: /system-addresses
-      method: POST
-      handler: HandleCreateSystemAddressAPI
-      description: "Create system address"
-    - path: /system-addresses/:id
-      method: PUT
-      handler: HandleUpdateSystemAddressAPI
-      description: "Update system address"
-    - path: /salutations
-      method: GET
-      handler: HandleListSalutationsAPI
-      description: "List salutations"
-    - path: /salutations
-      method: POST
-      handler: HandleCreateSalutationAPI
-      description: "Create salutation"
-    - path: /salutations/:id
-      method: PUT
-      handler: HandleUpdateSalutationAPI
-      description: "Update salutation"
-    - path: /signatures
-      method: GET
-      handler: HandleListSignaturesAPI
-      description: "List signatures"
-    - path: /signatures
-      method: POST
-      handler: HandleCreateSignatureAPI
-      description: "Create signature"
-    - path: /signatures/:id
-      method: PUT
-      handler: HandleUpdateSignatureAPI
-      description: "Update signature"
+    prefix: /api/v1
+    middleware:
+        - auth
+    routes:
+        - path: /tickets
+          method: GET
+          handler: HandleListTicketsAPI
+          middleware:
+              - auth
+              - queue_ro # Require read access to at least one queue
+          description: "List tickets"
+        - path: /tickets
+          method: POST
+          handler: HandleCreateTicketAPI
+          middleware:
+              - auth
+              - queue_access_create # Require create access to target queue
+          description: "Create ticket"
+        - path: /tickets/:id
+          method: GET
+          handler: HandleGetTicketAPI
+          middleware:
+              - auth
+              - ticket_access_ro # Require read access to ticket's queue
+          description: "Get ticket by ID"
+        - path: /tickets/:id
+          method: PUT
+          handler: HandleUpdateTicketAPI
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access to ticket's queue
+          description: "Update ticket"
+        - path: /tickets/:id
+          method: DELETE
+          handler: HandleDeleteTicketAPI
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access to ticket's queue
+          description: "Delete ticket"
+        - path: /tickets/:id/reopen
+          method: POST
+          handler: HandleReopenTicketAPI
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access
+          description: "Reopen ticket"
+        # Time accounting endpoint
+        - path: /tickets/:id/time
+          method: POST
+          handler: handleAddTicketTime
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
+          description: "Add time accounting entry to ticket"
+        # Article endpoints
+        - path: /tickets/:id/articles
+          method: GET
+          handler: HandleListArticlesAPI
+          middleware:
+              - auth
+              - ticket_access_ro # Require read access
+          description: "Get ticket articles"
+        - path: /tickets/:id/articles
+          method: POST
+          handler: HandleCreateArticleAPI
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
+          description: "Add article to ticket"
+        - path: /tickets/:id/articles/:article_id
+          method: GET
+          handler: HandleGetArticleAPI
+          middleware:
+              - auth
+              - ticket_access_ro # Require read access
+          description: "Get specific article"
+        # Internal notes endpoints
+        - path: /tickets/:id/internal-notes
+          method: GET
+          handler: HandleGetInternalNotes
+          middleware:
+              - auth
+              - ticket_access_ro # Require read access
+          description: "Get internal notes for a ticket"
+        - path: /tickets/:id/internal-notes
+          method: POST
+          handler: HandleCreateInternalNote
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
+          description: "Create internal note for a ticket"
+        - path: /tickets/:id/internal-notes/:note_id
+          method: PUT
+          handler: HandleUpdateInternalNote
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
+          description: "Update internal note"
+        - path: /tickets/:id/internal-notes/:note_id
+          method: DELETE
+          handler: HandleDeleteInternalNote
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
+          description: "Delete internal note"
+        # User endpoints
+        - path: /users
+          method: GET
+          handler: HandleListUsersAPI
+          description: "List users"
+        - path: /users/:id
+          method: GET
+          handler: HandleGetUserAPI
+          description: "Get user by ID"
+        - path: /users/me
+          method: GET
+          handler: HandleUserMeAPI
+          description: "Get current user"
+        # Group endpoints
+        - path: /groups
+          method: GET
+          handler: HandleListGroupsAPI
+          description: "List groups"
+        # Queue endpoints
+        - path: /queues
+          method: GET
+          handler: HandleListQueuesAPI
+          middleware:
+              - auth
+              - queue_ro # Require read access to at least one queue
+          description: "List queues"
+        - path: /queues/:id
+          method: GET
+          handler: HandleGetQueueAPI
+          middleware:
+              - auth
+              - queue_access_ro # Require read access to the specific queue
+          description: "Get queue by ID"
+        - path: /queues/:id/agents
+          method: GET
+          handler: HandleGetQueueAgentsAPI
+          middleware:
+              - auth
+              - queue_access_ro # Require read access to the specific queue
+          description: "Get agents with permissions for queue"
+        # Priority endpoints
+        - path: /priorities
+          method: GET
+          handler: HandleListPrioritiesAPI
+          description: "List priorities"
+        - path: /priorities/:id
+          method: GET
+          handler: HandleGetPriorityAPI
+          description: "Get priority by ID"
+        # Types and states (add missing endpoints)
+        - path: /types
+          method: GET
+          handler: HandleListTypesAPI
+          description: "List ticket types"
+        - path: /states
+          method: GET
+          handler: HandleListStatesAPI
+          description: "List ticket states"
+        # Search endpoints
+        - path: /search
+          method: POST
+          handler: HandleSearchAPI
+          description: "Search tickets"
+        - path: /search/suggestions
+          method: GET
+          handler: HandleSearchSuggestionsAPI
+          description: "Search suggestions"
+        - path: /search/reindex
+          method: POST
+          handler: HandleReindexAPI
+          description: "Trigger search reindex"
+        - path: /search/health
+          method: GET
+          handler: HandleSearchHealthAPI
+          description: "Search health"
+        # User mutations
+        - path: /users
+          method: POST
+          handler: HandleCreateUserAPI
+          description: "Create user"
+        - path: /users/:id
+          method: PUT
+          handler: HandleUpdateUserAPI
+          description: "Update user"
+        - path: /users/:id
+          method: DELETE
+          handler: HandleDeleteUserAPI
+          description: "Delete user"
+        # Article mutations
+        - path: /tickets/:id/articles/:article_id
+          method: PUT
+          handler: HandleUpdateArticleAPI
+          description: "Update article"
+        - path: /tickets/:id/articles/:article_id
+          method: DELETE
+          handler: HandleDeleteArticleAPI
+          description: "Delete article"
+        # Queue mutations and extras
+        - path: /queues
+          method: POST
+          handler: HandleCreateQueueAPI
+          description: "Create queue"
+        - path: /queues/:id
+          method: PUT
+          handler: HandleUpdateQueueAPI
+          description: "Update queue"
+        - path: /queues/:id
+          method: DELETE
+          handler: HandleDeleteQueueAPI
+          description: "Delete queue"
+        - path: /queues/:id/stats
+          method: GET
+          handler: HandleGetQueueStatsAPI
+          description: "Queue ticket statistics"
+        - path: /queues/:id/groups
+          method: POST
+          handler: HandleAssignQueueGroupAPI
+          description: "Assign group to queue"
+        - path: /queues/:id/groups/:group_id
+          method: DELETE
+          handler: HandleRemoveQueueGroupAPI
+          description: "Remove group from queue"
+        # Email identity endpoints
+        - path: /system-addresses
+          method: GET
+          handler: HandleListSystemAddressesAPI
+          description: "List system addresses"
+        - path: /system-addresses
+          method: POST
+          handler: HandleCreateSystemAddressAPI
+          description: "Create system address"
+        - path: /system-addresses/:id
+          method: PUT
+          handler: HandleUpdateSystemAddressAPI
+          description: "Update system address"
+        - path: /salutations
+          method: GET
+          handler: HandleListSalutationsAPI
+          description: "List salutations"
+        - path: /salutations
+          method: POST
+          handler: HandleCreateSalutationAPI
+          description: "Create salutation"
+        - path: /salutations/:id
+          method: PUT
+          handler: HandleUpdateSalutationAPI
+          description: "Update salutation"
+        - path: /signatures
+          method: GET
+          handler: HandleListSignaturesAPI
+          description: "List signatures"
+        - path: /signatures
+          method: POST
+          handler: HandleCreateSignatureAPI
+          description: "Create signature"
+        - path: /signatures/:id
+          method: PUT
+          handler: HandleUpdateSignatureAPI
+          description: "Update signature"

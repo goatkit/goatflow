@@ -2125,7 +2125,31 @@
         "pending_until_help": "chaw' auto poSqa' poH wIv.",
         "pending_required": "loS DotlhmeyvaD poQlu'",
         "target_ticket_number": "DoS chaw' mI'",
-        "merge_target_placeholder": "muvmeH chaw' mI' lan"
+        "merge_target_placeholder": "muvmeH chaw' mI' lan",
+        "pending_reminder": {
+            "overdue": "qImHa' qaw",
+            "scheduled": "qaw wuqpu'",
+            "not_scheduled": "qaw wuqbe'pu'",
+            "was_scheduled_for": "qaw wuqpu' poH",
+            "will_reopen_at": "QIn poSmoH poH",
+            "ago": "ret",
+            "in": "pIq",
+            "no_time_scheduled": "qaw poH wuqbe'pu'.",
+            "title": "loS qaw",
+            "help": "QIn \"poS\" Dotlh chegh poH wuqpu'bogh."
+        },
+        "auto_close": {
+            "overdue": "qImHa' SoQmoH",
+            "scheduled": "SoQmoH wuqpu'",
+            "should_have_closed_at": "QIn SoQmoH 'e' poQ poH",
+            "will_close_at": "QIn SoQmoH",
+            "while_pending": "SoQmoH loS Dotlh",
+            "at": "poH",
+            "plus_title": "SoQmoH loS+",
+            "plus_help": "qaStaHvIS poH wuqpu'bogh jang qoch pagh QIn SoQmoH.",
+            "minus_title": "SoQmoH loS-",
+            "minus_help": "poH wuqpu'bogh QIn SoQmoH, Qu' pagh."
+        }
     },
     "tickets_form": {
         "subject_placeholder": "Qagh Del mach...",
@@ -2193,6 +2217,21 @@
         "title": "patlh",
         "title_placeholder": "DaH joq, joq'a', joqwI'",
         "username": "lo'wI' pong"
+    },
+    "queue_access": {
+        "denied": "tlhoy Dochvam 'ellaHbe'",
+        "no_queues": "tlhoymey 'ellaHbe'",
+        "error": "tlhoy chaw' 'ol lujlu'",
+        "permission_required": "tlhoy chaw' poQlu'",
+        "types": {
+            "ro": "laD neH",
+            "rw": "laD/ghItlh",
+            "create": "ta' chenmoH",
+            "move_into": "ta' vIH",
+            "note": "ghItlh chel",
+            "owner": "ghajwI' mojchoH",
+            "priority": "patmey choH"
+        }
     },
     "validation": {
         "alpha": "ngutlhmey neH ghaj net poQ",

@@ -3,98 +3,105 @@
 apiVersion: v1
 kind: RouteGroup
 metadata:
-  name: basic
-  description: "Basic system routes (root, health, metrics, etc.)"
-  namespace: default
-  enabled: true
+    name: basic
+    description: "Basic system routes (root, health, metrics, etc.)"
+    namespace: default
+    enabled: true
 spec:
-  prefix: ""
-  middleware: []
-  routes:
-    # Root path - redirect to login
-    - path: /
-      method: GET
-      handler: handleRoot
-      description: "Root path redirects to login"
+    prefix: ""
+    middleware: []
+    routes:
+        # Root path - redirect to login
+        - path: /
+          method: GET
+          handler: handleRoot
+          description: "Root path redirects to login"
 
-    # Health check endpoint
-    - path: /health
-      method: GET
-      handler: handleHealthCheck
-      description: "Basic health check endpoint"
+        # Health check endpoint
+        - path: /health
+          method: GET
+          handler: handleHealthCheck
+          description: "Basic health check endpoint"
 
-    # Detailed health check
-    - path: /health/detailed
-      method: GET
-      handler: handleDetailedHealthCheck
-      description: "Detailed health check with component status"
+        # Detailed health check
+        - path: /health/detailed
+          method: GET
+          handler: handleDetailedHealthCheck
+          description: "Detailed health check with component status"
 
-    # Metrics endpoint
-    - path: /metrics
-      method: GET
-      handler: handleMetrics
-      description: "Prometheus metrics endpoint"
+        # Metrics endpoint
+        - path: /metrics
+          method: GET
+          handler: handleMetrics
+          description: "Prometheus metrics endpoint"
 
-    # Queues redirect - redirects to appropriate queues based on user role
-    - path: /queues
-      method: GET
-      handler: handleQueuesRedirect
-      middleware:
-        - auth  # Require authentication to determine role
-      description: "Role-aware redirect/render for queues"
+        # Queues redirect - redirects to appropriate queues based on user role
+        - path: /queues
+          method: GET
+          handler: handleQueuesRedirect
+          middleware:
+              - auth
+              - queue_ro # Require read access to at least one queue
+          description: "Role-aware redirect/render for queues"
 
-    # Queue detail page - shows tickets filtered by queue
-    - path: /queues/:id
-      method: GET
-      handler: HandleQueueDetail
-      template: pages/tickets.pongo2
-      middleware:
-        - auth
-      description: "Display tickets filtered by specific queue"
+        # Queue detail page - shows tickets filtered by queue
+        - path: /queues/:id
+          method: GET
+          handler: HandleQueueDetail
+          template: pages/tickets.pongo2
+          middleware:
+              - auth
+              - queue_access_ro # Require read access to the specific queue
+          description: "Display tickets filtered by specific queue"
 
-    # Queue metadata partial (used by HX requests)
-    - path: /queues/:id/meta
-      method: GET
-      handler: handleQueueMetaPartial
-      middleware:
-        - auth
-      description: "Render queue metadata panel or JSON payload"
+        # Queue metadata partial (used by HX requests)
+        - path: /queues/:id/meta
+          method: GET
+          handler: handleQueueMetaPartial
+          middleware:
+              - auth
+              - queue_access_ro # Require read access to the specific queue
+          description: "Render queue metadata panel or JSON payload"
 
-    # Unified ticket detail view
-    - path: /ticket/:id
-      method: GET
-      handler: handleTicketDetail
-      middleware:
-        - auth
-      description: "Display ticket detail using the unified handler"
+        # Unified ticket detail view
+        - path: /ticket/:id
+          method: GET
+          handler: handleTicketDetail
+          middleware:
+              - auth
+              - ticket_access_ro # Require read access to ticket's queue
+          description: "Display ticket detail using the unified handler"
 
-    # Ticket creation routes
-    - path: /ticket/new
-      method: GET
-      handler: handleNewTicket
-      template: pages/tickets/new.pongo2
-      middleware:
-        - auth
-      description: "Redirect to email ticket creation form"
+        # Ticket creation routes
+        - path: /ticket/new
+          method: GET
+          handler: handleNewTicket
+          template: pages/tickets/new.pongo2
+          middleware:
+              - auth
+              - queue_create # Require create access to at least one queue
+          description: "Redirect to email ticket creation form"
 
-    - path: /ticket/new/email
-      method: GET
-      handler: handleNewEmailTicket
-      template: pages/tickets/new.pongo2
-      middleware:
-        - auth
-      description: "Display email ticket creation form"
+        - path: /ticket/new/email
+          method: GET
+          handler: handleNewEmailTicket
+          template: pages/tickets/new.pongo2
+          middleware:
+              - auth
+              - queue_create # Require create access to at least one queue
+          description: "Display email ticket creation form"
 
-    - path: /ticket/new/phone
-      method: GET
-      handler: handleNewPhoneTicket
-      template: pages/tickets/new.pongo2
-      middleware:
-        - auth
-      description: "Display phone ticket creation form"
+        - path: /ticket/new/phone
+          method: GET
+          handler: handleNewPhoneTicket
+          template: pages/tickets/new.pongo2
+          middleware:
+              - auth
+              - queue_create # Require create access to at least one queue
+          description: "Display phone ticket creation form"
 
-    # Lightweight liveness endpoint
-    - path: /healthz
-      method: GET
-      handler: handleHealthCheck
-      description: "Quick liveness probe"
+        # Lightweight liveness endpoint
+        - path: /healthz
+          method: GET
+          handler: handleHealthCheck
+          description: "Quick liveness probe"

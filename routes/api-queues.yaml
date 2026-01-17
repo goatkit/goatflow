@@ -3,36 +3,49 @@
 apiVersion: v1
 kind: RouteGroup
 metadata:
-  name: api-queues
-  description: "Queue API endpoints for frontend"
-  namespace: default
-  enabled: true
+    name: api-queues
+    description: "Queue API endpoints for frontend"
+    namespace: default
+    enabled: true
 spec:
-  prefix: /api/queues
-  middleware:
-    - auth
-  routes:
-    - path: /
-      method: GET
-      handler: handleGetQueuesAPI
-      description: "List all queues"
+    prefix: /api/queues
+    middleware:
+        - auth
+        - queue_ro # Require read access to at least one queue
+    routes:
+        - path: /
+          method: GET
+          handler: handleGetQueuesAPI
+          description: "List all queues"
 
-    - path: /
-      method: POST
-      handler: handleCreateQueueWrapper
-      description: "Create new queue"
+        - path: /
+          method: POST
+          handler: handleCreateQueueWrapper
+          middleware:
+              - auth
+              - admin # Queue creation requires admin access
+          description: "Create new queue"
 
-    - path: /:id
-      method: GET
-      handler: HandleAPIQueueGet
-      description: "Get queue by ID"
+        - path: /:id
+          method: GET
+          handler: HandleAPIQueueGet
+          middleware:
+              - auth
+              - queue_access_ro # Require read access to specific queue
+          description: "Get queue by ID"
 
-    - path: /:id/details
-      method: GET
-      handler: HandleAPIQueueDetails
-      description: "Get queue details"
+        - path: /:id/details
+          method: GET
+          handler: HandleAPIQueueDetails
+          middleware:
+              - auth
+              - queue_access_ro # Require read access to specific queue
+          description: "Get queue details"
 
-    - path: /:id/status
-      method: PUT
-      handler: HandleAPIQueueStatus
-      description: "Update queue status"
+        - path: /:id/status
+          method: PUT
+          handler: HandleAPIQueueStatus
+          middleware:
+              - auth
+              - admin # Queue status update requires admin access
+          description: "Update queue status"

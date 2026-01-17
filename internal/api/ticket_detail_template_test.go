@@ -64,12 +64,22 @@ func TestTicketDetailTemplatePendingReminderMessage(t *testing.T) {
 		"status_id":                          4,
 	}
 
+	// Map i18n keys to expected English text for test
+	translations := map[string]string{
+		"tickets.pending_reminder.scheduled":    "Reminder scheduled",
+		"tickets.pending_reminder.will_reopen_at": "Ticket will re-open at",
+		"tickets.pending_reminder.in":           "in",
+	}
+
 	ctx := pongo2.Context{
 		"Ticket":               ticket,
 		"PendingStateIDs":      []int{4, 5},
 		"TicketStates":         []pongo2.Context{},
 		"RequireNoteTimeUnits": false,
 		"t": func(key string, _ ...interface{}) string {
+			if val, ok := translations[key]; ok {
+				return val
+			}
 			return key
 		},
 	}

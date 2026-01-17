@@ -2105,7 +2105,31 @@
         "pending_until_help": "Especifique cuándo este ticket debe reabrirse automáticamente.",
         "pending_required": "Requerido para estados pendientes",
         "target_ticket_number": "Número de Ticket Destino",
-        "merge_target_placeholder": "Ingrese el número de ticket para fusionar"
+        "merge_target_placeholder": "Ingrese el número de ticket para fusionar",
+        "pending_reminder": {
+            "overdue": "Recordatorio vencido",
+            "scheduled": "Recordatorio programado",
+            "not_scheduled": "Recordatorio no programado",
+            "was_scheduled_for": "El recordatorio estaba programado para",
+            "will_reopen_at": "El ticket se reabrirá a las",
+            "ago": "hace",
+            "in": "en",
+            "no_time_scheduled": "No hay hora de recordatorio programada.",
+            "title": "Recordatorio pendiente",
+            "help": "El ticket volverá al estado \"abierto\" en el momento especificado."
+        },
+        "auto_close": {
+            "overdue": "Cierre automático vencido",
+            "scheduled": "Cierre automático programado",
+            "should_have_closed_at": "El ticket debería haberse cerrado automáticamente a las",
+            "will_close_at": "El ticket se cerrará automáticamente",
+            "while_pending": "mientras está en estado de cierre automático pendiente",
+            "at": "a las",
+            "plus_title": "Cierre automático pendiente+",
+            "plus_help": "El ticket se cerrará automáticamente si no hay respuesta del cliente antes del momento especificado.",
+            "minus_title": "Cierre automático pendiente-",
+            "minus_help": "El ticket se cerrará automáticamente en el momento especificado independientemente de la actividad."
+        }
     },
     "tickets_form": {
         "subject_placeholder": "Resumen breve del problema...",
@@ -2173,6 +2197,21 @@
         "title": "Título",
         "title_placeholder": "ej. Sr., Sra., Dr.",
         "username": "Nombre de Usuario"
+    },
+    "queue_access": {
+        "denied": "No tiene permiso para acceder a esta cola",
+        "no_queues": "No tiene acceso a ninguna cola",
+        "error": "Error al verificar los permisos de la cola",
+        "permission_required": "Se requiere permiso de acceso a la cola",
+        "types": {
+            "ro": "Solo Lectura",
+            "rw": "Lectura/Escritura",
+            "create": "Crear Tickets",
+            "move_into": "Mover Tickets",
+            "note": "Agregar Notas",
+            "owner": "Convertirse en Propietario",
+            "priority": "Cambiar Prioridad"
+        }
     },
     "validation": {
         "alpha": "Debe contener solo letras",

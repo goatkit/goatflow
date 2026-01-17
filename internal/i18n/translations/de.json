@@ -2105,7 +2105,31 @@
         "pending_until_help": "Geben Sie an, wann dieses Ticket automatisch wiedereröffnet werden soll.",
         "pending_required": "Erforderlich für ausstehende Status",
         "target_ticket_number": "Ziel-Ticketnummer",
-        "merge_target_placeholder": "Ticketnummer eingeben, mit der zusammengeführt werden soll"
+        "merge_target_placeholder": "Ticketnummer eingeben, mit der zusammengeführt werden soll",
+        "pending_reminder": {
+            "overdue": "Erinnerung überfällig",
+            "scheduled": "Erinnerung geplant",
+            "not_scheduled": "Erinnerung nicht geplant",
+            "was_scheduled_for": "Erinnerung war geplant für",
+            "will_reopen_at": "Ticket wird wieder geöffnet um",
+            "ago": "vor",
+            "in": "in",
+            "no_time_scheduled": "Keine Erinnerungszeit geplant.",
+            "title": "Warten auf Erinnerung",
+            "help": "Ticket wird zum angegebenen Zeitpunkt in den Status \"offen\" zurückkehren."
+        },
+        "auto_close": {
+            "overdue": "Automatisches Schließen überfällig",
+            "scheduled": "Automatisches Schließen geplant",
+            "should_have_closed_at": "Ticket hätte automatisch geschlossen werden sollen um",
+            "will_close_at": "Ticket wird automatisch geschlossen",
+            "while_pending": "während im Status Warten auf automatisches Schließen",
+            "at": "um",
+            "plus_title": "Warten auf automatisches Schließen+",
+            "plus_help": "Ticket wird automatisch geschlossen, wenn keine Kundenantwort bis zum angegebenen Zeitpunkt erfolgt.",
+            "minus_title": "Warten auf automatisches Schließen-",
+            "minus_help": "Ticket wird automatisch zum angegebenen Zeitpunkt geschlossen, unabhängig von Aktivitäten."
+        }
     },
     "tickets_form": {
         "subject_placeholder": "Kurze Zusammenfassung des Problems...",
@@ -2173,6 +2197,21 @@
         "title": "Anrede",
         "title_placeholder": "z.B. Herr, Frau, Dr.",
         "username": "Benutzername"
+    },
+    "queue_access": {
+        "denied": "Sie haben keine Berechtigung, auf diese Queue zuzugreifen",
+        "no_queues": "Sie haben keinen Zugriff auf Queues",
+        "error": "Fehler bei der Überprüfung der Queue-Berechtigungen",
+        "permission_required": "Queue-Zugriffsberechtigung erforderlich",
+        "types": {
+            "ro": "Nur Lesen",
+            "rw": "Lesen/Schreiben",
+            "create": "Tickets erstellen",
+            "move_into": "Tickets verschieben",
+            "note": "Notizen hinzufügen",
+            "owner": "Besitzer werden",
+            "priority": "Priorität ändern"
+        }
     },
     "validation": {
         "alpha": "Darf nur Buchstaben enthalten",

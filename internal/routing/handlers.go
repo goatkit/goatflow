@@ -278,6 +278,28 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 		},
 
 		"customer-portal": middleware.CustomerPortalGate(shared.GetJWTManager()),
+
+		// Queue permission middleware - for routes requiring access to ANY queue with permission
+		"queue_ro":     middleware.RequireAnyQueueAccess("ro"),
+		"queue_rw":     middleware.RequireAnyQueueAccess("rw"),
+		"queue_create": middleware.RequireAnyQueueAccess("create"),
+
+		// Queue permission middleware - for routes with queue_id in path/query
+		"queue_access_ro":        middleware.RequireQueueAccess("ro"),
+		"queue_access_rw":        middleware.RequireQueueAccess("rw"),
+		"queue_access_create":    middleware.RequireQueueAccess("create"),
+		"queue_access_move_into": middleware.RequireQueueAccess("move_into"),
+		"queue_access_note":      middleware.RequireQueueAccess("note"),
+		"queue_access_owner":     middleware.RequireQueueAccess("owner"),
+		"queue_access_priority":  middleware.RequireQueueAccess("priority"),
+
+		// Ticket permission middleware - for routes with ticket_id/id in path (checks ticket's queue)
+		"ticket_access_ro":        middleware.RequireQueueAccessFromTicket("ro"),
+		"ticket_access_rw":        middleware.RequireQueueAccessFromTicket("rw"),
+		"ticket_access_note":      middleware.RequireQueueAccessFromTicket("note"),
+		"ticket_access_owner":     middleware.RequireQueueAccessFromTicket("owner"),
+		"ticket_access_priority":  middleware.RequireQueueAccessFromTicket("priority"),
+		"ticket_access_move_into": middleware.RequireQueueAccessFromTicket("move_into"),
 	}
 
 	// Register all middleware

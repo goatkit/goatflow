@@ -193,23 +193,23 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
             <div class="font-medium">
                 {% if Ticket.pending_reminder_has_time %}
                     {% if Ticket.pending_reminder_overdue %}
-                        Reminder overdue
+                        {{ t("tickets.pending_reminder.overdue")|default:"Reminder overdue" }}
                     {% else %}
-                        Reminder scheduled
+                        {{ t("tickets.pending_reminder.scheduled")|default:"Reminder scheduled" }}
                     {% endif %}
                 {% else %}
-                    Reminder not scheduled
+                    {{ t("tickets.pending_reminder.not_scheduled")|default:"Reminder not scheduled" }}
                 {% endif %}
             </div>
             <p class="mt-1">
                 {% if Ticket.pending_reminder_has_time %}
                     {% if Ticket.pending_reminder_overdue %}
-                        Reminder was scheduled for <span class="font-semibold">{{ Ticket.pending_reminder_at }}</span>{% if Ticket.pending_reminder_relative and Ticket.pending_reminder_at_iso %} (<span data-relative-time data-mode="duration" data-direction="past" data-timestamp="{{ Ticket.pending_reminder_at_iso }}">{{ Ticket.pending_reminder_relative }}</span> ago){% elif Ticket.pending_reminder_relative %} ({{ Ticket.pending_reminder_relative }} ago){% endif %}.
+                        {{ t("tickets.pending_reminder.was_scheduled_for")|default:"Reminder was scheduled for" }} <span class="font-semibold">{{ Ticket.pending_reminder_at }}</span>{% if Ticket.pending_reminder_relative and Ticket.pending_reminder_at_iso %} (<span data-relative-time data-mode="duration" data-direction="past" data-timestamp="{{ Ticket.pending_reminder_at_iso }}">{{ Ticket.pending_reminder_relative }}</span> {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% elif Ticket.pending_reminder_relative %} ({{ Ticket.pending_reminder_relative }} {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% endif %}.
                     {% else %}
-                        Ticket will re-open at <span class="font-semibold">{{ Ticket.pending_reminder_at }}</span>{% if Ticket.pending_reminder_relative and Ticket.pending_reminder_at_iso %} (in <span data-relative-time data-mode="duration" data-direction="future" data-timestamp="{{ Ticket.pending_reminder_at_iso }}">{{ Ticket.pending_reminder_relative }}</span>){% elif Ticket.pending_reminder_relative %} (in {{ Ticket.pending_reminder_relative }}){% endif %}.
+                        {{ t("tickets.pending_reminder.will_reopen_at")|default:"Ticket will re-open at" }} <span class="font-semibold">{{ Ticket.pending_reminder_at }}</span>{% if Ticket.pending_reminder_relative and Ticket.pending_reminder_at_iso %} ({{ t("tickets.pending_reminder.in")|default:"in" }} <span data-relative-time data-mode="duration" data-direction="future" data-timestamp="{{ Ticket.pending_reminder_at_iso }}">{{ Ticket.pending_reminder_relative }}</span>){% elif Ticket.pending_reminder_relative %} ({{ t("tickets.pending_reminder.in")|default:"in" }} {{ Ticket.pending_reminder_relative }}){% endif %}.
                     {% endif %}
                 {% else %}
-                    {{ Ticket.pending_reminder_message|default:"No reminder time scheduled." }}
+                    {{ Ticket.pending_reminder_message|default:t("tickets.pending_reminder.no_time_scheduled")|default:"No reminder time scheduled." }}
                 {% endif %}
             </p>
         </div>
@@ -221,16 +221,16 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
         <div class="rounded-md border p-4 text-sm {% if Ticket.auto_close_overdue %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-900 dark:text-red-100{% else %}border-amber-200 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100{% endif %}">
             <div class="font-medium">
                 {% if Ticket.auto_close_overdue %}
-                    Auto-close overdue
+                    {{ t("tickets.auto_close.overdue")|default:"Auto-close overdue" }}
                 {% else %}
-                    Auto-close scheduled
+                    {{ t("tickets.auto_close.scheduled")|default:"Auto-close scheduled" }}
                 {% endif %}
             </div>
             <p class="mt-1">
                 {% if Ticket.auto_close_overdue %}
-                    Ticket should have auto-closed at <span class="font-semibold">{{ Ticket.auto_close_at }}</span>{% if Ticket.auto_close_relative and Ticket.auto_close_at_iso %} (<span data-relative-time data-mode="duration" data-direction="past" data-timestamp="{{ Ticket.auto_close_at_iso }}">{{ Ticket.auto_close_relative }}</span> ago){% elif Ticket.auto_close_relative %} ({{ Ticket.auto_close_relative }} ago){% endif %}.
+                    {{ t("tickets.auto_close.should_have_closed_at")|default:"Ticket should have auto-closed at" }} <span class="font-semibold">{{ Ticket.auto_close_at }}</span>{% if Ticket.auto_close_relative and Ticket.auto_close_at_iso %} (<span data-relative-time data-mode="duration" data-direction="past" data-timestamp="{{ Ticket.auto_close_at_iso }}">{{ Ticket.auto_close_relative }}</span> {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% elif Ticket.auto_close_relative %} ({{ Ticket.auto_close_relative }} {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% endif %}.
                 {% else %}
-                    Ticket will auto-close{% if Ticket.auto_close_pending %} while in pending auto close state{% endif %} at <span class="font-semibold">{{ Ticket.auto_close_at }}</span>{% if Ticket.auto_close_relative and Ticket.auto_close_at_iso %} (in <span data-relative-time data-mode="duration" data-direction="future" data-timestamp="{{ Ticket.auto_close_at_iso }}">{{ Ticket.auto_close_relative }}</span>){% elif Ticket.auto_close_relative %} (in {{ Ticket.auto_close_relative }}){% endif %}.
+                    {{ t("tickets.auto_close.will_close_at")|default:"Ticket will auto-close" }}{% if Ticket.auto_close_pending %} {{ t("tickets.auto_close.while_pending")|default:"while in pending auto close state" }}{% endif %} {{ t("tickets.auto_close.at")|default:"at" }} <span class="font-semibold">{{ Ticket.auto_close_at }}</span>{% if Ticket.auto_close_relative and Ticket.auto_close_at_iso %} ({{ t("tickets.pending_reminder.in")|default:"in" }} <span data-relative-time data-mode="duration" data-direction="future" data-timestamp="{{ Ticket.auto_close_at_iso }}">{{ Ticket.auto_close_relative }}</span>){% elif Ticket.auto_close_relative %} ({{ t("tickets.pending_reminder.in")|default:"in" }} {{ Ticket.auto_close_relative }}){% endif %}.
                 {% endif %}
             </p>
         </div>
@@ -1694,20 +1694,15 @@ if (noteForm) {
             method: 'POST',
             body: formData
         })
-        .then(async response => {
-            let data = null;
-            try { data = await response.clone().json(); } catch (_) {}
-            if (!response.ok) {
-                const msg = (data && (data.error || data.message)) || `HTTP ${response.status}`;
-                throw new Error(msg);
-            }
+        .then(data => {
+            // apiFetch already parses JSON and returns the data directly
             if (data && data.success === false) {
                 const errMsg = data.error || data.message || 'Unknown error';
                 throw new Error(errMsg);
             }
-            return true;
+            // Success - reload the page
+            location.reload();
         })
-        .then(() => { location.reload(); })
         .catch(error => {
             console.error('Error:', error);
             ensureErrorDiv().textContent = 'Error adding note: ' + (error && error.message ? error.message : 'Network error');

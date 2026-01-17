@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -12,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
 
 // HandleAgentNewTicket displays the agent ticket creation form with necessary data.
@@ -41,10 +43,45 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Get queues
-		queues, err := getQueuesForAgent(db)
-		if err != nil {
-			log.Printf("Error getting queues: %v", err)
+		// Get queues filtered by user's create permission
+		// Use context values from middleware if available
+		isQueueAdmin := false
+		if val, exists := c.Get("is_queue_admin"); exists {
+			if admin, ok := val.(bool); ok {
+				isQueueAdmin = admin
+			}
+		}
+
+		var queues []gin.H
+		var queueErr error
+		if isQueueAdmin {
+			// Admin users get all queues
+			queues, queueErr = getAllQueues(db)
+		} else if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
+			// Use queue IDs from middleware
+			if queueIDs, ok := accessibleQueueIDs.([]uint); ok {
+				queues, queueErr = getQueuesByIDs(db, queueIDs)
+			}
+		}
+		// Fallback to querying directly if no context values
+		if queues == nil && queueErr == nil {
+			var userIDUint uint
+			if userID, exists := c.Get("user_id"); exists {
+				switch v := userID.(type) {
+				case int:
+					userIDUint = uint(v)
+				case int64:
+					userIDUint = uint(v)
+				case uint:
+					userIDUint = v
+				case uint64:
+					userIDUint = uint(v)
+				}
+			}
+			queues, queueErr = getQueuesForAgent(c.Request.Context(), db, userIDUint)
+		}
+		if queueErr != nil {
+			log.Printf("Error getting queues: %v", queueErr)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load queues"})
 			return
 		}
@@ -136,13 +173,110 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 }
 
 // getQueuesForAgent gets queues available for agent ticket creation.
-func getQueuesForAgent(db *sql.DB) ([]gin.H, error) {
+// Filters by user's "create" permission unless user is admin.
+func getQueuesForAgent(ctx context.Context, db *sql.DB, userID uint) ([]gin.H, error) {
+	// If userID is provided, filter by permission
+	if userID > 0 {
+		queueAccessSvc := service.NewQueueAccessService(db)
+
+		// Check if user is admin (gets all queues)
+		isAdmin, err := queueAccessSvc.IsAdmin(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+
+		if !isAdmin {
+			// Get queues user has "create" permission for
+			accessibleQueues, err := queueAccessSvc.GetAccessibleQueues(ctx, userID, "create")
+			if err != nil {
+				return nil, err
+			}
+
+			var queues []gin.H
+			for _, q := range accessibleQueues {
+				queues = append(queues, gin.H{"ID": q.QueueID, "Name": q.QueueName})
+			}
+			return queues, nil
+		}
+	}
+
+	// Admin users or no user ID: return all valid queues
 	rows, err := db.Query(database.ConvertPlaceholders(`
 		SELECT id, name
 		FROM queue
 		WHERE valid_id = 1
 		ORDER BY name
 	`))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var queues []gin.H
+	for rows.Next() {
+		var id int
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, err
+		}
+		queues = append(queues, gin.H{"ID": id, "Name": name})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return queues, nil
+}
+
+// getAllQueues returns all valid queues (for admin users).
+func getAllQueues(db *sql.DB) ([]gin.H, error) {
+	rows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT id, name
+		FROM queue
+		WHERE valid_id = 1
+		ORDER BY name
+	`))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var queues []gin.H
+	for rows.Next() {
+		var id int
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, err
+		}
+		queues = append(queues, gin.H{"ID": id, "Name": name})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return queues, nil
+}
+
+// getQueuesByIDs returns queues by their IDs.
+func getQueuesByIDs(db *sql.DB, queueIDs []uint) ([]gin.H, error) {
+	if len(queueIDs) == 0 {
+		return []gin.H{}, nil
+	}
+
+	// Build placeholders for IN clause
+	placeholders := make([]string, len(queueIDs))
+	args := make([]interface{}, len(queueIDs))
+	for i, id := range queueIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, name
+		FROM queue
+		WHERE id IN (%s) AND valid_id = 1
+		ORDER BY name
+	`, strings.Join(placeholders, ","))
+
+	rows, err := db.Query(database.ConvertPlaceholders(query), args...)
 	if err != nil {
 		return nil, err
 	}

@@ -2705,7 +2705,31 @@
         "pending_until_help": "Określ, kiedy to zgłoszenie powinno automatycznie się otworzyć.",
         "pending_required": "Wymagane dla stanów oczekujących",
         "target_ticket_number": "Numer zgłoszenia docelowego",
-        "merge_target_placeholder": "Wprowadź numer zgłoszenia do scalenia"
+        "merge_target_placeholder": "Wprowadź numer zgłoszenia do scalenia",
+        "pending_reminder": {
+            "overdue": "Przypomnienie zaległe",
+            "scheduled": "Przypomnienie zaplanowane",
+            "not_scheduled": "Przypomnienie nie zaplanowane",
+            "was_scheduled_for": "Przypomnienie było zaplanowane na",
+            "will_reopen_at": "Zgłoszenie zostanie ponownie otwarte o",
+            "ago": "temu",
+            "in": "za",
+            "no_time_scheduled": "Brak zaplanowanej godziny przypomnienia.",
+            "title": "Oczekujące przypomnienie",
+            "help": "Zgłoszenie powróci do stanu \"otwarte\" o określonej godzinie."
+        },
+        "auto_close": {
+            "overdue": "Automatyczne zamknięcie zaległe",
+            "scheduled": "Automatyczne zamknięcie zaplanowane",
+            "should_have_closed_at": "Zgłoszenie powinno zostać automatycznie zamknięte o",
+            "will_close_at": "Zgłoszenie zostanie automatycznie zamknięte",
+            "while_pending": "podczas oczekiwania na automatyczne zamknięcie",
+            "at": "o",
+            "plus_title": "Oczekujące automatyczne zamknięcie+",
+            "plus_help": "Zgłoszenie zostanie automatycznie zamknięte, jeśli nie będzie odpowiedzi klienta do określonego czasu.",
+            "minus_title": "Oczekujące automatyczne zamknięcie-",
+            "minus_help": "Zgłoszenie zostanie automatycznie zamknięte o określonej godzinie niezależnie od aktywności."
+        }
     },
     "tickets_form": {
         "subject_placeholder": "Krótkie podsumowanie problemu...",
@@ -2754,6 +2778,21 @@
         "title": "Tytuł lub zwrot grzecznościowy",
         "title_placeholder": "np. Pan, Pani, Dr",
         "username": "Nazwa użytkownika"
+    },
+    "queue_access": {
+        "denied": "Nie masz uprawnień do dostępu do tej kolejki",
+        "no_queues": "Nie masz dostępu do żadnych kolejek",
+        "error": "Nie udało się sprawdzić uprawnień do kolejki",
+        "permission_required": "Wymagane uprawnienie dostępu do kolejki",
+        "types": {
+            "ro": "Tylko do odczytu",
+            "rw": "Odczyt/Zapis",
+            "create": "Tworzenie zgłoszeń",
+            "move_into": "Przenoszenie zgłoszeń do",
+            "note": "Dodawanie notatek",
+            "owner": "Zostanie właścicielem",
+            "priority": "Zmiana priorytetu"
+        }
     },
     "validation": {
         "alpha": "Musi zawierać tylko litery",

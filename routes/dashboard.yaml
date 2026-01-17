@@ -3,42 +3,43 @@
 apiVersion: v1
 kind: RouteGroup
 metadata:
-  name: dashboard
-  description: "Dashboard routes for main application"
-  namespace: default
-  enabled: true
+    name: dashboard
+    description: "Dashboard routes for main application"
+    namespace: default
+    enabled: true
 spec:
-  prefix: /dashboard
-  middleware:
-    - auth  # Require authentication for dashboard access
-  routes:
-    # Main dashboard page - shows overview and activity
-    - path: /
-      method: GET
-      handler: handleDashboard
-      template: pages/dashboard.pongo2
-      description: "Display main dashboard with tickets overview and activity"
+    prefix: /dashboard
+    middleware:
+        - auth
+        - queue_ro # Require read access to at least one queue
+    routes:
+        # Main dashboard page - shows overview and activity
+        - path: /
+          method: GET
+          handler: handleDashboard
+          template: pages/dashboard.pongo2
+          description: "Display main dashboard with tickets overview and activity"
 
-    # Dashboard activity stream API
-    - path: /api/activity-stream
-      method: GET
-      handler: dashboard_activity_stream
-      description: "Server-sent events for dashboard activity updates"
+        # Dashboard activity stream API
+        - path: /api/activity-stream
+          method: GET
+          handler: dashboard_activity_stream
+          description: "Server-sent events for dashboard activity updates"
 
-    # Dashboard statistics API
-    - path: /api/stats
-      method: GET
-      handler: dashboard_stats
-      description: "Get dashboard statistics and metrics"
+        # Dashboard statistics API
+        - path: /api/stats
+          method: GET
+          handler: dashboard_stats
+          description: "Get dashboard statistics and metrics"
 
-    # Recent tickets widget
-    - path: /api/recent-tickets
-      method: GET
-      handler: dashboard_recent_tickets
-      description: "Get recent ticket activity for dashboard widget"
+        # Recent tickets widget
+        - path: /api/recent-tickets
+          method: GET
+          handler: dashboard_recent_tickets
+          description: "Get recent ticket activity for dashboard widget"
 
-    # Queue status widget
-    - path: /api/queue-status
-      method: GET
-      handler: dashboard_queue_status
-      description: "Get queue status and ticket counts for dashboard widget"
+        # Queue status widget
+        - path: /api/queue-status
+          method: GET
+          handler: dashboard_queue_status
+          description: "Get queue status and ticket counts for dashboard widget"

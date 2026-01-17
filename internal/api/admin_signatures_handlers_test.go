@@ -104,10 +104,10 @@ func TestSubstituteSignatureVariables(t *testing.T) {
 			expected: "Jane Smith\nSales\nSupport Team",
 		},
 		{
-			name:     "variable not found - unchanged",
+			name:     "variable not found - replaced with dash (OTRS behavior)",
 			text:     "Hello <GOTRS_UNKNOWN_Variable>",
 			vars:     map[string]string{},
-			expected: "Hello <GOTRS_UNKNOWN_Variable>",
+			expected: "Hello -",
 		},
 	}
 

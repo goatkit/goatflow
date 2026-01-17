@@ -125,10 +125,48 @@ func handleTickets(c *gin.Context) {
 		}
 	}
 
-	// Apply queue filter
+	// Queue permission filtering is handled by middleware
+	// Use context values set by queue_ro middleware
+	isQueueAdmin := false
+	if val, exists := c.Get("is_queue_admin"); exists {
+		if admin, ok := val.(bool); ok {
+			isQueueAdmin = admin
+		}
+	}
+
+	// Get accessible queue IDs from middleware (for non-admin users)
+	var accessibleQueueIDs []uint
+	if !isQueueAdmin {
+		if accessibleQueues, exists := c.Get("accessible_queue_ids"); exists {
+			if queueIDs, ok := accessibleQueues.([]uint); ok {
+				accessibleQueueIDs = queueIDs
+				req.AccessibleQueueIDs = queueIDs
+			}
+		}
+	}
+
+	// Apply queue filter - SECURITY: Validate user has access to requested queue
 	if queueParam != "" && queueParam != "all" {
 		queueID, _ := strconv.Atoi(queueParam) //nolint:errcheck // Defaults to 0
 		if queueID > 0 {
+			// SECURITY CHECK: Non-admin users can only filter by queues they have access to
+			if !isQueueAdmin {
+				hasAccess := false
+				for _, accessibleID := range accessibleQueueIDs {
+					if accessibleID == uint(queueID) {
+						hasAccess = true
+						break
+					}
+				}
+				if !hasAccess {
+					// User requested a queue they don't have access to - return 403
+					c.JSON(http.StatusForbidden, gin.H{
+						"success": false,
+						"error":   "You do not have permission to access tickets in this queue",
+					})
+					return
+				}
+			}
 			queueIDPtr := uint(queueID)
 			req.QueueID = &queueIDPtr
 		}
@@ -205,18 +243,39 @@ func handleTickets(c *gin.Context) {
 		priorityLabels[id] = strings.ToLower(fmt.Sprint(p["name"]))
 	}
 
-	// Get queues for filter
-	queueRepo := repository.NewQueueRepository(db)
-	queues, _ := queueRepo.List() //nolint:errcheck // Empty list on error
-	queueList := make([]gin.H, 0, len(queues))
+	// Get queues for filter (filtered by user's read permission)
+	queueList := make([]gin.H, 0)
 	queueLabels := map[string]string{}
-	for _, q := range queues {
-		idStr := fmt.Sprintf("%d", q.ID)
-		queueList = append(queueList, gin.H{
-			"id":   idStr,
-			"name": q.Name,
-		})
-		queueLabels[idStr] = q.Name
+
+	// Use accessible queue IDs from middleware context
+	if !isQueueAdmin {
+		// Non-admin: query queue details for accessible IDs
+		if len(req.AccessibleQueueIDs) > 0 {
+			for _, qID := range req.AccessibleQueueIDs {
+				var name string
+				err := db.QueryRow(database.ConvertPlaceholders("SELECT name FROM queue WHERE id = ?"), qID).Scan(&name)
+				if err == nil {
+					idStr := fmt.Sprintf("%d", qID)
+					queueList = append(queueList, gin.H{
+						"id":   idStr,
+						"name": name,
+					})
+					queueLabels[idStr] = name
+				}
+			}
+		}
+	} else {
+		// Admin user - show all queues
+		queueRepo := repository.NewQueueRepository(db)
+		queues, _ := queueRepo.List() //nolint:errcheck // Empty list on error
+		for _, q := range queues {
+			idStr := fmt.Sprintf("%d", q.ID)
+			queueList = append(queueList, gin.H{
+				"id":   idStr,
+				"name": q.Name,
+			})
+			queueLabels[idStr] = q.Name
+		}
 	}
 
 	statusLabel := ""

@@ -2105,7 +2105,31 @@
         "pending_until_help": "Specify when this ticket should automatically reopen.",
         "pending_required": "Required for pending states",
         "target_ticket_number": "Target Ticket Number",
-        "merge_target_placeholder": "Enter ticket number to merge into"
+        "merge_target_placeholder": "Enter ticket number to merge into",
+        "pending_reminder": {
+            "overdue": "Reminder overdue",
+            "scheduled": "Reminder scheduled",
+            "not_scheduled": "Reminder not scheduled",
+            "was_scheduled_for": "Reminder was scheduled for",
+            "will_reopen_at": "Ticket will re-open at",
+            "ago": "ago",
+            "in": "in",
+            "no_time_scheduled": "No reminder time scheduled.",
+            "title": "Pending Reminder",
+            "help": "Ticket will return to \"open\" state at specified time."
+        },
+        "auto_close": {
+            "overdue": "Auto-close overdue",
+            "scheduled": "Auto-close scheduled",
+            "should_have_closed_at": "Ticket should have auto-closed at",
+            "will_close_at": "Ticket will auto-close",
+            "while_pending": "while in pending auto close state",
+            "at": "at",
+            "plus_title": "Pending Auto Close+",
+            "plus_help": "Ticket will close automatically if no customer response by specified time.",
+            "minus_title": "Pending Auto Close-",
+            "minus_help": "Ticket will close automatically at specified time regardless of activity."
+        }
     },
     "tickets_form": {
         "subject_placeholder": "Brief summary of the issue...",
@@ -2173,6 +2197,21 @@
         "title": "Title or salutation",
         "title_placeholder": "e.g. Mr., Ms., Dr.",
         "username": "Username"
+    },
+    "queue_access": {
+        "denied": "You do not have permission to access this queue",
+        "no_queues": "You do not have access to any queues",
+        "error": "Failed to check queue permissions",
+        "permission_required": "Queue access permission required",
+        "types": {
+            "ro": "Read Only",
+            "rw": "Read/Write",
+            "create": "Create Tickets",
+            "move_into": "Move Tickets Into",
+            "note": "Add Notes",
+            "owner": "Become Owner",
+            "priority": "Change Priority"
+        }
     },
     "validation": {
         "alpha": "Must contain only letters",

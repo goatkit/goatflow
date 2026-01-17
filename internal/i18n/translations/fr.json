@@ -2105,7 +2105,31 @@
         "pending_until_help": "Spécifiez quand ce ticket doit se rouvrir automatiquement.",
         "pending_required": "Requis pour les états en attente",
         "target_ticket_number": "Numéro de ticket cible",
-        "merge_target_placeholder": "Entrez le numéro de ticket dans lequel fusionner"
+        "merge_target_placeholder": "Entrez le numéro de ticket dans lequel fusionner",
+        "pending_reminder": {
+            "overdue": "Rappel en retard",
+            "scheduled": "Rappel programmé",
+            "not_scheduled": "Rappel non programmé",
+            "was_scheduled_for": "Le rappel était programmé pour",
+            "will_reopen_at": "Le ticket sera rouvert à",
+            "ago": "il y a",
+            "in": "dans",
+            "no_time_scheduled": "Aucune heure de rappel programmée.",
+            "title": "Rappel en attente",
+            "help": "Le ticket reviendra à l'état \"ouvert\" à l'heure spécifiée."
+        },
+        "auto_close": {
+            "overdue": "Fermeture automatique en retard",
+            "scheduled": "Fermeture automatique programmée",
+            "should_have_closed_at": "Le ticket aurait dû se fermer automatiquement à",
+            "will_close_at": "Le ticket se fermera automatiquement",
+            "while_pending": "pendant l'état de fermeture automatique en attente",
+            "at": "à",
+            "plus_title": "Fermeture automatique en attente+",
+            "plus_help": "Le ticket se fermera automatiquement si aucune réponse du client n'est reçue avant l'heure spécifiée.",
+            "minus_title": "Fermeture automatique en attente-",
+            "minus_help": "Le ticket se fermera automatiquement à l'heure spécifiée quelle que soit l'activité."
+        }
     },
     "tickets_form": {
         "subject_placeholder": "Bref résumé du problème...",
@@ -2173,6 +2197,21 @@
         "title": "Civilité",
         "title_placeholder": "ex. M., Mme, Dr",
         "username": "Nom d'utilisateur"
+    },
+    "queue_access": {
+        "denied": "Vous n'avez pas la permission d'accéder à cette file",
+        "no_queues": "Vous n'avez accès à aucune file",
+        "error": "Erreur lors de la vérification des permissions de file",
+        "permission_required": "Permission d'accès à la file requise",
+        "types": {
+            "ro": "Lecture Seule",
+            "rw": "Lecture/Écriture",
+            "create": "Créer des Tickets",
+            "move_into": "Déplacer des Tickets",
+            "note": "Ajouter des Notes",
+            "owner": "Devenir Propriétaire",
+            "priority": "Changer la Priorité"
+        }
     },
     "validation": {
         "alpha": "Ne doit contenir que des lettres",

@@ -68,8 +68,10 @@ func TestSubstituteTemplateVariables_EmptyVars(t *testing.T) {
 
 	result := SubstituteTemplateVariables(text, vars)
 
-	if result != text {
-		t.Errorf("Expected unchanged text %q, got %q", text, result)
+	// OTRS behavior: unmatched variables are replaced with "-"
+	expected := "Hello -!"
+	if result != expected {
+		t.Errorf("Expected %q (OTRS replaces unmatched vars with '-'), got %q", expected, result)
 	}
 }
 
@@ -94,8 +96,10 @@ func TestSubstituteTemplateVariables_UnknownVariable(t *testing.T) {
 
 	result := SubstituteTemplateVariables(text, vars)
 
-	if result != text {
-		t.Errorf("Unknown variables should remain unchanged, expected %q, got %q", text, result)
+	// OTRS behavior: unmatched variables are replaced with "-"
+	expected := "Hello -!"
+	if result != expected {
+		t.Errorf("Unknown variables should be replaced with '-' (OTRS behavior), expected %q, got %q", expected, result)
 	}
 }
 

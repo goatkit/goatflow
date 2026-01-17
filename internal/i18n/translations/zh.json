@@ -2105,7 +2105,31 @@
         "pending_until_help": "指定此工单应自动重新打开的时间。",
         "pending_required": "待处理状态必需",
         "target_ticket_number": "目标工单编号",
-        "merge_target_placeholder": "输入要合并到的工单编号"
+        "merge_target_placeholder": "输入要合并到的工单编号",
+        "pending_reminder": {
+            "overdue": "提醒已过期",
+            "scheduled": "提醒已安排",
+            "not_scheduled": "提醒未安排",
+            "was_scheduled_for": "提醒原定于",
+            "will_reopen_at": "工单将于以下时间重新打开",
+            "ago": "前",
+            "in": "后",
+            "no_time_scheduled": "未安排提醒时间。",
+            "title": "待处理提醒",
+            "help": "工单将在指定时间返回\"打开\"状态。"
+        },
+        "auto_close": {
+            "overdue": "自动关闭已过期",
+            "scheduled": "自动关闭已安排",
+            "should_have_closed_at": "工单应在以下时间自动关闭",
+            "will_close_at": "工单将自动关闭",
+            "while_pending": "处于待自动关闭状态时",
+            "at": "于",
+            "plus_title": "待自动关闭+",
+            "plus_help": "如果在指定时间前没有客户回复，工单将自动关闭。",
+            "minus_title": "待自动关闭-",
+            "minus_help": "无论活动状态如何，工单将在指定时间自动关闭。"
+        }
     },
     "tickets_form": {
         "subject_placeholder": "问题的简要摘要...",
@@ -2173,6 +2197,21 @@
         "title": "称谓",
         "title_placeholder": "例如：先生、女士、博士",
         "username": "用户名"
+    },
+    "queue_access": {
+        "denied": "您没有访问此队列的权限",
+        "no_queues": "您没有访问任何队列的权限",
+        "error": "检查队列权限失败",
+        "permission_required": "需要队列访问权限",
+        "types": {
+            "ro": "只读",
+            "rw": "读写",
+            "create": "创建工单",
+            "move_into": "移动工单至",
+            "note": "添加备注",
+            "owner": "成为负责人",
+            "priority": "更改优先级"
+        }
     },
     "validation": {
         "alpha": "只能包含字母",
