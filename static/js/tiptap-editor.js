@@ -14,15 +14,15 @@ function getTiptapInstance(elementId) {
 }
 
 function formatHtmlContent(html) {
-    if (typeof html !== 'string') return '';
+    if (typeof html !== "string") return "";
     const trimmed = html.trim();
-    if (!trimmed) return '';
+    if (!trimmed) return "";
 
-    const normalized = trimmed.replace(/>\s+</g, '><');
+    const normalized = trimmed.replace(/>\s+</g, "><");
     const segments = normalized
-        .replace(/></g, '>$cutHere<$')
-        .split('$cutHere$')
-        .map(segment => segment.trim())
+        .replace(/></g, ">$cutHere<$")
+        .split("$cutHere$")
+        .map((segment) => segment.trim())
         .filter(Boolean);
 
     const lines = [];
@@ -33,22 +33,22 @@ function formatHtmlContent(html) {
             depth = Math.max(depth - 1, 0);
         }
 
-        lines.push(`${'    '.repeat(depth)}${segment}`);
+        lines.push(`${"    ".repeat(depth)}${segment}`);
 
         if (/^<[^!?\/][^>]*[^/]?>$/.test(segment)) {
             depth += 1;
         }
     });
 
-    return lines.join('\n');
+    return lines.join("\n");
 }
 
 function isLikelyHtml(content) {
-    return typeof content === 'string' && /<[^>]+>/.test(content);
+    return typeof content === "string" && /<[^>]+>/.test(content);
 }
 
 function normalizeTextareaValue(content) {
-    if (!content) return '';
+    if (!content) return "";
     return isLikelyHtml(content) ? formatHtmlContent(content) : content;
 }
 
@@ -60,10 +60,10 @@ function insertTextAtCursor(target, snippet) {
     const after = target.value.slice(end);
     target.value = `${before}${snippet}${after}`;
     const next = start + snippet.length;
-    if (typeof target.setSelectionRange === 'function') {
+    if (typeof target.setSelectionRange === "function") {
         target.setSelectionRange(next, next);
     }
-    target.dispatchEvent(new Event('input', { bubbles: true }));
+    target.dispatchEvent(new Event("input", { bubbles: true }));
     return true;
 }
 
@@ -77,83 +77,89 @@ function insertLiteralIntoEditor(elementId, text) {
     if (!text) return false;
     const instance = getTiptapInstance(elementId);
     if (!instance) return false;
-    if (instance.getMode() === 'markdown') {
+    if (instance.getMode() === "markdown") {
         return insertLiteralIntoMarkdown(elementId, text);
     }
     if (!instance.editor) return false;
-    const payload = { type: 'text', text };
+    const payload = { type: "text", text };
     instance.editor.chain().focus().insertContent(payload).run();
     return true;
 }
 
-document.addEventListener('keydown', (evt) => {
-    if (evt.key === 'Tab') {
+document.addEventListener("keydown", (evt) => {
+    if (evt.key === "Tab") {
         tiptapLastKeyboardNavigation = true;
     }
 });
 
-['mousedown', 'pointerdown', 'touchstart'].forEach((type) => {
-    document.addEventListener(type, () => {
-        tiptapLastKeyboardNavigation = false;
-    }, { capture: true });
+["mousedown", "pointerdown", "touchstart"].forEach((type) => {
+    document.addEventListener(
+        type,
+        () => {
+            tiptapLastKeyboardNavigation = false;
+        },
+        { capture: true },
+    );
 });
 
 // Wait for DOM and Tiptap to be ready
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener("DOMContentLoaded", function () {
     // Make initTiptapEditor available globally
     window.initTiptapEditor = initTiptapEditor;
     // Back-compat: templates call TiptapEditor.init(id, opts)
-    if (!window.TiptapEditor || typeof window.TiptapEditor !== 'object') {
+    if (!window.TiptapEditor || typeof window.TiptapEditor !== "object") {
         window.TiptapEditor = {};
     }
-    window.TiptapEditor.init = function(elementId, options) {
+    window.TiptapEditor.init = function (elementId, options) {
         return initTiptapEditor(elementId, options);
     };
-    window.TiptapEditor.insertLiteral = function(elementId, text) {
+    window.TiptapEditor.insertLiteral = function (elementId, text) {
         return insertLiteralIntoEditor(elementId, text);
     };
-    window.TiptapEditor.insertMarkdownLiteral = function(elementId, text) {
+    window.TiptapEditor.insertMarkdownLiteral = function (elementId, text) {
         return insertLiteralIntoMarkdown(elementId, text);
     };
-    
+
     // Global helper for inserting placeholders from HTML onclick
-    window.insertEditorPlaceholder = function(elementId, placeholder) {
-        if (typeof TiptapEditor !== 'undefined') {
+    window.insertEditorPlaceholder = function (elementId, placeholder) {
+        if (typeof TiptapEditor !== "undefined") {
             TiptapEditor.insertText(elementId, placeholder);
         }
     };
 });
 
 function initTiptapEditor(elementId, options = {}) {
-    console.log('initTiptapEditor called with elementId:', elementId);
-    
+    console.log("initTiptapEditor called with elementId:", elementId);
+
     // Check if editor already exists for this element
     const existingInstance = getTiptapInstance(elementId);
     if (existingInstance) {
-        console.log('Editor already exists for elementId:', elementId);
+        console.log("Editor already exists for elementId:", elementId);
         return existingInstance;
     }
-    
+
     const container = document.getElementById(elementId);
-    console.log('Container element:', container);
+    console.log("Container element:", container);
     if (!container) {
-        console.error('Container not found for elementId:', elementId);
+        console.error("Container not found for elementId:", elementId);
         return null;
     }
 
     // Default options
     const config = {
-        mode: options.mode || 'edit', // 'edit' or 'view'
-        editorMode: options.editorMode || 'richtext', // 'richtext' or 'markdown'
-        placeholder: options.placeholder || 'Write your message here...',
-        content: options.content || '',
-        onUpdate: options.onUpdate || null
+        mode: options.mode || "edit", // 'edit' or 'view'
+        editorMode: options.editorMode || "richtext", // 'richtext' or 'markdown'
+        placeholder: options.placeholder || "Write your message here...",
+        content: options.content || "",
+        onUpdate: options.onUpdate || null,
     };
 
     // Build editor div structure
     const editorHtml = `
-        <div class="tiptap-editor ${config.mode === 'view' ? 'readonly' : ''}" data-editor-id="${elementId}">
-            ${config.mode === 'edit' ? `
+        <div class="tiptap-editor ${config.mode === "view" ? "readonly" : ""}" data-editor-id="${elementId}">
+            ${
+                config.mode === "edit"
+                    ? `
             <div class="tiptap-toolbar border-b border-gray-200 dark:border-gray-700 p-2 flex flex-wrap gap-1">
                 <!-- Text formatting -->
                 <div class="flex gap-1 border-r border-gray-200 dark:border-gray-700 pr-2">
@@ -324,22 +330,24 @@ function initTiptapEditor(elementId, options = {}) {
                     </button>
                 </div>
             </div>
-            ` : ''}
-            <div class="tiptap-content prose prose-sm dark:prose-invert max-w-none p-4 min-h-[200px] focus:outline-none ${config.mode === 'edit' ? 'border border-gray-300 dark:border-gray-600 rounded-b-lg' : ''}"></div>
+            `
+                    : ""
+            }
+            <div class="tiptap-content prose prose-sm dark:prose-invert max-w-none p-4 min-h-[200px] focus:outline-none ${config.mode === "edit" ? "border border-gray-300 dark:border-gray-600 rounded-b-lg" : ""}"></div>
         </div>
     `;
 
     container.innerHTML = editorHtml;
-    const toolbar = container.querySelector('.tiptap-toolbar');
-    const contentElement = container.querySelector('.tiptap-content');
+    const toolbar = container.querySelector(".tiptap-toolbar");
+    const contentElement = container.querySelector(".tiptap-content");
     if (contentElement) {
-        contentElement.setAttribute('tabindex', '0');
-        contentElement.style.whiteSpace = 'pre-wrap';
+        contentElement.setAttribute("tabindex", "0");
+        contentElement.style.whiteSpace = "pre-wrap";
     }
 
     // Initialize Tiptap editor (using bundled Tiptap)
-    if (typeof window.Tiptap === 'undefined') {
-        console.error('Tiptap not loaded');
+    if (typeof window.Tiptap === "undefined") {
+        console.error("Tiptap not loaded");
         return null;
     }
 
@@ -360,35 +368,35 @@ function initTiptapEditor(elementId, options = {}) {
         },
         set markdownTextarea(value) {
             markdownTextarea = value;
-        }
+        },
     };
     registerTiptapInstance(elementId, instanceApi);
 
     // Update toolbar visibility and mode button text
     function updateToolbarVisibility() {
-        const toolbar = container.querySelector('.tiptap-toolbar');
-        const modeToggle = container.querySelector('.mode-toggle .mode-text');
+        const toolbar = container.querySelector(".tiptap-toolbar");
+        const modeToggle = container.querySelector(".mode-toggle .mode-text");
 
         // Get all toolbar sections
-        const toolbarSections = toolbar.querySelectorAll('.flex.gap-1');
-        const actionsSection = toolbar.querySelector('.flex.gap-1:last-child');
+        const toolbarSections = toolbar.querySelectorAll(".flex.gap-1");
+        const actionsSection = toolbar.querySelector(".flex.gap-1:last-child");
 
-        if (currentMode === 'markdown') {
+        if (currentMode === "markdown") {
             // Hide all sections except the last one (Actions) which contains mode toggle, undo, redo, clear format
             toolbarSections.forEach((section, index) => {
                 if (index < toolbarSections.length - 1) {
-                    section.style.display = 'none';
+                    section.style.display = "none";
                 } else {
-                    section.style.display = 'flex';
+                    section.style.display = "flex";
                 }
             });
-            if (modeToggle) modeToggle.textContent = 'Markdown';
+            if (modeToggle) modeToggle.textContent = "Markdown";
         } else {
             // Show all sections in rich text mode
-            toolbarSections.forEach(section => {
-                section.style.display = 'flex';
+            toolbarSections.forEach((section) => {
+                section.style.display = "flex";
             });
-            if (modeToggle) modeToggle.textContent = 'Rich Text';
+            if (modeToggle) modeToggle.textContent = "Rich Text";
         }
     }
 
@@ -396,13 +404,15 @@ function initTiptapEditor(elementId, options = {}) {
     function convertContent(content, fromMode, toMode) {
         if (fromMode === toMode) return content;
 
-        if (fromMode === 'richtext' && toMode === 'markdown') {
+        if (fromMode === "richtext" && toMode === "markdown") {
             if (window.Tiptap.htmlToMarkdown) {
                 return window.Tiptap.htmlToMarkdown(content);
             }
             return normalizeTextareaValue(content);
-        } else if (fromMode === 'markdown' && toMode === 'richtext') {
-            return window.Tiptap.markdownToHTML ? window.Tiptap.markdownToHTML(content) : content;
+        } else if (fromMode === "markdown" && toMode === "richtext") {
+            return window.Tiptap.markdownToHTML
+                ? window.Tiptap.markdownToHTML(content)
+                : content;
         }
 
         return content;
@@ -427,24 +437,24 @@ function initTiptapEditor(elementId, options = {}) {
             TableRow,
             TableCell,
             TableHeader,
-            Image
+            Image,
         } = window.Tiptap;
 
-        const contentElement = container.querySelector('.tiptap-content');
+        const contentElement = container.querySelector(".tiptap-content");
         instanceApi.editor = new Editor({
             element: contentElement,
             extensions: [
                 StarterKit.configure({
                     heading: {
-                        levels: [1, 2, 3]
+                        levels: [1, 2, 3],
                     },
-                    underline: false  // Disable StarterKit's built-in underline, we add it explicitly below
+                    underline: false, // Disable StarterKit's built-in underline, we add it explicitly below
                 }),
                 Placeholder.configure({
-                    placeholder: config.placeholder
+                    placeholder: config.placeholder,
                 }),
                 TextAlign.configure({
-                    types: ['heading', 'paragraph'],
+                    types: ["heading", "paragraph"],
                 }),
                 TextStyle,
                 Color,
@@ -457,23 +467,23 @@ function initTiptapEditor(elementId, options = {}) {
                     nested: true,
                 }),
                 Table.configure({
-                    resizable: true
+                    resizable: true,
                 }),
                 TableRow,
                 TableCell,
                 TableHeader,
-                Image
+                Image,
             ],
             content: content,
-            editable: config.mode === 'edit',
+            editable: config.mode === "edit",
             onUpdate: ({ editor: updatedEditor }) => {
-                console.log('Rich text editor content updated');
+                console.log("Rich text editor content updated");
                 if (config.onUpdate) {
                     // Preserve HTML content instead of converting to Markdown
                     const html = updatedEditor.getHTML();
                     config.onUpdate(html);
                 }
-            }
+            },
         });
     }
 
@@ -481,18 +491,19 @@ function initTiptapEditor(elementId, options = {}) {
     function initMarkdownTextarea(content) {
         if (markdownTextarea) return;
 
-        const contentElement = container.querySelector('.tiptap-content');
-        const textarea = document.createElement('textarea');
-        textarea.className = 'w-full h-64 p-3 border border-gray-300 dark:border-gray-600 rounded-md font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white';
+        const contentElement = container.querySelector(".tiptap-content");
+        const textarea = document.createElement("textarea");
+        textarea.className =
+            "w-full h-64 p-3 border border-gray-300 dark:border-gray-600 rounded-md font-mono text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white";
         textarea.placeholder = config.placeholder;
         textarea.value = content;
-        textarea.disabled = config.mode !== 'edit';
+        textarea.disabled = config.mode !== "edit";
 
-        contentElement.innerHTML = '';
+        contentElement.innerHTML = "";
         contentElement.appendChild(textarea);
 
-        textarea.addEventListener('input', () => {
-            console.log('Markdown textarea content updated');
+        textarea.addEventListener("input", () => {
+            console.log("Markdown textarea content updated");
             if (config.onUpdate) {
                 config.onUpdate(textarea.value);
             }
@@ -503,12 +514,21 @@ function initTiptapEditor(elementId, options = {}) {
 
     // Toggle between modes
     function toggleMode() {
-        const newMode = currentMode === 'richtext' ? 'markdown' : 'richtext';
-        const currentContent = currentMode === 'richtext' ?
-            (editor ? editor.getHTML() : '') :
-            (markdownTextarea ? markdownTextarea.value : '');
+        const newMode = currentMode === "richtext" ? "markdown" : "richtext";
+        const currentContent =
+            currentMode === "richtext"
+                ? editor
+                    ? editor.getHTML()
+                    : ""
+                : markdownTextarea
+                  ? markdownTextarea.value
+                  : "";
 
-        const convertedContent = convertContent(currentContent, currentMode, newMode);
+        const convertedContent = convertContent(
+            currentContent,
+            currentMode,
+            newMode,
+        );
 
         // Destroy current editor/textarea
         if (editor) {
@@ -524,7 +544,7 @@ function initTiptapEditor(elementId, options = {}) {
         currentMode = newMode;
         updateToolbarVisibility();
 
-        if (currentMode === 'richtext') {
+        if (currentMode === "richtext") {
             initRichTextEditor(convertedContent);
         } else {
             initMarkdownTextarea(convertedContent);
@@ -533,23 +553,23 @@ function initTiptapEditor(elementId, options = {}) {
 
     // Initialize with current mode
     updateToolbarVisibility();
-    if (currentMode === 'richtext') {
+    if (currentMode === "richtext") {
         initRichTextEditor(config.content);
     } else {
         initMarkdownTextarea(config.content);
     }
 
     // Attach toolbar actions for edit mode
-    if (config.mode === 'edit') {
+    if (config.mode === "edit") {
         const focusEditorContent = () => {
-            if (currentMode === 'markdown' && markdownTextarea) {
+            if (currentMode === "markdown" && markdownTextarea) {
                 markdownTextarea.focus();
                 return;
             }
             if (editor) {
                 editor.chain().focus().run();
                 const dom = editor.view && editor.view.dom;
-                if (dom && typeof dom.focus === 'function') {
+                if (dom && typeof dom.focus === "function") {
                     dom.focus();
                 }
             } else if (contentElement) {
@@ -557,15 +577,18 @@ function initTiptapEditor(elementId, options = {}) {
             }
         };
 
-        if (toolbar && config.mode === 'edit') {
-            container.addEventListener('focusin', (evt) => {
+        if (toolbar && config.mode === "edit") {
+            container.addEventListener("focusin", (evt) => {
                 if (!tiptapLastKeyboardNavigation) {
                     return;
                 }
                 if (!toolbar.contains(evt.target)) {
                     return;
                 }
-                if (evt.relatedTarget && container.contains(evt.relatedTarget)) {
+                if (
+                    evt.relatedTarget &&
+                    container.contains(evt.relatedTarget)
+                ) {
                     return;
                 }
                 tiptapLastKeyboardNavigation = false;
@@ -573,18 +596,18 @@ function initTiptapEditor(elementId, options = {}) {
             });
         }
 
-        toolbar.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-action]');
+        toolbar.addEventListener("click", (e) => {
+            const btn = e.target.closest("[data-action]");
             if (!btn) return;
 
             e.preventDefault();
             const action = btn.dataset.action;
 
-            switch(action) {
+            switch (action) {
                 // Mode toggle
-                case 'toggleMode':
+                case "toggleMode":
                     toggleMode();
-                    if (currentMode === 'markdown' && markdownTextarea) {
+                    if (currentMode === "markdown" && markdownTextarea) {
                         markdownTextarea.focus();
                     } else {
                         focusEditorContent();
@@ -592,18 +615,18 @@ function initTiptapEditor(elementId, options = {}) {
                     break;
 
                 // Text formatting - only work in rich text mode
-                case 'bold':
-                    if (currentMode === 'richtext' && editor) {
+                case "bold":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().toggleBold().run();
                     }
                     break;
-                case 'italic':
-                    if (currentMode === 'richtext' && editor) {
+                case "italic":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().toggleItalic().run();
                     }
                     break;
-                case 'underline':
-                    if (currentMode === 'richtext' && editor) {
+                case "underline":
+                    if (currentMode === "richtext" && editor) {
                         // Trim trailing spaces from selection before applying underline
                         const { from, to } = editor.state.selection;
                         const doc = editor.state.doc;
@@ -612,7 +635,11 @@ function initTiptapEditor(elementId, options = {}) {
                         // Check if selection ends with spaces and adjust
                         for (let i = to - 1; i >= from; i--) {
                             const char = doc.textBetween(i, i + 1);
-                            if (char !== ' ' && char !== '\t' && char !== '\n') {
+                            if (
+                                char !== " " &&
+                                char !== "\t" &&
+                                char !== "\n"
+                            ) {
                                 break;
                             }
                             newTo = i;
@@ -620,234 +647,299 @@ function initTiptapEditor(elementId, options = {}) {
 
                         // Only adjust selection if we found trailing spaces
                         if (newTo !== to) {
-                            editor.chain().focus().setTextSelection({ from, to: newTo }).toggleMark('underline').run();
+                            editor
+                                .chain()
+                                .focus()
+                                .setTextSelection({ from, to: newTo })
+                                .toggleMark("underline")
+                                .run();
                         } else {
-                            editor.chain().focus().toggleMark('underline').run();
+                            editor
+                                .chain()
+                                .focus()
+                                .toggleMark("underline")
+                                .run();
                         }
                     }
                     break;
-                case 'strike':
-                    if (currentMode === 'richtext' && editor) {
+                case "strike":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().toggleStrike().run();
                     }
                     break;
 
                 // Colors
-                case 'textColorMenu':
+                case "textColorMenu":
                     e.preventDefault();
-                    const textColorMenu = container.querySelector('[data-color-menu="text"]');
+                    const textColorMenu = container.querySelector(
+                        '[data-color-menu="text"]',
+                    );
                     if (textColorMenu) {
-                        textColorMenu.classList.toggle('hidden');
+                        textColorMenu.classList.toggle("hidden");
                         // Close highlight menu if open
-                        const highlightMenu = container.querySelector('[data-color-menu="highlight"]');
-                        if (highlightMenu && !highlightMenu.classList.contains('hidden')) {
-                            highlightMenu.classList.add('hidden');
+                        const highlightMenu = container.querySelector(
+                            '[data-color-menu="highlight"]',
+                        );
+                        if (
+                            highlightMenu &&
+                            !highlightMenu.classList.contains("hidden")
+                        ) {
+                            highlightMenu.classList.add("hidden");
                         }
                     }
                     break;
-                case 'highlightMenu':
+                case "highlightMenu":
                     e.preventDefault();
-                    const highlightMenu = container.querySelector('[data-color-menu="highlight"]');
+                    const highlightMenu = container.querySelector(
+                        '[data-color-menu="highlight"]',
+                    );
                     if (highlightMenu) {
-                        highlightMenu.classList.toggle('hidden');
+                        highlightMenu.classList.toggle("hidden");
                         // Close text color menu if open
-                        const textColorMenu = container.querySelector('[data-color-menu="text"]');
-                        if (textColorMenu && !textColorMenu.classList.contains('hidden')) {
-                            textColorMenu.classList.add('hidden');
+                        const textColorMenu = container.querySelector(
+                            '[data-color-menu="text"]',
+                        );
+                        if (
+                            textColorMenu &&
+                            !textColorMenu.classList.contains("hidden")
+                        ) {
+                            textColorMenu.classList.add("hidden");
                         }
                     }
                     break;
-                case 'customTextColor':
-                    if (currentMode === 'richtext' && editor) {
+                case "customTextColor":
+                    if (currentMode === "richtext" && editor) {
                         const textColor = e.target.value;
                         editor.chain().focus().setColor(textColor).run();
                     }
                     break;
-                case 'customHighlightColor':
-                    if (currentMode === 'richtext' && editor) {
+                case "customHighlightColor":
+                    if (currentMode === "richtext" && editor) {
                         const highlightColor = e.target.value;
-                        editor.chain().focus().toggleHighlight({ color: highlightColor }).run();
+                        editor
+                            .chain()
+                            .focus()
+                            .toggleHighlight({ color: highlightColor })
+                            .run();
                     }
                     break;
 
                 // Headings
-                case 'heading1':
-                    if (currentMode === 'richtext' && editor) {
-                        editor.chain().focus().toggleHeading({ level: 1 }).run();
+                case "heading1":
+                    if (currentMode === "richtext" && editor) {
+                        editor
+                            .chain()
+                            .focus()
+                            .toggleHeading({ level: 1 })
+                            .run();
                     }
                     break;
-                case 'heading2':
-                    if (currentMode === 'richtext' && editor) {
-                        editor.chain().focus().toggleHeading({ level: 2 }).run();
+                case "heading2":
+                    if (currentMode === "richtext" && editor) {
+                        editor
+                            .chain()
+                            .focus()
+                            .toggleHeading({ level: 2 })
+                            .run();
                     }
                     break;
-                case 'heading3':
-                    if (currentMode === 'richtext' && editor) {
-                        editor.chain().focus().toggleHeading({ level: 3 }).run();
+                case "heading3":
+                    if (currentMode === "richtext" && editor) {
+                        editor
+                            .chain()
+                            .focus()
+                            .toggleHeading({ level: 3 })
+                            .run();
                     }
                     break;
-                case 'paragraph':
-                    if (currentMode === 'richtext' && editor) {
+                case "paragraph":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().setParagraph().run();
                     }
                     break;
 
                 // Text alignment
-                case 'alignLeft':
-                    if (currentMode === 'richtext' && editor) {
-                        editor.chain().focus().setTextAlign('left').run();
+                case "alignLeft":
+                    if (currentMode === "richtext" && editor) {
+                        editor.chain().focus().setTextAlign("left").run();
                     }
                     break;
-                case 'alignCenter':
-                    if (currentMode === 'richtext' && editor) {
-                        editor.chain().focus().setTextAlign('center').run();
+                case "alignCenter":
+                    if (currentMode === "richtext" && editor) {
+                        editor.chain().focus().setTextAlign("center").run();
                     }
                     break;
-                case 'alignRight':
-                    if (currentMode === 'richtext' && editor) {
-                        editor.chain().focus().setTextAlign('right').run();
+                case "alignRight":
+                    if (currentMode === "richtext" && editor) {
+                        editor.chain().focus().setTextAlign("right").run();
                     }
                     break;
-                case 'alignJustify':
-                    if (currentMode === 'richtext' && editor) {
-                        editor.chain().focus().setTextAlign('justify').run();
+                case "alignJustify":
+                    if (currentMode === "richtext" && editor) {
+                        editor.chain().focus().setTextAlign("justify").run();
                     }
                     break;
 
                 // Lists
-                case 'bulletList':
-                    if (currentMode === 'richtext' && editor) {
+                case "bulletList":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().toggleBulletList().run();
                     }
                     break;
-                case 'orderedList':
-                    if (currentMode === 'richtext' && editor) {
+                case "orderedList":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().toggleOrderedList().run();
                     }
                     break;
-                case 'taskList':
-                    if (currentMode === 'richtext' && editor) {
+                case "taskList":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().toggleTaskList().run();
                     }
                     break;
 
                 // Block elements
-                case 'blockquote':
-                    if (currentMode === 'richtext' && editor) {
+                case "blockquote":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().toggleBlockquote().run();
                     }
                     break;
-                case 'codeBlock':
-                    if (currentMode === 'richtext' && editor) {
+                case "codeBlock":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().toggleCodeBlock().run();
                     }
                     break;
-                case 'setLink':
-                    if (currentMode === 'richtext' && editor) {
-                        const url = prompt('Enter URL:');
+                case "setLink":
+                    if (currentMode === "richtext" && editor) {
+                        const url = prompt("Enter URL:");
                         if (url) {
                             editor.chain().focus().setLink({ href: url }).run();
                         }
                     }
                     break;
-                case 'unsetLink':
-                    if (currentMode === 'richtext' && editor) {
+                case "unsetLink":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().unsetLink().run();
                     }
                     break;
-                case 'insertImage':
-                    if (currentMode === 'richtext' && editor) {
-                        const imageUrl = prompt('Enter image URL:');
+                case "insertImage":
+                    if (currentMode === "richtext" && editor) {
+                        const imageUrl = prompt("Enter image URL:");
                         if (imageUrl) {
-                            editor.chain().focus().setImage({ src: imageUrl }).run();
+                            editor
+                                .chain()
+                                .focus()
+                                .setImage({ src: imageUrl })
+                                .run();
                         }
                     }
                     break;
-                case 'horizontalRule':
-                    if (currentMode === 'richtext' && editor) {
+                case "horizontalRule":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().setHorizontalRule().run();
                     }
                     break;
 
                 // Tables
-                case 'insertTable':
-                    if (currentMode === 'richtext' && editor) {
-                        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+                case "insertTable":
+                    if (currentMode === "richtext" && editor) {
+                        editor
+                            .chain()
+                            .focus()
+                            .insertTable({
+                                rows: 3,
+                                cols: 3,
+                                withHeaderRow: true,
+                            })
+                            .run();
                     }
                     break;
-                case 'addColumnBefore':
-                    if (currentMode === 'richtext' && editor) {
+                case "addColumnBefore":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().addColumnBefore().run();
                     }
                     break;
-                case 'addRowAfter':
-                    if (currentMode === 'richtext' && editor) {
+                case "addRowAfter":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().addRowAfter().run();
                     }
                     break;
-                case 'deleteTable':
-                    if (currentMode === 'richtext' && editor) {
+                case "deleteTable":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().deleteTable().run();
                     }
                     break;
 
                 // Actions
-                case 'undo':
-                    if (currentMode === 'richtext' && editor) {
+                case "undo":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().undo().run();
                     }
                     break;
-                case 'redo':
-                    if (currentMode === 'richtext' && editor) {
+                case "redo":
+                    if (currentMode === "richtext" && editor) {
                         editor.chain().focus().redo().run();
                     }
                     break;
-                case 'clearFormat':
-                    if (currentMode === 'richtext' && editor) {
-                        editor.chain().focus().clearNodes().unsetAllMarks().run();
+                case "clearFormat":
+                    if (currentMode === "richtext" && editor) {
+                        editor
+                            .chain()
+                            .focus()
+                            .clearNodes()
+                            .unsetAllMarks()
+                            .run();
                     }
                     break;
             }
 
             // Update button states
-            updateToolbarState(currentMode === 'richtext' ? editor : null, toolbar);
+            updateToolbarState(
+                currentMode === "richtext" ? editor : null,
+                toolbar,
+            );
         });
 
         // Handle color palette button clicks
-        toolbar.addEventListener('click', (e) => {
-            const colorBtn = e.target.closest('[data-color]');
+        toolbar.addEventListener("click", (e) => {
+            const colorBtn = e.target.closest("[data-color]");
             if (!colorBtn) return;
 
             e.preventDefault();
             const color = colorBtn.dataset.color;
-            const menu = colorBtn.closest('[data-color-menu]');
-            
-            if (menu && menu.dataset.colorMenu === 'text') {
-                if (currentMode === 'richtext' && editor) {
+            const menu = colorBtn.closest("[data-color-menu]");
+
+            if (menu && menu.dataset.colorMenu === "text") {
+                if (currentMode === "richtext" && editor) {
                     editor.chain().focus().setColor(color).run();
                 }
-            } else if (menu && menu.dataset.colorMenu === 'highlight') {
-                if (currentMode === 'richtext' && editor) {
-                    editor.chain().focus().toggleHighlight({ color: color }).run();
+            } else if (menu && menu.dataset.colorMenu === "highlight") {
+                if (currentMode === "richtext" && editor) {
+                    editor
+                        .chain()
+                        .focus()
+                        .toggleHighlight({ color: color })
+                        .run();
                 }
             }
-            
+
             // Close the menu after selection
-            menu.classList.add('hidden');
+            menu.classList.add("hidden");
         });
 
         // Close color menus when clicking outside
-        document.addEventListener('click', (e) => {
+        document.addEventListener("click", (e) => {
             if (!container.contains(e.target)) {
-                container.querySelectorAll('[data-color-menu]').forEach(menu => {
-                    menu.classList.add('hidden');
-                });
+                container
+                    .querySelectorAll("[data-color-menu]")
+                    .forEach((menu) => {
+                        menu.classList.add("hidden");
+                    });
             }
         });
 
         // Update toolbar button states
-        if (currentMode === 'richtext' && editor) {
-            editor.on('selectionUpdate', () => {
+        if (currentMode === "richtext" && editor) {
+            editor.on("selectionUpdate", () => {
                 updateToolbarState(editor, toolbar);
             });
 
@@ -857,37 +949,54 @@ function initTiptapEditor(elementId, options = {}) {
 
     Object.assign(instanceApi, {
         getHTML: () => {
-            if (currentMode === 'richtext' && editor) {
+            if (currentMode === "richtext" && editor) {
                 return editor.getHTML();
             }
-            if (currentMode === 'markdown' && markdownTextarea) {
+            if (currentMode === "markdown" && markdownTextarea) {
                 return markdownTextarea.value;
             }
-            return '';
+            return "";
         },
         getMarkdown: () => {
-            if (currentMode === 'markdown' && markdownTextarea) {
+            if (currentMode === "markdown" && markdownTextarea) {
                 return markdownTextarea.value;
             }
-            if (currentMode === 'richtext' && editor) {
-                return window.Tiptap.htmlToMarkdown ? window.Tiptap.htmlToMarkdown(editor.getHTML()) : editor.getHTML();
+            if (currentMode === "richtext" && editor) {
+                return window.Tiptap.htmlToMarkdown
+                    ? window.Tiptap.htmlToMarkdown(editor.getHTML())
+                    : editor.getHTML();
             }
-            return '';
+            return "";
         },
         setContent: (content, mode = null) => {
             const targetMode = mode || currentMode;
-            if (targetMode === 'richtext') {
-                const htmlContent = currentMode === 'markdown'
-                    ? (window.Tiptap.markdownToHTML ? window.Tiptap.markdownToHTML(content) : content)
-                    : content;
+            if (targetMode === "richtext") {
+                const htmlContent =
+                    currentMode === "markdown"
+                        ? window.Tiptap.markdownToHTML
+                            ? window.Tiptap.markdownToHTML(content)
+                            : content
+                        : content;
                 if (editor) {
                     editor.commands.setContent(htmlContent);
+                    // Explicitly trigger onUpdate callback since programmatic setContent
+                    // may not always trigger Tiptap's onUpdate event
+                    if (config.onUpdate) {
+                        config.onUpdate(editor.getHTML());
+                    }
                 }
             } else if (markdownTextarea) {
-                const markdownContent = currentMode === 'richtext'
-                    ? (window.Tiptap.htmlToMarkdown ? window.Tiptap.htmlToMarkdown(content) : content)
-                    : content;
+                const markdownContent =
+                    currentMode === "richtext"
+                        ? window.Tiptap.htmlToMarkdown
+                            ? window.Tiptap.htmlToMarkdown(content)
+                            : content
+                        : content;
                 markdownTextarea.value = markdownContent;
+                // Explicitly trigger onUpdate callback for markdown mode too
+                if (config.onUpdate) {
+                    config.onUpdate(markdownTextarea.value);
+                }
             }
         },
         setMode: (mode) => {
@@ -904,7 +1013,7 @@ function initTiptapEditor(elementId, options = {}) {
                 markdownTextarea.remove();
                 instanceApi.markdownTextarea = null;
             }
-        }
+        },
     });
 
     return instanceApi;
@@ -913,121 +1022,135 @@ function initTiptapEditor(elementId, options = {}) {
 function updateToolbarState(editor, toolbar) {
     if (!editor) {
         // In markdown mode, disable most buttons but keep toggleMode enabled
-        toolbar.querySelectorAll('[data-action]').forEach(btn => {
-            if (btn.dataset.action === 'toggleMode') {
+        toolbar.querySelectorAll("[data-action]").forEach((btn) => {
+            if (btn.dataset.action === "toggleMode") {
                 btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.classList.remove("opacity-50", "cursor-not-allowed");
             } else {
                 btn.disabled = true;
-                btn.classList.remove('active');
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                btn.classList.remove("active");
+                btn.classList.add("opacity-50", "cursor-not-allowed");
             }
         });
         return;
     }
 
     // Enable buttons and update states for rich text mode
-    toolbar.querySelectorAll('[data-action]').forEach(btn => {
+    toolbar.querySelectorAll("[data-action]").forEach((btn) => {
         btn.disabled = false;
-        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btn.classList.remove("opacity-50", "cursor-not-allowed");
     });
 
     // Update active states for toolbar buttons
-    toolbar.querySelectorAll('[data-action]').forEach(btn => {
+    toolbar.querySelectorAll("[data-action]").forEach((btn) => {
         const action = btn.dataset.action;
         let isActive = false;
 
-        switch(action) {
-            case 'bold':
-                isActive = editor.isActive('bold');
+        switch (action) {
+            case "bold":
+                isActive = editor.isActive("bold");
                 break;
-            case 'italic':
-                isActive = editor.isActive('italic');
+            case "italic":
+                isActive = editor.isActive("italic");
                 break;
-            case 'underline':
-                isActive = editor.isActive('underline');
+            case "underline":
+                isActive = editor.isActive("underline");
                 break;
-            case 'strike':
-                isActive = editor.isActive('strike');
+            case "strike":
+                isActive = editor.isActive("strike");
                 break;
-            case 'heading1':
-                isActive = editor.isActive('heading', { level: 1 });
+            case "heading1":
+                isActive = editor.isActive("heading", { level: 1 });
                 break;
-            case 'heading2':
-                isActive = editor.isActive('heading', { level: 2 });
+            case "heading2":
+                isActive = editor.isActive("heading", { level: 2 });
                 break;
-            case 'heading3':
-                isActive = editor.isActive('heading', { level: 3 });
+            case "heading3":
+                isActive = editor.isActive("heading", { level: 3 });
                 break;
-            case 'paragraph':
-                isActive = editor.isActive('paragraph');
+            case "paragraph":
+                isActive = editor.isActive("paragraph");
                 break;
-            case 'alignLeft':
-                isActive = editor.isActive({ textAlign: 'left' });
+            case "alignLeft":
+                isActive = editor.isActive({ textAlign: "left" });
                 break;
-            case 'alignCenter':
-                isActive = editor.isActive({ textAlign: 'center' });
+            case "alignCenter":
+                isActive = editor.isActive({ textAlign: "center" });
                 break;
-            case 'alignRight':
-                isActive = editor.isActive({ textAlign: 'right' });
+            case "alignRight":
+                isActive = editor.isActive({ textAlign: "right" });
                 break;
-            case 'alignJustify':
-                isActive = editor.isActive({ textAlign: 'justify' });
+            case "alignJustify":
+                isActive = editor.isActive({ textAlign: "justify" });
                 break;
-            case 'bulletList':
-                isActive = editor.isActive('bulletList');
+            case "bulletList":
+                isActive = editor.isActive("bulletList");
                 break;
-            case 'orderedList':
-                isActive = editor.isActive('orderedList');
+            case "orderedList":
+                isActive = editor.isActive("orderedList");
                 break;
-            case 'taskList':
-                isActive = editor.isActive('taskList');
+            case "taskList":
+                isActive = editor.isActive("taskList");
                 break;
-            case 'blockquote':
-                isActive = editor.isActive('blockquote');
+            case "blockquote":
+                isActive = editor.isActive("blockquote");
                 break;
-            case 'codeBlock':
-                isActive = editor.isActive('codeBlock');
+            case "codeBlock":
+                isActive = editor.isActive("codeBlock");
                 break;
-            case 'setLink':
-            case 'unsetLink':
-                isActive = editor.isActive('link');
+            case "setLink":
+            case "unsetLink":
+                isActive = editor.isActive("link");
                 break;
         }
 
         if (isActive) {
-            btn.classList.add('active');
+            btn.classList.add("active");
         } else {
-            btn.classList.remove('active');
+            btn.classList.remove("active");
         }
     });
 }
 
 function getEditorContent(elementId) {
     const instance = getTiptapInstance(elementId);
-    if (!instance) return '';
-    
+    if (!instance) return "";
+
     // Handle markdown mode - return textarea value directly
-    if (instance.getMode && instance.getMode() === 'markdown' && instance.markdownTextarea) {
+    if (
+        instance.getMode &&
+        instance.getMode() === "markdown" &&
+        instance.markdownTextarea
+    ) {
         return instance.markdownTextarea.value;
     }
-    
+
     // Handle rich text mode
-    if (!instance.editor) return '';
+    if (!instance.editor) return "";
     return instance.editor.getHTML();
 }
 
 function setEditorContent(elementId, content, mode) {
     const instance = getTiptapInstance(elementId);
     if (!instance) return;
-    
-    // Handle markdown mode - set textarea value directly
-    if (instance.getMode && instance.getMode() === 'markdown' && instance.markdownTextarea) {
+
+    // Use the instance's setContent method which properly triggers onUpdate callback
+    if (instance.setContent) {
+        instance.setContent(content, mode);
+        return;
+    }
+
+    // Fallback: Handle markdown mode - set textarea value directly
+    if (
+        instance.getMode &&
+        instance.getMode() === "markdown" &&
+        instance.markdownTextarea
+    ) {
         instance.markdownTextarea.value = content;
         return;
     }
-    
-    // Handle rich text mode
+
+    // Fallback: Handle rich text mode
     if (instance.editor) {
         instance.editor.commands.setContent(content, mode);
     }
@@ -1053,7 +1176,7 @@ function destroyEditor(elementId) {
 }
 
 // Add CSS for toolbar buttons
-const style = document.createElement('style');
+const style = document.createElement("style");
 style.textContent = `
     .tiptap-toolbar .toolbar-btn {
         padding: 6px 10px;
@@ -1197,5 +1320,5 @@ window.TiptapEditor = {
     setContent: setEditorContent,
     setMode: setEditorMode,
     insertText: insertText,
-    destroy: destroyEditor
+    destroy: destroyEditor,
 };

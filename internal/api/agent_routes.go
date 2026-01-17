@@ -104,7 +104,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 				   q.name as queue,
 				   ts.name as state,
 				   tp.name as priority,
-				   CASE 
+				   CASE
 				       WHEN tp.name LIKE '%very low%' THEN '#03c4f0'
 				       WHEN tp.name LIKE '%low%' THEN '#83bfc8'
 				       WHEN tp.name LIKE '%normal%' THEN '#cdcdcd'
@@ -143,24 +143,47 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 			query += " AND t.ticket_state_id NOT IN (SELECT id FROM ticket_state WHERE type_id = 3)"
 		}
 
-		// Apply queue filter
+		// Check if user is admin
+		var isAdmin bool
+		adminCheckErr := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT EXISTS(
+				SELECT 1 FROM group_user gu
+				JOIN groups g ON gu.group_id = g.id
+				WHERE gu.user_id = ? AND g.name = 'admin'
+			)
+		`), userID).Scan(&isAdmin)
+		if adminCheckErr != nil {
+			isAdmin = false // Fail-safe: if we can't check, assume not admin
+		}
+
+		// Apply queue filter - SECURITY: Always validate queue access for non-admin users
 		if queue != "all" {
+			// SECURITY CHECK: Verify user has access to the requested queue
+			if !isAdmin {
+				var hasAccess bool
+				accessCheckErr := db.QueryRow(database.ConvertPlaceholders(`
+					SELECT EXISTS(
+						SELECT 1 FROM queue q
+						WHERE q.id = ?
+						AND q.group_id IN (
+							SELECT group_id FROM group_user WHERE user_id = ?
+						)
+					)
+				`), queue, userID).Scan(&hasAccess)
+
+				if accessCheckErr != nil || !hasAccess {
+					// User requested a queue they don't have access to - return 403
+					c.JSON(http.StatusForbidden, gin.H{
+						"error": "You do not have permission to access tickets in this queue",
+					})
+					return
+				}
+			}
 			query += " AND t.queue_id = ?"
 			args = append(args, queue)
 		} else {
-			// Check if user is admin
-			var isAdmin bool
-			adminCheckErr := db.QueryRow(database.ConvertPlaceholders(`
-				SELECT EXISTS(
-					SELECT 1 FROM group_user gu
-					JOIN groups g ON gu.group_id = g.id
-					WHERE gu.user_id = ? AND g.name = 'admin'
-				)
-			`), userID).Scan(&isAdmin)
-
-			if adminCheckErr == nil && isAdmin {
-				// Admin sees all queues - no filter needed
-			} else {
+			// No specific queue requested - filter by user's accessible queues (non-admin only)
+			if !isAdmin {
 				// Regular agents see only queues they have access to through group membership
 				query += ` AND t.queue_id IN (
 					SELECT DISTINCT q2.id FROM queue q2
@@ -170,6 +193,7 @@ func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 				)`
 				args = append(args, userID)
 			}
+			// Admin sees all queues - no filter needed
 		}
 
 		// Apply assignee filter
@@ -453,7 +477,7 @@ func handleTicketCustomerUsers(db *sql.DB) gin.HandlerFunc {
 
 		// Query customer users - prioritize same company
 		query := database.ConvertPlaceholders(`
-			SELECT 
+			SELECT
 				cu.login,
 				COALESCE(cu.email, cu.login) as email,
 				COALESCE(cu.first_name, '') as first_name,
@@ -464,7 +488,7 @@ func handleTicketCustomerUsers(db *sql.DB) gin.HandlerFunc {
 			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
 			WHERE cu.valid_id = 1
 				AND (? = '' OR cu.customer_id = ?)
-			ORDER BY 
+			ORDER BY
 				CASE WHEN cu.customer_id = ? THEN 0 ELSE 1 END,
 				cu.first_name, cu.last_name
 			LIMIT 50

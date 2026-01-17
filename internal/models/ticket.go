@@ -201,6 +201,7 @@ type TicketListRequest struct {
 	StartDate           *string `json:"start_date,omitempty" form:"start_date"`
 	EndDate             *string `json:"end_date,omitempty" form:"end_date"`
 	ExcludeClosedStates bool    `json:"-"`
+	AccessibleQueueIDs  []uint  `json:"-"` // Queue IDs user has permission to view (for permission filtering)
 }
 
 // TicketListResponse represents a paginated list of tickets.

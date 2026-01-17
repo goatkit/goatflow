@@ -2705,7 +2705,31 @@
         "pending_until_help": "Especifique quando este chamado deve reabrir automaticamente.",
         "pending_required": "Obrigatório para estados pendentes",
         "target_ticket_number": "Número do Chamado Alvo",
-        "merge_target_placeholder": "Digite o número do chamado para mesclar"
+        "merge_target_placeholder": "Digite o número do chamado para mesclar",
+        "pending_reminder": {
+            "overdue": "Lembrete atrasado",
+            "scheduled": "Lembrete agendado",
+            "not_scheduled": "Lembrete não agendado",
+            "was_scheduled_for": "O lembrete estava agendado para",
+            "will_reopen_at": "O ticket será reaberto às",
+            "ago": "atrás",
+            "in": "em",
+            "no_time_scheduled": "Nenhum horário de lembrete agendado.",
+            "title": "Lembrete pendente",
+            "help": "O ticket retornará ao estado \"aberto\" no horário especificado."
+        },
+        "auto_close": {
+            "overdue": "Fechamento automático atrasado",
+            "scheduled": "Fechamento automático agendado",
+            "should_have_closed_at": "O ticket deveria ter sido fechado automaticamente às",
+            "will_close_at": "O ticket será fechado automaticamente",
+            "while_pending": "enquanto em estado de fechamento automático pendente",
+            "at": "às",
+            "plus_title": "Fechamento automático pendente+",
+            "plus_help": "O ticket será fechado automaticamente se não houver resposta do cliente até o horário especificado.",
+            "minus_title": "Fechamento automático pendente-",
+            "minus_help": "O ticket será fechado automaticamente no horário especificado, independentemente da atividade."
+        }
     },
     "tickets_form": {
         "subject_placeholder": "Breve resumo do problema...",
@@ -2754,6 +2778,21 @@
         "title": "Título ou saudação",
         "title_placeholder": "ex. Sr., Sra., Dr.",
         "username": "Nome de Usuário"
+    },
+    "queue_access": {
+        "denied": "Você não tem permissão para acessar esta fila",
+        "no_queues": "Você não tem acesso a nenhuma fila",
+        "error": "Falha ao verificar permissões da fila",
+        "permission_required": "Permissão de acesso à fila necessária",
+        "types": {
+            "ro": "Somente Leitura",
+            "rw": "Leitura/Escrita",
+            "create": "Criar Chamados",
+            "move_into": "Mover Chamados Para",
+            "note": "Adicionar Notas",
+            "owner": "Tornar-se Proprietário",
+            "priority": "Alterar Prioridade"
+        }
     },
     "validation": {
         "alpha": "Deve conter apenas letras",

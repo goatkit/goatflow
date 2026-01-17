@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -73,13 +74,27 @@ func GetTemplatesForQueue(queueID int, templateType string) ([]TemplateForAgent,
 }
 
 // SubstituteTemplateVariables replaces template variables with actual values.
+// Like OTRS, any unmatched variables are replaced with "-" rather than left as raw tags.
+// Handles both raw tags (<OTRS_*>) and HTML-encoded tags (&lt;OTRS_*&gt;).
 func SubstituteTemplateVariables(text string, vars map[string]string) string {
 	result := text
 	for key, value := range vars {
-		// Support both <OTRS_*> and <GOTRS_*> style variables
+		// Support both <OTRS_*> and <GOTRS_*> style variables (raw)
 		result = strings.ReplaceAll(result, "<OTRS_"+key+">", value)
 		result = strings.ReplaceAll(result, "<GOTRS_"+key+">", value)
+		// Support HTML-encoded versions (&lt;OTRS_*&gt; and &lt;GOTRS_*&gt;)
+		result = strings.ReplaceAll(result, "&lt;OTRS_"+key+"&gt;", value)
+		result = strings.ReplaceAll(result, "&lt;GOTRS_"+key+"&gt;", value)
 	}
+
+	// Clean up any remaining unmatched template variables (like OTRS does)
+	// OTRS replaces unmatched <OTRS_*> and <GOTRS_*> tags with "-"
+	// Handle both raw and HTML-encoded versions
+	unmatchedPattern := regexp.MustCompile(`<(?:OTRS|GOTRS)_[A-Za-z0-9_]+>`)
+	result = unmatchedPattern.ReplaceAllString(result, "-")
+	unmatchedEncodedPattern := regexp.MustCompile(`&lt;(?:OTRS|GOTRS)_[A-Za-z0-9_]+&gt;`)
+	result = unmatchedEncodedPattern.ReplaceAllString(result, "-")
+
 	return result
 }
 
@@ -151,6 +166,7 @@ func handleGetAgentTemplate(c *gin.Context) {
 
 	// Get ticket context for variable substitution if provided
 	ticketIDStr := c.Query("ticket_id")
+
 	if ticketIDStr != "" {
 		ticketID, err := strconv.Atoi(ticketIDStr)
 		if err == nil {
@@ -211,6 +227,12 @@ func GetTicketTemplateVariables(ticketID int) map[string]string {
 	vars["TICKET_CustomerUserID"] = customerUserID.String
 	vars["TICKET_Queue"] = queueName.String
 	vars["TICKET_Owner"] = ownerLogin.String
+
+	// Initialize CUSTOMER_* variables with empty defaults
+	vars["CUSTOMER_UserFirstname"] = ""
+	vars["CUSTOMER_UserLastname"] = ""
+	vars["CUSTOMER_UserFullname"] = ""
+	vars["CUSTOMER_UserEmail"] = ""
 
 	// Get customer user data if available
 	if customerUserID.String != "" {

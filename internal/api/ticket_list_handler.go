@@ -201,12 +201,31 @@ func HandleListTicketsAPI(c *gin.Context) {
 		return
 	}
 
+	// Queue permission filtering - use context values from middleware
+	// Customers are already restricted to their own tickets above
+	if isCustomer != true {
+		isQueueAdmin := false
+		if val, exists := c.Get("is_queue_admin"); exists {
+			if admin, ok := val.(bool); ok {
+				isQueueAdmin = admin
+			}
+		}
+
+		if !isQueueAdmin {
+			if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
+				if queueIDs, ok := accessibleQueueIDs.([]uint); ok && len(queueIDs) > 0 {
+					filters["accessible_queue_ids"] = queueIDs
+				}
+			}
+		}
+	}
+
 	// Build the query
 	offset := (page - 1) * perPage
 
 	// Base query
 	query := `
-		SELECT 
+		SELECT
 			t.id,
 			t.tn,
 			t.title,
@@ -258,6 +277,16 @@ func HandleListTicketsAPI(c *gin.Context) {
 	if responsibleUserID, ok := filters["responsible_user_id"].(int); ok {
 		query += " AND t.responsible_user_id = ?"
 		args = append(args, responsibleUserID)
+	}
+
+	// Add queue permission filter (accessible queues)
+	if queueIDs, ok := filters["accessible_queue_ids"].([]uint); ok && len(queueIDs) > 0 {
+		placeholders := make([]string, len(queueIDs))
+		for i, qid := range queueIDs {
+			placeholders[i] = "?"
+			args = append(args, qid)
+		}
+		query += fmt.Sprintf(" AND t.queue_id IN (%s)", strings.Join(placeholders, ","))
 	}
 
 	// Add search condition

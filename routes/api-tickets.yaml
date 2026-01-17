@@ -3,177 +3,223 @@
 apiVersion: v1
 kind: RouteGroup
 metadata:
-  name: api-tickets-protected
-  description: "Ticket management API endpoints (protected)"
-  namespace: default
-  enabled: true
+    name: api-tickets-protected
+    description: "Ticket management API endpoints (protected)"
+    namespace: default
+    enabled: true
 spec:
-  prefix: /api/tickets
-  middleware:
-    - auth
-  routes:
-    # Core CRUD
-    - path: /
-      method: GET
-      handler: handleAPITickets
-      description: "List tickets with filtering"
+    prefix: /api/tickets
+    middleware:
+        - auth
+        - queue_ro # Require read access to at least one queue
+    routes:
+        # Core CRUD
+        - path: /
+          method: GET
+          handler: handleAPITickets
+          description: "List tickets with filtering"
 
-    - path: /
-      method: POST
-      handler: handleCreateTicket
-      description: "Create new ticket"
+        - path: /
+          method: POST
+          handler: handleCreateTicket
+          middleware:
+              - auth
+              - queue_access_create # Require create access to target queue
+          description: "Create new ticket"
 
-    - path: /:id
-      method: GET
-      handler: handleGetTicket
-      description: "Get ticket by ID"
+        - path: /:id
+          method: GET
+          handler: handleGetTicket
+          middleware:
+              - auth
+              - ticket_access_ro # Require read access to ticket's queue
+          description: "Get ticket by ID"
 
-    - path: /:id
-      method: PUT
-      handler: handleUpdateTicket
-      description: "Update ticket"
+        - path: /:id
+          method: PUT
+          handler: handleUpdateTicket
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access to ticket's queue
+          description: "Update ticket"
 
-    - path: /:id
-      method: DELETE
-      handler: handleDeleteTicket
-      description: "Delete ticket"
+        - path: /:id
+          method: DELETE
+          handler: handleDeleteTicket
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access to ticket's queue
+          description: "Delete ticket"
 
-    # Ticket actions
-    - path: /:id/notes
-      method: POST
-      handler: handleAddTicketNote
-      description: "Add note to ticket"
+        # Ticket actions
+        - path: /:id/notes
+          method: POST
+          handler: handleAddTicketNote
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
+          description: "Add note to ticket"
 
-    - path: /:id/history
-      method: GET
-      handler: handleGetTicketHistory
-      description: "Get ticket history"
+        - path: /:id/history
+          method: GET
+          handler: handleGetTicketHistory
+          middleware:
+              - auth
+              - ticket_access_ro # Require read access
+          description: "Get ticket history"
 
-    - path: /:id/available-agents
-      method: GET
-      handler: handleGetAvailableAgents
-      description: "Get available agents for assignment"
+        - path: /:id/available-agents
+          method: GET
+          handler: handleGetAvailableAgents
+          middleware:
+              - auth
+              - ticket_access_ro # Require read access
+          description: "Get available agents for assignment"
 
-    - path: /:id/assign
-      method: POST
-      handler: handleAssignTicket
-      description: "Assign ticket to agent"
+        - path: /:id/assign
+          method: POST
+          handler: handleAssignTicket
+          middleware:
+              - auth
+              - ticket_access_owner # Require owner permission
+          description: "Assign ticket to agent"
 
-    - path: /:id/close
-      method: POST
-      handler: handleCloseTicket
-      description: "Close ticket"
+        - path: /:id/close
+          method: POST
+          handler: handleCloseTicket
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access
+          description: "Close ticket"
 
-    - path: /:id/reopen
-      method: POST
-      handler: handleReopenTicket
-      description: "Reopen closed ticket"
+        - path: /:id/reopen
+          method: POST
+          handler: handleReopenTicket
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access
+          description: "Reopen closed ticket"
 
-    - path: /:id/status
-      method: POST
-      handler: handleUpdateTicketStatus
-      description: "Update ticket status (supports pending reminders)"
+        - path: /:id/status
+          method: POST
+          handler: handleUpdateTicketStatus
+          middleware:
+              - auth
+              - ticket_access_rw # Require read-write access
+          description: "Update ticket status (supports pending reminders)"
 
-    - path: /:id/time
-      method: POST
-      handler: handleAddTicketTime
-      description: "Add time accounting entry"
+        - path: /:id/time
+          method: POST
+          handler: handleAddTicketTime
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
+          description: "Add time accounting entry"
 
-    - path: /:id/reply
-      method: POST
-      handler: handleTicketReply
-      description: "Reply to ticket"
+        - path: /:id/reply
+          method: POST
+          handler: handleTicketReply
+          middleware:
+              - auth
+              - ticket_access_note # Require note permission
+          description: "Reply to ticket"
 
-    - path: /:id/priority
-      method: POST
-      handler: handleUpdateTicketPriority
-      description: "Update ticket priority"
+        - path: /:id/priority
+          method: POST
+          handler: handleUpdateTicketPriority
+          middleware:
+              - auth
+              - ticket_access_priority # Require priority permission
+          description: "Update ticket priority"
 
-    - path: /:id/queue
-      method: POST
-      handler: handleUpdateTicketQueue
-      description: "Update ticket queue"
+        - path: /:id/queue
+          method: POST
+          handler: handleUpdateTicketQueue
+          middleware:
+              - auth
+              - ticket_access_move_into # Require move_into permission
+          description: "Update ticket queue"
 
-    # Search and filtering
-    - path: /search
-      method: GET
-      handler: handleSearchTickets
-      description: "Search tickets"
+        # Search and filtering
+        - path: /search
+          method: GET
+          handler: handleSearchTickets
+          description: "Search tickets"
 
-    - path: /filter
-      method: GET
-      handler: handleFilterTickets
-      description: "Filter tickets"
+        - path: /filter
+          method: GET
+          handler: handleFilterTickets
+          description: "Filter tickets"
 
-    - path: /advanced-search
-      method: GET
-      handler: handleAdvancedTicketSearch
-      description: "Advanced ticket search"
+        - path: /advanced-search
+          method: GET
+          handler: handleAdvancedTicketSearch
+          description: "Advanced ticket search"
 
-    - path: /search/suggestions
-      method: GET
-      handler: handleSearchSuggestions
-      description: "Get search suggestions"
+        - path: /search/suggestions
+          method: GET
+          handler: handleSearchSuggestions
+          description: "Get search suggestions"
 
-    - path: /search/export
-      method: GET
-      handler: handleExportSearchResults
-      description: "Export search results"
+        - path: /search/export
+          method: GET
+          handler: handleExportSearchResults
+          description: "Export search results"
 
-    # Search history
-    - path: /search/history
-      method: POST
-      handler: handleSaveSearchHistory
-      description: "Save search to history"
+        # Search history
+        - path: /search/history
+          method: POST
+          handler: handleSaveSearchHistory
+          description: "Save search to history"
 
-    - path: /search/history
-      method: GET
-      handler: handleGetSearchHistory
-      description: "Get search history"
+        - path: /search/history
+          method: GET
+          handler: handleGetSearchHistory
+          description: "Get search history"
 
-    - path: /search/history/:id
-      method: DELETE
-      handler: handleDeleteSearchHistory
-      description: "Delete search history item"
+        - path: /search/history/:id
+          method: DELETE
+          handler: handleDeleteSearchHistory
+          description: "Delete search history item"
 
-    # Saved searches
-    - path: /search/saved
-      method: POST
-      handler: handleCreateSavedSearch
-      description: "Create saved search"
+        # Saved searches
+        - path: /search/saved
+          method: POST
+          handler: handleCreateSavedSearch
+          description: "Create saved search"
 
-    - path: /search/saved
-      method: GET
-      handler: handleGetSavedSearches
-      description: "Get saved searches"
+        - path: /search/saved
+          method: GET
+          handler: handleGetSavedSearches
+          description: "Get saved searches"
 
-    - path: /search/saved/:id/execute
-      method: GET
-      handler: handleExecuteSavedSearch
-      description: "Execute saved search"
+        - path: /search/saved/:id/execute
+          method: GET
+          handler: handleExecuteSavedSearch
+          description: "Execute saved search"
 
-    - path: /search/saved/:id
-      method: PUT
-      handler: handleUpdateSavedSearch
-      description: "Update saved search"
+        - path: /search/saved/:id
+          method: PUT
+          handler: handleUpdateSavedSearch
+          description: "Update saved search"
 
-    - path: /search/saved/:id
-      method: DELETE
-      handler: handleDeleteSavedSearch
-      description: "Delete saved search"
+        - path: /search/saved/:id
+          method: DELETE
+          handler: handleDeleteSavedSearch
+          description: "Delete saved search"
 
-    # Merge operations
-    - path: /:id/merge
-      method: POST
-      handler: handleMergeTickets
-      description: "Merge tickets"
+        # Merge operations
+        - path: /:id/merge
+          method: POST
+          handler: handleMergeTickets
+          description: "Merge tickets"
 
-    - path: /:id/unmerge
-      method: POST
-      handler: handleUnmergeTicket
-      description: "Unmerge ticket"
+        - path: /:id/unmerge
+          method: POST
+          handler: handleUnmergeTicket
+          description: "Unmerge ticket"
 
-    - path: /:id/merge-history
-      method: GET
-      handler: handleGetMergeHistory
-      description: "Get merge history"
+        - path: /:id/merge-history
+          method: GET
+          handler: handleGetMergeHistory
+          description: "Get merge history"
