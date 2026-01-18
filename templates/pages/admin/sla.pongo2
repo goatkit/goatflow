@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}SLA Management{% endblock %}
+{% block title %}{{ t("sla.title")|default:"SLA Management" }}{% endblock %}
 
 {% block content %}
 <style>
@@ -19,8 +19,8 @@ input[type="number"] {
         <!-- Header -->
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
             <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">SLA Management</h1>
-                <button onclick="openSLAModal()" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600" title="Add new SLA">
+                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ t("sla.title")|default:"SLA Management" }}</h1>
+                <button onclick="openSLAModal()" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600" title="{{ t("sla.tooltips.add_new")|default:"Add new SLA" }}">
                     <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                     </svg>
@@ -33,8 +33,8 @@ input[type="number"] {
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
             <form method="GET" action="/admin/sla" class="flex flex-wrap gap-4">
                 <div class="flex-1 min-w-[200px]">
-                    <input type="text" name="search" value="{{ SearchQuery }}" 
-                           placeholder="Search SLAs..." 
+                    <input type="text" name="search" value="{{ SearchQuery }}"
+                           placeholder="Search SLAs..."
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
                 </div>
                 <div>
@@ -44,11 +44,11 @@ input[type="number"] {
                         <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>Invalid Only</option>
                     </select>
                 </div>
-                <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" title="Apply filters">
+                <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" title="{{ t("sla.tooltips.apply_filters")|default:"Apply filters" }}">
                     Filter
                 </button>
                 {% if SearchQuery or ValidFilter != "all" %}
-                <a href="/admin/sla" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg" title="Clear all filters">
+                <a href="/admin/sla" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg" title="{{ t("sla.tooltips.clear_filters")|default:"Clear all filters" }}">
                     Clear
                 </a>
                 {% endif %}
@@ -143,13 +143,13 @@ input[type="number"] {
                                 solution_notify: {% if sla.SolutionNotify %}{{ sla.SolutionNotify }}{% else %}null{% endif %},
                                 comments: {% if sla.Comments %}'{{ sla.Comments }}'{% else %}null{% endif %},
                                 valid_id: {{ sla.ValidID }}
-                            })" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="Edit SLA">
+                            })" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="{{ t("sla.tooltips.edit")|default:"Edit SLA" }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                 </svg>
                             </button>
-                            <button onclick="toggleSLAStatus({{ sla.ID }}, {{ sla.ValidID }}, '{{ sla.Name }}')" 
-                                    class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300" 
+                            <button onclick="toggleSLAStatus({{ sla.ID }}, {{ sla.ValidID }}, '{{ sla.Name }}')"
+                                    class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
                                     title="{% if sla.ValidID == 1 %}Deactivate SLA{% else %}Activate SLA{% endif %}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     {% if sla.ValidID == 1 %}
@@ -178,12 +178,12 @@ input[type="number"] {
 <div id="slaModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900 dark:text-white">Add SLA</h2>
+            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("sla.add_sla")|default:"Add SLA" }}</h2>
         </div>
         <form id="slaForm" onsubmit="saveSLA(event)">
             <div class="p-6 space-y-4">
                 <input type="hidden" id="slaId" name="id">
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
                     <input type="text" id="slaName" name="name" required
@@ -281,11 +281,11 @@ input[type="number"] {
             </div>
 
             <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                <button type="button" onclick="closeSLAModal()" 
+                <button type="button" onclick="closeSLAModal()"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                     Cancel
                 </button>
-                <button type="submit" 
+                <button type="submit"
                         class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:text-sm">
                     Save
                 </button>
@@ -324,26 +324,26 @@ function editSLA(sla) {
     document.getElementById('slaId').value = sla.id;
     document.getElementById('slaName').value = sla.name;
     document.getElementById('slaCalendar').value = sla.calendar_name || '';
-    
+
     // Convert stored minutes to display value + unit
     const firstResponse = minutesToUnit(sla.first_response_time);
     document.getElementById('slaFirstResponseValue').value = firstResponse.value || '';
     document.getElementById('slaFirstResponseUnit').value = firstResponse.unit;
     document.getElementById('slaFirstResponseNotify').value = sla.first_response_notify || '';
-    
+
     const updateTime = minutesToUnit(sla.update_time);
     document.getElementById('slaUpdateTimeValue').value = updateTime.value || '';
     document.getElementById('slaUpdateTimeUnit').value = updateTime.unit;
     document.getElementById('slaUpdateNotify').value = sla.update_notify || '';
-    
+
     const solutionTime = minutesToUnit(sla.solution_time);
     document.getElementById('slaSolutionTimeValue').value = solutionTime.value || '';
     document.getElementById('slaSolutionTimeUnit').value = solutionTime.unit;
     document.getElementById('slaSolutionNotify').value = sla.solution_notify || '';
-    
+
     document.getElementById('slaComments').value = sla.comments || '';
     document.getElementById('slaValidId').value = sla.valid_id;
-    
+
     const modal = document.getElementById('slaModal');
     if (modal) {
         modal.classList.remove('hidden');
@@ -359,33 +359,33 @@ function closeSLAModal() {
 
 function saveSLA(event) {
     event.preventDefault();
-    
+
     // Disable submit button to prevent double submission
     const submitBtn = event.target.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Saving...';
-    
+
     // Convert value+unit pairs to minutes
     const getMinutes = (valueId, unitId) => {
         const value = parseInt(document.getElementById(valueId).value) || 0;
         const unit = parseInt(document.getElementById(unitId).value) || 1;
         return value * unit;
     };
-    
+
     // Update hidden fields with calculated minutes
     document.getElementById('slaFirstResponse').value = getMinutes('slaFirstResponseValue', 'slaFirstResponseUnit');
     document.getElementById('slaUpdateTime').value = getMinutes('slaUpdateTimeValue', 'slaUpdateTimeUnit');
     document.getElementById('slaSolutionTime').value = getMinutes('slaSolutionTimeValue', 'slaSolutionTimeUnit');
-    
+
     const formData = new FormData(event.target);
     const id = formData.get('id');
-    
+
     // Convert form data to JSON
     const data = {};
     formData.forEach((value, key) => {
         if (key !== 'id') {
             // Convert numeric fields
-            if (['first_response_time', 'first_response_notify', 'update_time', 'update_notify', 
+            if (['first_response_time', 'first_response_notify', 'update_time', 'update_notify',
                  'solution_time', 'solution_notify'].includes(key)) {
                 const trimmed = value ? value.toString().trim() : '';
                 data[key] = trimmed !== '' ? parseInt(trimmed) : 0;
@@ -398,12 +398,12 @@ function saveSLA(event) {
             }
         }
     });
-    
+
     console.log('SLA save data:', JSON.stringify(data, null, 2));
-    
+
     const url = id ? `/admin/sla/${id}/update` : '/admin/sla/create';
     const method = id ? 'PUT' : 'POST';
-    
+
     fetch(url, {
         method: method,
         headers: {
@@ -442,8 +442,11 @@ function saveSLA(event) {
 function toggleSLAStatus(id, currentStatus, name) {
     const newStatus = currentStatus === 1 ? 2 : 1;
     const action = newStatus === 1 ? 'activate' : 'deactivate';
-    
-    if (confirm(`Are you sure you want to ${action} the SLA "${name}"?`)) {
+
+    const confirmMsg = action === 'activate'
+        ? '{{ t("messages.confirm.activate_sla")|default:"Are you sure you want to activate this SLA?" }}'
+        : '{{ t("messages.confirm.deactivate_sla")|default:"Are you sure you want to deactivate this SLA?" }}';
+    if (confirm(confirmMsg)) {
         fetch(`/admin/sla/${id}/update`, {
             method: 'PUT',
             headers: {
@@ -493,14 +496,14 @@ document.getElementById('slaForm').addEventListener('keypress', function(event) 
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
-        type === 'error' ? 'bg-red-600' : 
-        type === 'success' ? 'bg-green-600' : 
+        type === 'error' ? 'bg-red-600' :
+        type === 'success' ? 'bg-green-600' :
         'bg-blue-600'
     }`;
     toast.textContent = message;
-    
+
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.remove();
     }, 3000);

@@ -42,24 +42,48 @@
     <!-- HTMX extensions (vendored) -->
     <script src="/static/js/htmx-json-enc.js"></script>
 
-    <!-- Common utilities -->
+    <!-- i18n data blocks - MUST be before common.js which reads them -->
+    <!-- Validation i18n (only current language) -->
+    <script id="gk-validation-msgs" type="application/json">{
+        "lang": "{{ getLang()|default:"en" }}",
+        "messages": {
+            "validation.required": "{field} {{ t("validation.required_suffix")|default:"is required" }}",
+            "validation.minlength": "{field} {{ t("validation.minlength_suffix")|default:"must be at least {min} characters" }}",
+            "validation.pattern": "{field} {{ t("validation.pattern_suffix")|default:"has invalid format" }}",
+            "validation.filesize": "{file} {{ t("validation.filesize_suffix")|default:"exceeds maximum size {size}MB" }}",
+            "validation.summary": "{{ t("validation.summary_title")|default:"Please correct the following:" }}"
+        }
+    }</script>
+    <!-- Reminder popup i18n -->
+    <script id="reminder-i18n" type="application/json">{
+        "ticket_reminder": "{{ t("notifications.reminder.ticket_reminder")|default:"Ticket reminder" }}",
+        "reminder_ready": "{{ t("notifications.reminder.reminder_ready")|default:"Reminder is ready" }}",
+        "overdue_by": "{{ t("notifications.reminder.overdue_by")|default:"Overdue by" }}",
+        "due_in": "{{ t("notifications.reminder.due_in")|default:"Due in" }}",
+        "reminder_at": "{{ t("notifications.reminder.reminder_at")|default:"Reminder at" }}",
+        "open_ticket": "{{ t("notifications.reminder.open_ticket")|default:"Open Ticket" }}",
+        "dismiss": "{{ t("notifications.reminder.dismiss")|default:"Dismiss reminder" }}",
+        "ticket_label": "{{ t("notifications.reminder.ticket_label")|default:"Ticket" }}",
+        "snoozed_until": "{{ t("notifications.reminder.snoozed_until")|default:"Reminder snoozed until" }}",
+        "snooze_failed": "{{ t("notifications.reminder.snooze_failed")|default:"Failed to snooze reminder" }}",
+        "years": "{{ t("time.years")|default:"years" }}",
+        "year": "{{ t("time.year")|default:"year" }}",
+        "months": "{{ t("time.months")|default:"months" }}",
+        "month": "{{ t("time.month")|default:"month" }}",
+        "weeks": "{{ t("time.weeks")|default:"weeks" }}",
+        "week": "{{ t("time.week")|default:"week" }}",
+        "days": "{{ t("time.days")|default:"days" }}",
+        "day": "{{ t("time.day")|default:"day" }}",
+        "pending_reminder": "{{ t("ticket.states.pending_reminder")|default:"pending reminder" }}"
+    }</script>
+
+    <!-- Common utilities - loads after i18n data blocks -->
     <script src="/static/js/common.js"></script>
     <!-- GoatKit typeahead enhancement -->
     <script src="/static/js/goatkit-typeahead.js"></script>
     <script src="/static/js/goatkit-autocomplete.js"></script>
     <script src="/static/js/goatkit-validate.js"></script>
     <script src="/static/js/entity-selector.js"></script>
-        <!-- Validation i18n (only current language) -->
-        <script id="gk-validation-msgs" type="application/json">{
-            "lang": "{{ getLang()|default:"en" }}",
-            "messages": {
-                "validation.required": "{field} {{ t("validation.required_suffix")|default:"is required" }}",
-                "validation.minlength": "{field} {{ t("validation.minlength_suffix")|default:"must be at least {min} characters" }}",
-                "validation.pattern": "{field} {{ t("validation.pattern_suffix")|default:"has invalid format" }}",
-                "validation.filesize": "{file} {{ t("validation.filesize_suffix")|default:"exceeds maximum size {size}MB" }}",
-                "validation.summary": "{{ t("validation.summary_title")|default:"Please correct the following:" }}"
-            }
-        }</script>
 
     <!-- Custom styles -->
     <style>

@@ -83,10 +83,10 @@
                             {{ user.Email }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button 
+                            <button
                                 onclick="removeUser({{ user.UserID }})"
                                 class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                title="Remove from role">
+                                title="{{ t("role_users.tooltips.remove")|default:"Remove from role" }}">
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
@@ -99,8 +99,8 @@
                             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
-                            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No users assigned</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by adding users to this role.</p>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">{{ t("role_users.no_users")|default:"No users assigned" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("role_users.get_started")|default:"Get started by adding users to this role." }}</p>
                             <div class="mt-6">
                                 <button onclick="showAddUserModal()" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700">
                                     <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,10 +128,10 @@
                 <div class="sm:flex sm:items-start">
                     <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
                         <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
-                            Add User to Role
+                            {{ t("role_users.modal.title")|default:"Add User to Role" }}
                         </h3>
                         <div class="mt-4">
-                            <label for="userSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Select User</label>
+                            <label for="userSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("role_users.modal.select_user")|default:"Select User" }}</label>
                             <select id="userSelect" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
                                 <option value="">-- Select a user --</option>
                                 {% for user in AvailableUsers %}
@@ -144,7 +144,7 @@
             </div>
             <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                 <button type="button" onclick="addUser()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">
-                    Add User
+                    {{ t("role_users.modal.add_user")|default:"Add User" }}
                 </button>
                 <button type="button" onclick="hideAddUserModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:w-auto sm:text-sm">
                     Cancel
@@ -169,7 +169,7 @@ function hideAddUserModal() {
 function addUser() {
     const userId = document.getElementById('userSelect').value;
     if (!userId) {
-        alert('Please select a user');
+        alert('{{ t("messages.please_select_user")|default:"Please select a user" }}');
         return;
     }
 
@@ -186,17 +186,17 @@ function addUser() {
         if (data.success) {
             location.reload();
         } else {
-            alert(data.error || 'Failed to add user');
+            alert(data.error || '{{ t("messages.failed_add_user")|default:"Failed to add user" }}');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred');
+        alert('{{ t("messages.error_occurred")|default:"An error occurred" }}');
     });
 }
 
 function removeUser(userId) {
-    if (!confirm('Are you sure you want to remove this user from the role?')) {
+    if (!confirm('{{ t("messages.confirm_remove_user_from_role")|default:"Are you sure you want to remove this user from the role?" }}')) {
         return;
     }
 
@@ -219,12 +219,12 @@ function removeUser(userId) {
                 location.reload();
             }
         } else {
-            alert(data.error || 'Failed to remove user');
+            alert(data.error || '{{ t("messages.failed_remove_user")|default:"Failed to remove user" }}');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred');
+        alert('{{ t("messages.error_occurred")|default:"An error occurred" }}');
     });
 }
 </script>

@@ -127,7 +127,7 @@
                             </span>
                             {% endif %}
                             {% if queue.SystemAddressID %}
-                            <span class="inline-flex items-center" title="Email configured">
+                            <span class="inline-flex items-center" title="{{ t("queues.tooltips.email_configured")|default:"Email configured" }}">
                                 <svg class="h-4 w-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                                     <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
@@ -150,7 +150,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button onclick="viewQueueDetails({{ queue.ID }})"
                             class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-200 mr-3"
-                            title="View details">
+                            title="{{ t("queues.tooltips.view_details")|default:"View details" }}">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -158,7 +158,7 @@
                         </button>
                         <button onclick="editQueue({{ queue.ID }})"
                             class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-200 mr-3"
-                            title="Edit">
+                            title="{{ t("queues.tooltips.edit")|default:"Edit" }}">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
@@ -186,8 +186,8 @@
             <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No queues</h3>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by creating a new queue.</p>
+            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">{{ t("admin_queues.no_queues")|default:"No queues" }}</h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_queues.get_started")|default:"Get started by creating a new queue." }}</p>
             <div class="mt-6">
                 <button onclick="openQueueModal()"
                     class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
@@ -212,7 +212,7 @@
             <form id="queueForm" onsubmit="saveQueue(event)">
                 <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4" id="queue-modal-title">
-                        Add Queue
+                        {{ t("admin_queues.add_queue")|default:"Add Queue" }}
                     </h3>
 
                     <input type="hidden" id="queueId" name="id">
@@ -220,7 +220,7 @@
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <!-- Basic Information -->
                         <div class="sm:col-span-2">
-                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Basic Information</h4>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ t("admin_queues.basic_info")|default:"Basic Information" }}</h4>
                         </div>
 
                         <div>
@@ -248,9 +248,9 @@
 
                         <!-- Email Settings -->
                         <div class="sm:col-span-2 mt-4 flex items-center justify-between">
-                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Email Settings</h4>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ t("admin_queues.email_settings")|default:"Email Settings" }}</h4>
                             <a href="/admin/email-identities" class="text-xs font-medium text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-300 dark:hover:text-gotrs-100">
-                                Manage email identities
+                                {{ t("admin_queues.manage_email_identities")|default:"Manage email identities" }}
                             </a>
                         </div>
 
@@ -303,7 +303,7 @@
 
                         <!-- Ticket Settings -->
                         <div class="sm:col-span-2 mt-4">
-                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Ticket Settings</h4>
+                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ t("admin_queues.ticket_settings")|default:"Ticket Settings" }}</h4>
                         </div>
 
                         <div>
@@ -406,8 +406,7 @@
                         </h3>
                         <div class="mt-2">
                             <p class="text-sm text-gray-500 dark:text-gray-400">
-                                Are you sure you want to delete the queue "<span id="deleteQueueName"></span>"?
-                                All tickets in this queue will need to be reassigned. This action cannot be undone.
+                                {{ t("messages.confirm.delete_queue")|default:"Are you sure you want to delete this queue? All tickets in this queue will need to be reassigned. This action cannot be undone." }}
                             </p>
                         </div>
                     </div>
@@ -691,7 +690,7 @@ async function saveQueue(event) {
 async function viewQueueDetails(id) {
     const contentEl = document.getElementById('queueDetailsContent');
     if (contentEl) {
-        contentEl.innerHTML = '<div class="py-8 text-center text-gray-500 dark:text-gray-400">Loading queue details...</div>';
+        contentEl.innerHTML = '<div class="py-8 text-center text-gray-500 dark:text-gray-400">{{ t("common.loading_queue_details")|default:"Loading queue details..." }}</div>';
     }
     try {
         const response = await fetch(`/queues/${id}/meta`, {
@@ -737,7 +736,10 @@ async function toggleQueueStatus(id, currentStatus) {
     const newStatus = currentStatus === 1 ? 2 : 1;
     const action = newStatus === 1 ? 'enable' : 'disable';
 
-    if (!confirm(`Are you sure you want to ${action} this queue?`)) {
+    const confirmMsg = action === 'enable'
+        ? '{{ t("messages.confirm.enable_queue")|default:"Are you sure you want to enable this queue?" }}'
+        : '{{ t("messages.confirm.disable_queue")|default:"Are you sure you want to disable this queue?" }}';
+    if (!confirm(confirmMsg)) {
         return;
     }
 

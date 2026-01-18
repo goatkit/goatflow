@@ -67,7 +67,7 @@
     <!-- Permissions Form -->
     <form method="post" action="/admin/customer-groups/group/{{ Group.ID }}" class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
         <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">Customer Permissions</h3>
+            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">{{ t("customer_group.customer_permissions")|default:"Customer Permissions" }}</h3>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Select which customers have access to this group</p>
         </div>
 

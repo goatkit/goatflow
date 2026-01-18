@@ -12,12 +12,12 @@
     </header>
 
     <section aria-labelledby="admin-stats">
-        <h2 id="admin-stats" class="sr-only">Key metrics</h2>
+        <h2 id="admin-stats" class="sr-only">{{ t("admin_dashboard.key_metrics")|default:"Key metrics" }}</h2>
         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <article class="bg-white dark:bg-gray-800 shadow rounded-lg p-5">
                 <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("admin.total_users") }}</h3>
                 <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ UserCount|default:"0" }}</p>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Active agents and customers</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.active_users_customers")|default:"Active agents and customers" }}</p>
             </article>
             <article class="bg-white dark:bg-gray-800 shadow rounded-lg p-5">
                 <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("admin.total_groups") }}</h3>
@@ -27,18 +27,18 @@
             <article class="bg-white dark:bg-gray-800 shadow rounded-lg p-5">
                 <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("admin.active_tickets") }}</h3>
                 <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ ActiveTickets|default:"0" }}</p>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Queues monitored: {{ QueueCount|default:"0" }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.queues_monitored")|default:"Queues monitored" }}: {{ QueueCount|default:"0" }}</p>
             </article>
             <article class="bg-white dark:bg-gray-800 shadow rounded-lg p-5">
-                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">System Health</h3>
+                <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.system_health")|default:"System Health" }}</h3>
                 <p class="mt-2 text-2xl font-semibold text-green-600 dark:text-green-400">99.9%</p>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">uptime this month</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.uptime_this_month")|default:"uptime this month" }}</p>
             </article>
         </div>
     </section>
 
     <section class="mt-10" aria-labelledby="admin-actions">
-        <h2 id="admin-actions" class="text-xl font-semibold text-gray-900 dark:text-white">System Administration</h2>
+        <h2 id="admin-actions" class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("admin_dashboard.system_administration")|default:"System Administration" }}</h2>
         <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <a href="/admin/users" class="block bg-white dark:bg-gray-800 shadow rounded-lg p-5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gotrs-500">
                 <div class="flex items-start">
@@ -46,8 +46,8 @@
                         <i class="fa-solid fa-users text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">User Management</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage agent and customer accounts</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.user_management")|default:"User Management" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.user_management_desc")|default:"Manage agent and customer accounts" }}</p>
                     </div>
                 </div>
             </a>
@@ -57,8 +57,8 @@
                         <i class="fa-solid fa-people-group text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Group Management</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure teams and escalation paths</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.group_management")|default:"Group Management" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.group_management_desc")|default:"Configure teams and escalation paths" }}</p>
                     </div>
                 </div>
             </a>
@@ -68,8 +68,8 @@
                         <i class="fa-solid fa-user-shield text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Permissions</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Adjust agent access levels</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.permissions")|default:"Permissions" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.permissions_desc")|default:"Adjust agent access levels" }}</p>
                     </div>
                 </div>
             </a>
@@ -79,8 +79,8 @@
                         <i class="fa-solid fa-user-tag text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Roles</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage roles and role-group permissions</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.roles")|default:"Roles" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.roles_desc")|default:"Manage roles and role-group permissions" }}</p>
                     </div>
                 </div>
             </a>
@@ -90,8 +90,8 @@
                         <i class="fa-solid fa-lock text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Access Control Lists</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Define conditional access rules</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.acl")|default:"Access Control Lists" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.acl_desc")|default:"Define conditional access rules" }}</p>
                     </div>
                 </div>
             </a>
@@ -112,8 +112,8 @@
                         <i class="fa-solid fa-wrench text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ Labels.admin_system_maintenance_title|default:"System Maintenance" }}</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ Labels.admin_system_maintenance_description|default:"Schedule maintenance windows and notify users" }}</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.system_maintenance")|default:"System Maintenance" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.system_maintenance_desc")|default:"Schedule maintenance windows and notify users" }}</p>
                     </div>
                 </div>
             </a>
@@ -123,8 +123,8 @@
                         <i class="fa-solid fa-envelope-open-text text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Email Identities</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage salutations, addresses, signatures</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.email_identities")|default:"Email Identities" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.email_identities_desc")|default:"Manage salutations, addresses, signatures" }}</p>
                     </div>
                 </div>
             </a>
@@ -134,8 +134,8 @@
                         <i class="fa-solid fa-envelope-circle-check text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Inbound Mail Accounts</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure POP/IMAP polling and dispatch rules</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.inbound_mail")|default:"Inbound Mail Accounts" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.inbound_mail_desc")|default:"Configure POP/IMAP polling and dispatch rules" }}</p>
                     </div>
                 </div>
             </a>
@@ -145,8 +145,8 @@
                         <i class="fa-solid fa-filter text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Postmaster Filters</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure email routing rules based on headers</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.postmaster_filters")|default:"Postmaster Filters" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.postmaster_filters_desc")|default:"Configure email routing rules based on headers" }}</p>
                     </div>
                 </div>
             </a>
@@ -156,8 +156,8 @@
                         <i class="fa-solid fa-reply-all text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Auto Responses</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure automatic email replies</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.auto_responses")|default:"Auto Responses" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.auto_responses_desc")|default:"Configure automatic email replies" }}</p>
                     </div>
                 </div>
             </a>
@@ -167,8 +167,8 @@
                         <i class="fa-solid fa-link text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Queue Auto Responses</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Link auto responses to queues</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.queue_auto_responses")|default:"Queue Auto Responses" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.queue_auto_responses_desc")|default:"Link auto responses to queues" }}</p>
                     </div>
                 </div>
             </a>
@@ -178,8 +178,8 @@
                         <i class="fa-solid fa-bell text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Ticket Notifications</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure automated notifications for ticket events</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.ticket_notifications")|default:"Ticket Notifications" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.ticket_notifications_desc")|default:"Configure automated notifications for ticket events" }}</p>
                     </div>
                 </div>
             </a>
@@ -189,8 +189,8 @@
                         <i class="fa-solid fa-robot text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Generic Agent</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Automated ticket actions and batch jobs</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.generic_agent")|default:"Generic Agent" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.generic_agent_desc")|default:"Automated ticket actions and batch jobs" }}</p>
                     </div>
                 </div>
             </a>
@@ -200,8 +200,8 @@
                         <i class="fa-solid fa-signature text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Signatures</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage email signature templates</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.signatures")|default:"Signatures" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.signatures_desc")|default:"Manage email signature templates" }}</p>
                     </div>
                 </div>
             </a>
@@ -211,8 +211,8 @@
                         <i class="fa-solid fa-sliders text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">System Configuration</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Tune platform preferences</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.system_config")|default:"System Configuration" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.system_config_desc")|default:"Tune platform preferences" }}</p>
                     </div>
                 </div>
             </a>
@@ -222,8 +222,8 @@
                         <i class="fa-solid fa-chart-line text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ "Reports & Analytics"|safe }}</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Track performance insights</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.reports_analytics")|default:"Reports & Analytics" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.reports_analytics_desc")|default:"Track performance insights" }}</p>
                     </div>
                 </div>
             </a>
@@ -233,15 +233,15 @@
                         <i class="fa-solid fa-clipboard-list text-xl" aria-hidden="true"></i>
                     </div>
                     <div class="ml-4">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">Audit Logs</h3>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Review administrative actions</p>
+                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.audit_logs")|default:"Audit Logs" }}</h3>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.audit_logs_desc")|default:"Review administrative actions" }}</p>
                     </div>
                 </div>
             </a>
         </div>
     </section>
         <section class="mt-10" aria-labelledby="customer-admin">
-            <h2 id="customer-admin" class="text-xl font-semibold text-gray-900 dark:text-white">Customer Administration</h2>
+            <h2 id="customer-admin" class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("admin_dashboard.customer_administration")|default:"Customer Administration" }}</h2>
             <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <a href="/admin/customer/companies" class="block bg-white dark:bg-gray-800 shadow rounded-lg p-5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-gotrs-500">
                     <div class="flex items-start">
@@ -249,8 +249,8 @@
                             <i class="fa-solid fa-building text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Customer Organizations</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage company records and branding</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.customer_organizations")|default:"Customer Organizations" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.customer_organizations_desc")|default:"Manage company records and branding" }}</p>
                         </div>
                     </div>
                 </a>
@@ -260,8 +260,8 @@
                             <i class="fa-solid fa-id-badge text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Customer Users</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Maintain customer identities and access</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.customer_users")|default:"Customer Users" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.customer_users_desc")|default:"Maintain customer identities and access" }}</p>
                         </div>
                     </div>
                 </a>
@@ -271,8 +271,8 @@
                             <i class="fa-solid fa-user-cog text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Customer User Services</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Assign services to individual customer users</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.customer_user_services")|default:"Customer User Services" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.customer_user_services_desc")|default:"Assign services to individual customer users" }}</p>
                         </div>
                     </div>
                 </a>
@@ -282,8 +282,8 @@
                             <i class="fa-solid fa-earth-americas text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Customer Portal</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure portal branding and access</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.customer_portal")|default:"Customer Portal" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.customer_portal_desc")|default:"Configure portal branding and access" }}</p>
                         </div>
                     </div>
                 </a>
@@ -293,8 +293,8 @@
                             <i class="fa-solid fa-people-group text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Customer Groups</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure customer company group permissions</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.customer_groups")|default:"Customer Groups" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.customer_groups_desc")|default:"Configure customer company group permissions" }}</p>
                         </div>
                     </div>
                 </a>
@@ -304,8 +304,8 @@
                             <i class="fa-solid fa-user-group text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Customer User Groups</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure individual customer user group permissions</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.customer_user_groups")|default:"Customer User Groups" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.customer_user_groups_desc")|default:"Configure individual customer user group permissions" }}</p>
                         </div>
                     </div>
                 </a>
@@ -315,8 +315,8 @@
                             <i class="fa-solid fa-inbox text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Queues</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Control ticket routing and ownership</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.queues")|default:"Queues" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.queues_desc")|default:"Control ticket routing and ownership" }}</p>
                         </div>
                     </div>
                 </a>
@@ -326,8 +326,8 @@
                             <i class="fa-solid fa-list-check text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Lookups</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage states, priorities, and types</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.lookups")|default:"Lookups" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.lookups_desc")|default:"Manage states, priorities, and types" }}</p>
                         </div>
                     </div>
                 </a>
@@ -337,8 +337,8 @@
                             <i class="fa-solid fa-concierge-bell text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Services</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Define service catalog for ticket categorization</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.services")|default:"Services" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.services_desc")|default:"Define service catalog for ticket categorization" }}</p>
                         </div>
                     </div>
                 </a>
@@ -348,8 +348,8 @@
                             <i class="fa-solid fa-stopwatch text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Service Level Agreements</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Configure response and resolution times</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.sla")|default:"Service Level Agreements" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.sla_desc")|default:"Configure response and resolution times" }}</p>
                         </div>
                     </div>
                 </a>
@@ -359,8 +359,8 @@
                             <i class="fa-solid fa-sliders text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Dynamic Fields</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Add custom fields to tickets, articles, and customers</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.dynamic_fields")|default:"Dynamic Fields" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.dynamic_fields_desc")|default:"Add custom fields to tickets, articles, and customers" }}</p>
                         </div>
                     </div>
                 </a>
@@ -370,8 +370,8 @@
                             <i class="fa-solid fa-file-lines text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Templates</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Create response templates for quick ticket replies</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.templates")|default:"Templates" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.templates_desc")|default:"Create response templates for quick ticket replies" }}</p>
                         </div>
                     </div>
                 </a>
@@ -381,8 +381,8 @@
                             <i class="fa-solid fa-paperclip text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Attachments</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage standard attachments for response templates</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.attachments")|default:"Attachments" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.attachments_desc")|default:"Manage standard attachments for response templates" }}</p>
                         </div>
                     </div>
                 </a>
@@ -392,8 +392,8 @@
                             <i class="fa-solid fa-link text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ Labels.admin_queue_templates_title|default:"Queue Templates" }}</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ Labels.admin_queue_templates_description|default:"Manage queue to template assignments" }}</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.queue_templates")|default:"Queue Templates" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.queue_templates_desc")|default:"Manage queue to template assignments" }}</p>
                         </div>
                     </div>
                 </a>
@@ -403,8 +403,8 @@
                             <i class="fa-solid fa-file-circle-plus text-xl" aria-hidden="true"></i>
                         </div>
                         <div class="ml-4">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ Labels.admin_template_attachments_title|default:"Template Attachments" }}</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ Labels.admin_template_attachments_description|default:"Manage template to attachment assignments" }}</p>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin_dashboard.template_attachments")|default:"Template Attachments" }}</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin_dashboard.template_attachments_desc")|default:"Manage template to attachment assignments" }}</p>
                         </div>
                     </div>
                 </a>
@@ -423,20 +423,20 @@
         </section>
 
     <section class="mt-10" aria-labelledby="recent-activity">
-        <h2 id="recent-activity" class="text-xl font-semibold text-gray-900 dark:text-white">Recent Admin Activity</h2>
+        <h2 id="recent-activity" class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("admin_dashboard.recent_activity")|default:"Recent Admin Activity" }}</h2>
         <div class="mt-4 bg-white dark:bg-gray-800 shadow rounded-lg">
             <ul class="divide-y divide-gray-100 dark:divide-gray-700">
                 <li class="flex items-center justify-between px-5 py-3 bg-gray-50 dark:bg-gray-700">
-                    <span class="text-sm text-gray-700 dark:text-gray-200">User account created</span>
-                    <span class="text-xs text-gray-500 dark:text-gray-300">5 minutes ago</span>
+                    <span class="text-sm text-gray-700 dark:text-gray-200">{{ t("admin_dashboard.activity.user_created")|default:"User account created" }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-300">5 {{ t("time.minutes_ago")|default:"minutes ago" }}</span>
                 </li>
                 <li class="flex items-center justify-between px-5 py-3">
-                    <span class="text-sm text-gray-700 dark:text-gray-200">System configuration updated</span>
-                    <span class="text-xs text-gray-500 dark:text-gray-300">12 minutes ago</span>
+                    <span class="text-sm text-gray-700 dark:text-gray-200">{{ t("admin_dashboard.activity.config_updated")|default:"System configuration updated" }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-300">12 {{ t("time.minutes_ago")|default:"minutes ago" }}</span>
                 </li>
                 <li class="flex items-center justify-between px-5 py-3">
-                    <span class="text-sm text-gray-700 dark:text-gray-200">Audit logs reviewed</span>
-                    <span class="text-xs text-gray-500 dark:text-gray-300">30 minutes ago</span>
+                    <span class="text-sm text-gray-700 dark:text-gray-200">{{ t("admin_dashboard.activity.logs_reviewed")|default:"Audit logs reviewed" }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-300">30 {{ t("time.minutes_ago")|default:"minutes ago" }}</span>
                 </li>
             </ul>
         </div>

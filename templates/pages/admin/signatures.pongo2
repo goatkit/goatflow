@@ -301,12 +301,12 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', function()
                 window.location.reload();
             } else {
                 return response.json().then(data => {
-                    alert(data.error || 'Failed to delete signature');
+                    alert(data.error || '{{ t("messages.failed_delete_signature")|default:"Failed to delete signature" }}');
                 });
             }
         })
         .catch(error => {
-            alert('An error occurred');
+            alert('{{ t("messages.error_occurred")|default:"An error occurred" }}');
         });
     }
     closeDeleteModal();

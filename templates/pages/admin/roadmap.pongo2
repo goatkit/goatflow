@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Development Roadmap - GOTRS Admin{% endblock %}
+{% block title %}{{ t("roadmap.title")|default:"System Roadmap" }} - GOTRS Admin{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -10,7 +10,7 @@
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center">
-                        <a href="/admin" 
+                        <a href="/admin"
                            class="mr-4 inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-primary transition-colors">
                             <svg class="mr-2 -ml-0.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -18,7 +18,7 @@
                             Back to Dashboard
                         </a>
                         <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                            <i class="fas fa-road mr-2"></i>Development Roadmap
+                            <i class="fas fa-road mr-2"></i>{{ t("roadmap.heading")|default:"Development Roadmap" }}
                         </h1>
                     </div>
                     <div class="text-sm text-gray-500 dark:text-gray-400">
@@ -42,7 +42,7 @@
                             </div>
                             <div class="ml-3">
                                 <h3 class="text-sm font-medium text-red-800 dark:text-red-200">
-                                    Error Loading Roadmap
+                                    {{ t("roadmap.error_loading")|default:"Error Loading Roadmap" }}
                                 </h3>
                                 <p class="mt-1 text-sm text-red-700 dark:text-red-300">
                                     {{ Error }}
@@ -61,23 +61,23 @@
         <!-- Quick Stats Summary -->
         <div class="mt-6 bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white">Quick Navigation</h2>
+                <h2 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("roadmap.quick_navigation")|default:"Quick Navigation" }}</h2>
             </div>
             <div class="px-6 py-4">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <a href="#phase-2a-admin-ui-implementation-current-top-priority" 
+                    <a href="#phase-2a-admin-ui-implementation-current-top-priority"
                        class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                        <h3 class="font-medium text-gray-900 dark:text-white mb-1">Current Phase</h3>
+                        <h3 class="font-medium text-gray-900 dark:text-white mb-1">{{ t("roadmap.current_phase")|default:"Current Phase" }}</h3>
                         <p class="text-sm text-gray-600 dark:text-gray-400">Admin UI Implementation</p>
                     </a>
-                    <a href="#admin-ui-module-checklist-71-total" 
+                    <a href="#admin-ui-module-checklist-71-total"
                        class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                        <h3 class="font-medium text-gray-900 dark:text-white mb-1">Module Checklist</h3>
+                        <h3 class="font-medium text-gray-900 dark:text-white mb-1">{{ t("roadmap.module_checklist")|default:"Module Checklist" }}</h3>
                         <p class="text-sm text-gray-600 dark:text-gray-400">71 Total Modules</p>
                     </a>
-                    <a href="#recent-accomplishments-august-22-2025" 
+                    <a href="#recent-accomplishments-august-22-2025"
                        class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                        <h3 class="font-medium text-gray-900 dark:text-white mb-1">Recent Updates</h3>
+                        <h3 class="font-medium text-gray-900 dark:text-white mb-1">{{ t("roadmap.recent_updates")|default:"Recent Updates" }}</h3>
                         <p class="text-sm text-gray-600 dark:text-gray-400">Latest accomplishments</p>
                     </a>
                 </div>

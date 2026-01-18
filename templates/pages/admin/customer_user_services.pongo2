@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Customer User Services - GOTRS Admin{% endblock %}
+{% block title %}{{ t("customer_user_services.title")|default:"Customer User Services" }} - GOTRS Admin{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
@@ -230,7 +230,7 @@ function openDefaultServices() {
                 <div class="space-y-2">
                     <div class="flex items-center justify-between mb-2">
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Services</label>
-                        <button type="button" onclick="toggleAllDefaultServices()" class="text-xs text-gotrs-primary hover:underline">Toggle All</button>
+                        <button type="button" onclick="toggleAllDefaultServices()" class="text-xs text-gotrs-primary hover:underline">{{ t("buttons.toggle_all")|default:"Toggle All" }}</button>
                     </div>
             `;
 
@@ -277,7 +277,7 @@ function selectCustomerUser(login) {
                 <div class="space-y-2">
                     <div class="flex items-center justify-between mb-2">
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Available Services</label>
-                        <button type="button" onclick="toggleAllServices()" class="text-xs text-gotrs-primary hover:underline">Toggle All</button>
+                        <button type="button" onclick="toggleAllServices()" class="text-xs text-gotrs-primary hover:underline">{{ t("buttons.toggle_all")|default:"Toggle All" }}</button>
                     </div>
             `;
 
@@ -318,7 +318,7 @@ function selectService(id) {
                 <div class="space-y-2">
                     <div class="flex items-center justify-between mb-2">
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Customer Users</label>
-                        <button type="button" onclick="toggleAllCustomers()" class="text-xs text-gotrs-primary hover:underline">Toggle All</button>
+                        <button type="button" onclick="toggleAllCustomers()" class="text-xs text-gotrs-primary hover:underline">{{ t("buttons.toggle_all")|default:"Toggle All" }}</button>
                     </div>
             `;
 

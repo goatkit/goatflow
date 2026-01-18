@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Real-Time Dashboard{% endblock %}
+{% block title %}{{ t("dashboard.realtime.title")|default:"Real-time Dashboard" }}{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -9,7 +9,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Real-Time Dashboard</h1>
+                    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ t("realtime.heading")|default:"Real-Time Dashboard" }}</h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
                         Last updated: <span id="lastUpdate" class="font-medium">--:--:--</span>
                     </p>
@@ -23,13 +23,13 @@
                         <option value="30">30 seconds</option>
                         <option value="60">1 minute</option>
                     </select>
-                    
+
                     <!-- Connection Status -->
                     <div class="flex items-center gap-2">
                         <div id="connectionStatus" class="w-3 h-3 rounded-full bg-gray-400"></div>
                         <span id="connectionText" class="text-sm text-gray-600 dark:text-gray-400">Connecting...</span>
                     </div>
-                    
+
                     <!-- Full Screen Toggle -->
                     <button onclick="toggleFullScreen()" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,7 +48,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Open Tickets</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("realtime.stats.open_tickets")|default:"Open Tickets" }}</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white" id="openTickets">--</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             <span id="openTicketsTrend" class="inline-flex items-center">--</span>
@@ -66,7 +66,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Avg Response Time</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("realtime.stats.avg_response_time")|default:"Avg Response Time" }}</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white" id="responseTime">--</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             <span id="responseTimeTrend" class="inline-flex items-center">--</span>
@@ -84,7 +84,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Active Agents</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("realtime.stats.active_agents")|default:"Active Agents" }}</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-white" id="activeAgents">--</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             <span id="agentStatus">-- available</span>
@@ -121,13 +121,13 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             <!-- Ticket Volume Chart -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Ticket Volume (24h)</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ t("realtime.ticket_volume")|default:"Ticket Volume (24h)" }}</h3>
                 <canvas id="ticketVolumeChart" height="150"></canvas>
             </div>
 
             <!-- Queue Distribution -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Queue Distribution</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">{{ t("realtime.queue_distribution")|default:"Queue Distribution" }}</h3>
                 <canvas id="queueDistributionChart" height="150"></canvas>
             </div>
         </div>
@@ -135,7 +135,7 @@
         <!-- Queue Status Table -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow mt-6">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Queue Status</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("realtime.queue_status")|default:"Queue Status" }}</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full">
@@ -159,7 +159,7 @@
         <div class="mt-6">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Active Alerts</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("realtime.active_alerts")|default:"Active Alerts" }}</h3>
                     <span id="alertCount" class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 rounded-full">0</span>
                 </div>
                 <div id="alertsList" class="p-6 space-y-3">
@@ -187,26 +187,26 @@ document.addEventListener('DOMContentLoaded', function() {
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/dashboard`;
-    
+
     ws = new WebSocket(wsUrl);
-    
+
     ws.onopen = function() {
         console.log('WebSocket connected');
         updateConnectionStatus('connected');
-        
+
         // Subscribe to metrics
         ws.send(JSON.stringify({
             type: 'subscribe',
             filters: ['*']
         }));
-        
+
         // Clear reconnect interval if exists
         if (reconnectInterval) {
             clearInterval(reconnectInterval);
             reconnectInterval = null;
         }
     };
-    
+
     ws.onmessage = function(event) {
         try {
             const data = JSON.parse(event.data);
@@ -215,16 +215,16 @@ function connectWebSocket() {
             console.error('Error parsing WebSocket message:', error);
         }
     };
-    
+
     ws.onerror = function(error) {
         console.error('WebSocket error:', error);
         updateConnectionStatus('error');
     };
-    
+
     ws.onclose = function() {
         console.log('WebSocket disconnected');
         updateConnectionStatus('disconnected');
-        
+
         // Attempt to reconnect
         if (!reconnectInterval) {
             reconnectInterval = setInterval(function() {
@@ -238,7 +238,7 @@ function connectWebSocket() {
 function updateConnectionStatus(status) {
     const statusIndicator = document.getElementById('connectionStatus');
     const statusText = document.getElementById('connectionText');
-    
+
     switch(status) {
         case 'connected':
             statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500';
@@ -261,7 +261,7 @@ function updateConnectionStatus(status) {
 function updateDashboard(data) {
     // Update timestamp
     document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
-    
+
     // Update key metrics
     if (data.tickets) {
         updateElement('openTickets', data.tickets.total_open);
@@ -269,27 +269,27 @@ function updateDashboard(data) {
         updateElement('responseTime', formatTime(data.tickets.avg_response_time_hours));
         updateTrend('responseTimeTrend', data.trends?.response_trend);
     }
-    
+
     if (data.users) {
         updateElement('activeAgents', data.users.agents_available + data.users.agents_busy);
         updateElement('agentStatus', `${data.users.agents_available} available`);
     }
-    
+
     if (data.sla) {
         updateElement('slaCompliance', Math.round(data.sla.compliance_rate_percent) + '%');
         updateElement('slaRisk', `${data.sla.at_risk_tickets} at risk`);
     }
-    
+
     // Update charts
     if (data.tickets) {
         updateTicketVolumeChart(data);
     }
-    
+
     if (data.queues) {
         updateQueueDistributionChart(data.queues);
         updateQueueTable(data.queues);
     }
-    
+
     // Update alerts
     if (data.alerts) {
         updateAlerts(data.alerts);
@@ -359,7 +359,7 @@ function initializeCharts() {
             }
         }
     });
-    
+
     // Queue Distribution Chart
     const ctx2 = document.getElementById('queueDistributionChart').getContext('2d');
     charts.queueDistribution = new Chart(ctx2, {
@@ -395,13 +395,13 @@ function updateTicketVolumeChart(data) {
     const hours = [];
     const created = [];
     const closed = [];
-    
+
     for (let i = 23; i >= 0; i--) {
         hours.push(`${i}h`);
         created.push(Math.floor(Math.random() * 20) + 5);
         closed.push(Math.floor(Math.random() * 18) + 3);
     }
-    
+
     charts.ticketVolume.data.labels = hours;
     charts.ticketVolume.data.datasets[0].data = created;
     charts.ticketVolume.data.datasets[1].data = closed;
@@ -410,10 +410,10 @@ function updateTicketVolumeChart(data) {
 
 function updateQueueDistributionChart(queues) {
     if (!queues || queues.length === 0) return;
-    
+
     const labels = queues.map(q => q.queue_name);
     const data = queues.map(q => q.tickets_waiting);
-    
+
     charts.queueDistribution.data.labels = labels;
     charts.queueDistribution.data.datasets[0].data = data;
     charts.queueDistribution.update();
@@ -422,7 +422,7 @@ function updateQueueDistributionChart(queues) {
 function updateQueueTable(queues) {
     const tbody = document.getElementById('queueTableBody');
     if (!tbody || !queues) return;
-    
+
     tbody.innerHTML = queues.map(queue => `
         <tr>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
@@ -447,11 +447,11 @@ function updateQueueTable(queues) {
 function updateAlerts(alerts) {
     const alertsList = document.getElementById('alertsList');
     const alertCount = document.getElementById('alertCount');
-    
+
     if (!alertsList || !alerts) return;
-    
+
     alertCount.textContent = alerts.length;
-    
+
     if (alerts.length === 0) {
         alertsList.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center">No active alerts</p>';
     } else {
@@ -462,7 +462,7 @@ function updateAlerts(alerts) {
                 'warning': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
                 'info': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
             };
-            
+
             return `
                 <div class="flex items-start gap-3 p-3 rounded-lg ${levelColors[alert.level] || levelColors.info}">
                     <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
@@ -536,7 +536,7 @@ setInterval(function() {
                 { level: 'warning', message: 'High ticket volume detected', affected_item: 'Support Queue', timestamp: new Date(), action_required: 'Consider adding more agents' }
             ] : []
         };
-        
+
         updateDashboard(demoData);
     }
 }, 5000);

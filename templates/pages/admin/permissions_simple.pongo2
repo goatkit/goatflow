@@ -2,19 +2,19 @@
 <html>
 <head><title>Simple Test</title></head>
 <body>
-    <h1>Simple Permissions Test</h1>
+    <h1>{{ t("permissions.simple_test")|default:"Simple Permissions Test" }}</h1>
     <p>Users count: {{ Users|length }}</p>
     <p>Groups count: {{ Groups|length }}</p>
-    
-    <h2>Users:</h2>
+
+    <h2>{{ t("permissions.users_heading")|default:"Users:" }}</h2>
     {% for user in Users %}
         <p>{{ user.Login }} (ID: {{ user.ID }})</p>
     {% endfor %}
-    
-    <h2>Groups:</h2>
+
+    <h2>{{ t("permissions.groups_heading")|default:"Groups:" }}</h2>
     {% for group in Groups %}
         <p>{{ group.Name }} (ID: {{ group.ID }})</p>
     {% endfor %}
-    
+
 </body>
 </html>

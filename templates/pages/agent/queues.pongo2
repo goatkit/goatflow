@@ -1,14 +1,14 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Queue Management - GOTRS{% endblock %}
+{% block title %}{{ t("pages.agent.queues.title")|default:"Queue Management" }} - GOTRS{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Queue Management</h1>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("pages.agent.queues.title")|default:"Queue Management" }}</h1>
         <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
-            View and manage ticket queues assigned to you
+            {{ t("pages.agent.queues.description")|default:"View and manage ticket queues assigned to you" }}
         </p>
     </div>
 
@@ -59,7 +59,7 @@
                 <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
                 </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">No queues available</h3>
+                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">{{ t("queues.no_queues_available")|default:"No queues available" }}</h3>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     You don't have access to any ticket queues, or no queues are configured in the system.
                 </p>

@@ -77,7 +77,7 @@
         <!-- Session Preferences -->
         <div class="px-4 py-5 sm:p-6 border-t border-gray-200 dark:border-gray-700">
             <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">{{ t("settings.sessions")|default:"Session Settings" }}</h4>
-            
+
             <form id="session-preferences-form" class="space-y-4">
                 <div>
                     <label for="session-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("settings.sessions")|default:"Session Timeout" }}</label>
@@ -100,7 +100,7 @@
                     <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">{{ t("common.save") }}</button>
                 </div>
             </form>
-            
+
             <div id="save-feedback" class="mt-4 hidden">
                 <div class="rounded-md bg-green-50 dark:bg-green-900/20 p-4">
                     <div class="flex">
@@ -185,12 +185,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     feedback.classList.add('hidden');
                 }, 3000);
             } else {
-                alert('Error saving profile: ' + (data.error || 'Unknown error'));
+                alert('{{ t("messages.error_saving_profile")|default:"Error saving profile" }}: ' + (data.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
             }
         })
         .catch(error => {
             console.error('Error saving profile:', error);
-            alert('Error saving profile');
+            alert('{{ t("messages.error_saving_profile")|default:"Error saving profile" }}');
         });
     });
 
@@ -249,12 +249,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     feedback.classList.add('hidden');
                 }, 3000);
             } else {
-                alert('Error saving preferences: ' + (data.error || 'Unknown error'));
+                alert('{{ t("messages.error_saving_preferences")|default:"Error saving preferences" }}: ' + (data.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
             }
         })
         .catch(error => {
             console.error('Error saving preferences:', error);
-            alert('Error saving preferences');
+            alert('{{ t("messages.error_saving_preferences")|default:"Error saving preferences" }}');
         });
     });
 
@@ -282,12 +282,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.location.reload();
                 }, 1500);
             } else {
-                alert('Error saving preferences: ' + (data.error || 'Unknown error'));
+                alert('{{ t("messages.error_saving_preferences")|default:"Error saving preferences" }}: ' + (data.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
             }
         })
         .catch(error => {
             console.error('Error saving preferences:', error);
-            alert('Error saving preferences');
+            alert('{{ t("messages.error_saving_preferences")|default:"Error saving preferences" }}');
         });
     });
 });

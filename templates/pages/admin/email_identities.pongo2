@@ -1,13 +1,13 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Email Identities - GOTRS Admin{% endblock %}
+{% block title %}{{ t("email_identities.title")|default:"Email Identities" }} - GOTRS Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <header class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Email Identities</h1>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("email_identities.heading")|default:"Email Identities" }}</h1>
         <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Manage outbound email identities, salutations, and signatures used by queues.
+            {{ t("email_identities.description")|default:"Manage outbound email identities, salutations, and signatures used by queues." }}
         </p>
     </header>
 
@@ -27,11 +27,11 @@
         <section x-show="tab === 'system-addresses'" x-cloak>
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">System Addresses</h2>
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("email_identities.system_addresses")|default:"System Addresses" }}</h2>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Routing identities tied to queues.</p>
                 </div>
                 <button type="button" onclick="openSystemAddressModal()" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
-                    Add System Address
+                    {{ t("email_identities.add_system_address")|default:"Add System Address" }}
                 </button>
             </div>
             <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
@@ -77,7 +77,7 @@
         <section x-show="tab === 'salutations'" x-cloak>
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Salutations</h2>
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("email_identities.salutations")|default:"Salutations" }}</h2>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Reusable greeting blocks rendered before responses.</p>
                 </div>
                 <button type="button" onclick="openSalutationModal()" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
@@ -130,11 +130,11 @@
         <section x-show="tab === 'signatures'" x-cloak>
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Signatures</h2>
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("email_identities.signatures")|default:"Signatures" }}</h2>
                     <p class="text-sm text-gray-600 dark:text-gray-400">Footer blocks appended to outbound messages.</p>
                 </div>
                 <button type="button" onclick="openSignatureModal()" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
-                    Add Signature
+                    {{ t("email_identities.add_signature")|default:"Add Signature" }}
                 </button>
             </div>
             <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
@@ -190,7 +190,7 @@
             <form onsubmit="submitSystemAddress(event)">
                 <input type="hidden" name="id">
                 <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4" id="system-address-modal-title">Add System Address</h3>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4" id="system-address-modal-title">{{ t("email_identities.add_system_address")|default:"Add System Address" }}</h3>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email *</label>
@@ -223,8 +223,8 @@
                     </div>
                 </div>
                 <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">Save</button>
-                    <button type="button" onclick="closeSystemAddressModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Cancel</button>
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">{{ t("buttons.save")|default:"Save" }}</button>
+                    <button type="button" onclick="closeSystemAddressModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">{{ t("buttons.cancel")|default:"Cancel" }}</button>
                 </div>
             </form>
         </div>
@@ -239,7 +239,7 @@
             <form onsubmit="submitTemplateBlock(event)" data-block-type="signature">
                 <input type="hidden" name="id">
                 <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4" id="template-block-modal-title">Add Signature</h3>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4" id="template-block-modal-title">{{ t("email_identities.add_signature")|default:"Add Signature" }}</h3>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name *</label>
@@ -272,7 +272,7 @@
                                         <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
                                             <i class="fas fa-search text-xs" aria-hidden="true"></i>
                                         </span>
-                                        <input id="template-variable-search" type="search" autocomplete="off" placeholder="Search tokens" class="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 pl-9 pr-3 py-1.5 text-sm text-gray-900 dark:text-white focus:border-gotrs-500 focus:ring-gotrs-500" />
+                                        <input id="template-variable-search" type="search" autocomplete="off" placeholder="{{ t("common.search_tokens")|default:"Search tokens" }}" class="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 pl-9 pr-3 py-1.5 text-sm text-gray-900 dark:text-white focus:border-gotrs-500 focus:ring-gotrs-500" />
                                     </div>
                                 </div>
                                 <div id="template-variable-categories" class="flex flex-wrap gap-2"></div>
@@ -294,8 +294,8 @@
                     </div>
                 </div>
                 <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">Save</button>
-                    <button type="button" onclick="closeTemplateBlockModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Cancel</button>
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">{{ t("buttons.save")|default:"Save" }}</button>
+                    <button type="button" onclick="closeTemplateBlockModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">{{ t("buttons.cancel")|default:"Cancel" }}</button>
                 </div>
             </form>
         </div>

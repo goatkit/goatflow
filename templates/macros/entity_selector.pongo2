@@ -71,7 +71,7 @@
 
                     <!-- Add New Members -->
                     <div>
-                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Add New</h4>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ t("entity_selector.add_new")|default:"Add New" }}</h4>
                         <!-- Search Input -->
                         <div class="relative mb-2">
                             <input type="text"
@@ -162,12 +162,12 @@
         i18n: {
             singular: 'member',
             plural: 'members',
-            added: 'Added',
-            removed: 'Removed',
-            undo: 'Undo',
-            noMembers: 'No members yet',
-            noResults: 'No results found',
-            typeToSearch: 'Type at least {min} characters to search'
+            added: '{{ t("entity_selector.added")|default:"Added" }}',
+            removed: '{{ t("entity_selector.removed")|default:"Removed" }}',
+            undo: '{{ t("entity_selector.undo")|default:"Undo" }}',
+            noMembers: '{{ t("entity_selector.no_members")|default:"No members yet" }}',
+            noResults: '{{ t("entity_selector.no_results")|default:"No results found" }}',
+            typeToSearch: '{{ t("entity_selector.type_to_search")|default:"Type at least {min} characters to search" }}'
         }
     });
 })();

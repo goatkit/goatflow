@@ -15,6 +15,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/i18n"
+	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
@@ -299,31 +301,59 @@ func handleDashboardStats(c *gin.Context) {
 		_ = db.QueryRow(database.ConvertPlaceholders(query), args...).Scan(&closedToday) //nolint:errcheck // Defaults to 0
 	}
 
+	// Get user language for i18n
+	lang := "en"
+	if l, exists := c.Get(middleware.LanguageContextKey); exists {
+		if langStr, ok := l.(string); ok {
+			lang = langStr
+		}
+	}
+	i18nInstance := i18n.GetInstance()
+	t := func(key string) string {
+		return i18nInstance.T(lang, key)
+	}
+
 	// Return HTML for HTMX
 	c.Header("Content-Type", "text/html")
 	html := fmt.Sprintf(`
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Open Tickets</dt>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">%s</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
         </div>
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">New Today</dt>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">%s</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
         </div>
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Pending</dt>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">%s</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
         </div>
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Overdue</dt>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">%s</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
-        </div>`, openTickets, closedToday, pendingTickets, 0) // Note: Overdue calculation not implemented yet
+        </div>`,
+		t("dashboard.stats.open_tickets"), openTickets,
+		t("dashboard.stats.new_today"), closedToday,
+		t("dashboard.stats.pending"), pendingTickets,
+		t("dashboard.stats.overdue"), 0) // Note: Overdue calculation not implemented yet
 
 	c.String(http.StatusOK, html)
 }
 
 // handleRecentTickets returns recent tickets for dashboard.
 func handleRecentTickets(c *gin.Context) {
+	// Get user language for i18n
+	lang := "en"
+	if l, exists := c.Get(middleware.LanguageContextKey); exists {
+		if langStr, ok := l.(string); ok {
+			lang = langStr
+		}
+	}
+	i18nInstance := i18n.GetInstance()
+	t := func(key string) string {
+		return i18nInstance.T(lang, key)
+	}
+
 	db, err := database.GetDB()
 	if err != nil || db == nil {
 		// Return JSON error when database is unavailable
@@ -369,15 +399,15 @@ func handleRecentTickets(c *gin.Context) {
 	html.WriteString(`<ul role="list" class="-my-5 divide-y divide-gray-200 dark:divide-gray-700">`)
 
 	if len(tickets) == 0 {
-		html.WriteString(`
+		html.WriteString(fmt.Sprintf(`
                         <li class="py-4">
                             <div class="flex items-center space-x-4">
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">No recent tickets</p>
-                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">No tickets found in the system</p>
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">%s</p>
+                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">%s</p>
                                 </div>
                             </div>
-                        </li>`)
+                        </li>`, t("dashboard.no_recent_tickets"), t("dashboard.no_tickets_in_system")))
 	} else {
 		for _, ticket := range tickets {
 			// Get status label from database
@@ -456,9 +486,9 @@ func handleRecentTickets(c *gin.Context) {
 				statusLabel,
 				func() string {
 					if ticket.CustomerUserID != nil {
-						return fmt.Sprintf("Customer: %s", *ticket.CustomerUserID)
+						return fmt.Sprintf("%s: %s", t("labels.customer"), *ticket.CustomerUserID)
 					}
-					return "Customer: Unknown"
+					return fmt.Sprintf("%s: %s", t("labels.customer"), t("labels.unknown"))
 				}()))
 		}
 	}
@@ -471,13 +501,25 @@ func handleRecentTickets(c *gin.Context) {
 
 // dashboard_queue_status returns queue status for dashboard.
 func dashboard_queue_status(c *gin.Context) {
+	// Get user language for i18n
+	lang := "en"
+	if l, exists := c.Get(middleware.LanguageContextKey); exists {
+		if langStr, ok := l.(string); ok {
+			lang = langStr
+		}
+	}
+	i18nInstance := i18n.GetInstance()
+	t := func(key string) string {
+		return i18nInstance.T(lang, key)
+	}
+
 	if htmxHandlerSkipDB() {
-		renderDashboardQueueStatusFallback(c)
+		renderDashboardQueueStatusFallback(c, t)
 		return
 	}
 	db, err := database.GetDB()
 	if err != nil || db == nil {
-		renderDashboardQueueStatusFallback(c)
+		renderDashboardQueueStatusFallback(c, t)
 		return
 	}
 
@@ -540,20 +582,22 @@ func dashboard_queue_status(c *gin.Context) {
 	// Build HTML response with table format
 	const thClass = "px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase"
 	var html strings.Builder
-	html.WriteString(`<div class="mt-6">
+	html.WriteString(fmt.Sprintf(`<div class="mt-6">
 	<div class="overflow-x-auto">
 		<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
 			<thead class="bg-gray-50 dark:bg-gray-700">
 				<tr>
-					<th scope="col" class="` + thClass + `">Queue</th>
-					<th scope="col" class="` + thClass + `">New</th>
-					<th scope="col" class="` + thClass + `">Open</th>
-					<th scope="col" class="` + thClass + `">Pending</th>
-					<th scope="col" class="` + thClass + `">Closed</th>
-					<th scope="col" class="` + thClass + `">Total</th>
+					<th scope="col" class="`+thClass+`">%s</th>
+					<th scope="col" class="`+thClass+`">%s</th>
+					<th scope="col" class="`+thClass+`">%s</th>
+					<th scope="col" class="`+thClass+`">%s</th>
+					<th scope="col" class="`+thClass+`">%s</th>
+					<th scope="col" class="`+thClass+`">%s</th>
 				</tr>
 			</thead>
-			<tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">`)
+			<tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">`,
+		t("labels.queue"), t("ticket.states.new"), t("ticket.states.open"),
+		t("ticket.states.pending"), t("ticket.states.closed"), t("labels.total")))
 
 	queueCount := 0
 	for rows.Next() {
@@ -595,12 +639,12 @@ func dashboard_queue_status(c *gin.Context) {
 
 	// If no queues found, show a message
 	if queueCount == 0 {
-		html.WriteString(`
+		html.WriteString(fmt.Sprintf(`
                     <tr>
                         <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                            No queues found
+                            %s
                         </td>
-                    </tr>`)
+                    </tr>`, t("queues.no_queues_found")))
 	}
 
 	html.WriteString(`
@@ -613,43 +657,44 @@ func dashboard_queue_status(c *gin.Context) {
 	c.String(http.StatusOK, html.String())
 }
 
-func renderDashboardQueueStatusFallback(c *gin.Context) {
+func renderDashboardQueueStatusFallback(c *gin.Context, t func(string) string) {
 	// Provide deterministic HTML so link checks have stable content without DB access
 	const thClass = "px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase"
 	const tdClass = "px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300"
 	const tdName = "px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"
-	const stub = `
+	stub := fmt.Sprintf(`
 <div class="mt-6">
 	<div class="overflow-x-auto">
 		<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
 			<thead class="bg-gray-50 dark:bg-gray-700">
 				<tr>
-					<th scope="col" class="` + thClass + `">Queue</th>
-					<th scope="col" class="` + thClass + `">New</th>
-					<th scope="col" class="` + thClass + `">Open</th>
-					<th scope="col" class="` + thClass + `">Pending</th>
-					<th scope="col" class="` + thClass + `">Closed</th>
+					<th scope="col" class="`+thClass+`">%s</th>
+					<th scope="col" class="`+thClass+`">%s</th>
+					<th scope="col" class="`+thClass+`">%s</th>
+					<th scope="col" class="`+thClass+`">%s</th>
+					<th scope="col" class="`+thClass+`">%s</th>
 				</tr>
 			</thead>
 			<tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
 				<tr>
-					<td class="` + tdName + `">Raw</td>
-					<td class="` + tdClass + `">2</td>
-					<td class="` + tdClass + `">4</td>
-					<td class="` + tdClass + `">1</td>
-					<td class="` + tdClass + `">0</td>
+					<td class="`+tdName+`">Raw</td>
+					<td class="`+tdClass+`">2</td>
+					<td class="`+tdClass+`">4</td>
+					<td class="`+tdClass+`">1</td>
+					<td class="`+tdClass+`">0</td>
 				</tr>
 				<tr>
-					<td class="` + tdName + `">Support</td>
-					<td class="` + tdClass + `">0</td>
-					<td class="` + tdClass + `">3</td>
-					<td class="` + tdClass + `">1</td>
-					<td class="` + tdClass + `">5</td>
+					<td class="`+tdName+`">Support</td>
+					<td class="`+tdClass+`">0</td>
+					<td class="`+tdClass+`">3</td>
+					<td class="`+tdClass+`">1</td>
+					<td class="`+tdClass+`">5</td>
 				</tr>
 			</tbody>
 		</table>
 	</div>
-</div>`
+</div>`, t("labels.queue"), t("ticket.states.new"), t("ticket.states.open"),
+		t("ticket.states.pending"), t("ticket.states.closed"))
 	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.String(http.StatusOK, stub)
 }

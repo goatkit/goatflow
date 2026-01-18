@@ -19,19 +19,19 @@
     <!-- Tabs for different lookup types -->
     <div class="border-b border-gray-200 dark:border-gray-700">
         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-            <button 
+            <button
                 onclick="switchTab('priorities')"
                 id="tab-priorities"
                 class="tab-button whitespace-nowrap border-b-2 py-2 px-1 text-sm font-medium">
                 {{ t("admin.priorities") }}
             </button>
-            <button 
+            <button
                 onclick="switchTab('states')"
                 id="tab-states"
                 class="tab-button whitespace-nowrap border-b-2 py-2 px-1 text-sm font-medium">
                 {{ t("admin.states") }}
             </button>
-            <button 
+            <button
                 onclick="switchTab('types')"
                 id="tab-types"
                 class="tab-button whitespace-nowrap border-b-2 py-2 px-1 text-sm font-medium">
@@ -46,7 +46,7 @@
         <div id="tab-content-priorities" class="tab-content">
             <div class="sm:flex sm:items-center sm:justify-between mb-6">
                 <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("admin.priorities") }}</h2>
-                <button 
+                <button
                     onclick="openPriorityModal()"
                     class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
                     <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -55,7 +55,7 @@
                     {{ t("admin.add_priority") }}
                 </button>
             </div>
-            
+
             <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
                 <ul class="divide-y divide-gray-200 dark:divide-gray-700" id="priorities-list">
                     {% for priority in Priorities %}
@@ -76,7 +76,7 @@
                                 </div>
                             </div>
                             <div class="flex items-center space-x-2">
-                                <button 
+                                <button
                                     onclick="editPriority({{ priority.ID }}, '{{ priority.Name|addslashes }}', '{{ priority.Color|default:"" }}')"
                                     class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-200">
                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,7 +95,7 @@
         <div id="tab-content-states" class="tab-content hidden">
             <div class="sm:flex sm:items-center sm:justify-between mb-6">
                 <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("admin.states") }}</h2>
-                <button 
+                <button
                     onclick="openStateModal()"
                     class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
                     <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -104,7 +104,7 @@
                     {{ t("admin.add_state") }}
                 </button>
             </div>
-            
+
             <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
                 <ul class="divide-y divide-gray-200 dark:divide-gray-700" id="states-list">
                     {% for state in TicketStates %}
@@ -122,7 +122,7 @@
                                 </div>
                             </div>
                             <div class="flex items-center space-x-2">
-                                <button 
+                                <button
                                     onclick="editState({{ state.ID }}, '{{ state.Name|addslashes }}', {{ state.TypeID }}, '{{ state.Comments|default:""|addslashes }}')"
                                     class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-200">
                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,7 +141,7 @@
         <div id="tab-content-types" class="tab-content hidden">
             <div class="sm:flex sm:items-center sm:justify-between mb-6">
                 <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("admin.types") }}</h2>
-                <button 
+                <button
                     onclick="openTypeModal()"
                     class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
                     <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -150,7 +150,7 @@
                     {{ t("admin.add_type") }}
                 </button>
             </div>
-            
+
             <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
                 <ul class="divide-y divide-gray-200 dark:divide-gray-700" id="types-list">
                     {% for type in TicketTypes %}
@@ -168,7 +168,7 @@
                                 </div>
                             </div>
                             <div class="flex items-center space-x-2">
-                                <button 
+                                <button
                                     onclick="editType({{ type.ID }}, '{{ type.Name|addslashes }}', '{{ type.Comments|default:""|addslashes }}')"
                                     class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-200">
                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,7 +190,7 @@
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
+
         <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <form id="priorityForm" onsubmit="savePriority(event)">
                 <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
@@ -201,13 +201,13 @@
                             </h3>
                             <div class="mt-4">
                                 <input type="hidden" id="priorityId" name="id">
-                                
+
                                 <div class="mb-4">
                                     <label for="priorityName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
                                     <input type="text" name="name" id="priorityName" required
                                            class="mt-1 focus:ring-gotrs-500 focus:border-gotrs-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
                                 </div>
-                                
+
                                 <div class="mb-4">
                                     <label for="priorityColor" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Color</label>
                                     <input type="color" name="color" id="priorityColor"
@@ -237,7 +237,7 @@
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
+
         <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <form id="stateForm" onsubmit="saveState(event)">
                 <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
@@ -248,13 +248,13 @@
                             </h3>
                             <div class="mt-4">
                                 <input type="hidden" id="stateId" name="id">
-                                
+
                                 <div class="mb-4">
                                     <label for="stateName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
                                     <input type="text" name="name" id="stateName" required
                                            class="mt-1 focus:ring-gotrs-500 focus:border-gotrs-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
                                 </div>
-                                
+
                                 <div class="mb-4">
                                     <label for="stateTypeId" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
                                     <select name="type_id" id="stateTypeId" required
@@ -265,7 +265,7 @@
                                         <option value="4">Closed</option>
                                     </select>
                                 </div>
-                                
+
                                 <div class="mb-4">
                                     <label for="stateComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Comments</label>
                                     <textarea name="comments" id="stateComments" rows="2"
@@ -295,7 +295,7 @@
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
+
         <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <form id="typeForm" onsubmit="saveType(event)">
                 <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
@@ -306,13 +306,13 @@
                             </h3>
                             <div class="mt-4">
                                 <input type="hidden" id="typeId" name="id">
-                                
+
                                 <div class="mb-4">
                                     <label for="typeName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
                                     <input type="text" name="name" id="typeName" required
                                            class="mt-1 focus:ring-gotrs-500 focus:border-gotrs-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
                                 </div>
-                                
+
                                 <div class="mb-4">
                                     <label for="typeComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Comments</label>
                                     <textarea name="comments" id="typeComments" rows="2"
@@ -342,7 +342,7 @@
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
+
         <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
@@ -357,7 +357,7 @@
                         </h3>
                         <div class="mt-2">
                             <p class="text-sm text-gray-500 dark:text-gray-400">
-                                Are you sure you want to delete this <span id="deleteItemTypeDesc"></span>? This action cannot be undone.
+                                {{ t("messages.confirm.delete_lookup")|default:"Are you sure you want to delete this item? This action cannot be undone." }}
                             </p>
                         </div>
                     </div>
@@ -384,26 +384,26 @@ let currentTab = 'priorities'; // Default tab
 
 function switchTab(tabName) {
     currentTab = tabName;
-    
+
     // Update URL with current tab
     const url = new URL(window.location);
     url.searchParams.set('tab', tabName);
     window.history.pushState({}, '', url);
-    
+
     // Hide all tab contents
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.add('hidden');
     });
-    
+
     // Remove active state from all tab buttons
     document.querySelectorAll('.tab-button').forEach(button => {
         button.classList.remove('border-gotrs-500', 'text-gotrs-600', 'dark:text-gotrs-400');
         button.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
     });
-    
+
     // Show selected tab content
     document.getElementById('tab-content-' + tabName).classList.remove('hidden');
-    
+
     // Set active state on selected tab button
     const activeButton = document.getElementById('tab-' + tabName);
     activeButton.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
@@ -449,17 +449,17 @@ async function savePriority(event) {
         name: formData.get('name'),
         color: formData.get('color')
     };
-    
+
     const url = currentEditId ? `/admin/priorities/${currentEditId}` : '/admin/priorities';
     const method = currentEditId ? 'PUT' : 'POST';
-    
+
     try {
         const response = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        
+
         if (response.ok) {
             closePriorityModal();
             reloadWithCurrentTab();
@@ -509,17 +509,17 @@ async function saveState(event) {
         type_id: parseInt(formData.get('type_id')),
         comments: formData.get('comments') || null
     };
-    
+
     const url = currentEditId ? `/api/states/${currentEditId}` : '/api/states';
     const method = currentEditId ? 'PUT' : 'POST';
-    
+
     try {
         const response = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        
+
         if (response.ok) {
             closeStateModal();
             reloadWithCurrentTab();
@@ -567,17 +567,17 @@ async function saveType(event) {
         name: formData.get('name'),
         comments: formData.get('comments') || null
     };
-    
+
     const url = currentEditId ? `/api/types/${currentEditId}` : '/api/types';
     const method = currentEditId ? 'PUT' : 'POST';
-    
+
     try {
         const response = await fetch(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        
+
         if (response.ok) {
             closeTypeModal();
             reloadWithCurrentTab();
@@ -605,7 +605,7 @@ function closeDeleteModal() {
 
 async function confirmDelete() {
     if (!deleteContext.type || !deleteContext.id) return;
-    
+
     let url;
     if (deleteContext.type === 'priority') {
         url = `/admin/priorities/${deleteContext.id}`;
@@ -614,13 +614,13 @@ async function confirmDelete() {
     } else {
         url = `/api/types/${deleteContext.id}`;
     }
-    
+
     try {
         const response = await fetch(url, {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' }
         });
-        
+
         if (response.ok) {
             closeDeleteModal();
             reloadWithCurrentTab();
@@ -638,14 +638,14 @@ function showToast(message, type = 'info') {
     // Create toast element
     const toast = document.createElement('div');
     toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
-        type === 'error' ? 'bg-red-600' : 
-        type === 'success' ? 'bg-green-600' : 
+        type === 'error' ? 'bg-red-600' :
+        type === 'success' ? 'bg-green-600' :
         'bg-blue-600'
     }`;
     toast.textContent = message;
-    
+
     document.body.appendChild(toast);
-    
+
     // Remove after 3 seconds
     setTimeout(() => {
         toast.remove();
@@ -657,7 +657,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set current tab from URL or default to priorities
     currentTab = getCurrentTabFromURL();
     switchTab(currentTab);
-    
+
     // Allow Enter key to submit modal forms
     const modals = ['priorityModal', 'stateModal', 'typeModal'];
     modals.forEach(modalId => {

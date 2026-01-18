@@ -11,7 +11,7 @@
                 <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
                     {{ Title }}
                 </h2>
-                <button id="addStateBtn" 
+                <button id="addStateBtn"
                         class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         onclick="openStateModal()"
                         aria-label="Add new state">
@@ -26,7 +26,7 @@
                 <!-- Search -->
                 <div class="flex-1 min-w-[200px]">
                     <div class="relative">
-                        <input type="text" 
+                        <input type="text"
                                id="searchInput"
                                value="{{ SearchQuery }}"
                                placeholder="Search states..."
@@ -45,7 +45,7 @@
 
                 <!-- Type Filter -->
                 <div class="min-w-[200px]">
-                    <select id="typeFilter" 
+                    <select id="typeFilter"
                             class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                             onchange="filterByType(this.value)">
                         <option value="">All Types</option>
@@ -167,28 +167,28 @@
                     Add New State
                 </h3>
             </div>
-            
+
             <form id="stateForm" onsubmit="saveState(event)">
                 <div class="px-6 py-4 space-y-4">
                     <input type="hidden" id="stateId">
-                    
+
                     <div>
                         <label for="stateName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Name <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" 
-                               id="stateName" 
+                        <input type="text"
+                               id="stateName"
                                name="name"
                                required
                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <span id="nameError" class="text-red-500 text-sm hidden"></span>
                     </div>
-                    
+
                     <div>
                         <label for="stateType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Type <span class="text-red-500">*</span>
                         </label>
-                        <select id="stateType" 
+                        <select id="stateType"
                                 name="type_id"
                                 required
                                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -199,12 +199,12 @@
                         </select>
                         <span id="typeError" class="text-red-500 text-sm hidden"></span>
                     </div>
-                    
+
                     <div>
                         <label for="stateValidity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Validity <span class="text-red-500">*</span>
                         </label>
-                        <select id="stateValidity" 
+                        <select id="stateValidity"
                                 name="valid_id"
                                 required
                                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -213,20 +213,20 @@
                             <option value="3">invalid-temporarily</option>
                         </select>
                     </div>
-                    
+
                     <div>
                         <label for="stateComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Comments
                         </label>
-                        <textarea id="stateComments" 
+                        <textarea id="stateComments"
                                   name="comments"
                                   rows="3"
                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
                     </div>
                 </div>
-                
+
                 <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                    <button type="button" 
+                    <button type="button"
                             onclick="closeStateModal()"
                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
                         Cancel
@@ -255,7 +255,7 @@ let currentOrder = '{{ SortOrder }}';
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     restoreSearchState();
-    
+
     // Add keyboard shortcuts
     document.addEventListener('keydown', function(event) {
         if (event.key === 'Escape') {
@@ -263,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
             closeDeleteModal();
         }
     });
-    
+
     // Modal keyboard support
     document.getElementById('stateForm').addEventListener('keydown', function(event) {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -290,10 +290,10 @@ function performSearch(value) {
         params.delete('search');
         document.getElementById('clearSearchBtn').classList.add('hidden');
     }
-    
+
     // Save to session storage
     sessionStorage.setItem('stateSearch', value);
-    
+
     window.location.search = params.toString();
 }
 
@@ -310,7 +310,7 @@ function filterByType(typeId) {
     } else {
         params.delete('type');
     }
-    
+
     sessionStorage.setItem('stateTypeFilter', typeId);
     window.location.search = params.toString();
 }
@@ -318,17 +318,17 @@ function filterByType(typeId) {
 // Sorting functionality
 function sortTable(column) {
     const params = new URLSearchParams(window.location.search);
-    
+
     if (currentSort === column) {
         currentOrder = currentOrder === 'asc' ? 'desc' : 'asc';
     } else {
         currentSort = column;
         currentOrder = 'asc';
     }
-    
+
     params.set('sort', currentSort);
     params.set('order', currentOrder);
-    
+
     window.location.search = params.toString();
 }
 
@@ -361,7 +361,7 @@ function editStateFromRow(btn) {
     const typeId = parseInt(btn.dataset.type);
     const comments = btn.dataset.comments || '';
     const validId = parseInt(btn.dataset.valid) || 1;
-    
+
     console.log('Edit state data:', { id, name, typeId, comments, validId });
     editState(id, name, typeId, comments, validId);
 }
@@ -380,27 +380,27 @@ function closeStateModal() {
 
 function saveState(event) {
     event.preventDefault();
-    
+
     if (!validateForm()) {
         return;
     }
-    
+
     const stateId = document.getElementById('stateId').value;
     const isEdit = !!stateId;
-    
+
     const data = {
         name: document.getElementById('stateName').value.trim(),
         type_id: parseInt(document.getElementById('stateType').value),
         comments: document.getElementById('stateComments').value.trim() || null,
         valid_id: parseInt(document.getElementById('stateValidity').value)
     };
-    
-    const url = isEdit 
+
+    const url = isEdit
         ? `/admin/states/${stateId}/update`
         : '/admin/states/create';
-    
+
     console.log('Saving state:', { isEdit, data, url });
-    
+
     fetch(url, {
         method: isEdit ? 'PUT' : 'POST',
         headers: {
@@ -436,17 +436,17 @@ function saveState(event) {
 // Delete functionality
 function confirmDelete(id, name, ticketCount) {
     deleteStateId = id;
-    const message = `Are you sure you want to delete the state "${name}"?`;
+    const message = '{{ t("messages.confirm.delete_state")|default:"Are you sure you want to delete this state?" }}';
     document.getElementById('deleteMessage').textContent = message;
-    
+
     if (ticketCount > 0) {
-        document.getElementById('deleteWarning').textContent = 
+        document.getElementById('deleteWarning').textContent =
             `Warning: This state is used by ${ticketCount} ticket(s). Deletion will fail.`;
         document.getElementById('deleteWarning').classList.remove('hidden');
     } else {
         document.getElementById('deleteWarning').classList.add('hidden');
     }
-    
+
     document.getElementById('deleteModal').classList.remove('hidden');
 }
 
@@ -455,7 +455,7 @@ function confirmDeleteFromRow(btn) {
     const id = parseInt(btn.dataset.id);
     const name = btn.dataset.name || '';
     const count = parseInt(btn.dataset.count);
-    
+
     console.log('Delete state data:', { id, name, count });
     confirmDelete(id, name, count);
 }
@@ -470,7 +470,7 @@ function closeDeleteModal() {
 
 function deleteState() {
     if (!deleteStateId) return;
-    
+
     fetch(`/admin/states/${deleteStateId}/delete`, {
         method: 'DELETE'
     })
@@ -496,22 +496,22 @@ function deleteState() {
 function validateForm() {
     let isValid = true;
     clearErrors();
-    
+
     const name = document.getElementById('stateName').value.trim();
     const typeId = document.getElementById('stateType').value;
-    
+
     if (!name) {
         document.getElementById('nameError').textContent = 'Name is required';
         document.getElementById('nameError').classList.remove('hidden');
         isValid = false;
     }
-    
+
     if (!typeId) {
         document.getElementById('typeError').textContent = 'Type is required';
         document.getElementById('typeError').classList.remove('hidden');
         isValid = false;
     }
-    
+
     return isValid;
 }
 
@@ -524,11 +524,11 @@ function clearErrors() {
 function restoreSearchState() {
     const savedSearch = sessionStorage.getItem('stateSearch');
     const savedType = sessionStorage.getItem('stateTypeFilter');
-    
+
     if (savedSearch && !document.getElementById('searchInput').value) {
         document.getElementById('searchInput').value = savedSearch;
     }
-    
+
     if (savedType && !document.getElementById('typeFilter').value) {
         document.getElementById('typeFilter').value = savedType;
     }
@@ -546,8 +546,8 @@ function showError(message) {
 function showToast(message, type) {
     const toast = document.createElement('div');
     toast.className = `px-4 py-3 rounded-lg shadow-lg mb-4 transform transition-all duration-300 ${
-        type === 'success' 
-            ? 'bg-green-500 text-white' 
+        type === 'success'
+            ? 'bg-green-500 text-white'
             : 'bg-red-500 text-white'
     }`;
     toast.innerHTML = `
@@ -556,9 +556,9 @@ function showToast(message, type) {
             <span>${message}</span>
         </div>
     `;
-    
+
     document.getElementById('toastContainer').appendChild(toast);
-    
+
     setTimeout(() => {
         toast.classList.add('opacity-0');
         setTimeout(() => {

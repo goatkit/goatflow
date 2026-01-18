@@ -1,13 +1,13 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Group Permissions{% endblock %}
+{% block title %}{{ t("group_permissions.title")|default:"Group Permissions" }}{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8 space-y-8">
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Queue Permissions</h1>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ t("group_permissions.queue_permissions")|default:"Queue Permissions" }}</h1>
                 <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                     Manage queue-centric permissions for <span class="font-semibold">{{ Group.Name }}</span>
                 </p>
@@ -30,7 +30,7 @@
 
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Queues</h2>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("group_permissions.queues")|default:"Queues" }}</h2>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Queues tied to this group inherit the permissions you configure below.</p>
         </div>
         <div class="px-6 py-4">
@@ -61,7 +61,7 @@
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div>
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Permission Matrix</h2>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("group_permissions.permission_matrix")|default:"Permission Matrix" }}</h2>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Toggle permissions for each agent. Read/Write grants every permission in the row.</p>
             </div>
             <button id="savePermissionsButton" type="button" onclick="saveGroupPermissions()" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 disabled:opacity-50 disabled:cursor-not-allowed">

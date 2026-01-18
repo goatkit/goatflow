@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Schema Discovery Monitor - Admin - GOTRS{% endblock %}
+{% block title %}{{ t("schema_monitoring.title")|default:"Schema Monitoring" }} - Admin - GOTRS{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -77,7 +77,7 @@
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Module Health Status</h2>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ t("schema_monitoring.module_health_status")|default:"Module Health Status" }}</h2>
                 <button onclick="refreshStatus()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                     <svg class="h-4 w-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
@@ -86,7 +86,7 @@
                 </button>
             </div>
         </div>
-        
+
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead class="bg-gray-50 dark:bg-gray-900">
@@ -109,7 +109,7 @@
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                             </div>
-                            <p class="mt-2">Loading module status...</p>
+                            <p class="mt-2">{{ t("schema_monitoring.loading_status")|default:"Loading module status..." }}</p>
                         </td>
                     </tr>
                 </tbody>
@@ -119,7 +119,7 @@
 
     <!-- Performance Chart -->
     <div class="mt-8 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Performance Trends</h2>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">{{ t("schema_monitoring.performance_heading")|default:"Performance Trends" }}</h2>
         <div id="performance-chart" class="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
             <p>Performance chart will appear here</p>
         </div>
@@ -139,21 +139,21 @@ async function loadModuleStatus() {
                 'Accept': 'application/json'
             }
         });
-        
+
         if (!tablesResponse.ok) throw new Error('Failed to fetch tables');
-        
+
         const tablesData = await tablesResponse.json();
         const tables = tablesData.data || [];
-        
+
         moduleData = [];
         let totalTime = 0;
         let healthyCount = 0;
         let moduleCount = 0;
-        
+
         // Test each module
         for (const table of tables.slice(0, 20)) { // Limit to first 20 for performance
             const startTime = Date.now();
-            
+
             // Check if module exists
             const moduleResponse = await fetch(`/admin/dynamic/${table.name}`, {
                 headers: {
@@ -161,10 +161,10 @@ async function loadModuleStatus() {
                     'Accept': 'application/json'
                 }
             });
-            
+
             const responseTime = Date.now() - startTime;
             totalTime += responseTime;
-            
+
             const moduleInfo = {
                 name: table.name,
                 status: moduleResponse.ok ? 'healthy' : 'error',
@@ -174,11 +174,11 @@ async function loadModuleStatus() {
                 hasAudit: false,
                 crudOps: []
             };
-            
+
             if (moduleResponse.ok) {
                 healthyCount++;
                 moduleCount++;
-                
+
                 // Get module config
                 const configResponse = await fetch(`/admin/dynamic/_schema?action=generate&table=${table.name}`, {
                     headers: {
@@ -186,17 +186,17 @@ async function loadModuleStatus() {
                         'Accept': 'application/json'
                     }
                 });
-                
+
                 if (configResponse.ok) {
                     const configData = await configResponse.json();
                     if (configData.config && configData.config.Fields) {
                         moduleInfo.fields = configData.config.Fields.length;
-                        moduleInfo.hasAudit = configData.config.Fields.some(f => 
+                        moduleInfo.hasAudit = configData.config.Fields.some(f =>
                             f.Name === 'create_by' || f.Name === 'change_by'
                         );
                     }
                 }
-                
+
                 // Test CRUD operations
                 const moduleData = await moduleResponse.json();
                 if (moduleData.success) {
@@ -206,20 +206,20 @@ async function loadModuleStatus() {
                 // Module not generated yet
                 moduleInfo.status = 'not_generated';
             }
-            
+
             moduleData.push(moduleInfo);
         }
-        
+
         // Update statistics
         const avgTime = moduleCount > 0 ? Math.round(totalTime / moduleCount) : 0;
         document.getElementById('avg-time').textContent = `${avgTime}ms`;
         document.getElementById('total-modules').textContent = moduleCount;
         document.getElementById('healthy-modules').textContent = healthyCount;
         document.getElementById('coverage').textContent = `${Math.round((moduleCount / tables.length) * 100)}%`;
-        
+
         // Update table
         updateModuleTable();
-        
+
     } catch (error) {
         console.error('Error loading module status:', error);
         showToast('Failed to load module status', 'error');
@@ -228,7 +228,7 @@ async function loadModuleStatus() {
 
 function updateModuleTable() {
     const tbody = document.getElementById('module-list');
-    
+
     if (moduleData.length === 0) {
         tbody.innerHTML = `
             <tr>
@@ -239,17 +239,17 @@ function updateModuleTable() {
         `;
         return;
     }
-    
+
     tbody.innerHTML = moduleData.map(module => {
         const statusBadge = getStatusBadge(module.status, module.statusCode);
         const crudBadges = getCrudBadges(module.crudOps);
-        const auditBadge = module.hasAudit 
+        const auditBadge = module.hasAudit
             ? '<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">✓</span>'
             : '<span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">-</span>';
-        
-        const responseClass = module.responseTime < 100 ? 'text-green-600' : 
+
+        const responseClass = module.responseTime < 100 ? 'text-green-600' :
                             module.responseTime < 500 ? 'text-yellow-600' : 'text-red-600';
-        
+
         return `
             <tr>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -333,7 +333,7 @@ async function generateModule(tableName) {
                 'Accept': 'application/json'
             }
         });
-        
+
         if (response.ok) {
             showToast(`Module ${tableName} generated successfully`, 'success');
             setTimeout(() => loadModuleStatus(), 2000); // Reload after file watcher picks it up
@@ -362,7 +362,7 @@ function refreshStatus() {
         </svg>
         Refreshing...
     `;
-    
+
     loadModuleStatus().finally(() => {
         button.disabled = false;
         button.innerHTML = `
@@ -376,14 +376,14 @@ function refreshStatus() {
 
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-500' : 
+    const bgColor = type === 'success' ? 'bg-green-500' :
                     type === 'error' ? 'bg-red-500' : 'bg-blue-500';
-    
+
     toast.className = `fixed bottom-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-300`;
     toast.textContent = message;
-    
+
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 300);
@@ -393,7 +393,7 @@ function showToast(message, type = 'info') {
 // Load on page ready
 document.addEventListener('DOMContentLoaded', () => {
     loadModuleStatus();
-    
+
     // Auto-refresh every 30 seconds
     setInterval(loadModuleStatus, 30000);
 });

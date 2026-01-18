@@ -15,7 +15,7 @@
             </p>
         </div>
         <div class="mt-4 flex md:ml-4 md:mt-0">
-            <a href="/tickets/new" 
+            <a href="/tickets/new"
                class="ml-3 inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
                 <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
@@ -33,19 +33,19 @@
          hx-swap="innerHTML">
         <!-- Loading placeholder -->
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</dt>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
         </div>
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</dt>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
         </div>
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</dt>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
         </div>
         <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</dt>
+            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</dt>
             <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
         </div>
     </div>
@@ -66,8 +66,8 @@
                         <li class="py-4">
                             <div class="flex items-center space-x-4">
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">Loading...</p>
-                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">Loading recent tickets...</p>
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ t("labels.loading")|default:"Loading..." }}</p>
+                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</p>
                                 </div>
                             </div>
                         </li>
@@ -93,7 +93,7 @@
                     <!-- Loading placeholder -->
                     <dl class="space-y-4">
                         <div class="flex items-center justify-between">
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Loading...</dt>
+                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</dt>
                             <dd class="text-sm text-gray-900 dark:text-white">-</dd>
                         </div>
                     </dl>

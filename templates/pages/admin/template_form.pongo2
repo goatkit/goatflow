@@ -51,7 +51,7 @@
             <!-- Basic Information -->
             <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.modules.template.form.basic_info") }}</h3>
-                
+
                 <div class="grid grid-cols-1 gap-6">
                     <!-- Name -->
                     <div class="max-w-lg">
@@ -148,12 +148,12 @@
             <!-- Template Content -->
             <div class="pb-6">
                 <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.modules.template.form.template_content") }}</h3>
-                
+
                 <div>
                     <label id="templateEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         {{ t("admin.modules.template.fields.text") }}
                     </label>
-                    
+
                     <!-- Available placeholders -->
                     <div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
                         <p class="mb-1">{{ t("admin.modules.template.form.available_placeholders") }}:</p>
@@ -170,9 +170,9 @@
                         </div>
                         <p class="mt-2 text-xs text-gray-400">{{ t("admin.modules.template.form.placeholder_click_hint") }}</p>
                     </div>
-                    
+
                     {% include "partials/rich_text_editor.pongo2" with EditorID="templateEditor" FieldName="text" InitialContent=Template.Text Placeholder="Enter your template content here..." MinHeight="300px" EditorMode="markdown" LabelID="templateEditorLabel" %}
-                    
+
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         {{ t("admin.modules.template.form.template_text_help") }}
                     </p>
@@ -229,7 +229,7 @@
         const checkboxes = document.querySelectorAll('input[name="template_type"]:checked');
         if (checkboxes.length === 0) {
             e.preventDefault();
-            alert('Please select at least one template type.');
+            alert('{{ t("messages.select_template_type")|default:"Please select at least one template type." }}');
             return false;
         }
     });

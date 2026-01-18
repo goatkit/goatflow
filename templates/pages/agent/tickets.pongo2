@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Ticket Management - GOTRS{% endblock %}
+{% block title %}{{ t("pages.agent.tickets.title")|default:"Ticket Management" }} - GOTRS{% endblock %}
 
 {% block content %}
 <!-- Floating Bulk Actions Bar (appears when tickets are selected) -->
@@ -12,36 +12,36 @@
                 <div class="flex items-center space-x-4">
                     <span id="floating-selected-count" class="text-sm font-medium text-white">
                         <span class="inline-flex items-center justify-center w-6 h-6 bg-blue-600 rounded-full mr-2">0</span>
-                        tickets selected
+                        <span data-singular="{{ t("tickets.ticket_selected")|default:"ticket selected" }}" data-plural="{{ t("tickets.tickets_selected")|default:"tickets selected" }}">{{ t("tickets.tickets_selected")|default:"tickets selected" }}</span>
                     </span>
                     <div class="h-6 w-px bg-gray-600"></div>
                     <button onclick="bulkAssign()" class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors">
                         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                         </svg>
-                        Assign
+                        {{ t("tickets.assign")|default:"Assign" }}
                     </button>
                     <button onclick="bulkChangeStatus()" class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors">
                         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        Change Status
+                        {{ t("tickets.change_status")|default:"Change Status" }}
                     </button>
                     <button onclick="bulkChangePriority()" class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-md transition-colors">
                         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
                         </svg>
-                        Change Priority
+                        {{ t("tickets.change_priority")|default:"Change Priority" }}
                     </button>
                     <button onclick="bulkMerge()" class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors">
                         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                         </svg>
-                        Merge
+                        {{ t("tickets.merge")|default:"Merge" }}
                     </button>
                 </div>
                 <button onclick="clearAllSelections()" class="text-sm text-gray-400 hover:text-white transition-colors">
-                    Clear selection
+                    {{ t("tickets.clear_selection")|default:"Clear selection" }}
                 </button>
             </div>
         </div>
@@ -52,7 +52,7 @@
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="mb-6 sm:flex sm:items-center sm:justify-between">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Ticket Management</h1>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("pages.agent.tickets.heading")|default:"Ticket Management" }}</h1>
         <div class="mt-4 sm:mt-0">
             <a href="/tickets/new"
                class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
@@ -71,7 +71,7 @@
                 <!-- Search -->
                 <div class="flex-1">
                     <input id="search-input" type="text" name="search" value="{{ CurrentFilters.search }}"
-                           placeholder="Search by ticket number, title, or customer..."
+                           placeholder="{{ t("tickets.search_placeholder")|default:"Search by ticket number, title, or customer..." }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
                 </div>
 
@@ -89,7 +89,7 @@
                 <!-- Queue Filter -->
                 <div>
                     <select name="queue" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-                        <option value="all">All Queues</option>
+                        <option value="all">{{ t("tickets.all_queues")|default:"All Queues" }}</option>
                         {% for queue in AvailableQueues %}
                         <option value="{{ queue.id }}" {% if CurrentFilters.queue == queue.id %}selected{% endif %}>
                             {{ queue.name }}
@@ -101,19 +101,19 @@
                 <!-- Assignee Filter -->
                 <div>
                     <select name="assignee" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-                        <option value="all" {% if CurrentFilters.assignee == "all" %}selected{% endif %}>All Tickets</option>
-                        <option value="me" {% if CurrentFilters.assignee == "me" %}selected{% endif %}>My Tickets</option>
-                        <option value="unassigned" {% if CurrentFilters.assignee == "unassigned" %}selected{% endif %}>Unassigned</option>
+                        <option value="all" {% if CurrentFilters.assignee == "all" %}selected{% endif %}>{{ t("tickets.all_tickets")|default:"All Tickets" }}</option>
+                        <option value="me" {% if CurrentFilters.assignee == "me" %}selected{% endif %}>{{ t("tickets.my_tickets")|default:"My Tickets" }}</option>
+                        <option value="unassigned" {% if CurrentFilters.assignee == "unassigned" %}selected{% endif %}>{{ t("tickets.unassigned")|default:"Unassigned" }}</option>
                     </select>
                 </div>
 
                 <!-- Buttons -->
                 <div class="flex space-x-2">
                     <button id="search-btn" type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Filter
+                        {{ t("tickets.filter")|default:"Filter" }}
                     </button>
                     <a href="/agent/tickets" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
-                        Clear
+                        {{ t("buttons.clear")|default:"Clear" }}
                     </a>
                 </div>
             </form>
@@ -126,7 +126,7 @@
                     <svg class="w-4 h-4 mr-2 transition-transform details-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
-                    Dynamic Field Filters
+                    {{ t("tickets.dynamic_field_filters")|default:"Dynamic Field Filters" }}
                     {% if CurrentDFFilters|length > 0 %}
                     <span class="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full">
                         {{ CurrentDFFilters|length }} active
@@ -179,7 +179,7 @@
                             {% else %}
                             <input type="text" name="df_{{ field.Name }}_contains"
                                    value="{{ CurrentDFFilters['df_' + field.Name + '_contains'] }}"
-                                   placeholder="Contains..."
+                                   placeholder="{{ t("placeholders.contains")|default:"Contains..." }}"
                                    class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
                             {% endif %}
                         </div>
@@ -187,7 +187,7 @@
 
                         <div class="sm:col-span-2 lg:col-span-3 flex space-x-2">
                             <button type="submit" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                                Apply DF Filters
+                                {{ t("tickets.apply_df_filters")|default:"Apply DF Filters" }}
                             </button>
                         </div>
                     </form>
@@ -209,7 +209,7 @@
                         <th class="w-24 px-2 py-2 text-left">
                             <a href="?sort=tn&order={% if CurrentFilters.sort == 'tn' and CurrentFilters.order == 'asc' %}desc{% else %}asc{% endif %}&{{ request.GET.urlencode }}"
                                class="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-white">
-                                Ticket #
+                                {{ t("tickets.ticket_number")|default:"Ticket #" }}
                                 {% if CurrentFilters.sort == 'tn' %}
                                     {% if CurrentFilters.order == 'asc' %}↑{% else %}↓{% endif %}
                                 {% endif %}
@@ -218,37 +218,37 @@
                         <th class="px-2 py-2 text-left" style="width: 20%;">
                             <a href="?sort=title&order={% if CurrentFilters.sort == 'title' and CurrentFilters.order == 'asc' %}desc{% else %}asc{% endif %}&{{ request.GET.urlencode }}"
                                class="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-white">
-                                Title
+                                {{ t("tickets.title")|default:"Title" }}
                                 {% if CurrentFilters.sort == 'title' %}
                                     {% if CurrentFilters.order == 'asc' %}↑{% else %}↓{% endif %}
                                 {% endif %}
                             </a>
                         </th>
                         <th class="w-28 px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Customer
+                            {{ t("tickets.customer")|default:"Customer" }}
                         </th>
                         <th class="w-24 px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Queue
+                            {{ t("tickets.queue")|default:"Queue" }}
                         </th>
                         <th class="w-24 px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            State
+                            {{ t("tickets.state")|default:"State" }}
                         </th>
                         <th class="w-20 px-2 py-2 text-left">
                             <a href="?sort=priority&order={% if CurrentFilters.sort == 'priority' and CurrentFilters.order == 'asc' %}desc{% else %}asc{% endif %}&{{ request.GET.urlencode }}"
                                class="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-white">
-                                Prio
+                                {{ t("tickets.priority_short")|default:"Prio" }}
                                 {% if CurrentFilters.sort == 'priority' %}
                                     {% if CurrentFilters.order == 'asc' %}↑{% else %}↓{% endif %}
                                 {% endif %}
                             </a>
                         </th>
                         <th class="w-24 px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Assigned
+                            {{ t("tickets.assigned")|default:"Assigned" }}
                         </th>
                         <th class="w-20 px-2 py-2 text-left">
                             <a href="?sort=create_time&order={% if CurrentFilters.sort == 'create_time' and CurrentFilters.order == 'asc' %}desc{% else %}asc{% endif %}&{{ request.GET.urlencode }}"
                                class="text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-white">
-                                Age
+                                {{ t("tickets.age")|default:"Age" }}
                                 {% if CurrentFilters.sort == 'create_time' %}
                                     {% if CurrentFilters.order == 'asc' %}↑{% else %}↓{% endif %}
                                 {% endif %}
@@ -258,7 +258,7 @@
                             #
                         </th>
                         <th class="w-20 px-2 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Actions
+                            {{ t("common.actions")|default:"Actions" }}
                         </th>
                     </tr>
                 </thead>
@@ -316,13 +316,13 @@
                         </td>
                         <td class="px-2 py-2 whitespace-nowrap text-right">
                             <div class="flex items-center justify-end space-x-1">
-                                <button onclick="quickAssign({{ ticket.id }})" title="Quick Assign"
+                                <button onclick="quickAssign({{ ticket.id }})" title="{{ t("tooltips.quick_assign")|default:"Quick Assign" }}"
                                         class="text-blue-600 hover:text-blue-700 dark:text-blue-400 p-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                     </svg>
                                 </button>
-								<a href="/ticket/{{ ticket.tn }}" title="View Details"
+								<a href="/ticket/{{ ticket.tn }}" title="{{ t("tooltips.view_details")|default:"View Details" }}"
                                    class="text-gray-600 hover:text-gray-700 dark:text-gray-400 p-1">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -335,7 +335,7 @@
                     {% empty %}
                     <tr>
                         <td colspan="11" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                            No tickets found matching your criteria
+                            {{ t("tickets.no_tickets_found")|default:"No tickets found matching your criteria" }}
                         </td>
                     </tr>
                     {% endfor %}
@@ -350,15 +350,15 @@
                 <div class="flex items-center space-x-3">
                     <button id="select-all-matching" onclick="selectAllMatching()"
                             class="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline">
-                        Select all {{ Pagination.TotalCount }} matching tickets
+                        {{ t("tickets.select_all")|default:"Select all" }} {{ Pagination.TotalCount }} {{ t("tickets.matching_tickets")|default:"matching tickets" }}
                     </button>
                     <span class="text-xs text-gray-400">|</span>
                     <span id="selection-info" class="text-xs text-gray-500 dark:text-gray-400">
-                        Select tickets to use bulk actions
+                        {{ t("tickets.select_for_bulk_actions")|default:"Select tickets to use bulk actions" }}
                     </span>
                 </div>
                 <div class="text-xs text-gray-500 dark:text-gray-400">
-                    Showing {{ Tickets|length }} of {{ Pagination.TotalCount }} tickets
+                    {{ t("tickets.showing")|default:"Showing" }} {{ Tickets|length }} {{ t("tickets.of")|default:"of" }} {{ Pagination.TotalCount }} {{ t("tickets.tickets")|default:"tickets" }}
                 </div>
             </div>
         </div>
@@ -369,14 +369,14 @@
         <div class="px-6 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
             <div class="flex items-center justify-between">
                 <div class="text-sm text-gray-700 dark:text-gray-300">
-                    Page {{ Pagination.Page }} of {{ Pagination.TotalPages }}
+                    {{ t("pagination.page")|default:"Page" }} {{ Pagination.Page }} {{ t("pagination.of")|default:"of" }} {{ Pagination.TotalPages }}
                 </div>
                 <div class="flex items-center space-x-1">
                     <!-- First Page -->
                     {% if Pagination.HasFirst %}
                     <a href="?page=1&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
                        class="px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200"
-                       title="First page">
+                       title="{{ t("pagination.first_page")|default:"First page" }}">
                         &laquo;
                     </a>
                     {% else %}
@@ -387,7 +387,7 @@
                     {% if Pagination.Page > 1 %}
                     <a href="?page={{ Pagination.PrevPage }}&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
                        class="px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200"
-                       title="Previous page">
+                       title="{{ t("pagination.previous_page")|default:"Previous page" }}">
                         &lsaquo;
                     </a>
                     {% else %}
@@ -410,7 +410,7 @@
                     {% if Pagination.Page < Pagination.TotalPages %}
                     <a href="?page={{ Pagination.NextPage }}&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
                        class="px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200"
-                       title="Next page">
+                       title="{{ t("pagination.next_page")|default:"Next page" }}">
                         &rsaquo;
                     </a>
                     {% else %}
@@ -421,7 +421,7 @@
                     {% if Pagination.HasLast %}
                     <a href="?page={{ Pagination.TotalPages }}&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
                        class="px-2 py-1 text-sm bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded hover:bg-gray-100 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200"
-                       title="Last page">
+                       title="{{ t("pagination.last_page")|default:"Last page" }}">
                         &raquo;
                     </a>
                     {% else %}
@@ -728,10 +728,14 @@ function updateSelectedCount() {
             // Update the text with count
             const textNode = document.getElementById('floating-selected-count');
             if (textNode) {
+                const textSpan = textNode.querySelector('span[data-singular]');
+                const singularText = textSpan ? textSpan.dataset.singular : 'ticket selected';
+                const pluralText = textSpan ? textSpan.dataset.plural : 'tickets selected';
+                const selectedText = count === 1 ? singularText : pluralText;
                 const pageInfo = crossPageSelections.length > 0
-                    ? ` (${currentPageSelected.length} on this page)`
+                    ? ` (${currentPageSelected.length} {{ t("tickets.on_this_page")|default:"on this page" }})`
                     : '';
-                textNode.innerHTML = `<span class="inline-flex items-center justify-center w-6 h-6 bg-blue-600 rounded-full mr-2">${count}</span> ticket${count !== 1 ? 's' : ''} selected${pageInfo}`;
+                textNode.innerHTML = `<span class="inline-flex items-center justify-center w-6 h-6 bg-blue-600 rounded-full mr-2">${count}</span> <span data-singular="${singularText}" data-plural="${pluralText}">${selectedText}</span>${pageInfo}`;
             }
         } else {
             floatingBar.classList.add('translate-y-full');
@@ -767,7 +771,7 @@ function getSelectedTickets() {
 async function selectAllMatching() {
     const btn = document.getElementById('select-all-matching');
     const originalText = btn.textContent;
-    btn.textContent = 'Loading...';
+    btn.textContent = '{{ t("messages.loading")|default:"Loading..." }}';
     btn.disabled = true;
 
     try {
@@ -893,7 +897,7 @@ async function loadOptions(type, selectId) {
 function bulkAssign() {
     const tickets = getSelectedTickets();
     if (tickets.length === 0) {
-        showToast(false, 'No Selection', 'Please select at least one ticket');
+        showToast(false, '{{ t("messages.no_selection")|default:"No Selection" }}', '{{ t("messages.please_select_ticket")|default:"Please select at least one ticket" }}');
         return;
     }
     selectedTicketIds = tickets;
@@ -905,7 +909,7 @@ function bulkAssign() {
 function bulkChangeStatus() {
     const tickets = getSelectedTickets();
     if (tickets.length === 0) {
-        showToast(false, 'No Selection', 'Please select at least one ticket');
+        showToast(false, '{{ t("messages.no_selection")|default:"No Selection" }}', '{{ t("messages.please_select_ticket")|default:"Please select at least one ticket" }}');
         return;
     }
     selectedTicketIds = tickets;
@@ -917,7 +921,7 @@ function bulkChangeStatus() {
 function bulkChangePriority() {
     const tickets = getSelectedTickets();
     if (tickets.length === 0) {
-        showToast(false, 'No Selection', 'Please select at least one ticket');
+        showToast(false, '{{ t("messages.no_selection")|default:"No Selection" }}', '{{ t("messages.please_select_ticket")|default:"Please select at least one ticket" }}');
         return;
     }
     selectedTicketIds = tickets;
@@ -929,7 +933,7 @@ function bulkChangePriority() {
 function bulkChangeQueue() {
     const tickets = getSelectedTickets();
     if (tickets.length === 0) {
-        showToast(false, 'No Selection', 'Please select at least one ticket');
+        showToast(false, '{{ t("messages.no_selection")|default:"No Selection" }}', '{{ t("messages.please_select_ticket")|default:"Please select at least one ticket" }}');
         return;
     }
     selectedTicketIds = tickets;
@@ -941,7 +945,7 @@ function bulkChangeQueue() {
 function bulkMerge() {
     const tickets = getSelectedTickets();
     if (tickets.length < 2) {
-        showToast(false, 'Not Enough Tickets', 'Please select at least two tickets to merge');
+        showToast(false, '{{ t("messages.not_enough_tickets")|default:"Not Enough Tickets" }}', '{{ t("messages.select_two_to_merge")|default:"Please select at least two tickets to merge" }}');
         return;
     }
     selectedTicketIds = tickets;

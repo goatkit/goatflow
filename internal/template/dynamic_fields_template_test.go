@@ -45,8 +45,8 @@ func TestDynamicFieldFormCreate(t *testing.T) {
 	// Form action should match
 	asserter.HasFormAction("/admin/api/dynamic-fields")
 
-	// Title should indicate create
-	asserter.Contains("Create Dynamic Field")
+	// Title should indicate create (check for either i18n key or default text)
+	asserter.ContainsAny("Create Dynamic Field", "admin.dynamic_fields.create_heading")
 }
 
 // TestDynamicFieldFormEdit tests the edit form uses hx-put.
@@ -87,8 +87,8 @@ func TestDynamicFieldFormEdit(t *testing.T) {
 	// Form action should include ID
 	asserter.HasFormAction("/admin/api/dynamic-fields/42")
 
-	// Title should indicate edit
-	asserter.Contains("Edit Dynamic Field")
+	// Title should indicate edit (check for either i18n key or default text)
+	asserter.ContainsAny("Edit Dynamic Field", "admin.dynamic_fields.edit_heading")
 }
 
 // TestDynamicFieldsListDeletePath tests delete buttons use correct API path.

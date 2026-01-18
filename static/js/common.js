@@ -415,6 +415,18 @@ document.addEventListener("DOMContentLoaded", () => {
     let stopped = false;
     let failureCount = 0;
 
+    // Load reminder i18n from embedded JSON
+    let reminderI18n = {};
+    try {
+        const i18nEl = document.getElementById("reminder-i18n");
+        if (i18nEl) {
+            reminderI18n = JSON.parse(i18nEl.textContent) || {};
+        }
+    } catch (e) {
+        console.warn("Failed to load reminder i18n:", e);
+    }
+    const ri18n = (key, fallback) => reminderI18n[key] || fallback;
+
     function formatShortDuration(ms) {
         const totalSeconds = Math.max(0, Math.round(Math.abs(ms) / 1000));
         const totalMinutes = Math.floor(totalSeconds / 60);
@@ -424,21 +436,29 @@ document.addEventListener("DOMContentLoaded", () => {
         // For very long durations, use years/months/weeks/days
         if (totalDays >= 365) {
             const years = Math.floor(totalDays / 365);
-            return `${years} year${years !== 1 ? "s" : ""}`;
+            const label =
+                years !== 1 ? ri18n("years", "years") : ri18n("year", "year");
+            return `${years} ${label}`;
         }
         if (totalDays >= 60) {
             const months = Math.floor(totalDays / 30);
-            return `${months} month${months !== 1 ? "s" : ""}`;
+            const label =
+                months !== 1
+                    ? ri18n("months", "months")
+                    : ri18n("month", "month");
+            return `${months} ${label}`;
         }
         if (totalDays >= 14) {
             const weeks = Math.floor(totalDays / 7);
-            return `${weeks} week${weeks !== 1 ? "s" : ""}`;
+            const label =
+                weeks !== 1 ? ri18n("weeks", "weeks") : ri18n("week", "week");
+            return `${weeks} ${label}`;
         }
         if (totalDays >= 2) {
-            return `${totalDays} days`;
+            return `${totalDays} ${ri18n("days", "days")}`;
         }
         if (totalDays === 1) {
-            return "1 day";
+            return `1 ${ri18n("day", "day")}`;
         }
         if (totalHours >= 1) {
             const hours = totalHours;
@@ -475,7 +495,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const params = new URLSearchParams();
         params.set(
             "status",
-            (reminder && reminder.state_name) || "pending reminder",
+            (reminder && reminder.state_name) ||
+                ri18n("pending_reminder", "pending reminder"),
         );
         params.set("pending_until", nextAt.toISOString());
 
@@ -503,11 +524,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     const msg =
                         data && data.error
                             ? data.error
-                            : "Failed to snooze reminder";
+                            : ri18n(
+                                  "snooze_failed",
+                                  "Failed to snooze reminder",
+                              );
                     throw new Error(msg);
                 }
                 showToast(
-                    `Reminder snoozed until ${nextAt.toLocaleString()}`,
+                    `${ri18n("snoozed_until", "Reminder snoozed until")} ${nextAt.toLocaleString()}`,
                     "success",
                 );
                 if (toast) {
@@ -519,7 +543,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 showToast(
                     err && err.message
                         ? err.message
-                        : "Failed to snooze reminder",
+                        : ri18n("snooze_failed", "Failed to snooze reminder"),
                     "error",
                 );
             })
@@ -564,14 +588,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const heading = document.createElement("div");
         heading.className =
             "text-sm font-semibold text-amber-900 dark:text-amber-100";
-        heading.textContent = reminder.title || "Ticket reminder";
+        heading.textContent =
+            reminder.title || ri18n("ticket_reminder", "Ticket reminder");
         titleWrap.appendChild(heading);
 
         const subline = document.createElement("div");
         subline.className = "text-xs text-gray-600 dark:text-gray-300";
         const ticketLabel = reminder.ticket_number || reminder.ticket_id;
         const queueName = reminder.queue_name || "Queue";
-        subline.textContent = `Ticket #${ticketLabel} • ${queueName}`;
+        subline.textContent = `${ri18n("ticket_label", "Ticket")} #${ticketLabel} • ${queueName}`;
         titleWrap.appendChild(subline);
         header.appendChild(titleWrap);
 
@@ -579,7 +604,10 @@ document.addEventListener("DOMContentLoaded", () => {
         dismiss.type = "button";
         dismiss.className =
             "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300";
-        dismiss.setAttribute("aria-label", "Dismiss reminder");
+        dismiss.setAttribute(
+            "aria-label",
+            ri18n("dismiss", "Dismiss reminder"),
+        );
         dismiss.textContent = "x";
         dismiss.addEventListener("click", () => removeToastElement(toast));
         header.appendChild(dismiss);
@@ -590,13 +618,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 ? new Date(reminder.pending_until)
                 : null;
         const now = new Date();
-        let timingLabel = "Reminder is ready";
+        let timingLabel = ri18n("reminder_ready", "Reminder is ready");
         if (due) {
             const diffMs = due.getTime() - now.getTime();
             timingLabel =
                 diffMs < 0
-                    ? `Overdue by ${formatShortDuration(diffMs)}`
-                    : `Due in ${formatShortDuration(diffMs)}`;
+                    ? `${ri18n("overdue_by", "Overdue by")} ${formatShortDuration(diffMs)}`
+                    : `${ri18n("due_in", "Due in")} ${formatShortDuration(diffMs)}`;
         }
 
         const timing = document.createElement("div");
@@ -608,7 +636,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (due) {
             const exact = document.createElement("div");
             exact.className = "text-xs text-gray-500 dark:text-gray-400";
-            exact.textContent = `Reminder at ${due.toLocaleString()}`;
+            exact.textContent = `${ri18n("reminder_at", "Reminder at")} ${due.toLocaleString()}`;
             toast.appendChild(exact);
         }
 
@@ -616,7 +644,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const state = document.createElement("div");
             state.className =
                 "text-xs uppercase tracking-wide text-amber-600 dark:text-amber-300";
-            state.textContent = reminder.state_name;
+            // Translate known state names, fallback to raw value
+            const stateKey = reminder.state_name
+                .toLowerCase()
+                .replace(/\s+/g, "_");
+            state.textContent = ri18n(stateKey, reminder.state_name);
             toast.appendChild(state);
         }
 
@@ -627,7 +659,7 @@ document.addEventListener("DOMContentLoaded", () => {
         openLink.href = `/agent/tickets/${reminder.ticket_id}`;
         openLink.className =
             "px-3 py-1.5 rounded-md text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500";
-        openLink.textContent = "Open Ticket";
+        openLink.textContent = ri18n("open_ticket", "Open Ticket");
         openLink.addEventListener("click", () => removeToastElement(toast));
         actions.appendChild(openLink);
 

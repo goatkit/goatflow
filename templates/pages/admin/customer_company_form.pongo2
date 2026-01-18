@@ -62,8 +62,8 @@
         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
             <label for="customer_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Customer ID *</label>
-            <input type="text" name="customer_id" id="customer_id" 
-                   value="{{ Company.customer_id|default:'' }}" 
+            <input type="text" name="customer_id" id="customer_id"
+                   value="{{ Company.customer_id|default:'' }}"
                    {% if not IsNew %}readonly{% endif %} required
                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
           </div>
@@ -137,7 +137,7 @@
       <form method="post" action="/admin/customer/companies/{{ Company.customer_id }}/portal-settings">
         <div class="space-y-6">
           <div>
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Branding</h3>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("customer_company_form.branding")|default:"Branding" }}</h3>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Customize the appearance of the customer portal</p>
           </div>
 
@@ -192,8 +192,8 @@
           </div>
 
           <div class="space-y-4">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Features</h3>
-            
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("customer_company_form.features")|default:"Features" }}</h3>
+
             <div class="flex items-center">
               <input type="checkbox" name="enable_kb" id="enable_kb" value="1" {% if PortalConfig.enable_kb %}checked{% endif %}
                      class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 dark:border-gray-600 rounded">
@@ -225,7 +225,7 @@
     <div id="content-services" class="tab-content p-6 hidden">
       <div class="space-y-6">
         <div>
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white">Assigned Services</h3>
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("customer_company_form.assigned_services")|default:"Assigned Services" }}</h3>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage which services are available to this customer company</p>
         </div>
 
@@ -249,18 +249,18 @@ function switchTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(tab => {
     tab.classList.add('hidden');
   });
-  
+
   // Remove active state from all tab buttons
   document.querySelectorAll('[id^="tab-"]').forEach(btn => {
     btn.classList.remove('border-gotrs-500', 'text-gotrs-600', 'dark:text-gotrs-400');
     btn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
   });
-  
+
   // Show selected tab
   document.getElementById('content-' + tabName).classList.remove('hidden');
   document.getElementById('tab-' + tabName).classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
   document.getElementById('tab-' + tabName).classList.add('border-gotrs-500', 'text-gotrs-600', 'dark:text-gotrs-400');
-  
+
   // Load services if switching to services tab
   if (tabName === 'services') {
     loadServices();
@@ -274,7 +274,7 @@ function loadServices() {
 }
 
 function saveServices() {
-  alert('Save the company before assigning services.');
+  alert('{{ t("messages.save_company_before_services")|default:"Save the company before assigning services." }}');
 }
 {% else %}
 function loadServices() {
@@ -283,7 +283,7 @@ function loadServices() {
     .then(data => {
       const container = document.getElementById('services-list');
       container.innerHTML = '';
-      
+
       data.services.forEach(service => {
         const div = document.createElement('div');
         div.className = 'flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg';
@@ -303,7 +303,7 @@ function loadServices() {
 function saveServices() {
   const selectedServices = Array.from(document.querySelectorAll('input[name="services"]:checked'))
     .map(cb => cb.value);
-  
+
   fetch(`/admin/customer/companies/{{ Company.customer_id }}/services`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -312,9 +312,9 @@ function saveServices() {
   .then(res => res.json())
   .then(data => {
     if (data.success) {
-      alert('Services updated successfully');
+      alert('{{ t("messages.services_updated_success")|default:"Services updated successfully" }}');
     } else {
-      alert('Failed to update services: ' + (data.error || 'Unknown error'));
+      alert('{{ t("messages.failed_update_services")|default:"Failed to update services" }}: ' + (data.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
     }
   });
 }

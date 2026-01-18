@@ -1,12 +1,12 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Dynamic Module Testing - Side by Side Comparison{% endblock %}
+{% block title %}{{ t("dynamic_test.title")|default:"Dynamic Module Testing" }} - Side by Side Comparison{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Dynamic Module Testing</h1>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("dynamic_test.heading")|default:"Dynamic Module Testing" }}</h1>
         <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Compare static and dynamic module implementations side by side
         </p>
@@ -21,7 +21,7 @@
                 </svg>
             </div>
             <div class="ml-3">
-                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">Testing Instructions</h3>
+                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">{{ t("dynamic_test.testing_instructions")|default:"Testing Instructions" }}</h3>
                 <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
                     <ul class="list-disc pl-5 space-y-1">
                         <li>Open static and dynamic versions in separate tabs</li>
@@ -74,7 +74,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             {% if module.has_static %}
-                            <a href="{{ module.static_url }}" 
+                            <a href="{{ module.static_url }}"
                                target="_blank"
                                class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">
                                 {{ module.static_url }}
@@ -85,7 +85,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             {% if module.has_friendly %}
-                            <a href="{{ module.friendly_url }}" 
+                            <a href="{{ module.friendly_url }}"
                                target="_blank"
                                class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300">
                                 {{ module.friendly_url }}
@@ -150,14 +150,14 @@ function openSideBySide(module, friendlyUrl, hasStatic) {
     const width = window.screen.width;
     const height = window.screen.height;
     const halfWidth = Math.floor(width / 2);
-    
+
     // Open dynamic version on the right
     const dynamicWindow = window.open(
         friendlyUrl,
         `dynamic_${module}`,
         `width=${halfWidth},height=${height},left=${halfWidth},top=0`
     );
-    
+
     // Open static version on the left if it exists
     if (hasStatic) {
         const staticWindow = window.open(
@@ -171,10 +171,10 @@ function openSideBySide(module, friendlyUrl, hasStatic) {
 function runComparison(module) {
     const resultsDiv = document.getElementById('test-results');
     const outputDiv = document.getElementById('test-output');
-    
+
     resultsDiv.classList.remove('hidden');
     outputDiv.innerHTML = '<div class="text-gray-500">Running automated tests...</div>';
-    
+
     // This is where Playwright tests would be triggered
     // For now, show manual test checklist
     const tests = [
@@ -189,7 +189,7 @@ function runComparison(module) {
         'Form validation works',
         'Pagination works'
     ];
-    
+
     outputDiv.innerHTML = `
         <div class="space-y-2">
             <div class="font-medium text-gray-900 dark:text-white">Manual Test Checklist for ${module}:</div>
@@ -200,7 +200,7 @@ function runComparison(module) {
                 </label>
             `).join('')}
             <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <button onclick="saveTestResults('${module}')" 
+                <button onclick="saveTestResults('${module}')"
                         class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
                     Save Test Results
                 </button>
@@ -214,7 +214,7 @@ function saveTestResults(module) {
     const results = Array.from(checkboxes).map(cb => cb.checked);
     const passed = results.filter(r => r).length;
     const total = results.length;
-    
+
     alert(`Test results for ${module}: ${passed}/${total} tests passed`);
 }
 </script>

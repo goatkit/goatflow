@@ -15,7 +15,7 @@
                 <button
                     type="button"
                     onclick="showAddGroupModal()"
-                    title="Add a new group to the system"
+                    title="{{ t("groups.tooltips.add_new")|default:"Add a new group to the system" }}"
                     class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
                 >
                     <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,7 +52,7 @@
                         onclick="clearSearch()"
                         class="absolute inset-y-0 right-0 pr-3 flex items-center"
                         style="display: none;"
-                        title="Clear search"
+                        title="{{ t("groups.tooltips.clear_search")|default:"Clear search" }}"
                     >
                         <svg class="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -69,7 +69,7 @@
                 <button
                     type="button"
                     onclick="clearFilters()"
-                    title="Clear all filters"
+                    title="{{ t("groups.tooltips.clear_filters")|default:"Clear all filters" }}"
                     class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
                 >
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,7 +181,7 @@
                         <div class="flex items-center justify-end space-x-2">
                             <button
                                 onclick="showEditGroupModal({{ group.ID }})"
-                                title="Edit group"
+                                title="{{ t("groups.tooltips.edit")|default:"Edit group" }}"
                                 class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-300"
                             >
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,7 +190,7 @@
                             </button>
                             <button
                                 onclick="showGroupPermissions({{ group.ID }}); return false;"
-                                title="Manage permissions"
+                                title="{{ t("groups.tooltips.manage_permissions")|default:"Manage permissions" }}"
                                 class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                             >
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,7 +200,7 @@
                             {% if group.Name != "admin" and group.Name != "users" and group.Name != "stats" %}
                             <button
                                 onclick="confirmDeleteGroup({{ group.ID }}, '{{ group.Name }}')"
-                                title="Delete group"
+                                title="{{ t("groups.tooltips.delete")|default:"Delete group" }}"
                                 class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                             >
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -210,7 +210,7 @@
                             {% else %}
                             <button
                                 disabled
-                                title="System groups cannot be deleted"
+                                title="{{ t("groups.tooltips.system_group_no_delete")|default:"System groups cannot be deleted" }}"
                                 class="text-gray-400 cursor-not-allowed"
                             >
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,7 +257,7 @@
                         </h3>
                         <div class="mt-2">
                             <p class="text-sm text-gray-500 dark:text-gray-400">
-                                Are you sure you want to delete the group "<span id="deleteGroupName" class="font-semibold"></span>"? 
+                                {{ t("messages.confirm.delete_group")|default:"Are you sure you want to delete this group?" }}
                             </p>
                             <p class="mt-2 text-sm text-red-600 dark:text-red-400">
                                 <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -312,7 +312,7 @@
                             </h3>
                             <div class="mt-4 space-y-4">
                                 <input type="hidden" id="groupId" name="id">
-                                
+
                                 <div>
                                     <label for="groupName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Group Name <span class="text-red-500">*</span>
@@ -363,7 +363,7 @@
                                             </svg>
                                         </div>
                                         <div class="ml-3">
-                                            <h3 class="text-sm font-medium text-red-800 dark:text-red-200">Error</h3>
+                                            <h3 class="text-sm font-medium text-red-800 dark:text-red-200">{{ t("labels.error")|default:"Error" }}</h3>
                                             <div class="mt-2 text-sm text-red-700 dark:text-red-300" id="errorMessage"></div>
                                         </div>
                                     </div>
@@ -407,14 +407,14 @@
                     </div>
                     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                         <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="members-modal-title">
-                            Group Members
+                            {{ t("groups.members")|default:"Group Members" }}
                         </h3>
                         <div class="mt-4">
                             <input type="hidden" id="currentGroupId" value="">
-                            
+
                             <!-- Add User Section -->
                             <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Add User to Group</h4>
+                                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">{{ t("groups.add_user")|default:"Add User to Group" }}</h4>
                                 <div class="flex space-x-3">
                                     <select
                                         id="addUserSelect"
@@ -434,12 +434,12 @@
                                     </button>
                                 </div>
                             </div>
-                            
+
                             <!-- Current Members Section -->
                             <div>
-                                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Current Members</h4>
+                                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">{{ t("groups.current_members")|default:"Current Members" }}</h4>
                                 <div id="groupMembersList" class="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
-                                    <p class="text-gray-500 dark:text-gray-400 text-center py-4">Loading members...</p>
+                                    <p class="text-gray-500 dark:text-gray-400 text-center py-4">{{ t("groups.loading_members")|default:"Loading members..." }}</p>
                                 </div>
                             </div>
                         </div>
@@ -482,7 +482,7 @@ function restorePageState() {
         if (Date.now() - state.timestamp < 1800000) {
             document.getElementById('groupSearch').value = state.search || '';
             document.getElementById('statusFilter').value = state.status || '';
-            
+
             if (state.search) {
                 document.getElementById('clearSearchBtn').style.display = 'block';
             }
@@ -495,12 +495,12 @@ let searchTimer;
 function handleSearchInput() {
     clearTimeout(searchTimer);
     const searchValue = document.getElementById('groupSearch').value;
-    
+
     // Show/hide clear button
     document.getElementById('clearSearchBtn').style.display = searchValue ? 'block' : 'none';
-    
+
     savePageState();
-    
+
     searchTimer = setTimeout(() => {
         filterGroups();
     }, 300);
@@ -524,7 +524,7 @@ function clearFilters() {
 function filterGroups() {
     const search = document.getElementById('groupSearch').value;
     const status = document.getElementById('statusFilter').value;
-    
+
     // TODO: Implement HTMX partial update
     console.log('Filtering groups:', { search, status });
 }
@@ -540,7 +540,7 @@ function sortTable(column) {
         sortColumn = column;
         sortOrder = 'asc';
     }
-    
+
     // TODO: Implement sorting
     console.log('Sorting by:', column, sortOrder);
 }
@@ -552,7 +552,7 @@ function showAddGroupModal() {
     document.getElementById('groupId').value = '';
     document.getElementById('formError').classList.add('hidden');
     document.getElementById('groupModal').classList.remove('hidden');
-    
+
     // Focus on first input when modal opens
     setTimeout(() => {
         document.getElementById('groupName').focus();
@@ -562,7 +562,7 @@ function showAddGroupModal() {
 function showEditGroupModal(groupId) {
     document.getElementById('modalAction').textContent = 'Edit';
     document.getElementById('formError').classList.add('hidden');
-    
+
     // Fetch group data
     fetch(`/admin/groups/${groupId}`, {
         credentials: 'include'
@@ -575,7 +575,7 @@ function showEditGroupModal(groupId) {
                 document.getElementById('groupComments').value = data.role.Description || '';
                 document.getElementById('groupStatus').value = data.role.IsActive ? 1 : 2;
                 document.getElementById('groupModal').classList.remove('hidden');
-                
+
                 setTimeout(() => {
                     document.getElementById('groupName').focus();
                 }, 100);
@@ -596,14 +596,14 @@ function closeGroupModal() {
 
 function handleGroupSubmit(event) {
     event.preventDefault();
-    
+
     const formData = new FormData(event.target);
     const groupId = formData.get('id');
     const isEdit = !!groupId;
-    
+
     const url = isEdit ? `/admin/groups/${groupId}` : '/admin/groups';
     const method = isEdit ? 'PUT' : 'POST';
-    
+
     fetch(url, {
         method: method,
         body: formData,
@@ -645,7 +645,7 @@ function handleGroupSubmit(event) {
     .catch(error => {
         console.error('Error saving group:', error);
         // Only show form error if Guru Meditation wasn't already shown
-        if (!document.getElementById('guru-meditation').style.display || 
+        if (!document.getElementById('guru-meditation').style.display ||
             document.getElementById('guru-meditation').style.display === 'none') {
             document.getElementById('errorMessage').textContent = error.message || 'Failed to save group';
             document.getElementById('formError').classList.remove('hidden');
@@ -659,13 +659,13 @@ let groupToDelete = null;
 function confirmDeleteGroup(groupId, groupName) {
     // Store the group info
     groupToDelete = { id: groupId, name: groupName };
-    
+
     // Update modal content
     document.getElementById('deleteGroupName').textContent = groupName;
-    
+
     // Show the modal
     document.getElementById('deleteModal').classList.remove('hidden');
-    
+
     // Focus on cancel button for safety
     setTimeout(() => {
         // Find cancel button by its onclick attribute
@@ -681,13 +681,13 @@ function closeDeleteModal() {
 
 function executeDelete() {
     if (!groupToDelete) return;
-    
+
     const { id, name } = groupToDelete;
-    
+
     // Disable buttons during deletion
     const deleteBtn = document.querySelector('#deleteModal button[onclick="executeDelete()"]');
     const cancelBtn = document.querySelector('#deleteModal button[onclick="closeDeleteModal()"]');
-    
+
     if (deleteBtn) {
         deleteBtn.disabled = true;
         deleteBtn.innerHTML = `
@@ -699,7 +699,7 @@ function executeDelete() {
         `;
     }
     if (cancelBtn) cancelBtn.disabled = true;
-    
+
     fetch(`/admin/groups/${id}`, {
         method: 'DELETE',
         credentials: 'include'
@@ -709,7 +709,7 @@ function executeDelete() {
         if (data.success) {
             // Close modal
             closeDeleteModal();
-            
+
             // Remove the row with animation
             const row = document.getElementById(`group-row-${id}`);
             if (row) {
@@ -733,7 +733,7 @@ function executeDelete() {
                     Error: ${data.error || 'Failed to delete group'}
                 `;
             }
-            
+
             // Re-enable buttons
             if (deleteBtn) {
                 deleteBtn.disabled = false;
@@ -749,7 +749,7 @@ function executeDelete() {
     })
     .catch(error => {
         console.error('Error deleting group:', error);
-        
+
         // Re-enable buttons
         if (deleteBtn) {
             deleteBtn.disabled = false;
@@ -761,7 +761,7 @@ function executeDelete() {
             `;
         }
         if (cancelBtn) cancelBtn.disabled = false;
-        
+
         showToast('error', 'Failed to delete group. Please try again.');
     });
 }
@@ -769,15 +769,15 @@ function executeDelete() {
 // Toast notification function
 function showToast(type, message) {
     const toastContainer = document.getElementById('toast-container') || createToastContainer();
-    
+
     const toast = document.createElement('div');
     toast.className = `transform transition-all duration-300 translate-x-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden`;
-    
+
     const iconColor = type === 'success' ? 'text-green-500' : 'text-red-500';
-    const icon = type === 'success' 
+    const icon = type === 'success'
         ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />'
         : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />';
-    
+
     toast.innerHTML = `
         <div class="p-4">
             <div class="flex items-start">
@@ -794,15 +794,15 @@ function showToast(type, message) {
             </div>
         </div>
     `;
-    
+
     toastContainer.appendChild(toast);
-    
+
     // Animate in
     setTimeout(() => {
         toast.style.transform = 'translateX(0)';
         toast.style.opacity = '1';
     }, 100);
-    
+
     // Remove after 3 seconds
     setTimeout(() => {
         toast.style.transform = 'translateX(100%)';
@@ -823,10 +823,10 @@ function showGroupMembers(groupId) {
     // Show group members modal
     document.getElementById('groupMembersModal').classList.remove('hidden');
     document.getElementById('currentGroupId').value = groupId;
-    
+
     // Load group members
     loadGroupMembers(groupId);
-    
+
     // Load available users for adding
     loadAvailableUsers(groupId);
 }
@@ -841,12 +841,12 @@ function loadGroupMembers(groupId) {
             const members = data.members || data.data || data.users || [];
             const membersList = document.getElementById('groupMembersList');
             membersList.innerHTML = '';
-            
+
             if (members.length === 0) {
                 membersList.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-4">No members in this group</p>';
                 return;
             }
-            
+
             members.forEach(user => {
                 const memberItem = document.createElement('div');
                 memberItem.className = 'flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0';
@@ -862,10 +862,10 @@ function loadGroupMembers(groupId) {
                             <p class="text-sm text-gray-500 dark:text-gray-400">${user.login}</p>
                         </div>
                     </div>
-                    <button 
+                    <button
                         onclick="removeUserFromGroup(${groupId}, ${user.id})"
                         class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                        title="Remove user from group"
+                        title="{{ t("groups.tooltips.remove_user")|default:"Remove user from group" }}"
                     >
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -883,7 +883,7 @@ function loadGroupMembers(groupId) {
     })
     .catch(error => {
         console.error('Error loading group members:', error);
-        document.getElementById('groupMembersList').innerHTML = '<p class="text-red-500 text-center py-4">Error loading members</p>';
+        document.getElementById('groupMembersList').innerHTML = '<p class="text-red-500 text-center py-4">{{ t("messages.error_loading_members")|default:"Error loading members" }}</p>';
     });
 }
 
@@ -896,7 +896,7 @@ function loadAvailableUsers(groupId) {
         if (data.success && data.users) {
             const userSelect = document.getElementById('addUserSelect');
             userSelect.innerHTML = '<option value="">-- Select a user to add --</option>';
-            
+
             data.users.forEach(user => {
                 const option = document.createElement('option');
                 option.value = user.id;
@@ -913,12 +913,12 @@ function loadAvailableUsers(groupId) {
 function addUserToGroup() {
     const groupId = document.getElementById('currentGroupId').value;
     const userId = document.getElementById('addUserSelect').value;
-    
+
     if (!userId) {
-        alert('Please select a user to add');
+        alert('{{ t("messages.groups.select_user")|default:"Please select a user to add" }}');
         return;
     }
-    
+
     fetch(`/admin/groups/${groupId}/members`, {
         method: 'POST',
         headers: {
@@ -934,7 +934,7 @@ function addUserToGroup() {
             loadGroupMembers(groupId);
             loadAvailableUsers(groupId);
             document.getElementById('addUserSelect').value = '';
-            
+
             // Update the member count in the main table
             fetch(`/admin/groups/${groupId}/members`, {
                 credentials: 'include'
@@ -946,7 +946,7 @@ function addUserToGroup() {
                     document.getElementById(`member-count-${groupId}`).textContent = members.length;
                 }
             });
-            
+
             showToast('User added to group successfully', 'success');
         } else {
             showToast(data.error || 'Failed to add user to group', 'error');
@@ -959,10 +959,10 @@ function addUserToGroup() {
 }
 
 function removeUserFromGroup(groupId, userId) {
-    if (!confirm('Are you sure you want to remove this user from the group?')) {
+    if (!confirm('{{ t("messages.confirm.remove_user_from_group")|default:"Are you sure you want to remove this user from the group?" }}')) {
         return;
     }
-    
+
     fetch(`/admin/groups/${groupId}/members/${userId}`, {
         method: 'DELETE',
         credentials: 'include'
@@ -973,7 +973,7 @@ function removeUserFromGroup(groupId, userId) {
             // Reload members and update count
             loadGroupMembers(groupId);
             loadAvailableUsers(groupId);
-            
+
             // Update the member count in the main table
             fetch(`/admin/groups/${groupId}/members`, {
                 credentials: 'include'
@@ -985,7 +985,7 @@ function removeUserFromGroup(groupId, userId) {
                     document.getElementById(`member-count-${groupId}`).textContent = members.length;
                 }
             });
-            
+
             showToast('User removed from group successfully', 'success');
         } else {
             showToast(data.error || 'Failed to remove user from group', 'error');
@@ -1018,7 +1018,7 @@ document.getElementById('groupForm').addEventListener('keydown', function(event)
 // Load member counts on page load
 document.addEventListener('DOMContentLoaded', function() {
     restorePageState();
-    
+
     // Load member counts for each group
     {% for group in Groups %}
     fetch(`/admin/groups/{{ group.ID }}/members`, {

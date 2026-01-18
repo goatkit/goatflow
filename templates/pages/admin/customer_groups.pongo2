@@ -8,7 +8,7 @@
     <div class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Customer Group Permissions</h1>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("customer_groups.heading")|default:"Customer Group Permissions" }}</h1>
                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Manage customer company access to groups and queues</p>
             </div>
         </div>
@@ -173,7 +173,7 @@
                 </svg>
             </div>
             <div class="ml-3">
-                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">About Customer Group Permissions</h3>
+                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">{{ t("customer_groups.about_heading")|default:"About Customer Group Permissions" }}</h3>
                 <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
                     <p>Customer group permissions control which tickets customer users can see in the customer portal.</p>
                     <ul class="list-disc list-inside mt-2 space-y-1">

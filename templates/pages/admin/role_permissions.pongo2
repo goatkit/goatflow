@@ -62,7 +62,7 @@
                     <!-- Quick Actions -->
                     <div class="flex flex-wrap gap-2">
                         <button type="button" onclick="selectAll()" class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                            Select All
+                            {{ t("buttons.select_all")|default:"Select All" }}
                         </button>
                         <button type="button" onclick="selectNone()" class="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                             Select None
@@ -87,25 +87,25 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 Group
                             </th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Read Only">
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="{{ t("role_permissions.tooltips.ro")|default:"Read Only" }}">
                                 RO
                             </th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Move Into">
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="{{ t("role_permissions.tooltips.move_into")|default:"Move Into" }}">
                                 Move
                             </th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Create">
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="{{ t("role_permissions.tooltips.create")|default:"Create" }}">
                                 Create
                             </th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Owner">
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="{{ t("role_permissions.tooltips.owner")|default:"Owner" }}">
                                 Owner
                             </th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Priority">
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="{{ t("role_permissions.tooltips.priority")|default:"Priority" }}">
                                 Priority
                             </th>
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Read/Write">
                                 RW
                             </th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="Note">
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="{{ t("role_permissions.tooltips.note")|default:"Note" }}">
                                 Note
                             </th>
                             <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -158,12 +158,12 @@
                                 <div class="flex justify-center space-x-1">
                                     <button type="button" onclick="selectGroupAll({{ group.GroupID }})"
                                             class="text-xs px-2 py-1 text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
-                                            title="Select All">
+                                            title="{{ t("role_permissions.tooltips.select_all")|default:"Select All" }}">
                                         All
                                     </button>
                                     <button type="button" onclick="selectGroupNone({{ group.GroupID }})"
                                             class="text-xs px-2 py-1 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                            title="Select None">
+                                            title="{{ t("role_permissions.tooltips.select_none")|default:"Select None" }}">
                                         None
                                     </button>
                                 </div>
@@ -254,7 +254,7 @@ function savePermissions() {
         }
     })
     .catch(error => {
-        alert('Error saving permissions');
+        alert('{{ t("messages.error_saving_permissions")|default:"Error saving permissions" }}');
         console.error('Error:', error);
     });
 }

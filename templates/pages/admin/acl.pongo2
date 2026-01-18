@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}ACL Management{% endblock %}
+{% block title %}{{ t("acl.title")|default:"Access Control Lists" }}{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -9,14 +9,14 @@
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
             <div class="flex justify-between items-center">
                 <div>
-                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">ACL Management</h1>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Access Control Lists define rules for ticket actions and permissions</p>
+                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ t("acl.heading")|default:"ACL Management" }}</h1>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("acl.description")|default:"Access Control Lists define rules for ticket actions and permissions" }}</p>
                 </div>
-                <button onclick="openACLModal()" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600" title="Add new ACL">
+                <button onclick="openACLModal()" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600" title="{{ t("acl.tooltips.add_new")|default:"Add new ACL" }}">
                     <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                     </svg>
-                    Add ACL
+                    {{ t("acl.add_acl")|default:"Add ACL" }}
                 </button>
             </div>
         </div>
@@ -36,11 +36,11 @@
                         <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>Invalid Only</option>
                     </select>
                 </div>
-                <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" title="Apply filters">
+                <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" title="{{ t("acl.tooltips.apply_filters")|default:"Apply filters" }}">
                     Filter
                 </button>
                 {% if SearchQuery or ValidFilter != "all" %}
-                <a href="/admin/acl" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg" title="Clear all filters">
+                <a href="/admin/acl" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg" title="{{ t("acl.tooltips.clear_filters")|default:"Clear all filters" }}">
                     Clear
                 </a>
                 {% endif %}
@@ -91,7 +91,7 @@
                             {% endif %}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button onclick="editACL({{ acl.ID }})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="Edit ACL">
+                            <button onclick="editACL({{ acl.ID }})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="{{ t("acl.tooltips.edit")|default:"Edit ACL" }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                 </svg>
@@ -126,7 +126,7 @@
 <div id="aclModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900 dark:text-white">Add ACL</h2>
+            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("acl.modal.add_title")|default:"Add ACL" }}</h2>
         </div>
         <form id="aclForm" onsubmit="saveACL(event)">
             <div class="p-6 space-y-4">
@@ -168,7 +168,7 @@
                 </div>
 
                 <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Match Conditions (Properties)</h3>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">{{ t("acl.modal.match_conditions")|default:"Match Conditions (Properties)" }}</h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Define conditions that must match for this ACL to apply. Enter as JSON.</p>
                     <textarea id="aclConfigMatch" name="config_match" rows="6"
                               placeholder='{"Properties": {"Queue": ["Raw", "Postmaster"], "State": ["new", "open"]}}'
@@ -176,7 +176,7 @@
                 </div>
 
                 <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">Change Actions</h3>
+                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">{{ t("acl.modal.change_actions")|default:"Change Actions" }}</h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Define what changes this ACL makes when conditions match. Enter as JSON.</p>
                     <textarea id="aclConfigChange" name="config_change" rows="6"
                               placeholder='{"Possible": {"Action": ["AgentTicketClose", "AgentTicketNote"]}, "PossibleNot": {"Action": ["AgentTicketBounce"]}}'
@@ -340,7 +340,10 @@ function toggleACLStatus(id, currentStatus, name) {
     const newStatus = currentStatus === 1 ? 2 : 1;
     const action = newStatus === 1 ? 'activate' : 'deactivate';
 
-    if (confirm(`Are you sure you want to ${action} "${name}"?`)) {
+    const confirmMsg = action === 'activate'
+        ? '{{ t("messages.confirm.activate_acl")|default:"Are you sure you want to activate" }}' + ` "${name}"?`
+        : '{{ t("messages.confirm.deactivate_acl")|default:"Are you sure you want to deactivate" }}' + ` "${name}"?`;
+    if (confirm(confirmMsg)) {
         fetch(`/admin/api/acl/${id}`, {
             method: 'PUT',
             headers: {

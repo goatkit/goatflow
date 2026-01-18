@@ -908,7 +908,12 @@
                 "test_success": "Тест налаштування успішний",
                 "test_failed": "Тест налаштування не вдався",
                 "no_webservices": "Немає доступних веб-сервісів. Спочатку створіть веб-сервіс."
-            }
+            },
+            "new_title": "Нове динамічне поле",
+            "edit_title": "Редагувати динамічне поле",
+            "create_heading": "Створити динамічне поле",
+            "edit_heading": "Редагувати динамічне поле",
+            "add_button": "Додати динамічне поле"
         },
         "webservices": {
             "title": "Веб-сервіси",
@@ -1180,6 +1185,15 @@
                 "inactive": "Неактивний",
                 "invalid": "Недійсний",
                 "valid": "Дійсний"
+            },
+            "saved_filter_sets": "Збережені набори фільтрів",
+            "show_hide_columns": "Показати/Сховати стовпці",
+            "no_data_available": "Дані відсутні",
+            "tooltips": {
+                "edit": "Редагувати",
+                "disable": "Вимкнути",
+                "enable": "Увімкнути",
+                "delete": "Видалити"
             }
         },
         "filters": {
@@ -1256,6 +1270,12 @@
             "login_placeholder": "Повідомлення на сторінці входу",
             "form_description": "Запланувати вікно обслуговування для сповіщення користувачів та опціонального вимкнення входу",
             "status": "Статус"
+        },
+        "variables": {
+            "ticket": "Заявка",
+            "customer": "Клієнт",
+            "agent": "Агент",
+            "system": "Система"
         }
     },
     "agent": {
@@ -1305,7 +1325,10 @@
         "signing_in": "Виконується вхід...",
         "signin": "Увійти",
         "signup": "Зареєструватися",
-        "username": "Ім'я користувача"
+        "username": "Ім'я користувача",
+        "caps_lock_on": "Caps Lock увімкнено",
+        "too_many_attempts": "Забагато невдалих спроб. Зачекайте",
+        "and_try_again": "і спробуйте знову."
     },
     "buttons": {
         "add": "Додати",
@@ -1349,7 +1372,9 @@
         "update": "Оновити",
         "upload": "Завантажити",
         "view_all": "Показати все",
-        "warning": "Попередження"
+        "warning": "Попередження",
+        "toggle_all": "Перемкнути все",
+        "select_all": "Вибрати все"
     },
     "bulk_actions": {
         "change_status_title": "Змінити Статус Заявки",
@@ -1470,7 +1495,20 @@
         "invalid_only": "Тільки неактивні",
         "from": "з",
         "until": "до",
-        "back_to_list": "Повернутися до списку"
+        "back_to_list": "Повернутися до списку",
+        "manage": "Керувати",
+        "close": "Закрити",
+        "add": "Додати",
+        "toggle_dark_mode": "Перемкнути темний режим",
+        "view": "Переглянути",
+        "copy_details": "Копіювати деталі Guru",
+        "copy_to_clipboard": "Копіювати в буфер обміну",
+        "search_tokens": "Токени пошуку",
+        "loading_history": "Завантаження історії...",
+        "loading_links": "Завантаження посилань...",
+        "loading_queue_details": "Завантаження деталей черги...",
+        "no_data_available": "Дані відсутні",
+        "no_results_found": "Результатів не знайдено"
     },
     "customer": {
         "company": "Компанія",
@@ -1645,13 +1683,49 @@
         "statistics": "Статистика",
         "title": "Панель керування",
         "welcome_back": "З поверненням",
-        "welcome_message": "Ось що відбувається з вашими заявками сьогодні"
+        "welcome_message": "Ось що відбувається з вашими заявками сьогодні",
+        "my_queues": "Мої черги",
+        "no_tickets_found": "Заявок не знайдено",
+        "no_queues_assigned": "Черги не призначено",
+        "stats": {
+            "my_open": "Мої відкриті",
+            "my_pending": "Мої в очікуванні",
+            "unassigned": "Непризначені",
+            "new_today": "Нових сьогодні",
+            "closed_today": "Закрито сьогодні",
+            "total_assigned": "Всього призначено",
+            "open_tickets": "Відкриті заявки",
+            "pending": "В очікуванні",
+            "overdue": "Прострочені"
+        },
+        "no_recent_tickets": "Немає останніх заявок",
+        "no_tickets_in_system": "Заявок у системі не знайдено",
+        "tickets_count": "заявок",
+        "unassigned_count": "непризначені",
+        "realtime": {
+            "title": "Панель у реальному часі"
+        }
     },
     "dynamic_fields": {
         "title": "Додаткові поля",
         "article_fields": "Поля статті",
         "additional_fields": "Додаткові поля",
-        "select": "Оберіть..."
+        "select": "Оберіть...",
+        "heading": "Керування динамічними полями",
+        "description": "Створення та керування динамічними полями для заявок, статей та інших об'єктів",
+        "tooltips": {
+            "edit": "Редагувати поле",
+            "delete": "Видалити поле",
+            "add_new": "Додати нове динамічне поле",
+            "apply_filters": "Застосувати фільтри",
+            "clear_filters": "Очистити фільтри"
+        },
+        "no_dynamic_fields": "Динамічних полів немає",
+        "available_field_types": "Доступні типи полів",
+        "placeholders": {
+            "name": "МоєВласнеПоле",
+            "label": "Моє власне поле"
+        }
     },
     "errors": {
         "authentication": "Помилка автентифікації",
@@ -1746,7 +1820,15 @@
         "time": "Час",
         "to": "Кому",
         "type": "Тип",
-        "yes": "Так"
+        "yes": "Так",
+        "error": "Помилка",
+        "loading": "Завантаження...",
+        "no_tickets_found": "Заявок не знайдено",
+        "no_results_found": "Результатів не знайдено",
+        "queue": "Черга",
+        "total": "Всього",
+        "customer": "Клієнт",
+        "unknown": "Невідомо"
     },
     "messages": {
         "access_denied": "Доступ заборонено",
@@ -1773,7 +1855,99 @@
         "success": "Успіх",
         "unauthorized": "Не авторизовано",
         "validation_error": "Помилка перевірки",
-        "warning": "Попередження"
+        "warning": "Попередження",
+        "please_select": "Будь ласка, оберіть",
+        "no_selection": "Нічого не вибрано",
+        "please_select_ticket": "Виберіть хоча б одну заявку",
+        "not_enough_tickets": "Недостатньо заявок",
+        "select_two_to_merge": "Виберіть хоча б дві заявки для об'єднання",
+        "loading_customer_users": "Завантаження користувачів-клієнтів...",
+        "confirm": {
+            "delete_customer_user": "Ви впевнені, що хочете видалити цього користувача-клієнта? Цю дію неможливо скасувати.",
+            "toggle_customer_status": "Ви впевнені, що хочете {action} цього користувача-клієнта?",
+            "bulk_action": "Ви впевнені, що хочете {action} {count} користувачів-клієнтів?",
+            "delete_filter_sets": "Видалити всі збережені набори фільтрів?",
+            "remove_user_from_group": "Ви впевнені, що хочете видалити цього користувача з групи?",
+            "lock_ticket": "Ви впевнені, що хочете заблокувати цю заявку?",
+            "proceed_action": "Ви впевнені, що хочете продовжити цю дію?",
+            "activate_item": "Ви впевнені, що хочете активувати цей елемент?",
+            "deactivate_item": "Ви впевнені, що хочете деактивувати цей елемент?",
+            "delete_item": "Ви впевнені, що хочете видалити цей елемент?",
+            "delete_attachment": "Ви впевнені, що хочете видалити це вкладення?",
+            "delete_group": "Ви впевнені, що хочете видалити цю групу?",
+            "delete_queue": "Ви впевнені, що хочете видалити цю чергу? Усі заявки в цій черзі потрібно буде перепризначити. Цю дію неможливо скасувати.",
+            "delete_queue_simple": "Ви впевнені, що хочете видалити цю чергу?",
+            "delete_queues_bulk": "Ви впевнені, що хочете видалити вибрані черги?",
+            "delete_lookup": "Ви впевнені, що хочете видалити цей елемент? Цю дію неможливо скасувати.",
+            "delete_dynamic_field": "Ви впевнені, що хочете видалити це динамічне поле? Це також видалить усі збережені значення для цього поля.",
+            "delete_priority": "Ви впевнені, що хочете видалити цей пріоритет? Цю дію неможливо скасувати.",
+            "delete_state": "Ви впевнені, що хочете видалити цей стан?",
+            "delete_webservice": "Ви впевнені, що хочете видалити цей веб-сервіс? Цю дію неможливо скасувати.",
+            "delete_bulk": "Ви впевнені, що хочете видалити вибрані елементи? Цю дію неможливо скасувати.",
+            "activate_acl": "Ви впевнені, що хочете активувати",
+            "deactivate_acl": "Ви впевнені, що хочете деактивувати",
+            "activate_company": "Ви впевнені, що хочете активувати цю компанію? Це дозволить користувачам цієї компанії отримати доступ до порталу.",
+            "deactivate_company": "Ви впевнені, що хочете деактивувати цю компанію? Це заблокує доступ до порталу для всіх користувачів цієї компанії.",
+            "enable_customer_user": "Ви впевнені, що хочете увімкнути цього користувача-клієнта?",
+            "disable_customer_user": "Ви впевнені, що хочете вимкнути цього користувача-клієнта?",
+            "bulk_enable_customer_users": "Ви впевнені, що хочете увімкнути вибраних користувачів-клієнтів?",
+            "bulk_disable_customer_users": "Ви впевнені, що хочете вимкнути вибраних користувачів-клієнтів?",
+            "bulk_delete_customer_users": "Ви впевнені, що хочете видалити вибраних користувачів-клієнтів?",
+            "enable_queue": "Ви впевнені, що хочете увімкнути цю чергу?",
+            "disable_queue": "Ви впевнені, що хочете вимкнути цю чергу?",
+            "activate_service": "Ви впевнені, що хочете активувати цю послугу?",
+            "deactivate_service": "Ви впевнені, що хочете деактивувати цю послугу?",
+            "activate_sla": "Ви впевнені, що хочете активувати цей SLA?",
+            "deactivate_sla": "Ви впевнені, що хочете деактивувати цей SLA?",
+            "reset_config": "Ви впевнені, що хочете скинути це налаштування до значення за замовчуванням? Цю дію неможливо скасувати.",
+            "toggle_status_bulk": "Ви впевнені, що хочете змінити статус вибраних елементів?"
+        },
+        "groups": {
+            "select_user": "Виберіть користувача для додавання"
+        },
+        "validation": {
+            "please_enter_subject": "Введіть тему",
+            "please_enter_content": "Введіть вміст",
+            "please_select_state": "Виберіть стан",
+            "please_enter_query": "Введіть запит"
+        },
+        "save_company_first": "Збережіть компанію перед призначенням послуг.",
+        "services_updated": "Послуги успішно оновлено",
+        "error_saving_field": "Помилка збереження поля",
+        "error_screen_config": "Не вдалося оновити налаштування екрану",
+        "error_saving_permissions": "Помилка збереження дозволів",
+        "please_select_user": "Виберіть користувача",
+        "select_template_type": "Виберіть хоча б один тип шаблону.",
+        "connection_test_success": "Тест з'єднання успішний!",
+        "error_saving_profile": "Помилка збереження профілю",
+        "error_saving_preferences": "Помилка збереження налаштувань",
+        "failed_add_user": "Не вдалося додати користувача",
+        "confirm_remove_user_from_role": "Ви впевнені, що хочете видалити цього користувача з ролі?",
+        "failed_remove_user": "Не вдалося видалити користувача",
+        "failed_update_screen_config": "Не вдалося оновити налаштування екрану",
+        "failed_save_field": "Не вдалося зберегти поле",
+        "save_company_before_services": "Збережіть компанію перед призначенням послуг.",
+        "services_updated_success": "Послуги успішно оновлено",
+        "failed_update_services": "Не вдалося оновити послуги",
+        "unknown_error": "Невідома помилка",
+        "failed_delete_signature": "Не вдалося видалити підпис",
+        "connection_test_failed": "Тест з'єднання не вдався",
+        "error_testing_connection": "Помилка тестування з'єднання",
+        "select_at_least_one_queue": "Виберіть хоча б одну чергу",
+        "code_copied": "Код скопійовано в буфер обміну!",
+        "confirm_delete_ticket": "Ви впевнені, що хочете видалити цю заявку? Цю дію неможливо скасувати.",
+        "please_enter_close_notes": "Введіть нотатки закриття",
+        "please_enter_reopen_reason": "Введіть причину повторного відкриття",
+        "please_enter_note_content": "Введіть вміст нотатки.",
+        "please_enter_sql_query": "Введіть SQL-запит",
+        "please_select_agent": "Виберіть агента",
+        "please_select_both_users": "Виберіть користувача-джерело та цільового користувача",
+        "error_loading_agents": "Помилка завантаження агентів",
+        "error_loading_members": "Помилка завантаження учасників",
+        "error_loading_tables": "Помилка завантаження таблиць",
+        "error_loading_columns": "Помилка завантаження стовпців",
+        "error_loading_config": "Помилка завантаження деталей налаштування",
+        "no_agents_available": "Агенти недоступні"
     },
     "navigation": {
         "admin": "Адміністрування",
@@ -1809,7 +1983,19 @@
         "sound": "Звук",
         "vibration": "Вібрація",
         "maintenance_active": "Технічне обслуговування системи активне",
-        "maintenance_upcoming": "Заплановане технічне обслуговування"
+        "maintenance_upcoming": "Заплановане технічне обслуговування",
+        "reminder": {
+            "ticket_reminder": "Нагадування про заявку",
+            "reminder_ready": "Нагадування готове",
+            "overdue_by": "Прострочено на",
+            "due_in": "Термін через",
+            "reminder_at": "Нагадування о",
+            "open_ticket": "Відкрити заявку",
+            "dismiss": "Відхилити нагадування",
+            "ticket_label": "Заявка",
+            "snoozed_until": "Нагадування відкладено до",
+            "snooze_failed": "Не вдалося відкласти нагадування"
+        }
     },
     "pagination": {
         "first": "Перша",
@@ -1823,7 +2009,11 @@
         "previous": "Назад",
         "showing": "Показано",
         "to": "до",
-        "total": "всього"
+        "total": "всього",
+        "first_page": "Перша сторінка",
+        "previous_page": "Попередня сторінка",
+        "next_page": "Наступна сторінка",
+        "last_page": "Остання сторінка"
     },
     "priority": {
         "critical": "Критичний",
@@ -1832,7 +2022,9 @@
         "medium": "Середній",
         "normal": "Звичайний",
         "title": "Пріоритет",
-        "urgent": "Терміновий"
+        "urgent": "Терміновий",
+        "form_heading": "Деталі пріоритету",
+        "heading": "Керування пріоритетами"
     },
     "problems": {
         "known_error": "Відома помилка",
@@ -1870,7 +2062,17 @@
         "queue_status": "Статус черги",
         "search_placeholder": "Пошук черг...",
         "sla_rules": "Правила SLA",
-        "title": "Черги"
+        "title": "Черги",
+        "no_description": "Без опису",
+        "open_count": "відкрити",
+        "total_count": "всього",
+        "no_queues_available": "Черги недоступні",
+        "tooltips": {
+            "email_configured": "Електронна пошта налаштована",
+            "view_details": "Переглянути деталі",
+            "edit": "Редагувати"
+        },
+        "no_queues_found": "Черг не знайдено"
     },
     "search": {
         "advanced_search": "Розширений пошук",
@@ -1932,7 +2134,8 @@
         "timezone": "Часовий пояс",
         "two_factor_auth": "Двофакторна автентифікація",
         "webhooks": "Вебхуки",
-        "more_coming": "Додаткові налаштування незабаром з'являться"
+        "more_coming": "Додаткові налаштування незабаром з'являться",
+        "heading": "Налаштування"
     },
     "severity": {
         "critical": "Критична",
@@ -2065,9 +2268,9 @@
         "total_time": "Загальний час",
         "minutes": "Хвилини",
         "ticket": "Заявка",
-        "ticket_number": "№ заявки",
+        "ticket_number": "Заявка №",
         "tickets": "заявок",
-        "title": "Заявки",
+        "title": "Назва",
         "to": "Кому",
         "type": "Тип",
         "unassign": "Зняти призначення",
@@ -2079,6 +2282,7 @@
         "view_and_manage": "Перегляд та керування заявками підтримки",
         "back_to_list": "Назад до списку",
         "back_to_queues": "Назад до всіх черг",
+        "search_placeholder": "Пошук за номером заявки, назвою або клієнтом...",
         "search_placeholder_list": "Пошук заявок за ID, темою, клієнтом...",
         "all_statuses": "Усі статуси",
         "all_priorities": "Усі пріоритети",
@@ -2149,7 +2353,42 @@
             "plus_help": "Заявка буде автоматично закрита, якщо не буде відповіді клієнта до вказаного часу.",
             "minus_title": "Очікування автозакриття-",
             "minus_help": "Заявка буде автоматично закрита у вказаний час незалежно від активності."
-        }
+        },
+        "ticket_selected": "заявку вибрано",
+        "tickets_selected": "заявок вибрано",
+        "clear_selection": "Очистити вибір",
+        "all_tickets": "Всі заявки",
+        "my_tickets": "Мої заявки",
+        "unassigned": "Непризначені",
+        "filter": "Фільтр",
+        "no_tickets_found": "Заявок, що відповідають вашим критеріям, не знайдено",
+        "select_all_matching": "Вибрати всі відповідні заявки",
+        "select_to_use_bulk": "Виберіть заявки для масових дій",
+        "showing_of": "Показано {count} з {total} заявок",
+        "compose_reply": "Написати відповідь",
+        "add_internal_note": "Додати внутрішню нотатку",
+        "search_tickets": "Пошук заявок",
+        "customer_directory": "Довідник клієнтів",
+        "table": {
+            "ticket": "Заявка",
+            "customer": "Клієнт",
+            "queue": "Черга",
+            "state": "Стан",
+            "age": "Вік"
+        },
+        "heading": "Управління заявками",
+        "search_results_heading": "Результати пошуку",
+        "dynamic_field_filters": "Фільтри динамічних полів",
+        "apply_df_filters": "Застосувати фільтри ДП",
+        "select_for_bulk_actions": "Виберіть заявки для масових дій",
+        "showing_of_total": "Показано %d з %d заявок",
+        "select_all": "Вибрати все",
+        "matching_tickets": "відповідних заявок",
+        "showing": "Показано",
+        "of": "з",
+        "on_this_page": "на цій сторінці",
+        "priority_short": "Пріор",
+        "assigned": "Призначено"
     },
     "tickets_form": {
         "subject_placeholder": "Короткий опис проблеми...",
@@ -2202,7 +2441,13 @@
         "minutes": "хвилин",
         "formats": {
             "queue_detail": "2 Jan 2006 о 15:04"
-        }
+        },
+        "years": "років",
+        "year": "рік",
+        "months": "місяців",
+        "month": "місяць",
+        "weeks": "тижнів",
+        "week": "тиждень"
     },
     "user": {
         "department": "Відділ",
@@ -2261,5 +2506,539 @@
     },
     "welcome": {
         "greeting": "Ласкаво просимо"
+    },
+    "pages": {
+        "agent": {
+            "tickets": {
+                "title": "Управління заявками",
+                "heading": "Управління заявками"
+            },
+            "dashboard": {
+                "title": "Панель агента"
+            },
+            "queues": {
+                "title": "Управління чергами",
+                "description": "Перегляд та керування призначеними вам чергами заявок"
+            }
+        },
+        "settings": {
+            "title": "Налаштування"
+        }
+    },
+    "tooltips": {
+        "quick_assign": "Швидке призначення",
+        "view_details": "Переглянути деталі"
+    },
+    "placeholders": {
+        "separate_emails": "Розділіть кілька адрес комами",
+        "note_subject": "Тема нотатки",
+        "contains": "Містить..."
+    },
+    "admin_dashboard": {
+        "key_metrics": "Ключові показники",
+        "system_health": "Стан системи",
+        "uptime_this_month": "час роботи цього місяця",
+        "system_administration": "Адміністрування системи",
+        "user_management": "Керування користувачами",
+        "user_management_desc": "Керування обліковими записами агентів та клієнтів",
+        "group_management": "Керування групами",
+        "group_management_desc": "Налаштування команд та шляхів ескалації",
+        "permissions": "Дозволи",
+        "permissions_desc": "Налаштування рівнів доступу агентів",
+        "roles": "Ролі",
+        "roles_desc": "Керування ролями та дозволами груп-ролей",
+        "acl": "Списки контролю доступу",
+        "acl_desc": "Визначення умовних правил доступу",
+        "email_identities": "Ідентифікатори електронної пошти",
+        "email_identities_desc": "Керування привітаннями, адресами, підписами",
+        "inbound_mail": "Вхідні поштові скриньки",
+        "inbound_mail_desc": "Налаштування опитування POP/IMAP та правил розподілу",
+        "postmaster_filters": "Фільтри поштмейстера",
+        "postmaster_filters_desc": "Налаштування правил маршрутизації пошти на основі заголовків",
+        "auto_responses": "Автовідповіді",
+        "auto_responses_desc": "Налаштування автоматичних відповідей електронною поштою",
+        "queue_auto_responses": "Автовідповіді черг",
+        "queue_auto_responses_desc": "Прив'язка автовідповідей до черг",
+        "ticket_notifications": "Сповіщення про заявки",
+        "ticket_notifications_desc": "Налаштування автоматичних сповіщень про події заявок",
+        "generic_agent": "Загальний агент",
+        "generic_agent_desc": "Автоматичні дії з заявками та пакетні завдання",
+        "signatures": "Підписи",
+        "signatures_desc": "Налаштування підписів електронної пошти для відповідей",
+        "system_config": "Налаштування системи",
+        "system_config_desc": "Налаштування глобальних параметрів та поведінки",
+        "audit_logs": "Журнали аудиту",
+        "audit_logs_desc": "Перегляд змін та історії доступу",
+        "customer_administration": "Адміністрування клієнтів",
+        "customer_organizations": "Організації клієнтів",
+        "customer_organizations_desc": "Керування компаніями та відділами",
+        "customer_users": "Користувачі-клієнти",
+        "customer_users_desc": "Індивідуальні облікові записи клієнтів",
+        "customer_user_services": "Послуги користувачів-клієнтів",
+        "customer_user_services_desc": "Прив'язка клієнтів до послуг",
+        "customer_portal": "Портал клієнта",
+        "customer_portal_desc": "Налаштування інтерфейсу самообслуговування",
+        "customer_groups": "Групи клієнтів",
+        "customer_groups_desc": "Організація дозволів доступу клієнтів",
+        "customer_user_groups": "Групи користувачів-клієнтів",
+        "customer_user_groups_desc": "Прив'язка користувачів-клієнтів до груп клієнтів",
+        "queues": "Черги",
+        "queues_desc": "Маршрутизація та організація заявок",
+        "lookups": "Довідники",
+        "lookups_desc": "Керування пріоритетами, станами, типами заявок",
+        "services": "Послуги",
+        "services_desc": "Визначення записів каталогу послуг",
+        "sla": "Угоди про рівень обслуговування",
+        "sla_desc": "Налаштування цілей відповіді та вирішення",
+        "dynamic_fields": "Динамічні поля",
+        "dynamic_fields_desc": "Створення власних атрибутів заявок",
+        "templates": "Шаблони",
+        "templates_desc": "Багаторазові шаблони відповідей та електронної пошти",
+        "attachments": "Вкладення",
+        "attachments_desc": "Керування шаблонами вкладень за замовчуванням",
+        "recent_activity": "Остання активність адміністратора",
+        "active_users_customers": "Активні агенти та клієнти",
+        "queues_monitored": "Черг під наглядом",
+        "system_maintenance": "Обслуговування системи",
+        "system_maintenance_desc": "Планування вікон обслуговування та сповіщення користувачів",
+        "reports_analytics": "Звіти та аналітика",
+        "reports_analytics_desc": "Відстеження показників продуктивності",
+        "queue_templates": "Шаблони черг",
+        "queue_templates_desc": "Керування призначеннями шаблонів до черг",
+        "template_attachments": "Вкладення шаблонів",
+        "template_attachments_desc": "Керування призначеннями вкладень до шаблонів",
+        "activity": {
+            "user_created": "Обліковий запис користувача створено",
+            "config_updated": "Налаштування системи оновлено",
+            "logs_reviewed": "Журнали аудиту переглянуто"
+        }
+    },
+    "groups": {
+        "members": "Учасники групи",
+        "add_user": "Додати користувача до групи",
+        "select_user": "Виберіть користувача для додавання",
+        "add_user_btn": "Додати користувача",
+        "current_members": "Поточні учасники",
+        "loading_members": "Завантаження учасників...",
+        "add_group": "Додати групу",
+        "confirm_delete": "Ви впевнені, що хочете видалити цю групу?",
+        "delete_success": "Групу успішно видалено",
+        "save_success": "Групу успішно збережено",
+        "tooltips": {
+            "add_new": "Додати нову групу до системи",
+            "edit": "Редагувати групу",
+            "manage_permissions": "Керувати дозволами",
+            "delete": "Видалити групу",
+            "system_group_no_delete": "Системні групи не можна видаляти",
+            "remove_user": "Видалити користувача з групи",
+            "clear_search": "Очистити пошук",
+            "clear_filters": "Очистити всі фільтри"
+        },
+        "group_form": "Форма групи",
+        "group_members": "Учасники групи",
+        "group": "Група"
+    },
+    "customer_users": {
+        "title": "Керування користувачами-клієнтами",
+        "description": "Керування обліковими записами та доступом користувачів-клієнтів",
+        "import_csv": "Імпорт CSV",
+        "export": "Експорт",
+        "add_user": "Додати користувача-клієнта",
+        "search": "Пошук",
+        "table_heading": "Користувачі-клієнти",
+        "add_modal_title": "Додати користувача-клієнта",
+        "edit_modal_title": "Редагувати користувача-клієнта",
+        "section": {
+            "basic_info": "Основна інформація",
+            "personal_info": "Особиста інформація",
+            "contact_info": "Контактна інформація",
+            "address_info": "Інформація про адресу"
+        },
+        "import_title": "Імпорт користувачів-клієнтів",
+        "tickets_title": "Заявки клієнта",
+        "tooltips": {
+            "edit": "Редагувати користувача-клієнта",
+            "disable": "Вимкнути користувача-клієнта",
+            "enable": "Увімкнути користувача-клієнта",
+            "delete": "Видалити користувача-клієнта"
+        }
+    },
+    "admin_queues": {
+        "no_queues": "Черги відсутні",
+        "get_started": "Почніть зі створення нової черги.",
+        "new_queue": "Нова черга",
+        "add_queue": "Додати чергу",
+        "edit_queue": "Редагувати чергу",
+        "basic_info": "Основна інформація",
+        "email_settings": "Налаштування електронної пошти",
+        "manage_email_identities": "Керувати ідентифікаторами електронної пошти",
+        "advanced_settings": "Розширені налаштування",
+        "follow_up_settings": "Налаштування продовження",
+        "unlock_timeout": "Тайм-аут розблокування",
+        "calendar": "Календар",
+        "ticket_settings": "Налаштування заявок",
+        "no_signature": "Підпис не вибрано"
+    },
+    "permissions": {
+        "title": "Керування дозволами",
+        "description": "Керування дозволами користувачів у групах (керування ролями OTRS)",
+        "no_data": "Дані про дозволи відсутні",
+        "select_user": "Виберіть користувача для перегляду дозволів",
+        "no_user_selected": "Користувача не вибрано",
+        "select_group": "Виберіть групу для зміни",
+        "change_priority": "Змінити пріоритет",
+        "tooltips": {
+            "grant_all": "Вибір цього надасть усі дозволи",
+            "select_all_group": "Вибрати всі дозволи для цієї групи",
+            "clear_all_group": "Очистити всі дозволи для цієї групи",
+            "clone": "Клонувати дозволи від одного користувача до іншого",
+            "ro": "Лише читання",
+            "move_into": "Перемістити заявки до черги",
+            "create": "Створити заявки",
+            "note": "Додати нотатки",
+            "owner": "Стати власником",
+            "priority": "Змінити пріоритет"
+        },
+        "error_saving": "Помилка збереження дозволів",
+        "heading": "Керування дозволами",
+        "debug_permissions": "НАЛАГОДЖЕННЯ - Дозволи",
+        "groups": "Групи:",
+        "simple_test": "Простий тест дозволів",
+        "users": "Користувачі:",
+        "user_selection": "Вибір користувача",
+        "permission_matrix": "Матриця дозволів",
+        "debug_heading": "НАЛАГОДЖЕННЯ - Дозволи",
+        "groups_heading": "Групи:",
+        "users_heading": "Користувачі:",
+        "standalone_heading": "Керування дозволами",
+        "matrix_heading": "Матриця дозволів",
+        "working_heading": "Керування дозволами",
+        "please_select_user": "Виберіть користувача для перегляду дозволів."
+    },
+    "sla": {
+        "title": "Керування SLA",
+        "add_sla": "Додати SLA",
+        "edit_sla": "Редагувати SLA",
+        "add_new": "Додати новий SLA",
+        "tooltips": {
+            "add_new": "Додати новий SLA",
+            "apply_filters": "Застосувати фільтри",
+            "clear_filters": "Очистити всі фільтри",
+            "edit": "Редагувати SLA"
+        },
+        "form_heading": "Налаштування SLA"
+    },
+    "roles": {
+        "title": "Керування ролями",
+        "description": "Керування системними ролями та їхніми дозволами (еквівалент OTRS AdminRole)",
+        "add_role": "Додати роль",
+        "edit_role": "Редагувати роль",
+        "tooltips": {
+            "edit": "Редагувати роль",
+            "manage_users": "Керувати користувачами в цій ролі",
+            "manage_permissions": "Керувати дозволами групи для цієї ролі"
+        },
+        "manage_users": "Керувати користувачами ролі"
+    },
+    "services": {
+        "title": "Керування послугами",
+        "tooltips": {
+            "edit": "Редагувати послугу"
+        },
+        "placeholders": {
+            "name": "Введіть назву послуги",
+            "comments": "Необов'язкові коментарі"
+        }
+    },
+    "acl": {
+        "title": "Списки контролю доступу",
+        "heading": "Керування ACL",
+        "description": "Списки контролю доступу визначають правила для дій із заявками та дозволів",
+        "add_acl": "Додати ACL",
+        "tooltips": {
+            "add_new": "Додати новий ACL",
+            "apply_filters": "Застосувати фільтри",
+            "clear_filters": "Очистити всі фільтри",
+            "edit": "Редагувати ACL"
+        },
+        "modal": {
+            "add_title": "Додати ACL",
+            "match_conditions": "Умови відповідності (властивості)",
+            "change_actions": "Змінити дії"
+        }
+    },
+    "customer_companies": {
+        "title": "Компанії клієнтів",
+        "heading": "Компанії клієнтів",
+        "description": "Керування організаціями клієнтів та їхніми брендованими порталами",
+        "tooltips": {
+            "portal_settings": "Налаштування порталу",
+            "manage_services": "Керувати послугами",
+            "edit": "Редагувати компанію",
+            "deactivate": "Деактивувати компанію",
+            "activate": "Активувати компанію"
+        }
+    },
+    "customer_company_services": {
+        "title": "Послуги компанії клієнта",
+        "heading": "Послуги компанії клієнта"
+    },
+    "customer_company_tickets": {
+        "title": "Заявки компанії клієнта",
+        "heading": "Заявки компанії клієнта"
+    },
+    "customer_company_users": {
+        "title": "Користувачі компанії клієнта",
+        "heading": "Користувачі компанії клієнта"
+    },
+    "customer_portal_settings": {
+        "title": "Налаштування порталу клієнта",
+        "heading": "Налаштування порталу клієнта"
+    },
+    "customer_user_services": {
+        "title": "Послуги користувачів-клієнтів"
+    },
+    "dynamic_field_screens": {
+        "title": "Екрани динамічних полів",
+        "screen_configuration": "Налаштування екрану"
+    },
+    "email_identities": {
+        "title": "Ідентифікатори електронної пошти",
+        "heading": "Ідентифікатори електронної пошти",
+        "description": "Керування вихідними ідентифікаторами електронної пошти, привітаннями та підписами, що використовуються чергами.",
+        "signatures": "Підписи",
+        "add_system_address": "Додати системну адресу",
+        "add_signature": "Додати підпис",
+        "system_addresses": "Системні адреси",
+        "salutations": "Привітання"
+    },
+    "email_queue": {
+        "title": "Черга електронної пошти",
+        "heading": "Керування чергою електронної пошти",
+        "description": "Перегляд та керування повідомленнями в черзі",
+        "tooltips": {
+            "retry": "Повторити надсилання",
+            "delete": "Видалити з черги",
+            "view_details": "Переглянути деталі",
+            "apply_filters": "Застосувати фільтри",
+            "clear_filters": "Очистити фільтри"
+        },
+        "queue_actions": "Дії з чергою"
+    },
+    "priorities": {
+        "title": "Керування пріоритетами",
+        "heading": "Керування пріоритетами",
+        "priorities_management": "Керування пріоритетами",
+        "tooltips": {
+            "edit": "Редагувати пріоритет"
+        }
+    },
+    "roadmap": {
+        "title": "План розвитку системи",
+        "quick_navigation": "Швидка навігація",
+        "current_phase": "Поточна фаза",
+        "module_checklist": "Контрольний список модулів",
+        "recent_updates": "Останні оновлення",
+        "performance_trends": "Тенденції продуктивності",
+        "module_health_status": "Стан здоров'я модуля",
+        "features_heading": "Функції",
+        "enhancements_heading": "Покращення",
+        "fixes_heading": "Виправлення помилок",
+        "other_heading": "Інші зміни",
+        "heading": "План розвитку",
+        "error_loading": "Помилка завантаження плану розвитку"
+    },
+    "schema_discovery": {
+        "title": "Виявлення схеми",
+        "heading": "Виявлення схеми",
+        "sql_explorer": "Провідник SQL-запитів",
+        "query_results": "Результати запиту",
+        "query_error": "Помилка запиту",
+        "available_tables": "Доступні таблиці"
+    },
+    "schema_monitoring": {
+        "title": "Моніторинг схеми",
+        "performance_heading": "Показники продуктивності",
+        "alerts_heading": "Активні сповіщення",
+        "heading": "Монітор виявлення схеми",
+        "module_health_status": "Стан здоров'я модуля",
+        "loading_status": "Завантаження статусу модуля..."
+    },
+    "types": {
+        "title": "Типи заявок",
+        "heading": "Керування типами заявок",
+        "add_new_type": "Додати новий тип",
+        "form_heading": "Налаштування типу",
+        "tooltips": {
+            "edit": "Редагувати тип"
+        }
+    },
+    "realtime_dashboard": {
+        "title": "Панель у реальному часі"
+    },
+    "error": {
+        "title": "Помилка"
+    },
+    "customer_groups": {
+        "heading": "Дозволи груп клієнтів",
+        "about_heading": "Про дозволи груп клієнтів"
+    },
+    "group_permissions": {
+        "title": "Дозволи групи",
+        "queue_permissions": "Дозволи черги",
+        "queues": "Черги",
+        "permission_matrix": "Матриця дозволів"
+    },
+    "dynamic_test": {
+        "title": "Тестування динамічних модулів",
+        "testing_instructions": "Інструкції з тестування",
+        "heading": "Тестування динамічних модулів"
+    },
+    "group_form": {
+        "title": "Форма групи",
+        "heading": "Форма групи"
+    },
+    "group_members": {
+        "title": "Учасники групи",
+        "heading": "Учасники групи"
+    },
+    "group_view": {
+        "title": "Група",
+        "heading": "Деталі групи"
+    },
+    "permissions_working": {
+        "title": "Керування дозволами"
+    },
+    "state": {
+        "title": "Керування станами",
+        "form_heading": "Деталі стану",
+        "heading": "Керування станами"
+    },
+    "admin_tickets": {
+        "title": "Заявки"
+    },
+    "ticket": {
+        "attachments": "Вкладення",
+        "states": {
+            "pending_reminder": "очікує нагадування",
+            "new": "Новий",
+            "open": "Відкритий",
+            "pending": "В очікуванні",
+            "closed": "Закритий"
+        }
+    },
+    "role_permissions": {
+        "tooltips": {
+            "ro": "Лише читання",
+            "move_into": "Перемістити до",
+            "create": "Створити",
+            "owner": "Власник",
+            "priority": "Пріоритет",
+            "note": "Нотатка",
+            "select_all": "Вибрати все",
+            "select_none": "Не вибирати нічого"
+        }
+    },
+    "role_users": {
+        "heading": "Користувачі в ролі",
+        "no_users": "Користувачів не призначено",
+        "get_started": "Почніть з додавання користувачів до цієї ролі.",
+        "tooltips": {
+            "remove": "Видалити з ролі"
+        },
+        "modal": {
+            "title": "Додати користувача до ролі",
+            "select_user": "Вибрати користувача",
+            "add_user": "Додати користувача"
+        }
+    },
+    "customer_company_form": {
+        "branding": "Брендинг",
+        "features": "Функції",
+        "assigned_services": "Призначені послуги",
+        "portal_settings": "Налаштування порталу",
+        "company_details": "Деталі компанії"
+    },
+    "queue_detail": {
+        "tickets_in_queue": "Заявки в цій черзі",
+        "no_tickets": "У цій черзі немає заявок",
+        "ticket_list_heading": "Заявки в черзі",
+        "ticket_assignments_heading": "Призначення заявок",
+        "recent_tickets": "Останні заявки",
+        "title": "Черга",
+        "description": "Деталі та статистика черги",
+        "back_to_queues": "Назад до черг",
+        "queue_id": "ID черги",
+        "queue_name": "Назва черги",
+        "group_id": "ID групи",
+        "no_description": "Опис відсутній"
+    },
+    "entity_selector": {
+        "add_new": "Додати новий",
+        "select_items": "Вибрати елементи",
+        "selected_items": "Вибрані елементи",
+        "added": "Додано",
+        "removed": "Видалено",
+        "undo": "Скасувати",
+        "no_members": "Учасників ще немає",
+        "no_results": "Результатів не знайдено",
+        "type_to_search": "Введіть хоча б {min} символів для пошуку",
+        "type_to_search_hint": "Введіть хоча б 2 символи для пошуку",
+        "manage_members": "Керувати учасниками"
+    },
+    "customer_group_by_group": {
+        "customer_permissions": "Дозволи клієнтів"
+    },
+    "customer_group_edit": {
+        "group_permissions": "Дозволи групи"
+    },
+    "dynamic_field_form": {
+        "field_configuration": "Налаштування поля",
+        "basic_information": "Основна інформація"
+    },
+    "states": {
+        "heading": "Керування станами"
+    },
+    "realtime": {
+        "ticket_volume": "Обсяг заявок (24г)",
+        "heading": "Панель у реальному часі",
+        "queue_distribution": "Розподіл черг",
+        "queue_status": "Статус черги",
+        "active_alerts": "Активні сповіщення",
+        "recent_tickets": "Останні заявки",
+        "no_tickets": "Заявок немає",
+        "stats": {
+            "open_tickets": "Відкриті заявки",
+            "avg_response_time": "Сер. час відповіді",
+            "active_agents": "Активні агенти"
+        }
+    },
+    "profile": {
+        "settings": "Налаштування"
+    },
+    "ticket_detail": {
+        "additional_information": "Додаткова інформація",
+        "history": "Історія",
+        "links": "Посилання"
+    },
+    "customer_group": {
+        "edit_heading": "Редагувати дозволи груп клієнтів",
+        "by_group_heading": "Дозволи клієнтів за групами",
+        "group_permissions": "Дозволи групи",
+        "customer_permissions": "Дозволи клієнтів"
+    },
+    "customer_portal": {
+        "placeholders": {
+            "title": "Портал клієнта",
+            "footer": "Працює на GOTRS"
+        }
+    },
+    "queue": {
+        "stats": {
+            "open_tickets": "Відкриті заявки",
+            "total_tickets": "Всього заявок",
+            "pending_tickets": "В очікуванні",
+            "closed_tickets": "Закрито"
+        }
     }
 }

@@ -106,19 +106,19 @@
                     <div id="actionsDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-600">
                         <div class="py-1">
                             <a href="#" onclick="changeStatus(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-tasks mr-2"></i>Change Status
+                                <i class="fas fa-tasks mr-2"></i>{{ t("tickets.change_status")|default:"Change Status" }}
                             </a>
                             <a href="#" onclick="assignAgent(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-user-check mr-2"></i>Assign Agent
+                                <i class="fas fa-user-check mr-2"></i>{{ t("tickets.assign_agent")|default:"Assign Agent" }}
                             </a>
                             <a href="#" onclick="changePriority(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-flag mr-2"></i>Change Priority
+                                <i class="fas fa-flag mr-2"></i>{{ t("tickets.change_priority")|default:"Change Priority" }}
                             </a>
                             <a href="#" onclick="moveQueue(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-inbox mr-2"></i>Move to Queue
+                                <i class="fas fa-inbox mr-2"></i>{{ t("tickets.move_to_queue")|default:"Move to Queue" }}
                             </a>
                             <a href="#" onclick="mergeTicket(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-code-branch mr-2"></i>Merge Ticket
+                                <i class="fas fa-code-branch mr-2"></i>{{ t("tickets.merge_ticket")|default:"Merge Ticket" }}
                             </a>
                         </div>
                     </div>
@@ -134,9 +134,9 @@
     <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow">
         <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700">
             <nav class="flex space-x-4" aria-label="Ticket tabs">
-                <button id="tab-conversation" onclick="showTab('conversation')" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded">Conversation</button>
-                <button id="tab-history" hx-get="/agent/tickets/{{ ticket.id }}/history" hx-target="#tab-panel" hx-swap="innerHTML" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 rounded">History</button>
-                <button id="tab-links" hx-get="/agent/tickets/{{ ticket.id }}/links" hx-target="#tab-panel" hx-swap="innerHTML" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 rounded">Links</button>
+                <button id="tab-conversation" onclick="showTab('conversation')" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded">{{ t("customer.ticket_view.conversation")|default:"Conversation" }}</button>
+                <button id="tab-history" hx-get="/agent/tickets/{{ ticket.id }}/history" hx-target="#tab-panel" hx-swap="innerHTML" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 rounded">{{ t("tickets.history")|default:"History" }}</button>
+                <button id="tab-links" hx-get="/agent/tickets/{{ ticket.id }}/links" hx-target="#tab-panel" hx-swap="innerHTML" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 rounded">{{ t("tickets.links")|default:"Links" }}</button>
             </nav>
         </div>
         <div id="tab-panel">
@@ -228,7 +228,7 @@
             <!-- Articles -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow"{% if first_article_sender_color %} style="border-left: 4px solid {{ first_article_sender_color }};"{% endif %}>
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Conversation</h2>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("customer.ticket_view.conversation")|default:"Conversation" }}</h2>
                 </div>
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                     {% for article in notes %}
@@ -268,7 +268,7 @@
                                 </div>
                                 {% if article.attachments %}
                                 <div class="mt-4">
-                                    <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Attachments</h4>
+                                    <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{{ t("tickets.attachments")|default:"Attachments" }}</h4>
                                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                                         {% for attachment in article.attachments %}
                                         <div class="relative group bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
@@ -343,7 +343,7 @@
             <!-- Ticket Details -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Details</h2>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.details")|default:"Details" }}</h2>
                 </div>
                 <div class="p-6 space-y-4">
                     <div>
@@ -391,23 +391,23 @@
             <!-- Quick Actions -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Quick Actions</h2>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("dashboard.quick_actions")|default:"Quick Actions" }}</h2>
                 </div>
                 <div class="p-6 space-y-3">
                     <button onclick="changeStatus()" class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                        Change Status
+                        {{ t("tickets.change_status")|default:"Change Status" }}
                     </button>
                     <button onclick="assignAgent()" class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                        Assign Agent
+                        {{ t("tickets.assign_agent")|default:"Assign Agent" }}
                     </button>
                     <button onclick="changePriority()" class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                        Change Priority
+                        {{ t("tickets.change_priority")|default:"Change Priority" }}
                     </button>
                     <button onclick="moveQueue()" class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                        Move to Queue
+                        {{ t("tickets.move_to_queue")|default:"Move to Queue" }}
                     </button>
                     <button onclick="mergeTicket()" class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-                        Merge Ticket
+                        {{ t("tickets.merge_ticket")|default:"Merge Ticket" }}
                     </button>
                 </div>
             </div>
@@ -420,7 +420,7 @@
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Compose Reply</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.compose_reply")|default:"Compose Reply" }}</h3>
             </div>
             <form id="replyForm" onsubmit="submitReply(event)">
                 <div class="p-6 space-y-4">
@@ -456,7 +456,7 @@
                             <option value="{{ ticket.customer_user_id }}">{{ ticket.customer_user_id }}</option>
                         </select>
                         <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            Loading customer users...
+                            {{ t("messages.loading_customer_users")|default:"Loading customer users..." }}
                         </div>
                     </div>
 
@@ -468,12 +468,12 @@
                         <div id="ccBccFields" class="hidden mt-2 space-y-2">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Cc</label>
-                                <input type="email" name="cc" multiple placeholder="Separate multiple emails with commas"
+                                <input type="email" name="cc" multiple placeholder="{{ t("placeholders.separate_emails")|default:"Separate multiple emails with commas" }}"
                                        class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bcc</label>
-                                <input type="email" name="bcc" multiple placeholder="Separate multiple emails with commas"
+                                <input type="email" name="bcc" multiple placeholder="{{ t("placeholders.separate_emails")|default:"Separate multiple emails with commas" }}"
                                        class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
                             </div>
                         </div>
@@ -555,7 +555,7 @@
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Add Internal Note</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.add_internal_note")|default:"Add Internal Note" }}</h3>
             </div>
             <form id="noteForm" onsubmit="submitNote(event)">
                 <div class="p-6 space-y-4">
@@ -571,7 +571,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>
-                        <input type="text" id="noteSubject" name="subject" placeholder="Note subject" value="Internal Note" required
+                        <input type="text" id="noteSubject" name="subject" placeholder="{{ t("placeholders.note_subject")|default:"Note subject" }}" value="Internal Note" required
                                class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
                     </div>
                     <!-- Note Template Selection -->
@@ -617,7 +617,7 @@
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Change Status</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.change_status")|default:"Change Status" }}</h3>
             </div>
             <form id="statusForm" onsubmit="submitStatus(event)" data-pending-states="{% if PendingStateIDs %}{% for sid in PendingStateIDs %}{{ sid }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
                 <div class="p-6 space-y-4">
@@ -668,7 +668,7 @@
                     </button>
                     <button type="submit"
                             class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                        Change Status
+                        {{ t("tickets.change_status")|default:"Change Status" }}
                     </button>
                 </div>
             </form>
@@ -681,7 +681,7 @@
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Assign Agent</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.assign_agent")|default:"Assign Agent" }}</h3>
             </div>
             <form id="assignForm" onsubmit="submitAssign(event)">
                 <div class="p-6">
@@ -711,7 +711,7 @@
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Change Priority</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.change_priority")|default:"Change Priority" }}</h3>
             </div>
             <form id="priorityForm" onsubmit="submitPriority(event)">
                 <div class="p-6">
@@ -746,7 +746,7 @@
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Move to Queue</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.move_to_queue")|default:"Move to Queue" }}</h3>
             </div>
             <form id="queueForm" onsubmit="submitQueue(event)">
                 <div class="p-6">
@@ -777,7 +777,7 @@
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Merge Ticket</h3>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.merge_ticket")|default:"Merge Ticket" }}</h3>
             </div>
             <form id="mergeForm" onsubmit="submitMerge(event)">
                 <div class="p-6">

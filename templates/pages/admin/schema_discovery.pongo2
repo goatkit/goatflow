@@ -1,24 +1,24 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Schema Discovery - Admin{% endblock %}
+{% block title %}{{ t("schema_discovery.title")|default:"Schema Discovery" }} - Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Schema Discovery</h1>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">{{ t("schema_discovery.heading")|default:"Schema Discovery" }}</h1>
         <p class="text-gray-600 dark:text-gray-400">Automatically generate dynamic modules from database tables</p>
     </div>
 
     <!-- SQL Query Section -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">SQL Query Explorer</h2>
+        <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{{ t("schema_discovery.sql_explorer")|default:"SQL Query Explorer" }}</h2>
         <div class="space-y-4">
             <div>
                 <label for="sqlQuery" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Enter SQL Query (SELECT only for safety)
                 </label>
-                <textarea id="sqlQuery" 
-                          rows="4" 
+                <textarea id="sqlQuery"
+                          rows="4"
                           placeholder="SELECT * FROM users LIMIT 10"
                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white font-mono text-sm"></textarea>
             </div>
@@ -34,10 +34,10 @@
                 </button>
             </div>
         </div>
-        
+
         <!-- Query Results -->
         <div id="queryResults" class="mt-6 hidden">
-            <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Query Results</h3>
+            <h3 class="text-lg font-semibold mb-3 text-gray-900 dark:text-white">{{ t("schema_discovery.query_results")|default:"Query Results" }}</h3>
             <div class="overflow-x-auto">
                 <table id="resultsTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead id="resultsHeader" class="bg-gray-50 dark:bg-gray-700">
@@ -52,7 +52,7 @@
                 <!-- Stats will be shown here -->
             </div>
         </div>
-        
+
         <!-- Query Error -->
         <div id="queryError" class="mt-6 hidden">
             <div class="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-md p-4">
@@ -63,7 +63,7 @@
                         </svg>
                     </div>
                     <div class="ml-3">
-                        <h3 class="text-sm font-medium text-red-800 dark:text-red-200">Query Error</h3>
+                        <h3 class="text-sm font-medium text-red-800 dark:text-red-200">{{ t("schema_discovery.query_error")|default:"Query Error" }}</h3>
                         <div id="errorMessage" class="mt-2 text-sm text-red-700 dark:text-red-300">
                             <!-- Error message will be shown here -->
                         </div>
@@ -75,7 +75,7 @@
 
     <!-- Table List Section -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Available Tables</h2>
+        <h2 class="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{{ t("schema_discovery.available_tables")|default:"Available Tables" }}</h2>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead class="bg-gray-50 dark:bg-gray-700">
@@ -207,14 +207,14 @@ function loadTables() {
     })
     .catch(error => {
         console.error('Error loading tables:', error);
-        showToast('Error loading tables', 'error');
+        showToast('{{ t("messages.error_loading_tables")|default:"Error loading tables" }}', 'error');
     });
 }
 
 function displayTables(tables) {
     const tbody = document.getElementById('tablesList');
     tbody.innerHTML = '';
-    
+
     tables.forEach(table => {
         const hasModule = existingModules.includes(table.Name);
         const row = document.createElement('tr');
@@ -226,7 +226,7 @@ function displayTables(tables) {
                 ${table.Comment || '-'}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
-                ${hasModule 
+                ${hasModule
                     ? '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">Configured</span>'
                     : '<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">Not Configured</span>'
                 }
@@ -247,7 +247,7 @@ function displayTables(tables) {
 function viewColumns(tableName) {
     currentTable = tableName;
     document.getElementById('modalTableName').textContent = tableName;
-    
+
     fetch(`/admin/dynamic/_schema?action=columns&table=${tableName}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -265,14 +265,14 @@ function viewColumns(tableName) {
     })
     .catch(error => {
         console.error('Error loading columns:', error);
-        showToast('Error loading columns', 'error');
+        showToast('{{ t("messages.error_loading_columns")|default:"Error loading columns" }}', 'error');
     });
 }
 
 function displayColumns(columns) {
     const tbody = document.getElementById('columnsList');
     tbody.innerHTML = '';
-    
+
     columns.forEach(column => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -301,7 +301,7 @@ function generateModule() {
 
 function previewModule(tableName) {
     currentTable = tableName;
-    
+
     fetch(`/admin/dynamic/_schema?action=generate&table=${tableName}&format=yaml`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -353,22 +353,22 @@ function saveModule() {
 
 function executeQuery() {
     const query = document.getElementById('sqlQuery').value.trim();
-    
+
     if (!query) {
-        showToast('Please enter a SQL query', 'error');
+        showToast('{{ t("messages.please_enter_sql_query")|default:"Please enter a SQL query" }}', 'error');
         return;
     }
-    
+
     // Only allow SELECT queries for safety
     if (!query.toUpperCase().startsWith('SELECT')) {
         showToast('Only SELECT queries are allowed for safety', 'error');
         return;
     }
-    
+
     // Hide previous results/errors
     document.getElementById('queryResults').classList.add('hidden');
     document.getElementById('queryError').classList.add('hidden');
-    
+
     // Send query to backend
     fetch('/admin/dynamic/_schema?action=query', {
         method: 'POST',
@@ -396,17 +396,17 @@ function executeQuery() {
 function displayQueryResults(results) {
     // Show results section
     document.getElementById('queryResults').classList.remove('hidden');
-    
+
     if (!results || results.length === 0) {
         document.getElementById('resultsHeader').innerHTML = '';
-        document.getElementById('resultsBody').innerHTML = '<tr><td colspan="100%" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">No results found</td></tr>';
+        document.getElementById('resultsBody').innerHTML = '<tr><td colspan="100%" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">{{ t("common.no_results_found")|default:"No results found" }}</td></tr>';
         document.getElementById('resultStats').textContent = '0 rows returned';
         return;
     }
-    
+
     // Get column names from first row
     const columns = Object.keys(results[0]);
-    
+
     // Build header
     const headerRow = document.createElement('tr');
     columns.forEach(col => {
@@ -417,37 +417,37 @@ function displayQueryResults(results) {
     });
     document.getElementById('resultsHeader').innerHTML = '';
     document.getElementById('resultsHeader').appendChild(headerRow);
-    
+
     // Build body
     const tbody = document.getElementById('resultsBody');
     tbody.innerHTML = '';
-    
+
     results.forEach(row => {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-gray-50 dark:hover:bg-gray-700';
-        
+
         columns.forEach(col => {
             const td = document.createElement('td');
             td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100';
-            
+
             // Handle null values
             const value = row[col];
             if (value === null || value === undefined) {
                 td.innerHTML = '<span class="text-gray-400 italic">NULL</span>';
             } else if (typeof value === 'boolean') {
-                td.innerHTML = value ? 
-                    '<span class="text-green-600 dark:text-green-400">✓</span>' : 
+                td.innerHTML = value ?
+                    '<span class="text-green-600 dark:text-green-400">✓</span>' :
                     '<span class="text-red-600 dark:text-red-400">✗</span>';
             } else {
                 td.textContent = String(value);
             }
-            
+
             tr.appendChild(td);
         });
-        
+
         tbody.appendChild(tr);
     });
-    
+
     // Update stats
     document.getElementById('resultStats').textContent = `${results.length} row${results.length !== 1 ? 's' : ''} returned`;
 }
@@ -467,14 +467,14 @@ function showToast(message, type = 'info') {
     // Create toast element
     const toast = document.createElement('div');
     toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
-        type === 'success' ? 'bg-green-500' : 
-        type === 'error' ? 'bg-red-500' : 
+        type === 'success' ? 'bg-green-500' :
+        type === 'error' ? 'bg-red-500' :
         'bg-blue-500'
     }`;
     toast.textContent = message;
-    
+
     document.body.appendChild(toast);
-    
+
     // Remove after 3 seconds
     setTimeout(() => {
         toast.remove();

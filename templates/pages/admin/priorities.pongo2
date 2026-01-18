@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Priority Management - GOTRS Admin{% endblock %}
+{% block title %}{{ t("priorities.title")|default:"Priority Management" }} - GOTRS Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -8,7 +8,7 @@
     <div class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Priority Management</h1>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("priorities.heading")|default:"Priority Management" }}</h1>
                 <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
                     Manage ticket priorities and their visual indicators
                 </p>
@@ -28,7 +28,7 @@
     <!-- Search bar -->
     <div class="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
         <div class="relative">
-            <input type="text" id="searchPriority" 
+            <input type="text" id="searchPriority"
                 class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 pl-10 pr-10 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm dark:text-white"
                 placeholder="Search priorities..." onkeyup="filterPriorities()">
             <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -81,7 +81,7 @@
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closePriorityModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
+
         <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <form id="priorityForm" onsubmit="savePriority(event)">
                 <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
@@ -92,7 +92,7 @@
                             </h3>
                             <div class="mt-4 space-y-4">
                                 <input type="hidden" id="priorityId" />
-                                
+
                                 <div>
                                     <label for="priorityName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Priority Name <span class="text-red-500">*</span>
@@ -133,7 +133,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button type="submit"
                         class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">
@@ -154,7 +154,7 @@
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        
+
         <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
@@ -169,7 +169,7 @@
                         </h3>
                         <div class="mt-2">
                             <p class="text-sm text-gray-500 dark:text-gray-400">
-                                Are you sure you want to delete this priority? This action cannot be undone.
+                                {{ t("messages.confirm.delete_priority")|default:"Are you sure you want to delete this priority? This action cannot be undone." }}
                             </p>
                             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
                                 Priority: <span id="deletePriorityName" class="font-semibold"></span>
@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', loadPriorities);
 async function loadPriorities() {
     try {
         const data = await apiFetch('/api/priorities');
-        
+
         if (data.success) {
             priorities = data.data || [];
             renderPriorities();
@@ -216,12 +216,12 @@ async function loadPriorities() {
 function renderPriorities() {
     const tbody = document.getElementById('prioritiesTableBody');
     const searchTerm = document.getElementById('searchPriority').value.toLowerCase();
-    
-    const filtered = priorities.filter(p => 
+
+    const filtered = priorities.filter(p =>
         p.name.toLowerCase().includes(searchTerm) ||
         (p.color && p.color.toLowerCase().includes(searchTerm))
     );
-    
+
     tbody.innerHTML = filtered.map(priority => `
         <tr class="priority-row">
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
@@ -237,7 +237,7 @@ function renderPriorities() {
                 ${priority.color ? `
                     <div class="flex items-center">
                         <div class="w-6 h-6 rounded" style="background-color: ${priority.color}"></div>
-                        <span class="ml-2 px-2 py-1 rounded text-xs font-medium" 
+                        <span class="ml-2 px-2 py-1 rounded text-xs font-medium"
                               style="background-color: ${priority.color}20; color: ${priority.color}">
                             Sample
                         </span>
@@ -246,17 +246,17 @@ function renderPriorities() {
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    priority.valid_id === 1 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                    priority.valid_id === 1
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                         : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                 }">
                     ${priority.valid_id === 1 ? 'Active' : 'Inactive'}
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button onclick="editPriority(${priority.id})" 
+                <button onclick="editPriority(${priority.id})"
                     class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-300 mr-3"
-                    title="Edit priority">
+                    title="{{ t("priorities.tooltips.edit")|default:"Edit priority" }}">
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
@@ -264,7 +264,7 @@ function renderPriorities() {
             </td>
         </tr>
     `).join('');
-    
+
     // Store filtered data in session
     sessionStorage.setItem('prioritySearch', document.getElementById('searchPriority').value);
 }
@@ -293,13 +293,13 @@ function closePriorityModal() {
 function editPriority(id) {
     const priority = priorities.find(p => p.id === id);
     if (!priority) return;
-    
+
     document.getElementById('modalTitle').textContent = 'Edit Priority';
     document.getElementById('priorityId').value = priority.id;
     document.getElementById('priorityName').value = priority.name;
     document.getElementById('priorityColor').value = priority.color || '';
     updateColorPreview();
-    
+
     document.getElementById('priorityModal').classList.remove('hidden');
 }
 
@@ -310,17 +310,17 @@ function updateColorPreview() {
 
 async function savePriority(event) {
     event.preventDefault();
-    
+
     const id = document.getElementById('priorityId').value;
     const data = {
         name: document.getElementById('priorityName').value,
         color: document.getElementById('priorityColor').value || null
     };
-    
+
     try {
         const url = id ? `/api/priorities/${id}` : '/api/priorities';
         const method = id ? 'PUT' : 'POST';
-        
+
         const response = await fetch(url, {
             method: method,
             headers: {
@@ -328,9 +328,9 @@ async function savePriority(event) {
             },
             body: JSON.stringify(data)
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showNotification(id ? 'Priority updated successfully' : 'Priority created successfully', 'success');
             closePriorityModal();
@@ -394,7 +394,7 @@ function showNotification(message, type) {
     } text-white z-50`;
     notification.textContent = message;
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.remove();
     }, 3000);

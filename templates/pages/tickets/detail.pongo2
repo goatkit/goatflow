@@ -376,7 +376,7 @@ function showCodeViewer(url, filename, contentType) {
                     copyToClipboard(code, true);
                 } else {
                     navigator.clipboard.writeText(code);
-                    alert('Code copied to clipboard!');
+                    alert('{{ t("messages.code_copied")|default:"Code copied to clipboard!" }}');
                 }
             };
         });

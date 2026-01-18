@@ -285,12 +285,12 @@ function webserviceForm() {
                 const result = await response.json();
 
                 if (result.success) {
-                    alert('Connection test successful!');
+                    alert('{{ t("messages.connection_test_success")|default:"Connection test successful!" }}');
                 } else {
-                    alert('Connection test failed: ' + (result.error || 'Unknown error'));
+                    alert('{{ t("messages.connection_test_failed")|default:"Connection test failed" }}: ' + (result.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
                 }
             } catch (error) {
-                alert('Error testing connection: ' + error.message);
+                alert('{{ t("messages.error_testing_connection")|default:"Error testing connection" }}: ' + error.message);
             }
         }
     };

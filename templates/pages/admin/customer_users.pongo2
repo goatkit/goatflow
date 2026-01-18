@@ -1,34 +1,34 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Customer User Management - {{ t("app.name") }}{% endblock %}
+{% block title %}{{ t("customer_users.title")|default:"Customer User Management" }} - {{ t("app.name") }}{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <!-- Page header -->
     <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Customer User Management</h1>
-            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Manage customer user accounts and access</p>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("customer_users.title")|default:"Customer User Management" }}</h1>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ t("customer_users.description")|default:"Manage customer user accounts and access" }}</p>
         </div>
-        
+
         <div class="mt-4 sm:mt-0 flex gap-3">
-            <button onclick="showImportModal()" 
+            <button onclick="showImportModal()"
                     class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                 </svg>
                 Import CSV
             </button>
-            
-            <a href="/admin/customer-users/export" 
+
+            <a href="/admin/customer-users/export"
                class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 11l3 3m0 0l3-3m-3 3V8"/>
                 </svg>
                 Export
             </a>
-            
-            <button onclick="showCreateModal()" 
+
+            <button onclick="showCreateModal()"
                     class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -45,18 +45,18 @@
                 <!-- Search -->
                 <div>
                     <label for="search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
-                    <input type="text" 
-                           id="search" 
-                           name="search" 
+                    <input type="text"
+                           id="search"
+                           name="search"
                            value="{{ search|default:"" }}"
-                           placeholder="Name, email, login..." 
+                           placeholder="Name, email, login..."
                            class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                 </div>
-                
+
                 <!-- Valid Filter -->
                 <div>
                     <label for="validFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                    <select id="validFilter" 
+                    <select id="validFilter"
                             name="valid"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                         <option value="">All</option>
@@ -64,11 +64,11 @@
                         <option value="2" {% if validFilter == "2" %}selected{% endif %}>Invalid</option>
                     </select>
                 </div>
-                
+
                 <!-- Company Filter -->
                 <div>
                     <label for="customerFilter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company</label>
-                    <select id="customerFilter" 
+                    <select id="customerFilter"
                             name="customer"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                         <option value="">All Companies</option>
@@ -79,14 +79,14 @@
                         {% endfor %}
                     </select>
                 </div>
-                
+
                 <!-- Actions -->
                 <div class="flex items-end gap-2">
-                    <button onclick="applyFilters()" 
+                    <button onclick="applyFilters()"
                             class="px-4 py-2 bg-gotrs-600 text-white rounded-md hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-gotrs-500">
                         Search
                     </button>
-                    <button onclick="clearFilters()" 
+                    <button onclick="clearFilters()"
                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500">
                         Clear
                     </button>
@@ -100,15 +100,15 @@
         <div class="px-6 py-4">
             <div class="flex items-center gap-4">
                 <span id="selectedCount" class="text-sm text-gray-600 dark:text-gray-400">0 selected</span>
-                <button onclick="bulkAction('enable')" 
+                <button onclick="bulkAction('enable')"
                         class="px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700">
                     Enable
                 </button>
-                <button onclick="bulkAction('disable')" 
+                <button onclick="bulkAction('disable')"
                         class="px-3 py-2 text-sm bg-yellow-600 text-white rounded-md hover:bg-yellow-700">
                     Disable
                 </button>
-                <button onclick="bulkAction('delete')" 
+                <button onclick="bulkAction('delete')"
                         class="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700">
                     Delete
                 </button>
@@ -119,15 +119,15 @@
     <!-- Customer Users Table -->
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Customer Users ({{ totalCount }})</h3>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("customer_users.table_heading")|default:"Customer Users" }} ({{ totalCount }})</h3>
         </div>
-        
+
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead class="bg-gray-50 dark:bg-gray-700">
                     <tr>
                         <th class="px-6 py-3 text-left">
-                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" 
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()"
                                    class="rounded border-gray-300 text-gotrs-600 focus:ring-gotrs-500">
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -157,7 +157,7 @@
                     {% for customer in customers %}
                     <tr>
                         <td class="px-6 py-4">
-                            <input type="checkbox" name="selectedUsers" value="{{ customer.id }}" onchange="updateBulkActions()" 
+                            <input type="checkbox" name="selectedUsers" value="{{ customer.id }}" onchange="updateBulkActions()"
                                    class="rounded border-gray-300 text-gotrs-600 focus:ring-gotrs-500">
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -183,7 +183,7 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <button onclick="showCustomerTickets({{ customer.id }})" 
+                            <button onclick="showCustomerTickets({{ customer.id }})"
                                     class="text-gotrs-600 dark:text-gotrs-400 hover:text-gotrs-800 dark:hover:text-gotrs-300">
                                 {{ customer.ticket_count }} ticket{% if customer.ticket_count != 1 %}s{% endif %}
                             </button>
@@ -201,35 +201,35 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex gap-2">
-                                <button onclick="editCustomer({{ customer.id }})" 
+                                <button onclick="editCustomer({{ customer.id }})"
                                         class="text-gotrs-600 dark:text-gotrs-400 hover:text-gotrs-800 dark:hover:text-gotrs-300"
-                                        title="Edit customer user">
+                                        title="{{ t("customer_users.tooltips.edit")|default:"Edit customer user" }}">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                     </svg>
                                 </button>
-                                
+
                                 {% if customer.valid_id == 1 %}
-                                    <button onclick="toggleCustomerStatus({{ customer.id }}, 2)" 
+                                    <button onclick="toggleCustomerStatus({{ customer.id }}, 2)"
                                             class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300"
-                                            title="Disable customer user">
+                                            title="{{ t("customer_users.tooltips.disable")|default:"Disable customer user" }}">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728"/>
                                         </svg>
                                     </button>
                                 {% else %}
-                                    <button onclick="toggleCustomerStatus({{ customer.id }}, 1)" 
+                                    <button onclick="toggleCustomerStatus({{ customer.id }}, 1)"
                                             class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
-                                            title="Enable customer user">
+                                            title="{{ t("customer_users.tooltips.enable")|default:"Enable customer user" }}">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
                                     </button>
                                 {% endif %}
-                                
-                                <button onclick="deleteCustomer({{ customer.id }})" 
+
+                                <button onclick="deleteCustomer({{ customer.id }})"
                                         class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                                        title="Delete customer user">
+                                        title="{{ t("customer_users.tooltips.delete")|default:"Delete customer user" }}">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                     </svg>
@@ -251,25 +251,25 @@
                 </tbody>
             </table>
         </div>
-        
+
         <!-- Pagination -->
         {% if totalPages > 1 %}
         <div class="bg-white dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 sm:px-6">
             <div class="flex-1 flex justify-between sm:justify-center">
                 <div class="flex items-center space-x-2">
                     {% if currentPage > 1 %}
-                        <a href="?page={{ currentPage|add:"-1" }}&search={{ search }}&valid={{ validFilter }}&customer={{ customerFilter }}" 
+                        <a href="?page={{ currentPage|add:"-1" }}&search={{ search }}&valid={{ validFilter }}&customer={{ customerFilter }}"
                            class="px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
                             Previous
                         </a>
                     {% endif %}
-                    
+
                     <span class="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
                         Page {{ currentPage }} of {{ totalPages }} ({{ totalCount }} total)
                     </span>
-                    
+
                     {% if currentPage < totalPages %}
-                        <a href="?page={{ currentPage|add:"1" }}&search={{ search }}&valid={{ validFilter }}&customer={{ customerFilter }}" 
+                        <a href="?page={{ currentPage|add:"1" }}&search={{ search }}&valid={{ validFilter }}&customer={{ customerFilter }}"
                            class="px-3 py-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
                             Next
                         </a>
@@ -286,63 +286,63 @@
     <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 id="modalTitle" class="text-lg font-medium text-gray-900 dark:text-white">Add Customer User</h3>
+                <h3 id="modalTitle" class="text-lg font-medium text-gray-900 dark:text-white">{{ t("customer_users.add_modal_title")|default:"Add Customer User" }}</h3>
             </div>
-            
+
             <form id="customerForm" class="px-6 py-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Basic Information -->
                     <div class="md:col-span-2">
-                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Basic Information</h4>
+                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">{{ t("customer_users.section.basic_info")|default:"Basic Information" }}</h4>
                     </div>
-                    
+
                     <div>
                         <label for="login" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Login *</label>
                         <input type="text" id="login" name="login" required
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <div>
                         <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email *</label>
                         <input type="email" id="email" name="email" required
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <div>
                         <label for="customer_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Customer ID *</label>
                         <input type="text" id="customer_id" name="customer_id" required
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <div>
                         <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
                         <input type="password" id="password" name="password"
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <!-- Personal Information -->
                     <div class="md:col-span-2 mt-4">
-                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Personal Information</h4>
+                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">{{ t("customer_users.section.personal_info")|default:"Personal Information" }}</h4>
                     </div>
-                    
+
                     <div>
                         <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
                         <input type="text" id="title" name="title"
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <div>
                         <label for="first_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">First Name</label>
                         <input type="text" id="first_name" name="first_name"
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <div>
                         <label for="last_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Name</label>
                         <input type="text" id="last_name" name="last_name"
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <div>
                         <label for="valid_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
                         <select id="valid_id" name="valid_id"
@@ -351,71 +351,71 @@
                             <option value="2">Invalid</option>
                         </select>
                     </div>
-                    
+
                     <!-- Contact Information -->
                     <div class="md:col-span-2 mt-4">
-                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Contact Information</h4>
+                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">{{ t("customer_users.section.contact_info")|default:"Contact Information" }}</h4>
                     </div>
-                    
+
                     <div>
                         <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
                         <input type="text" id="phone" name="phone"
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <div>
                         <label for="fax" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Fax</label>
                         <input type="text" id="fax" name="fax"
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <div>
                         <label for="mobile" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Mobile</label>
                         <input type="text" id="mobile" name="mobile"
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <!-- Address Information -->
                     <div class="md:col-span-2 mt-4">
-                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Address Information</h4>
+                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">{{ t("customer_users.section.address_info")|default:"Address Information" }}</h4>
                     </div>
-                    
+
                     <div class="md:col-span-2">
                         <label for="street" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Street</label>
                         <input type="text" id="street" name="street"
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <div>
                         <label for="zip" class="block text-sm font-medium text-gray-700 dark:text-gray-300">ZIP</label>
                         <input type="text" id="zip" name="zip"
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <div>
                         <label for="city" class="block text-sm font-medium text-gray-700 dark:text-gray-300">City</label>
                         <input type="text" id="city" name="city"
                                class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white">
                     </div>
-                    
+
                     <div>
                         <label for="country" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Country</label>
                         {% include "partials/forms/country_select.pongo2" with field_id="country" field_name="country" select_classes="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white" %}
                     </div>
-                    
+
                     <div class="md:col-span-2">
                         <label for="comments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Comments</label>
                         <textarea id="comments" name="comments" rows="3"
                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white"></textarea>
                     </div>
                 </div>
-                
+
                 <div class="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                    <button type="button" onclick="hideModal()" 
+                    <button type="button" onclick="hideModal()"
                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
                         Cancel
                     </button>
-                    <button type="submit" 
+                    <button type="submit"
                             class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
                         Save Customer User
                     </button>
@@ -430,16 +430,16 @@
     <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">Import Customer Users</h3>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("customer_users.import_title")|default:"Import Customer Users" }}</h3>
             </div>
-            
+
             <form id="importForm" class="px-6 py-4">
                 <div class="mb-4">
                     <label for="csv_file" class="block text-sm font-medium text-gray-700 dark:text-gray-300">CSV File</label>
                     <input type="file" id="csv_file" name="csv_file" accept=".csv" required
                            class="mt-1 block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gotrs-50 file:text-gotrs-700 hover:file:bg-gotrs-100">
                 </div>
-                
+
                 <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     <p class="mb-2">CSV should contain columns:</p>
                     <ul class="list-disc pl-5 space-y-1">
@@ -452,13 +452,13 @@
                         <li>comments</li>
                     </ul>
                 </div>
-                
+
                 <div class="flex justify-end gap-3">
-                    <button type="button" onclick="hideImportModal()" 
+                    <button type="button" onclick="hideImportModal()"
                             class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                         Cancel
                     </button>
-                    <button type="submit" 
+                    <button type="submit"
                             class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700">
                         Import
                     </button>
@@ -473,15 +473,15 @@
     <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-screen overflow-y-auto">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 id="ticketsModalTitle" class="text-lg font-medium text-gray-900 dark:text-white">Customer Tickets</h3>
+                <h3 id="ticketsModalTitle" class="text-lg font-medium text-gray-900 dark:text-white">{{ t("customer_users.tickets_title")|default:"Customer Tickets" }}</h3>
             </div>
-            
+
             <div id="ticketsContent" class="px-6 py-4">
                 <!-- Tickets will be loaded here -->
             </div>
-            
+
             <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-                <button onclick="hideTicketsModal()" 
+                <button onclick="hideTicketsModal()"
                         class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                     Close
                 </button>
@@ -496,14 +496,14 @@ function showToast(message, type = 'success') {
     // Create toast element
     const toast = document.createElement('div');
     toast.className = `fixed top-4 right-4 px-6 py-4 rounded-lg shadow-lg z-50 ${
-        type === 'success' ? 'bg-green-600 text-white' : 
-        type === 'error' ? 'bg-red-600 text-white' : 
+        type === 'success' ? 'bg-green-600 text-white' :
+        type === 'error' ? 'bg-red-600 text-white' :
         'bg-blue-600 text-white'
     }`;
     toast.textContent = message;
-    
+
     document.body.appendChild(toast);
-    
+
     // Remove after 3 seconds
     setTimeout(() => {
         toast.remove();
@@ -521,7 +521,7 @@ function showCreateModal() {
 function showEditModal(id) {
     document.getElementById('modalTitle').textContent = 'Edit Customer User';
     document.getElementById('customerForm').setAttribute('data-id', id);
-    
+
     // Load customer data
     fetch(`/admin/customer-users/${id}`)
         .then(response => response.json())
@@ -529,7 +529,7 @@ function showEditModal(id) {
             if (data.success) {
                 const customer = data.data;
                 const form = document.getElementById('customerForm');
-                
+
                 // Populate form fields
                 Object.keys(customer).forEach(key => {
                     const field = form.querySelector(`[name="${key}"]`);
@@ -537,7 +537,7 @@ function showEditModal(id) {
                         field.value = customer[key];
                     }
                 });
-                
+
                 document.getElementById('customerModal').classList.remove('hidden');
             } else {
                 showToast('Failed to load customer data: ' + data.error, 'error');
@@ -567,18 +567,18 @@ function hideTicketsModal() {
 // Form handlers
 document.getElementById('customerForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const formData = new FormData(this);
     const id = this.getAttribute('data-id');
     const url = id ? `/admin/customer-users/${id}` : '/admin/customer-users';
     const method = id ? 'PUT' : 'POST';
-    
+
     // Convert FormData to URLSearchParams for proper form encoding
     const params = new URLSearchParams();
     for (const [key, value] of formData.entries()) {
         params.append(key, value);
     }
-    
+
     fetch(url, {
         method: method,
         headers: {
@@ -604,9 +604,9 @@ document.getElementById('customerForm').addEventListener('submit', function(e) {
 
 document.getElementById('importForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const formData = new FormData(this);
-    
+
     fetch('/admin/customer-users/import', {
         method: 'POST',
         body: formData
@@ -638,12 +638,14 @@ function editCustomer(id) {
 
 function toggleCustomerStatus(id, validId) {
     const action = validId === 1 ? 'enable' : 'disable';
-    const confirmMsg = `Are you sure you want to ${action} this customer user?`;
-    
+    const confirmMsg = action === 'enable'
+        ? '{{ t("messages.confirm.enable_customer_user")|default:"Are you sure you want to enable this customer user?" }}'
+        : '{{ t("messages.confirm.disable_customer_user")|default:"Are you sure you want to disable this customer user?" }}';
+
     if (confirm(confirmMsg)) {
         const params = new URLSearchParams();
         params.append('valid_id', validId);
-        
+
         fetch(`/admin/customer-users/${id}`, {
             method: 'PUT',
             headers: {
@@ -668,7 +670,7 @@ function toggleCustomerStatus(id, validId) {
 }
 
 function deleteCustomer(id) {
-    if (confirm('Are you sure you want to delete this customer user? This action cannot be undone.')) {
+    if (confirm('{{ t("messages.confirm.delete_customer_user")|default:"Are you sure you want to delete this customer user? This action cannot be undone." }}')) {
         fetch(`/admin/customer-users/${id}`, {
             method: 'DELETE'
         })
@@ -689,18 +691,18 @@ function deleteCustomer(id) {
 }
 
 function showCustomerTickets(id) {
-    document.getElementById('ticketsModalTitle').textContent = 'Loading tickets...';
-    document.getElementById('ticketsContent').innerHTML = '<div class="text-center py-4">Loading...</div>';
+    document.getElementById('ticketsModalTitle').textContent = '{{ t("labels.loading")|default:"Loading..." }}';
+    document.getElementById('ticketsContent').innerHTML = '<div class="text-center py-4">{{ t("labels.loading")|default:"Loading..." }}</div>';
     document.getElementById('ticketsModal').classList.remove('hidden');
-    
+
     fetch(`/admin/customer-users/${id}/tickets`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 document.getElementById('ticketsModalTitle').textContent = `Customer Tickets (${data.data.length})`;
-                
+
                 if (data.data.length === 0) {
-                    document.getElementById('ticketsContent').innerHTML = '<div class="text-center py-8 text-gray-500">No tickets found</div>';
+                    document.getElementById('ticketsContent').innerHTML = '<div class="text-center py-8 text-gray-500">{{ t("labels.no_tickets_found")|default:"No tickets found" }}</div>';
                 } else {
                     let html = '<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">';
                     html += '<thead class="bg-gray-50 dark:bg-gray-700"><tr>';
@@ -711,7 +713,7 @@ function showCustomerTickets(id) {
                     html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Queue</th>';
                     html += '<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Created</th>';
                     html += '</tr></thead><tbody class="divide-y divide-gray-200 dark:divide-gray-700">';
-                    
+
                     data.data.forEach(ticket => {
                         html += '<tr>';
                         html += `<td class="px-6 py-4 text-sm"><a href="/tickets/${ticket.id}" class="text-gotrs-600 hover:text-gotrs-800">#${ticket.ticket_number || ticket.id}</a></td>`;
@@ -722,7 +724,7 @@ function showCustomerTickets(id) {
                         html += `<td class="px-6 py-4 text-sm">${ticket.create_time ? new Date(ticket.create_time).toLocaleDateString() : '-'}</td>`;
                         html += '</tr>';
                     });
-                    
+
                     html += '</tbody></table></div>';
                     document.getElementById('ticketsContent').innerHTML = html;
                 }
@@ -740,12 +742,12 @@ function applyFilters() {
     const search = document.getElementById('search').value;
     const validFilter = document.getElementById('validFilter').value;
     const customerFilter = document.getElementById('customerFilter').value;
-    
+
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (validFilter) params.append('valid', validFilter);
     if (customerFilter) params.append('customer', customerFilter);
-    
+
     window.location.search = params.toString();
 }
 
@@ -757,11 +759,11 @@ function clearFilters() {
 function toggleSelectAll() {
     const selectAll = document.getElementById('selectAll');
     const checkboxes = document.querySelectorAll('input[name="selectedUsers"]');
-    
+
     checkboxes.forEach(cb => {
         cb.checked = selectAll.checked;
     });
-    
+
     updateBulkActions();
 }
 
@@ -769,7 +771,7 @@ function updateBulkActions() {
     const checkboxes = document.querySelectorAll('input[name="selectedUsers"]:checked');
     const bulkActions = document.getElementById('bulkActions');
     const selectedCount = document.getElementById('selectedCount');
-    
+
     if (checkboxes.length > 0) {
         bulkActions.style.display = 'block';
         selectedCount.textContent = `${checkboxes.length} selected`;
@@ -785,18 +787,26 @@ function bulkAction(action) {
         showToast('No customer users selected', 'error');
         return;
     }
-    
+
     const actionName = action === 'enable' ? 'enable' : action === 'disable' ? 'disable' : 'delete';
-    if (!confirm(`Are you sure you want to ${actionName} ${checkboxes.length} customer user(s)?`)) {
+    let bulkConfirmMsg;
+    if (action === 'enable') {
+        bulkConfirmMsg = '{{ t("messages.confirm.bulk_enable_customer_users")|default:"Are you sure you want to enable the selected customer user(s)?" }}';
+    } else if (action === 'disable') {
+        bulkConfirmMsg = '{{ t("messages.confirm.bulk_disable_customer_users")|default:"Are you sure you want to disable the selected customer user(s)?" }}';
+    } else {
+        bulkConfirmMsg = '{{ t("messages.confirm.bulk_delete_customer_users")|default:"Are you sure you want to delete the selected customer user(s)?" }}';
+    }
+    if (!confirm(bulkConfirmMsg)) {
         return;
     }
-    
+
     const ids = Array.from(checkboxes).map(cb => cb.value);
-    
+
     const params = new URLSearchParams();
     params.append('action', action);
     ids.forEach(id => params.append('ids', id));
-    
+
     fetch('/admin/customer-users/bulk-action', {
         method: 'POST',
         headers: {

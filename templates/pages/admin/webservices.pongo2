@@ -141,17 +141,17 @@ async function testWebservice(id, name) {
         const result = await response.json();
 
         if (result.success) {
-            alert('Connection test successful!');
+            alert('{{ t("messages.connection_test_success")|default:"Connection test successful!" }}');
         } else {
-            alert('Connection test failed: ' + (result.error || 'Unknown error'));
+            alert('{{ t("messages.connection_test_failed")|default:"Connection test failed" }}: ' + (result.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
         }
     } catch (error) {
-        alert('Error testing connection: ' + error.message);
+        alert('{{ t("messages.error_testing_connection")|default:"Error testing connection" }}: ' + error.message);
     }
 }
 
 async function deleteWebservice(id, name) {
-    if (!confirm('Are you sure you want to delete "' + name + '"? This action cannot be undone.')) {
+    if (!confirm('{{ t("messages.confirm.delete_webservice")|default:"Are you sure you want to delete this webservice? This action cannot be undone." }}')) {
         return;
     }
 

@@ -10,6 +10,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// containsAny checks if body contains any of the given alternatives
+// Used for i18n tests where content could be either the key or the default text
+func containsAny(body string, alternatives ...string) bool {
+	for _, alt := range alternatives {
+		if strings.Contains(body, alt) {
+			return true
+		}
+	}
+	return false
+}
+
 // Test-Driven Development for UI Components
 // Tests for dark theme, navigation, and page rendering
 
@@ -190,22 +201,27 @@ func TestQueueView(t *testing.T) {
 func TestAdminView(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// checkAlternatives allows checking for i18n key OR default text
+	type checkAlternatives []string
+
 	tests := []struct {
-		name           string
-		userRole       string
-		expectedStatus int
-		checkContent   []string
+		name              string
+		userRole          string
+		expectedStatus    int
+		checkContent      []string
+		checkAlternatives []checkAlternatives // Each entry is a list of acceptable alternatives
 	}{
 		{
 			name:           "Admin dashboard loads successfully",
 			userRole:       "admin",
 			expectedStatus: http.StatusOK,
-			checkContent: []string{
-				"System Administration",
-				"User Management",
-				"System Configuration",
-				"Reports & Analytics",
-				"Audit Logs",
+			// These could be i18n keys or default English text (note: & becomes &amp; in HTML)
+			checkAlternatives: []checkAlternatives{
+				{"System Administration", "admin_dashboard.system_administration"},
+				{"User Management", "admin_dashboard.user_management"},
+				{"System Configuration", "admin_dashboard.system_configuration"},
+				{"Reports &amp; Analytics", "Reports & Analytics", "admin_dashboard.reports_analytics"},
+				{"Audit Logs", "admin_dashboard.audit_logs"},
 			},
 		},
 		{
@@ -216,8 +232,10 @@ func TestAdminView(t *testing.T) {
 				"<!DOCTYPE html>",
 				"<html",
 				"<head>",
-				"<title>Admin Dashboard - GOTRS</title>",
 				"<body",
+			},
+			checkAlternatives: []checkAlternatives{
+				{"<title>Admin Dashboard - GOTRS</title>", "pages.admin.dashboard.title"},
 			},
 		},
 		{
@@ -225,19 +243,21 @@ func TestAdminView(t *testing.T) {
 			userRole:       "admin",
 			expectedStatus: http.StatusOK,
 			checkContent: []string{
-				"System Health",
 				"99.9%",
 				"uptime",
+			},
+			checkAlternatives: []checkAlternatives{
+				{"System Health", "admin_dashboard.system_health"},
 			},
 		},
 		{
 			name:           "Admin dashboard shows recent activity",
 			userRole:       "admin",
 			expectedStatus: http.StatusOK,
-			checkContent: []string{
-				"Recent Admin Activity",
-				"User account created",
-				"System configuration updated",
+			checkAlternatives: []checkAlternatives{
+				{"Recent Admin Activity", "admin_dashboard.recent_activity"},
+				{"User account created", "admin_dashboard.activity.user_created"},
+				{"System configuration updated", "admin_dashboard.activity.system_config_updated"},
 			},
 		},
 		{
@@ -281,6 +301,12 @@ func TestAdminView(t *testing.T) {
 			body := w.Body.String()
 			for _, content := range tt.checkContent {
 				assert.Contains(t, body, content, "Missing expected content: %s", content)
+			}
+
+			// Check alternatives (i18n key OR default text)
+			for _, alts := range tt.checkAlternatives {
+				found := containsAny(body, alts...)
+				assert.True(t, found, "Missing expected content (none of alternatives found): %v", alts)
 			}
 
 			// Should not show fallback HTML

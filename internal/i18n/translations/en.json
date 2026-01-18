@@ -908,7 +908,12 @@
                 "test_success": "Configuration test successful",
                 "test_failed": "Configuration test failed",
                 "no_webservices": "No web services available. Please create a web service first."
-            }
+            },
+            "new_title": "New Dynamic Field",
+            "edit_title": "Edit Dynamic Field",
+            "create_heading": "Create Dynamic Field",
+            "edit_heading": "Edit Dynamic Field",
+            "add_button": "Add Dynamic Field"
         },
         "webservices": {
             "title": "Web Services",
@@ -1160,6 +1165,15 @@
                 "inactive": "Inactive",
                 "invalid": "Invalid",
                 "valid": "Valid"
+            },
+            "saved_filter_sets": "Saved Filter Sets",
+            "show_hide_columns": "Show/Hide Columns",
+            "no_data_available": "No data available",
+            "tooltips": {
+                "edit": "Edit",
+                "disable": "Disable",
+                "enable": "Enable",
+                "delete": "Delete"
             }
         },
         "filters": {
@@ -1236,6 +1250,12 @@
             "login_placeholder": "Message shown on the login page",
             "form_description": "Schedule a maintenance window to notify users and optionally disable logins",
             "status": "Status"
+        },
+        "variables": {
+            "ticket": "Ticket",
+            "customer": "Customer",
+            "agent": "Agent",
+            "system": "System"
         }
     },
     "agent": {
@@ -1285,7 +1305,10 @@
         "signing_in": "Signing you in...",
         "signin": "Sign In",
         "signup": "Sign Up",
-        "username": "Username"
+        "username": "Username",
+        "caps_lock_on": "Caps Lock is ON",
+        "too_many_attempts": "Too many failed attempts. Please wait",
+        "and_try_again": "and try again."
     },
     "buttons": {
         "add": "Add",
@@ -1329,7 +1352,9 @@
         "update": "Update",
         "upload": "Upload",
         "view_all": "View All",
-        "warning": "Warning"
+        "warning": "Warning",
+        "toggle_all": "Toggle All",
+        "select_all": "Select All"
     },
     "bulk_actions": {
         "change_status_title": "Change Ticket Status",
@@ -1450,7 +1475,20 @@
         "filter": "Filter",
         "all_status": "All Statuses",
         "valid_only": "Valid Only",
-        "invalid_only": "Invalid Only"
+        "invalid_only": "Invalid Only",
+        "manage": "Manage",
+        "close": "Close",
+        "add": "Add",
+        "toggle_dark_mode": "Toggle dark mode",
+        "view": "View",
+        "copy_details": "Copy Guru details",
+        "copy_to_clipboard": "Copy to clipboard",
+        "search_tokens": "Search tokens",
+        "loading_history": "Loading history...",
+        "loading_links": "Loading links...",
+        "loading_queue_details": "Loading queue details...",
+        "no_data_available": "No data available",
+        "no_results_found": "No results found"
     },
     "customer": {
         "company": "Company",
@@ -1625,13 +1663,49 @@
         "statistics": "Statistics",
         "title": "Dashboard",
         "welcome_back": "Welcome back",
-        "welcome_message": "Here's what's happening with your tickets today"
+        "welcome_message": "Here's what's happening with your tickets today",
+        "my_queues": "My Queues",
+        "no_tickets_found": "No tickets found",
+        "no_queues_assigned": "No queues assigned",
+        "stats": {
+            "my_open": "My Open",
+            "my_pending": "My Pending",
+            "unassigned": "Unassigned",
+            "new_today": "New Today",
+            "closed_today": "Closed Today",
+            "total_assigned": "Total Assigned",
+            "open_tickets": "Open Tickets",
+            "pending": "Pending",
+            "overdue": "Overdue"
+        },
+        "no_recent_tickets": "No recent tickets",
+        "no_tickets_in_system": "No tickets found in the system",
+        "tickets_count": "tickets",
+        "unassigned_count": "unassigned",
+        "realtime": {
+            "title": "Real-time Dashboard"
+        }
     },
     "dynamic_fields": {
         "title": "Additional Fields",
         "article_fields": "Article Fields",
         "additional_fields": "Additional Fields",
-        "select": "Select..."
+        "select": "Select...",
+        "heading": "Dynamic Fields Management",
+        "description": "Create and manage dynamic fields for tickets, articles, and other objects",
+        "tooltips": {
+            "edit": "Edit field",
+            "delete": "Delete field",
+            "add_new": "Add new dynamic field",
+            "apply_filters": "Apply filters",
+            "clear_filters": "Clear filters"
+        },
+        "no_dynamic_fields": "No dynamic fields",
+        "available_field_types": "Available Field Types",
+        "placeholders": {
+            "name": "MyCustomField",
+            "label": "My Custom Field"
+        }
     },
     "errors": {
         "authentication": "Authentication failed",
@@ -1726,7 +1800,15 @@
         "time": "Time",
         "to": "To",
         "type": "Type",
-        "yes": "Yes"
+        "yes": "Yes",
+        "error": "Error",
+        "loading": "Loading...",
+        "no_tickets_found": "No tickets found",
+        "no_results_found": "No results found",
+        "queue": "Queue",
+        "total": "Total",
+        "customer": "Customer",
+        "unknown": "Unknown"
     },
     "messages": {
         "access_denied": "Access denied",
@@ -1753,7 +1835,99 @@
         "success": "Success",
         "unauthorized": "Unauthorized",
         "validation_error": "Validation error",
-        "warning": "Warning"
+        "warning": "Warning",
+        "please_select": "Please select",
+        "no_selection": "No Selection",
+        "please_select_ticket": "Please select at least one ticket",
+        "not_enough_tickets": "Not Enough Tickets",
+        "select_two_to_merge": "Please select at least two tickets to merge",
+        "loading_customer_users": "Loading customer users...",
+        "confirm": {
+            "delete_customer_user": "Are you sure you want to delete this customer user? This action cannot be undone.",
+            "toggle_customer_status": "Are you sure you want to {action} this customer user?",
+            "bulk_action": "Are you sure you want to {action} {count} customer user(s)?",
+            "delete_filter_sets": "Delete all saved filter sets?",
+            "remove_user_from_group": "Are you sure you want to remove this user from the group?",
+            "lock_ticket": "Are you sure you want to lock this ticket?",
+            "proceed_action": "Are you sure you want to proceed with this action?",
+            "activate_item": "Are you sure you want to activate this item?",
+            "deactivate_item": "Are you sure you want to deactivate this item?",
+            "delete_item": "Are you sure you want to delete this item?",
+            "delete_attachment": "Are you sure you want to delete this attachment?",
+            "delete_group": "Are you sure you want to delete this group?",
+            "delete_queue": "Are you sure you want to delete this queue? All tickets in this queue will need to be reassigned. This action cannot be undone.",
+            "delete_queue_simple": "Are you sure you want to delete this queue?",
+            "delete_queues_bulk": "Are you sure you want to delete the selected queue(s)?",
+            "delete_lookup": "Are you sure you want to delete this item? This action cannot be undone.",
+            "delete_dynamic_field": "Are you sure you want to delete this dynamic field? This will also delete all stored values for this field.",
+            "delete_priority": "Are you sure you want to delete this priority? This action cannot be undone.",
+            "delete_state": "Are you sure you want to delete this state?",
+            "delete_webservice": "Are you sure you want to delete this webservice? This action cannot be undone.",
+            "delete_bulk": "Are you sure you want to delete the selected item(s)? This action cannot be undone.",
+            "activate_acl": "Are you sure you want to activate",
+            "deactivate_acl": "Are you sure you want to deactivate",
+            "activate_company": "Are you sure you want to activate this company? This will allow users from this company to access the portal.",
+            "deactivate_company": "Are you sure you want to deactivate this company? This will prevent all users from this company from accessing the portal.",
+            "enable_customer_user": "Are you sure you want to enable this customer user?",
+            "disable_customer_user": "Are you sure you want to disable this customer user?",
+            "bulk_enable_customer_users": "Are you sure you want to enable the selected customer user(s)?",
+            "bulk_disable_customer_users": "Are you sure you want to disable the selected customer user(s)?",
+            "bulk_delete_customer_users": "Are you sure you want to delete the selected customer user(s)?",
+            "enable_queue": "Are you sure you want to enable this queue?",
+            "disable_queue": "Are you sure you want to disable this queue?",
+            "activate_service": "Are you sure you want to activate this service?",
+            "deactivate_service": "Are you sure you want to deactivate this service?",
+            "activate_sla": "Are you sure you want to activate this SLA?",
+            "deactivate_sla": "Are you sure you want to deactivate this SLA?",
+            "reset_config": "Are you sure you want to reset this configuration to its default value? This action cannot be undone.",
+            "toggle_status_bulk": "Are you sure you want to toggle the status of the selected item(s)?"
+        },
+        "groups": {
+            "select_user": "Please select a user to add"
+        },
+        "validation": {
+            "please_enter_subject": "Please enter a subject",
+            "please_enter_content": "Please enter content",
+            "please_select_state": "Please select a state",
+            "please_enter_query": "Please enter a query"
+        },
+        "save_company_first": "Save the company before assigning services.",
+        "services_updated": "Services updated successfully",
+        "error_saving_field": "Error saving field",
+        "error_screen_config": "Failed to update screen configuration",
+        "error_saving_permissions": "Error saving permissions",
+        "please_select_user": "Please select a user",
+        "select_template_type": "Please select at least one template type.",
+        "connection_test_success": "Connection test successful!",
+        "error_saving_profile": "Error saving profile",
+        "error_saving_preferences": "Error saving preferences",
+        "failed_add_user": "Failed to add user",
+        "confirm_remove_user_from_role": "Are you sure you want to remove this user from the role?",
+        "failed_remove_user": "Failed to remove user",
+        "failed_update_screen_config": "Failed to update screen configuration",
+        "failed_save_field": "Failed to save field",
+        "save_company_before_services": "Save the company before assigning services.",
+        "services_updated_success": "Services updated successfully",
+        "failed_update_services": "Failed to update services",
+        "unknown_error": "Unknown error",
+        "failed_delete_signature": "Failed to delete signature",
+        "connection_test_failed": "Connection test failed",
+        "error_testing_connection": "Error testing connection",
+        "select_at_least_one_queue": "Please select at least one queue",
+        "code_copied": "Code copied to clipboard!",
+        "confirm_delete_ticket": "Are you sure you want to delete this ticket? This action cannot be undone.",
+        "please_enter_close_notes": "Please enter close notes",
+        "please_enter_reopen_reason": "Please enter a reason for reopening",
+        "please_enter_note_content": "Please enter note content.",
+        "please_enter_sql_query": "Please enter a SQL query",
+        "please_select_agent": "Please select an agent",
+        "please_select_both_users": "Please select both source and target users",
+        "error_loading_agents": "Error loading agents",
+        "error_loading_members": "Error loading members",
+        "error_loading_tables": "Error loading tables",
+        "error_loading_columns": "Error loading columns",
+        "error_loading_config": "Error loading configuration details",
+        "no_agents_available": "No agents available"
     },
     "navigation": {
         "admin": "Administration",
@@ -1789,7 +1963,19 @@
         "push_notifications": "Push Notifications",
         "settings": "Notification Settings",
         "sound": "Sound",
-        "vibration": "Vibration"
+        "vibration": "Vibration",
+        "reminder": {
+            "ticket_reminder": "Ticket reminder",
+            "reminder_ready": "Reminder is ready",
+            "overdue_by": "Overdue by",
+            "due_in": "Due in",
+            "reminder_at": "Reminder at",
+            "open_ticket": "Open Ticket",
+            "dismiss": "Dismiss reminder",
+            "ticket_label": "Ticket",
+            "snoozed_until": "Reminder snoozed until",
+            "snooze_failed": "Failed to snooze reminder"
+        }
     },
     "pagination": {
         "first": "First",
@@ -1803,7 +1989,11 @@
         "previous": "Previous",
         "showing": "Showing",
         "to": "to",
-        "total": "total"
+        "total": "total",
+        "first_page": "First page",
+        "previous_page": "Previous page",
+        "next_page": "Next page",
+        "last_page": "Last page"
     },
     "priority": {
         "critical": "Critical",
@@ -1812,7 +2002,9 @@
         "medium": "Medium",
         "normal": "Normal",
         "title": "Priority",
-        "urgent": "Urgent"
+        "urgent": "Urgent",
+        "form_heading": "Priority Details",
+        "heading": "Priorities Management"
     },
     "problems": {
         "known_error": "Known Error",
@@ -1850,7 +2042,17 @@
         "queue_status": "Queue Status",
         "search_placeholder": "Search queues...",
         "sla_rules": "SLA Rules",
-        "title": "Queues"
+        "title": "Queues",
+        "no_description": "No description",
+        "open_count": "open",
+        "total_count": "total",
+        "no_queues_available": "No queues available",
+        "tooltips": {
+            "email_configured": "Email configured",
+            "view_details": "View details",
+            "edit": "Edit"
+        },
+        "no_queues_found": "No queues found"
     },
     "search": {
         "advanced_search": "Advanced Search",
@@ -1912,7 +2114,8 @@
         "timezone": "Timezone",
         "two_factor_auth": "Two-Factor Authentication",
         "webhooks": "Webhooks",
-        "more_coming": "More settings coming soon"
+        "more_coming": "More settings coming soon",
+        "heading": "Settings"
     },
     "severity": {
         "critical": "Critical",
@@ -2047,6 +2250,9 @@
         "ticket": "Ticket",
         "ticket_number": "Ticket #",
         "tickets": "tickets",
+        "ticket_selected": "ticket selected",
+        "tickets_selected": "tickets selected",
+        "clear_selection": "Clear selection",
         "title": "Tickets",
         "to": "To",
         "type": "Type",
@@ -2059,6 +2265,7 @@
         "view_and_manage": "View and manage support tickets",
         "back_to_list": "Back to list",
         "back_to_queues": "Back to all queues",
+        "search_placeholder": "Search by ticket number, title, or customer...",
         "search_placeholder_list": "Search tickets by ID, subject, customer...",
         "all_statuses": "All Statuses",
         "all_priorities": "All Priorities",
@@ -2129,7 +2336,39 @@
             "plus_help": "Ticket will close automatically if no customer response by specified time.",
             "minus_title": "Pending Auto Close-",
             "minus_help": "Ticket will close automatically at specified time regardless of activity."
-        }
+        },
+        "all_tickets": "All Tickets",
+        "my_tickets": "My Tickets",
+        "unassigned": "Unassigned",
+        "filter": "Filter",
+        "no_tickets_found": "No tickets found matching your criteria",
+        "select_all_matching": "Select all matching tickets",
+        "select_to_use_bulk": "Select tickets to use bulk actions",
+        "showing_of": "Showing {count} of {total} tickets",
+        "compose_reply": "Compose Reply",
+        "add_internal_note": "Add Internal Note",
+        "search_tickets": "Search Tickets",
+        "customer_directory": "Customer Directory",
+        "table": {
+            "ticket": "Ticket",
+            "customer": "Customer",
+            "queue": "Queue",
+            "state": "State",
+            "age": "Age"
+        },
+        "heading": "Ticket Management",
+        "search_results_heading": "Search Results",
+        "dynamic_field_filters": "Dynamic Field Filters",
+        "apply_df_filters": "Apply DF Filters",
+        "select_for_bulk_actions": "Select tickets to use bulk actions",
+        "showing_of_total": "Showing %d of %d tickets",
+        "select_all": "Select all",
+        "matching_tickets": "matching tickets",
+        "showing": "Showing",
+        "of": "of",
+        "on_this_page": "on this page",
+        "priority_short": "Prio",
+        "assigned": "Assigned"
     },
     "tickets_form": {
         "subject_placeholder": "Brief summary of the issue...",
@@ -2182,7 +2421,13 @@
         "minutes": "minutes",
         "formats": {
             "queue_detail": "Jan 2, 2006 at 3:04 PM"
-        }
+        },
+        "years": "years",
+        "year": "year",
+        "months": "months",
+        "month": "month",
+        "weeks": "weeks",
+        "week": "week"
     },
     "user": {
         "department": "Department",
@@ -2241,5 +2486,539 @@
     },
     "welcome": {
         "greeting": "Welcome"
+    },
+    "pages": {
+        "agent": {
+            "tickets": {
+                "title": "Ticket Management",
+                "heading": "Ticket Management"
+            },
+            "dashboard": {
+                "title": "Agent Dashboard"
+            },
+            "queues": {
+                "title": "Queue Management",
+                "description": "View and manage ticket queues assigned to you"
+            }
+        },
+        "settings": {
+            "title": "Settings"
+        }
+    },
+    "tooltips": {
+        "quick_assign": "Quick Assign",
+        "view_details": "View Details"
+    },
+    "placeholders": {
+        "separate_emails": "Separate multiple emails with commas",
+        "note_subject": "Note subject",
+        "contains": "Contains..."
+    },
+    "admin_dashboard": {
+        "key_metrics": "Key metrics",
+        "system_health": "System Health",
+        "uptime_this_month": "uptime this month",
+        "system_administration": "System Administration",
+        "user_management": "User Management",
+        "user_management_desc": "Manage agent and customer accounts",
+        "group_management": "Group Management",
+        "group_management_desc": "Configure teams and escalation paths",
+        "permissions": "Permissions",
+        "permissions_desc": "Adjust agent access levels",
+        "roles": "Roles",
+        "roles_desc": "Manage roles and role-group permissions",
+        "acl": "Access Control Lists",
+        "acl_desc": "Define conditional access rules",
+        "email_identities": "Email Identities",
+        "email_identities_desc": "Manage salutations, addresses, signatures",
+        "inbound_mail": "Inbound Mail Accounts",
+        "inbound_mail_desc": "Configure POP/IMAP polling and dispatch rules",
+        "postmaster_filters": "Postmaster Filters",
+        "postmaster_filters_desc": "Configure email routing rules based on headers",
+        "auto_responses": "Auto Responses",
+        "auto_responses_desc": "Configure automatic email replies",
+        "queue_auto_responses": "Queue Auto Responses",
+        "queue_auto_responses_desc": "Link auto responses to queues",
+        "ticket_notifications": "Ticket Notifications",
+        "ticket_notifications_desc": "Configure automated notifications for ticket events",
+        "generic_agent": "Generic Agent",
+        "generic_agent_desc": "Automated ticket actions and batch jobs",
+        "signatures": "Signatures",
+        "signatures_desc": "Configure email signatures for responses",
+        "system_config": "System Configuration",
+        "system_config_desc": "Adjust global settings and behavior",
+        "audit_logs": "Audit Logs",
+        "audit_logs_desc": "Review changes and access history",
+        "customer_administration": "Customer Administration",
+        "customer_organizations": "Customer Organizations",
+        "customer_organizations_desc": "Manage companies and departments",
+        "customer_users": "Customer Users",
+        "customer_users_desc": "Individual customer accounts",
+        "customer_user_services": "Customer User Services",
+        "customer_user_services_desc": "Link customers to services",
+        "customer_portal": "Customer Portal",
+        "customer_portal_desc": "Customize the self-service interface",
+        "customer_groups": "Customer Groups",
+        "customer_groups_desc": "Organize customer access permissions",
+        "customer_user_groups": "Customer User Groups",
+        "customer_user_groups_desc": "Link customer users to customer groups",
+        "queues": "Queues",
+        "queues_desc": "Ticket routing and organization",
+        "lookups": "Lookups",
+        "lookups_desc": "Manage ticket priorities, states, types",
+        "services": "Services",
+        "services_desc": "Define service catalog entries",
+        "sla": "Service Level Agreements",
+        "sla_desc": "Configure response and resolution targets",
+        "dynamic_fields": "Dynamic Fields",
+        "dynamic_fields_desc": "Create custom ticket attributes",
+        "templates": "Templates",
+        "templates_desc": "Reusable response and email templates",
+        "attachments": "Attachments",
+        "attachments_desc": "Manage default attachment templates",
+        "recent_activity": "Recent Admin Activity",
+        "active_users_customers": "Active agents and customers",
+        "queues_monitored": "Queues monitored",
+        "system_maintenance": "System Maintenance",
+        "system_maintenance_desc": "Schedule maintenance windows and notify users",
+        "reports_analytics": "Reports & Analytics",
+        "reports_analytics_desc": "Track performance insights",
+        "queue_templates": "Queue Templates",
+        "queue_templates_desc": "Manage queue to template assignments",
+        "template_attachments": "Template Attachments",
+        "template_attachments_desc": "Manage template to attachment assignments",
+        "activity": {
+            "user_created": "User account created",
+            "config_updated": "System configuration updated",
+            "logs_reviewed": "Audit logs reviewed"
+        }
+    },
+    "groups": {
+        "members": "Group Members",
+        "add_user": "Add User to Group",
+        "select_user": "Select a user to add",
+        "add_user_btn": "Add User",
+        "current_members": "Current Members",
+        "loading_members": "Loading members...",
+        "add_group": "Add Group",
+        "confirm_delete": "Are you sure you want to delete this group?",
+        "delete_success": "Group deleted successfully",
+        "save_success": "Group saved successfully",
+        "tooltips": {
+            "add_new": "Add a new group to the system",
+            "edit": "Edit group",
+            "manage_permissions": "Manage permissions",
+            "delete": "Delete group",
+            "system_group_no_delete": "System groups cannot be deleted",
+            "remove_user": "Remove user from group",
+            "clear_search": "Clear search",
+            "clear_filters": "Clear all filters"
+        },
+        "group_form": "Group Form",
+        "group_members": "Group Members",
+        "group": "Group"
+    },
+    "customer_users": {
+        "title": "Customer User Management",
+        "description": "Manage customer user accounts and access",
+        "import_csv": "Import CSV",
+        "export": "Export",
+        "add_user": "Add Customer User",
+        "search": "Search",
+        "table_heading": "Customer Users",
+        "add_modal_title": "Add Customer User",
+        "edit_modal_title": "Edit Customer User",
+        "section": {
+            "basic_info": "Basic Information",
+            "personal_info": "Personal Information",
+            "contact_info": "Contact Information",
+            "address_info": "Address Information"
+        },
+        "import_title": "Import Customer Users",
+        "tickets_title": "Customer Tickets",
+        "tooltips": {
+            "edit": "Edit customer user",
+            "disable": "Disable customer user",
+            "enable": "Enable customer user",
+            "delete": "Delete customer user"
+        }
+    },
+    "admin_queues": {
+        "no_queues": "No queues",
+        "get_started": "Get started by creating a new queue.",
+        "new_queue": "New Queue",
+        "add_queue": "Add Queue",
+        "edit_queue": "Edit Queue",
+        "basic_info": "Basic Information",
+        "email_settings": "Email Settings",
+        "manage_email_identities": "Manage email identities",
+        "advanced_settings": "Advanced Settings",
+        "follow_up_settings": "Follow-up Settings",
+        "unlock_timeout": "Unlock Timeout",
+        "calendar": "Calendar",
+        "ticket_settings": "Ticket Settings",
+        "no_signature": "No signature selected"
+    },
+    "permissions": {
+        "title": "Permission Management",
+        "description": "Manage user permissions across groups (OTRS Role Management)",
+        "no_data": "No permissions data available",
+        "select_user": "Select a user to view permissions",
+        "no_user_selected": "No user selected",
+        "select_group": "Please select a group to modify",
+        "change_priority": "Change Priority",
+        "tooltips": {
+            "grant_all": "Selecting this will grant all permissions",
+            "select_all_group": "Select all permissions for this group",
+            "clear_all_group": "Clear all permissions for this group",
+            "clone": "Clone permissions from one user to another",
+            "ro": "Read Only",
+            "move_into": "Move tickets into queue",
+            "create": "Create tickets",
+            "note": "Add notes",
+            "owner": "Become owner",
+            "priority": "Change priority"
+        },
+        "error_saving": "Error saving permissions",
+        "heading": "Permission Management",
+        "debug_permissions": "DEBUG - Permissions",
+        "groups": "Groups:",
+        "simple_test": "Simple Permissions Test",
+        "users": "Users:",
+        "user_selection": "User Selection",
+        "permission_matrix": "Permission Matrix",
+        "debug_heading": "DEBUG - Permissions",
+        "groups_heading": "Groups:",
+        "users_heading": "Users:",
+        "standalone_heading": "Permission Management",
+        "matrix_heading": "Permission Matrix",
+        "working_heading": "Permission Management",
+        "please_select_user": "Please select a user to view permissions."
+    },
+    "sla": {
+        "title": "SLA Management",
+        "add_sla": "Add SLA",
+        "edit_sla": "Edit SLA",
+        "add_new": "Add new SLA",
+        "tooltips": {
+            "add_new": "Add new SLA",
+            "apply_filters": "Apply filters",
+            "clear_filters": "Clear all filters",
+            "edit": "Edit SLA"
+        },
+        "form_heading": "SLA Configuration"
+    },
+    "roles": {
+        "title": "Role Management",
+        "description": "Manage system roles and their permissions (OTRS AdminRole equivalent)",
+        "add_role": "Add Role",
+        "edit_role": "Edit Role",
+        "tooltips": {
+            "edit": "Edit role",
+            "manage_users": "Manage users in this role",
+            "manage_permissions": "Manage group permissions for this role"
+        },
+        "manage_users": "Manage Role Users"
+    },
+    "services": {
+        "title": "Service Management",
+        "tooltips": {
+            "edit": "Edit Service"
+        },
+        "placeholders": {
+            "name": "Enter service name",
+            "comments": "Optional comments"
+        }
+    },
+    "acl": {
+        "title": "Access Control Lists",
+        "heading": "ACL Management",
+        "description": "Access Control Lists define rules for ticket actions and permissions",
+        "add_acl": "Add ACL",
+        "tooltips": {
+            "add_new": "Add new ACL",
+            "apply_filters": "Apply filters",
+            "clear_filters": "Clear all filters",
+            "edit": "Edit ACL"
+        },
+        "modal": {
+            "add_title": "Add ACL",
+            "match_conditions": "Match Conditions (Properties)",
+            "change_actions": "Change Actions"
+        }
+    },
+    "customer_companies": {
+        "title": "Customer Companies",
+        "heading": "Customer Companies",
+        "description": "Manage customer organizations and their branded portals",
+        "tooltips": {
+            "portal_settings": "Portal Settings",
+            "manage_services": "Manage Services",
+            "edit": "Edit Company",
+            "deactivate": "Deactivate Company",
+            "activate": "Activate Company"
+        }
+    },
+    "customer_company_services": {
+        "title": "Customer Company Services",
+        "heading": "Customer Company Services"
+    },
+    "customer_company_tickets": {
+        "title": "Customer Company Tickets",
+        "heading": "Customer Company Tickets"
+    },
+    "customer_company_users": {
+        "title": "Customer Company Users",
+        "heading": "Customer Company Users"
+    },
+    "customer_portal_settings": {
+        "title": "Customer Portal Settings",
+        "heading": "Customer Portal Settings"
+    },
+    "customer_user_services": {
+        "title": "Customer User Services"
+    },
+    "dynamic_field_screens": {
+        "title": "Dynamic Field Screens",
+        "screen_configuration": "Screen Configuration"
+    },
+    "email_identities": {
+        "title": "Email Identities",
+        "heading": "Email Identities",
+        "description": "Manage outbound email identities, salutations, and signatures used by queues.",
+        "signatures": "Signatures",
+        "add_system_address": "Add System Address",
+        "add_signature": "Add Signature",
+        "system_addresses": "System Addresses",
+        "salutations": "Salutations"
+    },
+    "email_queue": {
+        "title": "Email Queue",
+        "heading": "Email Queue Management",
+        "description": "View and manage queued email messages",
+        "tooltips": {
+            "retry": "Retry sending",
+            "delete": "Delete from queue",
+            "view_details": "View details",
+            "apply_filters": "Apply filters",
+            "clear_filters": "Clear filters"
+        },
+        "queue_actions": "Queue Actions"
+    },
+    "priorities": {
+        "title": "Priority Management",
+        "heading": "Priority Management",
+        "priorities_management": "Priorities Management",
+        "tooltips": {
+            "edit": "Edit priority"
+        }
+    },
+    "roadmap": {
+        "title": "System Roadmap",
+        "quick_navigation": "Quick Navigation",
+        "current_phase": "Current Phase",
+        "module_checklist": "Module Checklist",
+        "recent_updates": "Recent Updates",
+        "performance_trends": "Performance Trends",
+        "module_health_status": "Module Health Status",
+        "features_heading": "Features",
+        "enhancements_heading": "Enhancements",
+        "fixes_heading": "Bug Fixes",
+        "other_heading": "Other Changes",
+        "heading": "Development Roadmap",
+        "error_loading": "Error Loading Roadmap"
+    },
+    "schema_discovery": {
+        "title": "Schema Discovery",
+        "heading": "Schema Discovery",
+        "sql_explorer": "SQL Query Explorer",
+        "query_results": "Query Results",
+        "query_error": "Query Error",
+        "available_tables": "Available Tables"
+    },
+    "schema_monitoring": {
+        "title": "Schema Monitoring",
+        "performance_heading": "Performance Metrics",
+        "alerts_heading": "Active Alerts",
+        "heading": "Schema Discovery Monitor",
+        "module_health_status": "Module Health Status",
+        "loading_status": "Loading module status..."
+    },
+    "types": {
+        "title": "Ticket Types",
+        "heading": "Ticket Type Management",
+        "add_new_type": "Add New Type",
+        "form_heading": "Type Configuration",
+        "tooltips": {
+            "edit": "Edit type"
+        }
+    },
+    "realtime_dashboard": {
+        "title": "Real-time Dashboard"
+    },
+    "error": {
+        "title": "Error"
+    },
+    "customer_groups": {
+        "heading": "Customer Group Permissions",
+        "about_heading": "About Customer Group Permissions"
+    },
+    "group_permissions": {
+        "title": "Group Permissions",
+        "queue_permissions": "Queue Permissions",
+        "queues": "Queues",
+        "permission_matrix": "Permission Matrix"
+    },
+    "dynamic_test": {
+        "title": "Dynamic Module Testing",
+        "testing_instructions": "Testing Instructions",
+        "heading": "Dynamic Module Testing"
+    },
+    "group_form": {
+        "title": "Group Form",
+        "heading": "Group Form"
+    },
+    "group_members": {
+        "title": "Group Members",
+        "heading": "Group Members"
+    },
+    "group_view": {
+        "title": "Group",
+        "heading": "Group Details"
+    },
+    "permissions_working": {
+        "title": "Permission Management"
+    },
+    "state": {
+        "title": "State Management",
+        "form_heading": "State Details",
+        "heading": "States Management"
+    },
+    "admin_tickets": {
+        "title": "Tickets"
+    },
+    "ticket": {
+        "attachments": "Attachments",
+        "states": {
+            "pending_reminder": "pending reminder",
+            "new": "New",
+            "open": "Open",
+            "pending": "Pending",
+            "closed": "Closed"
+        }
+    },
+    "role_permissions": {
+        "tooltips": {
+            "ro": "Read Only",
+            "move_into": "Move Into",
+            "create": "Create",
+            "owner": "Owner",
+            "priority": "Priority",
+            "note": "Note",
+            "select_all": "Select All",
+            "select_none": "Select None"
+        }
+    },
+    "role_users": {
+        "heading": "Users in Role",
+        "no_users": "No users assigned",
+        "get_started": "Get started by adding users to this role.",
+        "tooltips": {
+            "remove": "Remove from role"
+        },
+        "modal": {
+            "title": "Add User to Role",
+            "select_user": "Select User",
+            "add_user": "Add User"
+        }
+    },
+    "customer_company_form": {
+        "branding": "Branding",
+        "features": "Features",
+        "assigned_services": "Assigned Services",
+        "portal_settings": "Portal Settings",
+        "company_details": "Company Details"
+    },
+    "queue_detail": {
+        "tickets_in_queue": "Tickets in this queue",
+        "no_tickets": "No tickets in this queue",
+        "ticket_list_heading": "Tickets in Queue",
+        "ticket_assignments_heading": "Ticket Assignments",
+        "recent_tickets": "Recent Tickets",
+        "title": "Queue",
+        "description": "Queue Details and Statistics",
+        "back_to_queues": "Back to Queues",
+        "queue_id": "Queue ID",
+        "queue_name": "Queue Name",
+        "group_id": "Group ID",
+        "no_description": "No description available"
+    },
+    "entity_selector": {
+        "add_new": "Add New",
+        "select_items": "Select Items",
+        "selected_items": "Selected Items",
+        "added": "Added",
+        "removed": "Removed",
+        "undo": "Undo",
+        "no_members": "No members yet",
+        "no_results": "No results found",
+        "type_to_search": "Type at least {min} characters to search",
+        "type_to_search_hint": "Type at least 2 characters to search",
+        "manage_members": "Manage Members"
+    },
+    "customer_group_by_group": {
+        "customer_permissions": "Customer Permissions"
+    },
+    "customer_group_edit": {
+        "group_permissions": "Group Permissions"
+    },
+    "dynamic_field_form": {
+        "field_configuration": "Field Configuration",
+        "basic_information": "Basic Information"
+    },
+    "states": {
+        "heading": "States Management"
+    },
+    "realtime": {
+        "ticket_volume": "Ticket Volume (24h)",
+        "heading": "Real-Time Dashboard",
+        "queue_distribution": "Queue Distribution",
+        "queue_status": "Queue Status",
+        "active_alerts": "Active Alerts",
+        "recent_tickets": "Recent Tickets",
+        "no_tickets": "No tickets",
+        "stats": {
+            "open_tickets": "Open Tickets",
+            "avg_response_time": "Avg Response Time",
+            "active_agents": "Active Agents"
+        }
+    },
+    "profile": {
+        "settings": "Settings"
+    },
+    "ticket_detail": {
+        "additional_information": "Additional Information",
+        "history": "History",
+        "links": "Links"
+    },
+    "customer_group": {
+        "edit_heading": "Edit Customer Group Permissions",
+        "by_group_heading": "Customer Permissions by Group",
+        "group_permissions": "Group Permissions",
+        "customer_permissions": "Customer Permissions"
+    },
+    "customer_portal": {
+        "placeholders": {
+            "title": "Customer Portal",
+            "footer": "Powered by GOTRS"
+        }
+    },
+    "queue": {
+        "stats": {
+            "open_tickets": "Open Tickets",
+            "total_tickets": "Total Tickets",
+            "pending_tickets": "Pending",
+            "closed_tickets": "Closed"
+        }
     }
 }

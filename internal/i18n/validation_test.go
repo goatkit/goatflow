@@ -63,6 +63,13 @@ func TestTranslationCompleteness(t *testing.T) {
 					translation := i18n.T(lang, key)
 					if translation == key {
 						untranslated = append(untranslated, key)
+					} else if lang != "en" {
+						// For non-English languages, also check if translation matches English
+						// (indicates placeholder/untranslated content)
+						enTranslation := i18n.T("en", key)
+						if translation == enTranslation {
+							untranslated = append(untranslated, key)
+						}
 					}
 				}
 			}

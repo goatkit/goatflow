@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Permission Management - GOTRS{% endblock %}
+{% block title %}{{ t("permissions_working.title")|default:"Permission Management" }} - GOTRS{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -8,7 +8,7 @@
     <div class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Permission Management</h1>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("permissions.working_heading")|default:"Permission Management" }}</h1>
                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Manage user permissions across groups</p>
             </div>
         </div>
@@ -39,7 +39,7 @@
                 Permissions for: {{ PermissionMatrix.User.FirstName }} {{ PermissionMatrix.User.LastName }}
             </h2>
         </div>
-        
+
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead class="bg-gray-50 dark:bg-gray-700">
@@ -77,7 +77,7 @@
     </div>
     {% else %}
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-8 text-center">
-        <p class="text-gray-500 dark:text-gray-400">Please select a user to view permissions.</p>
+        <p class="text-gray-500 dark:text-gray-400">{{ t("permissions.please_select_user")|default:"Please select a user to view permissions." }}</p>
     </div>
     {% endif %}
 </div>

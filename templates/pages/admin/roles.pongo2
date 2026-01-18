@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Role Management - GOTRS Admin{% endblock %}
+{% block title %}{{ t("roles.title")|default:"Role Management" }} - GOTRS Admin{% endblock %}
 
 {% block content %}
 <style>
@@ -19,8 +19,8 @@ input[name="permissions"]:disabled + span {
     <div class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Role Management</h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Manage system roles and their permissions (OTRS AdminRole equivalent)</p>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("roles.title")|default:"Role Management" }}</h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ t("roles.description")|default:"Manage system roles and their permissions (OTRS AdminRole equivalent)" }}</p>
             </div>
             <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
                 <button
@@ -114,7 +114,7 @@ input[name="permissions"]:disabled + span {
                                     <button
                                         onclick="editRole('{{ role.ID }}')"
                                         class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-300"
-                                        title="Edit role"
+                                        title="{{ t("roles.tooltips.edit")|default:"Edit role" }}"
                                     >
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -123,7 +123,7 @@ input[name="permissions"]:disabled + span {
                                     <button
                                         onclick="viewRoleUsers('{{ role.ID }}')"
                                         class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                                        title="Manage users in this role"
+                                        title="{{ t("roles.tooltips.manage_users")|default:"Manage users in this role" }}"
                                     >
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -132,7 +132,7 @@ input[name="permissions"]:disabled + span {
                                     <a
                                         href="/admin/roles/{{ role.ID }}/permissions"
                                         class="text-purple-600 hover:text-purple-900 dark:text-purple-400 dark:hover:text-purple-300"
-                                        title="Manage group permissions for this role"
+                                        title="{{ t("roles.tooltips.manage_permissions")|default:"Manage group permissions for this role" }}"
                                     >
                                         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -273,7 +273,7 @@ input[name="permissions"]:disabled + span {
 </div>
 
 <!-- Manage Role Users Modal - Using GoatKit Entity Selector Component -->
-{% include "partials/components/entity_selector.pongo2" with es_id="roleUsersModal" es_title="Manage Role Users" es_icon="fa-users" es_search_endpoint="/admin/roles/{parentId}/users/search" es_members_endpoint="/admin/roles/{parentId}/users" es_add_endpoint="/admin/roles/{parentId}/users" es_remove_endpoint="/admin/roles/{parentId}/users/{entityId}" es_display_primary="login" es_display_secondary="first_name last_name" %}
+{% include "partials/components/entity_selector.pongo2" with es_id="roleUsersModal" es_title=t("roles.manage_users")|default:"Manage Role Users" es_icon="fa-users" es_search_endpoint="/admin/roles/{parentId}/users/search" es_members_endpoint="/admin/roles/{parentId}/users" es_add_endpoint="/admin/roles/{parentId}/users" es_remove_endpoint="/admin/roles/{parentId}/users/{entityId}" es_display_primary="login" es_display_secondary="first_name last_name" %}
 
 <!-- Toast Container -->
 <div id="toast-container" class="fixed bottom-0 right-0 p-6 z-50 pointer-events-none"></div>

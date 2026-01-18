@@ -100,14 +100,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
   - API helper for easy integration with ticket handlers
   - Unit tests and integration tests against live database
   - Files: `internal/models/acl.go`, `internal/repository/acl_repository.go`, `internal/services/acl/service.go`, `internal/api/acl_helper.go`
-- **i18n Expansion**: Extended language support from 8 to 15 languages (12 at 100% coverage)
-  - Added Japanese (ja) - 100% complete with native translations
-  - Added Russian (ru) - 100% complete with Cyrillic translations, ₽ currency support
-  - Added Ukrainian (uk) - 100% complete with distinct Ukrainian vocabulary, ₴ currency support
-  - Added Urdu (ur) - 100% complete with RTL support
-  - Added Hebrew (he) - 99.4% coverage with RTL support
-  - Added Chinese (zh) - 98.4% coverage
-  - Added Persian (fa) - 91.3% coverage with RTL and Persian numerals
+- **i18n Expansion**: Extended language support from 8 to 15 languages with extensive native translations across the UI
+  - Added Japanese (ja) with full native phrasing and typographic conventions
+  - Added Russian (ru) with comprehensive Cyrillic translations and ₽ currency support
+  - Added Ukrainian (uk) with dedicated Ukrainian vocabulary and ₴ currency support
+  - Added Urdu (ur) including full RTL handling
+  - Added Hebrew (he) with broad RTL coverage and localized phrasing
+  - Added Chinese (zh) with extensive Simplified Chinese copy
+  - Added Persian (fa) with deep RTL support and Persian numerals
   - Language configs in `rtl.go` include locale-specific date/time/number/currency formatting
   - `GetEnabledLanguages()` now auto-detects languages based on JSON file existence
 - **Customer Groups Admin**: Full CRUD interface at `/admin/customer-groups` for managing customer company group permissions (OTRS AdminCustomerGroup equivalent)
@@ -196,7 +196,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
 
 ### Changed
 - **Humanized Duration Display**: Reminder toast notifications now show overdue/due times in human-readable format (e.g., "4 months" instead of "3390h 20m") for periods exceeding 2 days
-- **Translation Coverage Test Output**: `TestTranslationCompleteness` now prints a formatted ASCII table showing all language coverage with checkmarks for 100% complete languages
+- **Translation Coverage Test Output**: `TestTranslationCompleteness` now prints a formatted ASCII table showing every enabled language and highlights the ones that are fully translated
 - **Test Runner Enhancement**: `scripts/test-runner.sh` now tracks individual test counts (not just packages) and displays the i18n coverage table in the summary output
 - **http-call Script**: `scripts/http-call.sh` now uses JSON API login to extract `access_token` via Bearer authentication instead of cookie-based session handling
 

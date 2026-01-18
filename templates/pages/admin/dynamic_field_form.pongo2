@@ -1,6 +1,6 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}{% if IsNew %}New{% else %}Edit{% endif %} Dynamic Field - GOTRS Admin{% endblock %}
+{% block title %}{% if IsNew %}{{ t("admin.dynamic_fields.new_title")|default:"New Dynamic Field" }}{% else %}{{ t("admin.dynamic_fields.edit_title")|default:"Edit Dynamic Field" }}{% endif %} - GOTRS Admin{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
@@ -9,7 +9,7 @@
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-                    {% if IsNew %}Create Dynamic Field{% else %}Edit Dynamic Field{% endif %}
+                    {% if IsNew %}{{ t("admin.dynamic_fields.create_heading")|default:"Create Dynamic Field" }}{% else %}{{ t("admin.dynamic_fields.edit_heading")|default:"Edit Dynamic Field" }}{% endif %}
                 </h1>
                 <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
                     {% if IsNew %}Define a new custom field for your data{% else %}Modify the dynamic field configuration{% endif %}
@@ -45,7 +45,7 @@
         >
             <!-- Basic Information -->
             <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Basic Information</h3>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("dynamic_field_form.basic_information")|default:"Basic Information" }}</h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Name -->
@@ -62,7 +62,7 @@
                             required
                             {% if not IsNew and Field.InternalField == 1 %}readonly{% endif %}
                             class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                            placeholder="MyCustomField"
+                            placeholder="{{ t("dynamic_fields.placeholders.name")|default:"MyCustomField" }}"
                         >
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Alphanumeric only, no spaces or special characters</p>
                     </div>
@@ -79,7 +79,7 @@
                             value="{{ Field.Label }}"
                             required
                             class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                            placeholder="My Custom Field"
+                            placeholder="{{ t("dynamic_fields.placeholders.label")|default:"My Custom Field" }}"
                         >
                         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Display label shown to users</p>
                     </div>
@@ -179,7 +179,7 @@
 
             <!-- Type-Specific Configuration -->
             <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Field Configuration</h3>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("dynamic_field_form.field_configuration")|default:"Field Configuration" }}</h3>
 
                 <!-- Auto-config info message -->
                 <div x-show="autoConfig && supportsAutoConfig()" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -387,7 +387,7 @@
                                     id="invoker_search"
                                     value="{% if Field.Config %}{{ Field.Config.InvokerSearch }}{% endif %}"
                                     class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                                    placeholder="Search"
+                                    placeholder="{{ t("common.search")|default:"Search" }}"
                                 >
                                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.invoker_search_hint") }}</p>
                             </div>
@@ -596,9 +596,9 @@ document.getElementById('dynamicFieldForm').addEventListener('htmx:afterRequest'
     if (xhr.status >= 400) {
         try {
             const response = JSON.parse(xhr.responseText);
-            alert('Error: ' + (response.error || 'Failed to save field'));
+            alert('Error: ' + (response.error || '{{ t("messages.failed_save_field")|default:"Failed to save field" }}'));
         } catch (e) {
-            alert('Error saving field');
+            alert('{{ t("messages.error_saving_field")|default:"Error saving field" }}');
         }
     }
 });

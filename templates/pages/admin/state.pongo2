@@ -1,26 +1,26 @@
 {% extends "layouts/base.pongo2" %}
 <!-- Modals disabled in test parse mode -->
 
-{% block title %}States Management{% endblock %}
+{% block title %}{{ t("state.title")|default:"State Management" }}{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-6">
     <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">States Management</h1>
+        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ t("state.heading")|default:"States Management" }}</h1>
         <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Manage ticket states</p>
     </div>
 
     <!-- Action Bar -->
     <div class="mb-4 flex justify-between items-center">
         <div class="flex space-x-2">
-            <button onclick="openCreateModal()" 
+            <button onclick="openCreateModal()"
                     class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
                 <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 New State
             </button>
-            <button onclick="exportToCSV()" 
+            <button onclick="exportToCSV()"
                     class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors">
                 <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -34,7 +34,7 @@
     <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
             <div class="flex justify-between items-center">
-                <input type="text" 
+                <input type="text"
                        id="searchInput"
                        placeholder="Search..."
                        class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
@@ -90,7 +90,7 @@
                     {% empty %}
                     <tr>
                         <td colspan="100%" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                            No data available
+                            {{ t("common.no_data_available")|default:"No data available" }}
                         </td>
                     </tr>
                     {% endfor %}
@@ -117,7 +117,7 @@ function openCreateModal() {
 function editItem(id) {
     currentEditId = id;
     document.querySelector('#state_modal h3').textContent = 'Edit State';
-    
+
     fetch(`${API_BASE}/${id}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -137,11 +137,11 @@ function editItem(id) {
 // Form submission
 document.getElementById('state_form').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const formData = new FormData(this);
     const url = currentEditId ? `${API_BASE}/${currentEditId}` : API_BASE;
     const method = currentEditId ? 'PUT' : 'POST';
-    
+
     fetch(url, {
         method: method,
         headers: {
@@ -168,7 +168,7 @@ function showToast(message, type = 'info') {
     toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white shadow-lg transition-opacity duration-500 ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'}`;
     toast.textContent = message;
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 500);

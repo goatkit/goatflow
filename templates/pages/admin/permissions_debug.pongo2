@@ -4,13 +4,13 @@
     <title>DEBUG</title>
 </head>
 <body>
-    <h1>DEBUG - Permissions</h1>
-    
+    <h1>{{ t("permissions.debug_heading")|default:"DEBUG - Permissions" }}</h1>
+
     <p>Testing basic variables...</p>
     <p>Users: {{ Users|length }}</p>
     <p>Groups: {{ Groups|length }}</p>
     <p>Selected User ID: {{ SelectedUserID }}</p>
-    
+
     <p>Testing matrix existence...</p>
     {% if PermissionMatrix %}
         <p>Matrix exists: Yes</p>

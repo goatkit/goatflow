@@ -2802,8 +2802,18 @@ test-integration: test-stack-up
 	 ./scripts/integration-test.sh
 
 #########################################
+# i18n CHECKS
+#########################################
+
+# Check for hardcoded UI text that should use i18n
+.PHONY: check-i18n
+check-i18n:
+	@printf "🌐 Checking for hardcoded UI text...\n"
+	@./scripts/check-hardcoded-text.sh --strict
+
+#########################################
 # TEST OVERRIDES
 #########################################
 
-# Main test target
-test: test-comprehensive
+# Main test target (includes i18n check)
+test: check-i18n test-comprehensive

@@ -8,10 +8,10 @@
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-6">Permission Management</h1>
-        
+        <h1 class="text-3xl font-bold mb-6">{{ t("permissions.standalone_heading")|default:"Permission Management" }}</h1>
+
         <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 class="text-lg font-semibold mb-4">User Selection</h2>
+            <h2 class="text-lg font-semibold mb-4">{{ t("permissions.user_selection")|default:"User Selection" }}</h2>
             <select class="border rounded px-3 py-2">
                 <option>Select a user...</option>
                 {% for user in Users %}
@@ -19,13 +19,13 @@
                 {% endfor %}
             </select>
         </div>
-        
+
         <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-lg font-semibold mb-4">Permission Matrix</h2>
-            
+            <h2 class="text-lg font-semibold mb-4">{{ t("permissions.matrix_heading")|default:"Permission Matrix" }}</h2>
+
             {% if PermissionMatrix %}
                 <p class="mb-4">User: {{ PermissionMatrix.User.FirstName }} {{ PermissionMatrix.User.LastName }}</p>
-                
+
                 <table class="min-w-full border">
                     <thead>
                         <tr>
@@ -57,7 +57,7 @@
                     </tbody>
                 </table>
             {% else %}
-                <p>Please select a user to view permissions.</p>
+                <p>{{ t("permissions.please_select_user")|default:"Please select a user to view permissions." }}</p>
             {% endif %}
         </div>
     </div>

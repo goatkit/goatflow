@@ -151,6 +151,16 @@ func (a *HTMLAsserter) Contains(expected string) {
 	assert.Contains(a.t, a.html, expected)
 }
 
+// ContainsAny checks if HTML contains at least one of the given strings.
+func (a *HTMLAsserter) ContainsAny(options ...string) {
+	for _, opt := range options {
+		if strings.Contains(a.html, opt) {
+			return
+		}
+	}
+	assert.Fail(a.t, "HTML should contain at least one of the expected strings", "Expected one of: %v", options)
+}
+
 // NotContains checks if HTML does not contain a string.
 func (a *HTMLAsserter) NotContains(unexpected string) {
 	assert.NotContains(a.t, a.html, unexpected)

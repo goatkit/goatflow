@@ -61,7 +61,7 @@ func TestTranslationKeys(t *testing.T) {
 		// German translations
 		{"German app name", "de", "app.name", "GOTRS", true},
 		{"German dashboard", "de", "navigation.dashboard", "Übersicht", true},
-		{"German queues", "de", "navigation.queues", "Queues", true},
+		{"German queues", "de", "navigation.queues", "Warteschlangen", true},
 		{"German admin dashboard", "de", "admin.dashboard", "Admin-Dashboard", true},
 		{"German queue new", "de", "queues.new_queue", "Neue Queue", true},
 
