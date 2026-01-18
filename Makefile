@@ -2268,6 +2268,13 @@ check-translations:
 	@printf "Checking for untranslated keys in UI...\n"
 	@./scripts/check-translations.sh
 
+CHECK_I18N_ARGS ?=
+
+.PHONY: check-i18n
+check-i18n:
+	@printf "🌐 Checking for hardcoded UI text...\n"
+	@./scripts/check-hardcoded-text.sh $(CHECK_I18N_ARGS)
+
 # Run E2E tests with headed browser for debugging
 test-e2e-playwright-debug: playwright-build
 	@printf "Running E2E tests in debug mode (headed browser)...\n"
@@ -2815,5 +2822,5 @@ check-i18n:
 # TEST OVERRIDES
 #########################################
 
-# Main test target (includes i18n check)
+# Main test target
 test: check-i18n test-comprehensive
