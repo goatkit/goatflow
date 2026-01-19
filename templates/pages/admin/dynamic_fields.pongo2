@@ -119,6 +119,10 @@
                                         {% if field.FieldType == 'Checkbox' %}bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100{% endif %}
                                         {% if field.FieldType == 'Date' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100{% endif %}
                                         {% if field.FieldType == 'DateTime' %}bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100{% endif %}
+                                        {% if field.FieldType == 'WebserviceDropdown' %}bg-cyan-100 text-cyan-800 dark:bg-cyan-800 dark:text-cyan-100{% endif %}
+                                        {% if field.FieldType == 'WebserviceMultiselect' %}bg-teal-100 text-teal-800 dark:bg-teal-800 dark:text-teal-100{% endif %}
+                                        {% if field.FieldType == 'ActivityID' %}bg-rose-100 text-rose-800 dark:bg-rose-800 dark:text-rose-100{% endif %}
+                                        {% if field.FieldType == 'ProcessID' %}bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100{% endif %}
                                     ">
                                         {{ field.FieldType }}
                                     </span>
@@ -203,6 +207,10 @@
                     {% if fieldType == 'Checkbox' %}bg-green-100 text-green-800{% endif %}
                     {% if fieldType == 'Date' %}bg-yellow-100 text-yellow-800{% endif %}
                     {% if fieldType == 'DateTime' %}bg-orange-100 text-orange-800{% endif %}
+                    {% if fieldType == 'WebserviceDropdown' %}bg-cyan-100 text-cyan-800{% endif %}
+                    {% if fieldType == 'WebserviceMultiselect' %}bg-teal-100 text-teal-800{% endif %}
+                    {% if fieldType == 'ActivityID' %}bg-rose-100 text-rose-800{% endif %}
+                    {% if fieldType == 'ProcessID' %}bg-amber-100 text-amber-800{% endif %}
                 ">
                     {{ fieldType }}
                 </span>

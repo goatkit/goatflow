@@ -2,6 +2,9 @@
 package middleware
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -50,8 +53,36 @@ func RequireQueueAccess(permType string) gin.HandlerFunc {
 			queueIDStr = c.Query("queue_id")
 		}
 		if queueIDStr == "" {
-			// Try to get from form/JSON body
+			// Try to get from form data
 			queueIDStr = c.PostForm("queue_id")
+		}
+
+		if queueIDStr == "" {
+			// Try to get from JSON body - read body and restore it for downstream handlers
+			if c.Request.Body != nil && c.ContentType() == "application/json" {
+				bodyBytes, err := io.ReadAll(c.Request.Body)
+				if err == nil && len(bodyBytes) > 0 {
+					// Restore the body for downstream handlers
+					c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+					// Parse JSON to extract queue_id
+					var jsonBody map[string]interface{}
+					if json.Unmarshal(bodyBytes, &jsonBody) == nil {
+						if queueVal, ok := jsonBody["queue_id"]; ok && queueVal != nil {
+							switch v := queueVal.(type) {
+							case string:
+								queueIDStr = v
+							case float64:
+								queueIDStr = strconv.FormatInt(int64(v), 10)
+							case int:
+								queueIDStr = strconv.Itoa(v)
+							case int64:
+								queueIDStr = strconv.FormatInt(v, 10)
+							}
+						}
+					}
+				}
+			}
 		}
 
 		if queueIDStr == "" {
