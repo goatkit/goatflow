@@ -4,20 +4,44 @@ Current status, past releases, and future plans for GOTRS.
 
 ## 🚀 Current Status
 
-**Version**: 0.5.0 (January 2026) - MVP Release
+**Version**: 0.6.1 (January 2026) - Automation & Access Control
 
 GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed as an OTRS-compatible replacement.
 
 ### What Works
-- Agent Interface: Full ticket management
+- Agent Interface: Full ticket management with bulk actions
 - Customer Portal: Login, submission, replies, closure
-- Email Integration: POP3/IMAP + RFC-compliant threading
+- Email Integration: POP3/IMAP + RFC-compliant threading + auto-responses
 - Database: MySQL/MariaDB and PostgreSQL
-- 14+ Admin Modules
+- Automation: GenericAgent, ACLs, SLA escalations
+- Integration: GenericInterface with REST/SOAP transports
+- Security: Group-based queue permissions, session management
+- i18n: 15 languages including RTL support
+- Deployment: Docker Compose and Kubernetes Helm chart
 
 ---
 
 ## 📜 Past Releases
+
+### [0.6.1] - January 17, 2026
+
+**Automation & Access Control**
+
+- GenericAgent execution engine for scheduled ticket processing
+- ACL evaluation engine for dynamic form filtering
+- GenericInterface framework (REST + SOAP transports)
+- Group-based queue permission enforcement
+- 15 languages with RTL support (ar, he, fa, ur)
+- 12 new admin modules (sessions, maintenance, postmaster filters, etc.)
+- Webservice dynamic field types (dropdown, multiselect)
+
+### [0.5.1] - January 9, 2026
+
+**Polish & Portability**
+
+- PostgreSQL support alongside MySQL/MariaDB
+- Enhanced customer portal
+- Improved test coverage
 
 ### [0.5.0] - January 3, 2026
 
@@ -60,25 +84,11 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 
 ## 🔮 Future Roadmap
 
-### 0.6.0 - March 2026
-
-**Stabilization & Completions**
-- ~~Admin module coverage to 51% (44/87 OTRS modules)~~ ✅ Done
-- ~~SLA escalation engine~~ ✅ Done
-- ~~Generic Agent execution engine~~ ✅ Done
-- ~~ACL execution engine~~ ✅ Done
-- ~~Bulk ticket actions~~ ✅ Done
-- ~~Kubernetes Helm chart~~ ✅ Done
-- ~~Email automation (mail accounts, auto-responses, notifications)~~ ✅ Done
-- ~~Session management with enforcement~~ ✅ Done
-- ~~System maintenance scheduling~~ ✅ Done
-- ~~GenericInterface framework (REST/SOAP transports)~~ ✅ Done
-
 ### 0.7.0 - June 2026
 
 **Enhancements**
 - Reporting and analytics
-- Workflow automation
+- Workflow automation (Process Management)
 - Knowledge base
 - REST API v2
 
@@ -98,8 +108,11 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 | Version | Date | Status |
 |---------|------|--------|
 | 1.0.0 | Q4 2026 | 🔮 Future |
+| 0.9.0 | Jun 2026 | 🔮 Future |
+| 0.8.0 | Jun 2026 | 🔮 Future |
 | 0.7.0 | Jun 2026 | 🔮 Future |
-| 0.6.0 | Mar 2026 | 🔮 Future |
+| 0.6.1 | Jan 2026 | ✅ Released (Current) |
+| 0.5.1 | Jan 2026 | ✅ Released |
 | 0.5.0 | Jan 2026 | ✅ Released (MVP) |
 | 0.4.0 | Oct 2025 | ✅ Released |
 | 0.3.0 | Sep 2025 | ✅ Released |
@@ -110,4 +123,4 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 
 ## Get Involved
 
-Want to influence the roadmap? {{< discord "Join our Discord" >}} or open a [GitHub Discussion](https://github.com/gotrs-io/gotrs-ce/discussions).
+Want to influence the roadmap? [Join our Discord](https://discord.gg/gotrs) or open a [GitHub Discussion](https://github.com/gotrs-io/gotrs-ce/discussions).
