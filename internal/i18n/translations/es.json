@@ -1142,6 +1142,37 @@
             "user": "Usuario",
             "warning_logout_all": "Esto desconectará a todos los usuarios excepto a usted."
         },
+        "ticket_attribute_relations": {
+            "title": "Relaciones de Atributos de Ticket",
+            "description": "Definir relaciones entre atributos de ticket para filtrar opciones de desplegable dinámicamente",
+            "import_file": "Importar archivo CSV o Excel",
+            "priority": "Prioridad",
+            "attribute": "Atributo",
+            "filename": "Nombre de archivo",
+            "file": "Archivo",
+            "file_hint": "Cargue un archivo CSV (UTF-8) o Excel (.xlsx) con dos columnas. La primera fila debe contener nombres de atributos de ticket válidos (p.ej., Queue, State, DynamicField_Category).",
+            "download_file": "Descargar archivo importado anteriormente",
+            "add_missing_values": "Agregar valores posibles de campo dinámico faltantes",
+            "add_missing_values_hint": "Si está marcado, los valores del archivo que no estén en la configuración del campo dinámico se agregarán automáticamente.",
+            "attribute_values": "Valores de Atributo",
+            "missing_values_hint": "Los valores mostrados en rojo faltan en la configuración de valores posibles del campo dinámico.",
+            "no_relations": "No se encontraron relaciones de atributos de ticket. Importe un archivo CSV o Excel para crear una.",
+            "delete_relation": "Eliminar Relación",
+            "confirm_delete": "¿Está seguro de que desea eliminar esta relación de atributos de ticket? Esta acción no se puede deshacer.",
+            "created": "Relación de atributos de ticket creada exitosamente",
+            "updated": "Relación de atributos de ticket actualizada exitosamente",
+            "deleted": "Relación de atributos de ticket eliminada exitosamente",
+            "reorder_success": "Orden de prioridad guardado exitosamente",
+            "reorder_error": "Error al guardar el orden de prioridad",
+            "errors": {
+                "file_required": "Se requiere un archivo para crear una nueva relación",
+                "invalid_file_type": "Tipo de archivo no válido. Solo se admiten archivos CSV y Excel (.xlsx).",
+                "parse_failed": "Error al analizar el archivo",
+                "invalid_columns": "El archivo debe tener exactamente dos columnas con nombres de atributos válidos",
+                "duplicate_filename": "Ya existe una relación con este nombre de archivo",
+                "not_found": "Relación de atributos de ticket no encontrada"
+            }
+        },
         "states": "Estados",
         "status": "Estado",
         "statuses": {
@@ -1278,6 +1309,8 @@
     "admin_dashboard": {
         "acl": "Listas de control de acceso",
         "acl_desc": "Definir reglas de acceso condicional",
+        "ticket_attribute_relations": "Relaciones de Atributos de Ticket",
+        "ticket_attribute_relations_desc": "Definir dependencias de atributos para formularios de ticket",
         "active_users_customers": "Agentes y clientes activos",
         "activity": {
             "config_updated": "[ES] System configuration updated",
@@ -1548,6 +1581,7 @@
         "created_by": "Creado Por",
         "date": "Fecha",
         "delete": "Eliminar",
+        "drag": "Arrastrar para reordenar",
         "edit": "Editar",
         "email": "Correo Electrónico",
         "error": "Error",
@@ -1572,6 +1606,8 @@
         "no_data_available": "No hay datos disponibles",
         "no_results": "No se encontraron resultados",
         "no_results_found": "No se encontraron resultados",
+        "last_update": "Última actualización",
+        "save_and_finish": "Guardar y finalizar",
         "none": "Ninguno",
         "not_closed": "No Cerrado",
         "of": "de",

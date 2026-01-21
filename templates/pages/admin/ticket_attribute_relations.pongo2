@@ -1,0 +1,627 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("admin.ticket_attribute_relations.title") }} - {{ t("app.name") }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Page header -->
+    <div class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("admin.ticket_attribute_relations.title") }}</h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ t("admin.ticket_attribute_relations.description") }}</p>
+            </div>
+            {% if Mode == "list" %}
+            <div class="mt-4 sm:mt-0">
+                <a href="/admin/ticket-attribute-relations/new"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
+                    <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    {{ t("admin.ticket_attribute_relations.import_file") }}
+                </a>
+            </div>
+            {% else %}
+            <div class="mt-4 sm:mt-0">
+                <a href="/admin/ticket-attribute-relations"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
+                    <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ t("common.back_to_list") }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if Mode == "list" %}
+    <!-- Relations table -->
+    <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead class="bg-gray-50 dark:bg-gray-900">
+                <tr>
+                    <th scope="col" class="w-10 px-2 py-3">
+                        <span class="sr-only">{{ t("common.drag") }}</span>
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider">
+                        {{ t("admin.ticket_attribute_relations.priority") }}
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider">
+                        {{ t("admin.ticket_attribute_relations.attribute") }} 1
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider">
+                        {{ t("admin.ticket_attribute_relations.attribute") }} 2
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider">
+                        {{ t("admin.ticket_attribute_relations.filename") }}
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider">
+                        {{ t("common.last_update") }}
+                    </th>
+                    <th scope="col" class="relative px-6 py-3">
+                        <span class="sr-only">{{ t("common.actions") }}</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="relations-tbody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {% for relation in Relations %}
+                <tr id="relation-row-{{ relation.ID }}" data-id="{{ relation.ID }}" class="hover:bg-gray-50 dark:hover:bg-gray-700 draggable-row">
+                    <td class="px-2 py-4 whitespace-nowrap">
+                        <div class="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+                            </svg>
+                        </div>
+                    </td>
+                    <td class="priority-cell px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-medium">
+                        {{ relation.Priority }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {{ relation.Attribute1 }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {{ relation.Attribute2 }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {{ relation.Filename }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {{ relation.ChangeTime|date:"2006-01-02 15:04" }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex items-center justify-end space-x-3">
+                            <a href="/admin/ticket-attribute-relations/{{ relation.ID }}"
+                                title="{{ t('common.edit') }}"
+                                class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-300">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </a>
+                            <button
+                                onclick="confirmDelete('{{ relation.ID }}', '{{ relation.Filename }}')"
+                                title="{{ t('common.delete') }}"
+                                class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center">
+                        <div class="text-gray-500 dark:text-gray-400">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <p class="mt-2 text-sm">{{ t("admin.ticket_attribute_relations.no_relations") }}</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% elif Mode == "new" or Mode == "edit" %}
+    <!-- Create/Edit form -->
+    <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+        <form
+            id="relation-form"
+            enctype="multipart/form-data"
+            {% if Mode == "new" %}
+            hx-post="/admin/api/ticket-attribute-relations"
+            {% else %}
+            hx-put="/admin/api/ticket-attribute-relations/{{ Relation.ID }}"
+            {% endif %}
+            hx-encoding="multipart/form-data"
+            hx-indicator="#save-spinner"
+        >
+
+            <div class="px-6 py-6 space-y-6">
+                <!-- File upload -->
+                <div>
+                    <label for="file" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ t("admin.ticket_attribute_relations.file") }}
+                        {% if Mode == "new" %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
+                    <div class="mt-1 flex items-center space-x-4">
+                        <input
+                            type="file"
+                            name="file"
+                            id="file"
+                            accept=".csv,.xlsx"
+                            {% if Mode == "new" %}required{% endif %}
+                            class="block w-full text-sm text-gray-500 dark:text-gray-400
+                                   file:mr-4 file:py-2 file:px-4
+                                   file:rounded-md file:border-0
+                                   file:text-sm file:font-medium
+                                   file:bg-gotrs-50 file:text-gotrs-700
+                                   dark:file:bg-gotrs-900 dark:file:text-gotrs-300
+                                   hover:file:bg-gotrs-100 dark:hover:file:bg-gotrs-800"
+                        >
+                        {% if Mode == "edit" %}
+                        <a href="/admin/ticket-attribute-relations/{{ Relation.ID }}/download"
+                            class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            {{ t("admin.ticket_attribute_relations.download_file") }}
+                        </a>
+                        {% endif %}
+                    </div>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        {{ t("admin.ticket_attribute_relations.file_hint") }}
+                    </p>
+                </div>
+
+                <!-- Priority -->
+                <div>
+                    <label for="priority" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {{ t("admin.ticket_attribute_relations.priority") }} <span class="text-red-500">*</span>
+                    </label>
+                    <select
+                        name="priority"
+                        id="priority"
+                        required
+                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 sm:text-sm rounded-md"
+                    >
+                        {% for opt in PriorityOptions %}
+                        <option value="{{ opt }}" {% if Mode == "edit" and Relation.Priority == opt %}selected{% elif Mode == "new" and NextPriority == opt %}selected{% endif %}>{{ opt }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Add missing dynamic field values -->
+                <div class="flex items-start">
+                    <div class="flex items-center h-5">
+                        <input
+                            type="checkbox"
+                            name="dynamic_field_config_update"
+                            id="dynamic_field_config_update"
+                            value="1"
+                            class="focus:ring-gotrs-500 h-4 w-4 text-gotrs-600 border-gray-300 dark:border-gray-600 rounded"
+                        >
+                    </div>
+                    <div class="ml-3 text-sm">
+                        <label for="dynamic_field_config_update" class="font-medium text-gray-700 dark:text-gray-300">
+                            {{ t("admin.ticket_attribute_relations.add_missing_values") }}
+                        </label>
+                        <p class="text-gray-500 dark:text-gray-400">
+                            {{ t("admin.ticket_attribute_relations.add_missing_values_hint") }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form actions -->
+            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-900 flex items-center justify-end space-x-3">
+                <!-- Loading spinner -->
+                <div id="save-spinner" class="htmx-indicator mr-2">
+                    <svg class="animate-spin h-5 w-5 text-gotrs-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </div>
+                <a href="/admin/ticket-attribute-relations"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
+                    {{ t("common.cancel") }}
+                </a>
+                {% if Mode == "edit" %}
+                <button
+                    type="submit"
+                    name="continue"
+                    value="0"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                    {{ t("common.save_and_finish") }}
+                </button>
+                <button
+                    type="submit"
+                    name="continue"
+                    value="1"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
+                    {{ t("common.save") }}
+                </button>
+                {% else %}
+                <button
+                    type="submit"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
+                    {{ t("common.save") }}
+                </button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    {% if Mode == "edit" and Relation.Data %}
+    <!-- Attribute values preview -->
+    <div class="mt-8 bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin.ticket_attribute_relations.attribute_values") }}</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider">
+                            {{ Relation.Attribute1 }}
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider">
+                            {{ Relation.Attribute2 }}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for pair in Relation.Data %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td class="px-6 py-2 whitespace-nowrap text-sm {% if MissingValues and Relation.Attribute1 in MissingValues and pair.Attribute1Value in MissingValues[Relation.Attribute1] %}text-red-600 dark:text-red-400{% else %}text-gray-900 dark:text-white{% endif %}">
+                            {% if pair.Attribute1Value %}{{ pair.Attribute1Value }}{% else %}-{% endif %}
+                        </td>
+                        <td class="px-6 py-2 whitespace-nowrap text-sm {% if MissingValues and Relation.Attribute2 in MissingValues and pair.Attribute2Value in MissingValues[Relation.Attribute2] %}text-red-600 dark:text-red-400{% else %}text-gray-900 dark:text-white{% endif %}">
+                            {% if pair.Attribute2Value %}{{ pair.Attribute2Value }}{% else %}-{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if MissingValues %}
+        <div class="px-6 py-4 bg-yellow-50 dark:bg-yellow-900/20 border-t border-yellow-100 dark:border-yellow-900">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                        {{ t("admin.ticket_attribute_relations.missing_values_hint") }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="hidden fixed z-20 inset-0 overflow-y-auto" aria-labelledby="delete-modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeDeleteModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="delete-modal-title">
+                            {{ t("admin.ticket_attribute_relations.delete_relation") }}
+                        </h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                {{ t("admin.ticket_attribute_relations.confirm_delete") }}
+                            </p>
+                            <p class="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+                                {{ t("admin.ticket_attribute_relations.filename") }}: <span id="deleteFilename" class="font-semibold text-gotrs-600"></span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                    type="button"
+                    onclick="executeDelete()"
+                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    {{ t("common.delete") }}
+                </button>
+                <button
+                    type="button"
+                    onclick="closeDeleteModal()"
+                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    {{ t("common.cancel") }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let relationToDelete = null;
+
+function confirmDelete(id, filename) {
+    relationToDelete = { id: id, filename: filename };
+    document.getElementById('deleteFilename').textContent = filename;
+    document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.add('hidden');
+    relationToDelete = null;
+}
+
+function executeDelete() {
+    if (!relationToDelete) return;
+
+    const { id, filename } = relationToDelete;
+
+    fetch(`/admin/api/ticket-attribute-relations/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+            'HX-Request': 'true'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            closeDeleteModal();
+            // Remove row with animation
+            const row = document.getElementById(`relation-row-${id}`);
+            if (row) {
+                row.style.transition = 'opacity 0.3s, transform 0.3s';
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(-10px)';
+                setTimeout(() => {
+                    row.remove();
+                    showToast(`Relation "${filename}" deleted successfully.`, 'success');
+                }, 300);
+            } else {
+                location.reload();
+            }
+        } else {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Failed to delete relation');
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting relation:', error);
+        showToast(error.message || 'Failed to delete relation. Please try again.', 'error');
+    });
+}
+
+// Note: Uses global showToast(message, type) from common.js
+
+// HTMX event handlers for form submissions
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('relation-form');
+    if (form) {
+        // Handle successful form submission - use htmx:beforeOnLoad to catch before redirect
+        document.body.addEventListener('htmx:beforeOnLoad', function(evt) {
+            // Check if this is our form's response
+            if (evt.detail.elt === form && evt.detail.xhr.status >= 200 && evt.detail.xhr.status < 300) {
+                const redirectUrl = evt.detail.xhr.getResponseHeader('HX-Redirect');
+                if (redirectUrl) {
+                    // Store message BEFORE redirect - htmx:beforeOnLoad fires before redirect starts
+                    sessionStorage.setItem('tar-success', 'Relation saved successfully');
+                }
+            }
+        });
+
+        // Handle form errors
+        document.body.addEventListener('htmx:responseError', function(evt) {
+            if (evt.detail.requestConfig && evt.detail.requestConfig.elt === form) {
+                try {
+                    const response = JSON.parse(evt.detail.xhr.responseText);
+                    showToast(response.error || 'Failed to save relation', 'error');
+                } catch (e) {
+                    showToast('Failed to save relation. Please try again.', 'error');
+                }
+            }
+        });
+
+        // Handle HTMX errors (network errors, etc.)
+        document.body.addEventListener('htmx:sendError', function(evt) {
+            if (evt.detail.requestConfig && evt.detail.requestConfig.elt === form) {
+                showToast('Network error. Please check your connection.', 'error');
+            }
+        });
+    }
+
+    // Check for success message from URL parameter or sessionStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('saved') === '1') {
+        // Remove the parameter from URL without reload
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+        showToast('Relation saved successfully', 'success');
+    } else {
+        // Check sessionStorage as fallback
+        const successMsg = sessionStorage.getItem('tar-success');
+        if (successMsg) {
+            sessionStorage.removeItem('tar-success');
+            showToast(successMsg, 'success');
+        }
+    }
+
+    // Initialize drag-and-drop for relations table
+    initDragAndDrop();
+});
+
+// Drag and drop functionality
+let draggedRow = null;
+let draggedRowClone = null;
+let dropIndicator = null;
+
+function initDragAndDrop() {
+    const tbody = document.getElementById('relations-tbody');
+    if (!tbody) return;
+
+    const rows = tbody.querySelectorAll('.draggable-row');
+    if (rows.length < 2) return; // No point in drag-drop with 0-1 items
+
+    // Create drop indicator
+    dropIndicator = document.createElement('tr');
+    dropIndicator.className = 'drop-indicator';
+    dropIndicator.innerHTML = '<td colspan="7" class="h-1 bg-gotrs-500"></td>';
+    dropIndicator.style.display = 'none';
+
+    rows.forEach(row => {
+        const handle = row.querySelector('.drag-handle');
+        if (!handle) return;
+
+        // Make the row draggable via the handle
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            startDrag(row, e);
+        });
+
+        // Touch support
+        handle.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            startDrag(row, touch);
+        }, { passive: false });
+    });
+
+    // Global event listeners for drag
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleDragEnd);
+}
+
+function startDrag(row, e) {
+    draggedRow = row;
+
+    // Add dragging styles
+    row.classList.add('opacity-50', 'bg-gotrs-50', 'dark:bg-gotrs-900');
+
+    // Store initial position
+    draggedRow.dataset.startY = e.clientY || e.pageY;
+}
+
+function handleDragMove(e) {
+    if (!draggedRow) return;
+
+    const tbody = document.getElementById('relations-tbody');
+    const rows = Array.from(tbody.querySelectorAll('.draggable-row'));
+    const mouseY = e.clientY;
+
+    // Find the row we're hovering over
+    let targetRow = null;
+    let insertBefore = true;
+
+    for (const row of rows) {
+        if (row === draggedRow) continue;
+
+        const rect = row.getBoundingClientRect();
+        const rowMiddle = rect.top + rect.height / 2;
+
+        if (mouseY < rowMiddle) {
+            targetRow = row;
+            insertBefore = true;
+            break;
+        } else if (mouseY >= rect.top && mouseY <= rect.bottom) {
+            targetRow = row;
+            insertBefore = mouseY < rowMiddle;
+        }
+    }
+
+    // Position drop indicator
+    if (targetRow && dropIndicator) {
+        dropIndicator.style.display = '';
+        if (insertBefore) {
+            targetRow.parentNode.insertBefore(dropIndicator, targetRow);
+        } else {
+            targetRow.parentNode.insertBefore(dropIndicator, targetRow.nextSibling);
+        }
+    }
+}
+
+function handleTouchMove(e) {
+    if (!draggedRow) return;
+    e.preventDefault();
+
+    const touch = e.touches[0];
+    handleDragMove({ clientY: touch.clientY });
+}
+
+function handleDragEnd(e) {
+    if (!draggedRow) return;
+
+    const tbody = document.getElementById('relations-tbody');
+
+    // Move the dragged row to its new position
+    if (dropIndicator && dropIndicator.parentNode) {
+        tbody.insertBefore(draggedRow, dropIndicator);
+        dropIndicator.style.display = 'none';
+        dropIndicator.remove();
+    }
+
+    // Remove dragging styles
+    draggedRow.classList.remove('opacity-50', 'bg-gotrs-50', 'dark:bg-gotrs-900');
+
+    // Get new order of IDs
+    const rows = tbody.querySelectorAll('.draggable-row');
+    const orderedIds = Array.from(rows).map(row => parseInt(row.dataset.id, 10));
+
+    // Update priorities visually
+    rows.forEach((row, index) => {
+        const priorityCell = row.querySelector('.priority-cell');
+        if (priorityCell) {
+            priorityCell.textContent = index + 1;
+        }
+    });
+
+    // Save the new order to the server
+    saveNewOrder(orderedIds);
+
+    draggedRow = null;
+}
+
+async function saveNewOrder(orderedIds) {
+    try {
+        const response = await fetch('/admin/api/ticket-attribute-relations/reorder', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({ ordered_ids: orderedIds })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to save new order');
+        }
+
+        showToast('{{ t("admin.ticket_attribute_relations.reorder_success") }}', 'success');
+    } catch (error) {
+        console.error('Error saving order:', error);
+        showToast('{{ t("admin.ticket_attribute_relations.reorder_error") }}', 'error');
+        // Reload page to restore original order
+        setTimeout(() => location.reload(), 2000);
+    }
+}
+</script>
+{% endblock %}

@@ -26,12 +26,14 @@ require (
 	github.com/playwright-community/playwright-go v0.5200.0
 	github.com/prometheus/client_golang v1.23.0
 	github.com/redis/go-redis/v9 v9.12.1
+	github.com/rickar/cal/v2 v2.1.26
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.18.2
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xeonx/timeago v1.0.0-rc5
+	github.com/xuri/excelize/v2 v2.10.0
 	github.com/yuin/goldmark v1.7.4
 	golang.org/x/crypto v0.45.0
 	golang.org/x/net v0.47.0
@@ -83,7 +85,8 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.65.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
-	github.com/rickar/cal/v2 v2.1.26 // indirect
+	github.com/richardlehane/mscfb v1.0.4 // indirect
+	github.com/richardlehane/msoleps v1.0.4 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sosodev/duration v1.3.1 // indirect
@@ -92,16 +95,19 @@ require (
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/tiendc/go-deepcopy v1.7.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.30 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
+	github.com/xuri/efp v0.0.1 // indirect
+	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/image v0.18.0 // indirect
+	golang.org/x/image v0.25.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231120223509-83a465c0220f // indirect
 	google.golang.org/protobuf v1.36.7 // indirect

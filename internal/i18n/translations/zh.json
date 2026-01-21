@@ -1142,6 +1142,37 @@
             "user": "用户",
             "warning_logout_all": "这将注销除您之外的所有用户。"
         },
+        "ticket_attribute_relations": {
+            "title": "工单属性关联",
+            "description": "定义工单属性之间的关联关系，以动态过滤下拉选项",
+            "import_file": "导入CSV或Excel文件",
+            "priority": "优先级",
+            "attribute": "属性",
+            "filename": "文件名",
+            "file": "文件",
+            "file_hint": "上传包含两列的CSV（UTF-8）或Excel（.xlsx）文件。第一行必须包含有效的工单属性名称（例如：Queue、State、DynamicField_Category）。",
+            "download_file": "下载之前导入的文件",
+            "add_missing_values": "添加缺失的动态字段可能值",
+            "add_missing_values_hint": "如果勾选，文件中不在动态字段配置中的值将被自动添加。",
+            "attribute_values": "属性值",
+            "missing_values_hint": "红色显示的值在动态字段的可能值配置中缺失。",
+            "no_relations": "未找到工单属性关联。请导入CSV或Excel文件来创建关联。",
+            "delete_relation": "删除关联",
+            "confirm_delete": "您确定要删除此工单属性关联吗？此操作无法撤销。",
+            "created": "工单属性关联创建成功",
+            "updated": "工单属性关联更新成功",
+            "deleted": "工单属性关联删除成功",
+            "reorder_success": "优先级顺序保存成功",
+            "reorder_error": "保存优先级顺序失败",
+            "errors": {
+                "file_required": "创建新关联需要文件",
+                "invalid_file_type": "无效的文件类型。仅支持CSV和Excel（.xlsx）文件。",
+                "parse_failed": "文件解析失败",
+                "invalid_columns": "文件必须恰好包含两列且具有有效的属性名称",
+                "duplicate_filename": "具有此文件名的关联已存在",
+                "not_found": "未找到工单属性关联"
+            }
+        },
         "states": "状态",
         "status": "状态",
         "statuses": {
@@ -1278,6 +1309,8 @@
     "admin_dashboard": {
         "acl": "访问控制列表",
         "acl_desc": "定义条件访问规则",
+        "ticket_attribute_relations": "工单属性关联",
+        "ticket_attribute_relations_desc": "为工单表单定义属性依赖关系",
         "active_users_customers": "活跃的代理和客户",
         "activity": {
             "config_updated": "[ZH] System configuration updated",
@@ -1548,6 +1581,7 @@
         "created_by": "创建者",
         "date": "日期",
         "delete": "删除",
+        "drag": "拖动以重新排序",
         "edit": "编辑",
         "email": "邮箱",
         "error": "错误",
@@ -1572,6 +1606,8 @@
         "no_data_available": "否 data available",
         "no_results": "未找到结果",
         "no_results_found": "否 results found",
+        "last_update": "最后更新",
+        "save_and_finish": "保存并完成",
         "none": "无",
         "not_closed": "未关闭",
         "of": "的",

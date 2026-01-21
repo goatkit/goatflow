@@ -431,8 +431,10 @@ func TestRecordEscalationEventIntegration(t *testing.T) {
 		// Ensure the escalation history type exists
 		ensureEscalationHistoryType(t, db, "EscalationResponseTimeStart")
 
-		// Create a test ticket with all required fields populated
-		ticketID := ensureTestTicket(t, db)
+		// Create a dedicated test ticket for this test (not shared)
+		ticketID := createTestTicketForEscalation(t, db)
+		// Clean up the test ticket after the test
+		defer cleanupTestTicket(t, db, ticketID)
 
 		// Get the ticket's current values for verification
 		var typeID, queueID, ownerID, priorityID, stateID int
@@ -490,6 +492,75 @@ func ensureEscalationHistoryType(t *testing.T, db *sql.DB, name string) {
 	`)
 	_, err = db.Exec(insertQuery, name)
 	require.NoError(t, err, "Should be able to create history type")
+}
+
+// createTestTicketForEscalation creates a fresh test ticket specifically for escalation tests.
+// Unlike ensureTestTicket, this always creates a new ticket to avoid flaky tests.
+func createTestTicketForEscalation(t *testing.T, db *sql.DB) int {
+	t.Helper()
+
+	// Find required IDs first
+	var queueID, stateID, priorityID, typeID int
+	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM queue WHERE valid_id = 1 LIMIT 1`)).Scan(&queueID)
+	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket_state WHERE type_id = 1 LIMIT 1`)).Scan(&stateID)
+	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket_priority WHERE valid_id = 1 LIMIT 1`)).Scan(&priorityID)
+	db.QueryRow(database.ConvertPlaceholders(`SELECT id FROM ticket_type WHERE valid_id = 1 LIMIT 1`)).Scan(&typeID)
+
+	// Use defaults if not found
+	if queueID == 0 {
+		queueID = 1
+	}
+	if stateID == 0 {
+		stateID = 1
+	}
+	if priorityID == 0 {
+		priorityID = 3
+	}
+	if typeID == 0 {
+		typeID = 1
+	}
+
+	// Create unique ticket number
+	tn := fmt.Sprintf("ESCTEST-%d-%d", time.Now().UnixNano(), time.Now().Nanosecond())
+
+	insertQuery := database.ConvertPlaceholders(`
+		INSERT INTO ticket (tn, title, queue_id, ticket_state_id, ticket_priority_id,
+			type_id, ticket_lock_id, timeout, until_time,
+			escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time,
+			user_id, responsible_user_id, create_time, create_by, change_time, change_by)
+		VALUES (?, ?, ?, ?, ?, ?, 1, 0, 0, 0, 0, 0, 0, 1, 1, NOW(), 1, NOW(), 1)
+	`)
+
+	var ticketID int
+	insertQuery, useLastInsert := database.ConvertReturning(insertQuery + " RETURNING id")
+	if useLastInsert {
+		result, err := db.Exec(insertQuery, tn, "Test Escalation Event Ticket", queueID, stateID, priorityID, typeID)
+		require.NoError(t, err, "Should be able to create test ticket")
+		id, _ := result.LastInsertId()
+		ticketID = int(id)
+	} else {
+		err := db.QueryRow(insertQuery, tn, "Test Escalation Event Ticket", queueID, stateID, priorityID, typeID).Scan(&ticketID)
+		require.NoError(t, err, "Should be able to create test ticket")
+	}
+
+	require.NotZero(t, ticketID, "Ticket ID should be non-zero")
+	return ticketID
+}
+
+// cleanupTestTicket removes a test ticket and its associated history records.
+func cleanupTestTicket(t *testing.T, db *sql.DB, ticketID int) {
+	t.Helper()
+
+	// Delete ticket history first (foreign key constraint)
+	deleteHistoryQuery := database.ConvertPlaceholders(`DELETE FROM ticket_history WHERE ticket_id = ?`)
+	_, _ = db.Exec(deleteHistoryQuery, ticketID) // Ignore errors - history may not exist
+
+	// Delete the ticket
+	deleteTicketQuery := database.ConvertPlaceholders(`DELETE FROM ticket WHERE id = ?`)
+	_, err := db.Exec(deleteTicketQuery, ticketID)
+	if err != nil {
+		t.Logf("Warning: could not clean up test ticket %d: %v", ticketID, err)
+	}
 }
 
 func ensureTimeWorkingHoursConfig(t *testing.T, db *sql.DB) {

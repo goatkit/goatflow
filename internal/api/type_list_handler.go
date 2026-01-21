@@ -9,6 +9,9 @@ import (
 )
 
 // HandleListTypesAPI handles GET /api/v1/types.
+// Supports optional filtering via ticket attribute relations:
+//   - filter_attribute: The attribute to filter by (e.g., "Queue", "Service")
+//   - filter_value: The value of that attribute (e.g., "Sales", "Gold Support")
 func HandleListTypesAPI(c *gin.Context) {
 	// Optional auth for now (treat as public list if no token)
 	db, err := database.GetDB()
@@ -41,5 +44,13 @@ func HandleListTypesAPI(c *gin.Context) {
 		}
 	}
 	_ = rows.Err() //nolint:errcheck // Check for iteration errors
+
+	// Apply ticket attribute relations filtering if requested
+	filterAttr := c.Query("filter_attribute")
+	filterValue := c.Query("filter_value")
+	if filterAttr != "" && filterValue != "" {
+		items = filterByTicketAttributeRelations(c, db, items, "Type", filterAttr, filterValue)
+	}
+
 	c.JSON(http.StatusOK, gin.H{"success": true, "data": items})
 }

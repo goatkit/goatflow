@@ -1,0 +1,35 @@
+DynamicField_ProductLine;DynamicField_IssueType
+Enterprise;Critical Bug
+Enterprise;Performance Issue
+Enterprise;Security Vulnerability
+Enterprise;Feature Request
+Enterprise;Integration Problem
+Enterprise;Licensing Issue
+Professional;Bug Report
+Professional;Setup Help
+Professional;Configuration
+Professional;Upgrade Assistance
+Professional;Documentation
+Starter;Getting Started
+Starter;Account Setup
+Starter;Billing Question
+Starter;General Inquiry
+Cloud;Deployment Issue
+Cloud;Scaling Problem
+Cloud;Region Availability
+Cloud;Data Migration
+Cloud;Compliance Question
+OnPremise;Installation
+OnPremise;Hardware Compatibility
+OnPremise;Network Configuration
+OnPremise;Backup and Recovery
+OnPremise;High Availability
+Partner;Certification
+Partner;Training Request
+Partner;Deal Registration
+Partner;Marketing Materials
+Partner;Technical Enablement
+Internal;Employee Request
+Internal;System Access
+Internal;Process Improvement
+Internal;Resource Allocation

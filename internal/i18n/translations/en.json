@@ -1208,6 +1208,37 @@
             "confirm_kill_user": "Are you sure you want to terminate all sessions for this user?",
             "current_session": "Your current session"
         },
+        "ticket_attribute_relations": {
+            "title": "Ticket Attribute Relations",
+            "description": "Define relationships between ticket attributes to filter dropdown options dynamically",
+            "import_file": "Import CSV or Excel file",
+            "priority": "Priority",
+            "attribute": "Attribute",
+            "filename": "Filename",
+            "file": "File",
+            "file_hint": "Upload a CSV (UTF-8) or Excel (.xlsx) file with two columns. The first row must contain valid ticket attribute names (e.g., Queue, State, DynamicField_Category).",
+            "download_file": "Download previously imported file",
+            "add_missing_values": "Add missing possible dynamic field values",
+            "add_missing_values_hint": "If checked, values from the file that are not in the dynamic field's configuration will be automatically added.",
+            "attribute_values": "Attribute Values",
+            "missing_values_hint": "Values shown in red are missing from the dynamic field's possible values configuration.",
+            "no_relations": "No ticket attribute relations found. Import a CSV or Excel file to create one.",
+            "delete_relation": "Delete Relation",
+            "confirm_delete": "Are you sure you want to delete this ticket attribute relation? This action cannot be undone.",
+            "created": "Ticket attribute relation created successfully",
+            "updated": "Ticket attribute relation updated successfully",
+            "deleted": "Ticket attribute relation deleted successfully",
+            "reorder_success": "Priority order saved successfully",
+            "reorder_error": "Failed to save priority order",
+            "errors": {
+                "file_required": "File is required for creating a new relation",
+                "invalid_file_type": "Invalid file type. Only CSV and Excel (.xlsx) files are supported.",
+                "parse_failed": "Failed to parse file",
+                "invalid_columns": "File must have exactly two columns with valid attribute names",
+                "duplicate_filename": "A relation with this filename already exists",
+                "not_found": "Ticket attribute relation not found"
+            }
+        },
         "system_maintenance": {
             "title": "System Maintenance",
             "description": "Schedule maintenance windows and notify users",
@@ -1431,6 +1462,7 @@
         "created_by": "Created By",
         "date": "Date",
         "delete": "Delete",
+        "drag": "Drag to reorder",
         "edit": "Edit",
         "error": "Error",
         "info": "Information",
@@ -1488,7 +1520,9 @@
         "loading_links": "Loading links...",
         "loading_queue_details": "Loading queue details...",
         "no_data_available": "No data available",
-        "no_results_found": "No results found"
+        "no_results_found": "No results found",
+        "last_update": "Last Update",
+        "save_and_finish": "Save and Finish"
     },
     "customer": {
         "company": "Company",
@@ -2529,6 +2563,8 @@
         "roles_desc": "Manage roles and role-group permissions",
         "acl": "Access Control Lists",
         "acl_desc": "Define conditional access rules",
+        "ticket_attribute_relations": "Ticket Attribute Relations",
+        "ticket_attribute_relations_desc": "Define attribute dependencies for ticket forms",
         "email_identities": "Email Identities",
         "email_identities_desc": "Manage salutations, addresses, signatures",
         "inbound_mail": "Inbound Mail Accounts",

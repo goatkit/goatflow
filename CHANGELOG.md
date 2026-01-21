@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Admin Ticket Attribute Relations**: Full CRUD interface at `/admin/ticket-attribute-relations` for managing ticket attribute relationships (OTRS AdminTicketAttributeRelations equivalent)
+  - Define relationships between ticket attributes (Queue, State, Priority, Type, Service, SLA, Owner, Responsible, DynamicField_*)
+  - CSV and Excel (.xlsx) file upload support for bulk relationship import
+  - "Add missing values to dynamic field config" checkbox for auto-populating dropdown options
+  - Priority-based ordering with drag-and-drop reordering
+  - Red highlighting for values missing from dynamic field's PossibleValues
+  - Download previously imported file
+  - ACL-based filtering integrated with ticket forms via `/api/v1/ticket-attribute-relations/evaluate`
+  - Full i18n support for all 15 languages
+  - Files: `internal/services/ticketattributerelations/service.go`, `internal/api/admin_ticket_attribute_relations_handlers.go`, `templates/pages/admin/ticket_attribute_relations.pongo2`
+
+### Fixed
+- **Pending Reminder Snooze Toast Color**: Fixed snooze success showing red toast instead of green on admin/ticket-attribute-relations page
+  - Page had local `showToast(type, message)` with reversed parameter order compared to global `showToast(message, type)` in common.js
+  - Removed local function and updated all calls to use global signature
+  - File: `templates/pages/admin/ticket_attribute_relations.pongo2`
+
 ## [0.6.1] - 2026-01-17
 
 ### Added

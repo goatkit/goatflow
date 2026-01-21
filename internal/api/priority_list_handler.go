@@ -11,6 +11,9 @@ import (
 )
 
 // HandleListPrioritiesAPI handles GET /api/v1/priorities.
+// Supports optional filtering via ticket attribute relations:
+//   - filter_attribute: The attribute to filter by (e.g., "Queue", "State")
+//   - filter_value: The value of that attribute (e.g., "Sales", "new")
 func HandleListPrioritiesAPI(c *gin.Context) {
 	// Require authentication similar to other admin lookups
 	if _, exists := c.Get("user_id"); !exists {
@@ -70,6 +73,13 @@ func HandleListPrioritiesAPI(c *gin.Context) {
 		items = append(items, gin.H{"id": id, "name": name, "color": color, "valid_id": validID})
 	}
 	_ = rows.Err() //nolint:errcheck // Check for iteration errors
+
+	// Apply ticket attribute relations filtering if requested
+	filterAttr := c.Query("filter_attribute")
+	filterValue := c.Query("filter_value")
+	if filterAttr != "" && filterValue != "" {
+		items = filterByTicketAttributeRelations(c, db, items, "Priority", filterAttr, filterValue)
+	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Priority deleted successfully", "data": items})
 }

@@ -180,7 +180,7 @@ spec:
           method: GET
           handler: HandleGetPriorityAPI
           description: "Get priority by ID"
-        # Types and states (add missing endpoints)
+        # Types, states, and services
         - path: /types
           method: GET
           handler: HandleListTypesAPI
@@ -189,6 +189,15 @@ spec:
           method: GET
           handler: HandleListStatesAPI
           description: "List ticket states"
+        - path: /services
+          method: GET
+          handler: HandleListServicesAPI
+          description: "List services"
+        # Ticket attribute relations evaluation (for form filtering)
+        - path: /ticket-attribute-relations/evaluate
+          method: GET
+          handler: handleAPITicketAttributeRelationsEvaluate
+          description: "Evaluate ticket attribute relations for filtering dropdowns"
         # Search endpoints
         - path: /search
           method: POST

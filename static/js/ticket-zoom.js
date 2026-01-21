@@ -233,8 +233,15 @@ function closeModal(modalId) {
  * Change ticket status
  */
 function changeStatus() {
-    // Load available statuses
-    apiFetch('/api/v1/states')
+    // Build URL with optional ticket attribute relation filtering
+    let statesUrl = '/api/v1/states';
+    const queueName = getCurrentQueueName();
+    if (queueName) {
+        statesUrl += `?filter_attribute=Queue&filter_value=${encodeURIComponent(queueName)}`;
+    }
+
+    // Load available statuses (filtered by ticket attribute relations if applicable)
+    apiFetch(statesUrl)
         .then(r => r.json())
         .then(data => {
             const select = document.querySelector('#statusModal select[name="status_id"]');
@@ -331,8 +338,16 @@ function assignAgent() {
  * Change ticket priority
  */
 function changePriority() {
-    // Load available priorities
-    apiFetch('/api/v1/priorities')
+    // Build URL with optional ticket attribute relation filtering
+    // Priority can be filtered by State (e.g., "new" state only allows certain priorities)
+    let prioritiesUrl = '/api/v1/priorities';
+    const stateName = getCurrentStateName();
+    if (stateName) {
+        prioritiesUrl += `?filter_attribute=State&filter_value=${encodeURIComponent(stateName)}`;
+    }
+
+    // Load available priorities (filtered by ticket attribute relations if applicable)
+    apiFetch(prioritiesUrl)
         .then(r => r.json())
         .then(data => {
             const select = document.querySelector('#priorityModal select[name="priority_id"]');
@@ -444,13 +459,49 @@ function getCurrentStatusId() {
     if (statusElement) {
         return statusElement.getAttribute('data-status-id');
     }
-    
+
     // Fallback to parsing from template if available
     if (window.ticketData && window.ticketData.status_id) {
         return window.ticketData.status_id;
     }
-    
+
     return 1; // Default fallback (usually "new" status)
+}
+
+/**
+ * Get current queue name from page data (for ticket attribute relations filtering)
+ */
+function getCurrentQueueName() {
+    // Try to get from data attribute
+    const queueElement = document.querySelector('[data-queue-name]');
+    if (queueElement) {
+        return queueElement.getAttribute('data-queue-name');
+    }
+
+    // Fallback to parsing from template if available
+    if (window.ticketData && window.ticketData.queue_name) {
+        return window.ticketData.queue_name;
+    }
+
+    return null; // No fallback - relations won't filter if queue name unknown
+}
+
+/**
+ * Get current state name from page data (for ticket attribute relations filtering)
+ */
+function getCurrentStateName() {
+    // Try to get from data attribute
+    const statusElement = document.querySelector('[data-status-name]');
+    if (statusElement) {
+        return statusElement.getAttribute('data-status-name');
+    }
+
+    // Fallback to parsing from template if available
+    if (window.ticketData && window.ticketData.status_name) {
+        return window.ticketData.status_name;
+    }
+
+    return null; // No fallback - relations won't filter if state name unknown
 }
 
 /**

@@ -1142,6 +1142,37 @@
             "user": "משתמש",
             "warning_logout_all": "פעולה זו תנתק את כל המשתמשים מלבדך."
         },
+        "ticket_attribute_relations": {
+            "title": "יחסי תכונות כרטיסים",
+            "description": "הגדר יחסים בין תכונות כרטיסים לסינון דינמי של אפשרויות נפתחות",
+            "import_file": "ייבוא קובץ CSV או Excel",
+            "priority": "עדיפות",
+            "attribute": "תכונה",
+            "filename": "שם קובץ",
+            "file": "קובץ",
+            "file_hint": "העלה קובץ CSV (UTF-8) או Excel (.xlsx) עם שתי עמודות. השורה הראשונה חייבת להכיל שמות תכונות כרטיס תקינים (לדוגמה: Queue, State, DynamicField_Category).",
+            "download_file": "הורד קובץ שיובא בעבר",
+            "add_missing_values": "הוסף ערכי שדות דינמיים חסרים",
+            "add_missing_values_hint": "אם מסומן, ערכים מהקובץ שאינם בתצורת השדה הדינמי יתווספו אוטומטית.",
+            "attribute_values": "ערכי תכונות",
+            "missing_values_hint": "ערכים המוצגים באדום חסרים מתצורת הערכים האפשריים של השדה הדינמי.",
+            "no_relations": "לא נמצאו יחסי תכונות כרטיסים. ייבא קובץ CSV או Excel ליצירת יחס.",
+            "delete_relation": "מחק יחס",
+            "confirm_delete": "האם אתה בטוח שברצונך למחוק יחס תכונות כרטיס זה? לא ניתן לבטל פעולה זו.",
+            "created": "יחס תכונות הכרטיס נוצר בהצלחה",
+            "updated": "יחס תכונות הכרטיס עודכן בהצלחה",
+            "deleted": "יחס תכונות הכרטיס נמחק בהצלחה",
+            "reorder_success": "סדר העדיפויות נשמר בהצלחה",
+            "reorder_error": "שמירת סדר העדיפויות נכשלה",
+            "errors": {
+                "file_required": "נדרש קובץ ליצירת יחס חדש",
+                "invalid_file_type": "סוג קובץ לא תקין. רק קבצי CSV ו-Excel (.xlsx) נתמכים.",
+                "parse_failed": "ניתוח הקובץ נכשל",
+                "invalid_columns": "הקובץ חייב להכיל בדיוק שתי עמודות עם שמות תכונות תקינים",
+                "duplicate_filename": "יחס עם שם קובץ זה כבר קיים",
+                "not_found": "יחס תכונות הכרטיס לא נמצא"
+            }
+        },
         "states": "מצבים",
         "status": "סטטוס",
         "statuses": {
@@ -1278,6 +1309,8 @@
     "admin_dashboard": {
         "acl": "רשימות בקרת גישה",
         "acl_desc": "הגדר כללי גישה מותנית",
+        "ticket_attribute_relations": "יחסי תכונות כרטיסים",
+        "ticket_attribute_relations_desc": "הגדר תלויות תכונות לטפסי כרטיסים",
         "active_users_customers": "סוכנים ולקוחות פעילים",
         "activity": {
             "config_updated": "[HE] System configuration updated",
@@ -1548,6 +1581,7 @@
         "created_by": "נוצר על ידי",
         "date": "תאריך",
         "delete": "מחק",
+        "drag": "גרור לשינוי סדר",
         "edit": "ערוך",
         "email": "דואל",
         "error": "שגיאה",
@@ -1572,6 +1606,8 @@
         "no_data_available": "לא data available",
         "no_results": "לא נמצאו תוצאות",
         "no_results_found": "לא results found",
+        "last_update": "עדכון אחרון",
+        "save_and_finish": "שמור וסיים",
         "none": "אין",
         "not_closed": "לא סגור",
         "of": "מתוך",

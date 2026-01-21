@@ -169,6 +169,13 @@ endif
 ifndef TEST_BACKEND_BASE_URL
 TEST_BACKEND_BASE_URL := http://localhost:$(TEST_BACKEND_PORT)
 endif
+# Test customer portal port
+ifndef TEST_CUSTOMER_FE_PORT
+TEST_CUSTOMER_FE_PORT := 18082
+endif
+ifeq ($(strip $(TEST_CUSTOMER_FE_PORT)),)
+override TEST_CUSTOMER_FE_PORT := 18082
+endif
 TEST_COMPOSE_FILE := $(CURDIR)/docker-compose.yml:$(CURDIR)/docker-compose.testdb.yml:$(CURDIR)/docker-compose.test.yaml
 
 help:
@@ -1256,10 +1263,11 @@ test-up:
 		exit 1; \
 	fi
 	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb up -d mariadb-test valkey-test smtp4dev
-	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb -f docker-compose.test.yaml build backend-test runner-test
-	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb -f docker-compose.test.yaml up -d backend-test runner-test
+	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb -f docker-compose.test.yaml build backend-test runner-test customer-fe-test
+	$(COMPOSE_CMD) -f docker-compose.yml -f docker-compose.testdb.yml --profile testdb -f docker-compose.test.yaml up -d backend-test runner-test customer-fe-test
 	@printf "✅ Test environment ready!\n"
 	@printf "   - Test backend: http://localhost:%s\n" "$(TEST_BACKEND_PORT)"
+	@printf "   - Customer portal: http://localhost:%s\n" "$(TEST_CUSTOMER_FE_PORT)"
 	@printf "   - Test DB MySQL: localhost:$(TEST_DB_MYSQL_PORT:-3308)\n"
 	@printf "   - Test DB Postgres: localhost:$(TEST_DB_POSTGRES_PORT:-5433)\n"
 

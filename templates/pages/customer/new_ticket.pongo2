@@ -6,6 +6,7 @@
 {{ block.super }}
 <script src="/static/js/tiptap.min.js"></script>
 <script src="/static/js/tiptap-editor.js"></script>
+<script src="/static/js/ticket-attribute-relations.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -308,8 +309,19 @@ document.addEventListener('DOMContentLoaded', function() {
             dropZone.appendChild(fileList);
         }
     }
-    
+
     // Rich text editor is initialized by the partial include
+
+    // Initialize ticket attribute relations filtering
+    if (window.TicketAttributeRelations) {
+        TicketAttributeRelations.init({
+            debug: false,
+            selectors: {
+                'Service': '#service_id',
+                'Priority': '#priority_id'
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

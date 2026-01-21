@@ -957,6 +957,56 @@ spec:
           handler: handleAdminACLDelete
           description: "Delete an ACL"
 
+        # Ticket Attribute Relations management
+        - path: /ticket-attribute-relations
+          method: GET
+          handler: handleAdminTicketAttributeRelations
+          template: pages/admin/ticket_attribute_relations.pongo2
+          description: "Display ticket attribute relations management page"
+
+        - path: /ticket-attribute-relations/new
+          method: GET
+          handler: handleAdminTicketAttributeRelationsNew
+          template: pages/admin/ticket_attribute_relations.pongo2
+          description: "Display new ticket attribute relation form"
+
+        - path: /ticket-attribute-relations/:id
+          method: GET
+          handler: handleAdminTicketAttributeRelationsEdit
+          template: pages/admin/ticket_attribute_relations.pongo2
+          description: "Display ticket attribute relation edit form"
+
+        - path: /ticket-attribute-relations/:id/download
+          method: GET
+          handler: handleAdminTicketAttributeRelationsDownload
+          description: "Download ticket attribute relation file"
+
+        # Ticket Attribute Relations API
+        - path: /api/ticket-attribute-relations
+          method: POST
+          handler: handleAdminTicketAttributeRelationsCreate
+          description: "Create a new ticket attribute relation"
+
+        - path: /api/ticket-attribute-relations/:id
+          method: PUT
+          handler: handleAdminTicketAttributeRelationsUpdate
+          description: "Update an existing ticket attribute relation"
+
+        - path: /api/ticket-attribute-relations/:id
+          method: DELETE
+          handler: handleAdminTicketAttributeRelationsDelete
+          description: "Delete a ticket attribute relation"
+
+        - path: /api/ticket-attribute-relations/reorder
+          method: POST
+          handler: handleAdminTicketAttributeRelationsReorder
+          description: "Reorder ticket attribute relations via drag-and-drop"
+
+        - path: /api/ticket-attribute-relations/evaluate
+          method: GET
+          handler: handleAPITicketAttributeRelationsEvaluate
+          description: "Evaluate ticket attribute relations for filtering"
+
         # Generic Agent Jobs management
         - path: /generic-agent
           method: GET

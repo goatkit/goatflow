@@ -1142,6 +1142,37 @@
             "user": "کاربر",
             "warning_logout_all": "این کار همه کاربران به جز شما را از سیستم خارج می‌کند."
         },
+        "ticket_attribute_relations": {
+            "title": "روابط ویژگی‌های تیکت",
+            "description": "تعریف روابط بین ویژگی‌های تیکت برای فیلتر پویای گزینه‌های کشویی",
+            "import_file": "وارد کردن فایل CSV یا Excel",
+            "priority": "اولویت",
+            "attribute": "ویژگی",
+            "filename": "نام فایل",
+            "file": "فایل",
+            "file_hint": "یک فایل CSV (UTF-8) یا Excel (.xlsx) با دو ستون آپلود کنید. ردیف اول باید شامل نام‌های معتبر ویژگی تیکت باشد (مثال: Queue، State، DynamicField_Category).",
+            "download_file": "دانلود فایل قبلاً وارد شده",
+            "add_missing_values": "افزودن مقادیر گمشده فیلد پویا",
+            "add_missing_values_hint": "در صورت انتخاب، مقادیر فایل که در پیکربندی فیلد پویا وجود ندارند به طور خودکار اضافه می‌شوند.",
+            "attribute_values": "مقادیر ویژگی",
+            "missing_values_hint": "مقادیر نمایش داده شده به رنگ قرمز در پیکربندی مقادیر ممکن فیلد پویا وجود ندارند.",
+            "no_relations": "هیچ رابطه ویژگی تیکتی یافت نشد. یک فایل CSV یا Excel برای ایجاد رابطه وارد کنید.",
+            "delete_relation": "حذف رابطه",
+            "confirm_delete": "آیا مطمئن هستید که می‌خواهید این رابطه ویژگی تیکت را حذف کنید؟ این عمل قابل بازگشت نیست.",
+            "created": "رابطه ویژگی تیکت با موفقیت ایجاد شد",
+            "updated": "رابطه ویژگی تیکت با موفقیت به‌روزرسانی شد",
+            "deleted": "رابطه ویژگی تیکت با موفقیت حذف شد",
+            "reorder_success": "ترتیب اولویت با موفقیت ذخیره شد",
+            "reorder_error": "ذخیره ترتیب اولویت ناموفق بود",
+            "errors": {
+                "file_required": "برای ایجاد رابطه جدید فایل لازم است",
+                "invalid_file_type": "نوع فایل نامعتبر. فقط فایل‌های CSV و Excel (.xlsx) پشتیبانی می‌شوند.",
+                "parse_failed": "تجزیه فایل ناموفق بود",
+                "invalid_columns": "فایل باید دقیقاً دو ستون با نام‌های ویژگی معتبر داشته باشد",
+                "duplicate_filename": "رابطه‌ای با این نام فایل از قبل وجود دارد",
+                "not_found": "رابطه ویژگی تیکت یافت نشد"
+            }
+        },
         "states": "وضعیت‌ها",
         "status": "وضعیت",
         "statuses": {
@@ -1278,6 +1309,8 @@
     "admin_dashboard": {
         "acl": "لیست‌های کنترل دسترسی",
         "acl_desc": "تعریف قوانین دسترسی شرطی",
+        "ticket_attribute_relations": "روابط ویژگی‌های تیکت",
+        "ticket_attribute_relations_desc": "تعریف وابستگی‌های ویژگی برای فرم‌های تیکت",
         "active_users_customers": "کارگزاران و مشتریان فعال",
         "activity": {
             "config_updated": "[FA] System configuration updated",
@@ -1548,6 +1581,7 @@
         "created_by": "ایجاد شده توسط",
         "date": "تاریخ",
         "delete": "حذف",
+        "drag": "بکشید برای مرتب‌سازی مجدد",
         "edit": "ویرایش",
         "email": "ایمیل",
         "error": "خطا",
@@ -1572,6 +1606,8 @@
         "no_data_available": "خیر data available",
         "no_results": "نتیجه‌ای یافت نشد",
         "no_results_found": "خیر results found",
+        "last_update": "آخرین به‌روزرسانی",
+        "save_and_finish": "ذخیره و پایان",
         "none": "هیچ",
         "not_closed": "بسته نشده",
         "of": "از",

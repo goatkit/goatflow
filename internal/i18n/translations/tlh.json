@@ -1162,6 +1162,37 @@
             "user": "lo'wI'",
             "warning_logout_all": "Hoch lo'wI'pu' mej, SoH neH pagh."
         },
+        "ticket_attribute_relations": {
+            "title": "chaw' DaH mIw",
+            "description": "chaw' DaH mIw chenmoH meq, dropdown mIw wIvmeH",
+            "import_file": "CSV pagh Excel De' yIqel",
+            "priority": "potlh",
+            "attribute": "Doch",
+            "filename": "De' pong",
+            "file": "De'",
+            "file_hint": "cha' rewbe' ghaj CSV (UTF-8) pagh Excel (.xlsx) De' yIlan. wa'DIch mIw pong lo'laHbogh chaw' Doch pong ghaj (Queue, State, DynamicField_Category).",
+            "download_file": "De' yIQaw' qelpu'bogh",
+            "add_missing_values": "Doch potlh tu'lu'be'bogh yIchel",
+            "add_missing_values_hint": "wIvlu'chugh, De' Doch Qap pagh ghaj DaH mIw chenmoH.",
+            "attribute_values": "Doch mIw",
+            "missing_values_hint": "Doq mIw Doch potlh DaH mIw Qap pagh ghaj.",
+            "no_relations": "chaw' DaH mIw tu'lu'be'. CSV pagh Excel De' yIqel chenmoHmeH.",
+            "delete_relation": "mIw yIHegh",
+            "confirm_delete": "chaw' DaH mIw DaHeghmoH'a'? vanglaHbe'.",
+            "created": "chaw' DaH mIw chenmoHlu'pu'",
+            "updated": "chaw' DaH mIw choHlu'pu'",
+            "deleted": "chaw' DaH mIw HeghmoHlu'pu'",
+            "reorder_success": "potlh tlhoy choqlu'pu' Qapla'",
+            "reorder_error": "potlh tlhoy choqlaHbe'",
+            "errors": {
+                "file_required": "mIw chu' chenmoHmeH De' poQ",
+                "invalid_file_type": "De' Segh pagh. CSV je Excel (.xlsx) De' neH.",
+                "parse_failed": "De' yajlaHbe'",
+                "invalid_columns": "De' cha' rewbe' neH ghaj Doch pong lo'laHbogh",
+                "duplicate_filename": "De' pong mIw tu'lu'",
+                "not_found": "chaw' DaH mIw tu'lu'be'"
+            }
+        },
         "states": "Dotlhmey",
         "status": "Dotlh",
         "statuses": {
@@ -1298,6 +1329,8 @@
     "admin_dashboard": {
         "acl": "'el SeH tetlh",
         "acl_desc": "'el chut conditional mojaq",
+        "ticket_attribute_relations": "chaw' DaH mIw",
+        "ticket_attribute_relations_desc": "chaw' ngoq Doch potlh mIw",
         "active_users_customers": "Duy'a' agents customers je",
         "activity": {
             "config_updated": "[TLH] System configuration updated",
@@ -1568,6 +1601,7 @@
         "created_by": "chenmoHwI'",
         "date": "jaj",
         "delete": "HeghmoH",
+        "drag": "choq yIraQ",
         "edit": "choH",
         "email": "QIn Daq",
         "error": "Qagh",
@@ -1592,6 +1626,8 @@
         "no_data_available": "ghobe' data available",
         "no_results": "pagh tu'lu'",
         "no_results_found": "ghobe' results found",
+        "last_update": "Qav choHmeH poH",
+        "save_and_finish": "Qop 'ej rIn",
         "none": "pagh",
         "not_closed": "SoQbe'",
         "of": "-vo'",
