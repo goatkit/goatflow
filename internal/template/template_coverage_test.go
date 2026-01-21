@@ -92,9 +92,10 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/webservices.pongo2":                 true,
 	"pages/admin/webservice_form.pongo2":             true,
 	"pages/admin/webservice_history.pongo2":          true,
-	"pages/admin/sessions.pongo2":                    true,
-	"pages/admin/system_maintenance.pongo2":          true,
-	"pages/admin/system_maintenance_form.pongo2":     true,
+	"pages/admin/sessions.pongo2":                     true,
+	"pages/admin/system_maintenance.pongo2":           true,
+	"pages/admin/system_maintenance_form.pongo2":      true,
+	"pages/admin/ticket_attribute_relations.pongo2":   true,
 
 	// Agent templates
 	"pages/agent/dashboard.pongo2":   true,

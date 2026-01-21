@@ -1,0 +1,14 @@
+State;Priority
+new;1 very low
+new;2 low
+new;3 normal
+new;4 high
+new;5 very high
+open;3 normal
+open;4 high
+open;5 very high
+pending reminder;2 low
+pending reminder;3 normal
+closed;1 very low
+closed;2 low
+closed;3 normal

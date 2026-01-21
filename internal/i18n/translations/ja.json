@@ -1142,6 +1142,37 @@
             "user": "ユーザー",
             "warning_logout_all": "これにより、あなた以外のすべてのユーザーがログアウトされます。"
         },
+        "ticket_attribute_relations": {
+            "title": "チケット属性関連",
+            "description": "チケット属性間の関連を定義し、ドロップダウンオプションを動的にフィルタリング",
+            "import_file": "CSVまたはExcelファイルをインポート",
+            "priority": "優先度",
+            "attribute": "属性",
+            "filename": "ファイル名",
+            "file": "ファイル",
+            "file_hint": "2列のCSV（UTF-8）またはExcel（.xlsx）ファイルをアップロードしてください。最初の行には有効なチケット属性名を含める必要があります（例：Queue、State、DynamicField_Category）。",
+            "download_file": "以前にインポートしたファイルをダウンロード",
+            "add_missing_values": "不足している動的フィールドの可能な値を追加",
+            "add_missing_values_hint": "チェックすると、動的フィールドの設定にないファイルの値が自動的に追加されます。",
+            "attribute_values": "属性値",
+            "missing_values_hint": "赤で表示されている値は、動的フィールドの可能な値の設定に存在しません。",
+            "no_relations": "チケット属性関連が見つかりません。CSVまたはExcelファイルをインポートして作成してください。",
+            "delete_relation": "関連を削除",
+            "confirm_delete": "このチケット属性関連を削除してもよろしいですか？この操作は元に戻せません。",
+            "created": "チケット属性関連が正常に作成されました",
+            "updated": "チケット属性関連が正常に更新されました",
+            "deleted": "チケット属性関連が正常に削除されました",
+            "reorder_success": "優先順位が正常に保存されました",
+            "reorder_error": "優先順位の保存に失敗しました",
+            "errors": {
+                "file_required": "新しい関連を作成するにはファイルが必要です",
+                "invalid_file_type": "無効なファイルタイプです。CSVとExcel（.xlsx）ファイルのみサポートされています。",
+                "parse_failed": "ファイルの解析に失敗しました",
+                "invalid_columns": "ファイルには有効な属性名を持つ2列が必要です",
+                "duplicate_filename": "このファイル名の関連は既に存在します",
+                "not_found": "チケット属性関連が見つかりません"
+            }
+        },
         "states": "ステート",
         "status": "ステータス",
         "statuses": {
@@ -1278,6 +1309,8 @@
     "admin_dashboard": {
         "acl": "アクセス制御リスト",
         "acl_desc": "条件付きアクセスルールの定義",
+        "ticket_attribute_relations": "チケット属性関連",
+        "ticket_attribute_relations_desc": "チケットフォームの属性依存関係を定義",
         "active_users_customers": "アクティブなエージェントと顧客",
         "activity": {
             "config_updated": "[JA] System configuration updated",
@@ -1548,6 +1581,7 @@
         "created_by": "作成者",
         "date": "日付",
         "delete": "削除",
+        "drag": "ドラッグして並べ替え",
         "edit": "編集",
         "email": "メール",
         "error": "エラー",
@@ -1572,6 +1606,8 @@
         "no_data_available": "いいえ data available",
         "no_results": "結果が見つかりません",
         "no_results_found": "いいえ results found",
+        "last_update": "最終更新",
+        "save_and_finish": "保存して終了",
         "none": "なし",
         "not_closed": "未クローズ",
         "of": "/",

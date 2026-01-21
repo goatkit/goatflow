@@ -1142,6 +1142,37 @@
             "user": "Benutzer",
             "warning_logout_all": "Dies meldet alle Benutzer außer Ihnen ab."
         },
+        "ticket_attribute_relations": {
+            "title": "Ticket-Attribut-Beziehungen",
+            "description": "Definieren Sie Beziehungen zwischen Ticket-Attributen, um Dropdown-Optionen dynamisch zu filtern",
+            "import_file": "CSV- oder Excel-Datei importieren",
+            "priority": "Priorität",
+            "attribute": "Attribut",
+            "filename": "Dateiname",
+            "file": "Datei",
+            "file_hint": "Laden Sie eine CSV- (UTF-8) oder Excel-Datei (.xlsx) mit zwei Spalten hoch. Die erste Zeile muss gültige Ticket-Attributnamen enthalten (z.B. Queue, State, DynamicField_Category).",
+            "download_file": "Zuvor importierte Datei herunterladen",
+            "add_missing_values": "Fehlende mögliche Dynamische-Feld-Werte hinzufügen",
+            "add_missing_values_hint": "Wenn aktiviert, werden Werte aus der Datei, die nicht in der Konfiguration des dynamischen Feldes vorhanden sind, automatisch hinzugefügt.",
+            "attribute_values": "Attributwerte",
+            "missing_values_hint": "Rot angezeigte Werte fehlen in der Konfiguration der möglichen Werte des dynamischen Feldes.",
+            "no_relations": "Keine Ticket-Attribut-Beziehungen gefunden. Importieren Sie eine CSV- oder Excel-Datei, um eine zu erstellen.",
+            "delete_relation": "Beziehung löschen",
+            "confirm_delete": "Sind Sie sicher, dass Sie diese Ticket-Attribut-Beziehung löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+            "created": "Ticket-Attribut-Beziehung erfolgreich erstellt",
+            "updated": "Ticket-Attribut-Beziehung erfolgreich aktualisiert",
+            "deleted": "Ticket-Attribut-Beziehung erfolgreich gelöscht",
+            "reorder_success": "Prioritätsreihenfolge erfolgreich gespeichert",
+            "reorder_error": "Fehler beim Speichern der Prioritätsreihenfolge",
+            "errors": {
+                "file_required": "Eine Datei ist erforderlich, um eine neue Beziehung zu erstellen",
+                "invalid_file_type": "Ungültiger Dateityp. Nur CSV- und Excel-Dateien (.xlsx) werden unterstützt.",
+                "parse_failed": "Datei konnte nicht analysiert werden",
+                "invalid_columns": "Die Datei muss genau zwei Spalten mit gültigen Attributnamen haben",
+                "duplicate_filename": "Eine Beziehung mit diesem Dateinamen existiert bereits",
+                "not_found": "Ticket-Attribut-Beziehung nicht gefunden"
+            }
+        },
         "states": "Status",
         "status": "Status",
         "statuses": {
@@ -1278,6 +1309,8 @@
     "admin_dashboard": {
         "acl": "Zugriffskontrolllisten",
         "acl_desc": "Bedingte Zugriffsregeln definieren",
+        "ticket_attribute_relations": "Ticket-Attribut-Beziehungen",
+        "ticket_attribute_relations_desc": "Attributabhängigkeiten für Ticket-Formulare definieren",
         "active_users_customers": "Aktive Agenten und Kunden",
         "activity": {
             "config_updated": "[DE] System configuration updated",
@@ -1548,6 +1581,7 @@
         "created_by": "Erstellt von",
         "date": "Datum",
         "delete": "Löschen",
+        "drag": "Ziehen zum Neuordnen",
         "edit": "Bearbeiten",
         "email": "E-Mail",
         "error": "Fehler",
@@ -1572,6 +1606,8 @@
         "no_data_available": "Keine Daten verfügbar",
         "no_results": "Keine Ergebnisse gefunden",
         "no_results_found": "Keine Ergebnisse gefunden",
+        "last_update": "Letzte Aktualisierung",
+        "save_and_finish": "Speichern und Abschließen",
         "none": "Keine",
         "not_closed": "Nicht geschlossen",
         "of": "von",

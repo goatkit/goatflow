@@ -105,6 +105,11 @@ func setupYAMLRouting(r *gin.Engine, db *sql.DB) error {
 		_ = registry.Register(name, handler) //nolint:errcheck // Best effort handler registration
 	}
 
+	// Also copy handlers from routing.GlobalHandlerMap (populated via init() in handler files)
+	for name, handler := range routing.GlobalHandlerMap {
+		_ = registry.Register(name, handler) //nolint:errcheck // Best effort handler registration
+	}
+
 	// Load all routes from YAML files
 	routesPath := "routes"
 

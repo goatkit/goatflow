@@ -1142,6 +1142,37 @@
             "user": "المستخدم",
             "warning_logout_all": "سيؤدي هذا إلى تسجيل خروج جميع المستخدمين باستثنائك."
         },
+        "ticket_attribute_relations": {
+            "title": "علاقات سمات التذاكر",
+            "description": "تحديد العلاقات بين سمات التذاكر لتصفية خيارات القائمة المنسدلة ديناميكياً",
+            "import_file": "استيراد ملف CSV أو Excel",
+            "priority": "الأولوية",
+            "attribute": "السمة",
+            "filename": "اسم الملف",
+            "file": "الملف",
+            "file_hint": "قم بتحميل ملف CSV (UTF-8) أو Excel (.xlsx) بعمودين. يجب أن يحتوي الصف الأول على أسماء سمات تذاكر صالحة (مثل: Queue، State، DynamicField_Category).",
+            "download_file": "تنزيل الملف المستورد سابقاً",
+            "add_missing_values": "إضافة قيم الحقول الديناميكية المفقودة",
+            "add_missing_values_hint": "إذا تم التحديد، سيتم إضافة القيم من الملف غير الموجودة في تكوين الحقل الديناميكي تلقائياً.",
+            "attribute_values": "قيم السمات",
+            "missing_values_hint": "القيم المعروضة باللون الأحمر مفقودة من تكوين القيم الممكنة للحقل الديناميكي.",
+            "no_relations": "لم يتم العثور على علاقات سمات التذاكر. قم باستيراد ملف CSV أو Excel لإنشاء علاقة.",
+            "delete_relation": "حذف العلاقة",
+            "confirm_delete": "هل أنت متأكد من رغبتك في حذف علاقة سمات التذكرة هذه؟ لا يمكن التراجع عن هذا الإجراء.",
+            "created": "تم إنشاء علاقة سمات التذكرة بنجاح",
+            "updated": "تم تحديث علاقة سمات التذكرة بنجاح",
+            "deleted": "تم حذف علاقة سمات التذكرة بنجاح",
+            "reorder_success": "تم حفظ ترتيب الأولوية بنجاح",
+            "reorder_error": "فشل في حفظ ترتيب الأولوية",
+            "errors": {
+                "file_required": "الملف مطلوب لإنشاء علاقة جديدة",
+                "invalid_file_type": "نوع ملف غير صالح. يتم دعم ملفات CSV و Excel (.xlsx) فقط.",
+                "parse_failed": "فشل في تحليل الملف",
+                "invalid_columns": "يجب أن يحتوي الملف على عمودين بالضبط بأسماء سمات صالحة",
+                "duplicate_filename": "توجد علاقة بهذا الاسم بالفعل",
+                "not_found": "لم يتم العثور على علاقة سمات التذكرة"
+            }
+        },
         "states": "الحالات",
         "status": "الحالة",
         "statuses": {
@@ -1278,6 +1309,8 @@
     "admin_dashboard": {
         "acl": "قوائم التحكم في الوصول",
         "acl_desc": "تحديد قواعد الوصول الشرطي",
+        "ticket_attribute_relations": "علاقات سمات التذاكر",
+        "ticket_attribute_relations_desc": "تحديد تبعيات السمات لنماذج التذاكر",
         "active_users_customers": "الوكلاء والعملاء النشطون",
         "activity": {
             "config_updated": "[AR] System configuration updated",
@@ -1548,6 +1581,7 @@
         "created_by": "أنشئ بواسطة",
         "date": "التاريخ",
         "delete": "حذف",
+        "drag": "اسحب لإعادة الترتيب",
         "edit": "تعديل",
         "email": "البريد الإلكتروني",
         "error": "خطأ",
@@ -1572,6 +1606,8 @@
         "no_data_available": "لا data available",
         "no_results": "لم يتم العثور على نتائج",
         "no_results_found": "لا results found",
+        "last_update": "آخر تحديث",
+        "save_and_finish": "حفظ وإنهاء",
         "none": "لا شيء",
         "not_closed": "غير مغلق",
         "of": "من",

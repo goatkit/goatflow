@@ -14,14 +14,15 @@ import (
 
 // TestConfig holds all configuration for E2E tests
 type TestConfig struct {
-	BaseURL       string
-	Timeout       time.Duration
-	Headless      bool
-	SlowMo        int
-	Screenshots   bool
-	Videos        bool
-	AdminEmail    string
-	AdminPassword string
+	BaseURL           string
+	CustomerPortalURL string
+	Timeout           time.Duration
+	Headless          bool
+	SlowMo            int
+	Screenshots       bool
+	Videos            bool
+	AdminEmail        string
+	AdminPassword     string
 }
 
 var loadOnce sync.Once
@@ -98,15 +99,35 @@ func GetConfig() *TestConfig {
 		slowMo = 100 // Default to 100ms for debugging
 	}
 
+	// Customer portal runs in a separate container on a different port
+	customerPortalURL := os.Getenv("CUSTOMER_PORTAL_URL")
+	if customerPortalURL == "" {
+		// Derive from baseURL - customer portal test container is on port 8084
+		// In test environment: backend-test:8080 -> customer-fe-test:8080 (exposed as 8084)
+		u, err := url.Parse(baseURL)
+		if err == nil {
+			host := u.Hostname()
+			// Map backend host to customer-fe host
+			if strings.Contains(host, "backend") {
+				host = strings.Replace(host, "backend", "customer-fe", 1)
+			}
+			customerPortalURL = u.Scheme + "://" + host + ":" + u.Port()
+		}
+		if customerPortalURL == "" {
+			customerPortalURL = "http://localhost:8084"
+		}
+	}
+
 	return &TestConfig{
-		BaseURL:       baseURL,
-		Timeout:       30 * time.Second,
-		Headless:      headless,
-		SlowMo:        slowMo,
-		Screenshots:   os.Getenv("SCREENSHOTS") != "false",
-		Videos:        os.Getenv("VIDEOS") == "true",
-		AdminEmail:    adminEmail,
-		AdminPassword: adminPassword,
+		BaseURL:           baseURL,
+		CustomerPortalURL: customerPortalURL,
+		Timeout:           30 * time.Second,
+		Headless:          headless,
+		SlowMo:            slowMo,
+		Screenshots:       os.Getenv("SCREENSHOTS") != "false",
+		Videos:            os.Getenv("VIDEOS") == "true",
+		AdminEmail:        adminEmail,
+		AdminPassword:     adminPassword,
 	}
 }
 

@@ -47,6 +47,9 @@ func resolveUserID(raw interface{}) int {
 }
 
 // HandleListSLAsAPI handles GET /api/v1/slas.
+// Supports optional filtering via ticket attribute relations:
+//   - filter_attribute: The attribute to filter by (e.g., "Queue", "Service")
+//   - filter_value: The value of that attribute (e.g., "Sales", "Gold Support")
 func HandleListSLAsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -141,6 +144,13 @@ func HandleListSLAsAPI(c *gin.Context) {
 		})
 	}
 	_ = rows.Err() //nolint:errcheck // Logged elsewhere if needed
+
+	// Apply ticket attribute relations filtering if requested
+	filterAttr := c.Query("filter_attribute")
+	filterValue := c.Query("filter_value")
+	if filterAttr != "" && filterValue != "" {
+		slas = filterByTicketAttributeRelations(c, db, slas, "SLA", filterAttr, filterValue)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"slas":  slas,

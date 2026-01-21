@@ -127,8 +127,13 @@
         </div>
     </div>
 
-    <!-- Add hidden queue ID for JavaScript -->
-    <div data-queue-id="{{ ticket.queue_id }}" style="display: none;"></div>
+    <!-- Add hidden ticket attributes for JavaScript (used by ticket attribute relations filtering) -->
+    <div data-queue-id="{{ ticket.queue_id }}"
+         data-queue-name="{{ ticket.queue_name }}"
+         data-status-id="{{ ticket.ticket_state_id }}"
+         data-status-name="{{ ticket.state_name }}"
+         data-priority-id="{{ ticket.ticket_priority_id }}"
+         style="display: none;"></div>
 
     <!-- Tabs: Conversation | History | Links -->
     <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow">

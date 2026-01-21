@@ -1142,6 +1142,37 @@
             "user": "Użytkownik",
             "warning_logout_all": "Spowoduje to wylogowanie wszystkich użytkowników oprócz Ciebie."
         },
+        "ticket_attribute_relations": {
+            "title": "Relacje atrybutów zgłoszeń",
+            "description": "Definiuj relacje między atrybutami zgłoszeń, aby dynamicznie filtrować opcje rozwijane",
+            "import_file": "Importuj plik CSV lub Excel",
+            "priority": "Priorytet",
+            "attribute": "Atrybut",
+            "filename": "Nazwa pliku",
+            "file": "Plik",
+            "file_hint": "Prześlij plik CSV (UTF-8) lub Excel (.xlsx) z dwiema kolumnami. Pierwszy wiersz musi zawierać prawidłowe nazwy atrybutów zgłoszeń (np. Queue, State, DynamicField_Category).",
+            "download_file": "Pobierz poprzednio zaimportowany plik",
+            "add_missing_values": "Dodaj brakujące możliwe wartości pól dynamicznych",
+            "add_missing_values_hint": "Jeśli zaznaczone, wartości z pliku, które nie znajdują się w konfiguracji pola dynamicznego, zostaną automatycznie dodane.",
+            "attribute_values": "Wartości atrybutów",
+            "missing_values_hint": "Wartości wyświetlane na czerwono brakują w konfiguracji możliwych wartości pola dynamicznego.",
+            "no_relations": "Nie znaleziono relacji atrybutów zgłoszeń. Zaimportuj plik CSV lub Excel, aby utworzyć relację.",
+            "delete_relation": "Usuń relację",
+            "confirm_delete": "Czy na pewno chcesz usunąć tę relację atrybutów zgłoszenia? Tej operacji nie można cofnąć.",
+            "created": "Relacja atrybutów zgłoszenia utworzona pomyślnie",
+            "updated": "Relacja atrybutów zgłoszenia zaktualizowana pomyślnie",
+            "deleted": "Relacja atrybutów zgłoszenia usunięta pomyślnie",
+            "reorder_success": "Kolejność priorytetów zapisana pomyślnie",
+            "reorder_error": "Nie udało się zapisać kolejności priorytetów",
+            "errors": {
+                "file_required": "Plik jest wymagany do utworzenia nowej relacji",
+                "invalid_file_type": "Nieprawidłowy typ pliku. Obsługiwane są tylko pliki CSV i Excel (.xlsx).",
+                "parse_failed": "Nie udało się przeanalizować pliku",
+                "invalid_columns": "Plik musi mieć dokładnie dwie kolumny z prawidłowymi nazwami atrybutów",
+                "duplicate_filename": "Relacja z tą nazwą pliku już istnieje",
+                "not_found": "Nie znaleziono relacji atrybutów zgłoszenia"
+            }
+        },
         "states": "Stany",
         "status": "Status",
         "statuses": {
@@ -1278,6 +1309,8 @@
     "admin_dashboard": {
         "acl": "Listy kontroli dostępu",
         "acl_desc": "Definiuj reguły dostępu warunkowego",
+        "ticket_attribute_relations": "Relacje atrybutów zgłoszeń",
+        "ticket_attribute_relations_desc": "Definiuj zależności atrybutów dla formularzy zgłoszeń",
         "active_users_customers": "Aktywni agenci i klienci",
         "activity": {
             "config_updated": "[PL] System configuration updated",
@@ -1548,6 +1581,7 @@
         "created_by": "Utworzone przez",
         "date": "Data",
         "delete": "Usuń",
+        "drag": "Przeciągnij, aby zmienić kolejność",
         "edit": "Edytuj",
         "email": "E-mail",
         "error": "Błąd",
@@ -1572,6 +1606,8 @@
         "no_data_available": "Nie data available",
         "no_results": "Nie znaleziono wyników",
         "no_results_found": "Nie results found",
+        "last_update": "Ostatnia aktualizacja",
+        "save_and_finish": "Zapisz i zakończ",
         "none": "Brak",
         "not_closed": "Niezamknięte",
         "of": "z",

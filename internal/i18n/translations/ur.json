@@ -1171,6 +1171,37 @@
             "user": "صارف",
             "warning_logout_all": "یہ آپ کے علاوہ تمام صارفین کو لاگ آؤٹ کر دے گا۔"
         },
+        "ticket_attribute_relations": {
+            "title": "ٹکٹ وصف تعلقات",
+            "description": "ڈراپ ڈاؤن آپشنز کو متحرک طور پر فلٹر کرنے کے لیے ٹکٹ وصف کے درمیان تعلقات کی وضاحت کریں",
+            "import_file": "CSV یا Excel فائل درآمد کریں",
+            "priority": "ترجیح",
+            "attribute": "وصف",
+            "filename": "فائل کا نام",
+            "file": "فائل",
+            "file_hint": "دو کالموں والی CSV (UTF-8) یا Excel (.xlsx) فائل اپ لوڈ کریں۔ پہلی قطار میں درست ٹکٹ وصف نام ہونے چاہئیں (مثال: Queue، State، DynamicField_Category)۔",
+            "download_file": "پہلے درآمد شدہ فائل ڈاؤن لوڈ کریں",
+            "add_missing_values": "گمشدہ متحرک فیلڈ ممکنہ اقدار شامل کریں",
+            "add_missing_values_hint": "اگر نشان زد ہو، فائل کی وہ اقدار جو متحرک فیلڈ کی ترتیب میں نہیں ہیں خود بخود شامل ہو جائیں گی۔",
+            "attribute_values": "وصف اقدار",
+            "missing_values_hint": "سرخ رنگ میں دکھائی گئی اقدار متحرک فیلڈ کی ممکنہ اقدار کی ترتیب میں موجود نہیں ہیں۔",
+            "no_relations": "کوئی ٹکٹ وصف تعلقات نہیں ملے۔ تعلق بنانے کے لیے CSV یا Excel فائل درآمد کریں۔",
+            "delete_relation": "تعلق حذف کریں",
+            "confirm_delete": "کیا آپ واقعی اس ٹکٹ وصف تعلق کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں ہو سکتا۔",
+            "created": "ٹکٹ وصف تعلق کامیابی سے بنایا گیا",
+            "updated": "ٹکٹ وصف تعلق کامیابی سے اپڈیٹ ہوا",
+            "deleted": "ٹکٹ وصف تعلق کامیابی سے حذف ہوا",
+            "reorder_success": "ترجیحی ترتیب کامیابی سے محفوظ ہو گئی",
+            "reorder_error": "ترجیحی ترتیب محفوظ کرنے میں ناکامی",
+            "errors": {
+                "file_required": "نیا تعلق بنانے کے لیے فائل ضروری ہے",
+                "invalid_file_type": "غلط فائل قسم۔ صرف CSV اور Excel (.xlsx) فائلیں معاون ہیں۔",
+                "parse_failed": "فائل کا تجزیہ ناکام",
+                "invalid_columns": "فائل میں درست وصف ناموں کے ساتھ بالکل دو کالم ہونے چاہئیں",
+                "duplicate_filename": "اس فائل نام کے ساتھ تعلق پہلے سے موجود ہے",
+                "not_found": "ٹکٹ وصف تعلق نہیں ملا"
+            }
+        },
         "states": "حالتیں",
         "status": "حیثیت",
         "statuses": {
@@ -1307,6 +1338,8 @@
     "admin_dashboard": {
         "acl": "رسائی کنٹرول لسٹ",
         "acl_desc": "مشروط رسائی کے قواعد کی تعریف",
+        "ticket_attribute_relations": "ٹکٹ وصف تعلقات",
+        "ticket_attribute_relations_desc": "ٹکٹ فارموں کے لیے وصف انحصار کی وضاحت کریں",
         "active_users_customers": "فعال ایجنٹس اور صارفین",
         "activity": {
             "config_updated": "[UR] System configuration updated",
@@ -1577,6 +1610,7 @@
         "created_by": "تخلیق کنندہ",
         "date": "تاریخ",
         "delete": "حذف کریں",
+        "drag": "ترتیب بدلنے کے لیے گھسیٹیں",
         "edit": "ترمیم کریں",
         "email": "ای میل",
         "error": "غلطی",
@@ -1601,6 +1635,8 @@
         "no_data_available": "نہیں data available",
         "no_results": "کوئی نتائج نہیں ملے",
         "no_results_found": "نہیں results found",
+        "last_update": "آخری تازہ کاری",
+        "save_and_finish": "محفوظ کریں اور ختم کریں",
         "none": "کوئی نہیں",
         "not_closed": "بند نہیں",
         "of": "کا",

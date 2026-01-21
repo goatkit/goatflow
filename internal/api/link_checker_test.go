@@ -83,6 +83,11 @@ func TestAllLinksReturn200(t *testing.T) {
 			return true
 		}
 
+		// Ticket attachment API endpoints return 400 without proper request body
+		if strings.Contains(trimmed, "/attachments") && strings.HasPrefix(trimmed, "/api/tickets/") && status == http.StatusBadRequest {
+			return true
+		}
+
 		// Admin group detail pages return 500 without DB
 		if strings.HasPrefix(trimmed, "/admin/groups/") && status == http.StatusInternalServerError {
 			return true

@@ -1,0 +1,10 @@
+Queue;DynamicField_Category
+Sales;Quote
+Sales;Opportunity
+Sales;Contract
+Support;Bug
+Support;Feature
+Support;Question
+HR;Onboarding
+HR;Offboarding
+HR;Benefits

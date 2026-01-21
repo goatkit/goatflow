@@ -16,7 +16,14 @@ import (
 func TestCustomerPortalServesHTML(t *testing.T) {
 	cfg := config.GetConfig()
 
-	resp, err := http.Get(cfg.BaseURL + "/customer")
+	// Customer portal runs in its own container, use CustomerPortalURL
+	portalURL := cfg.CustomerPortalURL
+	if portalURL == "" {
+		portalURL = cfg.BaseURL // fallback
+	}
+	t.Logf("Testing customer portal at: %s/customer", portalURL)
+
+	resp, err := http.Get(portalURL + "/customer")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 

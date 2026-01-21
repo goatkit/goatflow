@@ -184,8 +184,13 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
         </div>
     </div>
 
-    <!-- Add hidden queue ID, priority ID, and status ID for JavaScript -->
-    <div data-queue-id="{{ Ticket.queue_id }}" data-priority-id="{{ Ticket.priority_id }}" data-status-id="{{ Ticket.status_id }}" style="display: none;"></div>
+    <!-- Add hidden ticket attributes for JavaScript (used by ticket attribute relations filtering) -->
+    <div data-queue-id="{{ Ticket.queue_id }}"
+         data-queue-name="{{ Ticket.queue_name }}"
+         data-status-id="{{ Ticket.status_id }}"
+         data-status-name="{{ Ticket.status_name }}"
+         data-priority-id="{{ Ticket.priority_id }}"
+         style="display: none;"></div>
 
     {% if Ticket.pending_reminder %}
     <div class="mb-6">

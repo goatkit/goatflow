@@ -216,6 +216,23 @@ func HandleListQueuesAPI(c *gin.Context) {
 	}
 	_ = rows.Err() //nolint:errcheck // Check for iteration errors
 
+	// Apply ticket attribute relations filtering if requested
+	filterAttr := c.Query("filter_attribute")
+	filterValue := c.Query("filter_value")
+	if filterAttr != "" && filterValue != "" {
+		// Convert to []gin.H for the filter function
+		items := make([]gin.H, len(queues))
+		for i, q := range queues {
+			items[i] = gin.H(q)
+		}
+		items = filterByTicketAttributeRelations(c, db, items, "Queue", filterAttr, filterValue)
+		// Convert back
+		queues = make([]map[string]interface{}, len(items))
+		for i, item := range items {
+			queues[i] = map[string]interface{}(item)
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    queues,

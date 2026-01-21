@@ -159,6 +159,7 @@
 {{ block.super }}
 <script src="/static/js/tiptap.min.js"></script>
 <script src="/static/js/tiptap-editor.js"></script>
+<script src="/static/js/ticket-attribute-relations.js"></script>
 <!-- Seed JSON for GoatKit autocomplete (customer-user) -->
 <script type="application/json" data-gk-seed="customer-user">[
     {% for customerUser in CustomerUsers %}{
@@ -604,6 +605,20 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             nextStateSel.addEventListener('change', updateStateBindings);
             updateStateBindings();
+        }
+
+        // Initialize ticket attribute relations filtering
+        if (window.TicketAttributeRelations) {
+            TicketAttributeRelations.init({
+                debug: window.GK_DEBUG || false,
+                selectors: {
+                    'Queue': '#queue_id',
+                    'Priority': '#priority',
+                    'Service': '#service_id',
+                    'Type': '#type_id',
+                    'State': '#next_state'
+                }
+            });
         }
     });
 </script>
