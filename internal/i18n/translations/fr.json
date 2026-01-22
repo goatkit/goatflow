@@ -1608,6 +1608,8 @@
         "no_results_found": "Aucun résultat trouvé",
         "last_update": "Dernière mise à jour",
         "save_and_finish": "Enregistrer et terminer",
+        "save_changes": "Enregistrer les Modifications",
+        "saved": "Enregistré",
         "none": "Aucun",
         "not_closed": "Non fermé",
         "of": "sur",
@@ -2197,9 +2199,10 @@
         "error_loading_tables": "Erreur loading tables",
         "error_occurred": "Une erreur s'est produite",
         "error_saving_field": "Erreur saving field",
-        "error_saving_permissions": "Erreur saving permissions",
-        "error_saving_preferences": "Erreur saving preferences",
-        "error_saving_profile": "Erreur saving prdeile",
+        "error_saving_permissions": "Erreur lors de l'enregistrement des permissions",
+        "error_saving_preferences": "Erreur lors de l'enregistrement des préférences",
+        "error_saving_profile": "Erreur lors de l'enregistrement du profil",
+        "error_saving": "Erreur lors de l'enregistrement des modifications",
         "error_screen_config": "Failed to update screen configuration",
         "error_testing_connection": "Erreur testing connection",
         "failed_add_user": "Failed to add user",
@@ -2394,6 +2397,20 @@
         "tooltips": {
             "edit": "Modifier priouity"
         }
+    },
+    "password": {
+        "change_description": "Mettez à jour votre mot de passe pour sécuriser votre compte.",
+        "current_password": "Mot de passe actuel",
+        "new_password": "Nouveau mot de passe",
+        "requirements": "Exigences du mot de passe :",
+        "min_characters": "Minimum {n} caractères",
+        "min_2_upper_2_lower": "Au moins 2 majuscules et 2 minuscules",
+        "need_digit": "Au moins 1 chiffre",
+        "min_2_letters": "Au moins 2 lettres",
+        "passwords_match": "Les mots de passe correspondent",
+        "passwords_no_match": "Les mots de passe ne correspondent pas",
+        "changed_success": "Mot de passe modifié avec succès !",
+        "same_as_current": "Le nouveau mot de passe doit être différent du mot de passe actuel"
     },
     "priority": {
         "critical": "Critique",
@@ -2651,7 +2668,9 @@
         "time_format": "Format d'heure",
         "timezone": "Fuseau horaire",
         "two_factor_auth": "Authentification à deux facteurs",
-        "webhooks": "Webhooks"
+        "webhooks": "Webhooks",
+        "personal_info": "Informations Personnelles",
+        "preferences": "Préférences"
     },
     "severity": {
         "critical": "Critique",

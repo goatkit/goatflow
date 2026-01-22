@@ -1522,7 +1522,9 @@
         "no_data_available": "No data available",
         "no_results_found": "No results found",
         "last_update": "Last Update",
-        "save_and_finish": "Save and Finish"
+        "save_and_finish": "Save and Finish",
+        "save_changes": "Save Changes",
+        "saved": "Saved"
     },
     "customer": {
         "company": "Company",
@@ -1876,6 +1878,9 @@
         "not_enough_tickets": "Not Enough Tickets",
         "select_two_to_merge": "Please select at least two tickets to merge",
         "loading_customer_users": "Loading customer users...",
+        "error_saving_profile": "Error saving profile",
+        "error_saving_preferences": "Error saving preferences",
+        "error_saving": "Error saving changes",
         "confirm": {
             "delete_customer_user": "Are you sure you want to delete this customer user? This action cannot be undone.",
             "toggle_customer_status": "Are you sure you want to {action} this customer user?",
@@ -2029,6 +2034,20 @@
         "next_page": "Next page",
         "last_page": "Last page"
     },
+    "password": {
+        "change_description": "Update your password to keep your account secure.",
+        "current_password": "Current Password",
+        "new_password": "New Password",
+        "requirements": "Password requirements:",
+        "min_characters": "Minimum {n} characters",
+        "min_2_upper_2_lower": "At least 2 uppercase and 2 lowercase letters",
+        "need_digit": "At least 1 number",
+        "min_2_letters": "At least 2 letters",
+        "passwords_match": "Passwords match",
+        "passwords_no_match": "Passwords do not match",
+        "changed_success": "Password changed successfully!",
+        "same_as_current": "New password must be different from current password"
+    },
     "priority": {
         "critical": "Critical",
         "high": "High",
@@ -2150,7 +2169,9 @@
         "two_factor_auth": "Two-Factor Authentication",
         "webhooks": "Webhooks",
         "more_coming": "More settings coming soon",
-        "heading": "Settings"
+        "heading": "Settings",
+        "personal_info": "Personal Information",
+        "preferences": "Preferences"
     },
     "severity": {
         "critical": "Critical",

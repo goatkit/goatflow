@@ -1608,6 +1608,8 @@
         "no_results_found": "לא results found",
         "last_update": "עדכון אחרון",
         "save_and_finish": "שמור וסיים",
+        "save_changes": "שמור שינויים",
+        "saved": "נשמר",
         "none": "אין",
         "not_closed": "לא סגור",
         "of": "מתוך",
@@ -2194,9 +2196,10 @@
         "error_loading_tables": "שגיאה loading tables",
         "error_occurred": "אירעה שגיאה",
         "error_saving_field": "שגיאה saving field",
-        "error_saving_permissions": "שגיאה saving permissions",
-        "error_saving_preferences": "שגיאה saving preferences",
-        "error_saving_profile": "שגיאה saving profile",
+        "error_saving_permissions": "שגיאה בשמירת ההרשאות",
+        "error_saving_preferences": "שגיאה בשמירת ההעדפות",
+        "error_saving_profile": "שגיאה בשמירת הפרופיל",
+        "error_saving": "שגיאה בשמירת השינויים",
         "error_screen_config": "Failed to update screen configuration",
         "error_testing_connection": "שגיאה testing connection",
         "failed_add_user": "Failed to add user",
@@ -2391,6 +2394,20 @@
         "tooltips": {
             "edit": "עריכה priority"
         }
+    },
+    "password": {
+        "change_description": "עדכן את הסיסמה שלך כדי לשמור על אבטחת החשבון.",
+        "current_password": "סיסמה נוכחית",
+        "new_password": "סיסמה חדשה",
+        "requirements": "דרישות סיסמה:",
+        "min_characters": "לפחות {n} תווים",
+        "min_2_upper_2_lower": "לפחות 2 אותיות גדולות ו-2 אותיות קטנות",
+        "need_digit": "לפחות ספרה אחת",
+        "min_2_letters": "לפחות 2 אותיות",
+        "passwords_match": "הסיסמאות תואמות",
+        "passwords_no_match": "הסיסמאות אינן תואמות",
+        "changed_success": "הסיסמה שונתה בהצלחה!",
+        "same_as_current": "הסיסמה החדשה חייבת להיות שונה מהסיסמה הנוכחית"
     },
     "priority": {
         "critical": "קריטי",
@@ -2658,7 +2675,9 @@
         "time_format": "פורמט זמן",
         "timezone": "אזור זמן",
         "two_factor_auth": "אימות דו-שלבי",
-        "webhooks": "Webhooks"
+        "webhooks": "Webhooks",
+        "personal_info": "מידע אישי",
+        "preferences": "העדפות"
     },
     "severity": {
         "critical": "קריטי",

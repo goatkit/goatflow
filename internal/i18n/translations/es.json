@@ -1608,6 +1608,8 @@
         "no_results_found": "No se encontraron resultados",
         "last_update": "Última actualización",
         "save_and_finish": "Guardar y finalizar",
+        "save_changes": "Guardar Cambios",
+        "saved": "Guardado",
         "none": "Ninguno",
         "not_closed": "No Cerrado",
         "of": "de",
@@ -2196,9 +2198,10 @@
         "error_loading_tables": "Erro loading tables",
         "error_occurred": "Ocurrió un error",
         "error_saving_field": "Erro saving field",
-        "error_saving_permissions": "Erro saving permissions",
-        "error_saving_preferences": "Erro saving preferences",
-        "error_saving_profile": "Erro saving prdeile",
+        "error_saving_permissions": "Error al guardar los permisos",
+        "error_saving_preferences": "Error al guardar las preferencias",
+        "error_saving_profile": "Error al guardar el perfil",
+        "error_saving": "Error al guardar los cambios",
         "error_screen_config": "Failed to update screen configuration",
         "error_testing_connection": "Erro testing connection",
         "failed_add_user": "Failed to add user",
@@ -2393,6 +2396,20 @@
         "tooltips": {
             "edit": "Editar prioity"
         }
+    },
+    "password": {
+        "change_description": "Actualice su contraseña para mantener su cuenta segura.",
+        "current_password": "Contraseña actual",
+        "new_password": "Nueva contraseña",
+        "requirements": "Requisitos de contraseña:",
+        "min_characters": "Mínimo {n} caracteres",
+        "min_2_upper_2_lower": "Al menos 2 mayúsculas y 2 minúsculas",
+        "need_digit": "Al menos 1 número",
+        "min_2_letters": "Al menos 2 letras",
+        "passwords_match": "Las contraseñas coinciden",
+        "passwords_no_match": "Las contraseñas no coinciden",
+        "changed_success": "¡Contraseña cambiada exitosamente!",
+        "same_as_current": "La nueva contraseña debe ser diferente de la actual"
     },
     "priority": {
         "critical": "Crítica",
@@ -2650,7 +2667,9 @@
         "time_format": "Formato de Hora",
         "timezone": "Zona Horaria",
         "two_factor_auth": "Autenticación de Dos Factores",
-        "webhooks": "Webhooks"
+        "webhooks": "Webhooks",
+        "personal_info": "Información Personal",
+        "preferences": "Preferencias"
     },
     "severity": {
         "critical": "Crítica",

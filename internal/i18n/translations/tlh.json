@@ -1628,6 +1628,8 @@
         "no_results_found": "ghobe' results found",
         "last_update": "Qav choHmeH poH",
         "save_and_finish": "Qop 'ej rIn",
+        "save_changes": "choHmey pol",
+        "saved": "pollu'pu'",
         "none": "pagh",
         "not_closed": "SoQbe'",
         "of": "-vo'",
@@ -2214,9 +2216,10 @@
         "error_loading_tables": "Qagh loading tables",
         "error_occurred": "Qagh qaS",
         "error_saving_field": "Qagh saving field",
-        "error_saving_permissions": "Qagh saving permissions",
-        "error_saving_preferences": "Qagh saving preferences",
-        "error_saving_profile": "Qagh saving profile",
+        "error_saving_permissions": "chaw'mey polmeH Qagh",
+        "error_saving_preferences": "DuHmey polmeH Qagh",
+        "error_saving_profile": "nuv De' polmeH Qagh",
+        "error_saving": "choHmey polmeH Qagh",
         "error_screen_config": "Failed to update screen configuration",
         "error_testing_connection": "Qagh testing connection",
         "failed_add_user": "Failed to add user",
@@ -2411,6 +2414,20 @@
         "tooltips": {
             "edit": "choH priority"
         }
+    },
+    "password": {
+        "change_description": "ngaDmoHmeH DuHung choHwI' yIchoH.",
+        "current_password": "DaH ngaDmoHwI'",
+        "new_password": "chu' ngaDmoHwI'",
+        "requirements": "ngaDmoHwI' poQlu':",
+        "min_characters": "{n} Dol puS law'",
+        "min_2_upper_2_lower": "2 tIn mI' 'ej 2 mach mI' poQlu'",
+        "need_digit": "1 mI' poQlu'",
+        "min_2_letters": "2 mI'mey poQlu'",
+        "passwords_match": "ngaDmoHwI'mey rap",
+        "passwords_no_match": "ngaDmoHwI'mey rapbe'",
+        "changed_success": "ngaDmoHwI' choHlu'ta'!",
+        "same_as_current": "chu' ngaDmoHwI' pIm 'oH poQ"
     },
     "priority": {
         "critical": "Qob'a'",
@@ -2668,7 +2685,9 @@
         "time_format": "poH mIw",
         "timezone": "poH Sep",
         "two_factor_auth": "cha' mIw to'",
-        "webhooks": "web HIvje'mey"
+        "webhooks": "web HIvje'mey",
+        "personal_info": "nuv De'",
+        "preferences": "DuHmey"
     },
     "severity": {
         "critical": "Qob'a'",
