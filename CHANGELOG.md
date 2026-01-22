@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
 ## [Unreleased]
 
 ### Added
+- **Customer Profile Page**: Full profile management interface at `/customer/profile` for customer users
+  - View and edit personal information (first name, last name, title, phone, mobile)
+  - Language preference selection with all 15 supported languages
+  - Session timeout preference with configurable durations (1 hour to 7 days)
+  - Link to password change functionality
+  - Avatar with customer initials display
+  - Full i18n support for all 15 languages
+  - Files: `templates/pages/customer/profile.pongo2`, `internal/api/customer_routes.go`
+- **Customer Dashboard as Default Landing Page**: Customer login now redirects to `/customer` (dashboard) instead of `/customer/tickets`
+  - Dashboard tiles are clickable and link to filtered ticket lists (open, closed, all)
+  - Removed sysconfig override for customer landing page - now hardcoded in code
+  - Files: `internal/api/auth_customer.go`, `templates/pages/customer/dashboard.pongo2`
 - **Admin Ticket Attribute Relations**: Full CRUD interface at `/admin/ticket-attribute-relations` for managing ticket attribute relationships (OTRS AdminTicketAttributeRelations equivalent)
   - Define relationships between ticket attributes (Queue, State, Priority, Type, Service, SLA, Owner, Responsible, DynamicField_*)
   - CSV and Excel (.xlsx) file upload support for bulk relationship import
@@ -23,6 +35,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
   - Page had local `showToast(type, message)` with reversed parameter order compared to global `showToast(message, type)` in common.js
   - Removed local function and updated all calls to use global signature
   - File: `templates/pages/admin/ticket_attribute_relations.pongo2`
+- **Customer Initials Display**: Fixed customer initials in navigation showing only first letter instead of two letters (e.g., "E" instead of "ES" for Emma Scott)
+  - Root cause: pongo2 template whitespace between template tags was causing only first letter to render
+  - Solution: Put entire initials logic on single line in template
+  - File: `templates/layouts/base.pongo2`
+- **Missing i18n Translations**: Fixed untranslated strings in profile-related keys
+  - `common.email` in Ukrainian: "Email" → "Ел. пошта"
+  - `messages.unknown_error` in 10 languages (pt, pl, ru, zh, ja, ar, he, fa, ur, tlh) now properly translated
+  - Files: `internal/i18n/translations/*.json`
 
 ## [0.6.1] - 2026-01-17
 

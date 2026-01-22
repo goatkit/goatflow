@@ -35,7 +35,7 @@ func portalKeyDefs() []portalKeyDef {
 		{"CustomerPortal::LoginRequired", "Require customer authentication before accessing the portal.", `{"type":"boolean","default":true}`, "true"},
 		{"CustomerPortal::Title", "Portal title shown in header and HTML title.", `{"type":"string","default":"Customer Portal"}`, "Customer Portal"},
 		{"CustomerPortal::FooterText", "Footer text displayed on customer portal pages.", `{"type":"string","default":"Powered by GOTRS"}`, "Powered by GOTRS"},
-		{"CustomerPortal::LandingPage", "Relative path used after login (or on portal entry).", `{"type":"string","default":"/customer/tickets"}`, "/customer/tickets"},
+		{"CustomerPortal::LandingPage", "Relative path used after login (or on portal entry).", `{"type":"string","default":"/customer"}`, "/customer"},
 	}
 }
 

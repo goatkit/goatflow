@@ -8,10 +8,10 @@
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("customer.dashboard.welcome") }}</h1>
         <p class="mt-2 text-gray-600 dark:text-gray-400">
-            {% if CustomerInfo.FirstName.Valid %}
-                {{ t("customer.dashboard.hello") }} {{ CustomerInfo.FirstName.String }}{% if CustomerInfo.LastName.Valid %} {{ CustomerInfo.LastName.String }}{% endif %}!
+            {% if Customer.first_name %}
+                {{ t("customer.dashboard.hello") }} {{ Customer.first_name }}{% if Customer.last_name %} {{ Customer.last_name }}{% endif %}!
             {% else %}
-                {{ t("customer.dashboard.hello") }} {{ CustomerInfo.Email }}!
+                {{ t("customer.dashboard.hello") }} {{ Customer.email }}!
             {% endif %}
             {{ t("customer.dashboard.how_can_we_help") }}
         </p>
@@ -64,47 +64,53 @@
 
     <!-- Statistics -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.dashboard.open_tickets") }}</p>
-                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ Stats.OpenTickets }}</p>
-                </div>
-                <div class="text-blue-500">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                    </svg>
+        <a href="/customer/tickets?status=open" class="block">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.dashboard.open_tickets") }}</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ Stats.OpenTickets }}</p>
+                    </div>
+                    <div class="text-blue-500">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                    </div>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.dashboard.closed_tickets") }}</p>
-                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ Stats.ClosedTickets }}</p>
-                </div>
-                <div class="text-green-500">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
+        <a href="/customer/tickets?status=closed" class="block">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.dashboard.closed_tickets") }}</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ Stats.ClosedTickets }}</p>
+                    </div>
+                    <div class="text-green-500">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.dashboard.total_tickets") }}</p>
-                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ Stats.TotalTickets }}</p>
-                </div>
-                <div class="text-purple-500">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-                    </svg>
+        <a href="/customer/tickets?status=all" class="block">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.dashboard.total_tickets") }}</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ Stats.TotalTickets }}</p>
+                    </div>
+                    <div class="text-purple-500">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                        </svg>
+                    </div>
                 </div>
             </div>
-        </div>
+        </a>
 
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div class="flex items-center justify-between">

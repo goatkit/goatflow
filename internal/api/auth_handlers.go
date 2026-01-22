@@ -185,7 +185,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 
 	redirectTarget := "/dashboard"
 	if strings.EqualFold(user.Role, "customer") {
-		redirectTarget = "/customer/tickets"
+		redirectTarget = "/customer"
 	}
 
 	if strings.Contains(contentType, "application/json") {

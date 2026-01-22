@@ -1,10 +1,347 @@
 {% extends "layouts/base.pongo2" %}
-{% block title %}{{ t("customer.placeholder_pages.profile_title") }} - GOTRS{% endblock %}
+
+{% block title %}{{ t("navigation.profile") }} - {{ Portal.Title }}{% endblock %}
+
 {% block content %}
 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-  <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">{{ t("customer.placeholder_pages.profile_title") }}</h1>
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-    <p class="text-gray-600 dark:text-gray-300">{{ t("customer.placeholder_pages.under_construction") }}</p>
-  </div>
+    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg">
+        <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
+                {{ t("navigation.profile") }}
+            </h3>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ t("settings.general") }}
+            </p>
+        </div>
+
+        <!-- Avatar and Account Info -->
+        <div class="px-4 py-5 sm:p-6">
+            <div class="flex items-center space-x-6 mb-6">
+                <!-- Avatar with initials -->
+                <div class="flex-shrink-0">
+                    <div class="h-20 w-20 rounded-full bg-blue-600 flex items-center justify-center">
+                        <span class="text-2xl font-semibold text-white">{{ Customer.initials }}</span>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-xl font-medium text-gray-900 dark:text-gray-100">
+                        {{ Customer.first_name }} {{ Customer.last_name }}
+                    </h4>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ Customer.email }}</p>
+                </div>
+            </div>
+
+            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">{{ t("settings.account") }}</h4>
+
+            <!-- Read-only fields -->
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2 mb-6">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("auth.username")|default:"Username" }}</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ Customer.login }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("common.email") }}</dt>
+                    <dd class="mt-1 text-sm text-gray-900 dark:text-gray-100">{{ Customer.email }}</dd>
+                </div>
+            </dl>
+
+            <!-- Editable profile form -->
+            <form id="profile-form" class="space-y-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="first-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("user.first_name")|default:"First Name" }} *</label>
+                        <input type="text" id="first-name" name="first_name" required
+                               class="mt-1 block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                               value="{{ Customer.first_name }}">
+                    </div>
+                    <div>
+                        <label for="last-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("user.last_name")|default:"Last Name" }} *</label>
+                        <input type="text" id="last-name" name="last_name" required
+                               class="mt-1 block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                               value="{{ Customer.last_name }}">
+                    </div>
+                </div>
+                <div>
+                    <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("user.title")|default:"Title" }}</label>
+                    <input type="text" id="title" name="title"
+                           class="mt-1 block w-full sm:w-64 px-3 py-2 text-base border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                           placeholder="{{ t('user.title_placeholder')|default:'e.g. Mr., Ms., Dr.' }}"
+                           value="{{ Customer.title }}">
+                </div>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("user.phone")|default:"Phone" }}</label>
+                        <input type="tel" id="phone" name="phone"
+                               class="mt-1 block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                               value="{{ Customer.phone }}">
+                    </div>
+                    <div>
+                        <label for="mobile" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("user.mobile")|default:"Mobile" }}</label>
+                        <input type="tel" id="mobile" name="mobile"
+                               class="mt-1 block w-full px-3 py-2 text-base border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                               value="{{ Customer.mobile }}">
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">{{ t("common.save") }}</button>
+                </div>
+            </form>
+
+            <div id="profile-save-feedback" class="mt-4 hidden">
+                <div class="rounded-md bg-green-50 dark:bg-green-900/20 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-green-800 dark:text-green-200">{{ t("success.saved")|default:"Saved successfully" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Language Preferences -->
+        <div class="px-4 py-5 sm:p-6 border-t border-gray-200 dark:border-gray-700">
+            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">{{ t("settings.language")|default:"Language Settings" }}</h4>
+
+            <form id="language-preferences-form" class="space-y-4">
+                <div>
+                    <label for="language-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("settings.language")|default:"Language" }}</label>
+                    <select id="language-select" name="language"
+                            class="mt-1 block w-full sm:w-64 pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="">{{ t("settings.default")|default:"System Default" }}</option>
+                        <!-- Options populated via JavaScript -->
+                    </select>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        {{ t("settings.language_help")|default:"Choose your preferred language for the interface." }}
+                    </p>
+                </div>
+
+                <div>
+                    <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">{{ t("common.save") }}</button>
+                </div>
+            </form>
+
+            <div id="language-save-feedback" class="mt-4 hidden">
+                <div class="rounded-md bg-green-50 dark:bg-green-900/20 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-green-800 dark:text-green-200">{{ t("success.saved")|default:"Saved successfully" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Preferences -->
+        <div class="px-4 py-5 sm:p-6 border-t border-gray-200 dark:border-gray-700">
+            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">{{ t("settings.sessions")|default:"Session Settings" }}</h4>
+
+            <form id="session-preferences-form" class="space-y-4">
+                <div>
+                    <label for="session-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("settings.session_timeout")|default:"Session Timeout" }}</label>
+                    <select id="session-timeout" name="session_timeout"
+                            class="mt-1 block w-full sm:w-64 pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                        <option value="0">{{ t("settings.default")|default:"System Default" }} (24 {{ t("time.hours")|default:"hours" }})</option>
+                        <option value="3600">1 {{ t("time.hour")|default:"hour" }}</option>
+                        <option value="14400">4 {{ t("time.hours")|default:"hours" }}</option>
+                        <option value="28800">8 {{ t("time.hours")|default:"hours" }}</option>
+                        <option value="86400">24 {{ t("time.hours")|default:"hours" }}</option>
+                        <option value="259200">3 {{ t("time.days")|default:"days" }}</option>
+                        <option value="604800">7 {{ t("time.days")|default:"days" }}</option>
+                    </select>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        {{ t("settings.session_timeout_help")|default:"How long should your session stay active before requiring you to log in again?" }}
+                    </p>
+                </div>
+
+                <div>
+                    <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">{{ t("common.save") }}</button>
+                </div>
+            </form>
+
+            <div id="session-save-feedback" class="mt-4 hidden">
+                <div class="rounded-md bg-green-50 dark:bg-green-900/20 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-green-800 dark:text-green-200">{{ t("success.saved")|default:"Saved successfully" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Password Change Link -->
+        <div class="px-4 py-5 sm:p-6 border-t border-gray-200 dark:border-gray-700">
+            <h4 class="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">{{ t("settings.security")|default:"Security" }}</h4>
+            <a href="/customer/password/form" class="inline-flex items-center text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                {{ t("settings.change_password")|default:"Change Password" }}
+            </a>
+        </div>
+    </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle profile form submission
+    document.getElementById('profile-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const profileData = {
+            first_name: formData.get('first_name'),
+            last_name: formData.get('last_name'),
+            title: formData.get('title') || '',
+            phone: formData.get('phone') || '',
+            mobile: formData.get('mobile') || ''
+        };
+
+        fetch('/customer/profile/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(profileData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const feedback = document.getElementById('profile-save-feedback');
+                feedback.classList.remove('hidden');
+                // Update initials avatar if name changed
+                if (data.initials) {
+                    const avatar = document.querySelector('.rounded-full span');
+                    if (avatar) avatar.textContent = data.initials;
+                }
+                setTimeout(() => {
+                    feedback.classList.add('hidden');
+                }, 3000);
+            } else {
+                alert('{{ t("messages.error_saving_profile")|default:"Error saving profile" }}: ' + (data.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
+            }
+        })
+        .catch(error => {
+            console.error('Error saving profile:', error);
+            alert('{{ t("messages.error_saving_profile")|default:"Error saving profile" }}');
+        });
+    });
+
+    // Load current language preference and populate dropdown
+    fetch('/customer/api/preferences/language')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const select = document.getElementById('language-select');
+
+                // Populate available languages from API response
+                if (data.available && data.available.length > 0) {
+                    data.available.forEach(lang => {
+                        const option = document.createElement('option');
+                        option.value = lang.code;
+                        option.textContent = lang.native_name || lang.name || lang.code;
+                        select.appendChild(option);
+                    });
+                }
+
+                // Set current value
+                if (data.value) {
+                    select.value = data.value;
+                }
+            }
+        })
+        .catch(error => console.error('Error loading language preferences:', error));
+
+    // Load current session timeout preference
+    fetch('/customer/api/preferences/session-timeout')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.value !== undefined) {
+                document.getElementById('session-timeout').value = data.value;
+            }
+        })
+        .catch(error => console.error('Error loading session preferences:', error));
+
+    // Handle language form submission
+    document.getElementById('language-preferences-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const language = formData.get('language');
+
+        fetch('/customer/api/preferences/language', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ value: language })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const feedback = document.getElementById('language-save-feedback');
+                feedback.classList.remove('hidden');
+                setTimeout(() => {
+                    feedback.classList.add('hidden');
+                    // Reload page to apply new language
+                    window.location.reload();
+                }, 1500);
+            } else {
+                alert('{{ t("messages.error_saving_preferences")|default:"Error saving preferences" }}: ' + (data.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
+            }
+        })
+        .catch(error => {
+            console.error('Error saving preferences:', error);
+            alert('{{ t("messages.error_saving_preferences")|default:"Error saving preferences" }}');
+        });
+    });
+
+    // Handle session timeout form submission
+    document.getElementById('session-preferences-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const timeout = formData.get('session_timeout');
+
+        fetch('/customer/api/preferences/session-timeout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ value: parseInt(timeout) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const feedback = document.getElementById('session-save-feedback');
+                feedback.classList.remove('hidden');
+                setTimeout(() => {
+                    feedback.classList.add('hidden');
+                }, 3000);
+            } else {
+                alert('{{ t("messages.error_saving_preferences")|default:"Error saving preferences" }}: ' + (data.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
+            }
+        })
+        .catch(error => {
+            console.error('Error saving preferences:', error);
+            alert('{{ t("messages.error_saving_preferences")|default:"Error saving preferences" }}');
+        });
+    });
+});
+</script>
 {% endblock %}

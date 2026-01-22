@@ -13,6 +13,8 @@ import (
 
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/i18n"
+	"github.com/gotrs-io/gotrs-ce/internal/service"
 	"github.com/gotrs-io/gotrs-ce/internal/sysconfig"
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
@@ -93,13 +95,56 @@ func withPortalContext(ctx pongo2.Context, cfg sysconfig.CustomerPortalConfig) p
 	return ctx
 }
 
+// getCustomerInfo fetches customer info for the given username and returns it as a simple map.
+// Returns both CamelCase and snake_case keys for template compatibility.
+func getCustomerInfo(db *sql.DB, username string) map[string]string {
+	var custInfo struct {
+		FirstName sql.NullString
+		LastName  sql.NullString
+		Email     string
+		Company   sql.NullString
+	}
+	row := db.QueryRow(database.ConvertPlaceholders(`
+		SELECT cu.first_name, cu.last_name, cu.email, cc.name as company
+		FROM customer_user cu
+		LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
+		WHERE cu.login = ?
+	`), username)
+	_ = row.Scan(&custInfo.FirstName, &custInfo.LastName, //nolint:errcheck
+		&custInfo.Email, &custInfo.Company)
+
+	return map[string]string{
+		// CamelCase for CustomerInfo access
+		"FirstName": custInfo.FirstName.String,
+		"LastName":  custInfo.LastName.String,
+		"Email":     custInfo.Email,
+		"Company":   custInfo.Company.String,
+		// snake_case for Customer access
+		"first_name": custInfo.FirstName.String,
+		"last_name":  custInfo.LastName.String,
+		"email":      custInfo.Email,
+		"company":    custInfo.Company.String,
+	}
+}
+
+// withPortalContextAndCustomer adds portal context and customer info to the template context.
+func withPortalContextAndCustomer(ctx pongo2.Context, cfg sysconfig.CustomerPortalConfig, db *sql.DB, username string) pongo2.Context {
+	ctx = withPortalContext(ctx, cfg)
+	customerInfo := getCustomerInfo(db, username)
+	ctx["CustomerInfo"] = customerInfo
+	// Only set Customer if not already set by the handler
+	if _, exists := ctx["Customer"]; !exists {
+		ctx["Customer"] = customerInfo
+	}
+	return ctx
+}
+
 // handleCustomerDashboard shows the customer's main dashboard.
 func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !requireCustomerAuth(c) {
 			return
 		}
-		userID := c.GetInt("userID")
 		username := c.GetString("username")
 		cfg := customerPortalConfigFromContext(c, db)
 
@@ -160,15 +205,15 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 				   END as priority_color,
 				   t.create_time,
 				   t.change_time,
-				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id) as article_count,
-				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id AND create_by != ?) as unread_count
+				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id AND is_visible_for_customer = 1) as article_count,
+				   0 as unread_count
 			FROM ticket t
 			LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
 			LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
 			WHERE t.customer_user_id = ?
 			ORDER BY t.create_time DESC
 			LIMIT 10
-		`), userID, username)
+		`), username)
 		if err != nil {
 			log.Printf("handleCustomerDashboard: query error: %v", err)
 		}
@@ -211,34 +256,17 @@ func handleCustomerDashboard(db *sql.DB) gin.HandlerFunc {
 		}
 		_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 
-		// Get customer info
-		var customerInfo struct {
-			FirstName sql.NullString
-			LastName  sql.NullString
-			Email     string
-			Company   sql.NullString
-		}
-		row = db.QueryRow(database.ConvertPlaceholders(`
-			SELECT cu.first_name, cu.last_name, cu.email, cc.name as company
-			FROM customer_user cu
-			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
-			WHERE cu.login = ?
-		`), username)
-		_ = row.Scan(&customerInfo.FirstName, &customerInfo.LastName, //nolint:errcheck // Customer info defaults to empty
-			&customerInfo.Email, &customerInfo.Company)
-
 		// Get announcements/news (if any)
 		announcements := []map[string]interface{}{}
 		// TODO: Add announcements table/feature
 
-		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/dashboard.pongo2", withPortalContext(pongo2.Context{
+		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/dashboard.pongo2", withPortalContextAndCustomer(pongo2.Context{
 			"Title":         cfg.Title,
 			"ActivePage":    "customer",
 			"Stats":         stats,
 			"RecentTickets": recentTickets,
-			"CustomerInfo":  customerInfo,
 			"Announcements": announcements,
-		}, cfg))
+		}, cfg, db, username))
 	}
 }
 
@@ -249,7 +277,6 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 		username := c.GetString("username")
-		userID := c.GetInt("userID")
 		cfg := customerPortalConfigFromContext(c, db)
 
 		// Get filter parameters
@@ -272,8 +299,8 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 				   s.name as service,
 				   t.create_time,
 				   t.change_time,
-				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id) as article_count,
-				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id AND create_by != ?) as unread_count
+				   (SELECT COUNT(*) FROM article WHERE ticket_id = t.id AND is_visible_for_customer = 1) as article_count,
+				   0 as unread_count
 			FROM ticket t
 			LEFT JOIN ticket_state ts ON t.ticket_state_id = ts.id
 			LEFT JOIN ticket_priority tp ON t.ticket_priority_id = tp.id
@@ -281,7 +308,7 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 			WHERE t.customer_user_id = ?
 		`
 
-		args := []interface{}{userID, username}
+		args := []interface{}{username}
 
 		// Apply status filter
 		if status == "open" {
@@ -352,7 +379,7 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 		}
 		_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 
-		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/tickets.pongo2", withPortalContext(pongo2.Context{
+		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/tickets.pongo2", withPortalContextAndCustomer(pongo2.Context{
 			"Title":      fmt.Sprintf("%s - My Tickets", cfg.Title),
 			"ActivePage": "customer",
 			"Tickets":    tickets,
@@ -362,7 +389,7 @@ func handleCustomerTickets(db *sql.DB) gin.HandlerFunc {
 				"sort":   sortBy,
 				"order":  sortOrder,
 			},
-		}, cfg))
+		}, cfg, db, username))
 	}
 }
 
@@ -474,13 +501,13 @@ func handleCustomerNewTicket(db *sql.DB) gin.HandlerFunc {
 			customerDynamicFields = dfFields
 		}
 
-		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/new_ticket.pongo2", withPortalContext(pongo2.Context{
+		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/new_ticket.pongo2", withPortalContextAndCustomer(pongo2.Context{
 			"Title":                 fmt.Sprintf("%s - Create New Ticket", cfg.Title),
 			"ActivePage":            "customer",
 			"Services":              services,
 			"Priorities":            priorities,
 			"CustomerDynamicFields": customerDynamicFields,
-		}, cfg))
+		}, cfg, db, username))
 	}
 }
 
@@ -671,6 +698,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			Title         string
 			State         string
 			StateID       int
+			StateTypeID   int
 			Priority      string
 			PriorityColor sql.NullString
 			Service       sql.NullString
@@ -683,7 +711,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT t.id, t.tn, t.title,
-			       ts.name as state, ts.id as state_id,
+			       ts.name as state, ts.id as state_id, ts.type_id as state_type_id,
 			       tp.name as priority,
 				   CASE
 				       WHEN tp.name LIKE '%very low%' THEN '#03c4f0'
@@ -708,7 +736,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			WHERE t.id = ? AND t.customer_user_id = ?
 		`), ticketID, username).Scan(
 			&ticket.ID, &ticket.TN, &ticket.Title,
-			&ticket.State, &ticket.StateID,
+			&ticket.State, &ticket.StateID, &ticket.StateTypeID,
 			&ticket.Priority, &ticket.PriorityColor,
 			&ticket.Service, &ticket.Queue,
 			&ticket.Owner, &ticket.Responsible,
@@ -784,8 +812,12 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 		}
 
-		// Check if ticket can be closed by customer
-		canClose := ticket.StateID != 3 // Not already closed
+		// Note: OTRS doesn't track article-level "Seen" status for customers.
+		// The article_flag table has a FK constraint to users.id, not customer_user.id.
+		// Customer "new message" tracking would require schema changes.
+
+		// Check if ticket can be closed by customer (type_id 3 = closed states)
+		canClose := ticket.StateTypeID != 3
 
 		// Get dynamic field values for display on customer ticket view
 		var dynamicFieldsDisplay []DynamicFieldDisplay
@@ -805,7 +837,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			replyArticleDynamicFields = replyDFs
 		}
 
-		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/ticket_view.pongo2", withPortalContext(pongo2.Context{
+		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/ticket_view.pongo2", withPortalContextAndCustomer(pongo2.Context{
 			"Title":      fmt.Sprintf("%s - Ticket #%s", cfg.Title, ticket.TN),
 			"ActivePage": "customer",
 			"Ticket": map[string]interface{}{
@@ -829,7 +861,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			"Articles":                  articles,
 			"DynamicFields":             dynamicFieldsDisplay,
 			"ReplyArticleDynamicFields": replyArticleDynamicFields,
-		}, cfg))
+		}, cfg, db, username))
 	}
 }
 
@@ -1012,13 +1044,276 @@ func handleCustomerCloseTicket(db *sql.DB) gin.HandlerFunc {
 
 func handleCustomerProfile(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Customer profile"})
+		if !requireCustomerAuth(c) {
+			return
+		}
+		username := c.GetString("username")
+		cfg := customerPortalConfigFromContext(c, db)
+
+		// Get customer user details
+		var customer struct {
+			ID        int
+			Login     string
+			Email     string
+			Title     sql.NullString
+			FirstName string
+			LastName  string
+			Phone     sql.NullString
+			Mobile    sql.NullString
+		}
+
+		err := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT id, login, email, title, first_name, last_name, phone, mobile
+			FROM customer_user
+			WHERE login = ?
+		`), username).Scan(
+			&customer.ID, &customer.Login, &customer.Email,
+			&customer.Title, &customer.FirstName, &customer.LastName,
+			&customer.Phone, &customer.Mobile)
+
+		if err != nil {
+			log.Printf("Error loading customer profile for %s: %v", username, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load profile"})
+			return
+		}
+
+		// Generate initials for avatar
+		initials := getCustomerInitials(customer.FirstName, customer.LastName)
+
+		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/profile.pongo2", withPortalContextAndCustomer(pongo2.Context{
+			"Title":      fmt.Sprintf("%s - %s", cfg.Title, "Profile"),
+			"ActivePage": "profile",
+			"Customer": map[string]interface{}{
+				"id":         customer.ID,
+				"login":      customer.Login,
+				"email":      customer.Email,
+				"title":      customer.Title.String,
+				"first_name": customer.FirstName,
+				"last_name":  customer.LastName,
+				"phone":      customer.Phone.String,
+				"mobile":     customer.Mobile.String,
+				"initials":   initials,
+			},
+		}, cfg, db, username))
 	}
+}
+
+// getCustomerInitials generates initials from first and last name
+func getCustomerInitials(firstName, lastName string) string {
+	if firstName == "" && lastName == "" {
+		return "?"
+	}
+	if firstName == "" {
+		return strings.ToUpper(lastName[:1])
+	}
+	if lastName == "" {
+		return strings.ToUpper(firstName[:1])
+	}
+	return strings.ToUpper(firstName[:1] + lastName[:1])
 }
 
 func handleCustomerUpdateProfile(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Update profile"})
+		if !requireCustomerAuth(c) {
+			return
+		}
+		username := c.GetString("username")
+
+		var request struct {
+			FirstName string `json:"first_name"`
+			LastName  string `json:"last_name"`
+			Title     string `json:"title"`
+			Phone     string `json:"phone"`
+			Mobile    string `json:"mobile"`
+		}
+
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Invalid request format",
+			})
+			return
+		}
+
+		// Validate required fields
+		if request.FirstName == "" || request.LastName == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "First name and last name are required",
+			})
+			return
+		}
+
+		// Update customer profile
+		_, err := db.Exec(database.ConvertPlaceholders(`
+			UPDATE customer_user
+			SET first_name = ?, last_name = ?, title = ?, phone = ?, mobile = ?, change_time = NOW()
+			WHERE login = ?
+		`), request.FirstName, request.LastName, request.Title, request.Phone, request.Mobile, username)
+
+		if err != nil {
+			log.Printf("Error updating customer profile for %s: %v", username, err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to update profile",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Profile updated successfully",
+		})
+	}
+}
+
+func handleCustomerGetLanguage(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !requireCustomerAuth(c) {
+			return
+		}
+		username := c.GetString("username")
+
+		prefService := service.NewCustomerPreferencesService(db)
+		lang := prefService.GetLanguage(username)
+
+		// Build list of available languages with display names
+		availableLanguages := i18n.GetInstance().GetSupportedLanguages()
+		languageList := make([]gin.H, 0, len(availableLanguages))
+		for _, code := range availableLanguages {
+			if config, exists := i18n.GetLanguageConfig(code); exists {
+				languageList = append(languageList, gin.H{
+					"code":        code,
+					"name":        config.Name,
+					"native_name": config.NativeName,
+				})
+			} else {
+				languageList = append(languageList, gin.H{
+					"code":        code,
+					"name":        code,
+					"native_name": code,
+				})
+			}
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success":   true,
+			"value":     lang,
+			"available": languageList,
+		})
+	}
+}
+
+func handleCustomerSetLanguage(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !requireCustomerAuth(c) {
+			return
+		}
+		username := c.GetString("username")
+
+		var request struct {
+			Value string `json:"value"`
+		}
+
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Invalid request format",
+			})
+			return
+		}
+
+		// Validate language is supported (empty is allowed - means system default)
+		if request.Value != "" {
+			instance := i18n.GetInstance()
+			supported := false
+			for _, lang := range instance.GetSupportedLanguages() {
+				if lang == request.Value {
+					supported = true
+					break
+				}
+			}
+			if !supported {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"success": false,
+					"error":   "Unsupported language: " + request.Value,
+				})
+				return
+			}
+		}
+
+		prefService := service.NewCustomerPreferencesService(db)
+		if err := prefService.SetLanguage(username, request.Value); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to save preference",
+			})
+			return
+		}
+
+		// Set/clear cookie to reflect preference immediately
+		if request.Value != "" {
+			c.SetCookie("lang", request.Value, 86400*30, "/", "", false, true)
+		} else {
+			c.SetCookie("lang", "", -1, "/", "", false, true)
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Language preference saved successfully",
+		})
+	}
+}
+
+func handleCustomerGetSessionTimeout(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !requireCustomerAuth(c) {
+			return
+		}
+		username := c.GetString("username")
+
+		prefService := service.NewCustomerPreferencesService(db)
+		timeout := prefService.GetSessionTimeout(username)
+
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"value":   timeout,
+		})
+	}
+}
+
+func handleCustomerSetSessionTimeout(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !requireCustomerAuth(c) {
+			return
+		}
+		username := c.GetString("username")
+
+		var request struct {
+			Value int `json:"value"`
+		}
+
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Invalid request format",
+			})
+			return
+		}
+
+		prefService := service.NewCustomerPreferencesService(db)
+		if err := prefService.SetSessionTimeout(username, request.Value); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to save preference",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Session timeout preference saved successfully",
+		})
 	}
 }
 

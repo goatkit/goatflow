@@ -38,7 +38,7 @@ func handleCustomerLoginPage(c *gin.Context) {
 	if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
 		jwtManager := shared.GetJWTManager()
 		if claims, err := jwtManager.ValidateToken(cookie); err == nil && claims.Role == "Customer" {
-			c.Redirect(http.StatusFound, "/customer/tickets")
+			c.Redirect(http.StatusFound, "/customer")
 			return
 		}
 		c.SetCookie("access_token", "", -1, "/", "", false, true)

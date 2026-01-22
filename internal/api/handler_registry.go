@@ -265,6 +265,34 @@ func ensureCoreHandlers() {
 			}
 			handleCustomerCompanyUsers(db)(c)
 		},
+		"handleCustomerGetLanguage": func(c *gin.Context) {
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
+			handleCustomerGetLanguage(db)(c)
+		},
+		"handleCustomerSetLanguage": func(c *gin.Context) {
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
+			handleCustomerSetLanguage(db)(c)
+		},
+		"handleCustomerGetSessionTimeout": func(c *gin.Context) {
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
+			handleCustomerGetSessionTimeout(db)(c)
+		},
+		"handleCustomerSetSessionTimeout": func(c *gin.Context) {
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
+			handleCustomerSetSessionTimeout(db)(c)
+		},
 		"handleLogoutRedirect": func(c *gin.Context) {
 			// clear tokens then redirect to login
 			c.SetCookie("auth_token", "", -1, "/", "", false, true)

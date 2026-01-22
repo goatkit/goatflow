@@ -2246,7 +2246,7 @@
         "session_expired": "جلسه شما منقضی شده است",
         "success": "موفقیت",
         "unauthorized": "غیرمجاز",
-        "unknown_error": "Unknown error",
+        "unknown_error": "خطای ناشناخته",
         "validation": {
             "please_enter_content": "Please enter content",
             "please_enter_query": "لطفاً پرس‌وجو را وارد کنید",
@@ -2640,6 +2640,7 @@
         "privacy": "حریم خصوصی",
         "profile": "پروفایل",
         "security": "امنیت",
+        "session_timeout": "زمان پایان جلسه",
         "session_timeout_help": "انتخاب کنید که جلسه‌های مرورگر چقدر باید فعال بمانند قبل از نیاز به ورود مجدد.",
         "sessions": "جلسات فعال",
         "settings": "تنظیمات",

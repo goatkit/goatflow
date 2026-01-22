@@ -63,9 +63,30 @@ spec:
       description: "Display customer profile information"
 
     - path: /profile/update
-      method: PUT
+      method: POST
       handler: handleCustomerUpdateProfile
       description: "Update customer profile information"
+
+    # Preferences API
+    - path: /api/preferences/language
+      method: GET
+      handler: handleCustomerGetLanguage
+      description: "Get customer language preference"
+
+    - path: /api/preferences/language
+      method: POST
+      handler: handleCustomerSetLanguage
+      description: "Set customer language preference"
+
+    - path: /api/preferences/session-timeout
+      method: GET
+      handler: handleCustomerGetSessionTimeout
+      description: "Get customer session timeout preference"
+
+    - path: /api/preferences/session-timeout
+      method: POST
+      handler: handleCustomerSetSessionTimeout
+      description: "Set customer session timeout preference"
 
     # Password management
     - path: /password/form

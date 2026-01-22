@@ -13,7 +13,6 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
-	"github.com/gotrs-io/gotrs-ce/internal/sysconfig"
 )
 
 // HandleCustomerLogin is the exported handler for customer login POST requests.
@@ -120,16 +119,8 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 			}
 		}
 
-		redirectTo := "/customer/tickets"
-		cfg := sysconfig.DefaultCustomerPortalConfig()
-		if dbCfg, cfgErr := sysconfig.LoadCustomerPortalConfig(db); cfgErr == nil {
-			cfg = dbCfg
-		}
-		if strings.TrimSpace(cfg.LandingPage) != "" {
-			redirectTo = cfg.LandingPage
-		}
-
-		c.Header("HX-Redirect", redirectTo)
+		// Always redirect to customer dashboard after login
+		c.Header("HX-Redirect", "/customer")
 		c.JSON(http.StatusOK, gin.H{
 			"success":      true,
 			"access_token": token,

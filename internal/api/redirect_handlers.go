@@ -21,7 +21,7 @@ func handleRedirectTickets(c *gin.Context) {
 	case "Agent":
 		c.Redirect(http.StatusSeeOther, "/agent/tickets")
 	case "Customer":
-		c.Redirect(http.StatusSeeOther, "/customer/tickets")
+		c.Redirect(http.StatusSeeOther, "/customer")
 	default:
 		c.Redirect(http.StatusSeeOther, "/dashboard")
 	}
