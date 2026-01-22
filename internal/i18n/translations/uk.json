@@ -1542,7 +1542,9 @@
         "no_data_available": "Дані відсутні",
         "no_results_found": "Результатів не знайдено",
         "last_update": "Останнє оновлення",
-        "save_and_finish": "Зберегти та завершити"
+        "save_and_finish": "Зберегти та завершити",
+        "save_changes": "Зберегти Зміни",
+        "saved": "Збережено"
     },
     "customer": {
         "company": "Компанія",
@@ -1955,6 +1957,7 @@
         "connection_test_success": "Тест з'єднання успішний!",
         "error_saving_profile": "Помилка збереження профілю",
         "error_saving_preferences": "Помилка збереження налаштувань",
+        "error_saving": "Помилка збереження змін",
         "failed_add_user": "Не вдалося додати користувача",
         "confirm_remove_user_from_role": "Ви впевнені, що хочете видалити цього користувача з ролі?",
         "failed_remove_user": "Не вдалося видалити користувача",
@@ -2048,6 +2051,20 @@
         "previous_page": "Попередня сторінка",
         "next_page": "Наступна сторінка",
         "last_page": "Остання сторінка"
+    },
+    "password": {
+        "change_description": "Оновіть пароль, щоб захистити свій обліковий запис.",
+        "current_password": "Поточний пароль",
+        "new_password": "Новий пароль",
+        "requirements": "Вимоги до пароля:",
+        "min_characters": "Мінімум {n} символів",
+        "min_2_upper_2_lower": "Мінімум 2 великі та 2 малі літери",
+        "need_digit": "Мінімум 1 цифра",
+        "min_2_letters": "Мінімум 2 літери",
+        "passwords_match": "Паролі збігаються",
+        "passwords_no_match": "Паролі не збігаються",
+        "changed_success": "Пароль успішно змінено!",
+        "same_as_current": "Новий пароль має відрізнятися від поточного"
     },
     "priority": {
         "critical": "Критичний",
@@ -2169,6 +2186,8 @@
         "timezone": "Часовий пояс",
         "two_factor_auth": "Двофакторна автентифікація",
         "webhooks": "Вебхуки",
+        "personal_info": "Особиста Інформація",
+        "preferences": "Налаштування",
         "more_coming": "Додаткові налаштування незабаром з'являться",
         "heading": "Налаштування"
     },

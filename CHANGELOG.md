@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
 
 ## [Unreleased]
 
+### Changed
+- **Dynamic Theme Toggle Icon**: Theme toggle button now shows contextual icons - moon in light mode, sun in dark mode - using CSS-only swap via Tailwind's `dark:` variants
+  - Created reusable partial `templates/partials/theme_toggle.pongo2` for DRY code
+  - Updated `base.pongo2`, `login.pongo2`, and `customer/login.pongo2` to use the partial
+
 ### Added
 - **Customer Profile Page**: Full profile management interface at `/customer/profile` for customer users
   - View and edit personal information (first name, last name, title, phone, mobile)
@@ -36,9 +41,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
   - Removed local function and updated all calls to use global signature
   - File: `templates/pages/admin/ticket_attribute_relations.pongo2`
 - **Customer Initials Display**: Fixed customer initials in navigation showing only first letter instead of two letters (e.g., "E" instead of "ES" for Emma Scott)
-  - Root cause: pongo2 template whitespace between template tags was causing only first letter to render
-  - Solution: Put entire initials logic on single line in template
-  - File: `templates/layouts/base.pongo2`
+  - Root cause: Template checked `User` before `Customer`, and session middleware set `user_name` to email (no space), causing only first letter to be extracted
+  - Solution: Changed template to check `Customer.initials` first; added `is_customer` check in pongo2 renderer to skip auto-injecting incomplete `User` object for customer contexts
+  - Added regression tests: unit test for template logic, integration test for `getCustomerInfo`, E2E Playwright test for header/profile initials
+  - Files: `templates/layouts/base.pongo2`, `internal/template/pongo2.go`, `internal/template/pongo2_test.go`, `internal/api/customer_profile_test.go`, `tests/acceptance/customer-profile-initials.spec.js`
 - **Missing i18n Translations**: Fixed untranslated strings in profile-related keys
   - `common.email` in Ukrainian: "Email" → "Ел. пошта"
   - `messages.unknown_error` in 10 languages (pt, pl, ru, zh, ja, ar, he, fa, ur, tlh) now properly translated

@@ -11,6 +11,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
@@ -113,17 +114,21 @@ func getCustomerInfo(db *sql.DB, username string) map[string]string {
 	_ = row.Scan(&custInfo.FirstName, &custInfo.LastName, //nolint:errcheck
 		&custInfo.Email, &custInfo.Company)
 
+	initials := getCustomerInitials(custInfo.FirstName.String, custInfo.LastName.String)
+
 	return map[string]string{
 		// CamelCase for CustomerInfo access
 		"FirstName": custInfo.FirstName.String,
 		"LastName":  custInfo.LastName.String,
 		"Email":     custInfo.Email,
 		"Company":   custInfo.Company.String,
+		"Initials":  initials,
 		// snake_case for Customer access
 		"first_name": custInfo.FirstName.String,
 		"last_name":  custInfo.LastName.String,
 		"email":      custInfo.Email,
 		"company":    custInfo.Company.String,
+		"initials":   initials,
 	}
 }
 
@@ -1319,13 +1324,166 @@ func handleCustomerSetSessionTimeout(db *sql.DB) gin.HandlerFunc {
 
 func handleCustomerPasswordForm(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Password form"})
+		if !requireCustomerAuth(c) {
+			return
+		}
+		username := c.GetString("username")
+		cfg := customerPortalConfigFromContext(c, db)
+
+		// Load password policy from sysconfig
+		policy, err := sysconfig.LoadCustomerPasswordPolicy(db)
+		if err != nil {
+			log.Printf("Error loading customer password policy: %v", err)
+			// Continue with default policy (all disabled)
+			policy = sysconfig.DefaultCustomerPasswordPolicy()
+		}
+
+		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/password_form.pongo2", withPortalContextAndCustomer(pongo2.Context{
+			"Title":      fmt.Sprintf("%s - %s", cfg.Title, "Change Password"),
+			"ActivePage": "profile",
+			"Policy":     policy,
+		}, cfg, db, username))
 	}
 }
 
 func handleCustomerChangePassword(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "TODO: Change password"})
+		if !requireCustomerAuth(c) {
+			return
+		}
+		username := c.GetString("username")
+
+		var request struct {
+			CurrentPassword string `json:"current_password"`
+			NewPassword     string `json:"new_password"`
+			ConfirmPassword string `json:"confirm_password"`
+		}
+
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Invalid request format",
+			})
+			return
+		}
+
+		// Validate required fields
+		if request.CurrentPassword == "" || request.NewPassword == "" || request.ConfirmPassword == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "All password fields are required",
+			})
+			return
+		}
+
+		// Verify passwords match
+		if request.NewPassword != request.ConfirmPassword {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Passwords do not match",
+			})
+			return
+		}
+
+		// Get current password hash from database
+		var currentHash string
+		err := db.QueryRow(database.ConvertPlaceholders(`
+			SELECT pw FROM customer_user WHERE login = ?
+		`), username).Scan(&currentHash)
+
+		if err != nil {
+			log.Printf("Error getting customer password for %s: %v", username, err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to verify current password",
+			})
+			return
+		}
+
+		// Verify current password using auth package
+		hasher := auth.NewPasswordHasher()
+		if !hasher.VerifyPassword(request.CurrentPassword, currentHash) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"error":   "Current password is incorrect",
+			})
+			return
+		}
+
+		// Check that new password is different from current
+		if request.NewPassword == request.CurrentPassword {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "New password must be different from current password",
+			})
+			return
+		}
+
+		// Load and validate against password policy
+		policy, err := sysconfig.LoadCustomerPasswordPolicy(db)
+		if err != nil {
+			log.Printf("Error loading customer password policy: %v", err)
+			// Continue with default policy
+			policy = sysconfig.DefaultCustomerPasswordPolicy()
+		}
+
+		if validationErr := policy.ValidatePassword(request.NewPassword); validationErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   getPasswordPolicyErrorMessage(validationErr.Code),
+			})
+			return
+		}
+
+		// Hash the new password
+		newHash, err := hasher.HashPassword(request.NewPassword)
+		if err != nil {
+			log.Printf("Error hashing new password for customer %s: %v", username, err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to process new password",
+			})
+			return
+		}
+
+		// Update password in database
+		_, err = db.Exec(database.ConvertPlaceholders(`
+			UPDATE customer_user
+			SET pw = ?, change_time = NOW()
+			WHERE login = ?
+		`), newHash, username)
+
+		if err != nil {
+			log.Printf("Error updating password for customer %s: %v", username, err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to update password",
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "Password changed successfully",
+		})
+	}
+}
+
+// getPasswordPolicyErrorMessage returns a user-friendly error message for password policy validation errors.
+func getPasswordPolicyErrorMessage(code string) string {
+	switch code {
+	case "regexp_mismatch":
+		return "Password does not meet the required pattern"
+	case "min_size":
+		return "Password is too short"
+	case "min_2_lower_2_upper":
+		return "Password must contain at least 2 uppercase and 2 lowercase letters"
+	case "need_digit":
+		return "Password must contain at least 1 number"
+	case "min_2_characters":
+		return "Password must contain at least 2 letters"
+	default:
+		return "Password does not meet the security requirements"
 	}
 }
 

@@ -11,6 +11,13 @@ VALUES
     ('Plain Text Template', 'This is a plain text response without HTML formatting.', 'text/plain', 'Answer', 'E2E test fixture - plain text', 1, NOW(), 1, NOW(), 1)
 ON DUPLICATE KEY UPDATE change_time = NOW();
 
+-- Insert test customer user for E2E tests with known password
+-- Password is 'TestPass123!' (SHA256: 724936cd9b665b34b178904d938970b9fffede7f6fcbae3e0f61b87170c06feb)
+INSERT INTO customer_user (login, email, customer_id, pw, title, first_name, last_name, valid_id, create_time, create_by, change_time, change_by)
+SELECT 'e2e.test.customer', 'e2e.test@gotrs.local', 'e2e-test-company', '724936cd9b665b34b178904d938970b9fffede7f6fcbae3e0f61b87170c06feb', '', 'E2E', 'TestCustomer', 1, NOW(), 1, NOW(), 1
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM customer_user WHERE login = 'e2e.test.customer');
+
 -- Insert a test ticket for note_alignment_test.go if not exists
 -- (The test creates its own ticket via API, but having a base ticket helps)
 INSERT INTO ticket (tn, title, queue_id, ticket_lock_id, type_id, user_id, responsible_user_id, ticket_priority_id, ticket_state_id, customer_id, customer_user_id, timeout, until_time, escalation_time, escalation_update_time, escalation_response_time, escalation_solution_time, create_time, create_by, change_time, change_by)

@@ -1608,6 +1608,8 @@
         "no_results_found": "لا results found",
         "last_update": "آخر تحديث",
         "save_and_finish": "حفظ وإنهاء",
+        "save_changes": "حفظ التغييرات",
+        "saved": "تم الحفظ",
         "none": "لا شيء",
         "not_closed": "غير مغلق",
         "of": "من",
@@ -2197,9 +2199,10 @@
         "error_loading_tables": "خطأ loading tables",
         "error_occurred": "حدث خطأ",
         "error_saving_field": "خطأ saving field",
-        "error_saving_permissions": "خطأ saving permissions",
-        "error_saving_preferences": "خطأ saving preferences",
-        "error_saving_profile": "خطأ saving profile",
+        "error_saving_permissions": "خطأ في حفظ الأذونات",
+        "error_saving_preferences": "خطأ في حفظ التفضيلات",
+        "error_saving_profile": "خطأ في حفظ الملف الشخصي",
+        "error_saving": "خطأ في حفظ التغييرات",
         "error_screen_config": "Failed to update screen configuration",
         "error_testing_connection": "خطأ testing connection",
         "failed_add_user": "Failed to add user",
@@ -2394,6 +2397,20 @@
         "tooltips": {
             "edit": "تحرير priority"
         }
+    },
+    "password": {
+        "change_description": "قم بتحديث كلمة المرور للحفاظ على أمان حسابك.",
+        "current_password": "كلمة المرور الحالية",
+        "new_password": "كلمة المرور الجديدة",
+        "requirements": "متطلبات كلمة المرور:",
+        "min_characters": "{n} أحرف على الأقل",
+        "min_2_upper_2_lower": "حرفان كبيران و حرفان صغيران على الأقل",
+        "need_digit": "رقم واحد على الأقل",
+        "min_2_letters": "حرفان على الأقل",
+        "passwords_match": "كلمات المرور متطابقة",
+        "passwords_no_match": "كلمات المرور غير متطابقة",
+        "changed_success": "تم تغيير كلمة المرور بنجاح!",
+        "same_as_current": "يجب أن تكون كلمة المرور الجديدة مختلفة عن الحالية"
     },
     "priority": {
         "critical": "حرجة",
@@ -2651,7 +2668,9 @@
         "time_format": "تنسيق الوقت",
         "timezone": "المنطقة الزمنية",
         "two_factor_auth": "المصادقة الثنائية",
-        "webhooks": "Webhooks"
+        "webhooks": "Webhooks",
+        "personal_info": "المعلومات الشخصية",
+        "preferences": "التفضيلات"
     },
     "severity": {
         "critical": "حرج",

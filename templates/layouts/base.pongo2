@@ -251,17 +251,13 @@
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:items-center">
                         <!-- Dark mode toggle -->
-                        <button type="button" onclick="toggleDarkMode()" class="rounded-md p-1 text-gray-400 hover:text-gray-500 dark:text-gray-300 dark:hover:text-gray-200">
-                            <i class="fas fa-moon icon-md"></i>
-                        </button>
+                        {% include "partials/theme_toggle.pongo2" %}
 
                         <!-- User menu -->
                         <div class="relative ml-3" x-data="{ open: false }">
                             <button @click="open = !open" type="button" class="flex rounded-full bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
                                 <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-500">
-                                    <span class="text-sm font-medium leading-none text-white">
-                                        {% if User and (User.FirstName or User.LastName) %}{{ User.FirstName|default:""|slice:"0:1"|upper }}{{ User.LastName|default:""|slice:"0:1"|upper }}{% elif Customer and (Customer.first_name or Customer.last_name) %}{{ Customer.first_name|slice:"0:1"|upper }}{{ Customer.last_name|slice:"0:1"|upper }}{% else %}DU{% endif %}
-                                    </span>
+                                    <span class="text-sm font-medium leading-none text-white">{% if Customer and Customer.initials %}{{ Customer.initials }}{% elif User and (User.FirstName or User.LastName) %}{{ User.FirstName|default:""|slice:"0:1"|upper }}{{ User.LastName|default:""|slice:"0:1"|upper }}{% else %}?{% endif %}</span>
                                 </span>
                             </button>
                             <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white dark:bg-gray-800 py-1 shadow-lg ring-1 ring-black ring-opacity-5">
@@ -312,7 +308,7 @@
                         <div class="flex items-center px-4">
                             <div class="flex-shrink-0">
                                 <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-500">
-                                    <span class="text-sm font-medium leading-none text-white">{% if User and (User.FirstName or User.LastName) %}{{ User.FirstName|default:""|slice:"0:1"|upper }}{{ User.LastName|default:""|slice:"0:1"|upper }}{% elif Customer and (Customer.first_name or Customer.last_name) %}{{ Customer.first_name|slice:"0:1"|upper }}{{ Customer.last_name|slice:"0:1"|upper }}{% else %}DU{% endif %}</span>
+                                    <span class="text-sm font-medium leading-none text-white">{% if Customer and Customer.initials %}{{ Customer.initials }}{% elif User and (User.FirstName or User.LastName) %}{{ User.FirstName|default:""|slice:"0:1"|upper }}{{ User.LastName|default:""|slice:"0:1"|upper }}{% else %}?{% endif %}</span>
                                 </span>
                             </div>
                             <div class="ml-3">

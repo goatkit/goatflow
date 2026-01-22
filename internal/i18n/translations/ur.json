@@ -1637,6 +1637,8 @@
         "no_results_found": "نہیں results found",
         "last_update": "آخری تازہ کاری",
         "save_and_finish": "محفوظ کریں اور ختم کریں",
+        "save_changes": "تبدیلیاں محفوظ کریں",
+        "saved": "محفوظ",
         "none": "کوئی نہیں",
         "not_closed": "بند نہیں",
         "of": "کا",
@@ -2223,9 +2225,10 @@
         "error_loading_tables": "خرابی loading tables",
         "error_occurred": "ایک خرابی واقع ہوئی",
         "error_saving_field": "خرابی saving field",
-        "error_saving_permissions": "خرابی saving permissions",
-        "error_saving_preferences": "خرابی saving preferences",
-        "error_saving_profile": "خرابی saving profile",
+        "error_saving_permissions": "اجازتیں محفوظ کرنے میں خرابی",
+        "error_saving_preferences": "ترجیحات محفوظ کرنے میں خرابی",
+        "error_saving_profile": "پروفائل محفوظ کرنے میں خرابی",
+        "error_saving": "تبدیلیاں محفوظ کرنے میں خرابی",
         "error_screen_config": "Failed to update screen configuration",
         "error_testing_connection": "خرابی testing connection",
         "failed_add_user": "Failed to add user",
@@ -2420,6 +2423,20 @@
         "tooltips": {
             "edit": "ترمیم priority"
         }
+    },
+    "password": {
+        "change_description": "اپنے اکاؤنٹ کو محفوظ رکھنے کے لیے اپنا پاس ورڈ اپ ڈیٹ کریں۔",
+        "current_password": "موجودہ پاس ورڈ",
+        "new_password": "نیا پاس ورڈ",
+        "requirements": "پاس ورڈ کی ضروریات:",
+        "min_characters": "کم از کم {n} حروف",
+        "min_2_upper_2_lower": "کم از کم 2 بڑے اور 2 چھوٹے حروف",
+        "need_digit": "کم از کم 1 نمبر",
+        "min_2_letters": "کم از کم 2 حروف",
+        "passwords_match": "پاس ورڈز مماثل ہیں",
+        "passwords_no_match": "پاس ورڈز مماثل نہیں ہیں",
+        "changed_success": "پاس ورڈ کامیابی سے تبدیل ہو گیا!",
+        "same_as_current": "نیا پاس ورڈ موجودہ پاس ورڈ سے مختلف ہونا چاہیے"
     },
     "priority": {
         "critical": "اہم",
@@ -2677,7 +2694,9 @@
         "time_format": "وقت کی شکل",
         "timezone": "ٹائم زون",
         "two_factor_auth": "دو عنصری تصدیق",
-        "webhooks": "ویب ہکس"
+        "webhooks": "ویب ہکس",
+        "personal_info": "ذاتی معلومات",
+        "preferences": "ترجیحات"
     },
     "severity": {
         "critical": "اہم",

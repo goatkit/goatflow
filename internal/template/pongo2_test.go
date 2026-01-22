@@ -165,3 +165,73 @@ func (a *HTMLAsserter) ContainsAny(options ...string) {
 func (a *HTMLAsserter) NotContains(unexpected string) {
 	assert.NotContains(a.t, a.html, unexpected)
 }
+
+// TestCustomerInitialsInBaseTemplate tests that customer initials render correctly
+// in the base template navigation. This test ensures that when a Customer object
+// is provided with proper initials, those initials are used rather than deriving
+// them from an incomplete User object.
+func TestCustomerInitialsInBaseTemplate(t *testing.T) {
+	helper := NewTemplateTestHelper(t)
+
+	t.Run("customer initials display ES for Emma Scott", func(t *testing.T) {
+		// Simulate a customer context with properly set Customer.initials
+		// The key is that we DON'T set User, so the template falls through to Customer
+		ctx := pongo2.Context{
+			"Customer": map[string]string{
+				"first_name": "Emma",
+				"last_name":  "Scott",
+				"email":      "emma.scott@example.com",
+				"initials":   "ES",
+			},
+			"Lang":       "en",
+			"Direction":  "ltr",
+			"IsRTL":      false,
+			"profileHref": "/customer/profile",
+			"logoutHref":  "/customer/logout",
+		}
+
+		html, err := helper.RenderTemplate("layouts/base.pongo2", ctx)
+		require.NoError(t, err)
+
+		// The initials should be "ES", not "E" or "?"
+		// Check for the initials span with two letters
+		assert.Contains(t, html, ">ES</span>", "Customer initials should be 'ES' (two letters)")
+		assert.NotContains(t, html, ">E</span>", "Should not show single letter 'E'")
+	})
+
+	t.Run("customer initials NOT overridden by incomplete User object", func(t *testing.T) {
+		// This simulates the bug: User is set with only FirstName (from email parsing)
+		// but Customer has the correct initials. Template should prefer Customer.initials
+		// when in a customer context.
+		ctx := pongo2.Context{
+			// User object that might be auto-injected with incomplete data
+			// (FirstName from email, no LastName)
+			"User": map[string]interface{}{
+				"FirstName": "emma.scott@example.com", // Wrong: email used as name
+				"LastName":  "",                        // Empty because email has no space
+			},
+			"Customer": map[string]string{
+				"first_name": "Emma",
+				"last_name":  "Scott",
+				"email":      "emma.scott@example.com",
+				"initials":   "ES",
+			},
+			"Lang":       "en",
+			"Direction":  "ltr",
+			"IsRTL":      false,
+			"profileHref": "/customer/profile",
+			"logoutHref":  "/customer/logout",
+		}
+
+		html, err := helper.RenderTemplate("layouts/base.pongo2", ctx)
+		require.NoError(t, err)
+
+		// BUG: Currently this will show "E" because User takes precedence
+		// EXPECTED: Should show "ES" from Customer.initials
+		// This test documents the expected behavior after the fix
+
+		// For now, we check what the current (buggy) behavior produces
+		// After fixing, this assertion should pass:
+		assert.Contains(t, html, ">ES</span>", "Should show Customer initials 'ES', not User-derived single letter")
+	})
+}

@@ -1608,6 +1608,8 @@
         "no_results_found": "Não results found",
         "last_update": "Última atualização",
         "save_and_finish": "Salvar e concluir",
+        "save_changes": "Salvar Alterações",
+        "saved": "Salvo",
         "none": "Nenhum",
         "not_closed": "Não Fechado",
         "of": "de",
@@ -2196,9 +2198,10 @@
         "error_loading_tables": "Erro loading tables",
         "error_occurred": "Ocorreu um erro",
         "error_saving_field": "Erro saving field",
-        "error_saving_permissions": "Erro saving permissions",
-        "error_saving_preferences": "Erro saving preferences",
-        "error_saving_profile": "Erro saving profile",
+        "error_saving_permissions": "Erro ao salvar os permissões",
+        "error_saving_preferences": "Erro ao salvar as preferências",
+        "error_saving_profile": "Erro ao salvar o perfil",
+        "error_saving": "Erro ao salvar as alterações",
         "error_screen_config": "Failed to update screen configuration",
         "error_testing_connection": "Erro testing connection",
         "failed_add_user": "Failed to add user",
@@ -2393,6 +2396,20 @@
         "tooltips": {
             "edit": "Editar priority"
         }
+    },
+    "password": {
+        "change_description": "Atualize sua senha para manter sua conta segura.",
+        "current_password": "Senha atual",
+        "new_password": "Nova senha",
+        "requirements": "Requisitos de senha:",
+        "min_characters": "Mínimo de {n} caracteres",
+        "min_2_upper_2_lower": "Pelo menos 2 maiúsculas e 2 minúsculas",
+        "need_digit": "Pelo menos 1 número",
+        "min_2_letters": "Pelo menos 2 letras",
+        "passwords_match": "As senhas correspondem",
+        "passwords_no_match": "As senhas não correspondem",
+        "changed_success": "Senha alterada com sucesso!",
+        "same_as_current": "A nova senha deve ser diferente da senha atual"
     },
     "priority": {
         "critical": "Crítico",
@@ -2764,7 +2781,9 @@
         "user_info": "Informações do Usuário",
         "valid_from": "Válido a partir de",
         "valid_to": "Válido até",
-        "webhooks": "Webhooks"
+        "webhooks": "Webhooks",
+        "personal_info": "Informações Pessoais",
+        "preferences": "Preferências"
     },
     "severity": {
         "critical": "Crítico",

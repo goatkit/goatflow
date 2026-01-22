@@ -139,7 +139,16 @@ func (r *Pongo2Renderer) Render(c *gin.Context, code int, name string, data inte
 	}
 	ctx["IsInAdminGroup"] = isAdmin
 
-	if _, hasUser := ctx["User"]; !hasUser {
+	// Only auto-inject User if it's not a customer context
+	// For customers, the Customer object (with proper initials) is set by handlers
+	isCustomer := false
+	if flag, exists := c.Get("is_customer"); exists {
+		if b, ok := flag.(bool); ok {
+			isCustomer = b
+		}
+	}
+
+	if _, hasUser := ctx["User"]; !hasUser && !isCustomer {
 		if user := r.getUserFromContext(c); user != nil {
 			user.IsInAdminGroup = isAdmin
 			ctx["User"] = user

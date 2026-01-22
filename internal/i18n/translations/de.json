@@ -1608,6 +1608,8 @@
         "no_results_found": "Keine Ergebnisse gefunden",
         "last_update": "Letzte Aktualisierung",
         "save_and_finish": "Speichern und Abschließen",
+        "save_changes": "Änderungen speichern",
+        "saved": "Gespeichert",
         "none": "Keine",
         "not_closed": "Nicht geschlossen",
         "of": "von",
@@ -2145,6 +2147,9 @@
         "access_denied": "Zugriff verweigert",
         "changes_saved": "Änderungen erfolgreich gespeichert",
         "code_copied": "Code copied zu clipboard!",
+        "error_saving_profile": "Fehler beim Speichern des Profils",
+        "error_saving_preferences": "Fehler beim Speichern der Einstellungen",
+        "error_saving": "Fehler beim Speichern der Änderungen",
         "confirm": {
             "activate_acl": "Are you sure you want zu activbeie",
             "activate_company": "Are you sure you want zu activbeie this company? This will alniedrig users vam this company zu access the podertal.",
@@ -2395,6 +2400,20 @@
         "tooltips": {
             "edit": "Bearbeiten prioderity"
         }
+    },
+    "password": {
+        "change_description": "Aktualisieren Sie Ihr Passwort, um Ihr Konto sicher zu halten.",
+        "current_password": "Aktuelles Passwort",
+        "new_password": "Neues Passwort",
+        "requirements": "Passwortanforderungen:",
+        "min_characters": "Mindestens {n} Zeichen",
+        "min_2_upper_2_lower": "Mindestens 2 Groß- und 2 Kleinbuchstaben",
+        "need_digit": "Mindestens 1 Zahl",
+        "min_2_letters": "Mindestens 2 Buchstaben",
+        "passwords_match": "Passwörter stimmen überein",
+        "passwords_no_match": "Passwörter stimmen nicht überein",
+        "changed_success": "Passwort erfolgreich geändert!",
+        "same_as_current": "Das neue Passwort muss sich vom aktuellen Passwort unterscheiden"
     },
     "priority": {
         "critical": "Kritisch",
@@ -2652,7 +2671,9 @@
         "time_format": "Zeitformat",
         "timezone": "Zeitzone",
         "two_factor_auth": "Zwei-Faktor-Authentifizierung",
-        "webhooks": "Webhooks"
+        "webhooks": "Webhooks",
+        "personal_info": "Persönliche Informationen",
+        "preferences": "Einstellungen"
     },
     "severity": {
         "critical": "Kritisch",

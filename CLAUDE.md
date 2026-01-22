@@ -199,6 +199,60 @@ document.addEventListener('keydown', (e) => {
 
 **The test database EXISTS. Use it.**
 
+## RUNNING GO TESTS - MANDATORY METHOD (Jan 22, 2026)
+
+**ALWAYS use these Makefile targets to run Go tests:**
+
+```bash
+# Run tests for a specific package (optionally filtered by test name)
+make toolbox-test-pkg PKG=./internal/api TEST=^TestLogin
+
+# Run tests scoped to explicit test files
+make toolbox-test-files FILES='path/to/a_test.go'
+
+# Run a single Go test by name
+make toolbox-test-run TEST=TestName
+```
+
+### NEVER DO THIS
+- Don't use `make toolbox` with heredoc to run tests
+- Don't use `docker exec` to run go test directly
+- Don't run `go test` on the host machine
+
+**Always use the Makefile targets for running tests. No exceptions.**
+
+---
+
+## DATABASE QUERIES - MANDATORY METHOD (Jan 22, 2026)
+
+**ALWAYS use this method for ALL database queries:**
+
+```bash
+echo "SELECT * FROM table_name;" | make db-shell
+```
+
+### Examples
+```bash
+# List tables
+echo "show tables;" | make db-shell
+
+# Query customer users
+echo "SELECT login, first_name, last_name FROM customer_user LIMIT 10;" | make db-shell
+
+# Check specific record
+echo "SELECT * FROM users WHERE id = 1;" | make db-shell
+```
+
+### NEVER DO THIS
+- Don't use `docker exec` with mysql/mariadb client directly
+- Don't use `make toolbox` with heredoc for queries
+- Don't try to connect to the database any other way
+- Don't guess or make up alternative methods
+
+**This is the ONLY way to query the database. No exceptions.**
+
+---
+
 ## DATABASE WRAPPER PATTERNS - ALWAYS USE THESE (Jan 11, 2026)
 
 **Use `database.ConvertPlaceholders()` for all SQL queries. This allows future sqlx migration.**

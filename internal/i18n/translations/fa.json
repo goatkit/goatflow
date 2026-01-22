@@ -1608,6 +1608,8 @@
         "no_results_found": "خیر results found",
         "last_update": "آخرین به‌روزرسانی",
         "save_and_finish": "ذخیره و پایان",
+        "save_changes": "ذخیره تغییرات",
+        "saved": "ذخیره شد",
         "none": "هیچ",
         "not_closed": "بسته نشده",
         "of": "از",
@@ -2194,9 +2196,10 @@
         "error_loading_tables": "خطا loading tables",
         "error_occurred": "یک خطا رخ داد",
         "error_saving_field": "خطا saving field",
-        "error_saving_permissions": "خطا saving permissions",
-        "error_saving_preferences": "خطا saving preferences",
-        "error_saving_profile": "خطا saving profile",
+        "error_saving_permissions": "خطا در ذخیره مجوزها",
+        "error_saving_preferences": "خطا در ذخیره تنظیمات",
+        "error_saving_profile": "خطا در ذخیره پروفایل",
+        "error_saving": "خطا در ذخیره تغییرات",
         "error_screen_config": "Failed to update screen configuration",
         "error_testing_connection": "خطا testing connection",
         "failed_add_user": "Failed to add user",
@@ -2391,6 +2394,20 @@
         "tooltips": {
             "edit": "ویرایش priority"
         }
+    },
+    "password": {
+        "change_description": "رمز عبور خود را برای حفظ امنیت حساب به‌روز کنید.",
+        "current_password": "رمز عبور فعلی",
+        "new_password": "رمز عبور جدید",
+        "requirements": "الزامات رمز عبور:",
+        "min_characters": "حداقل {n} کاراکتر",
+        "min_2_upper_2_lower": "حداقل ۲ حرف بزرگ و ۲ حرف کوچک",
+        "need_digit": "حداقل ۱ عدد",
+        "min_2_letters": "حداقل ۲ حرف",
+        "passwords_match": "رمزهای عبور مطابقت دارند",
+        "passwords_no_match": "رمزهای عبور مطابقت ندارند",
+        "changed_success": "رمز عبور با موفقیت تغییر کرد!",
+        "same_as_current": "رمز عبور جدید باید با رمز عبور فعلی متفاوت باشد"
     },
     "priority": {
         "critical": "بحرانی",
@@ -2648,7 +2665,9 @@
         "time_format": "فرمت زمان",
         "timezone": "منطقه زمانی",
         "two_factor_auth": "احراز هویت دو عاملی",
-        "webhooks": "Webhooks"
+        "webhooks": "Webhooks",
+        "personal_info": "اطلاعات شخصی",
+        "preferences": "تنظیمات"
     },
     "severity": {
         "critical": "بحرانی",

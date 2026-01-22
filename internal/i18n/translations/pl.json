@@ -1608,6 +1608,8 @@
         "no_results_found": "Nie results found",
         "last_update": "Ostatnia aktualizacja",
         "save_and_finish": "Zapisz i zakończ",
+        "save_changes": "Zapisz Zmiany",
+        "saved": "Zapisano",
         "none": "Brak",
         "not_closed": "Niezamknięte",
         "of": "z",
@@ -2197,9 +2199,10 @@
         "error_loading_tables": "Błąd loading tables",
         "error_occurred": "Wystąpił błąd",
         "error_saving_field": "Błąd saving field",
-        "error_saving_permissions": "Błąd saving permissions",
-        "error_saving_preferences": "Błąd saving preferences",
-        "error_saving_profile": "Błąd saving profile",
+        "error_saving_permissions": "Błąd podczas zapisywania uprawnień",
+        "error_saving_preferences": "Błąd podczas zapisywania preferencji",
+        "error_saving_profile": "Błąd podczas zapisywania profilu",
+        "error_saving": "Błąd podczas zapisywania zmian",
         "error_screen_config": "Failed to update screen configuration",
         "error_testing_connection": "Błąd testing connection",
         "failed_add_user": "Failed to add user",
@@ -2394,6 +2397,20 @@
         "tooltips": {
             "edit": "Edytuj priority"
         }
+    },
+    "password": {
+        "change_description": "Zaktualizuj swoje hasło, aby zabezpieczyć konto.",
+        "current_password": "Aktualne hasło",
+        "new_password": "Nowe hasło",
+        "requirements": "Wymagania dotyczące hasła:",
+        "min_characters": "Minimum {n} znaków",
+        "min_2_upper_2_lower": "Co najmniej 2 wielkie i 2 małe litery",
+        "need_digit": "Co najmniej 1 cyfra",
+        "min_2_letters": "Co najmniej 2 litery",
+        "passwords_match": "Hasła są zgodne",
+        "passwords_no_match": "Hasła nie są zgodne",
+        "changed_success": "Hasło zostało pomyślnie zmienione!",
+        "same_as_current": "Nowe hasło musi być inne niż obecne"
     },
     "priority": {
         "critical": "Krytyczny",
@@ -2765,7 +2782,9 @@
         "user_info": "Informacje o użytkowniku",
         "valid_from": "Obowiązuje od",
         "valid_to": "Obowiązuje do",
-        "webhooks": "Webhooki"
+        "webhooks": "Webhooki",
+        "personal_info": "Informacje Osobiste",
+        "preferences": "Preferencje"
     },
     "severity": {
         "critical": "Krytyczny",

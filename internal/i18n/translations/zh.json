@@ -1608,6 +1608,8 @@
         "no_results_found": "否 results found",
         "last_update": "最后更新",
         "save_and_finish": "保存并完成",
+        "save_changes": "保存更改",
+        "saved": "已保存",
         "none": "无",
         "not_closed": "未关闭",
         "of": "的",
@@ -2197,9 +2199,10 @@
         "error_loading_tables": "错误 loading tables",
         "error_occurred": "发生错误",
         "error_saving_field": "错误 saving field",
-        "error_saving_permissions": "错误 saving permissions",
-        "error_saving_preferences": "错误 saving preferences",
-        "error_saving_profile": "错误 saving profile",
+        "error_saving_permissions": "保存权限时出错",
+        "error_saving_preferences": "保存偏好设置时出错",
+        "error_saving_profile": "保存个人资料时出错",
+        "error_saving": "保存更改时出错",
         "error_screen_config": "Failed to update screen configuration",
         "error_testing_connection": "错误 testing connection",
         "failed_add_user": "Failed to add user",
@@ -2394,6 +2397,20 @@
         "tooltips": {
             "edit": "编辑 priority"
         }
+    },
+    "password": {
+        "change_description": "更新密码以保护您的账户安全。",
+        "current_password": "当前密码",
+        "new_password": "新密码",
+        "requirements": "密码要求：",
+        "min_characters": "至少 {n} 个字符",
+        "min_2_upper_2_lower": "至少 2 个大写字母和 2 个小写字母",
+        "need_digit": "至少 1 个数字",
+        "min_2_letters": "至少 2 个字母",
+        "passwords_match": "密码匹配",
+        "passwords_no_match": "密码不匹配",
+        "changed_success": "密码修改成功！",
+        "same_as_current": "新密码必须与当前密码不同"
     },
     "priority": {
         "critical": "紧急",
@@ -2651,7 +2668,9 @@
         "time_format": "时间格式",
         "timezone": "时区",
         "two_factor_auth": "双因素认证",
-        "webhooks": "Webhooks"
+        "webhooks": "Webhooks",
+        "personal_info": "个人信息",
+        "preferences": "偏好设置"
     },
     "severity": {
         "critical": "紧急",
