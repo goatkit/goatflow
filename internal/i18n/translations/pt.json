@@ -3691,7 +3691,9 @@
         "classic": "Clássico",
         "classic_desc": "Limpo e profissional",
         "seventies": "Vibes dos anos 70",
-        "seventies_desc": "Tons terrosos quentes"
+        "seventies_desc": "Tons terrosos quentes",
+        "nineties": "Vibe dos anos 90",
+        "nineties_desc": "Desktop retrô (claro) / Terminal (escuro)"
     },
     "attachments": {
         "title": "Anexos",

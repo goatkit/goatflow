@@ -16,15 +16,44 @@ const ThemeManager = (function() {
   const STORAGE_KEY_THEME = 'gk-theme-name';
 
   // Available themes - add new themes here
-  const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes'];
+  const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe'];
   const DEFAULT_THEME = 'synthwave';
 
-  // Theme-specific font CSS files (vendored, loaded dynamically)
-  // Only Inter is loaded globally as universal fallback
-  const THEME_FONT_CSS = {
-    'synthwave': '/static/css/fonts-synthwave.css',
-    'gotrs-classic': '/static/css/fonts-synthwave.css',
-    'seventies-vibes': '/static/css/fonts-seventies.css'
+  // Theme metadata - SINGLE SOURCE OF TRUTH for all theme display info
+  // Used by theme selectors throughout the app
+  const THEME_METADATA = {
+    'synthwave': {
+      name: 'Synthwave',
+      nameKey: 'theme.synthwave',
+      description: 'Neon retro vibes',
+      descriptionKey: 'theme.synthwave_desc',
+      gradient: 'linear-gradient(135deg, #00E5FF, #FF2FD4)',
+      fontCss: '/static/css/fonts-synthwave.css'
+    },
+    'gotrs-classic': {
+      name: 'Classic',
+      nameKey: 'theme.classic',
+      description: 'Clean & professional',
+      descriptionKey: 'theme.classic_desc',
+      gradient: 'linear-gradient(135deg, #3b82f6, #4f46e5)',
+      fontCss: '/static/css/fonts-synthwave.css'
+    },
+    'seventies-vibes': {
+      name: '70s Vibes',
+      nameKey: 'theme.seventies',
+      description: 'Warm earth tones',
+      descriptionKey: 'theme.seventies_desc',
+      gradient: 'linear-gradient(135deg, #D35400, #F5A623)',
+      fontCss: '/static/css/fonts-seventies.css'
+    },
+    'nineties-vibe': {
+      name: '90s Vibe',
+      nameKey: 'theme.nineties',
+      description: 'Retro desktop (light) / Terminal (dark)',
+      descriptionKey: 'theme.nineties_desc',
+      gradient: 'linear-gradient(180deg, #808080, #333333)',
+      fontCss: '/static/css/fonts-nineties.css'
+    }
   };
 
   /**
@@ -37,10 +66,11 @@ const ThemeManager = (function() {
       el.remove();
     });
 
-    var fontCss = THEME_FONT_CSS[themeName];
-    if (!fontCss) {
+    var meta = THEME_METADATA[themeName];
+    if (!meta || !meta.fontCss) {
       return;
     }
+    var fontCss = meta.fontCss;
 
     // Inject link element for vendored font CSS
     var link = document.createElement('link');
@@ -220,6 +250,23 @@ const ThemeManager = (function() {
   }
 
   /**
+   * Get metadata for a specific theme
+   * @param {string} themeId - Theme identifier
+   * @returns {Object|null} Theme metadata or null if not found
+   */
+  function getThemeMetadata(themeId) {
+    return THEME_METADATA[themeId] || null;
+  }
+
+  /**
+   * Get metadata for all themes
+   * @returns {Object} All theme metadata keyed by theme ID
+   */
+  function getAllThemeMetadata() {
+    return { ...THEME_METADATA };
+  }
+
+  /**
    * Check if system prefers dark mode
    * @returns {boolean}
    */
@@ -277,8 +324,11 @@ const ThemeManager = (function() {
     toggleMode,
     setTheme,
     getAvailableThemes,
+    getThemeMetadata,
+    getAllThemeMetadata,
     systemPrefersDark,
     AVAILABLE_THEMES,
+    THEME_METADATA,
     DEFAULT_THEME
   };
 })();

@@ -3120,7 +3120,9 @@
         "classic": "Clásico",
         "classic_desc": "Limpio y profesional",
         "seventies": "Vibraciones de los 70",
-        "seventies_desc": "Tonos terrosos cálidos"
+        "seventies_desc": "Tonos terrosos cálidos",
+        "nineties": "Vibra de los 90",
+        "nineties_desc": "Escritorio retro (claro) / Terminal (oscuro)"
     },
     "attachments": {
         "title": "Archivos adjuntos",

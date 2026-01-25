@@ -386,6 +386,7 @@ func ensureCoreHandlers() {
 		"handleAdminUserDelete":  HandleAdminUserDelete,
 		"handleAdminUserGroups":  HandleAdminUserGroups,
 		"handleAdminUsersStatus": HandleAdminUsersStatus,
+		"HandleAdminUserResetPassword": HandleAdminUserResetPassword,
 		"handleAdminPasswordPolicy": func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{"min_length": 8, "require_special": true}})
 		},

@@ -65,21 +65,19 @@
 
 <script>
 (function() {
-    // Theme metadata for display
-    const THEME_DISPLAY = {
-        'synthwave': {
-            name: '{{ t("theme.synthwave")|default:"Synthwave" }}',
-            gradient: 'linear-gradient(135deg, #00E5FF, #FF2FD4)'
-        },
-        'gotrs-classic': {
-            name: '{{ t("theme.classic")|default:"Classic" }}',
-            gradient: 'linear-gradient(135deg, #3b82f6, #4f46e5)'
-        },
-        'seventies-vibes': {
-            name: '{{ t("theme.seventies")|default:"70s Vibes" }}',
-            gradient: 'linear-gradient(135deg, #D35400, #F5A623)'
-        }
+    // Translations for theme names (server-side i18n)
+    // ThemeManager.THEME_METADATA provides gradients and defaults
+    const TRANSLATIONS = {
+        'theme.synthwave': '{{ t("theme.synthwave")|default:"" }}',
+        'theme.classic': '{{ t("theme.classic")|default:"" }}',
+        'theme.seventies': '{{ t("theme.seventies")|default:"" }}',
+        'theme.nineties': '{{ t("theme.nineties")|default:"" }}'
     };
+
+    // Helper to get translated text or fall back to default
+    function tr(key, fallback) {
+        return TRANSLATIONS[key] || fallback;
+    }
 
     let themes = [];
     let currentTheme = '';
@@ -154,27 +152,30 @@
             list.innerHTML = '<div class="p-2 text-center text-sm" style="color: var(--gk-text-muted);">{{ t("common.no_results")|default:"No themes found" }}</div>';
             return;
         }
+        const allMeta = (window.ThemeManager && ThemeManager.THEME_METADATA) || {};
         let html = '';
         themes.forEach(theme => {
             const isSelected = theme.id === currentTheme;
-            const display = THEME_DISPLAY[theme.id] || {
+            const meta = allMeta[theme.id] || {
                 name: theme.name || theme.id,
+                nameKey: null,
                 gradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)'
             };
+            const name = meta.nameKey ? tr(meta.nameKey, meta.name) : meta.name;
             html += `
                 <button type="button" onclick="selectLoginTheme('${theme.id}')"
                         class="w-full px-2 py-2 flex items-center gap-3 rounded-md text-sm transition-all"
                         style="color: var(--gk-text-primary); background: ${isSelected ? 'var(--gk-primary-subtle)' : 'transparent'};"
                         onmouseover="if(!${isSelected}) this.style.background='var(--gk-bg-hover)';"
                         onmouseout="if(!${isSelected}) this.style.background='transparent';">
-                    <span class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style="background: ${display.gradient};">
+                    <span class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style="background: ${meta.gradient};">
                         ${isSelected ? `
                         <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                         </svg>
                         ` : ''}
                     </span>
-                    <span class="font-medium">${display.name}</span>
+                    <span class="font-medium">${name}</span>
                 </button>
             `;
         });

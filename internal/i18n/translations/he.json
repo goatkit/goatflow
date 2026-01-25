@@ -3173,7 +3173,9 @@
         "classic": "קלאסי",
         "classic_desc": "נקי ומקצועי",
         "seventies": "וייבס שנות ה-70",
-        "seventies_desc": "גוונים חמים ואדמתיים"
+        "seventies_desc": "גוונים חמים ואדמתיים",
+        "nineties": "וייב שנות ה-90",
+        "nineties_desc": "שולחן עבודה רטרו (בהיר) / מסוף (כהה)"
     },
     "attachments": {
         "title": "קבצים מצורפים",

@@ -91,6 +91,21 @@ This file documents third-party libraries downloaded at Docker build time and bu
 - **Files**: `static/fonts/nunito/*.woff2`
 - **Usage**: 70s Vibes theme body font
 
+### Hack Nerd Font
+- **Version**: 3.3.0
+- **License**: MIT License (Hack) + SIL Open Font License 1.1 (Nerd Fonts patches)
+- **URL**: https://github.com/ryanoasis/nerd-fonts
+- **Source**: https://www.nerdfonts.com/
+- **Files**: `static/fonts/hack/HackNerdFont-Regular.ttf`
+- **Usage**: 90s Vibe theme terminal mode font
+
+### Archivo Black
+- **Version**: 1.x
+- **License**: SIL Open Font License 1.1
+- **URL**: https://fonts.google.com/specimen/Archivo+Black
+- **Files**: `static/fonts/archivo-black/*.woff2`
+- **Usage**: 90s Vibe theme light mode heading font
+
 ## Build-Time Tools (not included in runtime)
 
 ### esbuild

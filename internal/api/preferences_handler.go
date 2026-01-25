@@ -3,6 +3,9 @@ package api
 import (
 	"log"
 	"net/http"
+	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/flosch/pongo2/v6"
@@ -462,14 +465,42 @@ func HandleUpdateProfile(c *gin.Context) {
 	})
 }
 
-// Available themes - keep in sync with static/js/theme-manager.js
-var availableThemes = []string{"synthwave", "gotrs-classic", "seventies-vibes"}
+// getAvailableThemes discovers themes by scanning static/css/themes/ directory.
+// This eliminates the need to maintain a hardcoded list - just add a CSS file.
+func getAvailableThemes() []string {
+	themesDir := "static/css/themes"
+	entries, err := os.ReadDir(themesDir)
+	if err != nil {
+		log.Printf("Warning: could not read themes directory: %v", err)
+		// Fallback to known themes if directory read fails
+		return []string{"synthwave", "gotrs-classic", "seventies-vibes", "nineties-vibe"}
+	}
+
+	var themes []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		// Only include .css files, exclude partials (starting with _)
+		if strings.HasSuffix(name, ".css") && !strings.HasPrefix(name, "_") {
+			// Remove .css extension to get theme name
+			themeName := strings.TrimSuffix(name, ".css")
+			themes = append(themes, themeName)
+		}
+	}
+
+	// Sort for consistent ordering
+	sort.Strings(themes)
+	return themes
+}
 
 // HandleGetAvailableThemes returns the list of available themes (public, no auth required).
 // Used on login pages to allow theme selection before authentication.
 func HandleGetAvailableThemes(c *gin.Context) {
-	themeList := make([]gin.H, 0, len(availableThemes))
-	for _, theme := range availableThemes {
+	themes := getAvailableThemes()
+	themeList := make([]gin.H, 0, len(themes))
+	for _, theme := range themes {
 		themeList = append(themeList, gin.H{
 			"id":   theme,
 			"name": theme,
@@ -506,7 +537,7 @@ func HandleSetPreLoginTheme(c *gin.Context) {
 	// Validate theme if provided
 	if request.Theme != "" {
 		valid := false
-		for _, t := range availableThemes {
+		for _, t := range getAvailableThemes() {
 			if t == request.Theme {
 				valid = true
 				break
@@ -598,8 +629,9 @@ func HandleGetTheme(c *gin.Context) {
 	}
 
 	// Build list of available themes for the UI
-	themeList := make([]gin.H, 0, len(availableThemes))
-	for _, t := range availableThemes {
+	themes := getAvailableThemes()
+	themeList := make([]gin.H, 0, len(themes))
+	for _, t := range themes {
 		themeList = append(themeList, gin.H{
 			"id":   t,
 			"name": t,
@@ -641,7 +673,7 @@ func HandleSetTheme(c *gin.Context) {
 	// Validate theme if provided
 	if request.Theme != "" {
 		valid := false
-		for _, t := range availableThemes {
+		for _, t := range getAvailableThemes() {
 			if t == request.Theme {
 				valid = true
 				break

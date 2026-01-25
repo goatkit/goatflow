@@ -4,13 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.6.2] - 2026-01-25
 
 ### Added
-- **Multi-Theme System**: Pluggable theming architecture with three themes and light/dark mode support
+- **Multi-Theme System**: Pluggable theming architecture with four themes and light/dark mode support
   - **Synthwave** (default): Neon cyan/magenta color scheme with grid background and glow effects
   - **GOTRS Classic**: Professional blue theme with clean solid backgrounds, no visual patterns
-  - **Seventies Vibes**: Warm retro palette with orange/brown tones
+  - **Seventies Vibes**: Warm retro palette with orange/brown tones and ogee wave pattern
+  - **Nineties Vibe**: Dual-personality theme with distinct light and dark aesthetics
+    - Light mode: Classic 90s Redmond desktop with gray windows, navy title bars, 3D beveled controls
+    - Dark mode: Linux terminal aesthetic with pure black (#000000) background, ANSI bright colors, Hack Nerd Font
   - Theme switcher UI in settings and login pages with live preview
   - CSS custom properties architecture (`--gk-*` variables) for consistent theming
   - Theme-specific font loading via ThemeManager
@@ -20,7 +23,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
   - Inter (400, 500, 600, 700) - universal fallback
   - Space Grotesk - synthwave headings
   - Righteous - synthwave display
-  - Nunito - seventies vibes
+  - Nunito - seventies vibes body text
+  - Hack Nerd Font - nineties vibe terminal mode (monospace with Nerd Font icons)
+  - Archivo Black - nineties vibe light mode headings
   - Dynamic font loading based on active theme
   - Files: `static/fonts/`, `static/css/fonts-*.css`
 - **Ticket Detail Page Refactoring**: Modular partial architecture for ticket zoom view
@@ -76,6 +81,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
   - Files: `internal/api/auth_customer.go`, `internal/api/auth_htmx_handlers.go`, `internal/api/handler_registry.go`, `internal/middleware/auth.go`, `internal/middleware/session.go`, `internal/routing/handlers.go`, `static/js/theme-manager.js`
 
 ### Fixed
+- **Seventies Vibes Theme Background Interference**: Fixed dual-layer background pattern causing visual interference when scrolling
+  - Body, sidebar, and grid pseudo-element all had the ogee wave pattern with different `background-attachment` values
+  - Removed pattern from sidebar and `.gk-grid-bg::before`, keeping only body background
+  - Changed `background-attachment` from `fixed` to `scroll` for natural scrolling behavior
+  - Restored solid earthy brown backgrounds on cards and panels
+  - File: `static/css/themes/seventies-vibes.css`
 - **Guru Meditation HTMX Compatibility**: Fixed duplicate declaration errors when Guru Meditation component was loaded multiple times via HTMX
   - Added initialization guard to prevent re-declaration of functions
   - Changed local variables to window-scoped to avoid redeclaration errors
@@ -103,6 +114,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
   - `common.email` in Ukrainian: "Email" → "Ел. пошта"
   - `messages.unknown_error` in 10 languages (pt, pl, ru, zh, ja, ar, he, fa, ur, tlh) now properly translated
   - Files: `internal/i18n/translations/*.json`
+- **Fix Agent Password Reset** : Fix regression in password reset feature.
 
 ## [0.6.1] - 2026-01-17
 

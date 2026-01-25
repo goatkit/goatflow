@@ -3692,7 +3692,9 @@
         "classic": "Klasyczny",
         "classic_desc": "Czysty i profesjonalny",
         "seventies": "Klimat lat 70.",
-        "seventies_desc": "Ciepłe, ziemiste tony"
+        "seventies_desc": "Ciepłe, ziemiste tony",
+        "nineties": "Klimat lat 90.",
+        "nineties_desc": "Pulpit retro (jasny) / Terminal (ciemny)"
     },
     "attachments": {
         "title": "Załączniki",

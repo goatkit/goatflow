@@ -1,0 +1,528 @@
+/**
+ * GoatKit 90s Vibe Theme - Dual Personality
+ *
+ * LIGHT MODE: Classic 90s desktop computing - The Redmond Aesthetic
+ *             Gray windows, navy title bars, 3D beveled controls
+ *
+ * DARK MODE:  Linux Terminal - ANSI colors on black
+ *             Monochrome white text, phosphor glow, Hack Nerd Font
+ */
+
+/* Dark mode - Linux Terminal Aesthetic */
+:root,
+:root.dark,
+.dark {
+  --gk-theme-name: 'nineties-vibe';
+  --gk-theme-mode: 'dark';
+
+  /* Primary - Pure White (terminal text) */
+  --gk-primary: #FFFFFF;
+  --gk-primary-hover: #CCCCCC;
+  --gk-primary-active: #AAAAAA;
+  --gk-primary-subtle: rgba(255, 255, 255, 0.15);
+
+  /* Secondary - ANSI Bright Cyan */
+  --gk-secondary: #55FFFF;
+  --gk-secondary-hover: #00CDCD;
+  --gk-secondary-subtle: rgba(85, 255, 255, 0.15);
+
+  /* Tertiary - ANSI Bright Yellow */
+  --gk-tertiary: #FFFF55;
+
+  /* Background colors - Terminal Black */
+  --gk-bg-base: #000000;
+  --gk-bg-surface: #0a0a0a;
+  --gk-bg-elevated: #1a1a1a;
+  --gk-bg-overlay: rgba(0, 0, 0, 0.92);
+
+  /* Text colors - Terminal white/gray spectrum */
+  --gk-text-primary: #FFFFFF;
+  --gk-text-secondary: #AAAAAA;
+  --gk-text-muted: #555555;
+  --gk-text-inverse: #000000;
+
+  /* Border colors - Subtle terminal grays */
+  --gk-border-default: #333333;
+  --gk-border-strong: #555555;
+
+  /* Status colors - ANSI Bright Colors */
+  --gk-success: #00FF00;
+  --gk-success-subtle: rgba(0, 255, 0, 0.15);
+  --gk-warning: #FFFF55;
+  --gk-warning-subtle: rgba(255, 255, 85, 0.15);
+  --gk-error: #FF5555;
+  --gk-error-subtle: rgba(255, 85, 85, 0.15);
+  --gk-info: #55FFFF;
+  --gk-info-subtle: rgba(85, 255, 255, 0.15);
+
+  /* Gradients - Minimal, terminal doesn't use gradients */
+  --gk-gradient-primary: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+  --gk-gradient-sunset: linear-gradient(180deg, #1a1a1a 0%, #000000 100%);
+  --gk-gradient-hero: linear-gradient(180deg, #0a0a0a 0%, #000000 100%);
+  --gk-gradient-chrome: linear-gradient(180deg, #333333 0%, #1a1a1a 100%);
+
+  /* Phosphor Glow - CRT monitor effect */
+  --gk-glow-primary: 0 0 8px rgba(255, 255, 255, 0.25);
+  --gk-glow-secondary: 0 0 8px rgba(85, 255, 255, 0.3);
+  --gk-glow-success: 0 0 10px rgba(0, 255, 0, 0.4);
+  --gk-glow-warning: 0 0 10px rgba(255, 255, 85, 0.4);
+  --gk-glow-error: 0 0 10px rgba(255, 85, 85, 0.4);
+
+  /* Shadows - Subtle on black */
+  --gk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.8);
+  --gk-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.8);
+  --gk-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.8);
+  --gk-shadow-xl: 0 8px 16px rgba(0, 0, 0, 0.8);
+
+  /* Focus ring - Phosphor glow */
+  --gk-focus-ring: 0 0 0 2px rgba(255, 255, 255, 0.5), 0 0 12px rgba(255, 255, 255, 0.3);
+
+  /* Typography - Hack Nerd Font for terminal authenticity */
+  --gk-font-heading: 'Hack Nerd Font', 'Fira Code', 'Consolas', 'Monaco', monospace;
+  --gk-font-body: 'Hack Nerd Font', 'Fira Code', 'Consolas', 'Monaco', monospace;
+  --gk-font-mono: 'Hack Nerd Font', 'Fira Code', 'Consolas', 'Monaco', monospace;
+
+  /* Transitions - Instant, like terminal */
+  --gk-transition-fast: 0ms;
+  --gk-transition-normal: 50ms ease-out;
+  --gk-transition-slow: 100ms ease-out;
+
+  /* Border radius - Sharp edges like terminal */
+  --gk-radius-sm: 0px;
+  --gk-radius-md: 2px;
+  --gk-radius-lg: 2px;
+  --gk-radius-xl: 4px;
+  --gk-radius-full: 9999px;
+}
+
+/* Light mode - Classic Application Window */
+:root.light,
+.light {
+  --gk-theme-mode: 'light';
+
+  /* Primary - Navy blue stays consistent */
+  --gk-primary: #000080;
+  --gk-primary-hover: #0000AA;
+  --gk-primary-active: #0000CC;
+  --gk-primary-subtle: rgba(0, 0, 128, 0.1);
+
+  /* Secondary - Darker silver for contrast */
+  --gk-secondary: #808080;
+  --gk-secondary-hover: #696969;
+  --gk-secondary-subtle: rgba(128, 128, 128, 0.1);
+
+  /* Tertiary */
+  --gk-tertiary: #DAA520;
+
+  /* Background colors - Classic gray window */
+  --gk-bg-base: #C0C0C0;
+  --gk-bg-surface: #DFDFDF;
+  --gk-bg-elevated: #FFFFFF;
+  --gk-bg-overlay: rgba(192, 192, 192, 0.97);
+
+  /* Text colors - Black on light for readability */
+  --gk-text-primary: #000000;
+  --gk-text-secondary: #333333;
+  --gk-text-muted: #666666;
+  --gk-text-inverse: #FFFFFF;
+
+  /* Border colors */
+  --gk-border-default: #808080;
+  --gk-border-strong: #000000;
+
+  /* Status colors - Adjusted for light mode */
+  --gk-success: #008000;
+  --gk-success-subtle: rgba(0, 128, 0, 0.1);
+  --gk-warning: #CC8800;
+  --gk-warning-subtle: rgba(204, 136, 0, 0.1);
+  --gk-error: #CC0000;
+  --gk-error-subtle: rgba(204, 0, 0, 0.1);
+  --gk-info: #000080;
+  --gk-info-subtle: rgba(0, 0, 128, 0.1);
+
+  /* Gradients */
+  --gk-gradient-primary: linear-gradient(180deg, #000080 0%, #1084d0 100%);
+  --gk-gradient-sunset: linear-gradient(180deg, #000080 0%, #0000AA 50%, #1084d0 100%);
+  --gk-gradient-hero: linear-gradient(180deg, #C0C0C0 0%, #D8D8D8 50%, #EFEFEF 100%);
+  --gk-gradient-chrome: linear-gradient(180deg, #DFDFDF 0%, #FFFFFF 50%, #DFDFDF 100%);
+
+  /* No glows */
+  --gk-glow-primary: none;
+  --gk-glow-secondary: none;
+  --gk-glow-success: none;
+  --gk-glow-warning: none;
+  --gk-glow-error: none;
+
+  /* Shadows - 3D beveled effect */
+  --gk-shadow-sm: 1px 1px 0 #808080, -1px -1px 0 #FFFFFF;
+  --gk-shadow-md: 2px 2px 0 #808080, -1px -1px 0 #FFFFFF;
+  --gk-shadow-lg: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  --gk-shadow-xl: 3px 3px 6px rgba(0, 0, 0, 0.3);
+
+  /* Focus ring */
+  --gk-focus-ring: 0 0 0 1px #000000, 0 0 0 3px #000080;
+}
+
+/* ===========================================
+   90s Theme - Clean solid backgrounds
+   =========================================== */
+
+[data-theme="nineties-vibe"] body {
+  background-image: none;
+}
+
+[data-theme="nineties-vibe"] .gk-pattern-bg {
+  background-image: none;
+}
+
+/* ===========================================
+   Dark Mode Terminal Overrides
+   Force white/cyan text on all interactive elements
+   =========================================== */
+
+/* All buttons - white text, no glow */
+[data-theme="nineties-vibe"].dark button,
+[data-theme="nineties-vibe"] .dark button,
+[data-theme="nineties-vibe"].dark [type="submit"],
+[data-theme="nineties-vibe"] .dark [type="submit"],
+[data-theme="nineties-vibe"].dark [type="button"],
+[data-theme="nineties-vibe"] .dark [type="button"],
+[data-theme="nineties-vibe"].dark .gk-btn-primary,
+[data-theme="nineties-vibe"] .dark .gk-btn-primary,
+[data-theme="nineties-vibe"].dark .gk-btn-secondary,
+[data-theme="nineties-vibe"] .dark .gk-btn-secondary,
+[data-theme="nineties-vibe"].dark .gk-btn-neon,
+[data-theme="nineties-vibe"] .dark .gk-btn-neon,
+[data-theme="nineties-vibe"].dark .gk-btn-outline,
+[data-theme="nineties-vibe"] .dark .gk-btn-outline {
+  color: #FFFFFF !important;
+  text-shadow: none !important;
+}
+
+/* Primary action buttons - cyan accent, no glow */
+[data-theme="nineties-vibe"].dark .gk-btn-primary,
+[data-theme="nineties-vibe"] .dark .gk-btn-primary,
+[data-theme="nineties-vibe"].dark button[type="submit"],
+[data-theme="nineties-vibe"] .dark button[type="submit"] {
+  background: #1a1a1a !important;
+  color: #55FFFF !important;
+  text-shadow: none !important;
+}
+
+/* All headings - light blue, no glow */
+[data-theme="nineties-vibe"].dark h1,
+[data-theme="nineties-vibe"].dark h2,
+[data-theme="nineties-vibe"].dark h3,
+[data-theme="nineties-vibe"].dark h4,
+[data-theme="nineties-vibe"].dark h5,
+[data-theme="nineties-vibe"].dark h6,
+[data-theme="nineties-vibe"] .dark h1,
+[data-theme="nineties-vibe"] .dark h2,
+[data-theme="nineties-vibe"] .dark h3,
+[data-theme="nineties-vibe"] .dark h4,
+[data-theme="nineties-vibe"] .dark h5,
+[data-theme="nineties-vibe"] .dark h6 {
+  color: #87CEEB !important;
+  text-shadow: none;
+  font-family: 'Hack Nerd Font', 'Fira Code', 'Consolas', 'Monaco', monospace !important;
+}
+
+/* Disable gradient text effect in terminal mode - use solid colors */
+[data-theme="nineties-vibe"].dark .gk-text-gradient,
+[data-theme="nineties-vibe"] .dark .gk-text-gradient {
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: #87CEEB !important;
+  background-clip: unset !important;
+  color: #87CEEB !important;
+}
+
+/* Brand name (GOTRS) in navbar - light blue, Hack font, no glow */
+[data-theme="nineties-vibe"].dark .gk-navbar-brand,
+[data-theme="nineties-vibe"] .dark .gk-navbar-brand,
+[data-theme="nineties-vibe"].dark .gk-navbar [class*="brand"],
+[data-theme="nineties-vibe"] .dark .gk-navbar [class*="brand"] {
+  color: #87CEEB !important;
+  -webkit-text-fill-color: #87CEEB !important;
+  text-shadow: none !important;
+  font-family: 'Hack Nerd Font', 'Fira Code', 'Consolas', 'Monaco', monospace !important;
+}
+
+/* Login screen brand/heading - light blue, Hack font, no glow */
+[data-theme="nineties-vibe"].dark .gk-heading,
+[data-theme="nineties-vibe"] .dark .gk-heading {
+  color: #87CEEB !important;
+  -webkit-text-fill-color: #87CEEB !important;
+  text-shadow: none !important;
+  font-family: 'Hack Nerd Font', 'Fira Code', 'Consolas', 'Monaco', monospace !important;
+}
+
+/* Login logo - no glow effect */
+[data-theme="nineties-vibe"].dark .gk-logo-glow,
+[data-theme="nineties-vibe"] .dark .gk-logo-glow {
+  filter: none !important;
+  animation: none !important;
+}
+
+/* Add spacing between icons and following text (margin-right on icons) */
+[data-theme="nineties-vibe"].dark .fa,
+[data-theme="nineties-vibe"] .dark .fa,
+[data-theme="nineties-vibe"].dark .fas,
+[data-theme="nineties-vibe"] .dark .fas,
+[data-theme="nineties-vibe"].dark .far,
+[data-theme="nineties-vibe"] .dark .far,
+[data-theme="nineties-vibe"].dark .fab,
+[data-theme="nineties-vibe"] .dark .fab,
+[data-theme="nineties-vibe"].dark [class^="fa-"],
+[data-theme="nineties-vibe"] .dark [class^="fa-"] {
+  margin-right: 0.5rem !important;
+}
+
+/* Force Hack Nerd Font everywhere in dark mode */
+[data-theme="nineties-vibe"].dark,
+[data-theme="nineties-vibe"] .dark,
+[data-theme="nineties-vibe"].dark *,
+[data-theme="nineties-vibe"] .dark * {
+  font-family: 'Hack Nerd Font', 'Fira Code', 'Consolas', 'Monaco', monospace;
+}
+
+/* Preserve Font Awesome font-family - don't override with Hack Nerd Font */
+[data-theme="nineties-vibe"].dark .fa,
+[data-theme="nineties-vibe"] .dark .fa,
+[data-theme="nineties-vibe"].dark .fas,
+[data-theme="nineties-vibe"] .dark .fas,
+[data-theme="nineties-vibe"].dark .far,
+[data-theme="nineties-vibe"] .dark .far,
+[data-theme="nineties-vibe"].dark .fab,
+[data-theme="nineties-vibe"] .dark .fab,
+[data-theme="nineties-vibe"].dark [class^="fa-"],
+[data-theme="nineties-vibe"] .dark [class^="fa-"],
+[data-theme="nineties-vibe"].dark [class*=" fa-"],
+[data-theme="nineties-vibe"] .dark [class*=" fa-"] {
+  font-family: 'Font Awesome 6 Free', 'Font Awesome 6 Brands' !important;
+}
+
+/* Toolbar buttons in active state - ensure icon is visible (black on white) */
+[data-theme="nineties-vibe"].dark .toolbar-btn.active,
+[data-theme="nineties-vibe"] .dark .toolbar-btn.active,
+[data-theme="nineties-vibe"].dark .toolbar-btn.active i,
+[data-theme="nineties-vibe"] .dark .toolbar-btn.active i {
+  color: #000000 !important;
+}
+
+/* Links in dark mode - cyan */
+[data-theme="nineties-vibe"].dark a,
+[data-theme="nineties-vibe"] .dark a {
+  color: #55FFFF;
+}
+
+[data-theme="nineties-vibe"].dark a:hover,
+[data-theme="nineties-vibe"] .dark a:hover {
+  color: #FFFFFF;
+  text-shadow: none;
+}
+
+/* Logo inversion for dark terminal mode */
+[data-theme="nineties-vibe"].dark .gk-logo,
+[data-theme="nineties-vibe"] .dark .gk-logo,
+[data-theme="nineties-vibe"].dark img[alt*="logo" i],
+[data-theme="nineties-vibe"] .dark img[alt*="logo" i],
+[data-theme="nineties-vibe"].dark .logo,
+[data-theme="nineties-vibe"] .dark .logo {
+  filter: invert(1) brightness(1.1);
+}
+
+/* Avatar/initials badges - light blue text on dark background */
+[data-theme="nineties-vibe"].dark .gk-avatar,
+[data-theme="nineties-vibe"] .dark .gk-avatar {
+  background: #1a1a1a !important;
+  border: 1px solid #55FFFF !important;
+}
+
+[data-theme="nineties-vibe"].dark .gk-avatar-text,
+[data-theme="nineties-vibe"] .dark .gk-avatar-text {
+  color: #87CEEB !important;
+}
+
+/* ===========================================
+   Windows 95 3D Beveled Effects
+   Classic raised/sunken panel styling
+   =========================================== */
+
+/* Light mode 3D variables */
+[data-theme="nineties-vibe"].light,
+[data-theme="nineties-vibe"] .light {
+  --bevel-highlight: #FFFFFF;
+  --bevel-shadow: #808080;
+  --bevel-dark: #404040;
+  --bevel-face: #C0C0C0;
+}
+
+/* Dark mode 3D variables (terminal black) */
+[data-theme="nineties-vibe"].dark,
+[data-theme="nineties-vibe"] .dark {
+  --bevel-highlight: rgba(255, 255, 255, 0.2);
+  --bevel-shadow: rgba(255, 255, 255, 0.1);
+  --bevel-dark: rgba(0, 0, 0, 0.8);
+  --bevel-face: #1a1a1a;
+}
+
+/* Raised 3D effect for cards and panels */
+[data-theme="nineties-vibe"] .gk-card,
+[data-theme="nineties-vibe"] .gk-panel,
+[data-theme="nineties-vibe"] .gk-stat-card,
+[data-theme="nineties-vibe"] .gk-admin-card,
+[data-theme="nineties-vibe"] .gk-modal,
+[data-theme="nineties-vibe"] .gk-login-card,
+[data-theme="nineties-vibe"] [class*="bg-"][class*="rounded"],
+[data-theme="nineties-vibe"] .rounded-lg[class*="border"],
+[data-theme="nineties-vibe"] .rounded-xl[class*="border"] {
+  border: none !important;
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-highlight),
+    2px 2px 0 var(--bevel-dark);
+}
+
+/* Sunken 3D effect for inputs and content areas */
+[data-theme="nineties-vibe"] input,
+[data-theme="nineties-vibe"] textarea,
+[data-theme="nineties-vibe"] select,
+[data-theme="nineties-vibe"] .gk-input-neon,
+[data-theme="nineties-vibe"] .gk-select-neon,
+[data-theme="nineties-vibe"] .gk-tiptap-container {
+  border: none !important;
+  box-shadow:
+    inset 1px 1px 0 var(--bevel-shadow),
+    inset -1px -1px 0 var(--bevel-highlight),
+    inset 2px 2px 2px var(--bevel-dark);
+}
+
+/* Raised buttons */
+[data-theme="nineties-vibe"] button,
+[data-theme="nineties-vibe"] .gk-btn-primary,
+[data-theme="nineties-vibe"] .gk-btn-secondary,
+[data-theme="nineties-vibe"] .gk-btn-neon,
+[data-theme="nineties-vibe"] .gk-btn-outline,
+[data-theme="nineties-vibe"] [type="submit"],
+[data-theme="nineties-vibe"] [type="button"] {
+  border: none !important;
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-highlight),
+    1px 1px 0 var(--bevel-dark);
+}
+
+/* Pressed button state */
+[data-theme="nineties-vibe"] button:active,
+[data-theme="nineties-vibe"] .gk-btn-primary:active,
+[data-theme="nineties-vibe"] .gk-btn-secondary:active,
+[data-theme="nineties-vibe"] .gk-btn-neon:active,
+[data-theme="nineties-vibe"] [type="submit"]:active,
+[data-theme="nineties-vibe"] [type="button"]:active {
+  box-shadow:
+    inset 1px 1px 0 var(--bevel-shadow),
+    inset -1px -1px 0 var(--bevel-highlight);
+}
+
+/* Tables with 3D effect */
+[data-theme="nineties-vibe"] .gk-table,
+[data-theme="nineties-vibe"] table {
+  box-shadow:
+    inset 1px 1px 0 var(--bevel-shadow),
+    inset -1px -1px 0 var(--bevel-highlight);
+}
+
+[data-theme="nineties-vibe"] .gk-table th,
+[data-theme="nineties-vibe"] table th {
+  background: var(--bevel-face);
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-highlight);
+}
+
+/* Sidebar with 3D edge */
+[data-theme="nineties-vibe"] .gk-sidebar {
+  box-shadow:
+    inset -1px 0 0 var(--bevel-shadow),
+    2px 0 0 var(--bevel-dark);
+}
+
+/* Navbar with 3D bottom edge */
+[data-theme="nineties-vibe"] .gk-navbar {
+  box-shadow:
+    inset 0 -1px 0 var(--bevel-shadow),
+    0 2px 0 var(--bevel-dark);
+}
+
+/* Tabs styling */
+[data-theme="nineties-vibe"] [role="tablist"],
+[data-theme="nineties-vibe"] .tab-list {
+  box-shadow: inset 0 -1px 0 var(--bevel-shadow);
+}
+
+[data-theme="nineties-vibe"] [role="tab"][aria-selected="true"],
+[data-theme="nineties-vibe"] .tab-active {
+  box-shadow:
+    inset -1px 0 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-highlight),
+    inset 0 -1px 0 var(--gk-bg-surface);
+}
+
+/* Dropdown menus */
+[data-theme="nineties-vibe"] [x-show],
+[data-theme="nineties-vibe"] .dropdown-menu,
+[data-theme="nineties-vibe"] [role="menu"] {
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-highlight),
+    2px 2px 0 var(--bevel-dark) !important;
+}
+
+/* Badges - flat with subtle border */
+[data-theme="nineties-vibe"] .gk-badge,
+[data-theme="nineties-vibe"] [class*="badge"] {
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-highlight);
+}
+
+/* Progress bars */
+[data-theme="nineties-vibe"] progress,
+[data-theme="nineties-vibe"] .progress-bar {
+  box-shadow:
+    inset 1px 1px 0 var(--bevel-shadow),
+    inset -1px -1px 0 var(--bevel-highlight);
+}
+
+/* Horizontal rules / dividers */
+[data-theme="nineties-vibe"] hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(180deg, var(--bevel-shadow) 0%, var(--bevel-shadow) 50%, var(--bevel-highlight) 50%, var(--bevel-highlight) 100%);
+}
+
+/* Scrollbars - Classic 90s style */
+[data-theme="nineties-vibe"] ::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+[data-theme="nineties-vibe"] ::-webkit-scrollbar-track {
+  background: var(--bevel-face);
+  box-shadow: inset 1px 1px 0 var(--bevel-shadow);
+}
+
+[data-theme="nineties-vibe"] ::-webkit-scrollbar-thumb {
+  background: var(--bevel-face);
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-highlight);
+}
+
+[data-theme="nineties-vibe"] ::-webkit-scrollbar-button {
+  background: var(--bevel-face);
+  box-shadow:
+    inset -1px -1px 0 var(--bevel-shadow),
+    inset 1px 1px 0 var(--bevel-highlight);
+}

@@ -2,8 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Import GoatKit theme - synthwave is the default */
-@import 'themes/synthwave.css';
+/* Import GoatKit base theme - classic provides clean defaults with no glows */
+/* Synthwave remains the DEFAULT selected theme (ThemeManager.DEFAULT_THEME) */
+/* This base just ensures non-glow themes don't need to fight CSS specificity */
+@import 'themes/gotrs-classic.css';
 
 /* Custom component styles */
 @layer components {
@@ -162,37 +164,31 @@
     .gk-badge-primary {
         background: var(--gk-primary-subtle);
         color: var(--gk-primary);
-        box-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
     }
 
     .gk-badge-secondary {
         background: var(--gk-secondary-subtle);
         color: var(--gk-secondary);
-        box-shadow: 0 0 8px rgba(255, 47, 212, 0.2);
     }
 
     .gk-badge-tertiary {
         background: var(--gk-tertiary-subtle);
         color: var(--gk-tertiary);
-        box-shadow: 0 0 8px rgba(255, 138, 61, 0.2);
     }
 
     .gk-badge-success {
         background: var(--gk-success-subtle);
         color: var(--gk-success);
-        box-shadow: 0 0 8px rgba(0, 255, 133, 0.2);
     }
 
     .gk-badge-warning {
         background: var(--gk-warning-subtle);
         color: var(--gk-warning);
-        box-shadow: 0 0 8px rgba(255, 212, 71, 0.2);
     }
 
     .gk-badge-error {
         background: var(--gk-error-subtle);
         color: var(--gk-error);
-        box-shadow: 0 0 8px rgba(255, 60, 110, 0.2);
     }
 
     .gk-badge-muted {
@@ -633,18 +629,32 @@
         50% { background-position: 100% 50%; }
     }
 
-    /* Pulsing glow animation */
+    /* Pulsing glow animation - only active when theme has glows */
     @keyframes gk-glow-pulse {
+        0%, 100% {
+            box-shadow: var(--gk-glow-primary);
+        }
+        50% {
+            box-shadow: var(--gk-glow-primary);
+        }
+    }
+
+    .gk-glow-pulse {
+        animation: gk-glow-pulse 2s ease-in-out infinite;
+    }
+
+    /* Synthwave-specific glow pulse with neon effect */
+    [data-theme="synthwave"] .gk-glow-pulse {
+        animation: gk-glow-pulse-neon 2s ease-in-out infinite;
+    }
+
+    @keyframes gk-glow-pulse-neon {
         0%, 100% {
             box-shadow: var(--gk-glow-primary);
         }
         50% {
             box-shadow: 0 0 30px rgba(0, 229, 255, 0.7), 0 0 60px rgba(0, 229, 255, 0.4);
         }
-    }
-
-    .gk-glow-pulse {
-        animation: gk-glow-pulse 2s ease-in-out infinite;
     }
 
     /* Neon text effect */
@@ -683,32 +693,7 @@
         box-shadow: var(--gk-shadow-xl);
     }
 
-    .gk-login-card::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        padding: 2px;
-        background: var(--gk-gradient-primary);
-        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-        -webkit-mask-composite: xor;
-        mask-composite: exclude;
-        opacity: 0.8;
-        pointer-events: none;
-    }
-
-    .gk-login-card::after {
-        content: '';
-        position: absolute;
-        inset: -2px;
-        border-radius: calc(var(--gk-radius-lg) + 2px);
-        background: var(--gk-gradient-primary);
-        filter: blur(20px);
-        opacity: 0.3;
-        z-index: -1;
-        pointer-events: none;
-    }
+    /* Login card glow effects are theme-specific - added in synthwave.css */
 
     /* Neon input fields */
     .gk-input-neon {
@@ -804,7 +789,7 @@
     .gk-btn-secondary:hover {
         border-color: var(--gk-primary);
         color: var(--gk-primary);
-        box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+        box-shadow: var(--gk-glow-primary);
     }
 
     /* Outline button - transparent with border */
@@ -818,7 +803,7 @@
     .gk-btn-outline:hover {
         border-color: var(--gk-primary);
         color: var(--gk-primary);
-        box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+        box-shadow: var(--gk-glow-primary);
     }
 
     /* Success button - green glow */
@@ -855,7 +840,7 @@
 
     .gk-btn-danger-outline:hover {
         background: var(--gk-error-subtle);
-        box-shadow: 0 0 10px rgba(255, 60, 110, 0.3);
+        box-shadow: var(--gk-glow-error);
     }
 
     /* Scanline overlay effect - classic CRT aesthetic */
@@ -874,20 +859,9 @@
         z-index: 9999;
     }
 
-    /* Grid background - the iconic synthwave grid */
+    /* Grid background container - pattern added by theme CSS (e.g., synthwave) */
     .gk-grid-bg {
         position: relative;
-    }
-
-    .gk-grid-bg::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background:
-            linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
-        background-size: 50px 50px;
-        pointer-events: none;
     }
 
     /* Hero section with sunset gradient */
@@ -930,8 +904,13 @@
         box-shadow: var(--gk-glow-primary);
     }
 
-    /* Logo glow effect */
+    /* Logo glow effect - only for glow themes */
     .gk-logo-glow {
+        filter: none;
+    }
+
+    [data-theme="synthwave"] .gk-logo-glow,
+    [data-theme="seventies-vibes"] .gk-logo-glow {
         filter: drop-shadow(0 0 10px var(--gk-primary)) drop-shadow(0 0 20px var(--gk-primary));
     }
 
@@ -1009,7 +988,7 @@
     .gk-navbar {
         background: var(--gk-bg-surface);
         border-bottom: 1px solid var(--gk-border-default);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 229, 255, 0.05);
+        box-shadow: var(--gk-shadow-lg);
     }
 
     .gk-navbar-brand {
@@ -1201,7 +1180,7 @@
 
     .gk-table tbody tr:hover {
         background: var(--gk-primary-subtle);
-        box-shadow: inset 0 0 0 1px var(--gk-primary), 0 0 15px rgba(0, 229, 255, 0.1);
+        box-shadow: inset 0 0 0 1px var(--gk-primary), var(--gk-glow-primary);
     }
 
     .gk-table tbody tr:hover td {
@@ -1396,7 +1375,7 @@
         position: absolute;
         content: "";
         inset: 0;
-        background: rgba(0, 229, 255, 0.2);
+        background: var(--gk-primary-subtle);
         pointer-events: none;
     }
 
@@ -1533,7 +1512,7 @@
     .gk-stat-card:hover {
         border-color: var(--gk-primary);
         transform: translateY(-4px);
-        box-shadow: var(--gk-shadow-xl), 0 0 30px rgba(0, 229, 255, 0.15);
+        box-shadow: var(--gk-shadow-xl), var(--gk-glow-primary);
     }
 
     .gk-stat-card:hover::before {
@@ -1544,7 +1523,6 @@
         @apply text-3xl font-bold;
         font-family: var(--gk-font-heading);
         color: var(--gk-primary);
-        text-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
     }
 
     .gk-stat-label {
@@ -1559,15 +1537,15 @@
     }
 
     /* Colored stat variants */
-    .gk-stat-card.success .gk-stat-value { color: var(--gk-success); text-shadow: 0 0 20px rgba(0, 255, 133, 0.5); }
+    .gk-stat-card.success .gk-stat-value { color: var(--gk-success); }
     .gk-stat-card.success:hover { border-color: var(--gk-success); box-shadow: var(--gk-shadow-xl), var(--gk-glow-success); }
     .gk-stat-card.success::before { background: var(--gk-success); }
 
-    .gk-stat-card.warning .gk-stat-value { color: var(--gk-warning); text-shadow: 0 0 20px rgba(255, 212, 71, 0.5); }
+    .gk-stat-card.warning .gk-stat-value { color: var(--gk-warning); }
     .gk-stat-card.warning:hover { border-color: var(--gk-warning); box-shadow: var(--gk-shadow-xl), var(--gk-glow-warning); }
     .gk-stat-card.warning::before { background: var(--gk-warning); }
 
-    .gk-stat-card.error .gk-stat-value { color: var(--gk-error); text-shadow: 0 0 20px rgba(255, 60, 110, 0.5); }
+    .gk-stat-card.error .gk-stat-value { color: var(--gk-error); }
     .gk-stat-card.error:hover { border-color: var(--gk-error); box-shadow: var(--gk-shadow-xl), var(--gk-glow-error); }
     .gk-stat-card.error::before { background: var(--gk-error); }
 
@@ -1575,7 +1553,7 @@
        SYNTHWAVE MODALS
        ============================================ */
     .gk-modal-backdrop {
-        background: rgba(11, 13, 26, 0.9);
+        background: var(--gk-bg-overlay);
         backdrop-filter: blur(4px);
     }
 
@@ -1583,7 +1561,7 @@
         background: var(--gk-bg-surface);
         border: 1px solid var(--gk-border-default);
         border-radius: var(--gk-radius-xl);
-        box-shadow: var(--gk-shadow-xl), 0 0 60px rgba(0, 229, 255, 0.1);
+        box-shadow: var(--gk-shadow-xl), var(--gk-glow-primary);
         position: relative;
     }
 
