@@ -3220,7 +3220,9 @@
         "classic": "کلاسیک",
         "classic_desc": "تمیز و حرفه‌ای",
         "seventies": "حال و هوای دهه ۷۰",
-        "seventies_desc": "رنگ‌های زمینی گرم"
+        "seventies_desc": "رنگ‌های زمینی گرم",
+        "nineties": "فضای دهه ۹۰",
+        "nineties_desc": "دسکتاپ رترو (روشن) / ترمینال (تیره)"
     },
     "attachments": {
         "title": "پیوست‌ها",

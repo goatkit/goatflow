@@ -3121,7 +3121,9 @@
         "classic": "Classique",
         "classic_desc": "Épuré et professionnel",
         "seventies": "Ambiance années 70",
-        "seventies_desc": "Tons chauds de terre"
+        "seventies_desc": "Tons chauds de terre",
+        "nineties": "Vibe des années 90",
+        "nineties_desc": "Bureau rétro (clair) / Terminal (sombre)"
     },
     "attachments": {
         "title": "Pièces jointes",

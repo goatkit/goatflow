@@ -312,9 +312,9 @@ func TestSomething(t *testing.T) {
 
 ---
 
-## ADDING NEW THEMES - STEP BY STEP (Jan 24, 2026)
+## ADDING NEW THEMES - STEP BY STEP (Jan 25, 2026)
 
-The theme system uses CSS custom properties with dynamic theme selection from `ThemeManager.AVAILABLE_THEMES`.
+The theme system uses `ThemeManager.THEME_METADATA` as the **single source of truth** for all theme configuration. Template selectors automatically read from it.
 
 ### Step 1: Create Theme CSS File
 
@@ -346,17 +346,9 @@ Create `static/css/themes/{theme-name}.css` with both dark and light mode varian
 }
 ```
 
-Reference: `static/css/themes/synthwave.css` or `static/css/themes/seventies-vibes.css`
+Reference: `static/css/themes/synthwave.css` or `static/css/themes/nineties-vibe.css`
 
-### Step 2: Register Theme in ThemeManager
-
-Edit `static/js/theme-manager.js`:
-
-```javascript
-const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'your-new-theme'];
-```
-
-### Step 3: Vendor Theme Fonts (MANDATORY)
+### Step 2: Vendor Theme Fonts (if custom fonts needed)
 
 **All theme fonts MUST be vendored locally for air-gapped deployment.**
 
@@ -376,39 +368,32 @@ const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'your-new-theme'];
 }
 ```
 
-3. **Register in THEME_FONT_CSS** in `static/js/theme-manager.js`:
-```javascript
-const THEME_FONT_CSS = {
-  'synthwave': '/static/css/fonts-synthwave.css',
-  'gotrs-classic': '/static/css/fonts-synthwave.css',
-  'seventies-vibes': '/static/css/fonts-seventies.css',
-  'your-new-theme': '/static/css/fonts-your-theme.css'  // ADD THIS
-};
-```
+3. **Update THIRD_PARTY_NOTICES.md** with font license info
 
-4. **Update THIRD_PARTY_NOTICES.md** with font license info
+### Step 3: Register Theme in THEME_METADATA (Single Source of Truth)
 
-**Font Architecture:**
-- `fonts.css` - Only Inter (universal fallback), loaded globally
-- `fonts-{theme}.css` - Theme-specific fonts, loaded dynamically on theme switch
-- This minimizes bandwidth - users only download fonts for themes they use
-
-### Step 4: Add Theme Metadata to Selector
-
-Edit `templates/partials/theme_selector.pongo2`, add to `THEME_METADATA` object:
+Edit `static/js/theme-manager.js` - add to both `AVAILABLE_THEMES` array AND `THEME_METADATA` object:
 
 ```javascript
+const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'your-new-theme'];
+
 const THEME_METADATA = {
-    // ... existing themes ...
-    'your-new-theme': {
-        name: '{{ t("theme.your_theme")|default:"Your Theme" }}',
-        description: '{{ t("theme.your_theme_desc")|default:"Theme description" }}',
-        gradient: 'linear-gradient(135deg, #PRIMARY_COLOR, #SECONDARY_COLOR)'
-    }
+  // ... existing themes ...
+  'your-new-theme': {
+    name: 'Your Theme',              // Default English name
+    nameKey: 'theme.your_theme',     // i18n translation key
+    description: 'Theme description', // Default English description
+    descriptionKey: 'theme.your_theme_desc', // i18n translation key
+    gradient: 'linear-gradient(135deg, #COLOR1, #COLOR2)', // Preview gradient
+    fontCss: '/static/css/fonts-your-theme.css' // or null if using default fonts
+  }
 };
 ```
 
-### Step 5: Add i18n Translations
+**Backend auto-discovers themes** from `static/css/themes/*.css` - no Go code changes needed!
+**Template selectors automatically read from THEME_METADATA** - no template changes needed!
+
+### Step 4: Add i18n Translations
 
 Add to ALL 15 language files in `internal/i18n/translations/*.json`:
 
@@ -435,7 +420,12 @@ Languages: en, de, es, fr, pt, pl, ru, zh, ja, ar, he, fa, ur, uk, tlh
 
 ### Files Modified When Adding a Theme
 
-1. `static/css/themes/{name}.css` - Theme CSS (NEW)
-2. `static/js/theme-manager.js` - Add to AVAILABLE_THEMES array
-3. `templates/partials/theme_selector.pongo2` - Add to THEME_METADATA object
-4. `internal/i18n/translations/*.json` - Add translations (15 files)
+1. `static/css/themes/{name}.css` - Theme CSS (NEW) - **Backend auto-discovers this**
+2. `static/css/fonts-{name}.css` - Font CSS (NEW, if custom fonts)
+3. `static/fonts/{font-name}/` - Font files (NEW, if custom fonts)
+4. `static/js/theme-manager.js` - Add to AVAILABLE_THEMES + THEME_METADATA
+5. `internal/i18n/translations/*.json` - Add translations (15 files)
+
+**No Go backend changes needed** - `getAvailableThemes()` in `internal/api/preferences_handler.go` scans the themes directory automatically.
+
+**Note:** Template selectors (`theme_selector.pongo2`, `login_theme_selector.pongo2`) do NOT need changes - they read from `ThemeManager.THEME_METADATA` automatically.

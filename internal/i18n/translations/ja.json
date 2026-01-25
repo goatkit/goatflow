@@ -3121,7 +3121,9 @@
         "classic": "クラシック",
         "classic_desc": "クリーン＆プロフェッショナル",
         "seventies": "70年代ヴァイブス",
-        "seventies_desc": "温かみのあるアーストーン"
+        "seventies_desc": "温かみのあるアーストーン",
+        "nineties": "90年代バイブ",
+        "nineties_desc": "レトロデスクトップ（ライト）/ ターミナル（ダーク）"
     },
     "attachments": {
         "title": "添付ファイル",

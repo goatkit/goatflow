@@ -3444,7 +3444,9 @@
         "classic": "Classic",
         "classic_desc": "Clean & professional",
         "seventies": "70s Vibes",
-        "seventies_desc": "Warm earth tones"
+        "seventies_desc": "Warm earth tones",
+        "nineties": "90s Vibe",
+        "nineties_desc": "Retro desktop (light) / Terminal (dark)"
     },
     "attachments": {
         "title": "Attachments",

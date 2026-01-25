@@ -171,3 +171,49 @@
   /* Focus ring for light mode */
   --gk-focus-ring: 0 0 0 2px var(--gk-bg-surface), 0 0 0 4px var(--gk-primary);
 }
+
+/* ============================================
+   SYNTHWAVE GRID BACKGROUND
+   The iconic synthwave perspective grid
+   ============================================ */
+[data-theme="synthwave"] .gk-grid-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(color-mix(in srgb, var(--gk-primary) 3%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--gk-primary) 3%, transparent) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+}
+
+/* ============================================
+   SYNTHWAVE LOGIN CARD GLOW EFFECTS
+   Neon gradient border and ambient glow
+   ============================================ */
+[data-theme="synthwave"] .gk-login-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: var(--gk-gradient-primary);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+[data-theme="synthwave"] .gk-login-card::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: calc(var(--gk-radius-lg) + 2px);
+  background: var(--gk-gradient-primary);
+  filter: blur(20px);
+  opacity: 0.3;
+  z-index: -1;
+  pointer-events: none;
+}

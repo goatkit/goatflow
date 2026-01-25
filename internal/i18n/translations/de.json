@@ -3124,7 +3124,9 @@
         "classic": "Klassisch",
         "classic_desc": "Sauber & professionell",
         "seventies": "70er Vibes",
-        "seventies_desc": "Warme Erdtöne"
+        "seventies_desc": "Warme Erdtöne",
+        "nineties": "90er Vibes",
+        "nineties_desc": "Retro-Desktop (hell) / Terminal (dunkel)"
     },
     "attachments": {
         "title": "Anhänge",

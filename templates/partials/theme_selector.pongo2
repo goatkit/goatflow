@@ -80,24 +80,23 @@
 
 <script>
 (function() {
-    // Theme metadata - add new themes here with their display info
-    const THEME_METADATA = {
-        'synthwave': {
-            name: '{{ t("theme.synthwave")|default:"Synthwave" }}',
-            description: '{{ t("theme.synthwave_desc")|default:"Neon retro vibes" }}',
-            gradient: 'linear-gradient(135deg, #00E5FF, #FF2FD4)'
-        },
-        'gotrs-classic': {
-            name: '{{ t("theme.classic")|default:"Classic" }}',
-            description: '{{ t("theme.classic_desc")|default:"Clean & professional" }}',
-            gradient: 'linear-gradient(135deg, #3b82f6, #4f46e5)'
-        },
-        'seventies-vibes': {
-            name: '{{ t("theme.seventies")|default:"70s Vibes" }}',
-            description: '{{ t("theme.seventies_desc")|default:"Warm earth tones" }}',
-            gradient: 'linear-gradient(135deg, #D35400, #F5A623)'
-        }
+    // Translations for theme names/descriptions (server-side i18n)
+    // ThemeManager.THEME_METADATA provides gradients and defaults
+    const TRANSLATIONS = {
+        'theme.synthwave': '{{ t("theme.synthwave")|default:"" }}',
+        'theme.synthwave_desc': '{{ t("theme.synthwave_desc")|default:"" }}',
+        'theme.classic': '{{ t("theme.classic")|default:"" }}',
+        'theme.classic_desc': '{{ t("theme.classic_desc")|default:"" }}',
+        'theme.seventies': '{{ t("theme.seventies")|default:"" }}',
+        'theme.seventies_desc': '{{ t("theme.seventies_desc")|default:"" }}',
+        'theme.nineties': '{{ t("theme.nineties")|default:"" }}',
+        'theme.nineties_desc': '{{ t("theme.nineties_desc")|default:"" }}'
     };
+
+    // Helper to get translated text or fall back to default
+    function tr(key, fallback) {
+        return TRANSLATIONS[key] || fallback;
+    }
 
     // Render theme list dynamically
     function renderThemeList() {
@@ -105,15 +104,19 @@
         if (!container || !ThemeManager) return;
 
         const themes = ThemeManager.AVAILABLE_THEMES || [];
+        const allMeta = ThemeManager.THEME_METADATA || {};
         const currentTheme = ThemeManager.getCurrentTheme();
 
         let html = '';
         themes.forEach(themeId => {
-            const meta = THEME_METADATA[themeId] || {
+            const meta = allMeta[themeId] || {
                 name: themeId.charAt(0).toUpperCase() + themeId.slice(1).replace(/-/g, ' '),
                 description: 'Custom theme',
                 gradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)'
             };
+            // Use translated name/description if available
+            const name = tr(meta.nameKey, meta.name);
+            const description = tr(meta.descriptionKey, meta.description);
 
             const isActive = themeId === currentTheme;
 
@@ -128,8 +131,8 @@
                         </svg>
                     </span>
                     <div class="flex-1 text-left">
-                        <span class="font-medium">${meta.name}</span>
-                        <p class="text-xs" style="color: var(--gk-text-muted);">${meta.description}</p>
+                        <span class="font-medium">${name}</span>
+                        <p class="text-xs" style="color: var(--gk-text-muted);">${description}</p>
                     </div>
                 </button>
             `;

@@ -134,66 +134,6 @@
 }
 
 /* ============================================
-   CLASSIC THEME OVERRIDES
-   Remove all neon glow effects from base styles
-   ============================================ */
-
-/* Remove text shadows/glows */
-[data-theme="gotrs-classic"] .gk-text-gradient,
-[data-theme="gotrs-classic"] .gk-heading,
-[data-theme="gotrs-classic"] .gk-stat-value,
-[data-theme="gotrs-classic"] .gk-stat-card .gk-stat-value,
-[data-theme="gotrs-classic"] .gk-hero-title {
-  text-shadow: none !important;
-  -webkit-text-fill-color: inherit;
-  background: none;
-  background-clip: unset;
-  -webkit-background-clip: unset;
-}
-
-/* Remove input glow effects */
-[data-theme="gotrs-classic"] .gk-input-neon:focus,
-[data-theme="gotrs-classic"] .gk-select-neon:focus,
-[data-theme="gotrs-classic"] input:focus,
-[data-theme="gotrs-classic"] select:focus,
-[data-theme="gotrs-classic"] textarea:focus {
-  box-shadow: 0 0 0 2px var(--gk-bg-surface), 0 0 0 4px var(--gk-primary) !important;
-}
-
-/* Remove button glow effects */
-[data-theme="gotrs-classic"] .gk-btn-neon:hover,
-[data-theme="gotrs-classic"] .gk-btn-neon:focus {
-  box-shadow: var(--gk-shadow-md) !important;
-}
-
-/* Remove card glow effects */
-[data-theme="gotrs-classic"] .gk-card:hover,
-[data-theme="gotrs-classic"] .gk-card-glow:hover,
-[data-theme="gotrs-classic"] .gk-stat-card:hover {
-  box-shadow: var(--gk-shadow-lg) !important;
-}
-
-/* Remove logo glow */
-[data-theme="gotrs-classic"] .gk-logo-glow {
-  filter: none !important;
-}
-
-/* Remove divider glow */
-[data-theme="gotrs-classic"] .gk-divider-glow {
-  box-shadow: none !important;
-}
-
-/* Remove animation glows */
-[data-theme="gotrs-classic"] .gk-glow-pulse {
-  animation: none !important;
-}
-
-/* Standard border for cards */
-[data-theme="gotrs-classic"] .gk-card-glow {
-  border: 1px solid var(--gk-border-default);
-}
-
-/* ============================================
    CLEAN SOLID BACKGROUND
    No patterns for classic theme - easy on the eyes
    ============================================ */
@@ -204,7 +144,12 @@
   background-image: none;
 }
 
-/* Override synthwave grid - disable it for classic theme */
-[data-theme="gotrs-classic"] .gk-grid-bg::before {
-  display: none;
+/* Logo visibility in dark mode - invert to white for contrast */
+[data-theme="gotrs-classic"].dark .gk-logo,
+[data-theme="gotrs-classic"] .dark .gk-logo,
+[data-theme="gotrs-classic"].dark img[alt*="logo" i],
+[data-theme="gotrs-classic"] .dark img[alt*="logo" i],
+[data-theme="gotrs-classic"].dark .logo,
+[data-theme="gotrs-classic"] .dark .logo {
+  filter: brightness(0) invert(1);
 }

@@ -3146,7 +3146,9 @@
         "classic": "کلاسک",
         "classic_desc": "صاف اور پیشہ ورانہ",
         "seventies": "ستر کی دہائی کا انداز",
-        "seventies_desc": "گرم مٹی کے رنگ"
+        "seventies_desc": "گرم مٹی کے رنگ",
+        "nineties": "90 کی دہائی کا انداز",
+        "nineties_desc": "ریٹرو ڈیسک ٹاپ (ہلکا) / ٹرمینل (گہرا)"
     },
     "attachments": {
         "title": "منسلکات",

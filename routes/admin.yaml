@@ -63,6 +63,11 @@ spec:
               POST: handleAdminUsersStatus
           description: "Toggle user activation status"
 
+        - path: /users/:id/reset-password
+          method: POST
+          handler: HandleAdminUserResetPassword
+          description: "Reset user password"
+
         - path: /password-policy
           method: GET
           handler: handleAdminPasswordPolicy

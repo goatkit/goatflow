@@ -192,10 +192,10 @@
 [data-theme="seventies-vibes"] body,
 [data-theme="seventies-vibes"].dark body,
 [data-theme="seventies-vibes"].light body {
-  background-image: var(--gk-bg-pattern);
-  background-color: var(--gk-bg-base);
-  background-attachment: fixed;
-  background-size: 80px 160px;
+  background-image: var(--gk-bg-pattern) !important;
+  background-color: var(--gk-bg-base) !important;
+  background-attachment: scroll !important;
+  background-size: 80px 160px !important;
 }
 
 /* Optional: More prominent pattern on login/auth pages */
@@ -204,24 +204,34 @@
   background-image:
     var(--gk-bg-pattern),
     linear-gradient(180deg, var(--gk-bg-surface) 0%, var(--gk-bg-base) 100%);
-  background-attachment: fixed, fixed;
+  background-attachment: scroll, scroll;
   background-size: 80px 160px, 100% 100%;
 }
 
-/* Sidebar pattern overlay - subtle */
+/* Sidebar - solid background, no pattern (avoids interference with body pattern) */
 [data-theme="seventies-vibes"] aside,
-[data-theme="seventies-vibes"] .sidebar {
-  background-image:
-    var(--gk-bg-pattern);
-  background-size: 60px 120px;
-  background-attachment: local;
+[data-theme="seventies-vibes"] .sidebar,
+[data-theme="seventies-vibes"] .gk-sidebar {
+  background-image: none;
+  background-color: var(--gk-bg-surface);
 }
 
-/* Override the synthwave grid with 70s wave pattern */
-[data-theme="seventies-vibes"] .gk-grid-bg::before {
-  background:
-    var(--gk-bg-pattern);
-  background-size: 80px 160px;
+/* Cards and tiles - solid earthy brown backgrounds */
+[data-theme="seventies-vibes"] .gk-card,
+[data-theme="seventies-vibes"] .gk-stat-card,
+[data-theme="seventies-vibes"] .gk-admin-card,
+[data-theme="seventies-vibes"] .gk-panel,
+[data-theme="seventies-vibes"] .gk-modal,
+[data-theme="seventies-vibes"] .gk-login-card {
+  background-image: none !important;
+  background-color: var(--gk-bg-surface) !important;
+}
+
+/* Main content area - no pattern inheritance */
+[data-theme="seventies-vibes"] main,
+[data-theme="seventies-vibes"] .main-content {
+  background-image: none;
+  background-color: transparent;
 }
 
 /* Hero gradient - warm 70s sunset feel */

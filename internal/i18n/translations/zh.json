@@ -3121,7 +3121,9 @@
         "classic": "经典",
         "classic_desc": "简洁专业",
         "seventies": "70年代风格",
-        "seventies_desc": "温暖的大地色调"
+        "seventies_desc": "温暖的大地色调",
+        "nineties": "90年代风格",
+        "nineties_desc": "复古桌面（浅色）/ 终端（深色）"
     },
     "attachments": {
         "title": "附件",
