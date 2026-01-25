@@ -88,6 +88,16 @@ spec:
       handler: handleCustomerSetSessionTimeout
       description: "Set customer session timeout preference"
 
+    - path: /api/preferences/theme
+      method: GET
+      handler: HandleGetTheme
+      description: "Get customer theme preference"
+
+    - path: /api/preferences/theme
+      method: POST
+      handler: HandleSetTheme
+      description: "Set customer theme preference"
+
     # Password management
     - path: /password/form
       method: GET
@@ -118,6 +128,32 @@ spec:
       handler: handleCustomerKBArticle
       template: pages/customer/kb_article.pongo2
       description: "Display knowledge base article"
+
+    # Ticket attachments
+    - path: /tickets/:id/attachments
+      method: GET
+      handler: handleCustomerGetAttachments
+      description: "Get attachments for a customer ticket"
+
+    - path: /tickets/:id/attachments
+      method: POST
+      handler: handleCustomerUploadAttachment
+      description: "Upload attachment to a customer ticket"
+
+    - path: /tickets/:id/attachments/:attachment_id
+      method: GET
+      handler: handleCustomerDownloadAttachment
+      description: "Download attachment from a customer ticket"
+
+    - path: /tickets/:id/attachments/:attachment_id/thumbnail
+      method: GET
+      handler: handleCustomerGetThumbnail
+      description: "Get thumbnail for an image attachment"
+
+    - path: /tickets/:id/attachments/:attachment_id/view
+      method: GET
+      handler: handleCustomerViewAttachment
+      description: "View attachment in modal viewer"
 
     # Company information
     - path: /company/info

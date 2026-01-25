@@ -12,6 +12,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
+	"github.com/gotrs-io/gotrs-ce/internal/service"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
@@ -98,8 +99,31 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		}
 
 		sessionTimeout := constants.DefaultSessionTimeout
-		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
-		c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
+		// Use customer-specific cookie names to avoid conflicts with agent sessions
+		// This allows agent and customer to be logged in simultaneously in the same browser
+		c.SetCookie("customer_access_token", token, sessionTimeout, "/", "", false, true)
+		c.SetCookie("customer_auth_token", token, sessionTimeout, "/", "", false, true)
+		// Set a non-httpOnly indicator so JavaScript can detect authentication
+		// (auth tokens are httpOnly for security, but JS needs to know user is logged in)
+		c.SetCookie("gotrs_customer_logged_in", "1", sessionTimeout, "/", "", false, false)
+
+		// Use CustomerPreferencesService - keyed by login, not numeric ID
+		prefService := service.NewCustomerPreferencesService(db)
+
+		// Persist pre-login language selection to customer preferences
+		if preLoginLang, err := c.Cookie("gotrs_lang"); err == nil && preLoginLang != "" {
+			if setErr := prefService.SetLanguage(user.Login, preLoginLang); setErr != nil {
+				log.Printf("Failed to save customer language preference: %v", setErr)
+			}
+		}
+
+		// Load customer's saved theme preferences from database and set cookies
+		if userTheme := prefService.GetTheme(user.Login); userTheme != "" {
+			c.SetCookie("gotrs_theme", userTheme, sessionTimeout, "/", "", false, false)
+		}
+		if userThemeMode := prefService.GetThemeMode(user.Login); userThemeMode != "" {
+			c.SetCookie("gotrs_mode", userThemeMode, sessionTimeout, "/", "", false, false)
+		}
 
 		// Create session record in database for admin session management
 		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
@@ -114,8 +138,8 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 				// Log error but don't fail login - session tracking is non-critical
 				log.Printf("Failed to create customer session record: %v", err)
 			} else {
-				// Store session ID in a cookie for logout cleanup
-				c.SetCookie("session_id", sessionID, sessionTimeout, "/", "", false, true)
+				// Store session ID in a customer-specific cookie for logout cleanup
+				c.SetCookie("customer_session_id", sessionID, sessionTimeout, "/", "", false, true)
 			}
 		}
 

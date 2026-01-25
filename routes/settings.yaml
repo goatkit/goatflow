@@ -40,3 +40,15 @@ spec:
       method: POST
       handler: HandleSetLanguage
       description: "Update language preference"
+
+    # Theme preference (GET current value and available themes)
+    - path: /api/preferences/theme
+      method: GET
+      handler: HandleGetTheme
+      description: "Get current theme preference and available themes"
+
+    # Theme preference (POST update - persists to database)
+    - path: /api/preferences/theme
+      method: POST
+      handler: HandleSetTheme
+      description: "Update theme preference (persists to database)"

@@ -1,20 +1,22 @@
 {
     "acl": {
         "add_acl": "ACL追加",
-        "description": "アクセス Control Lists define rules for ticket actions and permissions",
+        "description": "アクセス制御リストはチケットのアクションと権限のルールを定義します",
         "heading": "ACL管理",
         "modal": {
             "add_title": "ACL追加",
-            "change_actions": "Change アクション",
-            "match_conditions": "Match Conditions (Properties)"
+            "change_actions": "アクション変更",
+            "match_conditions": "一致条件（プロパティ）"
         },
         "title": "アクセス制御リスト",
         "tooltips": {
-            "add_new": "追加 new ACL",
-            "apply_filters": "適用 filters",
-            "clear_filters": "クリア all filters",
+            "add_new": "新しいACLを追加",
+            "apply_filters": "フィルターを適用",
+            "clear_filters": "すべてのフィルターをクリア",
             "edit": "ACL編集"
-        }
+        },
+        "no_acls_found": "ACLが見つかりません",
+        "click_add_acl": "「ACLを追加」をクリックして作成してください。"
     },
     "admin": {
         "action_labels": {
@@ -74,7 +76,7 @@
                 "saved_sets": "保存されたフィルターセット",
                 "set_name_placeholder": "フィルターセット名を入力..."
             },
-            "no_data_available": "いいえ data available",
+            "no_data_available": "データがありません",
             "pagination": {
                 "next": "次へ",
                 "per_page": "件/ページ",
@@ -82,12 +84,12 @@
                 "show": "表示"
             },
             "refresh": "更新",
-            "saved_filter_sets": "保存d フィルター Sets",
+            "saved_filter_sets": "保存されたフィルターセット",
             "search": {
                 "placeholder": "検索..."
             },
             "selected": "選択済み",
-            "show_hide_columns": "Show/Hide Columns",
+            "show_hide_columns": "列の表示/非表示",
             "status": {
                 "active": "有効",
                 "inactive": "無効",
@@ -302,7 +304,13 @@
         "leave_blank_to_keep": "現在のパスワードを維持する場合は空白のまま",
         "login": "ログイン",
         "lookups": {
-            "description": "ルックアップデータの管理"
+            "description": "ルックアップデータの管理",
+            "add_priority": "優先度を追加",
+            "edit_priority": "優先度を編集",
+            "add_state": "状態を追加",
+            "edit_state": "状態を編集",
+            "add_type": "タイプを追加",
+            "edit_type": "タイプを編集"
         },
         "lookups_desc": "ルックアップデータの管理",
         "lookups_title": "ルックアップ",
@@ -1307,101 +1315,109 @@
         }
     },
     "admin_dashboard": {
+        "activity": "アクティビティ",
+        "tickets_closed": "クローズしたチケット",
+        "tickets_created": "作成されたチケット",
+        "tickets_open": "オープンチケット",
+        "right_now": "現在",
+        "last_24_hours": "過去24時間",
+        "last_7_days": "過去7日間",
+        "last_30_days": "過去30日間",
         "acl": "アクセス制御リスト",
         "acl_desc": "条件付きアクセスルールの定義",
         "ticket_attribute_relations": "チケット属性関連",
         "ticket_attribute_relations_desc": "チケットフォームの属性依存関係を定義",
         "active_users_customers": "アクティブなエージェントと顧客",
-        "activity": {
-            "config_updated": "[JA] System configuration updated",
-            "logs_reviewed": "[JA] Audit logs reviewed",
-            "user_created": "[JA] User account created"
+        "recent_activity_items": {
+            "config_updated": "システム設定が更新されました",
+            "logs_reviewed": "監査ログが確認されました",
+            "user_created": "ユーザーアカウントが作成されました"
         },
         "attachments": "添付ファイル",
-        "attachments_desc": "Manage default attachment templates",
+        "attachments_desc": "デフォルト添付ファイルテンプレートの管理",
         "audit_logs": "監査ログ",
-        "audit_logs_desc": "Review changes and access history",
+        "audit_logs_desc": "変更とアクセス履歴の確認",
         "auto_responses": "自動応答",
-        "auto_responses_desc": "Configure automatic email replies",
+        "auto_responses_desc": "自動メール返信の設定",
         "customer_administration": "顧客管理",
         "customer_groups": "顧客グループ",
-        "customer_groups_desc": "Organize customer access permissions",
+        "customer_groups_desc": "顧客アクセス権限の整理",
         "customer_organizations": "顧客組織",
-        "customer_organizations_desc": "Manage companies and departments",
+        "customer_organizations_desc": "会社と部門の管理",
         "customer_portal": "顧客ポータル",
-        "customer_portal_desc": "Customize the self-service interface",
-        "customer_user_groups": "顧客 ユーザー グループ",
-        "customer_user_groups_desc": "Link customer users to customer groups",
-        "customer_user_services": "顧客 ユーザー サービス",
-        "customer_user_services_desc": "Link customers to services",
+        "customer_portal_desc": "セルフサービスインターフェースのカスタマイズ",
+        "customer_user_groups": "顧客ユーザーグループ",
+        "customer_user_groups_desc": "顧客ユーザーを顧客グループにリンク",
+        "customer_user_services": "顧客ユーザーサービス",
+        "customer_user_services_desc": "顧客をサービスにリンク",
         "customer_users": "顧客ユーザー",
-        "customer_users_desc": "Individual customer accounts",
+        "customer_users_desc": "個人顧客アカウント",
         "dynamic_fields": "動的フィールド",
-        "dynamic_fields_desc": "作成 custom ticket attributes",
+        "dynamic_fields_desc": "カスタムチケット属性の作成",
         "email_identities": "メールID",
-        "email_identities_desc": "Manage salutations, addresses, signatures",
+        "email_identities_desc": "挨拶文、アドレス、署名の管理",
         "generic_agent": "汎用エージェント",
-        "generic_agent_desc": "Automated ticket actions and batch jobs",
+        "generic_agent_desc": "自動チケットアクションとバッチジョブ",
         "group_management": "グループ管理",
         "group_management_desc": "チームとエスカレーションパスの設定",
-        "inbound_mail": "Inbound メールアカウント",
-        "inbound_mail_desc": "Configure POP/IMAP polling and dispatch rules",
-        "key_metrics": "Key metrics",
+        "inbound_mail": "受信メール",
+        "inbound_mail_desc": "POP/IMAPポーリングと配信ルールの設定",
+        "key_metrics": "主要指標",
         "lookups": "ルックアップ",
-        "lookups_desc": "Manage ticket priorities, states, types",
+        "lookups_desc": "チケットの優先度、ステータス、種類の管理",
         "permissions": "権限",
         "permissions_desc": "エージェントのアクセスレベルを調整",
         "postmaster_filters": "ポストマスターフィルター",
-        "postmaster_filters_desc": "Configure email routing rules based on headers",
-        "queue_auto_responses": "キュー 自動応答",
-        "queue_auto_responses_desc": "Link auto responses to queues",
-        "queue_templates": "[JA] Queue Templates",
-        "queue_templates_desc": "[JA] Manage queue to template assignments",
+        "postmaster_filters_desc": "ヘッダーに基づくメールルーティングルールの設定",
+        "queue_auto_responses": "キュー自動応答",
+        "queue_auto_responses_desc": "自動応答をキューにリンク",
+        "queue_templates": "キューテンプレート",
+        "queue_templates_desc": "キューからテンプレートへの割り当てを管理",
         "queues": "キュー",
-        "queues_desc": "チケット routing and organization",
-        "queues_monitored": "キュー monitored",
-        "recent_activity": "Recent 管理者 アクティビティ",
-        "reports_analytics": "[JA] Reports & Analytics",
-        "reports_analytics_desc": "[JA] Track performance insights",
+        "queues_desc": "チケットのルーティングと組織",
+        "queues_monitored": "監視中のキュー",
+        "recent_activity": "最近の管理者アクティビティ",
+        "reports_analytics": "レポートと分析",
+        "reports_analytics_desc": "パフォーマンスインサイトの追跡",
         "roles": "ロール",
         "roles_desc": "ロールとロールグループ権限の管理",
         "services": "サービス",
-        "services_desc": "Define service catalog entries",
+        "services_desc": "サービスカタログエントリの定義",
         "signatures": "署名",
-        "signatures_desc": "Configure email signatures for responses",
-        "sla": "サービス Level Agreements",
-        "sla_desc": "Configure response and resolution targets",
+        "signatures_desc": "応答用のメール署名の設定",
+        "sla": "サービスレベル契約",
+        "sla_desc": "応答と解決の目標の設定",
         "system_administration": "システム管理",
         "system_config": "システム設定",
-        "system_config_desc": "Adjust global settings and behavior",
+        "system_config_desc": "グローバル設定と動作の調整",
         "system_health": "システムヘルス",
-        "system_maintenance": "[JA] System Maintenance",
-        "system_maintenance_desc": "[JA] Schedule maintenance windows and notify users",
-        "template_attachments": "[JA] Template Attachments",
-        "template_attachments_desc": "[JA] Manage template to attachment assignments",
+        "system_maintenance": "システムメンテナンス",
+        "system_maintenance_desc": "メンテナンスウィンドウのスケジュールとユーザーへの通知",
+        "template_attachments": "テンプレート添付ファイル",
+        "template_attachments_desc": "テンプレートから添付ファイルへの割り当てを管理",
         "templates": "テンプレート",
-        "templates_desc": "Reusable response and email templates",
-        "ticket_notifications": "チケット 通知",
-        "ticket_notifications_desc": "Configure automated notifications for ticket events",
+        "templates_desc": "再利用可能な応答とメールテンプレート",
+        "ticket_notifications": "チケット通知",
+        "ticket_notifications_desc": "チケットイベントの自動通知の設定",
         "uptime_this_month": "今月の稼働時間",
         "user_management": "ユーザー管理",
         "user_management_desc": "エージェントと顧客アカウントの管理"
     },
     "admin_queues": {
-        "add_queue": "追加 キュー",
-        "advanced_settings": "Advanced 設定",
-        "basic_info": "Basic 情報rmation",
+        "add_queue": "キューを追加",
+        "advanced_settings": "詳細設定",
+        "basic_info": "基本情報",
         "calendar": "カレンダー",
-        "edit_queue": "編集 キュー",
-        "email_settings": "メール 設定",
-        "follow_up_settings": "Fol低-up 設定",
-        "get_started": "Get started by creating a new queue.",
+        "edit_queue": "キューを編集",
+        "email_settings": "メール設定",
+        "follow_up_settings": "フォローアップ設定",
+        "get_started": "新しいキューを作成して始めましょう。",
         "manage_email_identities": "メールIDを管理",
-        "new_queue": "新規 キュー",
-        "no_queues": "いいえ queues",
-        "no_signature": "いいえ signature selected",
+        "new_queue": "新規キュー",
+        "no_queues": "キューがありません",
+        "no_signature": "署名が選択されていません",
         "ticket_settings": "チケット設定",
-        "unlock_timeout": "Unlock 時間out"
+        "unlock_timeout": "ロック解除タイムアウト"
     },
     "admin_tickets": {
         "title": "チケット"
@@ -1455,8 +1471,10 @@
         "signin": "サインイン",
         "signing_in": "サインイン中...",
         "signup": "サインアップ",
-        "too_many_attempts": "Too many failed attempts. Please wait",
-        "username": "ユーザー名"
+        "too_many_attempts": "試行回数が多すぎます。しばらくお待ちください",
+        "username": "ユーザー名",
+        "username_placeholder": "ユーザー名を入力",
+        "password_placeholder": "パスワードを入力"
     },
     "bulk_actions": {
         "all_selected": "すべて選択済み",
@@ -1545,7 +1563,10 @@
         "update": "更新",
         "upload": "アップロード",
         "view_all": "すべて表示",
-        "warning": "警告"
+        "warning": "警告",
+        "disable": "無効",
+        "enable": "有効",
+        "save_changes": "変更を保存"
     },
     "changes": {
         "backout_plan": "バックアウト計画",
@@ -1574,8 +1595,8 @@
         "close": "閉じる",
         "comments": "コメント",
         "confirm_action": "アクションを確認",
-        "copy_details": "Copy Guru details",
-        "copy_to_clipboard": "Copy to clipboard",
+        "copy_details": "Guru詳細をコピー",
+        "copy_to_clipboard": "クリップボードにコピー",
         "create": "作成",
         "created": "作成日時",
         "created_by": "作成者",
@@ -1603,9 +1624,9 @@
         "name": "名前",
         "next": "次へ",
         "no": "いいえ",
-        "no_data_available": "いいえ data available",
+        "no_data_available": "データがありません",
         "no_results": "結果が見つかりません",
-        "no_results_found": "いいえ results found",
+        "no_results_found": "結果が見つかりません",
         "last_update": "最終更新",
         "save_and_finish": "保存して終了",
         "save_changes": "変更を保存",
@@ -1630,7 +1651,8 @@
         "submit": "送信",
         "success": "成功",
         "to": "～",
-        "toggle_dark_mode": "Toggle dark mode",
+        "toggle_dark_mode": "ダークモードを切り替え",
+        "select_language": "言語を選択",
         "total": "合計",
         "unassigned": "未割り当て",
         "until": "まで",
@@ -1650,7 +1672,9 @@
             "password": "パスワード",
             "sign_in": "サインイン",
             "signing_in": "サインイン中...",
-            "too_many_attempts": "試行回数が多すぎます。%d秒後に再試行してください。"
+            "too_many_attempts": "試行回数が多すぎます。%d秒後に再試行してください。",
+            "login_placeholder": "ユーザー名またはメールアドレスを入力",
+            "password_placeholder": "パスワードを入力"
         },
         "common": {
             "required": "*"
@@ -1782,51 +1806,51 @@
         }
     },
     "customer_companies": {
-        "description": "Manage customer organizations and their branded portals",
+        "description": "顧客組織とそのブランドポータルを管理",
         "heading": "顧客会社",
         "title": "顧客会社",
         "tooltips": {
-            "activate": "Activate 会社",
-            "deactivate": "Deactivate 会社",
-            "edit": "編集 会社",
-            "manage_services": "Manage サービス",
-            "portal_settings": "Portal 設定"
+            "activate": "会社を有効化",
+            "deactivate": "会社を無効化",
+            "edit": "会社を編集",
+            "manage_services": "サービスを管理",
+            "portal_settings": "ポータル設定"
         }
     },
     "customer_company_form": {
-        "assigned_services": "Assigned サービス",
-        "branding": "Branding",
-        "company_details": "会社 詳細",
-        "features": "Features",
-        "portal_settings": "Portal 設定"
+        "assigned_services": "割り当てられたサービス",
+        "branding": "ブランディング",
+        "company_details": "会社詳細",
+        "features": "機能",
+        "portal_settings": "ポータル設定"
     },
     "customer_company_services": {
-        "heading": "顧客 会社 サービス",
-        "title": "顧客 会社 サービス"
+        "heading": "顧客会社サービス",
+        "title": "顧客会社サービス"
     },
     "customer_company_tickets": {
-        "heading": "顧客 会社 チケット",
-        "title": "顧客 会社 チケット"
+        "heading": "顧客会社チケット",
+        "title": "顧客会社チケット"
     },
     "customer_company_users": {
-        "heading": "顧客 会社 ユーザー",
-        "title": "顧客 会社 ユーザー"
+        "heading": "顧客会社ユーザー",
+        "title": "顧客会社ユーザー"
     },
     "customer_group": {
-        "by_group_heading": "顧客 権限 by グループ",
-        "customer_permissions": "顧客 権限",
-        "edit_heading": "編集 顧客 グループ 権限",
-        "group_permissions": "グループ 権限"
+        "by_group_heading": "グループ別顧客権限",
+        "customer_permissions": "顧客権限",
+        "edit_heading": "顧客グループ権限を編集",
+        "group_permissions": "グループ権限"
     },
     "customer_group_by_group": {
-        "customer_permissions": "顧客 権限"
+        "customer_permissions": "顧客権限"
     },
     "customer_group_edit": {
-        "group_permissions": "グループ 権限"
+        "group_permissions": "グループ権限"
     },
     "customer_groups": {
-        "about_heading": "About 顧客 グループ 権限",
-        "heading": "顧客 グループ 権限"
+        "about_heading": "顧客グループ権限について",
+        "heading": "顧客グループ権限"
     },
     "customer_portal": {
         "placeholders": {
@@ -1835,140 +1859,141 @@
         }
     },
     "customer_portal_settings": {
-        "heading": "顧客ポータル 設定",
-        "title": "顧客ポータル 設定"
+        "heading": "顧客ポータル設定",
+        "title": "顧客ポータル設定"
     },
     "customer_user_services": {
-        "title": "顧客 ユーザー サービス"
+        "title": "顧客ユーザーサービス"
     },
     "customer_users": {
-        "add_modal_title": "追加 顧客 ユーザー",
-        "add_user": "追加 顧客 ユーザー",
-        "description": "Manage customer user accounts and access",
-        "edit_modal_title": "編集 顧客 ユーザー",
+        "add_modal_title": "顧客ユーザーを追加",
+        "add_user": "顧客ユーザーを追加",
+        "description": "顧客ユーザーアカウントとアクセスを管理",
+        "edit_modal_title": "顧客ユーザーを編集",
         "export": "エクスポート",
-        "import_csv": "インポート CSV",
-        "import_title": "インポート 顧客ユーザー",
+        "import_csv": "CSVをインポート",
+        "import_title": "顧客ユーザーをインポート",
         "search": "検索",
         "section": {
-            "address_info": "住所 情報rmation",
-            "basic_info": "Basic 情報rmation",
-            "contact_info": "Contact 情報rmation",
-            "personal_info": "Personal 情報rmation"
+            "address_info": "住所情報",
+            "basic_info": "基本情報",
+            "contact_info": "連絡先情報",
+            "personal_info": "個人情報"
         },
         "table_heading": "顧客ユーザー",
-        "tickets_title": "顧客 チケット",
-        "title": "顧客 ユーザー Management",
+        "tickets_title": "顧客チケット",
+        "title": "顧客ユーザー管理",
         "tooltips": {
-            "delete": "削除 customer user",
-            "disable": "無効 customer user",
-            "edit": "編集 customer user",
-            "enable": "有効 customer user"
-        }
+            "delete": "顧客ユーザーを削除",
+            "disable": "顧客ユーザーを無効化",
+            "edit": "顧客ユーザーを編集",
+            "enable": "顧客ユーザーを有効化"
+        },
+        "save_button": "顧客ユーザーを保存"
     },
     "dashboard": {
-        "my_queues": "My キュー",
+        "my_queues": "マイキュー",
         "my_tickets": "マイチケット",
-        "no_queues_assigned": "いいえ queues assigned",
-        "no_recent_tickets": "いいえ recent tickets",
-        "no_tickets_found": "いいえ tickets found",
-        "no_tickets_in_system": "いいえ tickets found in the system",
+        "no_queues_assigned": "割り当てられたキューがありません",
+        "no_recent_tickets": "最近のチケットがありません",
+        "no_tickets_found": "チケットが見つかりません",
+        "no_tickets_in_system": "システムにチケットがありません",
         "open_tickets": "オープンチケット",
         "overview": "概要",
         "performance": "パフォーマンス",
         "quick_actions": "クイックアクション",
         "quick_stats": "クイック統計",
         "realtime": {
-            "title": "Real-time ダッシュボード"
+            "title": "リアルタイムダッシュボード"
         },
         "recent_activity": "最近のアクティビティ",
         "recent_tickets": "最近のチケット",
         "statistics": "統計",
         "stats": {
-            "closed_today": "クローズ 今日",
-            "my_open": "My 開く",
-            "my_pending": "My 保留中",
-            "new_today": "新規 今日",
-            "open_tickets": "開く チケット",
+            "closed_today": "本日クローズ",
+            "my_open": "自分のオープン",
+            "my_pending": "自分の保留中",
+            "new_today": "本日新規",
+            "open_tickets": "オープンチケット",
             "overdue": "期限超過",
             "pending": "保留中",
-            "total_assigned": "合計 Assigned",
-            "unassigned": "Unassigned"
+            "total_assigned": "割り当て合計",
+            "unassigned": "未割り当て"
         },
         "tickets_count": "チケット",
         "title": "ダッシュボード",
-        "unassigned_count": "unassigned",
+        "unassigned_count": "未割り当て",
         "welcome_back": "おかえりなさい",
         "welcome_message": "本日のチケット状況です"
     },
     "dynamic_field_form": {
-        "basic_information": "Basic 情報rmation",
-        "field_configuration": "Field 設定"
+        "basic_information": "基本情報",
+        "field_configuration": "フィールド設定"
     },
     "dynamic_field_screens": {
-        "screen_configuration": "Screen 設定",
-        "title": "Dynamic Field Screens"
+        "screen_configuration": "画面設定",
+        "title": "動的フィールド画面"
     },
     "dynamic_fields": {
         "additional_fields": "追加フィールド",
         "article_fields": "記事フィールド",
-        "available_field_types": "Available Field タイプs",
-        "description": "作成 and manage dynamic fields for tickets, articles, and other objects",
-        "heading": "動的フィールド Management",
-        "no_dynamic_fields": "いいえ dynamic fields",
+        "available_field_types": "利用可能なフィールドタイプ",
+        "description": "チケット、記事、その他のオブジェクト用の動的フィールドを作成・管理",
+        "heading": "動的フィールド管理",
+        "no_dynamic_fields": "動的フィールドがありません",
         "placeholders": {
-            "label": "My Custom Field",
-            "name": "MyCustomField"
+            "label": "カスタムフィールド",
+            "name": "CustomField"
         },
         "select": "選択...",
         "title": "追加フィールド",
         "tooltips": {
-            "add_new": "追加 new dynamic field",
-            "apply_filters": "適用 filters",
-            "clear_filters": "クリア filters",
-            "delete": "削除 field",
-            "edit": "編集 field"
+            "add_new": "新しい動的フィールドを追加",
+            "apply_filters": "フィルターを適用",
+            "clear_filters": "フィルターをクリア",
+            "delete": "フィールドを削除",
+            "edit": "フィールドを編集"
         }
     },
     "dynamic_test": {
         "heading": "動的モジュールテスト",
-        "testing_instructions": "Testing Instructions",
+        "testing_instructions": "テスト手順",
         "title": "動的モジュールテスト"
     },
     "email_identities": {
-        "add_signature": "追加 署名",
-        "add_system_address": "追加 システム 住所",
-        "description": "Manage outbound email identities, salutations, and signatures used by queues.",
+        "add_signature": "署名を追加",
+        "add_system_address": "システムアドレスを追加",
+        "description": "キューで使用する送信メールID、挨拶文、署名を管理します。",
         "heading": "メールID",
-        "salutations": "挨拶s",
+        "salutations": "挨拶文",
         "signatures": "署名",
-        "system_addresses": "システム 住所es",
+        "system_addresses": "システムアドレス",
         "title": "メールID"
     },
     "email_queue": {
-        "description": "表示 and manage queued email messages",
-        "heading": "メール キュー管理",
-        "queue_actions": "キュー アクション",
-        "title": "メール キュー",
+        "description": "キューに入っているメールメッセージを表示・管理",
+        "heading": "メールキュー管理",
+        "queue_actions": "キューアクション",
+        "title": "メールキュー",
         "tooltips": {
-            "apply_filters": "適用 filters",
-            "clear_filters": "クリア filters",
-            "delete": "削除 from queue",
+            "apply_filters": "フィルターを適用",
+            "clear_filters": "フィルターをクリア",
+            "delete": "キューから削除",
             "retry": "再送信",
-            "view_details": "表示 details"
+            "view_details": "詳細を表示"
         }
     },
     "entity_selector": {
-        "add_new": "追加 新規",
-        "added": "追加ed",
+        "add_new": "新規追加",
+        "added": "追加しました",
         "manage_members": "メンバー管理",
-        "no_members": "いいえ members yet",
-        "no_results": "いいえ results found",
-        "removed": "削除d",
-        "select_items": "選択 Items",
-        "selected_items": "選択済み Items",
-        "type_to_search": "タイプ at least {min} characters to search",
-        "type_to_search_hint": "タイプ at least 2 characters to search",
+        "no_members": "メンバーがいません",
+        "no_results": "結果が見つかりません",
+        "removed": "削除しました",
+        "select_items": "アイテムを選択",
+        "selected_items": "選択済みアイテム",
+        "type_to_search": "検索するには{min}文字以上入力してください",
+        "type_to_search_hint": "検索するには2文字以上入力してください",
         "undo": "元に戻す"
     },
     "error": {
@@ -2015,46 +2040,46 @@
         "select": "選択"
     },
     "group_form": {
-        "heading": "グループ Form",
-        "title": "グループ Form"
+        "heading": "グループフォーム",
+        "title": "グループフォーム"
     },
     "group_members": {
-        "heading": "グループ Members",
-        "title": "グループ Members"
+        "heading": "グループメンバー",
+        "title": "グループメンバー"
     },
     "group_permissions": {
-        "permission_matrix": "権限 Matrix",
-        "queue_permissions": "キュー 権限",
+        "permission_matrix": "権限マトリックス",
+        "queue_permissions": "キュー権限",
         "queues": "キュー",
-        "title": "グループ 権限"
+        "title": "グループ権限"
     },
     "group_view": {
-        "heading": "グループ 詳細",
+        "heading": "グループ詳細",
         "title": "グループ"
     },
     "groups": {
-        "add_group": "追加 グループ",
-        "add_user": "追加 ユーザー to グループ",
-        "add_user_btn": "追加 ユーザー",
-        "confirm_delete": "Are you sure you want to delete this group?",
+        "add_group": "グループを追加",
+        "add_user": "グループにユーザーを追加",
+        "add_user_btn": "ユーザーを追加",
+        "confirm_delete": "このグループを削除してもよろしいですか？",
         "current_members": "現在のメンバー",
-        "delete_success": "グループ deleted successfully",
+        "delete_success": "グループを削除しました",
         "group": "グループ",
-        "group_form": "グループ Form",
-        "group_members": "グループ Members",
-        "loading_members": "読み込み中 members...",
-        "members": "グループ Members",
-        "save_success": "グループ saved successfully",
-        "select_user": "選択 a user to add",
+        "group_form": "グループフォーム",
+        "group_members": "グループメンバー",
+        "loading_members": "メンバーを読み込み中...",
+        "members": "グループメンバー",
+        "save_success": "グループを保存しました",
+        "select_user": "追加するユーザーを選択",
         "tooltips": {
-            "add_new": "追加 a new group to the system",
-            "clear_filters": "クリア all filters",
-            "clear_search": "クリア search",
-            "delete": "削除 group",
-            "edit": "編集 group",
-            "manage_permissions": "Manage permissions",
-            "remove_user": "削除 user from group",
-            "system_group_no_delete": "システム groups cannot be deleted"
+            "add_new": "システムに新しいグループを追加",
+            "clear_filters": "すべてのフィルターをクリア",
+            "clear_search": "検索をクリア",
+            "delete": "グループを削除",
+            "edit": "グループを編集",
+            "manage_permissions": "権限を管理",
+            "remove_user": "グループからユーザーを削除",
+            "system_group_no_delete": "システムグループは削除できません"
         }
     },
     "incidents": {
@@ -2122,8 +2147,8 @@
         "modified": "更新日時",
         "name": "名前",
         "no": "いいえ",
-        "no_results_found": "いいえ results found",
-        "no_tickets_found": "いいえ tickets found",
+        "no_results_found": "結果が見つかりません",
+        "no_tickets_found": "チケットが見つかりません",
         "none": "なし",
         "notes": "メモ",
         "phone": "電話",
@@ -2145,119 +2170,119 @@
     "messages": {
         "access_denied": "アクセスが拒否されました",
         "changes_saved": "変更を保存しました",
-        "code_copied": "Code copied to clipboard!",
+        "code_copied": "コードをクリップボードにコピーしました！",
         "confirm": {
-            "activate_acl": "Are you sure you want to activate",
-            "activate_company": "Are you sure you want to activate this company? This will al低 users from this company to access the portal.",
-            "activate_item": "Are you sure you want to activate this item?",
-            "activate_service": "Are you sure you want to activate this service?",
-            "activate_sla": "Are you sure you want to activate this SLA?",
-            "bulk_action": "Are you sure you want to {action} {count} customer user(s)?",
-            "bulk_delete_customer_users": "Are you sure you want to delete the selected customer user(s)?",
-            "bulk_disable_customer_users": "Are you sure you want to disable the selected customer user(s)?",
-            "bulk_enable_customer_users": "Are you sure you want to enable the selected customer user(s)?",
-            "deactivate_acl": "Are you sure you want to deactivate",
-            "deactivate_company": "Are you sure you want to deactivate this company? This will prevent all users from this company from accessing the portal.",
-            "deactivate_item": "Are you sure you want to deactivate this item?",
-            "deactivate_service": "Are you sure you want to deactivate this service?",
-            "deactivate_sla": "Are you sure you want to deactivate this SLA?",
-            "delete_attachment": "Are you sure you want to delete this attachment?",
-            "delete_bulk": "Are you sure you want to delete the selected item(s)? この操作は元に戻せません。",
-            "delete_customer_user": "Are you sure you want to delete this customer user? この操作は元に戻せません。",
-            "delete_dynamic_field": "Are you sure you want to delete this dynamic field? This will also delete all stored values for this field.",
-            "delete_filter_sets": "削除 all saved filter sets?",
-            "delete_group": "Are you sure you want to delete this group?",
-            "delete_item": "Are you sure you want to delete this item?",
-            "delete_lookup": "Are you sure you want to delete this item? この操作は元に戻せません。",
-            "delete_priority": "Are you sure you want to delete this priority? この操作は元に戻せません。",
-            "delete_queue": "Are you sure you want to delete this queue? すべて tickets in this queue will need to be reassigned. この操作は元に戻せません。",
-            "delete_queue_simple": "Are you sure you want to delete this queue?",
-            "delete_queues_bulk": "Are you sure you want to delete the selected queue(s)?",
-            "delete_state": "Are you sure you want to delete this state?",
-            "delete_webservice": "Are you sure you want to delete this webservice? この操作は元に戻せません。",
-            "disable_customer_user": "Are you sure you want to disable this customer user?",
-            "disable_queue": "Are you sure you want to disable this queue?",
-            "enable_customer_user": "Are you sure you want to enable this customer user?",
-            "enable_queue": "Are you sure you want to enable this queue?",
-            "lock_ticket": "Are you sure you want to lock this ticket?",
-            "proceed_action": "Are you sure you want to proceed with this action?",
-            "remove_user_from_group": "Are you sure you want to remove this user from the group?",
-            "reset_config": "Are you sure you want to reset this configuration to its default value? この操作は元に戻せません。",
-            "toggle_customer_status": "Are you sure you want to {action} this customer user?",
-            "toggle_status_bulk": "Are you sure you want to toggle the status of the selected item(s)?"
+            "activate_acl": "アクティブ化してもよろしいですか",
+            "activate_company": "この会社をアクティブ化してもよろしいですか？これにより、この会社のユーザーがポータルにアクセスできるようになります。",
+            "activate_item": "このアイテムをアクティブ化してもよろしいですか？",
+            "activate_service": "このサービスをアクティブ化してもよろしいですか？",
+            "activate_sla": "このSLAをアクティブ化してもよろしいですか？",
+            "bulk_action": "{count}人の顧客ユーザーに{action}を実行してもよろしいですか？",
+            "bulk_delete_customer_users": "選択した顧客ユーザーを削除してもよろしいですか？",
+            "bulk_disable_customer_users": "選択した顧客ユーザーを無効化してもよろしいですか？",
+            "bulk_enable_customer_users": "選択した顧客ユーザーを有効化してもよろしいですか？",
+            "deactivate_acl": "非アクティブ化してもよろしいですか",
+            "deactivate_company": "この会社を非アクティブ化してもよろしいですか？これにより、この会社のすべてのユーザーがポータルにアクセスできなくなります。",
+            "deactivate_item": "このアイテムを非アクティブ化してもよろしいですか？",
+            "deactivate_service": "このサービスを非アクティブ化してもよろしいですか？",
+            "deactivate_sla": "このSLAを非アクティブ化してもよろしいですか？",
+            "delete_attachment": "この添付ファイルを削除してもよろしいですか？",
+            "delete_bulk": "選択したアイテムを削除してもよろしいですか？この操作は元に戻せません。",
+            "delete_customer_user": "この顧客ユーザーを削除してもよろしいですか？この操作は元に戻せません。",
+            "delete_dynamic_field": "この動的フィールドを削除してもよろしいですか？このフィールドのすべての保存値も削除されます。",
+            "delete_filter_sets": "保存されたすべてのフィルターセットを削除しますか？",
+            "delete_group": "このグループを削除してもよろしいですか？",
+            "delete_item": "このアイテムを削除してもよろしいですか？",
+            "delete_lookup": "このアイテムを削除してもよろしいですか？この操作は元に戻せません。",
+            "delete_priority": "この優先度を削除してもよろしいですか？この操作は元に戻せません。",
+            "delete_queue": "このキューを削除してもよろしいですか？このキュー内のすべてのチケットは再割り当てが必要です。この操作は元に戻せません。",
+            "delete_queue_simple": "このキューを削除してもよろしいですか？",
+            "delete_queues_bulk": "選択したキューを削除してもよろしいですか？",
+            "delete_state": "このステータスを削除してもよろしいですか？",
+            "delete_webservice": "このWebサービスを削除してもよろしいですか？この操作は元に戻せません。",
+            "disable_customer_user": "この顧客ユーザーを無効化してもよろしいですか？",
+            "disable_queue": "このキューを無効化してもよろしいですか？",
+            "enable_customer_user": "この顧客ユーザーを有効化してもよろしいですか？",
+            "enable_queue": "このキューを有効化してもよろしいですか？",
+            "lock_ticket": "このチケットをロックしてもよろしいですか？",
+            "proceed_action": "このアクションを続行してもよろしいですか？",
+            "remove_user_from_group": "このユーザーをグループから削除してもよろしいですか？",
+            "reset_config": "この設定をデフォルト値にリセットしてもよろしいですか？この操作は元に戻せません。",
+            "toggle_customer_status": "この顧客ユーザーを{action}してもよろしいですか？",
+            "toggle_status_bulk": "選択したアイテムのステータスを切り替えてもよろしいですか？"
         },
         "confirm_action": "このアクションを実行してもよろしいですか？",
         "confirm_delete": "このアイテムを削除してもよろしいですか？",
-        "confirm_delete_ticket": "Are you sure you want to delete this ticket? この操作は元に戻せません。",
-        "confirm_remove_user_from_role": "Are you sure you want to remove this user from the role?",
-        "connection_test_failed": "Connection test failed",
-        "connection_test_success": "Connection test successful!",
-        "error_loading_agents": "エラー loading agents",
-        "error_loading_columns": "エラー loading columns",
-        "error_loading_config": "エラー loading configuration details",
-        "error_loading_members": "エラー loading members",
-        "error_loading_tables": "エラー loading tables",
+        "confirm_delete_ticket": "このチケットを削除してもよろしいですか？この操作は元に戻せません。",
+        "confirm_remove_user_from_role": "このユーザーをロールから削除してもよろしいですか？",
+        "connection_test_failed": "接続テストに失敗しました",
+        "connection_test_success": "接続テストに成功しました！",
+        "error_loading_agents": "エージェントの読み込み中にエラーが発生しました",
+        "error_loading_columns": "列の読み込み中にエラーが発生しました",
+        "error_loading_config": "設定の詳細の読み込み中にエラーが発生しました",
+        "error_loading_members": "メンバーの読み込み中にエラーが発生しました",
+        "error_loading_tables": "テーブルの読み込み中にエラーが発生しました",
         "error_occurred": "エラーが発生しました",
-        "error_saving_field": "エラー saving field",
+        "error_saving_field": "フィールドの保存中にエラーが発生しました",
         "error_saving_permissions": "権限の保存中にエラーが発生しました",
         "error_saving_preferences": "設定の保存中にエラーが発生しました",
         "error_saving_profile": "プロファイルの保存中にエラーが発生しました",
         "error_saving": "変更の保存中にエラーが発生しました",
-        "error_screen_config": "Failed to update screen configuration",
-        "error_testing_connection": "エラー testing connection",
-        "failed_add_user": "Failed to add user",
-        "failed_delete_signature": "Failed to delete signature",
-        "failed_remove_user": "Failed to remove user",
-        "failed_save_field": "Failed to save field",
-        "failed_update_screen_config": "Failed to update screen configuration",
-        "failed_update_services": "Failed to update services",
+        "error_screen_config": "画面設定の更新に失敗しました",
+        "error_testing_connection": "接続テスト中にエラーが発生しました",
+        "failed_add_user": "ユーザーの追加に失敗しました",
+        "failed_delete_signature": "署名の削除に失敗しました",
+        "failed_remove_user": "ユーザーの削除に失敗しました",
+        "failed_save_field": "フィールドの保存に失敗しました",
+        "failed_update_screen_config": "画面設定の更新に失敗しました",
+        "failed_update_services": "サービスの更新に失敗しました",
         "groups": {
-            "select_user": "Please select a user to add"
+            "select_user": "追加するユーザーを選択してください"
         },
         "info": "情報",
         "item_created": "アイテムを作成しました",
         "item_deleted": "アイテムを削除しました",
         "item_updated": "アイテムを更新しました",
         "loading": "読み込み中...",
-        "loading_customer_users": "読み込み中 customer users...",
+        "loading_customer_users": "顧客ユーザーを読み込み中...",
         "network_error": "ネットワークエラー",
-        "no_agents_available": "いいえ agents available",
+        "no_agents_available": "利用可能なエージェントがいません",
         "no_data": "データがありません",
         "no_results": "結果が見つかりません",
-        "no_selection": "いいえ 選択ion",
-        "not_enough_tickets": "いいえt Enough チケット",
+        "no_selection": "選択されていません",
+        "not_enough_tickets": "チケットが不足しています",
         "operation_failed": "操作に失敗しました",
         "page_not_found": "ページが見つかりません",
-        "please_enter_close_notes": "Please enter close notes",
-        "please_enter_note_content": "Please enter note content.",
-        "please_enter_reopen_reason": "Please enter a reason for reopening",
+        "please_enter_close_notes": "クローズメモを入力してください",
+        "please_enter_note_content": "メモの内容を入力してください。",
+        "please_enter_reopen_reason": "再オープンの理由を入力してください",
         "please_enter_sql_query": "SQLクエリを入力してください",
         "please_select": "選択してください",
         "please_select_agent": "エージェントを選択してください",
-        "please_select_both_users": "Please select both source and target users",
-        "please_select_ticket": "Please select at least one ticket",
+        "please_select_both_users": "ソースユーザーとターゲットユーザーの両方を選択してください",
+        "please_select_ticket": "少なくとも1つのチケットを選択してください",
         "please_select_user": "ユーザーを選択してください",
         "please_wait": "お待ちください...",
         "processing": "処理中...",
         "required_fields": "必須フィールドをすべて入力してください",
-        "save_company_before_services": "保存 the company before assigning services.",
-        "save_company_first": "保存 the company before assigning services.",
+        "save_company_before_services": "サービスを割り当てる前に会社を保存してください。",
+        "save_company_first": "サービスを割り当てる前に会社を保存してください。",
         "saving": "保存中...",
-        "select_at_least_one_queue": "Please select at least one queue",
-        "select_template_type": "Please select at least one template type.",
-        "select_two_to_merge": "Please select at least two tickets to merge",
+        "select_at_least_one_queue": "少なくとも1つのキューを選択してください",
+        "select_template_type": "少なくとも1つのテンプレートタイプを選択してください。",
+        "select_two_to_merge": "マージするには少なくとも2つのチケットを選択してください",
         "server_error": "サーバーエラー",
-        "services_updated": "サービス updated successfully",
-        "services_updated_success": "サービス updated successfully",
+        "services_updated": "サービスを更新しました",
+        "services_updated_success": "サービスを更新しました",
         "session_expired": "セッションが期限切れです",
         "success": "成功",
         "unauthorized": "未認証",
         "unknown_error": "不明なエラー",
         "validation": {
-            "please_enter_content": "Please enter content",
+            "please_enter_content": "内容を入力してください",
             "please_enter_query": "クエリを入力してください",
             "please_enter_subject": "件名を入力してください",
-            "please_select_state": "Please select a state"
+            "please_select_state": "ステータスを選択してください"
         },
         "validation_error": "検証エラー",
         "warning": "警告"
@@ -2296,15 +2321,18 @@
         "push_notifications": "プッシュ通知",
         "reminder": {
             "dismiss": "リマインダーを閉じる",
+            "dismiss_all": "すべて却下",
             "due_in": "期限まで",
-            "open_ticket": "開く チケット",
-            "overdue_by": "期限超過 by",
-            "reminder_at": "Reminder at",
+            "open_ticket": "チケットを開く",
+            "overdue_by": "期限超過",
+            "reminder_at": "リマインダー時刻",
             "reminder_ready": "リマインダー準備完了",
-            "snooze_failed": "Failed to snooze reminder",
+            "reminders": "リマインダー",
+            "snooze_failed": "リマインダーのスヌーズに失敗しました",
+            "snoozed": "スヌーズ済み",
             "snoozed_until": "リマインダーを延期",
             "ticket_label": "チケット",
-            "ticket_reminder": "チケット reminder"
+            "ticket_reminder": "チケットリマインダー"
         },
         "settings": "通知設定",
         "sound": "サウンド",
@@ -2316,7 +2344,7 @@
                 "title": "エージェント ダッシュボード"
             },
             "queues": {
-                "description": "表示 and manage ticket queues assigned to you",
+                "description": "割り当てられたチケットキューの表示と管理",
                 "title": "キュー管理"
             },
             "tickets": {
@@ -2347,55 +2375,58 @@
         "total": "合計"
     },
     "permissions": {
-        "change_priority": "Change 優先度",
+        "group": "グループ",
+        "clone_user_permissions": "ユーザー権限を複製",
+        "change_priority": "優先度を変更",
         "debug_heading": "DEBUG - 権限",
         "debug_permissions": "DEBUG - 権限",
-        "description": "Manage user permissions across groups (OTRS ロール Management)",
-        "error_saving": "エラー saving permissions",
+        "description": "グループ全体でユーザー権限を管理",
+        "error_saving": "権限の保存中にエラーが発生しました",
         "groups": "グループ:",
         "groups_heading": "グループ:",
-        "heading": "権限 Management",
-        "matrix_heading": "権限 Matrix",
-        "no_data": "いいえ permissions data available",
-        "no_user_selected": "いいえ user selected",
-        "permission_matrix": "権限 Matrix",
-        "please_select_user": "Please select a user to view permissions.",
-        "select_group": "Please select a group to modify",
-        "select_user": "選択 a user to view permissions",
-        "simple_test": "Simple 権限 Test",
-        "standalone_heading": "権限 Management",
-        "title": "権限 Management",
+        "heading": "権限管理",
+        "matrix_heading": "権限マトリックス",
+        "no_data": "権限データがありません",
+        "no_user_selected": "ユーザーが選択されていません",
+        "permission_matrix": "権限マトリックス",
+        "please_select_user": "権限を表示するユーザーを選択してください。",
+        "select_group": "変更するグループを選択してください",
+        "select_user": "権限を表示するユーザーを選択",
+        "simple_test": "シンプル権限テスト",
+        "standalone_heading": "権限管理",
+        "title": "権限管理",
         "tooltips": {
-            "clear_all_group": "クリア all permissions for this group",
-            "clone": "Clone permissions from one user to another",
-            "create": "作成 tickets",
-            "grant_all": "選択ing this will grant all permissions",
-            "move_into": "Move tickets into queue",
-            "note": "追加 notes",
+            "clear_all_group": "このグループのすべての権限をクリア",
+            "clone": "あるユーザーから別のユーザーに権限を複製",
+            "create": "チケットを作成",
+            "grant_all": "これを選択するとすべての権限が付与されます",
+            "move_into": "チケットをキューに移動",
+            "note": "メモを追加",
             "owner": "所有者になる",
-            "priority": "Change priority",
-            "ro": "読み取り Only",
-            "select_all_group": "すべて選択 permissions for this group"
+            "priority": "優先度を変更",
+            "ro": "読み取り専用",
+            "select_all_group": "このグループのすべての権限を選択"
         },
-        "user_selection": "ユーザー 選択ion",
+        "user_selection": "ユーザー選択",
         "users": "ユーザー:",
         "users_heading": "ユーザー:",
-        "working_heading": "権限 Management"
+        "working_heading": "権限管理",
+        "clone_permissions": "権限をコピー"
     },
     "permissions_working": {
-        "title": "権限 Management"
+        "title": "権限管理"
     },
     "placeholders": {
-        "contains": "Contains...",
-        "note_subject": "メモ subject",
-        "separate_emails": "Separate multiple emails with commas"
+        "contains": "含む...",
+        "note_subject": "メモの件名",
+        "separate_emails": "複数のメールアドレスはカンマで区切ってください"
     },
     "priorities": {
-        "heading": "優先度 Management",
-        "priorities_management": "優先度 Management",
-        "title": "優先度 Management",
+        "heading": "優先度管理",
+        "priorities_management": "優先度管理",
+        "title": "優先度管理",
         "tooltips": {
-            "edit": "編集 priority"
+            "edit": "優先度を編集"
         }
     },
     "password": {
@@ -2414,8 +2445,8 @@
     },
     "priority": {
         "critical": "緊急",
-        "form_heading": "優先度 詳細",
-        "heading": "優先度 Management",
+        "form_heading": "優先度詳細",
+        "heading": "優先度管理",
         "high": "高",
         "low": "低",
         "medium": "中",
@@ -2439,7 +2470,7 @@
     "queue": {
         "stats": {
             "closed_tickets": "クローズ",
-            "open_tickets": "開く チケット",
+            "open_tickets": "オープンチケット",
             "pending_tickets": "保留中",
             "total_tickets": "合計 チケット"
         }
@@ -2466,17 +2497,17 @@
         "Spam and junk emails": "スパムおよび迷惑メール"
     },
     "queue_detail": {
-        "back_to_queues": "戻る to キュー",
-        "description": "キュー 詳細 and 統計",
-        "group_id": "グループ ID",
-        "no_description": "いいえ description available",
-        "no_tickets": "いいえ tickets in this queue",
-        "queue_id": "キュー ID",
-        "queue_name": "キュー 名前",
-        "recent_tickets": "Recent チケット",
-        "ticket_assignments_heading": "チケット Assignments",
-        "ticket_list_heading": "チケット in キュー",
-        "tickets_in_queue": "チケット in this queue",
+        "back_to_queues": "キューに戻る",
+        "description": "キューの詳細と統計",
+        "group_id": "グループID",
+        "no_description": "説明がありません",
+        "no_tickets": "このキューにチケットがありません",
+        "queue_id": "キューID",
+        "queue_name": "キュー名",
+        "recent_tickets": "最近のチケット",
+        "ticket_assignments_heading": "チケット割り当て",
+        "ticket_list_heading": "キュー内のチケット",
+        "tickets_in_queue": "このキューのチケット",
         "title": "キュー"
     },
     "queues": {
@@ -2489,12 +2520,12 @@
         "escalation_rules": "エスカレーションルール",
         "manage_description": "キューの割り当てとルーティングルールを管理",
         "new_queue": "新規キュー",
-        "no_description": "いいえ description",
+        "no_description": "説明なし",
         "no_queues": "キューなし",
-        "no_queues_available": "いいえ queues available",
+        "no_queues_available": "利用可能なキューがありません",
         "no_queues_description": "最初のキューを作成して始めましょう",
-        "no_queues_found": "いいえ queues found",
-        "open_count": "開く",
+        "no_queues_found": "キューが見つかりません",
+        "open_count": "オープン",
         "queue_agents": "キュー担当者",
         "queue_description": "キューの説明",
         "queue_name": "キュー名",
@@ -2506,95 +2537,102 @@
         "title": "キュー",
         "tooltips": {
             "edit": "編集",
-            "email_configured": "メール configured",
-            "view_details": "表示 details"
+            "email_configured": "メール設定済み",
+            "view_details": "詳細を表示"
         },
         "total_count": "合計"
     },
     "realtime": {
-        "active_alerts": "アクティブ Alerts",
-        "heading": "Real-時間 ダッシュボード",
-        "no_tickets": "いいえ tickets",
-        "queue_distribution": "キュー Distribution",
-        "queue_status": "キュー ステータス",
-        "recent_tickets": "Recent チケット",
+        "active_alerts": "アクティブアラート",
+        "heading": "リアルタイムダッシュボード",
+        "no_tickets": "チケットなし",
+        "queue_distribution": "キュー分布",
+        "queue_status": "キューステータス",
+        "recent_tickets": "最近のチケット",
         "stats": {
-            "active_agents": "アクティブ エージェント",
-            "avg_response_time": "Avg Response 時間",
-            "open_tickets": "開く チケット"
+            "active_agents": "アクティブエージェント",
+            "avg_response_time": "平均応答時間",
+            "open_tickets": "オープンチケット"
         },
-        "ticket_volume": "チケット Volume (24h)"
+        "ticket_volume": "チケット量（24時間）"
     },
     "realtime_dashboard": {
-        "title": "Real-time ダッシュボード"
+        "title": "リアルタイムダッシュボード"
     },
     "roadmap": {
         "current_phase": "現在のフェーズ",
         "enhancements_heading": "機能強化",
-        "error_loading": "エラー 読み込み中 Roadmap",
-        "features_heading": "Features",
+        "error_loading": "ロードマップの読み込みエラー",
+        "features_heading": "機能",
         "fixes_heading": "バグ修正",
-        "heading": "Development Roadmap",
-        "module_checklist": "Module Checklist",
-        "module_health_status": "Module Health ステータス",
-        "other_heading": "Other Changes",
-        "performance_trends": "Performance Trends",
-        "quick_navigation": "Quick Navigation",
-        "recent_updates": "Recent 更新s",
-        "title": "システム Roadmap"
+        "heading": "開発ロードマップ",
+        "module_checklist": "モジュールチェックリスト",
+        "module_health_status": "モジュールヘルスステータス",
+        "other_heading": "その他の変更",
+        "performance_trends": "パフォーマンストレンド",
+        "quick_navigation": "クイックナビゲーション",
+        "recent_updates": "最近の更新",
+        "title": "システムロードマップ"
     },
     "role_permissions": {
         "tooltips": {
             "create": "作成",
-            "move_into": "Move Into",
+            "move_into": "移動先",
             "note": "メモ",
             "owner": "所有者",
             "priority": "優先度",
-            "ro": "読み取り Only",
+            "ro": "読み取り専用",
             "select_all": "すべて選択",
-            "select_none": "選択 なし"
+            "select_none": "選択解除"
         }
     },
     "role_users": {
-        "get_started": "Get started by adding users to this role.",
-        "heading": "ユーザー in ロール",
+        "get_started": "このロールにユーザーを追加して始めましょう。",
+        "heading": "ロール内のユーザー",
         "modal": {
-            "add_user": "追加 ユーザー",
-            "select_user": "選択 ユーザー",
-            "title": "追加 ユーザー to ロール"
+            "add_user": "ユーザーを追加",
+            "select_user": "ユーザーを選択",
+            "title": "ロールにユーザーを追加"
         },
-        "no_users": "いいえ users assigned",
+        "no_users": "割り当てられたユーザーがいません",
         "tooltips": {
-            "remove": "削除 from role"
+            "remove": "ロールから削除"
         }
     },
     "roles": {
-        "add_role": "追加 ロール",
-        "description": "Manage system roles and their permissions (OTRS 管理者ロール equivalent)",
-        "edit_role": "編集 ロール",
-        "manage_users": "Manage ロール ユーザー",
-        "title": "ロール Management",
+        "add_role": "ロールを追加",
+        "create_new_role": "新規ロールを作成",
+        "update_role": "ロールを更新",
+        "description": "システムロールとその権限を管理",
+        "edit_role": "ロールを編集",
+        "manage_users": "ロールユーザーを管理",
+        "title": "ロール管理",
         "tooltips": {
-            "edit": "編集 role",
-            "manage_permissions": "Manage group permissions for this role",
-            "manage_users": "Manage users in this role"
-        }
+            "edit": "ロールを編集",
+            "manage_permissions": "このロールのグループ権限を管理",
+            "manage_users": "このロールのユーザーを管理"
+        },
+        "create_role": "ロールを作成"
     },
     "schema_discovery": {
-        "available_tables": "Available Tables",
+        "available_tables": "利用可能なテーブル",
         "heading": "スキーマ検出",
-        "query_error": "Query エラー",
-        "query_results": "Query Results",
-        "sql_explorer": "SQL Query Explorer",
-        "title": "スキーマ検出"
+        "query_error": "クエリエラー",
+        "query_results": "クエリ結果",
+        "sql_explorer": "SQLクエリエクスプローラー",
+        "title": "スキーマ検出",
+        "generate_module": "モジュールを生成",
+        "save_module": "モジュールを保存",
+        "view_columns": "列を表示",
+        "generate": "生成"
     },
     "schema_monitoring": {
-        "alerts_heading": "アクティブ Alerts",
-        "heading": "Schema Discovery Monitor",
-        "loading_status": "読み込み中 module status...",
-        "module_health_status": "Module Health ステータス",
-        "performance_heading": "Performance Metrics",
-        "title": "Schema Monitoring"
+        "alerts_heading": "アクティブアラート",
+        "heading": "スキーマ検出モニター",
+        "loading_status": "モジュールステータスを読み込み中...",
+        "module_health_status": "モジュールヘルスステータス",
+        "performance_heading": "パフォーマンスメトリクス",
+        "title": "スキーマモニタリング"
     },
     "search": {
         "active_filters": "有効なフィルター：",
@@ -2777,7 +2815,7 @@
         "articles": "記事",
         "assign": "割り当て",
         "assign_agent": "担当者を割り当て",
-        "assigned": "[JA] Assigned",
+        "assigned": "割り当て済み",
         "assigned_to": "割り当て先",
         "attachments": "添付ファイル",
         "auto_close": {
@@ -2831,6 +2869,7 @@
         "internal_note": "内部メモ",
         "internal_note_default_subject": "メモ",
         "internal_only_badge": "内部のみ",
+        "customer_wrote_badge": "お客様がこれを書きました",
         "keep_current_state": "現在のステートを維持",
         "link": "リンク",
         "linked_tickets": "リンクされたチケット",
@@ -2843,11 +2882,13 @@
         "merge": "マージ",
         "merge_target_placeholder": "マージ先のチケット番号を入力",
         "merge_ticket": "チケットをマージ",
+        "merge_warning": "この操作は取り消せません。すべての記事が対象チケットに移動されます。",
+        "target_ticket_number": "ターゲットチケット番号",
         "messages": "メッセージ",
         "minutes": "分",
         "miscellaneous": "その他",
         "move_to_queue": "キューに移動",
-        "my_tickets": "My チケット",
+        "my_tickets": "マイチケット",
         "new": {
             "email_ticket": "新規メールチケット",
             "phone_ticket": "新規電話チケット"
@@ -2856,7 +2897,7 @@
         "next_state": "次のステート",
         "next_state_help": "処理後にチケットが移行するステートを選択。",
         "no_customer_assigned": "顧客が割り当てられていません",
-        "no_tickets_found": "いいえ tickets found matching your criteria",
+        "no_tickets_found": "条件に一致するチケットが見つかりません",
         "no_time_entries": "時間エントリが記録されていません",
         "note": "メモ",
         "note_content": "メモ内容",
@@ -2887,7 +2928,7 @@
         "phone_call": "電話",
         "print": "印刷",
         "priority": "優先度",
-        "priority_short": "[JA] Prio",
+        "priority_short": "優先",
         "queue": "キュー",
         "remove_priority_filter": "優先度フィルターを削除",
         "remove_queue_filter": "キューフィルターを削除",
@@ -2931,7 +2972,6 @@
             "ticket": "チケット"
         },
         "target_state": "ターゲットステート",
-        "target_ticket_number": "ターゲットチケット番号",
         "ticket": "チケット",
         "ticket_id": "チケットID",
         "ticket_number": "チケット番号",
@@ -3015,6 +3055,7 @@
     },
     "tooltips": {
         "quick_assign": "Quick Assign",
+        "quick_priority": "クイック優先度",
         "view_details": "表示 詳細"
     },
     "types": {
@@ -3069,5 +3110,32 @@
     },
     "welcome": {
         "greeting": "ようこそ"
+    },
+    "theme": {
+        "select_theme": "テーマ",
+        "appearance": "外観",
+        "light": "ライト",
+        "dark": "ダーク",
+        "synthwave": "Synthwave",
+        "synthwave_desc": "ネオンレトロスタイル",
+        "classic": "クラシック",
+        "classic_desc": "クリーン＆プロフェッショナル",
+        "seventies": "70年代ヴァイブス",
+        "seventies_desc": "温かみのあるアーストーン"
+    },
+    "attachments": {
+        "title": "添付ファイル",
+        "add_new": "添付ファイルを追加",
+        "attach_files": "ファイルを添付",
+        "click_to_upload": "クリックしてアップロード",
+        "or_drag_and_drop": "またはドラッグ＆ドロップ",
+        "file_types": "PDF, PNG, JPG, GIF, DOC, XLS, TXT (最大10MB)",
+        "file_too_large": "ファイルが大きすぎます",
+        "no_attachments": "添付ファイルがありません",
+        "upload_success": "アップロード成功",
+        "upload_error": "アップロード失敗",
+        "view": "表示",
+        "download": "ダウンロード",
+        "delete": "削除"
     }
 }

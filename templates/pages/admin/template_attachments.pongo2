@@ -3,28 +3,26 @@
 {% block title %}{{ t("admin.modules.template.attachments.title") }}: {{ Template.Name }} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
-    <div class="mb-8">
+    <header class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("admin.modules.template.attachments.title") }}</h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    {{ t("admin.modules.template.attachments.assign_to") }} "<span class="font-semibold">{{ Template.Name }}</span>"
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("admin.modules.template.attachments.title") }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                    {{ t("admin.modules.template.attachments.assign_to") }} "<span class="font-semibold" style="color: var(--gk-primary);">{{ Template.Name }}</span>"
                 </p>
             </div>
             <div class="mt-4 sm:mt-0 flex space-x-2">
-                <button type="button" onclick="toggleUploadForm()"
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
-                >
+                <button type="button" onclick="toggleUploadForm()" class="gk-btn-neon">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
                     {{ t("admin.modules.attachment.add_new") }}
                 </button>
-                <a href="/admin/templates"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                >
+                <a href="/admin/templates" class="gk-btn-secondary">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
@@ -32,14 +30,14 @@
                 </a>
             </div>
         </div>
-    </div>
+    </header>
 
     <!-- Inline Upload Form (collapsed by default) -->
-    <div id="uploadFormSection" class="hidden bg-white dark:bg-gray-800 shadow sm:rounded-lg mb-6">
+    <div id="uploadFormSection" class="hidden gk-card-glow rounded-lg mb-6">
         <div class="p-6">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin.modules.attachment.add_new") }}</h3>
-                <button type="button" onclick="toggleUploadForm()" class="text-gray-400 hover:text-gray-500">
+                <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.modules.attachment.add_new") }}</h3>
+                <button type="button" onclick="toggleUploadForm()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -52,40 +50,29 @@
             >
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="upload_name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {{ t("admin.modules.attachment.fields.name") }} <span class="text-red-500">*</span>
+                        <label for="upload_name" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.modules.attachment.fields.name") }} <span style="color: var(--gk-error);">*</span>
                         </label>
-                        <input type="text" id="upload_name" name="name" required
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                        />
+                        <input type="text" id="upload_name" name="name" required class="gk-input-neon w-full" />
                     </div>
                     <div>
-                        <label for="upload_file" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {{ t("admin.modules.attachment.fields.file") }} <span class="text-red-500">*</span>
+                        <label for="upload_file" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.modules.attachment.fields.file") }} <span style="color: var(--gk-error);">*</span>
                         </label>
                         <input type="file" id="upload_file" name="file" required
-                            class="mt-1 block w-full text-sm text-gray-500 dark:text-gray-400
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-md file:border-0
-                                file:text-sm file:font-medium
-                                file:bg-gotrs-50 file:text-gotrs-700
-                                hover:file:bg-gotrs-100
-                                dark:file:bg-gotrs-900 dark:file:text-gotrs-300"
+                            class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium"
+                            style="color: var(--gk-text-muted);"
                         />
                     </div>
                     <div class="md:col-span-2">
-                        <label for="upload_comments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <label for="upload_comments" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
                             {{ t("admin.modules.attachment.fields.comments") }}
                         </label>
-                        <input type="text" id="upload_comments" name="comments"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                        />
+                        <input type="text" id="upload_comments" name="comments" class="gk-input-neon w-full" />
                     </div>
                 </div>
                 <div class="mt-4 flex justify-end">
-                    <button type="submit"
-                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
-                    >
+                    <button type="submit" class="gk-btn-neon">
                         <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                         </svg>
@@ -97,44 +84,40 @@
     </div>
 
     <!-- Template Info Card -->
-    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg mb-6 p-4">
+    <div class="gk-card-glow rounded-lg mb-6 p-4">
         <div class="flex items-center justify-between">
             <div>
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ Template.Name }}</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ Template.Comments }}</p>
+                <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ Template.Name }}</h3>
+                <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ Template.Comments }}</p>
             </div>
             <div class="flex items-center space-x-4">
                 <div class="flex flex-wrap gap-1">
                     {% for type in Template.TemplateType|split:"," %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
-                        {% if type == 'Answer' %}bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100{% endif %}
-                        {% if type == 'Create' %}bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100{% endif %}
-                        {% if type == 'Email' %}bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100{% endif %}
-                        {% if type == 'Forward' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100{% endif %}
-                        {% if type == 'Note' %}bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100{% endif %}
-                        {% if type == 'PhoneCall' %}bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100{% endif %}
-                        {% if type == 'ProcessManagement' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100{% endif %}
-                        {% if type == 'Snippet' %}bg-pink-100 text-pink-800 dark:bg-pink-800 dark:text-pink-100{% endif %}
+                    <span class="gk-badge
+                        {% if type == 'Answer' %}gk-badge-accent{% endif %}
+                        {% if type == 'Create' %}gk-badge-success{% endif %}
+                        {% if type == 'Email' %}gk-badge-accent{% endif %}
+                        {% if type == 'Forward' %}gk-badge-warning{% endif %}
+                        {% if type == 'Note' %}gk-badge-muted{% endif %}
+                        {% if type == 'PhoneCall' %}gk-badge-warning{% endif %}
+                        {% if type == 'ProcessManagement' %}gk-badge-accent{% endif %}
+                        {% if type == 'Snippet' %}gk-badge-accent{% endif %}
                     ">
                         {{ type }}
                     </span>
                     {% endfor %}
                 </div>
                 {% if Template.ValidID == 1 %}
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-                    {{ t("admin.modules.template.fields.valid") }}
-                </span>
+                <span class="gk-badge gk-badge-success">{{ t("admin.modules.template.fields.valid") }}</span>
                 {% else %}
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
-                    {{ t("admin.modules.template.fields.invalid") }}
-                </span>
+                <span class="gk-badge gk-badge-error">{{ t("admin.modules.template.fields.invalid") }}</span>
                 {% endif %}
             </div>
         </div>
     </div>
 
     <!-- Attachment Assignment Form -->
-    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+    <div class="gk-card-glow rounded-lg overflow-hidden">
         <form
             id="attachmentAssignmentForm"
             method="POST"
@@ -145,45 +128,42 @@
         >
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin.modules.template.attachments.select_attachments") }}</h3>
+                    <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.modules.template.attachments.select_attachments") }}</h3>
                     <div class="flex space-x-2">
-                        <button type="button" onclick="selectAll()"
-                            class="text-sm text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300"
-                        >
+                        <button type="button" onclick="selectAll()" class="text-sm transition-colors hover:opacity-80" style="color: var(--gk-primary);">
                             {{ t("admin.modules.template.attachments.select_all") }}
                         </button>
-                        <span class="text-gray-300 dark:text-gray-600">|</span>
-                        <button type="button" onclick="selectNone()"
-                            class="text-sm text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300"
-                        >
+                        <span style="color: var(--gk-border);">|</span>
+                        <button type="button" onclick="selectNone()" class="text-sm transition-colors hover:opacity-80" style="color: var(--gk-primary);">
                             {{ t("admin.modules.template.attachments.select_none") }}
                         </button>
                     </div>
                 </div>
-                
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+
+                <p class="text-sm mb-4" style="color: var(--gk-text-muted);">
                     {{ t("admin.modules.template.attachments.help") }}
                 </p>
 
                 {% if Attachments %}
-                <div class="space-y-2 max-h-96 overflow-y-auto p-2 border border-gray-200 dark:border-gray-700 rounded-md">
+                <div class="space-y-2 max-h-96 overflow-y-auto p-2 border rounded-md" style="border-color: var(--gk-border);">
                     {% for attachment in Attachments %}
-                    <label class="relative flex items-start py-3 px-4 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border border-gray-100 dark:border-gray-700">
+                    <label class="relative flex items-start py-3 px-4 rounded-md cursor-pointer transition-colors hover:bg-white/5" style="border: 1px solid var(--gk-border);">
                         <div class="flex items-center h-5">
                             <input
                                 type="checkbox"
                                 name="attachment_ids"
                                 value="{{ attachment.ID }}"
                                 {% if attachment.Selected %}checked{% endif %}
-                                class="attachment-checkbox focus:ring-gotrs-500 h-4 w-4 text-gotrs-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
+                                class="attachment-checkbox h-4 w-4 rounded focus:ring-2"
+                                style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
                             >
                         </div>
                         <div class="ml-3 flex-1">
                             <div class="flex items-center justify-between">
-                                <span class="font-medium text-gray-900 dark:text-white">{{ attachment.Name }}</span>
-                                <span class="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{{ attachment.ContentType }}</span>
+                                <span class="font-medium" style="color: var(--gk-text-primary);">{{ attachment.Name }}</span>
+                                <span class="text-xs px-2 py-0.5 rounded" style="background: var(--gk-bg-tertiary); color: var(--gk-text-muted);">{{ attachment.ContentType }}</span>
                             </div>
-                            <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            <div class="mt-1 text-sm" style="color: var(--gk-text-muted);">
                                 <span class="flex items-center">
                                     <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -192,38 +172,34 @@
                                 </span>
                             </div>
                             {% if attachment.Comments %}
-                            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ attachment.Comments }}</p>
+                            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ attachment.Comments }}</p>
                             {% endif %}
                         </div>
                     </label>
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="text-center py-8" style="color: var(--gk-text-muted);">
+                    <svg class="mx-auto h-12 w-12 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                     </svg>
-                    <p class="mt-2">{{ t("admin.modules.template.attachments.no_attachments") }}</p>
+                    <p>{{ t("admin.modules.template.attachments.no_attachments") }}</p>
                     <p class="mt-1 text-sm">{{ t("admin.modules.template.attachments.no_attachments_hint") }}</p>
                 </div>
                 {% endif %}
 
                 <!-- Selection Counter -->
-                <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                <div class="mt-4 text-sm" style="color: var(--gk-text-muted);">
                     <span id="selectedCount">0</span> {{ t("admin.modules.template.attachments.attachments_selected") }}
                 </div>
             </div>
 
             <!-- Form Actions -->
-            <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <a href="/admin/templates"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600"
-                >
+            <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: var(--gk-border);">
+                <a href="/admin/templates" class="gk-btn-secondary">
                     {{ t("admin.modules.template.actions.cancel") }}
                 </a>
-                <button type="submit"
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
-                >
+                <button type="submit" class="gk-btn-neon">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
@@ -235,49 +211,58 @@
 </div>
 
 <script>
-    function toggleUploadForm() {
-        const section = document.getElementById('uploadFormSection');
-        section.classList.toggle('hidden');
-    }
+function toggleUploadForm() {
+    const section = document.getElementById('uploadFormSection');
+    section.classList.toggle('hidden');
+}
 
-    function selectAll() {
-        document.querySelectorAll('.attachment-checkbox').forEach(cb => cb.checked = true);
-        updateCount();
-    }
-
-    function selectNone() {
-        document.querySelectorAll('.attachment-checkbox').forEach(cb => cb.checked = false);
-        updateCount();
-    }
-
-    function updateCount() {
-        const count = document.querySelectorAll('.attachment-checkbox:checked').length;
-        document.getElementById('selectedCount').textContent = count;
-    }
-
-    // Initialize counter
+function selectAll() {
+    document.querySelectorAll('.attachment-checkbox').forEach(cb => cb.checked = true);
     updateCount();
+}
 
-    // Update counter on checkbox change
-    document.querySelectorAll('.attachment-checkbox').forEach(cb => {
-        cb.addEventListener('change', updateCount);
-    });
+function selectNone() {
+    document.querySelectorAll('.attachment-checkbox').forEach(cb => cb.checked = false);
+    updateCount();
+}
 
-    // Handle upload success - reload page to show new attachment
-    document.body.addEventListener('attachmentCreated', function() {
-        window.location.reload();
-    });
+function updateCount() {
+    const count = document.querySelectorAll('.attachment-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = count;
+}
 
-    // Handle form submission response
-    document.body.addEventListener('htmx:afterRequest', function(event) {
-        if (event.detail.xhr.status >= 400) {
-            try {
-                const response = JSON.parse(event.detail.xhr.responseText);
-                alert('Error: ' + (response.error || 'Unknown error'));
-            } catch (e) {
-                alert('Error: ' + event.detail.xhr.statusText);
-            }
+// Initialize counter
+updateCount();
+
+// Update counter on checkbox change
+document.querySelectorAll('.attachment-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateCount);
+});
+
+// Handle upload success - reload page to show new attachment
+document.body.addEventListener('attachmentCreated', function() {
+    window.location.reload();
+});
+
+// Handle form submission response
+document.body.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.xhr.status >= 400) {
+        try {
+            const response = JSON.parse(event.detail.xhr.responseText);
+            showToast('Error: ' + (response.error || 'Unknown error'), 'error');
+        } catch (e) {
+            showToast('Error: ' + event.detail.xhr.statusText, 'error');
         }
-    });
+    }
+});
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50';
+    toast.style.background = type === 'error' ? 'var(--gk-error)' : type === 'success' ? 'var(--gk-success)' : 'var(--gk-primary)';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
 </script>
 {% endblock %}

@@ -1,65 +1,115 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Permission Management</title>
-    <link rel="stylesheet" href="/static/css/output.css">
-</head>
-<body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-6">{{ t("permissions.standalone_heading")|default:"Permission Management" }}</h1>
+{% extends "layouts/base.pongo2" %}
 
-        <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 class="text-lg font-semibold mb-4">{{ t("permissions.user_selection")|default:"User Selection" }}</h2>
-            <select class="border rounded px-3 py-2">
-                <option>Select a user...</option>
+{% block title %}{{ t("permissions.standalone_title")|default:"Permission Management" }} - GOTRS Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Page header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div class="flex items-center">
+                <a href="/admin" class="gk-btn-secondary mr-4">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    {{ t("common.back") }}
+                </a>
+                <div>
+                    <h1 class="text-3xl font-bold gk-heading">
+                        <span class="gk-text-gradient">{{ t("permissions.standalone_heading")|default:"Permission Management" }}</span>
+                    </h1>
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                        {{ t("permissions.standalone_description")|default:"View and manage user permissions" }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- User Selection Card -->
+    <div class="gk-card-glow rounded-lg overflow-hidden mb-6">
+        <div class="p-6">
+            <h2 class="text-lg font-semibold mb-4" style="color: var(--gk-text-primary);">{{ t("permissions.user_selection")|default:"User Selection" }}</h2>
+            <select class="gk-select-neon w-full max-w-md">
+                <option value="">{{ t("permissions.select_user_prompt")|default:"Select a user..." }}</option>
                 {% for user in Users %}
                 <option value="{{ user.ID }}">{{ user.FirstName }} {{ user.LastName }}</option>
                 {% endfor %}
             </select>
         </div>
+    </div>
 
-        <div class="bg-white rounded-lg shadow p-6">
-            <h2 class="text-lg font-semibold mb-4">{{ t("permissions.matrix_heading")|default:"Permission Matrix" }}</h2>
-
+    <!-- Permission Matrix Card -->
+    <div class="gk-card-glow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b" style="border-color: var(--gk-border);">
+            <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("permissions.matrix_heading")|default:"Permission Matrix" }}</h2>
+        </div>
+        <div class="p-6">
             {% if PermissionMatrix %}
-                <p class="mb-4">User: {{ PermissionMatrix.User.FirstName }} {{ PermissionMatrix.User.LastName }}</p>
+                <p class="mb-4" style="color: var(--gk-text-secondary);">
+                    {{ t("permissions.user_label")|default:"User" }}:
+                    <span class="font-medium" style="color: var(--gk-text-primary);">{{ PermissionMatrix.User.FirstName }} {{ PermissionMatrix.User.LastName }}</span>
+                </p>
 
-                <table class="min-w-full border">
-                    <thead>
-                        <tr>
-                            <th class="border px-4 py-2">Group</th>
-                            <th class="border px-4 py-2">RO</th>
-                            <th class="border px-4 py-2">Create</th>
-                            <th class="border px-4 py-2">Owner</th>
-                            <th class="border px-4 py-2">RW</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for groupPerm in PermissionMatrix.Groups %}
-                        <tr>
-                            <td class="border px-4 py-2">{{ groupPerm.Group.Name }}</td>
-                            <td class="border px-4 py-2 text-center">
-                                {% if groupPerm.Permissions.ro %}✓{% endif %}
-                            </td>
-                            <td class="border px-4 py-2 text-center">
-                                {% if groupPerm.Permissions.create %}✓{% endif %}
-                            </td>
-                            <td class="border px-4 py-2 text-center">
-                                {% if groupPerm.Permissions.owner %}✓{% endif %}
-                            </td>
-                            <td class="border px-4 py-2 text-center">
-                                {% if groupPerm.Permissions.rw %}✓{% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="overflow-x-auto">
+                    <table class="gk-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ t("permissions.group_column")|default:"Group" }}</th>
+                                <th scope="col" class="text-center">{{ t("permissions.ro")|default:"RO" }}</th>
+                                <th scope="col" class="text-center">{{ t("permissions.create")|default:"Create" }}</th>
+                                <th scope="col" class="text-center">{{ t("permissions.owner")|default:"Owner" }}</th>
+                                <th scope="col" class="text-center">{{ t("permissions.rw")|default:"RW" }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for groupPerm in PermissionMatrix.Groups %}
+                            <tr>
+                                <td>
+                                    <span class="font-medium" style="color: var(--gk-text-primary);">{{ groupPerm.Group.Name }}</span>
+                                </td>
+                                <td class="text-center">
+                                    {% if groupPerm.Permissions.ro %}
+                                    <svg class="h-5 w-5 mx-auto" style="color: var(--gk-success);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if groupPerm.Permissions.create %}
+                                    <svg class="h-5 w-5 mx-auto" style="color: var(--gk-success);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if groupPerm.Permissions.owner %}
+                                    <svg class="h-5 w-5 mx-auto" style="color: var(--gk-success);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if groupPerm.Permissions.rw %}
+                                    <svg class="h-5 w-5 mx-auto" style="color: var(--gk-success);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
-                <p>{{ t("permissions.please_select_user")|default:"Please select a user to view permissions." }}</p>
+                <div class="text-center py-8" style="color: var(--gk-text-muted);">
+                    <svg class="mx-auto h-12 w-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <p>{{ t("permissions.please_select_user")|default:"Please select a user to view permissions." }}</p>
+                </div>
             {% endif %}
         </div>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}

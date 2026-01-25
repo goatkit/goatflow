@@ -3,29 +3,43 @@
 {% block title %}{{ t("admin_tickets.title")|default:"Tickets" }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Header -->
-    <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("tickets.heading")|default:"Ticket Management" }}</h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-2">Manage all tickets in the system</p>
-    </div>
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("tickets.heading")|default:"Ticket Management" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("tickets.admin_description")|default:"Manage all tickets in the system" }}</p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <a href="/admin" class="gk-btn-secondary">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ t("common.back") }}
+                </a>
+            </div>
+        </div>
+    </header>
 
     <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 p-4">
+    <div class="gk-card-glow rounded-lg mb-6 p-4">
         <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Search -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
+                <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.search") }}</label>
                 <input type="text" name="search" value="{{ searchQuery }}"
-                       placeholder="Ticket # or title..."
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-white">
+                       placeholder="{{ t('tickets.search_placeholder')|default:'Ticket # or title...' }}"
+                       class="gk-input-neon w-full">
             </div>
 
             <!-- Status Filter -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                <select name="status" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-white">
-                    <option value="all">All States</option>
+                <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("tickets.status") }}</label>
+                <select name="status" class="gk-select-neon w-full">
+                    <option value="all">{{ t("tickets.all_states")|default:"All States" }}</option>
                     {% for state in states %}
                     <option value="{{ state }}" {% if statusFilter == state %}selected{% endif %}>{{ state }}</option>
                     {% endfor %}
@@ -34,9 +48,9 @@
 
             <!-- Queue Filter -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Queue</label>
-                <select name="queue" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-white">
-                    <option value="all">All Queues</option>
+                <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("tickets.queue") }}</label>
+                <select name="queue" class="gk-select-neon w-full">
+                    <option value="all">{{ t("tickets.all_queues")|default:"All Queues" }}</option>
                     {% for queue in queues %}
                     <option value="{{ queue }}" {% if queueFilter == queue %}selected{% endif %}>{{ queue }}</option>
                     {% endfor %}
@@ -45,133 +59,114 @@
 
             <!-- Filter Buttons -->
             <div class="flex items-end space-x-2">
-                <button type="submit" class="px-4 py-2 bg-gotrs-600 text-white rounded-md hover:bg-gotrs-700 transition-colors">
-                    Filter
+                <button type="submit" class="gk-btn-neon">
+                    {{ t("common.filter")|default:"Filter" }}
                 </button>
-                <a href="/admin/tickets" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-                    Clear
+                <a href="/admin/tickets" class="gk-btn-secondary">
+                    {{ t("common.clear") }}
                 </a>
             </div>
         </form>
     </div>
 
     <!-- Tickets Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+    <div class="gk-card-glow rounded-lg overflow-hidden">
+        <div class="px-4 py-3 border-b" style="border-color: var(--gk-border);">
             <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-700 dark:text-gray-300">
-                    Showing {{ tickets|length }} of {{ totalCount }} tickets
+                <span class="text-sm" style="color: var(--gk-text-secondary);">
+                    {{ t("tickets.showing")|default:"Showing" }} {{ tickets|length }} {{ t("tickets.of")|default:"of" }} {{ totalCount }} {{ t("tickets.tickets")|default:"tickets" }}
                 </span>
             </div>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-900">
+            <table class="gk-table">
+                <thead>
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Ticket #
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Title
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            State
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Priority
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Queue
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Customer
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Assigned To
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Created
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Actions
-                        </th>
+                        <th scope="col">{{ t("tickets.number")|default:"Ticket #" }}</th>
+                        <th scope="col">{{ t("tickets.title")|default:"Title" }}</th>
+                        <th scope="col">{{ t("tickets.state")|default:"State" }}</th>
+                        <th scope="col">{{ t("tickets.priority")|default:"Priority" }}</th>
+                        <th scope="col">{{ t("tickets.queue")|default:"Queue" }}</th>
+                        <th scope="col">{{ t("tickets.customer")|default:"Customer" }}</th>
+                        <th scope="col">{{ t("tickets.assigned_to")|default:"Assigned To" }}</th>
+                        <th scope="col">{{ t("tickets.created")|default:"Created" }}</th>
+                        <th scope="col">{{ t("common.actions") }}</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody>
                     {% for ticket in tickets %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gotrs-600 dark:text-gotrs-400">
-                            {{ ticket.number }}
+                    <tr>
+                        <td>
+                            <span class="font-medium" style="color: var(--gk-primary);">{{ ticket.number }}</span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                            <div class="max-w-xs truncate" title="{{ ticket.title }}">
+                        <td>
+                            <div class="max-w-xs truncate" title="{{ ticket.title }}" style="color: var(--gk-text-primary);">
                                 {{ ticket.title }}
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td>
                             {% if ticket.state == "new" %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                {{ ticket.state }}
-                            </span>
+                            <span class="gk-badge gk-badge-success">{{ ticket.state }}</span>
                             {% elif ticket.state == "open" %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                                {{ ticket.state }}
-                            </span>
+                            <span class="gk-badge gk-badge-accent">{{ ticket.state }}</span>
                             {% elif ticket.state == "closed successful" or ticket.state == "closed unsuccessful" %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                                {{ ticket.state }}
-                            </span>
+                            <span class="gk-badge gk-badge-muted">{{ ticket.state }}</span>
                             {% elif ticket.state == "pending reminder" or ticket.state == "pending auto close+" or ticket.state == "pending auto close-" %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                                {{ ticket.state }}
-                            </span>
+                            <span class="gk-badge gk-badge-warning">{{ ticket.state }}</span>
                             {% else %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                                {{ ticket.state }}
-                            </span>
+                            <span class="gk-badge" style="background: rgba(var(--gk-primary-rgb), 0.2); color: var(--gk-primary);">{{ ticket.state }}</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        <td>
                             {% if ticket.priority == "1 very low" %}
-                            <span class="text-gray-600 dark:text-gray-400">{{ ticket.priority }}</span>
+                            <span style="color: var(--gk-text-muted);">{{ ticket.priority }}</span>
                             {% elif ticket.priority == "2 low" %}
-                            <span class="text-blue-600 dark:text-blue-400">{{ ticket.priority }}</span>
+                            <span style="color: var(--gk-primary);">{{ ticket.priority }}</span>
                             {% elif ticket.priority == "3 normal" %}
-                            <span class="text-green-600 dark:text-green-400">{{ ticket.priority }}</span>
+                            <span style="color: var(--gk-success);">{{ ticket.priority }}</span>
                             {% elif ticket.priority == "4 high" %}
-                            <span class="text-orange-600 dark:text-orange-400">{{ ticket.priority }}</span>
+                            <span style="color: var(--gk-warning);">{{ ticket.priority }}</span>
                             {% elif ticket.priority == "5 very high" %}
-                            <span class="text-red-600 dark:text-red-400 font-semibold">{{ ticket.priority }}</span>
+                            <span class="font-semibold" style="color: var(--gk-error);">{{ ticket.priority }}</span>
                             {% else %}
-                            {{ ticket.priority }}
+                            <span style="color: var(--gk-text-secondary);">{{ ticket.priority }}</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                            {{ ticket.queue }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                            {{ ticket.customer|default:"-" }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                            {{ ticket.assigned_to }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {{ ticket.create_time|slice:":10" }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <a href="/agent/tickets/{{ ticket.id }}" class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-300 mr-3">
-                                View
-                            </a>
-                            <button onclick="deleteTicket({{ ticket.id }})" class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
-                                Delete
-                            </button>
+                        <td style="color: var(--gk-text-secondary);">{{ ticket.queue }}</td>
+                        <td style="color: var(--gk-text-secondary);">{{ ticket.customer|default:"-" }}</td>
+                        <td style="color: var(--gk-text-secondary);">{{ ticket.assigned_to }}</td>
+                        <td style="color: var(--gk-text-muted);">{{ ticket.create_time|slice:":10" }}</td>
+                        <td>
+                            <div class="flex items-center space-x-2">
+                                <a href="/agent/tickets/{{ ticket.id }}"
+                                   class="p-1 rounded transition-colors hover:bg-white/10"
+                                   style="color: var(--gk-primary);"
+                                   title="{{ t('common.view') }}">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </a>
+                                <button onclick="deleteTicket({{ ticket.id }})"
+                                        class="p-1 rounded transition-colors hover:bg-white/10"
+                                        style="color: var(--gk-error);"
+                                        title="{{ t('common.delete') }}">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                            {{ t("tickets.no_tickets_found")|default:"No tickets found" }}
+                        <td colspan="9" class="px-6 py-12 text-center" style="color: var(--gk-text-muted);">
+                            <svg class="mx-auto h-12 w-12 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                            <h3 class="text-sm font-medium mb-1" style="color: var(--gk-text-primary);">{{ t("tickets.no_tickets_found")|default:"No tickets found" }}</h3>
+                            <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("tickets.try_different_filters")|default:"Try adjusting your search or filter criteria" }}</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -181,49 +176,53 @@
 
         <!-- Pagination -->
         {% if totalPages > 1 %}
-        <div class="bg-white dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 sm:px-6">
+        <div class="px-4 py-3 border-t sm:px-6" style="border-color: var(--gk-border);">
             <div class="flex items-center justify-between">
                 <div class="flex-1 flex justify-between sm:hidden">
                     {% if currentPage > 1 %}
                     <a href="?page={{ currentPage - 1 }}&status={{ statusFilter }}&queue={{ queueFilter }}&search={{ searchQuery }}"
-                       class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                        Previous
+                       class="gk-btn-secondary">
+                        {{ t("common.previous")|default:"Previous" }}
                     </a>
                     {% endif %}
                     {% if currentPage < totalPages %}
                     <a href="?page={{ currentPage + 1 }}&status={{ statusFilter }}&queue={{ queueFilter }}&search={{ searchQuery }}"
-                       class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                        Next
+                       class="gk-btn-secondary ml-3">
+                        {{ t("common.next")|default:"Next" }}
                     </a>
                     {% endif %}
                 </div>
                 <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
-                        <p class="text-sm text-gray-700 dark:text-gray-300">
-                            Page <span class="font-medium">{{ currentPage }}</span> of <span class="font-medium">{{ totalPages }}</span>
+                        <p class="text-sm" style="color: var(--gk-text-secondary);">
+                            {{ t("common.page")|default:"Page" }} <span class="font-medium">{{ currentPage }}</span> {{ t("common.of")|default:"of" }} <span class="font-medium">{{ totalPages }}</span>
                         </p>
                     </div>
                     <div>
                         <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                             {% if currentPage > 1 %}
                             <a href="?page={{ currentPage - 1 }}&status={{ statusFilter }}&queue={{ queueFilter }}&search={{ searchQuery }}"
-                               class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                Previous
+                               class="relative inline-flex items-center px-2 py-2 rounded-l-md border text-sm font-medium transition-colors hover:bg-white/10"
+                               style="border-color: var(--gk-border); color: var(--gk-text-secondary);">
+                                {{ t("common.previous")|default:"Previous" }}
                             </a>
                             {% endif %}
 
                             {% for page_num in range(1, totalPages + 1) %}
                                 {% if page_num == currentPage %}
-                                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-gotrs-50 dark:bg-gotrs-900 text-sm font-medium text-gotrs-600 dark:text-gotrs-400">
+                                <span class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                                      style="border-color: var(--gk-primary); background: rgba(var(--gk-primary-rgb), 0.2); color: var(--gk-primary);">
                                     {{ page_num }}
                                 </span>
                                 {% elif page_num <= 3 or page_num > totalPages - 3 or (page_num >= currentPage - 1 and page_num <= currentPage + 1) %}
                                 <a href="?page={{ page_num }}&status={{ statusFilter }}&queue={{ queueFilter }}&search={{ searchQuery }}"
-                                   class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                   class="relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors hover:bg-white/10"
+                                   style="border-color: var(--gk-border); color: var(--gk-text-secondary);">
                                     {{ page_num }}
                                 </a>
                                 {% elif page_num == 4 or page_num == totalPages - 3 %}
-                                <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <span class="relative inline-flex items-center px-4 py-2 border text-sm font-medium"
+                                      style="border-color: var(--gk-border); color: var(--gk-text-muted);">
                                     ...
                                 </span>
                                 {% endif %}
@@ -231,8 +230,9 @@
 
                             {% if currentPage < totalPages %}
                             <a href="?page={{ currentPage + 1 }}&status={{ statusFilter }}&queue={{ queueFilter }}&search={{ searchQuery }}"
-                               class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                Next
+                               class="relative inline-flex items-center px-2 py-2 rounded-r-md border text-sm font-medium transition-colors hover:bg-white/10"
+                               style="border-color: var(--gk-border); color: var(--gk-text-secondary);">
+                                {{ t("common.next")|default:"Next" }}
                             </a>
                             {% endif %}
                         </nav>
@@ -258,9 +258,18 @@ function deleteTicket(id) {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Failed to delete ticket: ' + error.message);
+            showToast('{{ t("messages.failed_delete_ticket")|default:"Failed to delete ticket" }}: ' + error.message, 'error');
         });
     }
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50';
+    toast.style.background = type === 'error' ? 'var(--gk-error)' : type === 'success' ? 'var(--gk-success)' : 'var(--gk-primary)';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 </script>
 {% endblock %}

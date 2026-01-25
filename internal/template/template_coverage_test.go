@@ -138,6 +138,7 @@ var AllPageTemplates = map[string]bool{
 	// Auth/Misc templates
 	"pages/error.pongo2":              true,
 	"pages/login.pongo2":              true,
+	"pages/password_form.pongo2":      true,
 	"pages/profile.pongo2":            true,
 	"pages/register.pongo2":           true,
 	"pages/settings.pongo2":           true,
@@ -1683,6 +1684,23 @@ func TestAllMiscTemplatesRender(t *testing.T) {
 			ctx: func() pongo2.Context {
 				ctx := baseContext()
 				ctx["Error"] = ""
+				return ctx
+			}(),
+		},
+		{
+			name:     "password_form",
+			template: "pages/password_form.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := baseContext()
+				ctx["Policy"] = map[string]interface{}{
+					"PasswordMinSize":                   8,
+					"PasswordMin2Lower2UpperCharacters": false,
+					"PasswordNeedDigit":                 true,
+					"PasswordMin2Characters":            false,
+					"PasswordRegExp":                    "",
+					"HasRequirements":                   true,
+				}
+				ctx["User"] = sampleUser()
 				return ctx
 			}(),
 		},

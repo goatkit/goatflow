@@ -7,24 +7,29 @@ import (
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
+	"github.com/gotrs-io/gotrs-ce/internal/ticketutil"
 )
 
 // FindDuePendingReminders returns tickets in pending reminder states whose deadline has passed.
+// This includes tickets with no pending date set (legacy/migrated data) - these are treated
+// as due immediately to ensure they get processed.
 func (r *TicketRepository) FindDuePendingReminders(ctx context.Context, now time.Time, limit int) ([]*models.PendingReminder, error) {
 	if limit <= 0 {
 		limit = 50
 	}
 
+	// Query includes:
+	// 1. Tickets with a set deadline that has passed (until_time > 0 AND until_time <= now)
+	// 2. Tickets with no deadline set (until_time = 0) - these are legacy/migrated data
 	query := `SELECT t.id, t.tn, t.title, t.queue_id, COALESCE(q.name, '') AS queue_name,
        t.responsible_user_id, t.user_id, t.until_time, ts.name AS state_name
 FROM ticket t
 JOIN ticket_state ts ON ts.id = t.ticket_state_id
 LEFT JOIN queue q ON q.id = t.queue_id
 WHERE ts.type_id = 4
-  AND t.until_time > 0
-  AND t.until_time <= ?
+  AND ((t.until_time > 0 AND t.until_time <= ?) OR t.until_time = 0)
   AND t.archive_flag = 0
-ORDER BY t.until_time ASC
+ORDER BY CASE WHEN t.until_time = 0 THEN 0 ELSE t.until_time END ASC
 LIMIT ?`
 
 	rows, err := r.db.QueryContext(ctx, database.ConvertPlaceholders(query), now.Unix(), limit)
@@ -57,7 +62,7 @@ LIMIT ?`
 			Title:        title,
 			QueueID:      queueID,
 			QueueName:    queueName,
-			PendingUntil: time.Unix(until, 0).UTC(),
+			PendingUntil: ticketutil.GetEffectivePendingTime(int(until)),
 			StateName:    stateName,
 		}
 		if responsible.Valid {

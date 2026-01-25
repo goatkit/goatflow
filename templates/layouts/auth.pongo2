@@ -4,39 +4,68 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ t("app.name") }}{% endblock %}</title>
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    
+
+    <!-- GoatKit Theme Initialization (prevents flash) -->
+    <script>
+        (function() {
+            // Helper to get cookie value
+            function getCookie(name) {
+                var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                return match ? match[2] : null;
+            }
+
+            // Check cookies first (in case returning user with saved prefs)
+            var cookieTheme = getCookie('gotrs_theme');
+            var cookieMode = getCookie('gotrs_mode');
+
+            // Get localStorage values as fallback
+            var storedMode = localStorage.getItem('gk-theme-mode');
+            var storedTheme = localStorage.getItem('gk-theme-name') || 'synthwave';
+
+            // Determine final values: cookies override localStorage if set
+            var theme = cookieTheme || storedTheme;
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var mode = cookieMode || storedMode || (prefersDark ? 'dark' : 'light');
+
+            // Apply immediately
+            document.documentElement.classList.add(mode);
+            document.documentElement.setAttribute('data-theme', theme);
+            document.write('<link id="gk-theme-stylesheet" rel="stylesheet" href="/static/css/themes/' + theme + '.css">');
+        })();
+    </script>
+    <noscript>
+        <link id="gk-theme-stylesheet" rel="stylesheet" href="/static/css/themes/synthwave.css">
+    </noscript>
+
+    <!-- Vendored Fonts (Inter, Space Grotesk) - theme-specific fonts loaded dynamically -->
+    <link rel="stylesheet" href="/static/css/fonts.css">
+
     <!-- Tailwind CSS (vendored) -->
     <link rel="stylesheet" href="/static/css/output.css">
-    
-    <!-- Dark mode script -->
+
+    <!-- HTMX (vendored) -->
+    <script src="/static/js/htmx.min.js"></script>
+
+    <!-- GoatKit Theme Manager -->
+    <script src="/static/js/theme-manager.js"></script>
+
+    <!-- Legacy toggleDarkMode for backwards compatibility -->
     <script>
-        // Check for saved theme or default to light
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark')
-        } else {
-            document.documentElement.classList.remove('dark')
-        }
-        
         function toggleDarkMode() {
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark')
-                localStorage.theme = 'light'
+            if (typeof ThemeManager !== 'undefined') {
+                ThemeManager.toggleMode();
             } else {
-                document.documentElement.classList.add('dark')
-                localStorage.theme = 'dark'
+                document.documentElement.classList.toggle('dark');
             }
         }
     </script>
-    
-    <!-- HTMX (vendored) -->
-    <script src="/static/js/htmx.min.js"></script>
-    
+
     {% block head %}{% endblock %}
 </head>
-<body class="h-full bg-gray-50 dark:bg-gray-900">
+<body class="h-full" style="background-color: var(--gk-bg-base); color: var(--gk-text-primary);">
     {% block content %}{% endblock %}
     
     {% block scripts %}{% endblock %}

@@ -1,0 +1,12 @@
+{# History Tab Panel with Synthwave Styling #}
+{# Required variables: Ticket #}
+
+<div id="tab-history" class="tab-panel hidden">
+    <div class="gk-card p-6 text-sm"
+         style="color: var(--gk-text-secondary);"
+         hx-get="/agent/tickets/{{ Ticket.id }}/history"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <div style="color: var(--gk-text-muted);">{{ t("common.loading_history")|default:"Loading history..." }}</div>
+    </div>
+</div>

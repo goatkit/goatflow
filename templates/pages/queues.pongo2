@@ -3,59 +3,118 @@
 {% block title %}{{ t("nav.queues") }} - GOTRS{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
     <div class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ t("nav.queues") }}</h1>
-                <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">{{ t("queues.manage_description") }}</p>
+                <h1 class="text-2xl sm:text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("nav.queues") }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("queues.manage_description") }}</p>
             </div>
         </div>
     </div>
 
     <!-- Search / Actions -->
-    <form method="get" action="/queues" class="mb-4 flex items-center space-x-3">
-        <input type="text" name="search" value="{{ Search }}" placeholder="{{ t('queues.search_placeholder') }}" class="block w-60 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:border-gotrs-500 focus:ring-gotrs-500" />
-        <button type="submit" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">{{ t('search.search') }}</button>
-        {% if Search %}
-        <a href="/queues" class="text-sm text-gray-600 dark:text-gray-300 hover:text-gotrs-600">{{ t('search.clear')|default:t('common.clear') }}</a>
-        {% endif %}
-        <a href="/queues" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gotrs-600">{{ t('common.refresh')|default:'Refresh' }}</a>
+    <form method="get" action="/queues" class="gk-card-glow mb-6">
+        <div class="gk-card-body">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="relative flex-1 min-w-[200px] max-w-md">
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <svg class="h-5 w-5" style="color: var(--gk-text-muted);" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input type="text" name="search" value="{{ Search }}"
+                           placeholder="{{ t('queues.search_placeholder') }}"
+                           class="gk-input-neon pl-10" />
+                </div>
+                <button type="submit" class="gk-btn-neon w-auto">
+                    <svg class="-ml-0.5 mr-1.5 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+                    </svg>
+                    {{ t('search.search') }}
+                </button>
+                {% if Search %}
+                <a href="/queues" class="gk-link-neon text-sm">{{ t('search.clear')|default:t('common.clear') }}</a>
+                {% endif %}
+                <a href="/queues" class="gk-link-neon text-sm">
+                    <svg class="h-4 w-4 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z" clip-rule="evenodd" />
+                    </svg>
+                    {{ t('common.refresh')|default:'Refresh' }}
+                </a>
+            </div>
+        </div>
     </form>
 
-    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-700">
+    <!-- Queue table -->
+    <div class="gk-card-glow overflow-hidden">
+        <table class="gk-table">
+            <thead>
                 <tr>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('tickets.queue') }}</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('status.new') }}</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('status.open') }}</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('status.pending') }}</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('status.closed') }}</th>
-                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t('common.total')|default:'Total' }}</th>
+                    <th class="text-left">{{ t('tickets.queue') }}</th>
+                    <th class="text-right">{{ t('status.new') }}</th>
+                    <th class="text-right">{{ t('status.open') }}</th>
+                    <th class="text-right">{{ t('status.pending') }}</th>
+                    <th class="text-right">{{ t('status.closed') }}</th>
+                    <th class="text-right">{{ t('common.total')|default:'Total' }}</th>
                 </tr>
             </thead>
-            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody>
                 {% if Queues and Queues|length > 0 %}
                 {% for queue in Queues %}
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td class="px-4 py-2 text-sm">
-                        <div class="font-medium text-gray-900 dark:text-white"><a href="/queues/{{ queue.ID }}" class="hover:text-gotrs-600">{{ queue.Name }}</a></div>
+                <tr>
+                    <td>
+                        <div class="font-medium" style="color: var(--gk-text-primary);">
+                            <a href="/queues/{{ queue.ID }}" class="gk-link-neon">{{ queue.Name }}</a>
+                        </div>
                         {% if queue.Comment %}
-                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ queue.Comment }}</div>
+                        <div class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ queue.Comment }}</div>
                         {% endif %}
                     </td>
-                    <td class="px-4 py-2 text-right text-sm"><a href="/tickets?queue={{ queue.ID }}&state=new" class="text-blue-600 dark:text-blue-400 hover:underline">{{ queue.New|default:0 }}</a></td>
-                    <td class="px-4 py-2 text-right text-sm"><a href="/tickets?queue={{ queue.ID }}&state=open" class="text-blue-600 dark:text-blue-400 hover:underline">{{ queue.Open|default:0 }}</a></td>
-                    <td class="px-4 py-2 text-right text-sm"><a href="/tickets?queue={{ queue.ID }}&state=pending" class="text-blue-600 dark:text-blue-400 hover:underline">{{ queue.Pending|default:0 }}</a></td>
-                    <td class="px-4 py-2 text-right text-sm"><a href="/tickets?queue={{ queue.ID }}&state=closed" class="text-blue-600 dark:text-blue-400 hover:underline">{{ queue.Closed|default:0 }}</a></td>
-                    <td class="px-4 py-2 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">{{ queue.Total|default:0 }}</td>
+                    <td class="text-right">
+                        <a href="/tickets?queue={{ queue.ID }}&state=new"
+                           class="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-xs font-medium"
+                           style="background: var(--gk-primary-subtle); color: var(--gk-primary);">
+                            {{ queue.New|default:0 }}
+                        </a>
+                    </td>
+                    <td class="text-right">
+                        <a href="/tickets?queue={{ queue.ID }}&state=open"
+                           class="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-xs font-medium"
+                           style="background: var(--gk-success-subtle); color: var(--gk-success);">
+                            {{ queue.Open|default:0 }}
+                        </a>
+                    </td>
+                    <td class="text-right">
+                        <a href="/tickets?queue={{ queue.ID }}&state=pending"
+                           class="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-xs font-medium"
+                           style="background: var(--gk-warning-subtle); color: var(--gk-warning);">
+                            {{ queue.Pending|default:0 }}
+                        </a>
+                    </td>
+                    <td class="text-right">
+                        <a href="/tickets?queue={{ queue.ID }}&state=closed"
+                           class="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full text-xs font-medium"
+                           style="background: var(--gk-text-muted); color: var(--gk-bg-surface); opacity: 0.8;">
+                            {{ queue.Closed|default:0 }}
+                        </a>
+                    </td>
+                    <td class="text-right">
+                        <span class="font-semibold" style="color: var(--gk-text-primary);">{{ queue.Total|default:0 }}</span>
+                    </td>
                 </tr>
                 {% endfor %}
                 {% else %}
                 <tr>
-                    <td colspan="6" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">{{ t('queues.no_queues') }}</td>
+                    <td colspan="6" class="text-center py-8" style="color: var(--gk-text-muted);">
+                        <svg class="mx-auto h-12 w-12 mb-4" style="color: var(--gk-text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                        {{ t('queues.no_queues') }}
+                    </td>
                 </tr>
                 {% endif %}
             </tbody>

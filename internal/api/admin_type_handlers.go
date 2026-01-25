@@ -136,7 +136,8 @@ func handleAdminTypes(c *gin.Context) {
 	_ = rows.Err() //nolint:errcheck // Iteration errors don't affect UI
 
 	// Render template or fallback if renderer not initialized
-	if getPongo2Renderer() == nil {
+	renderer := getPongo2Renderer()
+	if renderer == nil || renderer.TemplateSet() == nil {
 		c.Header("Content-Type", "text/html; charset=utf-8")
 		c.String(http.StatusOK, `<!DOCTYPE html>
 <html>
@@ -159,7 +160,7 @@ func handleAdminTypes(c *gin.Context) {
 </html>`)
 		return
 	}
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/types.pongo2", pongo2.Context{
+	renderer.HTML(c, http.StatusOK, "pages/admin/types.pongo2", pongo2.Context{
 		"Title":      "Ticket Type Management",
 		"User":       getUserMapForTemplate(c),
 		"Types":      types,

@@ -10,6 +10,7 @@ type ScheduledJob struct {
 	Schedule       string
 	TimeoutSeconds int
 	Config         map[string]any
+	RunOnStartup   bool // If true, execute immediately when scheduler starts
 	LastRunAt      *time.Time
 	NextRunAt      *time.Time
 	LastStatus     string

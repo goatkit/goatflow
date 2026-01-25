@@ -323,23 +323,7 @@ func handleUploadAttachment(c *gin.Context) {
 	}
 
 	// Determine uploader ID from auth context (default to 1)
-	uploaderID := 1
-	if v, ok := c.Get("user_id"); ok {
-		switch t := v.(type) {
-		case int:
-			uploaderID = t
-		case int64:
-			uploaderID = int(t)
-		case uint:
-			uploaderID = int(t)
-		case uint64:
-			uploaderID = int(t)
-		case string:
-			if n, err := strconv.Atoi(t); err == nil {
-				uploaderID = n
-			}
-		}
-	}
+	uploaderID := GetUserIDFromCtx(c, 1)
 
 	// Create attachment record
 	attachment := &Attachment{

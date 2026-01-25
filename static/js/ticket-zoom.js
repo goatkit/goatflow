@@ -109,7 +109,7 @@ function loadQueueSignature() {
                 (ticketId ? `?ticket_id=${ticketId}` : '');
     
     apiFetch(url)
-        .then(response => response.json())
+        
         .then(data => {
             if (data.success && data.data && data.data.text) {
                 const signatureText = data.data.text;
@@ -173,7 +173,7 @@ function loadCustomerUsers() {
     }
     
     apiFetch(`/agent/tickets/${ticketId}/customer-users`)
-        .then(response => response.json())
+        
         .then(data => {
             if (data.success && data.customer_users) {
                 // Clear existing options
@@ -242,7 +242,7 @@ function changeStatus() {
 
     // Load available statuses (filtered by ticket attribute relations if applicable)
     apiFetch(statesUrl)
-        .then(r => r.json())
+        
         .then(data => {
             const select = document.querySelector('#statusModal select[name="status_id"]');
             select.innerHTML = '<option value="">Select status...</option>';
@@ -304,7 +304,7 @@ function assignAgent() {
     console.log('Loading agents for queue:', ticketQueueId);
     
     apiFetch(`/api/v1/queues/${ticketQueueId}/agents`)
-        .then(r => r.json())
+        
         .then(data => {
             console.log('Agents API response:', data);
             const select = document.querySelector('#assignModal select[name="user_id"]');
@@ -348,7 +348,7 @@ function changePriority() {
 
     // Load available priorities (filtered by ticket attribute relations if applicable)
     apiFetch(prioritiesUrl)
-        .then(r => r.json())
+        
         .then(data => {
             const select = document.querySelector('#priorityModal select[name="priority_id"]');
             select.innerHTML = '<option value="">Select priority...</option>';
@@ -384,7 +384,7 @@ function changePriority() {
 function moveQueue() {
     // Load available queues
     apiFetch('/api/v1/queues')
-        .then(r => r.json())
+        
         .then(data => {
             const select = document.querySelector('#queueModal select[name="queue_id"]');
             select.innerHTML = '<option value="">Select queue...</option>';
@@ -526,7 +526,7 @@ function submitReply(event) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    
     .then(data => {
         if (data.success) {
             showToast('Reply sent successfully', 'success');
@@ -550,7 +550,7 @@ function submitNote(event) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    
     .then(data => {
         if (data.success) {
             showToast('Note added successfully', 'success');
@@ -602,7 +602,7 @@ function submitStatus(event) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    
     .then(data => {
         if (data.success) {
             showToast('Status updated successfully', 'success');
@@ -632,7 +632,7 @@ function submitAssign(event) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    
     .then(data => {
         if (data.success) {
             showToast('Ticket assigned successfully', 'success');
@@ -656,7 +656,7 @@ function submitPriority(event) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    
     .then(data => {
         if (data.success) {
             showToast('Priority updated successfully', 'success');
@@ -680,7 +680,7 @@ function submitQueue(event) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    
     .then(data => {
         if (data.success) {
             showToast('Ticket moved successfully', 'success');
@@ -704,7 +704,7 @@ function submitMerge(event) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    
     .then(data => {
         if (data.success) {
             showToast('Tickets merged successfully', 'success');

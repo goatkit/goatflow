@@ -1,0 +1,40 @@
+{# Ticket Detail Header with Synthwave Styling #}
+{# Required variables: Ticket #}
+
+<div class="mb-8">
+    <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+            <nav class="flex" aria-label="Breadcrumb">
+                <ol class="flex items-center space-x-4">
+                    <li>
+                        <a href="/tickets" class="gk-link-neon">{{ t("tickets.title") }}</a>
+                    </li>
+                    <li>
+                        <svg class="flex-shrink-0 h-5 w-5" style="color: var(--gk-text-muted);" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <path d="M5.555 17.776l8-16 .894.448-8 16-.894-.448z" />
+                        </svg>
+                    </li>
+                    <li>
+                        <span style="color: var(--gk-text-muted);">{{ Ticket.tn }}</span>
+                    </li>
+                </ol>
+            </nav>
+            <h1 class="mt-2 text-3xl font-bold gk-text-gradient">{{ Ticket.subject }}</h1>
+            <div class="mt-2 flex flex-wrap items-center gap-3 text-sm" style="color: var(--gk-text-muted);">
+                {% include "partials/ticket_detail/status_badge.pongo2" with status=Ticket.status %}
+                {% include "partials/ticket_detail/priority_badge.pongo2" with priority=Ticket.priority %}
+                <span>{{ Ticket.queue }}</span>
+                <span>{{ t("common.created")|default:"Created" }} {{ Ticket.created }}</span>
+                <span>{{ t("tickets.updated_at")|default:"Updated" }} {{ Ticket.updated }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden ticket attributes for JavaScript (used by ticket attribute relations filtering) -->
+<div data-queue-id="{{ Ticket.queue_id }}"
+     data-queue-name="{{ Ticket.queue_name }}"
+     data-status-id="{{ Ticket.status_id }}"
+     data-status-name="{{ Ticket.status_name }}"
+     data-priority-id="{{ Ticket.priority_id }}"
+     style="display: none;"></div>

@@ -3,97 +3,103 @@
 {% block title %}{{ t("group_permissions.title")|default:"Group Permissions" }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 space-y-8">
-    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+<div class="container mx-auto px-4 py-8 min-h-screen space-y-8">
+    <div class="gk-card-glow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 flex items-center justify-between" style="border-bottom: 1px solid var(--gk-border);">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ t("group_permissions.queue_permissions")|default:"Queue Permissions" }}</h1>
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    Manage queue-centric permissions for <span class="font-semibold">{{ Group.Name }}</span>
+                <h1 class="text-2xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("group_permissions.queue_permissions")|default:"Queue Permissions" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                    Manage queue-centric permissions for <span class="font-semibold" style="color: var(--gk-text-primary);">{{ Group.Name }}</span>
                 </p>
             </div>
             <div class="flex items-center space-x-3">
-                <a href="/admin/groups" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                <a href="/admin/groups" class="gk-btn-secondary">
                     Back to Groups
                 </a>
-                <span class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                <span class="gk-badge gk-badge-muted">
                     {{ Group.QueueCount }} queues
                 </span>
             </div>
         </div>
         {% if Group.Comments %}
-        <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-600 dark:text-gray-300">
+        <div class="px-6 py-4 text-sm" style="background: var(--gk-bg-tertiary); color: var(--gk-text-secondary);">
             {{ Group.Comments }}
         </div>
         {% endif %}
     </div>
 
-    <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("group_permissions.queues")|default:"Queues" }}</h2>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Queues tied to this group inherit the permissions you configure below.</p>
+    <div class="gk-card-glow rounded-lg overflow-hidden">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+            <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("group_permissions.queues")|default:"Queues" }}</h2>
+            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">Queues tied to this group inherit the permissions you configure below.</p>
         </div>
         <div class="px-6 py-4">
             {% if Queues|length > 0 %}
             <div class="grid gap-4 md:grid-cols-2">
                 {% for queue in Queues %}
-                <div class="rounded border border-gray-200 dark:border-gray-700 p-4">
+                <div class="rounded p-4" style="border: 1px solid var(--gk-border);">
                     <div class="flex items-start justify-between">
                         <div>
-                            <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ queue.Name }}</h3>
+                            <h3 class="text-base font-semibold" style="color: var(--gk-text-primary);">{{ queue.Name }}</h3>
                             {% if queue.Comment %}
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ queue.Comment }}</p>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ queue.Comment }}</p>
                             {% endif %}
                         </div>
-                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ queue.UserCount }} agents</span>
+                        <span class="text-xs" style="color: var(--gk-text-muted);">{{ queue.UserCount }} agents</span>
                     </div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
-            <div class="text-sm text-gray-500 dark:text-gray-400">
+            <div class="text-sm" style="color: var(--gk-text-muted);">
                 No queues currently reference this group.
             </div>
             {% endif %}
         </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+    <div class="gk-card-glow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 flex items-center justify-between" style="border-bottom: 1px solid var(--gk-border);">
             <div>
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("group_permissions.permission_matrix")|default:"Permission Matrix" }}</h2>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Toggle permissions for each agent. Read/Write grants every permission in the row.</p>
+                <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("group_permissions.permission_matrix")|default:"Permission Matrix" }}</h2>
+                <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">Toggle permissions for each agent. Read/Write grants every permission in the row.</p>
             </div>
-            <button id="savePermissionsButton" type="button" onclick="saveGroupPermissions()" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button id="savePermissionsButton" type="button" onclick="saveGroupPermissions()" class="gk-btn-neon">
                 Save Changes
             </button>
         </div>
         <div class="overflow-x-auto">
             {% if Members|length > 0 %}
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-700">
+            <table class="gk-table">
+                <thead>
                     <tr>
-                        <th scope="col" class="sticky left-0 bg-gray-50 dark:bg-gray-700 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th scope="col" class="sticky left-0" style="background: var(--gk-bg-tertiary); z-index: 10;">
                             Agent
                         </th>
                         {% for perm in PermissionKeys %}
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" title="{{ perm.Description }}">
+                        <th scope="col" class="text-center" title="{{ perm.Description }}">
                             {{ perm.Label }}
                         </th>
                         {% endfor %}
                     </tr>
                 </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody>
                     {% for member in Members %}
-                    <tr data-member-row="{{ member.ID }}" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="sticky left-0 bg-white dark:bg-gray-800 px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            <div class="font-medium">{{ member.Login }}</div>
-                            <div class="text-gray-500 dark:text-gray-400 text-xs">{{ member.FirstName }} {{ member.LastName }}</div>
+                    <tr data-member-row="{{ member.ID }}" class="transition-colors hover:bg-white/5">
+                        <td class="sticky left-0 whitespace-nowrap" style="background: var(--gk-bg-surface); z-index: 10;">
+                            <div class="font-medium" style="color: var(--gk-text-primary);">{{ member.Login }}</div>
+                            <div class="text-xs" style="color: var(--gk-text-muted);">{{ member.FirstName }} {{ member.LastName }}</div>
                         </td>
                         {% for perm in PermissionKeys %}
                         {% set assigned = member.Permissions[perm.Key]|default:false %}
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <input type="checkbox" class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded dark:bg-gray-700 dark:border-gray-600" data-permission="{{ perm.Key }}" {% if assigned %}checked{% endif %}>
+                        <td class="whitespace-nowrap text-center">
+                            <input type="checkbox"
+                                   class="h-4 w-4 rounded focus:ring-2"
+                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                   data-permission="{{ perm.Key }}"
+                                   {% if assigned %}checked{% endif %}>
                         </td>
                         {% endfor %}
                     </tr>
@@ -101,7 +107,7 @@
                 </tbody>
             </table>
             {% else %}
-            <div class="px-6 py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+            <div class="px-6 py-12 text-center text-sm" style="color: var(--gk-text-muted);">
                 No agents are assigned to this group yet. Use the Members action on the group list to add agents.
             </div>
             {% endif %}
@@ -178,7 +184,8 @@ function showPermissionToast(message, type) {
         return;
     }
     const toast = document.createElement('div');
-    toast.className = `px-4 py-3 rounded shadow text-white ${type === 'error' ? 'bg-red-600' : 'bg-gotrs-600'}`;
+    toast.className = 'px-4 py-3 rounded shadow text-white';
+    toast.style.background = type === 'error' ? 'var(--gk-error)' : 'var(--gk-success)';
     toast.textContent = message;
     container.appendChild(toast);
     setTimeout(() => {

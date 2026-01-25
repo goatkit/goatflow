@@ -235,7 +235,8 @@ rate_limiting:
         - /metrics
 
 features:
-    registration: true
+    registration: false
+    lost_password: false
     social_login: false
     two_factor_auth: false
     api_keys: true

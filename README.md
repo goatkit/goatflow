@@ -285,12 +285,12 @@ GOTRS provides comprehensive multi-language support:
 |----------|------|-----------|--------|
 | English | en | LTR | ✅ Base Language |
 | Arabic | ar | RTL | ✅ Complete |
-| Chinese | zh | LTR | ⚠️ 98.4% |
+| Chinese | zh | LTR | ✅ Complete |
 | French | fr | LTR | ✅ Complete |
 | German | de | LTR | ✅ Complete |
-| Hebrew | he | RTL | ⚠️ 99.4% |
+| Hebrew | he | RTL | ✅ Complete |
 | Japanese | ja | LTR | ✅ Complete |
-| Persian | fa | RTL | ⚠️ 91.3% |
+| Persian | fa | RTL | ✅ Complete |
 | Polish | pl | LTR | ✅ Complete |
 | Portuguese | pt | LTR | ✅ Complete |
 | Russian | ru | LTR | ✅ Complete |

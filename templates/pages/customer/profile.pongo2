@@ -3,83 +3,85 @@
 {% block title %}{{ t("navigation.profile") }} - {{ Portal.Title }}{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<div class="container mx-auto py-6">
     <!-- Breadcrumbs -->
     <nav class="flex items-center text-sm mb-4" aria-label="Breadcrumb">
-        <a href="/customer" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">{{ t("navigation.dashboard")|default:"Dashboard" }}</a>
-        <svg class="mx-2 h-4 w-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
-        <span class="text-gray-900 dark:text-gray-100 font-medium">{{ t("navigation.profile")|default:"Profile" }}</span>
+        <a href="/customer" class="gk-link-neon">{{ t("navigation.dashboard")|default:"Dashboard" }}</a>
+        <svg class="mx-2 h-4 w-4" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+        <span class="font-medium" style="color: var(--gk-text-primary);">{{ t("navigation.profile")|default:"Profile" }}</span>
     </nav>
 
-    <form id="profile-form" class="bg-white dark:bg-gray-800 shadow-sm rounded-lg">
+    <form id="profile-form" class="gk-card-glow">
         <!-- Header with Avatar -->
-        <div class="px-4 py-4 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="gk-card-header">
             <div class="flex items-center space-x-4 min-w-0">
                 <div class="flex-shrink-0">
-                    <div id="avatar" class="h-14 w-14 rounded-full bg-blue-600 flex items-center justify-center"><span class="text-lg font-semibold text-white">{{ Customer.initials }}</span></div>
+                    <div id="avatar" class="h-14 w-14 rounded-full flex items-center justify-center" style="background: linear-gradient(135deg, var(--gk-primary), var(--gk-secondary));">
+                        <span class="text-lg font-semibold text-white">{{ Customer.initials }}</span>
+                    </div>
                 </div>
                 <div class="min-w-0">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 truncate">{{ Customer.first_name }} {{ Customer.last_name }}</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 truncate">{{ Customer.email }}</p>
+                    <h3 class="text-lg font-medium truncate" style="color: var(--gk-text-primary);">{{ Customer.first_name }} {{ Customer.last_name }}</h3>
+                    <p class="text-sm truncate" style="color: var(--gk-text-secondary);">{{ Customer.email }}</p>
                 </div>
             </div>
         </div>
 
         <!-- Personal Information -->
-        <div class="px-4 py-4 sm:px-6">
-            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{{ t("settings.personal_info")|default:"Personal Information" }}</h4>
+        <div class="gk-card-body">
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-3" style="color: var(--gk-text-muted);">{{ t("settings.personal_info")|default:"Personal Information" }}</h4>
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                    <label for="first-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("user.first_name")|default:"First Name" }} *</label>
+                    <label for="first-name" class="gk-form-label">{{ t("user.first_name")|default:"First Name" }} *</label>
                     <input type="text" id="first-name" name="first_name" required
-                           class="mt-1 block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                           class="gk-input-neon mt-1"
                            value="{{ Customer.first_name }}">
                 </div>
                 <div>
-                    <label for="last-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("user.last_name")|default:"Last Name" }} *</label>
+                    <label for="last-name" class="gk-form-label">{{ t("user.last_name")|default:"Last Name" }} *</label>
                     <input type="text" id="last-name" name="last_name" required
-                           class="mt-1 block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                           class="gk-input-neon mt-1"
                            value="{{ Customer.last_name }}">
                 </div>
                 <div>
-                    <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("user.title")|default:"Title" }}</label>
+                    <label for="title" class="gk-form-label">{{ t("user.title")|default:"Title" }}</label>
                     <input type="text" id="title" name="title"
-                           class="mt-1 block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                           class="gk-input-neon mt-1"
                            placeholder="{{ t('user.title_placeholder')|default:'e.g. Mr., Ms., Dr.' }}"
                            value="{{ Customer.title }}">
                 </div>
                 <div>
-                    <label for="phone" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("user.phone")|default:"Phone" }}</label>
+                    <label for="phone" class="gk-form-label">{{ t("user.phone")|default:"Phone" }}</label>
                     <input type="tel" id="phone" name="phone"
-                           class="mt-1 block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                           class="gk-input-neon mt-1"
                            value="{{ Customer.phone }}">
                 </div>
                 <div class="sm:col-span-2 sm:w-1/2">
-                    <label for="mobile" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("user.mobile")|default:"Mobile" }}</label>
+                    <label for="mobile" class="gk-form-label">{{ t("user.mobile")|default:"Mobile" }}</label>
                     <input type="tel" id="mobile" name="mobile"
-                           class="mt-1 block w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                           class="gk-input-neon mt-1"
                            value="{{ Customer.mobile }}">
                 </div>
             </div>
         </div>
 
         <!-- Preferences Row -->
-        <div class="px-4 py-4 sm:px-6 border-t border-gray-200 dark:border-gray-700">
-            <h4 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{{ t("settings.preferences")|default:"Preferences" }}</h4>
+        <div class="gk-card-body" style="border-top: 1px solid var(--gk-border-default);">
+            <h4 class="text-xs font-semibold uppercase tracking-wider mb-3" style="color: var(--gk-text-muted);">{{ t("settings.preferences")|default:"Preferences" }}</h4>
 
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                    <label for="language-select" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("settings.language")|default:"Language" }}</label>
+                    <label for="language-select" class="gk-form-label">{{ t("settings.language")|default:"Language" }}</label>
                     <select id="language-select" name="language"
-                            class="mt-1 block w-full pl-3 pr-10 py-2 text-sm border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            class="gk-input-neon mt-1">
                         <option value="">{{ t("settings.default")|default:"System Default" }}</option>
                     </select>
                 </div>
                 <div>
-                    <label for="session-timeout" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("settings.session_timeout")|default:"Session Timeout" }}</label>
+                    <label for="session-timeout" class="gk-form-label">{{ t("settings.session_timeout")|default:"Session Timeout" }}</label>
                     <select id="session-timeout" name="session_timeout"
-                            class="mt-1 block w-full pl-3 pr-10 py-2 text-sm border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            class="gk-input-neon mt-1">
                         <option value="0">{{ t("settings.default")|default:"Default" }} (24h)</option>
                         <option value="3600">1 {{ t("time.hour")|default:"hour" }}</option>
                         <option value="14400">4 {{ t("time.hours")|default:"hours" }}</option>
@@ -93,25 +95,25 @@
         </div>
 
         <!-- Security & Actions -->
-        <div class="px-4 py-4 sm:px-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-lg">
+        <div class="gk-card-body rounded-b-lg" style="border-top: 1px solid var(--gk-border-default); background: var(--gk-bg-elevated);">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <a href="/customer/password/form" class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+                <a href="/customer/password/form" class="inline-flex items-center text-sm gk-link-neon">
                     <svg class="h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                     </svg>
                     {{ t("settings.change_password")|default:"Change Password" }}
                 </a>
                 <div class="flex items-center gap-3">
-                    <span id="save-status" class="text-sm text-green-600 dark:text-green-400 hidden">
+                    <span id="save-status" class="text-sm hidden" style="color: var(--gk-success);">
                         <svg class="inline h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                         </svg>
                         {{ t("common.saved")|default:"Saved" }}
                     </span>
-                    <a href="/customer" class="inline-flex items-center justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <a href="/customer" class="gk-btn-secondary">
                         {{ t("buttons.cancel")|default:"Cancel" }}
                     </a>
-                    <button type="submit" id="save-btn" class="inline-flex items-center justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]">
+                    <button type="submit" id="save-btn" class="gk-btn-neon min-w-[120px]">
                         <span id="save-text">{{ t("common.save_changes")|default:"Save Changes" }}</span>
                         <svg id="save-spinner" class="hidden animate-spin ml-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -124,7 +126,7 @@
     </form>
 
     <!-- Error Toast -->
-    <div id="error-toast" class="hidden fixed bottom-4 right-4 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50">
+    <div id="error-toast" class="hidden fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50" style="background: var(--gk-error); color: white;">
         <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
         </svg>
@@ -187,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load language options and current preference
     fetch('/customer/api/preferences/language')
-        .then(r => r.json())
+        .then(response => response.json())
         .then(data => {
             if (data.success) {
                 const select = document.getElementById('language-select');
@@ -207,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load session timeout preference
     fetch('/customer/api/preferences/session-timeout')
-        .then(r => r.json())
+        .then(response => response.json())
         .then(data => {
             if (data.success && data.value !== undefined) {
                 document.getElementById('session-timeout').value = data.value;

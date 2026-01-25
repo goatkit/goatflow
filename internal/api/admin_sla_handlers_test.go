@@ -2,11 +2,13 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -157,7 +159,8 @@ func TestAdminSLACreate(t *testing.T) {
 	})
 
 	t.Run("POST /admin/sla/create with JSON payload", func(t *testing.T) {
-		payload := `{"name": "Test SLA", "first_response_time": 60, "solution_time": 480}`
+		uniqueName := fmt.Sprintf("Test SLA JSON %d", time.Now().UnixNano())
+		payload := fmt.Sprintf(`{"name": "%s", "first_response_time": 60, "solution_time": 480}`, uniqueName)
 
 		req := httptest.NewRequest("POST", "/admin/sla/create", strings.NewReader(payload))
 		req.Header.Set("Content-Type", "application/json")
@@ -165,13 +168,14 @@ func TestAdminSLACreate(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		// Without DB, returns 500, but verifies JSON parsing works
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
+		// With DB available, should successfully create the SLA
+		assert.Equal(t, http.StatusOK, w.Code, "Expected 200 OK, got %d: %s", w.Code, w.Body.String())
 	})
 
 	t.Run("POST /admin/sla/create with form data", func(t *testing.T) {
+		uniqueName := fmt.Sprintf("Form Test SLA %d", time.Now().UnixNano())
 		form := url.Values{}
-		form.Set("name", "Form Test SLA")
+		form.Set("name", uniqueName)
 		form.Set("first_response_time", "30")
 		form.Set("update_time", "60")
 		form.Set("solution_time", "240")
@@ -183,13 +187,14 @@ func TestAdminSLACreate(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		// Without DB, returns 500, but verifies form parsing works
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
+		// With DB available, should successfully create the SLA
+		assert.Equal(t, http.StatusOK, w.Code, "Expected 200 OK, got %d: %s", w.Code, w.Body.String())
 	})
 
 	t.Run("POST /admin/sla/create with notify percentages", func(t *testing.T) {
+		uniqueName := fmt.Sprintf("SLA with Notify %d", time.Now().UnixNano())
 		form := url.Values{}
-		form.Set("name", "SLA with Notify")
+		form.Set("name", uniqueName)
 		form.Set("first_response_time", "60")
 		form.Set("first_response_notify", "80")
 		form.Set("update_time", "120")
@@ -203,12 +208,14 @@ func TestAdminSLACreate(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
+		// With DB available, should successfully create the SLA
+		assert.Equal(t, http.StatusOK, w.Code, "Expected 200 OK, got %d: %s", w.Code, w.Body.String())
 	})
 
 	t.Run("POST /admin/sla/create with calendar", func(t *testing.T) {
+		uniqueName := fmt.Sprintf("SLA with Calendar %d", time.Now().UnixNano())
 		form := url.Values{}
-		form.Set("name", "SLA with Calendar")
+		form.Set("name", uniqueName)
 		form.Set("calendar_name", "Business Hours")
 		form.Set("first_response_time", "60")
 
@@ -218,7 +225,8 @@ func TestAdminSLACreate(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
+		// With DB available, should successfully create the SLA
+		assert.Equal(t, http.StatusOK, w.Code, "Expected 200 OK, got %d: %s", w.Code, w.Body.String())
 	})
 }
 
@@ -342,8 +350,9 @@ func TestAdminSLAValidation(t *testing.T) {
 	router.POST("/admin/sla/create", handleAdminSLACreate)
 
 	t.Run("SLA name is trimmed and validated", func(t *testing.T) {
+		uniqueName := fmt.Sprintf("  Trimmed Name %d  ", time.Now().UnixNano())
 		form := url.Values{}
-		form.Set("name", "  Trimmed Name  ")
+		form.Set("name", uniqueName)
 		form.Set("first_response_time", "60")
 
 		req := httptest.NewRequest("POST", "/admin/sla/create", strings.NewReader(form.Encode()))
@@ -352,13 +361,14 @@ func TestAdminSLAValidation(t *testing.T) {
 
 		router.ServeHTTP(w, req)
 
-		// Should process the name (trimming happens at DB level or could be added)
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
+		// With DB available, should successfully create the SLA (name gets trimmed)
+		assert.Equal(t, http.StatusOK, w.Code, "Expected 200 OK, got %d: %s", w.Code, w.Body.String())
 	})
 
 	t.Run("SLA times accept zero values", func(t *testing.T) {
+		uniqueName := fmt.Sprintf("Zero Times SLA %d", time.Now().UnixNano())
 		form := url.Values{}
-		form.Set("name", "Zero Times SLA")
+		form.Set("name", uniqueName)
 		form.Set("first_response_time", "0")
 		form.Set("update_time", "0")
 		form.Set("solution_time", "0")
@@ -370,7 +380,7 @@ func TestAdminSLAValidation(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		// Zero times should be valid (means no SLA for that metric)
-		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusInternalServerError)
+		assert.Equal(t, http.StatusOK, w.Code, "Expected 200 OK, got %d: %s", w.Code, w.Body.String())
 	})
 }
 

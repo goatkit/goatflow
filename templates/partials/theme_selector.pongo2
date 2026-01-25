@@ -1,0 +1,196 @@
+{# Theme Selector Dropdown - Allows users to switch themes and light/dark mode #}
+{# Themes are loaded dynamically from ThemeManager.AVAILABLE_THEMES #}
+<div class="relative" x-data="{ open: false }">
+    <button @click="open = !open"
+            type="button"
+            class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200"
+            style="color: var(--gk-text-secondary); background: var(--gk-bg-elevated);"
+            onmouseover="this.style.color='var(--gk-primary)'; this.style.boxShadow='var(--gk-glow-primary)';"
+            onmouseout="this.style.color='var(--gk-text-secondary)'; this.style.boxShadow='none';"
+            title="{{ t('theme.select_theme')|default:'Select theme' }}">
+        <!-- Theme icon -->
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+        </svg>
+        <!-- Dropdown arrow -->
+        <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+    </button>
+
+    <!-- Dropdown Menu -->
+    <div x-show="open"
+         @click.away="open = false"
+         x-transition:enter="transition ease-out duration-100"
+         x-transition:enter-start="transform opacity-0 scale-95"
+         x-transition:enter-end="transform opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-75"
+         x-transition:leave-start="transform opacity-100 scale-100"
+         x-transition:leave-end="transform opacity-0 scale-95"
+         class="absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-lg overflow-hidden"
+         style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default); box-shadow: var(--gk-shadow-lg);">
+
+        <!-- Theme Selection -->
+        <div class="p-2">
+            <p class="px-3 py-1 text-xs font-semibold uppercase tracking-wider" style="color: var(--gk-text-muted);">
+                {{ t('theme.select_theme')|default:'Theme' }}
+            </p>
+
+            <!-- Dynamic theme list container -->
+            <div id="theme-list-container">
+                <!-- Themes will be rendered here by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Divider -->
+        <div style="height: 1px; background: var(--gk-border-default);"></div>
+
+        <!-- Light/Dark Mode Toggle -->
+        <div class="p-2">
+            <p class="px-3 py-1 text-xs font-semibold uppercase tracking-wider" style="color: var(--gk-text-muted);">
+                {{ t('theme.appearance')|default:'Appearance' }}
+            </p>
+
+            <div class="flex gap-1 p-1 rounded-lg" style="background: var(--gk-bg-elevated);">
+                <!-- Light Mode -->
+                <button onclick="ThemeManager.applyMode('light'); updateModeButtons();"
+                        id="mode-btn-light"
+                        class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150 mode-btn"
+                        style="color: var(--gk-text-secondary);">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path>
+                    </svg>
+                    {{ t('theme.light')|default:'Light' }}
+                </button>
+
+                <!-- Dark Mode -->
+                <button onclick="ThemeManager.applyMode('dark'); updateModeButtons();"
+                        id="mode-btn-dark"
+                        class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150 mode-btn"
+                        style="color: var(--gk-text-secondary);">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                    </svg>
+                    {{ t('theme.dark')|default:'Dark' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Theme metadata - add new themes here with their display info
+    const THEME_METADATA = {
+        'synthwave': {
+            name: '{{ t("theme.synthwave")|default:"Synthwave" }}',
+            description: '{{ t("theme.synthwave_desc")|default:"Neon retro vibes" }}',
+            gradient: 'linear-gradient(135deg, #00E5FF, #FF2FD4)'
+        },
+        'gotrs-classic': {
+            name: '{{ t("theme.classic")|default:"Classic" }}',
+            description: '{{ t("theme.classic_desc")|default:"Clean & professional" }}',
+            gradient: 'linear-gradient(135deg, #3b82f6, #4f46e5)'
+        },
+        'seventies-vibes': {
+            name: '{{ t("theme.seventies")|default:"70s Vibes" }}',
+            description: '{{ t("theme.seventies_desc")|default:"Warm earth tones" }}',
+            gradient: 'linear-gradient(135deg, #D35400, #F5A623)'
+        }
+    };
+
+    // Render theme list dynamically
+    function renderThemeList() {
+        const container = document.getElementById('theme-list-container');
+        if (!container || !ThemeManager) return;
+
+        const themes = ThemeManager.AVAILABLE_THEMES || [];
+        const currentTheme = ThemeManager.getCurrentTheme();
+
+        let html = '';
+        themes.forEach(themeId => {
+            const meta = THEME_METADATA[themeId] || {
+                name: themeId.charAt(0).toUpperCase() + themeId.slice(1).replace(/-/g, ' '),
+                description: 'Custom theme',
+                gradient: 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+            };
+
+            const isActive = themeId === currentTheme;
+
+            html += `
+                <button onclick="ThemeManager.applyTheme('${themeId}'); document.dispatchEvent(new CustomEvent('theme-changed'));"
+                        class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-150 theme-option"
+                        data-theme="${themeId}"
+                        style="color: var(--gk-text-primary); background: ${isActive ? 'var(--gk-primary-subtle)' : 'transparent'};">
+                    <span class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style="background: ${meta.gradient};">
+                        <svg class="w-4 h-4 text-white checkmark ${isActive ? '' : 'hidden'}" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                    <div class="flex-1 text-left">
+                        <span class="font-medium">${meta.name}</span>
+                        <p class="text-xs" style="color: var(--gk-text-muted);">${meta.description}</p>
+                    </div>
+                </button>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    // Update theme option checkmarks based on current theme
+    function updateThemeOptions() {
+        const currentTheme = ThemeManager ? ThemeManager.getCurrentTheme() : 'synthwave';
+        document.querySelectorAll('.theme-option').forEach(btn => {
+            const checkmark = btn.querySelector('.checkmark');
+            const isActive = btn.dataset.theme === currentTheme;
+            if (checkmark) {
+                checkmark.classList.toggle('hidden', !isActive);
+            }
+            btn.style.background = isActive ? 'var(--gk-primary-subtle)' : 'transparent';
+        });
+    }
+
+    // Update mode buttons based on current mode
+    window.updateModeButtons = function() {
+        const currentMode = ThemeManager ? ThemeManager.getCurrentMode() : 'dark';
+        const lightBtn = document.getElementById('mode-btn-light');
+        const darkBtn = document.getElementById('mode-btn-dark');
+
+        if (lightBtn && darkBtn) {
+            if (currentMode === 'light') {
+                lightBtn.style.background = 'var(--gk-bg-surface)';
+                lightBtn.style.color = 'var(--gk-primary)';
+                lightBtn.style.boxShadow = 'var(--gk-shadow-sm)';
+                darkBtn.style.background = 'transparent';
+                darkBtn.style.color = 'var(--gk-text-secondary)';
+                darkBtn.style.boxShadow = 'none';
+            } else {
+                darkBtn.style.background = 'var(--gk-bg-surface)';
+                darkBtn.style.color = 'var(--gk-primary)';
+                darkBtn.style.boxShadow = 'var(--gk-shadow-sm)';
+                lightBtn.style.background = 'transparent';
+                lightBtn.style.color = 'var(--gk-text-secondary)';
+                lightBtn.style.boxShadow = 'none';
+            }
+        }
+    };
+
+    // Initialize on DOM ready
+    function init() {
+        renderThemeList();
+        updateModeButtons();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+    // Listen for theme changes
+    document.addEventListener('theme-changed', updateThemeOptions);
+    document.addEventListener('gk:theme-change', updateThemeOptions);
+    document.addEventListener('gk:theme-mode-change', updateModeButtons);
+})();
+</script>

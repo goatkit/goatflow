@@ -3,18 +3,20 @@
 {% block title %}{{ t("queue_detail.title")|default:"Queue" }}: {{ Queue.Name }} - GOTRS{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+<div class="container mx-auto py-8 min-h-screen">
     <!-- Page header -->
     <div class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ Queue.Name }}</h1>
-                <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ Queue.Name }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">
                     {{ t("queue_detail.description")|default:"Queue Details and Statistics" }}
                 </p>
             </div>
             <div class="mt-4 sm:mt-0 sm:flex sm:space-x-3">
-                <a href="/queues" class="inline-flex items-center rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
+                <a href="/queues" class="gk-btn-secondary">
                     <svg class="-ml-0.5 mr-1.5 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
                     </svg>
@@ -25,42 +27,44 @@
     </div>
 
     <!-- Queue details -->
-    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-        <div class="px-4 py-5 sm:p-6">
+    <div class="gk-card-glow">
+        <div class="gk-card-body">
             <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("queue_detail.queue_id")|default:"Queue ID" }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ Queue.ID }}</dd>
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("queue_detail.queue_id")|default:"Queue ID" }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ Queue.ID }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("queue_detail.queue_name")|default:"Queue Name" }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ Queue.Name }}</dd>
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("queue_detail.queue_name")|default:"Queue Name" }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ Queue.Name }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.status")|default:"Status" }}</dt>
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("labels.status")|default:"Status" }}</dt>
                     <dd class="mt-1">
                         {% if Queue.ValidID == 1 %}
-                        <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                              style="background: var(--gk-success-subtle); color: var(--gk-success);">
                             {{ t("labels.active")|default:"Active" }}
                         </span>
                         {% else %}
-                        <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                              style="background: var(--gk-error-subtle); color: var(--gk-error);">
                             {{ t("labels.inactive")|default:"Inactive" }}
                         </span>
                         {% endif %}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("queue_detail.group_id")|default:"Group ID" }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ Queue.GroupID }}</dd>
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("queue_detail.group_id")|default:"Group ID" }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ Queue.GroupID }}</dd>
                 </div>
                 <div class="sm:col-span-2">
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.description")|default:"Description" }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("labels.description")|default:"Description" }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">
                         {% if Queue.Comment %}
                         {{ Queue.Comment }}
                         {% else %}
-                        <span class="italic text-gray-500 dark:text-gray-400">{{ t("queue_detail.no_description")|default:"No description available" }}</span>
+                        <span class="italic" style="color: var(--gk-text-muted);">{{ t("queue_detail.no_description")|default:"No description available" }}</span>
                         {% endif %}
                     </dd>
                 </div>
@@ -71,58 +75,63 @@
     <!-- Queue statistics -->
     <div class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <!-- Total Tickets -->
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("queue.stats.total_tickets")|default:"Total Tickets" }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">{{ Stats.Total }}</dd>
+        <div class="gk-stat-card">
+            <dt class="gk-stat-label">{{ t("queue.stats.total_tickets")|default:"Total Tickets" }}</dt>
+            <dd class="gk-stat-value mt-1">{{ Stats.Total }}</dd>
         </div>
 
         <!-- Open Tickets -->
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("queue.stats.open_tickets")|default:"Open Tickets" }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">{{ Stats.Open }}</dd>
+        <div class="gk-stat-card">
+            <dt class="gk-stat-label">{{ t("queue.stats.open_tickets")|default:"Open Tickets" }}</dt>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight" style="color: var(--gk-success);">{{ Stats.Open }}</dd>
         </div>
 
         <!-- Pending Tickets -->
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("queue.stats.pending_tickets")|default:"Pending" }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">{{ Stats.Pending }}</dd>
+        <div class="gk-stat-card">
+            <dt class="gk-stat-label">{{ t("queue.stats.pending_tickets")|default:"Pending" }}</dt>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight" style="color: var(--gk-warning);">{{ Stats.Pending }}</dd>
         </div>
 
         <!-- Closed Tickets -->
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("queue.stats.closed_tickets")|default:"Closed" }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">{{ Stats.Closed }}</dd>
+        <div class="gk-stat-card">
+            <dt class="gk-stat-label">{{ t("queue.stats.closed_tickets")|default:"Closed" }}</dt>
+            <dd class="mt-1 text-3xl font-semibold tracking-tight" style="color: var(--gk-text-muted);">{{ Stats.Closed }}</dd>
         </div>
     </div>
 
     <!-- Recent tickets in this queue -->
     <div class="mt-8">
-        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-            <div class="px-4 py-5 sm:p-6">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-6">{{ t("queue_detail.recent_tickets")|default:"Recent Tickets" }}</h3>
+        <div class="gk-card-glow">
+            <div class="gk-card-header">
+                <h3 class="gk-card-title">{{ t("queue_detail.recent_tickets")|default:"Recent Tickets" }}</h3>
+            </div>
+            <div class="gk-card-body">
                 {% if RecentTickets %}
-                <ul role="list" class="-my-5 divide-y divide-gray-200 dark:divide-gray-700">
+                <ul role="list" class="-my-5 divide-y" style="border-color: var(--gk-border-default);">
                     {% for ticket in RecentTickets %}
                     <li class="py-4">
                         <div class="flex items-center space-x-4">
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-center space-x-2">
-                                    <a href="/tickets/{{ ticket.ID }}" class="text-sm font-medium text-gray-900 dark:text-white hover:text-gotrs-600 dark:hover:text-gotrs-400">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <a href="/tickets/{{ ticket.ID }}" class="text-sm font-medium gk-link-neon">
                                         {{ ticket.TicketNumber }}: {{ ticket.Title }}
                                     </a>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                          style="background: var(--gk-primary-subtle); color: var(--gk-primary);">
                                         {{ ticket.QueueName|default:"Unknown Queue" }}
                                     </span>
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                          style="background: var(--gk-warning-subtle); color: var(--gk-warning);">
                                         {{ ticket.PriorityName|default:"Normal" }}
                                     </span>
                                     {% if ticket.CustomerName %}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                          style="background: var(--gk-success-subtle); color: var(--gk-success);">
                                         {{ ticket.CustomerName }}
                                     </span>
                                     {% endif %}
                                 </div>
-                                <div class="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                <div class="mt-2 flex items-center text-sm" style="color: var(--gk-text-muted);">
                                     <p class="truncate">
                                         Created {{ ticket.CreateTime.Format(t("time.formats.queue_detail")) }}
                                         {% if ticket.OwnerName %} • Owner: {{ ticket.OwnerName }}{% endif %}
@@ -130,13 +139,27 @@
                                 </div>
                             </div>
                             <div>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                    {% if ticket.TicketStateID == 1 %}bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200
-                                    {% elif ticket.TicketStateID == 2 %}bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200
-                                    {% elif ticket.TicketStateID == 3 %}bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200
-                                    {% else %}bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200{% endif %}">
+                                {% if ticket.TicketStateID == 1 %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                      style="background: var(--gk-primary-subtle); color: var(--gk-primary);">
                                     {{ ticket.StateName|default:"Unknown" }}
                                 </span>
+                                {% elif ticket.TicketStateID == 2 %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                      style="background: var(--gk-success-subtle); color: var(--gk-success);">
+                                    {{ ticket.StateName|default:"Unknown" }}
+                                </span>
+                                {% elif ticket.TicketStateID == 3 %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                      style="background: var(--gk-warning-subtle); color: var(--gk-warning);">
+                                    {{ ticket.StateName|default:"Unknown" }}
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                      style="background: var(--gk-text-muted); color: var(--gk-bg-surface);">
+                                    {{ ticket.StateName|default:"Unknown" }}
+                                </span>
+                                {% endif %}
                             </div>
                         </div>
                     </li>
@@ -144,15 +167,15 @@
                 </ul>
                 {% else %}
                 <div class="text-center py-12">
-                    <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="mx-auto h-12 w-12" style="color: var(--gk-text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">{{ t("queue_detail.no_tickets")|default:"No tickets" }}</h3>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <h3 class="mt-2 text-sm font-medium" style="color: var(--gk-text-primary);">{{ t("queue_detail.no_tickets")|default:"No tickets" }}</h3>
+                    <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">
                         There are no tickets in this queue yet.
                     </p>
                     <div class="mt-6">
-                        <a href="/tickets/new" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
+                        <a href="/tickets/new" class="gk-btn-neon">
                             <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                             </svg>

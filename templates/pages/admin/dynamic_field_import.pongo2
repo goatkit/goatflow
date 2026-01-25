@@ -3,37 +3,37 @@
 {% block title %}{{ t("admin.dynamic_fields.import_export.import_title") }} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
-    <div class="mb-8">
+    <header class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("admin.dynamic_fields.import_export.import_title") }}</h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ t("admin.dynamic_fields.import_export.import_hint") }}</p>
-            </div>
-            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex gap-3">
-                <a href="/admin/dynamic-fields"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
-                >
+            <div class="flex items-center">
+                <a href="/admin/dynamic-fields" class="gk-btn-secondary mr-4">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                     {{ t("common.back") }}
                 </a>
+                <div>
+                    <h1 class="text-3xl font-bold gk-heading">
+                        <span class="gk-text-gradient">{{ t("admin.dynamic_fields.import_export.import_title") }}</span>
+                    </h1>
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.import_export.import_hint") }}</p>
+                </div>
             </div>
         </div>
-    </div>
+    </header>
 
     {% if Error %}
-    <div class="mb-6 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-md p-4">
+    <div class="mb-6 rounded-md p-4" style="background: rgba(var(--gk-error-rgb), 0.1); border: 1px solid var(--gk-error);">
         <div class="flex">
             <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <svg class="h-5 w-5" style="color: var(--gk-error);" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
                 </svg>
             </div>
             <div class="ml-3">
-                <p class="text-sm font-medium text-red-800 dark:text-red-200">{{ Error }}</p>
+                <p class="text-sm font-medium" style="color: var(--gk-error);">{{ Error }}</p>
             </div>
         </div>
     </div>
@@ -41,12 +41,12 @@
 
     {% if ShowUpload %}
     <!-- Upload Form -->
-    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+    <div class="gk-card-glow rounded-lg overflow-hidden">
         <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+            <h3 class="text-lg leading-6 font-medium" style="color: var(--gk-text-primary);">
                 {{ t("admin.dynamic_fields.import_export.upload_file") }}
             </h3>
-            <div class="mt-2 max-w-xl text-sm text-gray-500 dark:text-gray-400">
+            <div class="mt-2 max-w-xl text-sm" style="color: var(--gk-text-muted);">
                 <p>{{ t("admin.dynamic_fields.import_export.upload_description") }}</p>
             </div>
             <form action="/admin/dynamic-fields/import" method="POST" enctype="multipart/form-data" class="mt-5">
@@ -54,20 +54,13 @@
                     <label class="block">
                         <span class="sr-only">{{ t("admin.dynamic_fields.import_export.choose_file") }}</span>
                         <input type="file" name="yaml_file" accept=".yml,.yaml" required
-                            class="block w-full text-sm text-gray-500 dark:text-gray-400
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-md file:border-0
-                                file:text-sm file:font-semibold
-                                file:bg-gotrs-50 file:text-gotrs-700
-                                hover:file:bg-gotrs-100
-                                dark:file:bg-gotrs-900 dark:file:text-gotrs-300"
+                            class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold"
+                            style="color: var(--gk-text-muted);"
                         >
                     </label>
                 </div>
                 <div class="mt-5">
-                    <button type="submit"
-                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
-                    >
+                    <button type="submit" class="gk-btn-neon">
                         <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                         </svg>
@@ -85,18 +78,18 @@
         <input type="hidden" name="yaml_data" value="{{ YAMLData }}">
 
         <!-- Overwrite Option -->
-        <div class="mb-6 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+        <div class="mb-6 gk-card-glow rounded-lg overflow-hidden">
             <div class="px-4 py-5 sm:p-6">
                 <div class="flex items-start">
                     <div class="flex items-center h-5">
                         <input type="checkbox" name="overwrite" value="1" id="overwrite"
-                            class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded">
+                            class="h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);">
                     </div>
                     <div class="ml-3 text-sm">
-                        <label for="overwrite" class="font-medium text-gray-700 dark:text-gray-300">
+                        <label for="overwrite" class="font-medium" style="color: var(--gk-text-secondary);">
                             {{ t("admin.dynamic_fields.import_export.overwrite_existing") }}
                         </label>
-                        <p class="text-gray-500 dark:text-gray-400">
+                        <p style="color: var(--gk-text-muted);">
                             {{ t("admin.dynamic_fields.import_export.overwrite_description") }}
                         </p>
                     </div>
@@ -105,95 +98,75 @@
         </div>
 
         <!-- Fields Preview Table -->
-        <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-            <div class="px-4 py-5 sm:px-6 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+        <div class="gk-card-glow rounded-lg overflow-hidden">
+            <div class="px-4 py-5 sm:px-6 border-b" style="border-color: var(--gk-border);">
+                <h3 class="text-lg leading-6 font-medium" style="color: var(--gk-text-primary);">
                     {{ t("admin.dynamic_fields.import_export.fields_to_import") }}
                 </h3>
             </div>
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-900">
+                <table class="gk-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <th scope="col" class="text-center">
                                 <label class="flex items-center justify-center cursor-pointer">
-                                    <input type="checkbox" id="selectAllFields" class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded" checked>
+                                    <input type="checkbox" id="selectAllFields" class="h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
                                     <span class="ml-2">{{ t("admin.dynamic_fields.import_export.field_configuration") }}</span>
                                 </label>
                             </th>
                             {% if HasScreenConfig %}
-                            <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            <th scope="col" class="text-center">
                                 <label class="flex items-center justify-center cursor-pointer">
-                                    <input type="checkbox" id="selectAllScreens" class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded" checked>
+                                    <input type="checkbox" id="selectAllScreens" class="h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
                                     <span class="ml-2">{{ t("admin.dynamic_fields.import_export.screen_configuration") }}</span>
                                 </label>
                             </th>
                             {% endif %}
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                {{ t("admin.dynamic_fields.field_name") }}
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                {{ t("admin.dynamic_fields.field_label") }}
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                {{ t("admin.dynamic_fields.field_type") }}
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                {{ t("admin.dynamic_fields.object_type") }}
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                {{ t("common.status") }}
-                            </th>
+                            <th scope="col">{{ t("admin.dynamic_fields.field_name") }}</th>
+                            <th scope="col">{{ t("admin.dynamic_fields.field_label") }}</th>
+                            <th scope="col">{{ t("admin.dynamic_fields.field_type") }}</th>
+                            <th scope="col">{{ t("admin.dynamic_fields.object_type") }}</th>
+                            <th scope="col">{{ t("common.status") }}</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody>
                         {% for item in Preview %}
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                        <tr>
+                            <td class="text-center">
                                 <input type="checkbox" name="field_config" value="{{ item.Name }}"
-                                    class="field-checkbox h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded" checked>
+                                    class="field-checkbox h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
                             </td>
                             {% if HasScreenConfig %}
-                            <td class="px-6 py-4 whitespace-nowrap text-center">
+                            <td class="text-center">
                                 {% if item.HasScreens %}
                                 <input type="checkbox" name="screen_config" value="{{ item.Name }}"
-                                    class="screen-checkbox h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded" checked>
+                                    class="screen-checkbox h-4 w-4 rounded" style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);" checked>
                                 {% else %}
-                                <span class="text-gray-400">-</span>
+                                <span style="color: var(--gk-text-muted);">-</span>
                                 {% endif %}
                             </td>
                             {% endif %}
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                {{ item.Name }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                {{ item.Label }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                    {% if item.FieldType == 'Text' %}bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100{% endif %}
-                                    {% if item.FieldType == 'TextArea' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100{% endif %}
-                                    {% if item.FieldType == 'Dropdown' %}bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100{% endif %}
-                                    {% if item.FieldType == 'Multiselect' %}bg-pink-100 text-pink-800 dark:bg-pink-800 dark:text-pink-100{% endif %}
-                                    {% if item.FieldType == 'Checkbox' %}bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100{% endif %}
-                                    {% if item.FieldType == 'Date' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100{% endif %}
-                                    {% if item.FieldType == 'DateTime' %}bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100{% endif %}
+                            <td style="color: var(--gk-text-primary);">{{ item.Name }}</td>
+                            <td style="color: var(--gk-text-secondary);">{{ item.Label }}</td>
+                            <td>
+                                <span class="gk-badge
+                                    {% if item.FieldType == 'Text' %}gk-badge-accent{% endif %}
+                                    {% if item.FieldType == 'TextArea' %}gk-badge-indigo{% endif %}
+                                    {% if item.FieldType == 'Dropdown' %}gk-badge-purple{% endif %}
+                                    {% if item.FieldType == 'Multiselect' %}gk-badge-pink{% endif %}
+                                    {% if item.FieldType == 'Checkbox' %}gk-badge-success{% endif %}
+                                    {% if item.FieldType == 'Date' %}gk-badge-warning{% endif %}
+                                    {% if item.FieldType == 'DateTime' %}gk-badge-orange{% endif %}
                                 ">
                                     {{ item.FieldType }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                {{ item.ObjectType }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td style="color: var(--gk-text-secondary);">{{ item.ObjectType }}</td>
+                            <td>
                                 {% if item.Exists %}
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
-                                    {{ t("admin.dynamic_fields.import_export.already_exists") }}
-                                </span>
+                                <span class="gk-badge gk-badge-warning">{{ t("admin.dynamic_fields.import_export.already_exists") }}</span>
                                 {% else %}
-                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-                                    {{ t("admin.dynamic_fields.import_export.will_create") }}
-                                </span>
+                                <span class="gk-badge gk-badge-success">{{ t("admin.dynamic_fields.import_export.will_create") }}</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -205,14 +178,10 @@
 
         <!-- Action Buttons -->
         <div class="mt-6 flex items-center justify-end gap-3">
-            <a href="/admin/dynamic-fields/import"
-                class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
-            >
+            <a href="/admin/dynamic-fields/import" class="gk-btn-secondary">
                 {{ t("common.cancel") }}
             </a>
-            <button type="submit"
-                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
-            >
+            <button type="submit" class="gk-btn-neon">
                 <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
@@ -248,22 +217,20 @@
 
     {% if ShowResults %}
     <!-- Import Results -->
-    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+    <div class="gk-card-glow rounded-lg overflow-hidden">
         <div class="px-4 py-5 sm:p-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
+            <h3 class="text-lg leading-6 font-medium mb-4" style="color: var(--gk-text-primary);">
                 {{ t("admin.dynamic_fields.import_export.import_results") }}
             </h3>
 
             {% if Result.Created|length > 0 %}
             <div class="mb-4">
-                <h4 class="text-sm font-medium text-green-700 dark:text-green-400 mb-2">
+                <h4 class="text-sm font-medium mb-2" style="color: var(--gk-success);">
                     {{ t("admin.dynamic_fields.import_export.created") }} ({{ Result.Created|length }})
                 </h4>
                 <div class="flex flex-wrap gap-2">
                     {% for name in Result.Created %}
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-                        {{ name }}
-                    </span>
+                    <span class="gk-badge gk-badge-success">{{ name }}</span>
                     {% endfor %}
                 </div>
             </div>
@@ -271,14 +238,12 @@
 
             {% if Result.Updated|length > 0 %}
             <div class="mb-4">
-                <h4 class="text-sm font-medium text-blue-700 dark:text-blue-400 mb-2">
+                <h4 class="text-sm font-medium mb-2" style="color: var(--gk-primary);">
                     {{ t("admin.dynamic_fields.import_export.updated") }} ({{ Result.Updated|length }})
                 </h4>
                 <div class="flex flex-wrap gap-2">
                     {% for name in Result.Updated %}
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
-                        {{ name }}
-                    </span>
+                    <span class="gk-badge gk-badge-accent">{{ name }}</span>
                     {% endfor %}
                 </div>
             </div>
@@ -286,14 +251,12 @@
 
             {% if Result.Skipped|length > 0 %}
             <div class="mb-4">
-                <h4 class="text-sm font-medium text-yellow-700 dark:text-yellow-400 mb-2">
+                <h4 class="text-sm font-medium mb-2" style="color: var(--gk-warning);">
                     {{ t("admin.dynamic_fields.import_export.skipped") }} ({{ Result.Skipped|length }})
                 </h4>
                 <div class="flex flex-wrap gap-2">
                     {% for name in Result.Skipped %}
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
-                        {{ name }}
-                    </span>
+                    <span class="gk-badge gk-badge-warning">{{ name }}</span>
                     {% endfor %}
                 </div>
             </div>
@@ -301,10 +264,10 @@
 
             {% if Result.Errors|length > 0 %}
             <div class="mb-4">
-                <h4 class="text-sm font-medium text-red-700 dark:text-red-400 mb-2">
+                <h4 class="text-sm font-medium mb-2" style="color: var(--gk-error);">
                     {{ t("admin.dynamic_fields.import_export.errors") }} ({{ Result.Errors|length }})
                 </h4>
-                <ul class="list-disc list-inside text-sm text-red-600 dark:text-red-400">
+                <ul class="list-disc list-inside text-sm" style="color: var(--gk-error);">
                     {% for err in Result.Errors %}
                     <li>{{ err }}</li>
                     {% endfor %}
@@ -314,16 +277,14 @@
 
             {% if Result.ScreensOK > 0 %}
             <div class="mb-4">
-                <p class="text-sm text-gray-600 dark:text-gray-400">
+                <p class="text-sm" style="color: var(--gk-text-muted);">
                     {{ t("admin.dynamic_fields.import_export.screens_imported") }}: {{ Result.ScreensOK }}
                 </p>
             </div>
             {% endif %}
 
             <div class="mt-6">
-                <a href="/admin/dynamic-fields"
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
-                >
+                <a href="/admin/dynamic-fields" class="gk-btn-neon">
                     {{ t("admin.dynamic_fields.import_export.back_to_list") }}
                 </a>
             </div>

@@ -82,8 +82,10 @@ func TestStatusFormsExposePendingStateMetadata(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	baseDir := filepath.Dir(filename)
 
+	// Test that status forms have data-pending-states attribute for client validation
+	// ticket_detail.pongo2 includes the status modal partial which contains the attribute
 	paths := []string{
-		filepath.Join(baseDir, "..", "..", "templates", "pages", "ticket_detail.pongo2"),
+		filepath.Join(baseDir, "..", "..", "templates", "partials", "ticket_detail", "modals", "status.pongo2"),
 		filepath.Join(baseDir, "..", "..", "templates", "pages", "agent", "ticket_view.pongo2"),
 	}
 	for _, path := range paths {

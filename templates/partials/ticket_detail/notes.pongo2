@@ -1,0 +1,88 @@
+{# Ticket Notes/Updates List with Synthwave Styling #}
+{# Required variables: Ticket #}
+
+{% if Ticket.notes and Ticket.notes|length > 0 %}
+<div class="gk-card p-6">
+    <h2 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("tickets.notes_updates")|default:"Notes & Updates" }}</h2>
+    <div class="flow-root">
+        <ul class="-mb-8">
+            {% set note_counter = 0 %}
+            {% for note in Ticket.notes %}
+            {% set note_counter = note_counter + 1 %}
+            {% set note_anchor = note.id|default:note_counter %}
+            {% set is_customer_visible = note.is_visible_for_customer %}
+            {% set is_from_customer = note.sender_type == "customer" %}
+            {% if is_from_customer %}
+                {# Customer wrote this note #}
+                {% set icon_bg_style = "background: var(--gk-secondary);" %}
+                {% set card_style = "background: var(--gk-secondary-subtle); border: 1px solid var(--gk-secondary);" %}
+                {% set badge_classes = "gk-badge gk-badge-secondary" %}
+                {% set badge_text = t("tickets.customer_wrote_badge")|default:"Customer wrote this" %}
+            {% elif is_customer_visible %}
+                {# Agent wrote this, visible to customer #}
+                {% set icon_bg_style = "background: var(--gk-success);" %}
+                {% set card_style = "background: var(--gk-success-subtle); border: 1px solid var(--gk-success);" %}
+                {% set badge_classes = "gk-badge gk-badge-success" %}
+                {% set badge_text = t("tickets.customer_visible_badge")|default:"Customer sees this" %}
+            {% else %}
+                {# Agent wrote this, internal only #}
+                {% set icon_bg_style = "background: var(--gk-primary);" %}
+                {% set card_style = "background: var(--gk-bg-elevated); border: 1px solid var(--gk-border-default);" %}
+                {% set badge_classes = "gk-badge gk-badge-muted" %}
+                {% set badge_text = t("tickets.internal_only_badge")|default:"Internal only" %}
+            {% endif %}
+            <li id="note-{{ note_anchor }}" class="note-entry" data-testid="note-entry">
+                <div class="relative pb-8">
+                    {% if not forloop.last %}
+                    <span class="absolute top-4 left-4 -ml-px h-full w-0.5" style="background: var(--gk-border-default);" aria-hidden="true"></span>
+                    {% endif %}
+                    <div class="relative flex space-x-3">
+                        <div>
+                            <span class="h-8 w-8 rounded-full flex items-center justify-center ring-8" style="{{ icon_bg_style }} ring-color: var(--gk-bg-surface);">
+                                <svg class="h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div>
+                                <div class="text-sm">
+                                    <span class="font-medium" style="color: var(--gk-text-primary);">{{ note.author }}</span>
+                                </div>
+                                <p class="mt-0.5 text-sm" style="color: var(--gk-text-muted);">{{ note.time }}</p>
+                            </div>
+                            {% if note.subject %}
+                            <div class="mt-2 text-sm" style="color: var(--gk-text-secondary);">
+                                <p class="font-medium">{{ note.subject }}</p>
+                            </div>
+                            {% endif %}
+                            <div class="mt-2 text-sm" style="color: var(--gk-text-secondary);">
+                                <div class="rounded-lg p-4 shadow-sm" style="{{ card_style }}{% if note.sender_color %} border-left: 4px solid {{ note.sender_color }};{% endif %}">
+                                    <div class="flex flex-wrap items-center gap-2 justify-between mb-3">
+                                        <span class="{{ badge_classes }}">
+                                            {{ badge_text }}
+                                        </span>
+                                        {% if Ticket.time_by_article and Ticket.time_by_article[note.id] and Ticket.time_by_article[note.id] > 0 %}
+                                        <span class="gk-badge gk-badge-primary">
+                                            &#9201; {{ Ticket.time_by_article[note.id] }} {{ t("tickets.minutes")|default:"minutes" }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    {% if note.has_html %}
+                                    <div id="note-content-{{ note_counter }}" class="prose prose-sm prose-invert max-w-none break-words article-content" data-article-body data-testid="note-content" style="color: var(--gk-text-secondary);">
+                                        {{ note.body|safe }}
+                                    </div>
+                                    {% else %}
+                                    <div id="note-content-{{ note_counter }}" class="article-plain article-content whitespace-pre-wrap" data-article-body data-testid="note-content" style="color: var(--gk-text-secondary);">{{- note.body|escape -}}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}

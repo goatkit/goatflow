@@ -2,14 +2,14 @@
 {# Usage: {% include "partials/dynamic_fields.pongo2" with DynamicFields=fields %} #}
 
 {% if DynamicFields %}
-<div class="space-y-6 border-t border-gray-200 dark:border-gray-700 pt-6 mt-6" x-data="dynamicFieldsValidation()">
-    <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("ticket_detail.additional_information")|default:"Additional Information" }}</h3>
+<div class="space-y-6 pt-6 mt-6" style="border-top: 1px solid var(--gk-border);" x-data="dynamicFieldsValidation()">
+    <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("ticket_detail.additional_information")|default:"Additional Information" }}</h3>
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {% for df in DynamicFields %}
         <div>
-            <label for="DynamicField_{{ df.Field.Name }}" class="block text-sm font-medium text-gray-900 dark:text-white">
+            <label for="DynamicField_{{ df.Field.Name }}" class="block text-sm font-medium" style="color: var(--gk-text-primary);">
                 {{ df.Field.Label }}
-                {% if df.ConfigValue == 2 %}<span class="text-red-500">*</span>{% endif %}
+                {% if df.ConfigValue == 2 %}<span style="color: var(--gk-error);">*</span>{% endif %}
             </label>
             <div class="mt-2">
                 {% if df.Field.FieldType == "Text" %}
@@ -21,9 +21,9 @@
                     {% if df.Field.Config.MaxLength %}maxlength="{{ df.Field.Config.MaxLength }}"{% endif %}
                     {% if df.Field.Config.RegexPattern %}data-pattern="{{ df.Field.Config.RegexPattern }}"{% endif %}
                     @blur="validateField($event.target)"
-                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                    class="gk-input-neon w-full"
                 />
-                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm" style="color: var(--gk-error);"></p>
 
                 {% elif df.Field.FieldType == "TextArea" %}
                 <textarea
@@ -33,9 +33,9 @@
                     cols="{{ df.Field.Config.Cols|default:50 }}"
                     {% if df.ConfigValue == 2 %}required{% endif %}
                     @blur="validateField($event.target)"
-                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                    class="gk-input-neon w-full"
                 >{{ df.Field.Config.DefaultValue }}</textarea>
-                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm" style="color: var(--gk-error);"></p>
 
                 {% elif df.Field.FieldType == "Checkbox" %}
                 <div class="flex items-center">
@@ -44,9 +44,10 @@
                         id="DynamicField_{{ df.Field.Name }}"
                         value="1"
                         {% if df.Field.Config.DefaultValue == "1" %}checked{% endif %}
-                        class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-gotrs-600 focus:ring-gotrs-500"
+                        class="h-4 w-4 rounded"
+                        style="border-color: var(--gk-border); accent-color: var(--gk-primary);"
                     />
-                    <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">{{ df.Field.Label }}</span>
+                    <span class="ml-2 text-sm" style="color: var(--gk-text-muted);">{{ df.Field.Label }}</span>
                 </div>
 
                 {% elif df.Field.FieldType == "Dropdown" %}
@@ -55,14 +56,14 @@
                     id="DynamicField_{{ df.Field.Name }}"
                     {% if df.ConfigValue == 2 %}required{% endif %}
                     @change="validateField($event.target)"
-                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                    class="gk-select-neon w-full"
                 >
                     <option value="">-- Select --</option>
                     {% for key, value in df.Field.Config.PossibleValues %}
                     <option value="{{ key }}" {% if df.Field.Config.DefaultValue == key %}selected{% endif %}>{{ value }}</option>
                     {% endfor %}
                 </select>
-                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm" style="color: var(--gk-error);"></p>
 
                 {% elif df.Field.FieldType == "Multiselect" %}
                 <select
@@ -71,14 +72,14 @@
                     multiple
                     {% if df.ConfigValue == 2 %}required{% endif %}
                     @change="validateField($event.target)"
-                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                    class="gk-select-neon w-full"
                 >
                     {% for key, value in df.Field.Config.PossibleValues %}
                     <option value="{{ key }}">{{ value }}</option>
                     {% endfor %}
                 </select>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Hold Ctrl/Cmd to select multiple</p>
-                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">Hold Ctrl/Cmd to select multiple</p>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm" style="color: var(--gk-error);"></p>
 
                 {% elif df.Field.FieldType == "Date" %}
                 <input type="date"
@@ -89,9 +90,9 @@
                     {% if df.Field.Config.DateRestriction == "DisablePastDates" %}min="{{ "now"|date:"2006-01-02" }}"{% endif %}
                     {% if df.Field.Config.DateRestriction == "DisableFutureDates" %}max="{{ "now"|date:"2006-01-02" }}"{% endif %}
                     @blur="validateField($event.target)"
-                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                    class="gk-input-neon w-full"
                 />
-                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm" style="color: var(--gk-error);"></p>
 
                 {% elif df.Field.FieldType == "DateTime" %}
                 <input type="datetime-local"
@@ -100,9 +101,9 @@
                     value="{{ df.Field.Config.DefaultValue }}"
                     {% if df.ConfigValue == 2 %}required{% endif %}
                     @blur="validateField($event.target)"
-                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                    class="gk-input-neon w-full"
                 />
-                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm" style="color: var(--gk-error);"></p>
 
                 {% elif df.Field.FieldType == "WebserviceDropdown" %}
                 <div class="webservice-field"
@@ -137,11 +138,11 @@
                                @keydown.escape="showDropdown = false"
                                placeholder="{{ t('common.search') }}..."
                                autocomplete="off"
-                               class="block w-full rounded-md border-0 py-1.5 px-3 pr-10 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6" />
+                               class="gk-input-neon w-full pr-10" />
 
                         {# Loading indicator #}
                         <div x-show="loading" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg class="animate-spin h-4 w-4" style="color: var(--gk-text-muted);" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -152,7 +153,7 @@
                                 @click.prevent="clearSelection()"
                                 type="button"
                                 class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                            <svg class="h-4 w-4 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="h-4 w-4 transition-opacity hover:opacity-80" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                             </svg>
                         </button>
@@ -160,11 +161,12 @@
                         {# Dropdown results #}
                         <ul x-show="showDropdown && results.length > 0"
                             x-cloak
-                            class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-700 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                            class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
+                            style="background: var(--gk-bg-surface);">
                             <template x-for="(result, index) in results" :key="result.value">
                                 <li @click="selectResult(result)"
                                     @mouseenter="highlightedIndex = index"
-                                    :class="{'bg-gotrs-600 text-white': highlightedIndex === index, 'text-gray-900 dark:text-white': highlightedIndex !== index}"
+                                    :style="highlightedIndex === index ? 'background: var(--gk-primary); color: white;' : 'color: var(--gk-text-primary);'"
                                     class="cursor-pointer select-none relative py-2 pl-3 pr-9">
                                     <span x-text="result.label" class="block truncate"></span>
                                 </li>
@@ -174,12 +176,13 @@
                         {# No results message #}
                         <div x-show="showDropdown && noResults && searchTerm.length >= minLength"
                              x-cloak
-                             class="absolute z-10 mt-1 w-full rounded-md bg-white dark:bg-gray-700 py-2 px-3 text-sm text-gray-500 dark:text-gray-400 shadow-lg ring-1 ring-black ring-opacity-5">
+                             class="absolute z-10 mt-1 w-full rounded-md py-2 px-3 text-sm shadow-lg ring-1 ring-black ring-opacity-5"
+                             style="background: var(--gk-bg-surface); color: var(--gk-text-muted);">
                             {{ t("common.no_results") }}
                         </div>
                     </div>
                 </div>
-                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm" style="color: var(--gk-error);"></p>
 
                 {% elif df.Field.FieldType == "WebserviceMultiselect" %}
                 <div class="webservice-field"
@@ -203,11 +206,11 @@
                     {# Selected items display #}
                     <div x-show="selectedItems.length > 0" class="flex flex-wrap gap-2 mb-2">
                         <template x-for="item in selectedItems" :key="item.value">
-                            <span class="inline-flex items-center gap-x-1 rounded-md bg-gotrs-100 dark:bg-gotrs-900 px-2 py-1 text-xs font-medium text-gotrs-700 dark:text-gotrs-300">
+                            <span class="gk-badge gk-badge-primary inline-flex items-center gap-x-1">
                                 <span x-text="item.label"></span>
                                 <button type="button"
                                         @click.prevent="removeItem(item)"
-                                        class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:bg-gotrs-200 dark:hover:bg-gotrs-800">
+                                        class="group relative -mr-1 h-3.5 w-3.5 rounded-sm hover:opacity-80">
                                     <svg class="h-3.5 w-3.5" viewBox="0 0 14 14" fill="currentColor">
                                         <path d="M4 4l6 6m0-6l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                                     </svg>
@@ -231,11 +234,11 @@
                                @keydown.backspace="handleBackspace($event)"
                                placeholder="{{ t('common.search') }}..."
                                autocomplete="off"
-                               class="block w-full rounded-md border-0 py-1.5 px-3 pr-10 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6" />
+                               class="gk-input-neon w-full pr-10" />
 
                         {# Loading indicator #}
                         <div x-show="loading" class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg class="animate-spin h-4 w-4" style="color: var(--gk-text-muted);" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -244,15 +247,12 @@
                         {# Dropdown results #}
                         <ul x-show="showDropdown && results.length > 0"
                             x-cloak
-                            class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-gray-700 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                            class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm"
+                            style="background: var(--gk-bg-surface);">
                             <template x-for="(result, index) in results" :key="result.value">
                                 <li @click="selectResult(result)"
                                     @mouseenter="highlightedIndex = index"
-                                    :class="{
-                                        'bg-gotrs-600 text-white': highlightedIndex === index,
-                                        'text-gray-900 dark:text-white': highlightedIndex !== index,
-                                        'opacity-50': isSelected(result.value)
-                                    }"
+                                    :style="highlightedIndex === index ? 'background: var(--gk-primary); color: white;' : (isSelected(result.value) ? 'opacity: 0.5; color: var(--gk-text-primary);' : 'color: var(--gk-text-primary);')"
                                     class="cursor-pointer select-none relative py-2 pl-3 pr-9">
                                     <span x-text="result.label" class="block truncate"></span>
                                     <span x-show="isSelected(result.value)" class="absolute inset-y-0 right-0 flex items-center pr-4">
@@ -267,13 +267,14 @@
                         {# No results message #}
                         <div x-show="showDropdown && noResults && searchTerm.length >= minLength"
                              x-cloak
-                             class="absolute z-10 mt-1 w-full rounded-md bg-white dark:bg-gray-700 py-2 px-3 text-sm text-gray-500 dark:text-gray-400 shadow-lg ring-1 ring-black ring-opacity-5">
+                             class="absolute z-10 mt-1 w-full rounded-md py-2 px-3 text-sm shadow-lg ring-1 ring-black ring-opacity-5"
+                             style="background: var(--gk-bg-surface); color: var(--gk-text-muted);">
                             {{ t("common.no_results") }}
                         </div>
                     </div>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("common.multiselect_hint") }}</p>
+                    <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("common.multiselect_hint") }}</p>
                 </div>
-                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm text-red-600 dark:text-red-400"></p>
+                <p x-show="errors['DynamicField_{{ df.Field.Name }}']" x-text="errors['DynamicField_{{ df.Field.Name }}']" class="mt-1 text-sm" style="color: var(--gk-error);"></p>
 
                 {% else %}
                 {# Fallback for unknown types #}
@@ -282,12 +283,12 @@
                     id="DynamicField_{{ df.Field.Name }}"
                     {% if df.ConfigValue == 2 %}required{% endif %}
                     @blur="validateField($event.target)"
-                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6"
+                    class="gk-input-neon w-full"
                 />
                 {% endif %}
             </div>
             {% if df.Field.Config.Tooltip %}
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ df.Field.Config.Tooltip }}</p>
+            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ df.Field.Config.Tooltip }}</p>
             {% endif %}
         </div>
         {% endfor %}

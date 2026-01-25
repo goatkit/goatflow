@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/gotrs-io/gotrs-ce/internal/config"
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
@@ -27,10 +28,21 @@ func handleLoginPage(c *gin.Context) {
 		return
 	}
 
+	cfg := config.Get()
 	errorMsg := c.Query("error")
 
+	// Default to false if config is not initialized (e.g., in tests)
+	allowRegistration := false
+	allowLostPassword := false
+	if cfg != nil {
+		allowRegistration = cfg.Features.Registration
+		allowLostPassword = cfg.Features.LostPassword
+	}
+
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/login.pongo2", pongo2.Context{
-		"error": errorMsg,
+		"error":             errorMsg,
+		"AllowRegistration": allowRegistration,
+		"AllowLostPassword": allowLostPassword,
 	})
 }
 
@@ -163,15 +175,31 @@ func handleLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		}
 
 		sessionTimeout := constants.DefaultSessionTimeout
+		var userTheme, userThemeMode string
 		if db != nil {
 			prefService := service.NewUserPreferencesService(db)
 			if userTimeout := prefService.GetSessionTimeout(int(userID)); userTimeout > 0 {
 				sessionTimeout = userTimeout
 			}
+			// Load user's saved theme preferences from database
+			userTheme = prefService.GetTheme(int(userID))
+			userThemeMode = prefService.GetThemeMode(int(userID))
 		}
 
 		c.SetCookie("access_token", token, sessionTimeout, "/", "", false, true)
 		c.SetCookie("auth_token", token, sessionTimeout, "/", "", false, true)
+		// Set a non-httpOnly indicator so JavaScript can detect authentication
+		// (auth tokens are httpOnly for security, but JS needs to know user is logged in)
+		c.SetCookie("gotrs_logged_in", "1", sessionTimeout, "/", "", false, false)
+
+		// Set theme cookies from database preferences (if user has saved preferences)
+		// These will override any login-page localStorage values in the browser
+		if userTheme != "" {
+			c.SetCookie("gotrs_theme", userTheme, sessionTimeout, "/", "", false, false)
+		}
+		if userThemeMode != "" {
+			c.SetCookie("gotrs_mode", userThemeMode, sessionTimeout, "/", "", false, false)
+		}
 
 		// Create session record in database for admin session management
 		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
@@ -280,7 +308,7 @@ func handleDemoCustomerLogin(c *gin.Context) {
 
 // handleLogout handles logout requests.
 func handleLogout(c *gin.Context) {
-	// Delete session record from database
+	// Delete session record from database (check both agent and customer session cookies)
 	if sessionID, err := c.Cookie("session_id"); err == nil && sessionID != "" {
 		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
 			if err := sessionSvc.KillSession(sessionID); err != nil {
@@ -288,16 +316,27 @@ func handleLogout(c *gin.Context) {
 			}
 		}
 	}
+	if sessionID, err := c.Cookie("customer_session_id"); err == nil && sessionID != "" {
+		if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+			if err := sessionSvc.KillSession(sessionID); err != nil {
+				log.Printf("Failed to delete customer session record: %v", err)
+			}
+		}
+	}
 
-	// Clear all auth cookies
+	// Clear all agent auth cookies
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
 	c.SetCookie("auth_token", "", -1, "/", "", false, true)
 	c.SetCookie("token", "", -1, "/", "", false, true)
 	c.SetCookie("session_id", "", -1, "/", "", false, true)
-	c.SetCookie("access_token", "", -1, "/customer", "", false, true)
-	c.SetCookie("auth_token", "", -1, "/customer", "", false, true)
-	c.SetCookie("token", "", -1, "/customer", "", false, true)
-	c.SetCookie("session_id", "", -1, "/customer", "", false, true)
+	c.SetCookie("gotrs_logged_in", "", -1, "/", "", false, false)
+
+	// Clear all customer-specific auth cookies
+	c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
+	c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
+	c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
+	c.SetCookie("gotrs_customer_logged_in", "", -1, "/", "", false, false)
+
 	c.Redirect(http.StatusFound, loginRedirectPath(c))
 }
 

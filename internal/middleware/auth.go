@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -88,7 +89,15 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 		}
 
 		// Validate session exists in database (session was not killed)
+		// Check for customer-specific session cookie first for /customer paths
+		isCustomerPath := strings.HasPrefix(c.Request.URL.Path, "/customer")
 		sessionID, cookieErr := c.Cookie("session_id")
+		if isCustomerPath {
+			if custSessionID, err := c.Cookie("customer_session_id"); err == nil && custSessionID != "" {
+				sessionID = custSessionID
+				cookieErr = nil
+			}
+		}
 		log.Printf("DEBUG: auth middleware - session_id cookie: '%s', err: %v", sessionID, cookieErr)
 		if cookieErr == nil && sessionID != "" {
 			sessionSvc := getMiddlewareSessionService()
@@ -102,6 +111,10 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 					c.SetCookie("auth_token", "", -1, "/", "", false, true)
 					c.SetCookie("access_token", "", -1, "/", "", false, true)
 					c.SetCookie("session_id", "", -1, "/", "", false, true)
+					// Also clear customer-specific cookies
+					c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
+					c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
+					c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
 					m.unauthorizedResponse(c, "Session has been terminated")
 					return
 				}
@@ -226,7 +239,18 @@ func (m *AuthMiddleware) extractToken(c *gin.Context) string {
 		return token
 	}
 
-	// Check cookie
+	// For customer portal paths, check customer-specific cookies first
+	// This prevents agent/customer session conflicts in the same browser
+	if strings.HasPrefix(c.Request.URL.Path, "/customer") {
+		if cookie, err := c.Cookie("customer_auth_token"); err == nil && cookie != "" {
+			return cookie
+		}
+		if cookie, err := c.Cookie("customer_access_token"); err == nil && cookie != "" {
+			return cookie
+		}
+	}
+
+	// Check standard cookies (used by agent portal)
 	if cookie, err := c.Cookie("auth_token"); err == nil && cookie != "" {
 		return cookie
 	}
@@ -308,11 +332,36 @@ func (m *AuthMiddleware) IsAuthenticated(c *gin.Context) bool {
 }
 
 func (m *AuthMiddleware) GetUserID(c *gin.Context) (uint, bool) {
-	userID, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		return 0, false
 	}
-	return userID.(uint), true
+	return getUserIDFromCtxUint(c, 0), true
+}
+
+// getUserIDFromCtxUint extracts the authenticated user's ID from gin context as uint.
+// Local helper to avoid circular import with shared package.
+func getUserIDFromCtxUint(c *gin.Context, fallback uint) uint {
+	v, ok := c.Get("user_id")
+	if !ok {
+		return fallback
+	}
+	switch id := v.(type) {
+	case int:
+		return uint(id)
+	case int64:
+		return uint(id)
+	case uint:
+		return id
+	case uint64:
+		return uint(id)
+	case float64:
+		return uint(id)
+	case string:
+		if n, err := strconv.Atoi(id); err == nil {
+			return uint(n)
+		}
+	}
+	return fallback
 }
 
 func (m *AuthMiddleware) GetUserRole(c *gin.Context) (string, bool) {

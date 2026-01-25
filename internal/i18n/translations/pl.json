@@ -1,20 +1,22 @@
 {
     "acl": {
         "add_acl": "Dodaj ACL",
-        "description": "Dostęp Control Lists define rules for ticket actions and permissions",
+        "description": "Listy kontroli dostępu definiują reguły dla akcji i uprawnień zgłoszeń",
         "heading": "Zarządzanie ACL",
         "modal": {
             "add_title": "Dodaj ACL",
-            "change_actions": "Change Akcje",
-            "match_conditions": "Match Conditions (Properties)"
+            "change_actions": "Zmień akcje",
+            "match_conditions": "Warunki dopasowania (Właściwości)"
         },
         "title": "Listy kontroli dostępu",
         "tooltips": {
-            "add_new": "Dodaj new ACL",
-            "apply_filters": "Zastosuj filters",
-            "clear_filters": "Wyczyść all filters",
+            "add_new": "Dodaj nowy ACL",
+            "apply_filters": "Zastosuj filtry",
+            "clear_filters": "Wyczyść wszystkie filtry",
             "edit": "Edytuj ACL"
-        }
+        },
+        "no_acls_found": "Nie znaleziono ACL",
+        "click_add_acl": "Kliknij \"Dodaj ACL\" aby utworzyć."
     },
     "admin": {
         "action_labels": {
@@ -74,7 +76,7 @@
                 "saved_sets": "Zapisane zestawy filtrów",
                 "set_name_placeholder": "Wpisz nazwę zestawu filtrów..."
             },
-            "no_data_available": "Nie data available",
+            "no_data_available": "Brak dostępnych danych",
             "pagination": {
                 "next": "Następny",
                 "per_page": "na stronie",
@@ -82,12 +84,12 @@
                 "show": "Pokaż"
             },
             "refresh": "Odśwież",
-            "saved_filter_sets": "Zapiszd Filtruj Sets",
+            "saved_filter_sets": "Zapisane zestawy filtrów",
             "search": {
                 "placeholder": "Szukaj..."
             },
             "selected": "wybrane",
-            "show_hide_columns": "Show/Hide Columns",
+            "show_hide_columns": "Pokaż/Ukryj kolumny",
             "status": {
                 "active": "Aktywny",
                 "inactive": "Nieaktywny",
@@ -146,7 +148,7 @@
         "delete_group": "Usuń grupę",
         "description": "Opis",
         "dynamic_fields": {
-            "add_button": "Dodaj Dynamic Field",
+            "add_button": "Dodaj pole dynamiczne",
             "add_field": "Dodaj pole dynamiczne",
             "add_value": "Dodaj wartość",
             "additional_fields": "Dodatkowe pola",
@@ -154,7 +156,7 @@
             "auto_config_description": "Zastosuj rozsądne ustawienia domyślne dla tego typu pola",
             "cols": "Kolumny",
             "confirm_delete": "Czy na pewno chcesz usunąć to pole?",
-            "create_heading": "Utwórz Dynamic Field",
+            "create_heading": "Utwórz pole dynamiczne",
             "date_restriction": "Ograniczenie daty",
             "default_value": "Wartość domyślna",
             "delete_field": "Usuń pole dynamiczne",
@@ -162,8 +164,8 @@
             "description": "Zarządzanie polami niestandardowymi dla zgłoszeń, artykułów i klientów",
             "disabled": "Wyłączone",
             "edit_field": "Edytuj pole dynamiczne",
-            "edit_heading": "Edytuj Dynamic Field",
-            "edit_title": "Edytuj Dynamic Field",
+            "edit_heading": "Edytuj pole dynamiczne",
+            "edit_title": "Edytuj pole dynamiczne",
             "enabled": "Włączone",
             "field_label": "Etykieta",
             "field_name": "Nazwa pola",
@@ -222,7 +224,7 @@
             "name_exists": "Pole o tej nazwie już istnieje",
             "name_invalid": "Nazwa pola musi być alfanumeryczna (litery, cyfry, podkreślenie)",
             "new_field": "Nowe pole dynamiczne",
-            "new_title": "Niewy Dynamic Field",
+            "new_title": "Nowe pole dynamiczne",
             "no_configuration_needed": "Ten typ pola użyje automatycznej konfiguracji domyślnej. Nie są wymagane dodatkowe ustawienia.",
             "no_fields": "Nie zdefiniowano pól dynamicznych",
             "no_future_dates": "Brak dat przyszłych",
@@ -302,7 +304,13 @@
         "leave_blank_to_keep": "Pozostaw puste, aby zachować obecne hasło",
         "login": "Logowanie",
         "lookups": {
-            "description": "Zarządzanie danymi odnośników"
+            "description": "Zarządzanie danymi odnośników",
+            "add_priority": "Dodaj priorytet",
+            "edit_priority": "Edytuj priorytet",
+            "add_state": "Dodaj stan",
+            "edit_state": "Edytuj stan",
+            "add_type": "Dodaj typ",
+            "edit_type": "Edytuj typ"
         },
         "lookups_desc": "Zarządzanie danymi odnośników",
         "lookups_title": "Odnośniki",
@@ -1307,101 +1315,109 @@
         }
     },
     "admin_dashboard": {
+        "activity": "Aktywność",
+        "tickets_closed": "zamknięte zgłoszenia",
+        "tickets_created": "utworzone zgłoszenia",
+        "tickets_open": "otwarte zgłoszenia",
+        "right_now": "w tej chwili",
+        "last_24_hours": "ostatnie 24 godziny",
+        "last_7_days": "ostatnie 7 dni",
+        "last_30_days": "ostatnie 30 dni",
         "acl": "Listy kontroli dostępu",
         "acl_desc": "Definiuj reguły dostępu warunkowego",
         "ticket_attribute_relations": "Relacje atrybutów zgłoszeń",
         "ticket_attribute_relations_desc": "Definiuj zależności atrybutów dla formularzy zgłoszeń",
         "active_users_customers": "Aktywni agenci i klienci",
-        "activity": {
-            "config_updated": "[PL] System configuration updated",
-            "logs_reviewed": "[PL] Audit logs reviewed",
-            "user_created": "[PL] User account created"
+        "recent_activity_items": {
+            "config_updated": "Konfiguracja systemu zaktualizowana",
+            "logs_reviewed": "Logi audytu sprawdzone",
+            "user_created": "Konto użytkownika utworzone"
         },
         "attachments": "Załączniki",
-        "attachments_desc": "Manage default attachment templates",
+        "attachments_desc": "Zarządzanie domyślnymi szablonami załączników",
         "audit_logs": "Logi audytu",
-        "audit_logs_desc": "Review changes and access history",
+        "audit_logs_desc": "Przegląd zmian i historii dostępu",
         "auto_responses": "Automatyczne odpowiedzi",
-        "auto_responses_desc": "Configure automatic email replies",
+        "auto_responses_desc": "Konfiguracja automatycznych odpowiedzi e-mail",
         "customer_administration": "Administracja klientów",
         "customer_groups": "Grupy klientów",
-        "customer_groups_desc": "Organize customer access permissions",
+        "customer_groups_desc": "Organizacja uprawnień dostępu klientów",
         "customer_organizations": "Organizacje klientów",
-        "customer_organizations_desc": "Manage companies and departments",
+        "customer_organizations_desc": "Zarządzanie firmami i działami",
         "customer_portal": "Portal klienta",
-        "customer_portal_desc": "Customize the self-service interface",
-        "customer_user_groups": "Klient Użytkownik Grupy",
-        "customer_user_groups_desc": "Link customer users to customer groups",
-        "customer_user_services": "Klient Użytkownik Usługi",
-        "customer_user_services_desc": "Link customers to services",
+        "customer_portal_desc": "Dostosowanie interfejsu samoobsługowego",
+        "customer_user_groups": "Grupy użytkowników klienta",
+        "customer_user_groups_desc": "Powiązanie użytkowników klienta z grupami",
+        "customer_user_services": "Usługi użytkowników klienta",
+        "customer_user_services_desc": "Powiązanie klientów z usługami",
         "customer_users": "Użytkownicy klienci",
-        "customer_users_desc": "Individual customer accounts",
+        "customer_users_desc": "Indywidualne konta klientów",
         "dynamic_fields": "Pola dynamiczne",
-        "dynamic_fields_desc": "Utwórz custom ticket attributes",
+        "dynamic_fields_desc": "Tworzenie niestandardowych atrybutów zgłoszeń",
         "email_identities": "Tożsamości e-mail",
-        "email_identities_desc": "Manage salutations, addresses, signatures",
+        "email_identities_desc": "Zarządzanie powitaniami, adresami, podpisami",
         "generic_agent": "Agent ogólny",
-        "generic_agent_desc": "Automated ticket actions and batch jobs",
+        "generic_agent_desc": "Automatyczne akcje na zgłoszeniach i zadania wsadowe",
         "group_management": "Zarządzanie grupami",
         "group_management_desc": "Konfiguracja zespołów i ścieżek eskalacji",
-        "inbound_mail": "Inbound Konta pocztowe",
-        "inbound_mail_desc": "Configure POP/IMAP polling and dispatch rules",
-        "key_metrics": "Key metrics",
+        "inbound_mail": "Przychodzące konta pocztowe",
+        "inbound_mail_desc": "Konfiguracja odpytywania POP/IMAP i reguł dystrybucji",
+        "key_metrics": "Kluczowe metryki",
         "lookups": "Słowniki",
-        "lookups_desc": "Manage ticket priorities, states, types",
+        "lookups_desc": "Zarządzanie priorytetami, stanami, typami zgłoszeń",
         "permissions": "Uprawnienia",
         "permissions_desc": "Dostosuj poziomy dostępu agentów",
         "postmaster_filters": "Filtry postmaster",
-        "postmaster_filters_desc": "Configure email routing rules based on headers",
-        "queue_auto_responses": "Kolejka Automatyczne odpowiedzi",
-        "queue_auto_responses_desc": "Link auto responses to queues",
-        "queue_templates": "[PL] Queue Templates",
-        "queue_templates_desc": "[PL] Manage queue to template assignments",
+        "postmaster_filters_desc": "Konfiguracja reguł routingu e-mail na podstawie nagłówków",
+        "queue_auto_responses": "Automatyczne odpowiedzi kolejki",
+        "queue_auto_responses_desc": "Powiązanie automatycznych odpowiedzi z kolejkami",
+        "queue_templates": "Szablony kolejek",
+        "queue_templates_desc": "Zarządzanie przypisaniami szablonów do kolejek",
         "queues": "Kolejki",
-        "queues_desc": "Zgłoszenie routing and organization",
-        "queues_monitored": "Kolejki monitored",
-        "recent_activity": "Recent Administrator Aktywność",
-        "reports_analytics": "[PL] Reports & Analytics",
-        "reports_analytics_desc": "[PL] Track performance insights",
+        "queues_desc": "Routing i organizacja zgłoszeń",
+        "queues_monitored": "Monitorowane kolejki",
+        "recent_activity": "Ostatnia aktywność administratora",
+        "reports_analytics": "Raporty i analityka",
+        "reports_analytics_desc": "Śledzenie wskaźników wydajności",
         "roles": "Role",
         "roles_desc": "Zarządzanie rolami i uprawnieniami grup ról",
         "services": "Usługi",
-        "services_desc": "Define service catalog entries",
+        "services_desc": "Definiowanie wpisów katalogu usług",
         "signatures": "Podpisy",
-        "signatures_desc": "Configure email signatures for responses",
-        "sla": "Usługa Level Agreements",
-        "sla_desc": "Configure response and resolution targets",
+        "signatures_desc": "Konfiguracja podpisów e-mail dla odpowiedzi",
+        "sla": "Umowy o poziomie usług",
+        "sla_desc": "Konfiguracja celów odpowiedzi i rozwiązania",
         "system_administration": "Administracja systemem",
         "system_config": "Konfiguracja systemu",
-        "system_config_desc": "Adjust global settings and behavior",
+        "system_config_desc": "Dostosowanie globalnych ustawień i zachowania",
         "system_health": "Zdrowie systemu",
-        "system_maintenance": "[PL] System Maintenance",
-        "system_maintenance_desc": "[PL] Schedule maintenance windows and notify users",
-        "template_attachments": "[PL] Template Attachments",
-        "template_attachments_desc": "[PL] Manage template to attachment assignments",
+        "system_maintenance": "Konserwacja systemu",
+        "system_maintenance_desc": "Planowanie okien konserwacji i powiadamianie użytkowników",
+        "template_attachments": "Załączniki szablonów",
+        "template_attachments_desc": "Zarządzanie przypisaniami załączników do szablonów",
         "templates": "Szablony",
-        "templates_desc": "Reusable response and email templates",
-        "ticket_notifications": "Zgłoszenie Powiadomienia",
-        "ticket_notifications_desc": "Configure automated notifications for ticket events",
+        "templates_desc": "Wielokrotnego użytku szablony odpowiedzi i e-mail",
+        "ticket_notifications": "Powiadomienia o zgłoszeniach",
+        "ticket_notifications_desc": "Konfiguracja automatycznych powiadomień dla zdarzeń zgłoszeń",
         "uptime_this_month": "czas działania w tym miesiącu",
         "user_management": "Zarządzanie użytkownikami",
         "user_management_desc": "Zarządzanie kontami agentów i klientów"
     },
     "admin_queues": {
-        "add_queue": "Dodaj Kolejka",
-        "advanced_settings": "Advanced Ustawienia",
-        "basic_info": "Basic Informacjarmation",
+        "add_queue": "Dodaj kolejkę",
+        "advanced_settings": "Ustawienia zaawansowane",
+        "basic_info": "Podstawowe informacje",
         "calendar": "Kalendarz",
-        "edit_queue": "Edytuj Kolejka",
-        "email_settings": "E-mail Ustawienia",
-        "follow_up_settings": "Folniski-up Ustawienia",
-        "get_started": "Get started by creating a new queue.",
+        "edit_queue": "Edytuj kolejkę",
+        "email_settings": "Ustawienia e-mail",
+        "follow_up_settings": "Ustawienia kontynuacji",
+        "get_started": "Zacznij od utworzenia nowej kolejki.",
         "manage_email_identities": "Zarządzaj tożsamościami email",
-        "new_queue": "Niewy Kolejka",
-        "no_queues": "Nie queues",
-        "no_signature": "Nie signature selected",
+        "new_queue": "Nowa kolejka",
+        "no_queues": "Brak kolejek",
+        "no_signature": "Nie wybrano podpisu",
         "ticket_settings": "Ustawienia zgłoszeń",
-        "unlock_timeout": "Unlock Czasout"
+        "unlock_timeout": "Limit czasu odblokowania"
     },
     "admin_tickets": {
         "title": "Zgłoszenia"
@@ -1435,8 +1451,8 @@
     },
     "auth": {
         "already_member": "Masz już konto?",
-        "and_try_again": "and try again.",
-        "caps_lock_on": "Caps Lock is ON",
+        "and_try_again": "i spróbuj ponownie.",
+        "caps_lock_on": "Caps Lock jest włączony",
         "confirm_password": "Potwierdź hasło",
         "create_account": "Utwórz swoje konto",
         "email": "E-mail",
@@ -1455,8 +1471,10 @@
         "signin": "Zaloguj się",
         "signing_in": "Logowanie...",
         "signup": "Zarejestruj się",
-        "too_many_attempts": "Too many failed attempts. Please wait",
-        "username": "Nazwa użytkownika"
+        "too_many_attempts": "Zbyt wiele nieudanych prób. Proszę czekać",
+        "username": "Nazwa użytkownika",
+        "username_placeholder": "Wprowadź nazwę użytkownika",
+        "password_placeholder": "Wprowadź hasło"
     },
     "bulk_actions": {
         "all_selected": "Wszystko wybrane",
@@ -1545,7 +1563,10 @@
         "update": "Aktualizuj",
         "upload": "Prześlij",
         "view_all": "Zobacz wszystkie",
-        "warning": "Ostrzeżenie"
+        "warning": "Ostrzeżenie",
+        "disable": "Wyłącz",
+        "enable": "Włącz",
+        "save_changes": "Zapisz zmiany"
     },
     "changes": {
         "backout_plan": "Plan wycofania",
@@ -1574,8 +1595,8 @@
         "close": "Zamknij",
         "comments": "Komentarze",
         "confirm_action": "Potwierdź akcję",
-        "copy_details": "Copy Guru details",
-        "copy_to_clipboard": "Copy to clipboard",
+        "copy_details": "Kopiuj szczegóły",
+        "copy_to_clipboard": "Kopiuj do schowka",
         "create": "Utwórz",
         "created": "Utworzone",
         "created_by": "Utworzone przez",
@@ -1592,9 +1613,9 @@
         "invalid_only": "Tylko nieaktywne",
         "invalid_temporary": "Nieważny (tymczasowy)",
         "loading": "Ładowanie...",
-        "loading_history": "Ładowanie history...",
-        "loading_links": "Ładowanie links...",
-        "loading_queue_details": "Ładowanie queue details...",
+        "loading_history": "Ładowanie historii...",
+        "loading_links": "Ładowanie linków...",
+        "loading_queue_details": "Ładowanie szczegółów kolejki...",
         "manage": "Zarządzaj",
         "modified": "Zmodyfikowane",
         "modified_by": "Zmodyfikowane przez",
@@ -1603,9 +1624,9 @@
         "name": "Nazwa",
         "next": "Następny",
         "no": "Nie",
-        "no_data_available": "Nie data available",
+        "no_data_available": "Brak dostępnych danych",
         "no_results": "Nie znaleziono wyników",
-        "no_results_found": "Nie results found",
+        "no_results_found": "Nie znaleziono wyników",
         "last_update": "Ostatnia aktualizacja",
         "save_and_finish": "Zapisz i zakończ",
         "save_changes": "Zapisz Zmiany",
@@ -1620,7 +1641,7 @@
         "save": "Zapisz",
         "saving": "Zapisywanie...",
         "search": "Szukaj",
-        "search_tokens": "Szukaj tokens",
+        "search_tokens": "Szukaj tokenów",
         "see_more": "Zobacz więcej",
         "select": "Wybierz",
         "settings": "Ustawienia",
@@ -1630,7 +1651,8 @@
         "submit": "Wyślij",
         "success": "Sukces",
         "to": "do",
-        "toggle_dark_mode": "Toggle dark mode",
+        "toggle_dark_mode": "Przełącz tryb ciemny",
+        "select_language": "Wybierz język",
         "total": "Wszystkich",
         "unassigned": "Nieprzypisane",
         "until": "do",
@@ -1650,7 +1672,9 @@
             "password": "Hasło",
             "sign_in": "Zaloguj się",
             "signing_in": "Logowanie...",
-            "too_many_attempts": "Zbyt wiele nieudanych prób. Poczekaj %ds i spróbuj ponownie."
+            "too_many_attempts": "Zbyt wiele nieudanych prób. Poczekaj %ds i spróbuj ponownie.",
+            "login_placeholder": "Wprowadź login lub e-mail",
+            "password_placeholder": "Wprowadź hasło"
         },
         "common": {
             "required": "*"
@@ -1782,51 +1806,51 @@
         }
     },
     "customer_companies": {
-        "description": "Manage customer organizations and their branded portals",
+        "description": "Zarządzanie organizacjami klientów i ich portalami",
         "heading": "Firmy klientów",
         "title": "Firmy klientów",
         "tooltips": {
-            "activate": "Activate Firma",
-            "deactivate": "Deactivate Firma",
-            "edit": "Edytuj Firma",
-            "manage_services": "Manage Usługi",
-            "portal_settings": "Portal Ustawienia"
+            "activate": "Aktywuj firmę",
+            "deactivate": "Dezaktywuj firmę",
+            "edit": "Edytuj firmę",
+            "manage_services": "Zarządzaj usługami",
+            "portal_settings": "Ustawienia portalu"
         }
     },
     "customer_company_form": {
-        "assigned_services": "Assigned Usługi",
+        "assigned_services": "Przypisane usługi",
         "branding": "Branding",
-        "company_details": "Firma Szczegóły",
-        "features": "Features",
-        "portal_settings": "Portal Ustawienia"
+        "company_details": "Szczegóły firmy",
+        "features": "Funkcje",
+        "portal_settings": "Ustawienia portalu"
     },
     "customer_company_services": {
-        "heading": "Klient Firma Usługi",
-        "title": "Klient Firma Usługi"
+        "heading": "Usługi firmy klienta",
+        "title": "Usługi firmy klienta"
     },
     "customer_company_tickets": {
-        "heading": "Klient Firma Zgłoszenia",
-        "title": "Klient Firma Zgłoszenia"
+        "heading": "Zgłoszenia firmy klienta",
+        "title": "Zgłoszenia firmy klienta"
     },
     "customer_company_users": {
-        "heading": "Klient Firma Użytkownicy",
-        "title": "Klient Firma Użytkownicy"
+        "heading": "Użytkownicy firmy klienta",
+        "title": "Użytkownicy firmy klienta"
     },
     "customer_group": {
-        "by_group_heading": "Klient Uprawnienia by Grupa",
-        "customer_permissions": "Klient Uprawnienia",
-        "edit_heading": "Edytuj Klient Grupa Uprawnienia",
-        "group_permissions": "Grupa Uprawnienia"
+        "by_group_heading": "Uprawnienia klienta według grupy",
+        "customer_permissions": "Uprawnienia klienta",
+        "edit_heading": "Edytuj uprawnienia grupy klienta",
+        "group_permissions": "Uprawnienia grupy"
     },
     "customer_group_by_group": {
-        "customer_permissions": "Klient Uprawnienia"
+        "customer_permissions": "Uprawnienia klienta"
     },
     "customer_group_edit": {
-        "group_permissions": "Grupa Uprawnienia"
+        "group_permissions": "Uprawnienia grupy"
     },
     "customer_groups": {
-        "about_heading": "About Klient Grupa Uprawnienia",
-        "heading": "Klient Grupa Uprawnienia"
+        "about_heading": "O uprawnieniach grup klientów",
+        "heading": "Uprawnienia grup klientów"
     },
     "customer_portal": {
         "placeholders": {
@@ -1835,140 +1859,141 @@
         }
     },
     "customer_portal_settings": {
-        "heading": "Portal klienta Ustawienia",
-        "title": "Portal klienta Ustawienia"
+        "heading": "Ustawienia portalu klienta",
+        "title": "Ustawienia portalu klienta"
     },
     "customer_user_services": {
-        "title": "Klient Użytkownik Usługi"
+        "title": "Usługi użytkownika klienta"
     },
     "customer_users": {
-        "add_modal_title": "Dodaj Klient Użytkownik",
-        "add_user": "Dodaj Klient Użytkownik",
-        "description": "Manage customer user accounts and access",
-        "edit_modal_title": "Edytuj Klient Użytkownik",
+        "add_modal_title": "Dodaj użytkownika klienta",
+        "add_user": "Dodaj użytkownika klienta",
+        "description": "Zarządzanie kontami użytkowników klientów i dostępem",
+        "edit_modal_title": "Edytuj użytkownika klienta",
         "export": "Eksportuj",
         "import_csv": "Importuj CSV",
-        "import_title": "Importuj Użytkownicy klienci",
+        "import_title": "Importuj użytkowników klientów",
         "search": "Szukaj",
         "section": {
-            "address_info": "Adres Informacjarmation",
-            "basic_info": "Basic Informacjarmation",
-            "contact_info": "Contact Informacjarmation",
-            "personal_info": "Personal Informacjarmation"
+            "address_info": "Informacje adresowe",
+            "basic_info": "Podstawowe informacje",
+            "contact_info": "Informacje kontaktowe",
+            "personal_info": "Informacje osobiste"
         },
         "table_heading": "Użytkownicy klienci",
-        "tickets_title": "Klient Zgłoszenia",
-        "title": "Klient Użytkownik Management",
+        "tickets_title": "Zgłoszenia klienta",
+        "title": "Zarządzanie użytkownikami klientów",
         "tooltips": {
-            "delete": "Usuń customer user",
-            "disable": "Wyłącz customer user",
-            "edit": "Edytuj customer user",
-            "enable": "Włącz customer user"
-        }
+            "delete": "Usuń użytkownika klienta",
+            "disable": "Wyłącz użytkownika klienta",
+            "edit": "Edytuj użytkownika klienta",
+            "enable": "Włącz użytkownika klienta"
+        },
+        "save_button": "Zapisz użytkownika klienta"
     },
     "dashboard": {
-        "my_queues": "My Kolejki",
+        "my_queues": "Moje kolejki",
         "my_tickets": "Moje zgłoszenia",
-        "no_queues_assigned": "Nie queues assigned",
-        "no_recent_tickets": "Nie recent tickets",
-        "no_tickets_found": "Nie tickets found",
-        "no_tickets_in_system": "Nie tickets found in the system",
+        "no_queues_assigned": "Brak przypisanych kolejek",
+        "no_recent_tickets": "Brak ostatnich zgłoszeń",
+        "no_tickets_found": "Nie znaleziono zgłoszeń",
+        "no_tickets_in_system": "Nie znaleziono zgłoszeń w systemie",
         "open_tickets": "Otwarte zgłoszenia",
         "overview": "Przegląd",
         "performance": "Wydajność",
         "quick_actions": "Szybkie akcje",
         "quick_stats": "Szybkie statystyki",
         "realtime": {
-            "title": "Real-time Panel"
+            "title": "Panel w czasie rzeczywistym"
         },
         "recent_activity": "Ostatnia aktywność",
         "recent_tickets": "Ostatnie zgłoszenia",
         "statistics": "Statystyki",
         "stats": {
-            "closed_today": "Zamknięty Dzisiaj",
-            "my_open": "My Otwórz",
-            "my_pending": "My Oczekujący",
-            "new_today": "Niewy Dzisiaj",
-            "open_tickets": "Otwórz Zgłoszenia",
-            "overdue": "Przeterminowany",
-            "pending": "Oczekujący",
-            "total_assigned": "Suma Assigned",
-            "unassigned": "Unassigned"
+            "closed_today": "Zamknięte dzisiaj",
+            "my_open": "Moje otwarte",
+            "my_pending": "Moje oczekujące",
+            "new_today": "Nowe dzisiaj",
+            "open_tickets": "Otwarte zgłoszenia",
+            "overdue": "Przeterminowane",
+            "pending": "Oczekujące",
+            "total_assigned": "Łącznie przypisane",
+            "unassigned": "Nieprzypisane"
         },
         "tickets_count": "Zgłoszenia",
         "title": "Panel",
-        "unassigned_count": "unassigned",
+        "unassigned_count": "nieprzypisane",
         "welcome_back": "Witaj ponownie",
         "welcome_message": "Oto, co dzisiaj dzieje się z Twoimi zgłoszeniami"
     },
     "dynamic_field_form": {
-        "basic_information": "Basic Informacjarmation",
-        "field_configuration": "Field Konfiguracja"
+        "basic_information": "Podstawowe informacje",
+        "field_configuration": "Konfiguracja pola"
     },
     "dynamic_field_screens": {
-        "screen_configuration": "Screen Konfiguracja",
-        "title": "Dynamic Field Screens"
+        "screen_configuration": "Konfiguracja ekranu",
+        "title": "Ekrany pól dynamicznych"
     },
     "dynamic_fields": {
         "additional_fields": "Dodatkowe pola",
         "article_fields": "Pola artykułu",
-        "available_field_types": "Available Field Typs",
-        "description": "Utwórz and manage dynamic fields for tickets, articles, and other objects",
-        "heading": "Pola dynamiczne Management",
-        "no_dynamic_fields": "Nie dynamic fields",
+        "available_field_types": "Dostępne typy pól",
+        "description": "Tworzenie i zarządzanie polami dynamicznymi dla zgłoszeń, artykułów i innych obiektów",
+        "heading": "Zarządzanie polami dynamicznymi",
+        "no_dynamic_fields": "Brak pól dynamicznych",
         "placeholders": {
-            "label": "My Custom Field",
-            "name": "MyCustomField"
+            "label": "Moje niestandardowe pole",
+            "name": "MojeNiestandardowePole"
         },
         "select": "Wybierz...",
         "title": "Dodatkowe pola",
         "tooltips": {
-            "add_new": "Dodaj new dynamic field",
-            "apply_filters": "Zastosuj filters",
-            "clear_filters": "Wyczyść filters",
-            "delete": "Usuń field",
-            "edit": "Edytuj field"
+            "add_new": "Dodaj nowe pole dynamiczne",
+            "apply_filters": "Zastosuj filtry",
+            "clear_filters": "Wyczyść filtry",
+            "delete": "Usuń pole",
+            "edit": "Edytuj pole"
         }
     },
     "dynamic_test": {
         "heading": "Testowanie modułu dynamicznego",
-        "testing_instructions": "Testing Instructions",
+        "testing_instructions": "Instrukcje testowania",
         "title": "Testowanie modułu dynamicznego"
     },
     "email_identities": {
-        "add_signature": "Dodaj Podpis",
-        "add_system_address": "Dodaj System Adres",
-        "description": "Manage outbound email identities, salutations, and signatures used by queues.",
+        "add_signature": "Dodaj podpis",
+        "add_system_address": "Dodaj adres systemowy",
+        "description": "Zarządzanie tożsamościami e-mail wychodzących, powitaniami i podpisami używanymi przez kolejki.",
         "heading": "Tożsamości e-mail",
-        "salutations": "Powitanies",
+        "salutations": "Powitania",
         "signatures": "Podpisy",
-        "system_addresses": "System Adreses",
+        "system_addresses": "Adresy systemowe",
         "title": "Tożsamości e-mail"
     },
     "email_queue": {
-        "description": "Wyświetl and manage queued email messages",
-        "heading": "E-mail Zarządzanie kolejkami",
-        "queue_actions": "Kolejka Akcje",
-        "title": "E-mail Kolejka",
+        "description": "Przeglądanie i zarządzanie wiadomościami e-mail w kolejce",
+        "heading": "Zarządzanie kolejką e-mail",
+        "queue_actions": "Akcje kolejki",
+        "title": "Kolejka e-mail",
         "tooltips": {
-            "apply_filters": "Zastosuj filters",
-            "clear_filters": "Wyczyść filters",
-            "delete": "Usuń from queue",
+            "apply_filters": "Zastosuj filtry",
+            "clear_filters": "Wyczyść filtry",
+            "delete": "Usuń z kolejki",
             "retry": "Ponów wysyłanie",
-            "view_details": "Wyświetl details"
+            "view_details": "Wyświetl szczegóły"
         }
     },
     "entity_selector": {
-        "add_new": "Dodaj Niewy",
-        "added": "Dodajed",
-        "manage_members": "Zarządzaj Członkami",
-        "no_members": "Nie members yet",
-        "no_results": "Nie results found",
-        "removed": "Usuńd",
-        "select_items": "Wybierz Items",
-        "selected_items": "Wybrano Items",
-        "type_to_search": "Typ at least {min} characters to search",
-        "type_to_search_hint": "Typ at least 2 characters to search",
+        "add_new": "Dodaj nowy",
+        "added": "Dodano",
+        "manage_members": "Zarządzaj członkami",
+        "no_members": "Brak członków",
+        "no_results": "Nie znaleziono wyników",
+        "removed": "Usunięto",
+        "select_items": "Wybierz elementy",
+        "selected_items": "Wybrane elementy",
+        "type_to_search": "Wpisz co najmniej {min} znaków aby wyszukać",
+        "type_to_search_hint": "Wpisz co najmniej 2 znaki aby wyszukać",
         "undo": "Cofnij"
     },
     "error": {
@@ -2015,46 +2040,46 @@
         "select": "Wybierz"
     },
     "group_form": {
-        "heading": "Grupa Form",
-        "title": "Grupa Form"
+        "heading": "Formularz grupy",
+        "title": "Formularz grupy"
     },
     "group_members": {
-        "heading": "Grupa Members",
-        "title": "Grupa Members"
+        "heading": "Członkowie grupy",
+        "title": "Członkowie grupy"
     },
     "group_permissions": {
-        "permission_matrix": "Uprawnienie Matrix",
-        "queue_permissions": "Kolejka Uprawnienia",
+        "permission_matrix": "Matryca uprawnień",
+        "queue_permissions": "Uprawnienia kolejki",
         "queues": "Kolejki",
-        "title": "Grupa Uprawnienia"
+        "title": "Uprawnienia grupy"
     },
     "group_view": {
-        "heading": "Grupa Szczegóły",
+        "heading": "Szczegóły grupy",
         "title": "Grupa"
     },
     "groups": {
-        "add_group": "Dodaj Grupa",
-        "add_user": "Dodaj Użytkownik to Grupa",
-        "add_user_btn": "Dodaj Użytkownik",
-        "confirm_delete": "Are you sure you want to delete this group?",
-        "current_members": "Aktualni Członkowie",
-        "delete_success": "Grupa deleted successfully",
+        "add_group": "Dodaj grupę",
+        "add_user": "Dodaj użytkownika do grupy",
+        "add_user_btn": "Dodaj użytkownika",
+        "confirm_delete": "Czy na pewno chcesz usunąć tę grupę?",
+        "current_members": "Aktualni członkowie",
+        "delete_success": "Grupa usunięta pomyślnie",
         "group": "Grupa",
-        "group_form": "Grupa Form",
-        "group_members": "Grupa Members",
-        "loading_members": "Ładowanie members...",
-        "members": "Grupa Members",
-        "save_success": "Grupa saved successfully",
-        "select_user": "Wybierz a user to add",
+        "group_form": "Formularz grupy",
+        "group_members": "Członkowie grupy",
+        "loading_members": "Ładowanie członków...",
+        "members": "Członkowie grupy",
+        "save_success": "Grupa zapisana pomyślnie",
+        "select_user": "Wybierz użytkownika do dodania",
         "tooltips": {
-            "add_new": "Dodaj a new group to the system",
-            "clear_filters": "Wyczyść all filters",
-            "clear_search": "Wyczyść search",
-            "delete": "Usuń group",
-            "edit": "Edytuj group",
-            "manage_permissions": "Manage permissions",
-            "remove_user": "Usuń user from group",
-            "system_group_no_delete": "System groups cannot be deleted"
+            "add_new": "Dodaj nową grupę do systemu",
+            "clear_filters": "Wyczyść wszystkie filtry",
+            "clear_search": "Wyczyść wyszukiwanie",
+            "delete": "Usuń grupę",
+            "edit": "Edytuj grupę",
+            "manage_permissions": "Zarządzaj uprawnieniami",
+            "remove_user": "Usuń użytkownika z grupy",
+            "system_group_no_delete": "Grupy systemowe nie mogą być usunięte"
         }
     },
     "incidents": {
@@ -2122,8 +2147,8 @@
         "modified": "Zmodyfikowane",
         "name": "Nazwa",
         "no": "Nie",
-        "no_results_found": "Nie results found",
-        "no_tickets_found": "Nie tickets found",
+        "no_results_found": "Nie znaleziono wyników",
+        "no_tickets_found": "Nie znaleziono zgłoszeń",
         "none": "Brak",
         "notes": "Notatki",
         "phone": "Telefon",
@@ -2145,119 +2170,119 @@
     "messages": {
         "access_denied": "Odmowa dostępu",
         "changes_saved": "Zmiany zapisane pomyślnie",
-        "code_copied": "Code copied to clipboard!",
+        "code_copied": "Kod skopiowany do schowka!",
         "confirm": {
-            "activate_acl": "Are you sure you want to activate",
-            "activate_company": "Are you sure you want to activate this company? This will alniski users from this company to access the portal.",
-            "activate_item": "Are you sure you want to activate this item?",
-            "activate_service": "Are you sure you want to activate this service?",
-            "activate_sla": "Are you sure you want to activate this SLA?",
-            "bulk_action": "Are you sure you want to {action} {count} customer user(s)?",
-            "bulk_delete_customer_users": "Are you sure you want to delete the selected customer user(s)?",
-            "bulk_disable_customer_users": "Are you sure you want to disable the selected customer user(s)?",
-            "bulk_enable_customer_users": "Are you sure you want to enable the selected customer user(s)?",
-            "deactivate_acl": "Are you sure you want to deactivate",
-            "deactivate_company": "Are you sure you want to deactivate this company? This will prevent all users from this company from accessing the portal.",
-            "deactivate_item": "Are you sure you want to deactivate this item?",
-            "deactivate_service": "Are you sure you want to deactivate this service?",
-            "deactivate_sla": "Are you sure you want to deactivate this SLA?",
-            "delete_attachment": "Are you sure you want to delete this attachment?",
-            "delete_bulk": "Are you sure you want to delete the selected item(s)? Tej akcji nie można cofnąć.",
-            "delete_customer_user": "Are you sure you want to delete this customer user? Tej akcji nie można cofnąć.",
-            "delete_dynamic_field": "Are you sure you want to delete this dynamic field? This will also delete all stored values for this field.",
-            "delete_filter_sets": "Usuń all saved filter sets?",
-            "delete_group": "Are you sure you want to delete this group?",
-            "delete_item": "Are you sure you want to delete this item?",
-            "delete_lookup": "Are you sure you want to delete this item? Tej akcji nie można cofnąć.",
-            "delete_priority": "Are you sure you want to delete this priority? Tej akcji nie można cofnąć.",
-            "delete_queue": "Are you sure you want to delete this queue? Wszystko tickets in this queue will need to be reassigned. Tej akcji nie można cofnąć.",
-            "delete_queue_simple": "Are you sure you want to delete this queue?",
-            "delete_queues_bulk": "Are you sure you want to delete the selected queue(s)?",
-            "delete_state": "Are you sure you want to delete this state?",
-            "delete_webservice": "Are you sure you want to delete this webservice? Tej akcji nie można cofnąć.",
-            "disable_customer_user": "Are you sure you want to disable this customer user?",
-            "disable_queue": "Are you sure you want to disable this queue?",
-            "enable_customer_user": "Are you sure you want to enable this customer user?",
-            "enable_queue": "Are you sure you want to enable this queue?",
-            "lock_ticket": "Are you sure you want to lock this ticket?",
-            "proceed_action": "Are you sure you want to proceed with this action?",
-            "remove_user_from_group": "Are you sure you want to remove this user from the group?",
-            "reset_config": "Are you sure you want to reset this configuration to its default value? Tej akcji nie można cofnąć.",
-            "toggle_customer_status": "Are you sure you want to {action} this customer user?",
-            "toggle_status_bulk": "Are you sure you want to toggle the status of the selected item(s)?"
+            "activate_acl": "Czy na pewno chcesz aktywować",
+            "activate_company": "Czy na pewno chcesz aktywować tę firmę? To pozwoli użytkownikom tej firmy na dostęp do portalu.",
+            "activate_item": "Czy na pewno chcesz aktywować ten element?",
+            "activate_service": "Czy na pewno chcesz aktywować tę usługę?",
+            "activate_sla": "Czy na pewno chcesz aktywować tę umowę SLA?",
+            "bulk_action": "Czy na pewno chcesz {action} {count} użytkownika(-ów) klienta?",
+            "bulk_delete_customer_users": "Czy na pewno chcesz usunąć wybranych użytkowników klienta?",
+            "bulk_disable_customer_users": "Czy na pewno chcesz wyłączyć wybranych użytkowników klienta?",
+            "bulk_enable_customer_users": "Czy na pewno chcesz włączyć wybranych użytkowników klienta?",
+            "deactivate_acl": "Czy na pewno chcesz dezaktywować",
+            "deactivate_company": "Czy na pewno chcesz dezaktywować tę firmę? To uniemożliwi wszystkim użytkownikom tej firmy dostęp do portalu.",
+            "deactivate_item": "Czy na pewno chcesz dezaktywować ten element?",
+            "deactivate_service": "Czy na pewno chcesz dezaktywować tę usługę?",
+            "deactivate_sla": "Czy na pewno chcesz dezaktywować tę umowę SLA?",
+            "delete_attachment": "Czy na pewno chcesz usunąć ten załącznik?",
+            "delete_bulk": "Czy na pewno chcesz usunąć wybrane elementy? Tej akcji nie można cofnąć.",
+            "delete_customer_user": "Czy na pewno chcesz usunąć tego użytkownika klienta? Tej akcji nie można cofnąć.",
+            "delete_dynamic_field": "Czy na pewno chcesz usunąć to pole dynamiczne? Spowoduje to również usunięcie wszystkich przechowywanych wartości dla tego pola.",
+            "delete_filter_sets": "Usunąć wszystkie zapisane zestawy filtrów?",
+            "delete_group": "Czy na pewno chcesz usunąć tę grupę?",
+            "delete_item": "Czy na pewno chcesz usunąć ten element?",
+            "delete_lookup": "Czy na pewno chcesz usunąć ten element? Tej akcji nie można cofnąć.",
+            "delete_priority": "Czy na pewno chcesz usunąć ten priorytet? Tej akcji nie można cofnąć.",
+            "delete_queue": "Czy na pewno chcesz usunąć tę kolejkę? Wszystkie zgłoszenia w tej kolejce będą musiały zostać ponownie przypisane. Tej akcji nie można cofnąć.",
+            "delete_queue_simple": "Czy na pewno chcesz usunąć tę kolejkę?",
+            "delete_queues_bulk": "Czy na pewno chcesz usunąć wybrane kolejki?",
+            "delete_state": "Czy na pewno chcesz usunąć ten stan?",
+            "delete_webservice": "Czy na pewno chcesz usunąć tę usługę webową? Tej akcji nie można cofnąć.",
+            "disable_customer_user": "Czy na pewno chcesz wyłączyć tego użytkownika klienta?",
+            "disable_queue": "Czy na pewno chcesz wyłączyć tę kolejkę?",
+            "enable_customer_user": "Czy na pewno chcesz włączyć tego użytkownika klienta?",
+            "enable_queue": "Czy na pewno chcesz włączyć tę kolejkę?",
+            "lock_ticket": "Czy na pewno chcesz zablokować to zgłoszenie?",
+            "proceed_action": "Czy na pewno chcesz kontynuować tę akcję?",
+            "remove_user_from_group": "Czy na pewno chcesz usunąć tego użytkownika z grupy?",
+            "reset_config": "Czy na pewno chcesz zresetować tę konfigurację do wartości domyślnej? Tej akcji nie można cofnąć.",
+            "toggle_customer_status": "Czy na pewno chcesz {action} tego użytkownika klienta?",
+            "toggle_status_bulk": "Czy na pewno chcesz zmienić status wybranych elementów?"
         },
         "confirm_action": "Czy na pewno chcesz wykonać tę akcję?",
         "confirm_delete": "Czy na pewno chcesz usunąć ten element?",
-        "confirm_delete_ticket": "Are you sure you want to delete this ticket? Tej akcji nie można cofnąć.",
-        "confirm_remove_user_from_role": "Are you sure you want to remove this user from the role?",
-        "connection_test_failed": "Connection test failed",
-        "connection_test_success": "Connection test successful!",
-        "error_loading_agents": "Błąd loading agents",
-        "error_loading_columns": "Błąd loading columns",
-        "error_loading_config": "Błąd loading configuration details",
-        "error_loading_members": "Błąd loading members",
-        "error_loading_tables": "Błąd loading tables",
+        "confirm_delete_ticket": "Czy na pewno chcesz usunąć to zgłoszenie? Tej akcji nie można cofnąć.",
+        "confirm_remove_user_from_role": "Czy na pewno chcesz usunąć tego użytkownika z roli?",
+        "connection_test_failed": "Test połączenia nie powiódł się",
+        "connection_test_success": "Test połączenia udany!",
+        "error_loading_agents": "Błąd ładowania agentów",
+        "error_loading_columns": "Błąd ładowania kolumn",
+        "error_loading_config": "Błąd ładowania szczegółów konfiguracji",
+        "error_loading_members": "Błąd ładowania członków",
+        "error_loading_tables": "Błąd ładowania tabel",
         "error_occurred": "Wystąpił błąd",
-        "error_saving_field": "Błąd saving field",
+        "error_saving_field": "Błąd zapisywania pola",
         "error_saving_permissions": "Błąd podczas zapisywania uprawnień",
         "error_saving_preferences": "Błąd podczas zapisywania preferencji",
         "error_saving_profile": "Błąd podczas zapisywania profilu",
         "error_saving": "Błąd podczas zapisywania zmian",
-        "error_screen_config": "Failed to update screen configuration",
-        "error_testing_connection": "Błąd testing connection",
-        "failed_add_user": "Failed to add user",
-        "failed_delete_signature": "Failed to delete signature",
-        "failed_remove_user": "Failed to remove user",
-        "failed_save_field": "Failed to save field",
-        "failed_update_screen_config": "Failed to update screen configuration",
-        "failed_update_services": "Failed to update services",
+        "error_screen_config": "Nie udało się zaktualizować konfiguracji ekranu",
+        "error_testing_connection": "Błąd testowania połączenia",
+        "failed_add_user": "Nie udało się dodać użytkownika",
+        "failed_delete_signature": "Nie udało się usunąć podpisu",
+        "failed_remove_user": "Nie udało się usunąć użytkownika",
+        "failed_save_field": "Nie udało się zapisać pola",
+        "failed_update_screen_config": "Nie udało się zaktualizować konfiguracji ekranu",
+        "failed_update_services": "Nie udało się zaktualizować usług",
         "groups": {
-            "select_user": "Please select a user to add"
+            "select_user": "Proszę wybrać użytkownika do dodania"
         },
         "info": "Informacja",
         "item_created": "Element utworzony pomyślnie",
         "item_deleted": "Element usunięty pomyślnie",
         "item_updated": "Element zaktualizowany pomyślnie",
         "loading": "Ładowanie...",
-        "loading_customer_users": "Ładowanie customer users...",
+        "loading_customer_users": "Ładowanie użytkowników klientów...",
         "network_error": "Błąd sieci",
-        "no_agents_available": "Nie agents available",
+        "no_agents_available": "Brak dostępnych agentów",
         "no_data": "Brak dostępnych danych",
         "no_results": "Nie znaleziono wyników",
-        "no_selection": "Nie Wybierzion",
-        "not_enough_tickets": "Niet Enough Zgłoszenia",
+        "no_selection": "Brak wyboru",
+        "not_enough_tickets": "Niewystarczająca liczba zgłoszeń",
         "operation_failed": "Operacja nie powiodła się",
         "page_not_found": "Strona nie znaleziona",
-        "please_enter_close_notes": "Please enter close notes",
-        "please_enter_note_content": "Please enter note content.",
-        "please_enter_reopen_reason": "Please enter a reason for reopening",
+        "please_enter_close_notes": "Proszę wprowadzić notatki zamknięcia",
+        "please_enter_note_content": "Proszę wprowadzić treść notatki.",
+        "please_enter_reopen_reason": "Proszę wprowadzić powód ponownego otwarcia",
         "please_enter_sql_query": "Proszę wprowadzić zapytanie SQL",
         "please_select": "Proszę wybrać",
         "please_select_agent": "Proszę wybrać agenta",
-        "please_select_both_users": "Please select both source and target users",
-        "please_select_ticket": "Please select at least one ticket",
+        "please_select_both_users": "Proszę wybrać zarówno użytkownika źródłowego jak i docelowego",
+        "please_select_ticket": "Proszę wybrać co najmniej jedno zgłoszenie",
         "please_select_user": "Proszę wybrać użytkownika",
         "please_wait": "Proszę czekać...",
         "processing": "Przetwarzanie...",
         "required_fields": "Wypełnij wszystkie wymagane pola",
-        "save_company_before_services": "Zapisz the company before assigning services.",
-        "save_company_first": "Zapisz the company before assigning services.",
+        "save_company_before_services": "Zapisz firmę przed przypisaniem usług.",
+        "save_company_first": "Zapisz firmę przed przypisaniem usług.",
         "saving": "Zapisywanie...",
-        "select_at_least_one_queue": "Please select at least one queue",
-        "select_template_type": "Please select at least one template type.",
-        "select_two_to_merge": "Please select at least two tickets to merge",
+        "select_at_least_one_queue": "Proszę wybrać co najmniej jedną kolejkę",
+        "select_template_type": "Proszę wybrać co najmniej jeden typ szablonu.",
+        "select_two_to_merge": "Proszę wybrać co najmniej dwa zgłoszenia do scalenia",
         "server_error": "Błąd serwera",
-        "services_updated": "Usługi updated successfully",
-        "services_updated_success": "Usługi updated successfully",
+        "services_updated": "Usługi zaktualizowane pomyślnie",
+        "services_updated_success": "Usługi zaktualizowane pomyślnie",
         "session_expired": "Twoja sesja wygasła",
         "success": "Sukces",
         "unauthorized": "Nieautoryzowany",
         "unknown_error": "Nieznany błąd",
         "validation": {
-            "please_enter_content": "Please enter content",
+            "please_enter_content": "Proszę wprowadzić treść",
             "please_enter_query": "Proszę wprowadzić zapytanie",
             "please_enter_subject": "Proszę wprowadzić temat",
-            "please_select_state": "Please select a state"
+            "please_select_state": "Proszę wybrać stan"
         },
         "validation_error": "Błąd walidacji",
         "warning": "Ostrzeżenie"
@@ -2296,15 +2321,18 @@
         "push_notifications": "Powiadomienia push",
         "reminder": {
             "dismiss": "Odrzuć przypomnienie",
+            "dismiss_all": "Odrzuć wszystkie",
             "due_in": "Termin za",
-            "open_ticket": "Otwórz Zgłoszenie",
-            "overdue_by": "Przeterminowany by",
-            "reminder_at": "Reminder at",
+            "open_ticket": "Otwórz zgłoszenie",
+            "overdue_by": "Przeterminowany o",
+            "reminder_at": "Przypomnienie o",
             "reminder_ready": "Przypomnienie gotowe",
-            "snooze_failed": "Failed to snooze reminder",
+            "reminders": "przypomnienia",
+            "snooze_failed": "Nie udało się odłożyć przypomnienia",
+            "snoozed": "Odłożone",
             "snoozed_until": "Przypomnienie odłożone do",
             "ticket_label": "Zgłoszenie",
-            "ticket_reminder": "Zgłoszenie reminder"
+            "ticket_reminder": "Przypomnienie o zgłoszeniu"
         },
         "settings": "Ustawienia powiadomień",
         "sound": "Dźwięk",
@@ -2313,10 +2341,10 @@
     "pages": {
         "agent": {
             "dashboard": {
-                "title": "Agent Panel"
+                "title": "Panel agenta"
             },
             "queues": {
-                "description": "Wyświetl and manage ticket queues assigned to you",
+                "description": "Przeglądaj i zarządzaj kolejkami zgłoszeń przypisanymi do Ciebie",
                 "title": "Zarządzanie kolejkami"
             },
             "tickets": {
@@ -2330,72 +2358,75 @@
     },
     "pagination": {
         "first": "Pierwszy",
-        "first_page": "Pierwszy page",
+        "first_page": "Pierwsza strona",
         "items": "elementy",
         "last": "Ostatni",
-        "last_page": "Ostatni page",
+        "last_page": "Ostatnia strona",
         "next": "Następny",
-        "next_page": "Dalej page",
+        "next_page": "Następna strona",
         "no_results": "Brak wyników do wyświetlenia",
         "of": "z",
         "page": "Strona",
         "per_page": "Na stronę",
         "previous": "Poprzedni",
-        "previous_page": "Poprzedni page",
+        "previous_page": "Poprzednia strona",
         "showing": "Wyświetlanie",
         "to": "do",
         "total": "wszystkich"
     },
     "permissions": {
-        "change_priority": "Change Priorytet",
+        "group": "Grupa",
+        "clone_user_permissions": "Klonuj uprawnienia użytkownika",
+        "change_priority": "Zmień priorytet",
         "debug_heading": "DEBUG - Uprawnienia",
         "debug_permissions": "DEBUG - Uprawnienia",
-        "description": "Manage user permissions across groups (OTRS Rola Management)",
-        "error_saving": "Błąd saving permissions",
+        "description": "Zarządzanie uprawnieniami użytkowników w grupach (zarządzanie rolami w stylu OTRS)",
+        "error_saving": "Błąd zapisywania uprawnień",
         "groups": "Grupy:",
         "groups_heading": "Grupy:",
-        "heading": "Uprawnienie Management",
-        "matrix_heading": "Uprawnienie Matrix",
-        "no_data": "Nie permissions data available",
-        "no_user_selected": "Nie user selected",
-        "permission_matrix": "Uprawnienie Matrix",
-        "please_select_user": "Please select a user to view permissions.",
-        "select_group": "Please select a group to modify",
-        "select_user": "Wybierz a user to view permissions",
-        "simple_test": "Simple Uprawnienia Test",
-        "standalone_heading": "Uprawnienie Management",
-        "title": "Uprawnienie Management",
+        "heading": "Zarządzanie uprawnieniami",
+        "matrix_heading": "Matryca uprawnień",
+        "no_data": "Brak danych o uprawnieniach",
+        "no_user_selected": "Nie wybrano użytkownika",
+        "permission_matrix": "Matryca uprawnień",
+        "please_select_user": "Proszę wybrać użytkownika, aby wyświetlić uprawnienia.",
+        "select_group": "Proszę wybrać grupę do modyfikacji",
+        "select_user": "Wybierz użytkownika, aby wyświetlić uprawnienia",
+        "simple_test": "Prosty test uprawnień",
+        "standalone_heading": "Zarządzanie uprawnieniami",
+        "title": "Zarządzanie uprawnieniami",
         "tooltips": {
-            "clear_all_group": "Wyczyść all permissions for this group",
-            "clone": "Clone permissions from one user to another",
-            "create": "Utwórz tickets",
-            "grant_all": "Wybierzing this will grant all permissions",
-            "move_into": "Move tickets into queue",
-            "note": "Dodaj notes",
-            "owner": "Zostań właścicielem",
-            "priority": "Change priority",
-            "ro": "Odczyt Only",
-            "select_all_group": "Zaznacz wszystko permissions for this group"
+            "clear_all_group": "Wyczyść wszystkie uprawnienia dla tej grupy",
+            "clone": "Klonuj uprawnienia z jednego użytkownika do drugiego",
+            "create": "Tworzenie zgłoszeń",
+            "grant_all": "Wybranie tego przyzna wszystkie uprawnienia",
+            "move_into": "Przenoszenie zgłoszeń do kolejki",
+            "note": "Dodawanie notatek",
+            "owner": "Zostanie właścicielem",
+            "priority": "Zmiana priorytetu",
+            "ro": "Tylko do odczytu",
+            "select_all_group": "Zaznacz wszystkie uprawnienia dla tej grupy"
         },
-        "user_selection": "Użytkownik Wybierzion",
+        "user_selection": "Wybór użytkownika",
         "users": "Użytkownicy:",
         "users_heading": "Użytkownicy:",
-        "working_heading": "Uprawnienie Management"
+        "working_heading": "Zarządzanie uprawnieniami",
+        "clone_permissions": "Klonuj uprawnienia"
     },
     "permissions_working": {
-        "title": "Uprawnienie Management"
+        "title": "Zarządzanie uprawnieniami"
     },
     "placeholders": {
-        "contains": "Contains...",
-        "note_subject": "Nietatka subject",
-        "separate_emails": "Separate multiple emails with commas"
+        "contains": "Zawiera...",
+        "note_subject": "Temat notatki",
+        "separate_emails": "Oddziel wiele adresów e-mail przecinkami"
     },
     "priorities": {
-        "heading": "Priorytet Management",
-        "priorities_management": "Priorytety Management",
-        "title": "Priorytet Management",
+        "heading": "Zarządzanie priorytetami",
+        "priorities_management": "Zarządzanie priorytetami",
+        "title": "Zarządzanie priorytetami",
         "tooltips": {
-            "edit": "Edytuj priority"
+            "edit": "Edytuj priorytet"
         }
     },
     "password": {
@@ -2414,8 +2445,8 @@
     },
     "priority": {
         "critical": "Krytyczny",
-        "form_heading": "Priorytet Szczegóły",
-        "heading": "Priorytety Management",
+        "form_heading": "Szczegóły priorytetu",
+        "heading": "Zarządzanie priorytetami",
         "high": "Wysoki",
         "low": "Niski",
         "medium": "Średni",
@@ -2438,10 +2469,10 @@
     },
     "queue": {
         "stats": {
-            "closed_tickets": "Zamknięty",
-            "open_tickets": "Otwórz Zgłoszenia",
-            "pending_tickets": "Oczekujący",
-            "total_tickets": "Suma Zgłoszenia"
+            "closed_tickets": "Zamknięte",
+            "open_tickets": "Otwarte zgłoszenia",
+            "pending_tickets": "Oczekujące",
+            "total_tickets": "Wszystkie zgłoszenia"
         }
     },
     "queue_access": {
@@ -2466,17 +2497,17 @@
         "Spam and junk emails": "Spam i niechciane e-maile"
     },
     "queue_detail": {
-        "back_to_queues": "Wstecz to Kolejki",
-        "description": "Kolejka Szczegóły and Statystyki",
-        "group_id": "Grupa ID",
-        "no_description": "Nie description available",
-        "no_tickets": "Nie tickets in this queue",
-        "queue_id": "Kolejka ID",
-        "queue_name": "Kolejka Nazwa",
-        "recent_tickets": "Recent Zgłoszenia",
-        "ticket_assignments_heading": "Zgłoszenie Assignments",
-        "ticket_list_heading": "Zgłoszenia in Kolejka",
-        "tickets_in_queue": "Zgłoszenia in this queue",
+        "back_to_queues": "Powrót do kolejek",
+        "description": "Szczegóły i statystyki kolejki",
+        "group_id": "ID grupy",
+        "no_description": "Brak dostępnego opisu",
+        "no_tickets": "Brak zgłoszeń w tej kolejce",
+        "queue_id": "ID kolejki",
+        "queue_name": "Nazwa kolejki",
+        "recent_tickets": "Ostatnie zgłoszenia",
+        "ticket_assignments_heading": "Przypisania zgłoszeń",
+        "ticket_list_heading": "Zgłoszenia w kolejce",
+        "tickets_in_queue": "Zgłoszenia w tej kolejce",
         "title": "Kolejka"
     },
     "queues": {
@@ -2489,12 +2520,12 @@
         "escalation_rules": "Reguły eskalacji",
         "manage_description": "Zarządzanie przypisaniami kolejek i regułami routingu",
         "new_queue": "Nowa kolejka",
-        "no_description": "Nie description",
+        "no_description": "Brak opisu",
         "no_queues": "Brak kolejek",
-        "no_queues_available": "Nie queues available",
+        "no_queues_available": "Brak dostępnych kolejek",
         "no_queues_description": "Zacznij od utworzenia pierwszej kolejki",
-        "no_queues_found": "Nie queues found",
-        "open_count": "Otwórz",
+        "no_queues_found": "Nie znaleziono kolejek",
+        "open_count": "Otwarte",
         "queue_agents": "Agenci kolejki",
         "queue_description": "Opis kolejki",
         "queue_name": "Nazwa kolejki",
@@ -2506,95 +2537,102 @@
         "title": "Kolejki",
         "tooltips": {
             "edit": "Edytuj",
-            "email_configured": "E-mail configured",
-            "view_details": "Wyświetl details"
+            "email_configured": "E-mail skonfigurowany",
+            "view_details": "Wyświetl szczegóły"
         },
         "total_count": "Suma"
     },
     "realtime": {
-        "active_alerts": "Aktywny Alerts",
-        "heading": "Real-Czas Panel",
-        "no_tickets": "Nie tickets",
-        "queue_distribution": "Kolejka Distribution",
-        "queue_status": "Kolejka Status",
-        "recent_tickets": "Recent Zgłoszenia",
+        "active_alerts": "Aktywne alerty",
+        "heading": "Panel w czasie rzeczywistym",
+        "no_tickets": "Brak zgłoszeń",
+        "queue_distribution": "Rozkład kolejek",
+        "queue_status": "Status kolejki",
+        "recent_tickets": "Ostatnie zgłoszenia",
         "stats": {
-            "active_agents": "Aktywny Agenci",
-            "avg_response_time": "Avg Response Czas",
-            "open_tickets": "Otwórz Zgłoszenia"
+            "active_agents": "Aktywni agenci",
+            "avg_response_time": "Średni czas odpowiedzi",
+            "open_tickets": "Otwarte zgłoszenia"
         },
-        "ticket_volume": "Zgłoszenie Volume (24h)"
+        "ticket_volume": "Wolumen zgłoszeń (24h)"
     },
     "realtime_dashboard": {
-        "title": "Real-time Panel"
+        "title": "Panel w czasie rzeczywistym"
     },
     "roadmap": {
-        "current_phase": "Aktualna Faza",
+        "current_phase": "Aktualna faza",
         "enhancements_heading": "Ulepszenia",
-        "error_loading": "Błąd Ładowanie Roadmap",
-        "features_heading": "Features",
+        "error_loading": "Błąd ładowania mapy drogowej",
+        "features_heading": "Funkcje",
         "fixes_heading": "Poprawki błędów",
-        "heading": "Development Roadmap",
-        "module_checklist": "Module Checklist",
-        "module_health_status": "Module Health Status",
-        "other_heading": "Other Changes",
-        "performance_trends": "Performance Trends",
-        "quick_navigation": "Quick Navigation",
-        "recent_updates": "Recent Aktualizujs",
-        "title": "System Roadmap"
+        "heading": "Mapa drogowa rozwoju",
+        "module_checklist": "Lista kontrolna modułów",
+        "module_health_status": "Status zdrowia modułów",
+        "other_heading": "Inne zmiany",
+        "performance_trends": "Trendy wydajności",
+        "quick_navigation": "Szybka nawigacja",
+        "recent_updates": "Ostatnie aktualizacje",
+        "title": "Mapa drogowa systemu"
     },
     "role_permissions": {
         "tooltips": {
             "create": "Utwórz",
-            "move_into": "Move Into",
+            "move_into": "Przenieś do",
             "note": "Notatka",
             "owner": "Właściciel",
             "priority": "Priorytet",
-            "ro": "Odczyt Only",
+            "ro": "Tylko do odczytu",
             "select_all": "Zaznacz wszystko",
-            "select_none": "Wybierz Brak"
+            "select_none": "Odznacz wszystko"
         }
     },
     "role_users": {
-        "get_started": "Get started by adding users to this role.",
-        "heading": "Użytkownicy in Rola",
+        "get_started": "Zacznij od dodania użytkowników do tej roli.",
+        "heading": "Użytkownicy w roli",
         "modal": {
-            "add_user": "Dodaj Użytkownik",
-            "select_user": "Wybierz Użytkownik",
-            "title": "Dodaj Użytkownik to Rola"
+            "add_user": "Dodaj użytkownika",
+            "select_user": "Wybierz użytkownika",
+            "title": "Dodaj użytkownika do roli"
         },
-        "no_users": "Nie users assigned",
+        "no_users": "Brak przypisanych użytkowników",
         "tooltips": {
-            "remove": "Usuń from role"
+            "remove": "Usuń z roli"
         }
     },
     "roles": {
-        "add_role": "Dodaj Rola",
-        "description": "Manage system roles and their permissions (OTRS AdministratorRola equivalent)",
-        "edit_role": "Edytuj Rola",
-        "manage_users": "Manage Rola Użytkownicy",
-        "title": "Rola Management",
+        "add_role": "Dodaj rolę",
+        "create_new_role": "Utwórz nową rolę",
+        "update_role": "Aktualizuj rolę",
+        "description": "Zarządzanie rolami systemowymi i ich uprawnieniami (odpowiednik AdminRola w OTRS)",
+        "edit_role": "Edytuj rolę",
+        "manage_users": "Zarządzaj użytkownikami roli",
+        "title": "Zarządzanie rolami",
         "tooltips": {
-            "edit": "Edytuj role",
-            "manage_permissions": "Manage group permissions for this role",
-            "manage_users": "Manage users in this role"
-        }
+            "edit": "Edytuj rolę",
+            "manage_permissions": "Zarządzaj uprawnieniami grup dla tej roli",
+            "manage_users": "Zarządzaj użytkownikami w tej roli"
+        },
+        "create_role": "Utwórz rolę"
     },
     "schema_discovery": {
-        "available_tables": "Available Tables",
+        "available_tables": "Dostępne tabele",
         "heading": "Odkrywanie schematu",
-        "query_error": "Query Błąd",
-        "query_results": "Query Results",
-        "sql_explorer": "SQL Query Explorer",
-        "title": "Odkrywanie schematu"
+        "query_error": "Błąd zapytania",
+        "query_results": "Wyniki zapytania",
+        "sql_explorer": "Eksplorator zapytań SQL",
+        "title": "Odkrywanie schematu",
+        "generate_module": "Generuj moduł",
+        "save_module": "Zapisz moduł",
+        "view_columns": "Zobacz kolumny",
+        "generate": "Generuj"
     },
     "schema_monitoring": {
-        "alerts_heading": "Aktywny Alerts",
-        "heading": "Schema Discovery Monitor",
-        "loading_status": "Ładowanie module status...",
-        "module_health_status": "Module Health Status",
-        "performance_heading": "Performance Metrics",
-        "title": "Schema Monitoring"
+        "alerts_heading": "Aktywne alerty",
+        "heading": "Monitor odkrywania schematu",
+        "loading_status": "Ładowanie statusu modułu...",
+        "module_health_status": "Status zdrowia modułu",
+        "performance_heading": "Metryki wydajności",
+        "title": "Monitorowanie schematu"
     },
     "search": {
         "active_filters": "Aktywne filtry:",
@@ -2683,12 +2721,12 @@
     },
     "services": {
         "placeholders": {
-            "comments": "Opcjonalne comments",
+            "comments": "Opcjonalne komentarze",
             "name": "Wprowadź nazwę usługi"
         },
-        "title": "Usługa Management",
+        "title": "Zarządzanie usługami",
         "tooltips": {
-            "edit": "Edytuj Usługa"
+            "edit": "Edytuj usługę"
         }
     },
     "settings": {
@@ -2797,7 +2835,7 @@
             "add": "Dodaj",
             "new": "Nowa umowa SLA"
         },
-        "add_new": "Dodaj new SLA",
+        "add_new": "Dodaj nową umowę SLA",
         "add_sla": "Dodaj SLA",
         "calendar": "Kalendarz",
         "create_success": "Umowa SLA utworzona pomyślnie",
@@ -2829,7 +2867,7 @@
             "update_time_help": "Maksymalny czas między aktualizacjami",
             "valid": "Ważny"
         },
-        "form_heading": "SLA Konfiguracja",
+        "form_heading": "Konfiguracja SLA",
         "hours": "godziny",
         "list": {
             "actions": "Akcje",
@@ -2850,9 +2888,9 @@
         "singular": "SLA",
         "title": "Umowy SLA",
         "tooltips": {
-            "add_new": "Dodaj new SLA",
-            "apply_filters": "Zastosuj filters",
-            "clear_filters": "Wyczyść all filters",
+            "add_new": "Dodaj nową umowę SLA",
+            "apply_filters": "Zastosuj filtry",
+            "clear_filters": "Wyczyść wszystkie filtry",
             "edit": "Edytuj SLA"
         },
         "update_success": "Umowa SLA zaktualizowana pomyślnie",
@@ -2869,9 +2907,9 @@
         "description": "Zarządzanie stanami zgłoszeń",
         "edit": "Edytuj stan",
         "edit_title": "Edytuj stan zgłoszenia",
-        "form_heading": "Stan Szczegóły",
+        "form_heading": "Szczegóły stanu",
         "general": "Ogólny stan",
-        "heading": "Stany Management",
+        "heading": "Zarządzanie stanami",
         "invalid_id": "Nieważny",
         "list": {
             "actions": "Akcje",
@@ -2903,7 +2941,7 @@
         "valid_id": "Ważność"
     },
     "states": {
-        "heading": "Stany Management"
+        "heading": "Zarządzanie stanami"
     },
     "status": {
         "active": "Aktywny",
@@ -3197,9 +3235,9 @@
         "watch_success": "Zacząłeś obserwować to zgłoszenie"
     },
     "ticket_detail": {
-        "additional_information": "Dodajitional Informacjarmation",
+        "additional_information": "Dodatkowe informacje",
         "history": "Historia",
-        "links": "Links"
+        "links": "Linki"
     },
     "ticket_overview": {
         "active": "Aktywne",
@@ -3265,7 +3303,7 @@
     "tickets": {
         "actions": "Akcje",
         "add_comment": "Dodaj komentarz",
-        "add_internal_note": "Dodaj Wewnętrzny Nietatka",
+        "add_internal_note": "Dodaj notatkę wewnętrzną",
         "add_note": "Dodaj notatkę",
         "additional_fields": "Dodatkowe pola",
         "additional_info_placeholder": "Dodatkowe informacje lub kontekst...",
@@ -3276,13 +3314,13 @@
         "all_priorities": "Wszystkie priorytety",
         "all_queues": "Wszystkie kolejki",
         "all_statuses": "Wszystkie statusy",
-        "all_tickets": "Wszystko Zgłoszenia",
-        "apply_df_filters": "Zastosuj DF Filtrujs",
+        "all_tickets": "Wszystkie zgłoszenia",
+        "apply_df_filters": "Zastosuj filtry pól dynamicznych",
         "article": "Artykuł",
         "articles": "Artykuły",
         "assign": "Przypisz",
         "assign_agent": "Przypisz agenta",
-        "assigned": "[PL] Assigned",
+        "assigned": "Przypisane",
         "assigned_to": "Przypisano do",
         "attachments": "Załączniki",
         "auto_close": {
@@ -3312,19 +3350,19 @@
         "comment_placeholder": "Wpisz swój komentarz tutaj...",
         "comments": "Komentarze",
         "communication": "Komunikacja",
-        "compose_reply": "Compose Odpowiedz",
+        "compose_reply": "Napisz odpowiedź",
         "created_at": "Utworzono",
         "created_by": "Utworzone przez",
         "created_on": "Utworzono dnia",
         "customer": "Klient",
-        "customer_directory": "Klient Directory",
+        "customer_directory": "Katalog klientów",
         "customer_id": "ID klienta",
         "customer_info": "Informacje o kliencie",
         "customer_visible_badge": "Widoczne dla klienta",
         "description": "Opis",
         "details": "Szczegóły",
         "due_date": "Termin",
-        "dynamic_field_filters": "Dynamic Field Filtrujs",
+        "dynamic_field_filters": "Filtry pól dynamicznych",
         "email": "E-mail",
         "escalate": "Eskaluj",
         "filter": "Filtruj",
@@ -3336,6 +3374,7 @@
         "internal_note": "Notatka wewnętrzna",
         "internal_note_default_subject": "Notatka",
         "internal_only_badge": "Tylko wewnętrzne",
+        "customer_wrote_badge": "Klient to napisał",
         "keep_current_state": "Zachowaj bieżący stan",
         "link": "Link",
         "linked_tickets": "Powiązane zgłoszenia",
@@ -3344,15 +3383,17 @@
         "loading_agents": "Ładowanie agentów...",
         "lock": "Zablokuj",
         "locked": "Zablokowane",
-        "matching_tickets": "matching tickets",
+        "matching_tickets": "pasujących zgłoszeń",
         "merge": "Scal",
         "merge_target_placeholder": "Wprowadź numer zgłoszenia do scalenia",
         "merge_ticket": "Scal zgłoszenie",
+        "merge_warning": "Ta akcja nie może być cofnięta. Wszystkie artykuły zostaną przeniesione do biletu docelowego.",
+        "target_ticket_number": "Numer zgłoszenia docelowego",
         "messages": "Wiadomości",
         "minutes": "Minuty",
         "miscellaneous": "Różne",
         "move_to_queue": "Przenieś do kolejki",
-        "my_tickets": "My Zgłoszenia",
+        "my_tickets": "Moje zgłoszenia",
         "new": {
             "email_ticket": "Nowe Zgłoszenie E-mail",
             "phone_ticket": "Nowe Zgłoszenie Telefoniczne"
@@ -3361,15 +3402,15 @@
         "next_state": "Następny stan",
         "next_state_help": "Wybierz stan, do którego zgłoszenie powinno przejść po przetworzeniu.",
         "no_customer_assigned": "Brak przypisanego klienta",
-        "no_tickets_found": "Nie tickets found matching your criteria",
+        "no_tickets_found": "Nie znaleziono zgłoszeń spełniających Twoje kryteria",
         "no_time_entries": "Brak wpisów czasu",
         "note": "Notatka",
         "note_content": "Treść notatki",
         "notes_updates": "Notatki i aktualizacje",
         "notify_close": "Powiadom klienta o zamknięciu zgłoszenia",
         "notify_reopen": "Powiadom klienta o ponownym otwarciu zgłoszenia",
-        "of": "of",
-        "on_this_page": "on this page",
+        "of": "z",
+        "on_this_page": "na tej stronie",
         "optional": "Opcjonalne",
         "overdue": "Przeterminowane",
         "owner": "Właściciel",
@@ -3392,7 +3433,7 @@
         "phone_call": "Rozmowa telefoniczna",
         "print": "Drukuj",
         "priority": "Priorytet",
-        "priority_short": "[PL] Prio",
+        "priority_short": "Prio",
         "queue": "Kolejka",
         "remove_priority_filter": "Usuń filtr priorytetu",
         "remove_queue_filter": "Usuń filtr kolejki",
@@ -3406,22 +3447,22 @@
         "resolution": "Rozwiązanie",
         "resolution_placeholder": "Opisz rozwiązanie lub zastosowane działanie...",
         "responsible": "Odpowiedzialny",
-        "search_placeholder": "Szukaj by ticket number, title, or customer...",
+        "search_placeholder": "Szukaj po numerze zgłoszenia, temacie lub kliencie...",
         "search_placeholder_list": "Szukaj zgłoszeń po ID, temacie, kliencie...",
-        "search_results_heading": "Szukaj Results",
-        "search_tickets": "Szukaj Zgłoszenia",
+        "search_results_heading": "Wyniki wyszukiwania",
+        "search_tickets": "Szukaj zgłoszeń",
         "select_agent": "Wybierz agenta",
         "select_all": "Zaznacz wszystko",
-        "select_all_matching": "Zaznacz wszystko matching tickets",
-        "select_for_bulk_actions": "Wybierz tickets to use bulk actions",
+        "select_all_matching": "Zaznacz wszystkie pasujące zgłoszenia",
+        "select_for_bulk_actions": "Wybierz zgłoszenia do operacji zbiorczych",
         "select_priority": "Wybierz priorytet...",
         "select_queue": "Wybierz kolejkę...",
         "select_status": "Wybierz status...",
-        "select_to_use_bulk": "Wybierz tickets to use bulk actions",
+        "select_to_use_bulk": "Wybierz zgłoszenia do operacji zbiorczych",
         "service": "Usługa",
-        "showing": "Showing",
-        "showing_of": "Showing {count} of {total} tickets",
-        "showing_of_total": "Showing %d of %d tickets",
+        "showing": "Wyświetlanie",
+        "showing_of": "Wyświetlanie {count} z {total} zgłoszeń",
+        "showing_of_total": "Wyświetlanie %d z %d zgłoszeń",
         "sla": "SLA",
         "spam": "Spam",
         "split": "Podziel",
@@ -3436,13 +3477,12 @@
             "ticket": "Zgłoszenie"
         },
         "target_state": "Stan docelowy",
-        "target_ticket_number": "Numer zgłoszenia docelowego",
         "ticket": "Zgłoszenie",
         "ticket_id": "ID zgłoszenia",
         "ticket_number": "Zgłoszenie #",
-        "ticket_selected": "zaznaczony ticket",
+        "ticket_selected": "zgłoszenie zaznaczone",
         "tickets": "zgłoszenia",
-        "tickets_selected": "zaznaczone tickety",
+        "tickets_selected": "zgłoszenia zaznaczone",
         "time_accounting": "Rozliczanie czasu",
         "time_spent_placeholder": "Czas poświęcony na rozwiązanie",
         "time_tracking": "Śledzenie czasu",
@@ -3454,7 +3494,7 @@
         "total_time": "Całkowity czas",
         "type": "Typ",
         "unassign": "Usuń przypisanie",
-        "unassigned": "Unassigned",
+        "unassigned": "Nieprzypisane",
         "unlock": "Odblokuj",
         "unlocked": "Odblokowane",
         "update_ticket": "Aktualizuj zgłoszenie",
@@ -3535,22 +3575,23 @@
         "yesterday": "Wczoraj"
     },
     "tooltips": {
-        "quick_assign": "Quick Assign",
-        "view_details": "Wyświetl Szczegóły"
+        "quick_assign": "Szybkie przypisanie",
+        "quick_priority": "Szybki priorytet",
+        "view_details": "Wyświetl szczegóły"
     },
     "types": {
-        "add_new_type": "Dodaj Niewy Typ",
+        "add_new_type": "Dodaj nowy typ",
         "default": "Domyślny typ",
         "email": "E-mail",
         "fax": "Faks",
-        "form_heading": "Typ Konfiguracja",
-        "heading": "Zgłoszenie Typ Management",
+        "form_heading": "Konfiguracja typu",
+        "heading": "Zarządzanie typami zgłoszeń",
         "note-internal": "Notatka wewnętrzna",
         "phone": "Telefon",
         "sms": "SMS",
-        "title": "Zgłoszenie Typs",
+        "title": "Typy zgłoszeń",
         "tooltips": {
-            "edit": "Edytuj type"
+            "edit": "Edytuj typ"
         },
         "web": "Sieć"
     },
@@ -3640,5 +3681,32 @@
     },
     "welcome": {
         "greeting": "Witamy"
+    },
+    "theme": {
+        "select_theme": "Motyw",
+        "appearance": "Wygląd",
+        "light": "Jasny",
+        "dark": "Ciemny",
+        "synthwave": "Synthwave",
+        "synthwave_desc": "Neonowy styl retro",
+        "classic": "Klasyczny",
+        "classic_desc": "Czysty i profesjonalny",
+        "seventies": "Klimat lat 70.",
+        "seventies_desc": "Ciepłe, ziemiste tony"
+    },
+    "attachments": {
+        "title": "Załączniki",
+        "add_new": "Dodaj załączniki",
+        "attach_files": "Dołącz pliki",
+        "click_to_upload": "Kliknij aby przesłać",
+        "or_drag_and_drop": "lub przeciągnij i upuść",
+        "file_types": "PDF, PNG, JPG, GIF, DOC, XLS, TXT (maks. 10MB)",
+        "file_too_large": "Plik za duży",
+        "no_attachments": "Nie znaleziono załączników",
+        "upload_success": "Załączniki przesłane pomyślnie",
+        "upload_error": "Nie udało się przesłać załącznika",
+        "view": "Zobacz",
+        "download": "Pobierz",
+        "delete": "Usuń"
     }
 }

@@ -108,6 +108,20 @@ func main() {
 		}
 	}
 
+	// Run database migrations automatically on startup
+	if db != nil {
+		log.Println("Running database migrations...")
+		applied, err := database.RunMigrations(db)
+		if err != nil {
+			log.Printf("⚠️  Migration warning: %v", err)
+			// Don't fail startup - migrations use IF NOT EXISTS patterns
+		} else if applied > 0 {
+			log.Printf("✅ Applied %d migration(s)", applied)
+		} else {
+			log.Println("✅ Database schema is up to date")
+		}
+	}
+
 	// Handle runner mode
 	if *mode == "runner" {
 		runRunner(db)

@@ -3,20 +3,19 @@
 {% block title %}{{ t("navigation.dashboard") }} - {{ t("app.name") }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
     <div class="md:flex md:items-center md:justify-between">
         <div class="min-w-0 flex-1">
-            <h2 class="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:truncate sm:text-3xl sm:tracking-tight">
-                {{ t("navigation.dashboard") }}
+            <h2 class="text-2xl font-bold leading-7 gk-heading sm:truncate sm:text-3xl sm:tracking-tight">
+                <span class="gk-text-gradient">{{ t("navigation.dashboard") }}</span>
             </h2>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p class="mt-1 text-sm" style="color: var(--gk-text-secondary);">
                 {{ t("dashboard.welcome_back") }}, {{ User.FirstName }}!
             </p>
         </div>
         <div class="mt-4 flex md:ml-4 md:mt-0">
-            <a href="/tickets/new"
-               class="ml-3 inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
+            <a href="/tickets/new" class="gk-btn-neon ml-3">
                 <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                 </svg>
@@ -32,49 +31,51 @@
          hx-target="this"
          hx-swap="innerHTML">
         <!-- Loading placeholder -->
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
+        <div class="gk-stat-card">
+            <dt class="gk-stat-label">{{ t("labels.loading")|default:"Loading..." }}</dt>
+            <dd class="gk-stat-value mt-1">-</dd>
         </div>
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
+        <div class="gk-stat-card">
+            <dt class="gk-stat-label">{{ t("labels.loading")|default:"Loading..." }}</dt>
+            <dd class="gk-stat-value mt-1">-</dd>
         </div>
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
+        <div class="gk-stat-card">
+            <dt class="gk-stat-label">{{ t("labels.loading")|default:"Loading..." }}</dt>
+            <dd class="gk-stat-value mt-1">-</dd>
         </div>
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">-</dd>
+        <div class="gk-stat-card">
+            <dt class="gk-stat-label">{{ t("labels.loading")|default:"Loading..." }}</dt>
+            <dd class="gk-stat-value mt-1">-</dd>
         </div>
     </div>
 
     <!-- Recent activity and queue status -->
     <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
         <!-- Recent tickets -->
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow">
-            <div class="p-6">
-                <h3 class="text-base font-semibold leading-6 text-gray-900 dark:text-white">{{ t("dashboard.recent_tickets") }}</h3>
-                <div class="mt-6 flow-root"
+        <div class="gk-card-glow">
+            <div class="gk-card-header">
+                <h3 class="gk-card-title">{{ t("dashboard.recent_tickets") }}</h3>
+            </div>
+            <div class="gk-card-body">
+                <div class="flow-root"
                      hx-get="/dashboard/api/recent-tickets"
                      hx-trigger="load"
                      hx-target="this"
                      hx-swap="innerHTML">
                     <!-- Loading placeholder -->
-                    <ul role="list" class="-my-5 divide-y divide-gray-200 dark:divide-gray-700">
+                    <ul role="list" class="-my-5 divide-y" style="border-color: var(--gk-border-default);">
                         <li class="py-4">
                             <div class="flex items-center space-x-4">
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ t("labels.loading")|default:"Loading..." }}</p>
-                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</p>
+                                    <p class="truncate text-sm font-medium" style="color: var(--gk-text-primary);">{{ t("labels.loading")|default:"Loading..." }}</p>
+                                    <p class="truncate text-sm" style="color: var(--gk-text-muted);">{{ t("labels.loading")|default:"Loading..." }}</p>
                                 </div>
                             </div>
                         </li>
                     </ul>
                 </div>
                 <div class="mt-6">
-                    <a href="/tickets" class="flex w-full items-center justify-center rounded-md bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
+                    <a href="/tickets" class="gk-link-neon flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-semibold" style="border: 1px solid var(--gk-border-default);">
                         {{ t("common.view_all") }}
                     </a>
                 </div>
@@ -82,19 +83,20 @@
         </div>
 
         <!-- Queue status -->
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow">
-            <div class="p-6">
-                <h3 class="text-base font-semibold leading-6 text-gray-900 dark:text-white">{{ t("queues.queue_status") }}</h3>
-                <div class="mt-6"
-                     hx-get="/dashboard/api/queue-status"
+        <div class="gk-card-glow">
+            <div class="gk-card-header">
+                <h3 class="gk-card-title">{{ t("queues.queue_status") }}</h3>
+            </div>
+            <div class="gk-card-body">
+                <div hx-get="/dashboard/api/queue-status"
                      hx-trigger="load"
                      hx-target="this"
                      hx-swap="innerHTML">
                     <!-- Loading placeholder -->
                     <dl class="space-y-4">
                         <div class="flex items-center justify-between">
-                            <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</dt>
-                            <dd class="text-sm text-gray-900 dark:text-white">-</dd>
+                            <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("labels.loading")|default:"Loading..." }}</dt>
+                            <dd class="text-sm" style="color: var(--gk-text-primary);">-</dd>
                         </div>
                     </dl>
                 </div>

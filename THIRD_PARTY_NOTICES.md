@@ -62,6 +62,35 @@ This file documents third-party libraries downloaded at Docker build time and bu
 - **URL**: https://tailwindcss.com/
 - **Files**: `static/css/output.css` (compiled at build time)
 
+## Fonts (Vendored)
+
+### Inter
+- **Version**: 4.x
+- **License**: SIL Open Font License 1.1
+- **URL**: https://rsms.me/inter/
+- **Source**: https://github.com/rsms/inter
+- **Files**: `static/fonts/inter/*.woff2`
+
+### Space Grotesk
+- **Version**: 2.x
+- **License**: SIL Open Font License 1.1
+- **URL**: https://fonts.google.com/specimen/Space+Grotesk
+- **Files**: `static/fonts/space-grotesk/*.woff2`
+
+### Righteous
+- **Version**: 1.x
+- **License**: SIL Open Font License 1.1
+- **URL**: https://fonts.google.com/specimen/Righteous
+- **Files**: `static/fonts/righteous/*.woff2`
+- **Usage**: 70s Vibes theme heading font
+
+### Nunito
+- **Version**: 3.x
+- **License**: SIL Open Font License 1.1
+- **URL**: https://fonts.google.com/specimen/Nunito
+- **Files**: `static/fonts/nunito/*.woff2`
+- **Usage**: 70s Vibes theme body font
+
 ## Build-Time Tools (not included in runtime)
 
 ### esbuild

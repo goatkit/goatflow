@@ -65,19 +65,7 @@ func HandleAgentNewTicket(db *sql.DB) gin.HandlerFunc {
 		}
 		// Fallback to querying directly if no context values
 		if queues == nil && queueErr == nil {
-			var userIDUint uint
-			if userID, exists := c.Get("user_id"); exists {
-				switch v := userID.(type) {
-				case int:
-					userIDUint = uint(v)
-				case int64:
-					userIDUint = uint(v)
-				case uint:
-					userIDUint = v
-				case uint64:
-					userIDUint = uint(v)
-				}
-			}
+			userIDUint := GetUserIDFromCtxUint(c, 0)
 			queues, queueErr = getQueuesForAgent(c.Request.Context(), db, userIDUint)
 		}
 		if queueErr != nil {

@@ -48,17 +48,11 @@ func HandleCreateArticleAPI(c *gin.Context) {
 			userIDVal = 1
 		}
 	}
-	// Normalize userID to int
-	userID := 1
-	switch v := userIDVal.(type) {
-	case int:
-		userID = v
-	case int64:
-		userID = int(v)
-	case uint:
-		userID = int(v)
-	case uint64:
-		userID = int(v)
+	// Normalize userID to int using helper (fallback to value from above if context missing)
+	userID := GetUserIDFromCtx(c, 1)
+	if userIDVal != nil {
+		// If we got a non-nil value above, the helper should have found it
+		_ = userIDVal // satisfies linter; helper already handled conversion
 	}
 
 	// Parse request body
@@ -470,11 +464,16 @@ func HandleCreateArticleAPI(c *gin.Context) {
 	if err != nil {
 		// Article was created but we can't fetch it, still return success
 		fallbackData := gin.H{
-			"id":             articleID,
-			"ticket_id":      ticketID,
-			"subject":        req.Subject,
-			"body":           req.Body,
-			"ticket_updated": true,
+			"id":                       articleID,
+			"ticket_id":                ticketID,
+			"subject":                  req.Subject,
+			"body":                     req.Body,
+			"content_type":             req.ContentType,
+			"article_sender_type_id":   senderTypeID,
+			"communication_channel_id": communicationChannelID,
+			"is_visible_for_customer":  isVisibleForCustomer == 1,
+			"create_by":                userID,
+			"ticket_updated":           true,
 		}
 
 		c.JSON(http.StatusCreated, gin.H{"success": true, "data": fallbackData})

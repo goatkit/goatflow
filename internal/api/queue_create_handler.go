@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -91,27 +90,8 @@ func HandleCreateQueueAPI(c *gin.Context) {
 		req.UnlockTimeout = 0
 	}
 
-	// Normalize user_id to int for DB parameters
-	var createdBy int
-	if uid, ok := userID.(int); ok {
-		createdBy = uid
-	} else if uid, ok := userID.(uint); ok {
-		createdBy = int(uid)
-	} else if uid, ok := userID.(int64); ok {
-		createdBy = int(uid)
-	} else if uid, ok := userID.(uint64); ok {
-		createdBy = int(uid)
-	} else if uid, ok := userID.(float64); ok { // very defensive
-		createdBy = int(uid)
-	} else if s, ok := userID.(string); ok {
-		if n, errAtoi := strconv.Atoi(s); errAtoi == nil {
-			createdBy = n
-		} else {
-			createdBy = 1
-		}
-	} else {
-		createdBy = 1
-	}
+	// Get user ID for DB parameters
+	createdBy := GetUserIDFromCtx(c, 1)
 
 	// Create queue - adapter handles MySQL vs PostgreSQL differences
 	// Note: ? is used for both create_by and change_by (repeated placeholder)

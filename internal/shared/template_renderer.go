@@ -154,24 +154,16 @@ func getUserFromContext(c *gin.Context, isAdmin bool) *models.User {
 	}
 
 	// Fall back to building user from individual context values
-	userID, hasID := c.Get("user_id")
-	if !hasID {
+	if _, hasID := c.Get("user_id"); !hasID {
 		return nil
 	}
 
-	user := &models.User{IsInAdminGroup: isAdmin}
-
-	// Set ID from context
-	switch id := userID.(type) {
-	case uint:
-		user.ID = id
-	case int:
-		user.ID = uint(id)
-	case int64:
-		user.ID = uint(id)
-	default:
+	userID := GetUserIDFromCtxUint(c, 0)
+	if userID == 0 {
 		return nil
 	}
+
+	user := &models.User{IsInAdminGroup: isAdmin, ID: userID}
 
 	// Set role
 	if role, ok := c.Get("user_role"); ok {

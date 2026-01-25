@@ -1085,7 +1085,13 @@
         "new_password": "Новий пароль",
         "confirm_password": "Підтвердіть пароль",
         "lookups": {
-            "description": "Керування довідковими даними"
+            "description": "Керування довідковими даними",
+            "add_priority": "Додати пріоритет",
+            "edit_priority": "Редагувати пріоритет",
+            "add_state": "Додати стан",
+            "edit_state": "Редагувати стан",
+            "add_type": "Додати тип",
+            "edit_type": "Редагувати тип"
         },
         "customer_user_groups": {
             "title": "Користувач-клієнт ↔ Групи",
@@ -1359,7 +1365,9 @@
         "username": "Ім'я користувача",
         "caps_lock_on": "Caps Lock увімкнено",
         "too_many_attempts": "Забагато невдалих спроб. Зачекайте",
-        "and_try_again": "і спробуйте знову."
+        "and_try_again": "і спробуйте знову.",
+        "username_placeholder": "Введіть ім'я користувача",
+        "password_placeholder": "Введіть пароль"
     },
     "buttons": {
         "add": "Додати",
@@ -1405,7 +1413,10 @@
         "view_all": "Показати все",
         "warning": "Попередження",
         "toggle_all": "Перемкнути все",
-        "select_all": "Вибрати все"
+        "select_all": "Вибрати все",
+        "disable": "Вимкнути",
+        "enable": "Увімкнути",
+        "save_changes": "Зберегти зміни"
     },
     "bulk_actions": {
         "change_status_title": "Змінити Статус Заявки",
@@ -1532,6 +1543,7 @@
         "close": "Закрити",
         "add": "Додати",
         "toggle_dark_mode": "Перемкнути темний режим",
+        "select_language": "Вибрати мову",
         "view": "Переглянути",
         "copy_details": "Копіювати деталі Guru",
         "copy_to_clipboard": "Копіювати в буфер обміну",
@@ -1572,7 +1584,9 @@
             "sign_in": "Увійти",
             "signing_in": "Виконується вхід...",
             "invalid_credentials": "Невірний логін або пароль",
-            "too_many_attempts": "Забагато спроб. Будь ласка, зачекайте %dс і спробуйте знову."
+            "too_many_attempts": "Забагато спроб. Будь ласка, зачекайте %dс і спробуйте знову.",
+            "login_placeholder": "Введіть логін або email",
+            "password_placeholder": "Введіть пароль"
         },
         "dashboard": {
             "welcome": "Ласкаво просимо до порталу підтримки",
@@ -2024,12 +2038,15 @@
         "reminder": {
             "ticket_reminder": "Нагадування про заявку",
             "reminder_ready": "Нагадування готове",
+            "reminders": "нагадування",
             "overdue_by": "Прострочено на",
             "due_in": "Термін через",
             "reminder_at": "Нагадування о",
             "open_ticket": "Відкрити заявку",
             "dismiss": "Відхилити нагадування",
+            "dismiss_all": "Відхилити всі",
             "ticket_label": "Заявка",
+            "snoozed": "Відкладено",
             "snoozed_until": "Нагадування відкладено до",
             "snooze_failed": "Не вдалося відкласти нагадування"
         }
@@ -2293,6 +2310,7 @@
         "internal_note_default_subject": "Нотатка",
         "customer_visible_badge": "Видно клієнту",
         "internal_only_badge": "Лише внутрішнє",
+        "customer_wrote_badge": "Клієнт написав це",
         "visible_for_customer": "Видно клієнту",
         "visible_for_customer_help": "Позначте, щоб показати це оновлення на клієнтському порталі.",
         "overdue": "Прострочено",
@@ -2352,6 +2370,9 @@
         "change_priority": "Змінити пріоритет",
         "move_to_queue": "Перемістити до черги",
         "merge_ticket": "Об'єднати заявку",
+        "merge_warning": "Цю дію не можна скасувати. Усі статті будуть переміщені до цільової заявки.",
+        "target_ticket_number": "Номер цільової заявки",
+        "merge_target_placeholder": "Введіть номер заявки для об'єднання",
         "select_agent": "Оберіть агента",
         "loading_agents": "Завантаження агентів...",
         "agents_with_permissions_only": "Показані лише агенти з правами для цієї черги",
@@ -2382,8 +2403,6 @@
         "pending_until": "Відкладено до",
         "pending_until_help": "Вкажіть, коли ця заявка повинна автоматично перевідкритися.",
         "pending_required": "Обов'язково для відкладених станів",
-        "target_ticket_number": "Номер цільової заявки",
-        "merge_target_placeholder": "Введіть номер заявки для об'єднання",
         "pending_reminder": {
             "overdue": "Нагадування прострочено",
             "scheduled": "Нагадування заплановано",
@@ -2582,6 +2601,7 @@
     },
     "tooltips": {
         "quick_assign": "Швидке призначення",
+        "quick_priority": "Швидкий пріоритет",
         "view_details": "Переглянути деталі"
     },
     "placeholders": {
@@ -2590,9 +2610,14 @@
         "contains": "Містить..."
     },
     "admin_dashboard": {
-        "key_metrics": "Ключові показники",
-        "system_health": "Стан системи",
-        "uptime_this_month": "час роботи цього місяця",
+        "activity": "Активність",
+        "tickets_closed": "закритих заявок",
+        "tickets_created": "створених заявок",
+        "tickets_open": "відкритих заявок",
+        "right_now": "зараз",
+        "last_24_hours": "останні 24 години",
+        "last_7_days": "останні 7 днів",
+        "last_30_days": "останні 30 днів",
         "system_administration": "Адміністрування системи",
         "user_management": "Керування користувачами",
         "user_management_desc": "Керування обліковими записами агентів та клієнтів",
@@ -2664,7 +2689,7 @@
         "queue_templates_desc": "Керування призначеннями шаблонів до черг",
         "template_attachments": "Вкладення шаблонів",
         "template_attachments_desc": "Керування призначеннями вкладень до шаблонів",
-        "activity": {
+        "recent_activity_items": {
             "user_created": "Обліковий запис користувача створено",
             "config_updated": "Налаштування системи оновлено",
             "logs_reviewed": "Журнали аудиту переглянуто"
@@ -2718,7 +2743,8 @@
             "disable": "Вимкнути користувача-клієнта",
             "enable": "Увімкнути користувача-клієнта",
             "delete": "Видалити користувача-клієнта"
-        }
+        },
+        "save_button": "Зберегти клієнта"
     },
     "admin_queues": {
         "no_queues": "Черги відсутні",
@@ -2739,6 +2765,8 @@
     "permissions": {
         "title": "Керування дозволами",
         "description": "Керування дозволами користувачів у групах (керування ролями OTRS)",
+        "group": "Група",
+        "clone_user_permissions": "Клонувати дозволи користувача",
         "no_data": "Дані про дозволи відсутні",
         "select_user": "Виберіть користувача для перегляду дозволів",
         "no_user_selected": "Користувача не вибрано",
@@ -2770,7 +2798,8 @@
         "standalone_heading": "Керування дозволами",
         "matrix_heading": "Матриця дозволів",
         "working_heading": "Керування дозволами",
-        "please_select_user": "Виберіть користувача для перегляду дозволів."
+        "please_select_user": "Виберіть користувача для перегляду дозволів.",
+        "clone_permissions": "Клонувати права"
     },
     "sla": {
         "title": "Керування SLA",
@@ -2789,13 +2818,16 @@
         "title": "Керування ролями",
         "description": "Керування системними ролями та їхніми дозволами (еквівалент OTRS AdminRole)",
         "add_role": "Додати роль",
+        "create_new_role": "Створити нову роль",
+        "update_role": "Оновити роль",
         "edit_role": "Редагувати роль",
         "tooltips": {
             "edit": "Редагувати роль",
             "manage_users": "Керувати користувачами в цій ролі",
             "manage_permissions": "Керувати дозволами групи для цієї ролі"
         },
-        "manage_users": "Керувати користувачами ролі"
+        "manage_users": "Керувати користувачами ролі",
+        "create_role": "Створити роль"
     },
     "services": {
         "title": "Керування послугами",
@@ -2822,7 +2854,9 @@
             "add_title": "Додати ACL",
             "match_conditions": "Умови відповідності (властивості)",
             "change_actions": "Змінити дії"
-        }
+        },
+        "no_acls_found": "ACL не знайдено",
+        "click_add_acl": "Натисніть \"Додати ACL\" щоб створити."
     },
     "customer_companies": {
         "title": "Компанії клієнтів",
@@ -2911,7 +2945,11 @@
         "sql_explorer": "Провідник SQL-запитів",
         "query_results": "Результати запиту",
         "query_error": "Помилка запиту",
-        "available_tables": "Доступні таблиці"
+        "available_tables": "Доступні таблиці",
+        "generate_module": "Створити модуль",
+        "save_module": "Зберегти модуль",
+        "view_columns": "Переглянути стовпці",
+        "generate": "Генерувати"
     },
     "schema_monitoring": {
         "title": "Моніторинг схеми",
@@ -3097,5 +3135,32 @@
             "pending_tickets": "В очікуванні",
             "closed_tickets": "Закрито"
         }
+    },
+    "theme": {
+        "select_theme": "Тема",
+        "appearance": "Зовнішній вигляд",
+        "light": "Світла",
+        "dark": "Темна",
+        "synthwave": "Synthwave",
+        "synthwave_desc": "Неоновий ретро стиль",
+        "classic": "Класична",
+        "classic_desc": "Чистий та професійний",
+        "seventies": "Стиль 70-х",
+        "seventies_desc": "Теплі земляні тони"
+    },
+    "attachments": {
+        "title": "Вкладення",
+        "add_new": "Додати вкладення",
+        "attach_files": "Прикріпити файли",
+        "click_to_upload": "Натисніть для завантаження",
+        "or_drag_and_drop": "або перетягніть",
+        "file_types": "PDF, PNG, JPG, GIF, DOC, XLS, TXT (макс. 10МБ)",
+        "file_too_large": "Файл занадто великий",
+        "no_attachments": "Вкладення не знайдено",
+        "upload_success": "Вкладення успішно завантажено",
+        "upload_error": "Помилка завантаження",
+        "view": "Переглянути",
+        "download": "Завантажити",
+        "delete": "Видалити"
     }
 }

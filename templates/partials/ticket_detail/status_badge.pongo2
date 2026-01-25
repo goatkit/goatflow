@@ -1,0 +1,18 @@
+{# Reusable Status Badge with Synthwave Styling #}
+{# Required variables: status #}
+
+{% if status == 'new' %}
+<span class="gk-badge gk-badge-success">{{ status|title }}</span>
+{% elif status == 'open' %}
+<span class="gk-badge gk-badge-primary">{{ status|title }}</span>
+{% elif status == 'pending' or status == 'pending reminder' or status == 'pending auto close' %}
+<span class="gk-badge gk-badge-warning">{{ status|title }}</span>
+{% elif status == 'closed' or status == 'closed successful' or status == 'closed unsuccessful' %}
+<span class="gk-badge gk-badge-muted">{{ status|title }}</span>
+{% elif status == 'merged' %}
+<span class="gk-badge gk-badge-secondary">{{ status|title }}</span>
+{% elif status == 'removed' %}
+<span class="gk-badge gk-badge-error">{{ status|title }}</span>
+{% else %}
+<span class="gk-badge gk-badge-primary">{{ status|title }}</span>
+{% endif %}

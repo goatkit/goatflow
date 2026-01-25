@@ -1,22 +1,22 @@
 <div id="ticket-history-fragment">
-    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ t("ticket_detail.history")|default:"History" }}</h3>
+    <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+        <h3 class="text-sm font-semibold" style="color: var(--gk-text-primary);">{{ t("ticket_detail.history")|default:"History" }}</h3>
     </div>
-    <div class="p-6 text-sm text-gray-700 dark:text-gray-300">
+    <div class="p-6 text-sm" style="color: var(--gk-text-secondary);">
         {% if history %}
             <ul class="space-y-2">
                 {% for h in history %}
                     <li class="flex justify-between">
                         <div>
-                            <div class="font-medium">{{ h.event }}</div>
-                            <div class="text-xs text-gray-500">{{ h.by }} • {{ h.when }}</div>
+                            <div class="font-medium" style="color: var(--gk-text-primary);">{{ h.event }}</div>
+                            <div class="text-xs" style="color: var(--gk-text-muted);">{{ h.by }} • {{ h.when }}</div>
                         </div>
-                        <div class="text-xs text-gray-500">{{ h.meta }}</div>
+                        <div class="text-xs" style="color: var(--gk-text-muted);">{{ h.meta }}</div>
                     </li>
                 {% endfor %}
             </ul>
         {% else %}
-            <div class="text-gray-500 dark:text-gray-400">No history available.</div>
+            <div style="color: var(--gk-text-muted);">No history available.</div>
         {% endif %}
     </div>
 </div>

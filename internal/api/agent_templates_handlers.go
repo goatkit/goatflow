@@ -235,14 +235,16 @@ func GetTicketTemplateVariables(ticketID int) map[string]string {
 	vars["CUSTOMER_UserEmail"] = ""
 
 	// Get customer user data if available
+	// Note: customer_user_id can be either the login OR the email address
 	if customerUserID.String != "" {
 		cuQuery := `
 			SELECT first_name, last_name, email
 			FROM customer_user
-			WHERE login = ?
+			WHERE login = ? OR email = ?
+			LIMIT 1
 		`
 		var firstName, lastName, email sql.NullString
-		err = db.QueryRow(database.ConvertPlaceholders(cuQuery), customerUserID.String).Scan(
+		err = db.QueryRow(database.ConvertPlaceholders(cuQuery), customerUserID.String, customerUserID.String).Scan(
 			&firstName, &lastName, &email,
 		)
 		if err == nil {

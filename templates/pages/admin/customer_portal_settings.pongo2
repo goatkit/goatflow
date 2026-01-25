@@ -1,62 +1,114 @@
 {% extends "layouts/base.pongo2" %}
 {% block title %}{{ t("customer_portal_settings.title")|default:"Customer Portal Settings" }} - Admin{% endblock %}
 {% block content %}
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-  <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">{{ t("customer_portal_settings.heading")|default:"Customer Portal Settings" }}</h1>
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow divide-y divide-gray-200 dark:divide-gray-700">
-    <form class="p-8 space-y-8" method="post" action="/admin/customer/portal/settings"
-      hx-post="/admin/customer/portal/settings" hx-target="#toast-container" hx-swap="beforeend" hx-push-url="false">
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <p class="text-sm font-medium text-gray-900 dark:text-white">Enable customer portal</p>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Gate the customer portal globally.</p>
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Page header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("customer_portal_settings.heading")|default:"Customer Portal Settings" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                    {{ t("customer_portal_settings.description")|default:"Configure customer portal access and display options" }}
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <a href="/admin" class="gk-btn-secondary">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ t("common.back") }}
+                </a>
+            </div>
         </div>
-        <label class="inline-flex items-center cursor-pointer px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-900/30 border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
-          <input type="hidden" name="enabled" value="0" />
-          <input type="checkbox" name="enabled" value="1" class="sr-only peer" {% if Settings.Enabled %}checked{% endif %}>
-          <span class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer dark:bg-gray-700 peer-checked:bg-blue-600 relative transition">
-            <span class="absolute top-0.5 left-[4px] w-5 h-5 bg-white rounded-full border border-gray-300 transition peer-checked:translate-x-full peer-checked:border-white"></span>
-          </span>
-        </label>
-      </div>
+    </header>
 
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <p class="text-sm font-medium text-gray-900 dark:text-white">Require login</p>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Force authentication before portal access.</p>
+    <div class="max-w-3xl">
+        <div class="gk-card-glow rounded-lg">
+            <form class="p-8 space-y-8" method="post" action="/admin/customer/portal/settings"
+                hx-post="/admin/customer/portal/settings" hx-target="#toast-container" hx-swap="beforeend" hx-push-url="false">
+
+                <!-- Enable Portal -->
+                <div class="flex items-center justify-between gap-4 pb-6 border-b" style="border-color: var(--gk-border);">
+                    <div>
+                        <p class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ t("customer_portal_settings.enable")|default:"Enable customer portal" }}</p>
+                        <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("customer_portal_settings.enable_help")|default:"Gate the customer portal globally." }}</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="hidden" name="enabled" value="0" />
+                        <input type="checkbox" name="enabled" value="1" class="sr-only peer" {% if Settings.Enabled %}checked{% endif %}>
+                        <div class="w-11 h-6 rounded-full peer transition-colors"
+                            style="background: var(--gk-bg-tertiary);"
+                            ></div>
+                        <div class="absolute left-[4px] top-0.5 w-5 h-5 bg-white rounded-full border transition peer-checked:translate-x-full peer-checked:border-white"
+                            style="border-color: var(--gk-border);"></div>
+                        <style>
+                            input:checked + div { background: var(--gk-primary) !important; }
+                        </style>
+                    </label>
+                </div>
+
+                <!-- Require Login -->
+                <div class="flex items-center justify-between gap-4 pb-6 border-b" style="border-color: var(--gk-border);">
+                    <div>
+                        <p class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ t("customer_portal_settings.require_login")|default:"Require login" }}</p>
+                        <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("customer_portal_settings.require_login_help")|default:"Force authentication before portal access." }}</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="hidden" name="login_required" value="0" />
+                        <input type="checkbox" name="login_required" value="1" class="sr-only peer" {% if Settings.LoginRequired %}checked{% endif %}>
+                        <div class="w-11 h-6 rounded-full peer transition-colors"
+                            style="background: var(--gk-bg-tertiary);"
+                            ></div>
+                        <div class="absolute left-[4px] top-0.5 w-5 h-5 bg-white rounded-full border transition peer-checked:translate-x-full peer-checked:border-white"
+                            style="border-color: var(--gk-border);"></div>
+                    </label>
+                </div>
+
+                <!-- Portal Title -->
+                <div class="pb-6 border-b" style="border-color: var(--gk-border);">
+                    <label for="title" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("customer_portal_settings.title_field")|default:"Portal title" }}
+                    </label>
+                    <input id="title" name="title" type="text" value="{{ Settings.Title }}"
+                        class="gk-input-neon w-full"
+                        placeholder="{{ t('customer_portal.placeholders.title')|default:'Customer Portal' }}" />
+                </div>
+
+                <!-- Footer Text -->
+                <div class="pb-6 border-b" style="border-color: var(--gk-border);">
+                    <label for="footer_text" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("customer_portal_settings.footer_text")|default:"Footer text" }}
+                    </label>
+                    <textarea id="footer_text" name="footer_text" rows="2"
+                        class="gk-input-neon w-full"
+                        placeholder="{{ t('customer_portal.placeholders.footer')|default:'Powered by GOTRS' }}">{{ Settings.FooterText }}</textarea>
+                </div>
+
+                <!-- Landing Page -->
+                <div class="pb-6 border-b" style="border-color: var(--gk-border);">
+                    <label for="landing_page" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("customer_portal_settings.landing_page")|default:"Landing page" }}
+                    </label>
+                    <input id="landing_page" name="landing_page" type="text" value="{{ Settings.LandingPage }}"
+                        class="gk-input-neon w-full"
+                        placeholder="/customer/tickets" />
+                    <p class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("customer_portal_settings.landing_page_help")|default:"Path relative to the customer portal root." }}</p>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex items-center justify-between pt-2">
+                    <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("customer_portal_settings.per_company_note")|default:"Per-company portal customization is not available in this build." }}</p>
+                    <button type="submit" class="gk-btn-neon">
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        {{ t("common.save") }}
+                    </button>
+                </div>
+            </form>
         </div>
-        <label class="inline-flex items-center cursor-pointer px-3 py-2 rounded-md bg-gray-50 dark:bg-gray-900/30 border border-transparent hover:border-gray-200 dark:hover:border-gray-700">
-          <input type="hidden" name="login_required" value="0" />
-          <input type="checkbox" name="login_required" value="1" class="sr-only peer" {% if Settings.LoginRequired %}checked{% endif %}>
-          <span class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer dark:bg-gray-700 peer-checked:bg-blue-600 relative transition">
-            <span class="absolute top-0.5 left-[4px] w-5 h-5 bg-white rounded-full border border-gray-300 transition peer-checked:translate-x-full peer-checked:border-white"></span>
-          </span>
-        </label>
-      </div>
-
-      <div>
-        <label for="title" class="block text-sm font-medium text-gray-900 dark:text-white">Portal title</label>
-        <input id="title" name="title" type="text" value="{{ Settings.Title }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="{{ t("customer_portal.placeholders.title")|default:"Customer Portal" }}" />
-      </div>
-
-      <div>
-        <label for="footer_text" class="block text-sm font-medium text-gray-900 dark:text-white">Footer text</label>
-        <textarea id="footer_text" name="footer_text" rows="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="{{ t("customer_portal.placeholders.footer")|default:"Powered by GOTRS" }}">{{ Settings.FooterText }}</textarea>
-      </div>
-
-      <div>
-        <label for="landing_page" class="block text-sm font-medium text-gray-900 dark:text-white">Landing page</label>
-        <input id="landing_page" name="landing_page" type="text" value="{{ Settings.LandingPage }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="/customer/tickets" />
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Path relative to the customer portal root.</p>
-      </div>
-
-      <div class="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-6 mt-2">
-        <p class="text-sm text-gray-500 dark:text-gray-400">Per-company portal customization is not available in this build.</p>
-        <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-          Save settings
-        </button>
-      </div>
-    </form>
-  </div>
+    </div>
 </div>
 {% endblock %}

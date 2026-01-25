@@ -152,7 +152,8 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 	}
 	log.Printf("CreateTicketWithAttachments: parsed minutes=%d", minutes)
 
-	createdBy := uint(1)
+	createdBy := GetUserIDFromCtxUint(c, 1)
+	log.Printf("CreateTicketWithAttachments: createdBy user_id=%d", createdBy)
 
 	db, err := database.GetDB()
 	if err != nil {
@@ -333,23 +334,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 				}
 
 				// Resolve uploader ID
-				uploaderID := int(createdBy)
-				if v, ok := c.Get("user_id"); ok {
-					switch t := v.(type) {
-					case int:
-						uploaderID = t
-					case int64:
-						uploaderID = int(t)
-					case uint:
-						uploaderID = int(t)
-					case uint64:
-						uploaderID = int(t)
-					case string:
-						if n, e := strconv.Atoi(t); e == nil {
-							uploaderID = n
-						}
-					}
-				}
+				uploaderID := GetUserIDFromCtx(c, int(createdBy))
 
 				// Use unified storage service; ensure we have an article
 				if article != nil && article.ID > 0 {
@@ -443,23 +428,7 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 		}
 	}
 
-	actorID := int(createdBy)
-	if v, ok := c.Get("user_id"); ok {
-		switch t := v.(type) {
-		case int:
-			actorID = t
-		case int64:
-			actorID = int(t)
-		case uint:
-			actorID = int(t)
-		case uint64:
-			actorID = int(t)
-		case string:
-			if n, err := strconv.Atoi(t); err == nil {
-				actorID = n
-			}
-		}
-	}
+	actorID := GetUserIDFromCtx(c, int(createdBy))
 
 	// Record ticket creation history entry
 	if ticketRepo != nil && !ticketSideEffectsDisabled() {

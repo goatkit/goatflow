@@ -1,0 +1,39 @@
+{# Time Accounting Tab Panel with Synthwave Styling #}
+{# Required variables: Ticket #}
+
+<div id="tab-time" class="tab-panel hidden">
+    <div class="gk-card p-6">
+        <h2 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("tickets.time_accounting")|default:"Time Accounting" }}</h2>
+        <p class="text-sm mb-4" style="color: var(--gk-text-secondary);">{{ t("tickets.total_time")|default:"Total Time" }}: <strong>{{ Ticket.time_total_minutes|default:0 }}</strong> {{ t("tickets.minutes")|default:"minutes" }}</p>
+        {% if Ticket.time_entries and Ticket.time_entries|length > 0 %}
+        <div class="overflow-x-auto">
+            <table class="gk-table w-full">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">{{ t("common.date")|default:"Date" }}</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">{{ t("tickets.minutes")|default:"Minutes" }}</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">{{ t("tickets.article")|default:"Article" }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in Ticket.time_entries %}
+                    <tr>
+                        <td class="px-4 py-2 text-sm">{{ e.create_time }}</td>
+                        <td class="px-4 py-2 text-sm">{{ e.minutes }}</td>
+                        <td class="px-4 py-2 text-sm">
+                            {% if e.article_id %}
+                                <a href="#note-{{ e.article_id }}" class="gk-link-neon time-entry-note-link" data-note-target="note-{{ e.article_id }}">#{{ e.article_id }}</a>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-sm" style="color: var(--gk-text-muted);">{{ t("tickets.no_time_entries")|default:"No time entries recorded yet." }}</div>
+        {% endif %}
+    </div>
+</div>

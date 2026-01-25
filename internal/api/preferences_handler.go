@@ -1,23 +1,102 @@
 package api
 
 import (
+	"log"
 	"net/http"
-	"strconv"
 	"time"
 
+	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/auth"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
+	"github.com/gotrs-io/gotrs-ce/internal/sysconfig"
 )
+
+// HandleGetAvailableLanguages returns the list of supported languages (public, no auth required).
+// Used on login pages to allow language selection before authentication.
+func HandleGetAvailableLanguages(c *gin.Context) {
+	availableLanguages := i18n.GetInstance().GetSupportedLanguages()
+	languageList := make([]gin.H, 0, len(availableLanguages))
+	for _, code := range availableLanguages {
+		if config, exists := i18n.GetLanguageConfig(code); exists {
+			languageList = append(languageList, gin.H{
+				"code":        code,
+				"name":        config.Name,
+				"native_name": config.NativeName,
+			})
+		} else {
+			languageList = append(languageList, gin.H{
+				"code":        code,
+				"name":        code,
+				"native_name": code,
+			})
+		}
+	}
+
+	// Get current language from cookie if set
+	currentLang, _ := c.Cookie("gotrs_lang")
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":   true,
+		"current":   currentLang,
+		"available": languageList,
+	})
+}
+
+// HandleSetPreLoginLanguage sets the language preference cookie (public, no auth required).
+// This is used on login pages before the user authenticates.
+func HandleSetPreLoginLanguage(c *gin.Context) {
+	var request struct {
+		Value string `json:"value"`
+	}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid request body",
+		})
+		return
+	}
+
+	// Validate language is supported (empty is allowed - means browser default)
+	if request.Value != "" {
+		instance := i18n.GetInstance()
+		supported := false
+		for _, lang := range instance.GetSupportedLanguages() {
+			if lang == request.Value {
+				supported = true
+				break
+			}
+		}
+		if !supported {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Unsupported language: " + request.Value,
+			})
+			return
+		}
+	}
+
+	// Set cookie (30 day expiry)
+	if request.Value != "" {
+		c.SetCookie("gotrs_lang", request.Value, 86400*30, "/", "", false, false)
+	} else {
+		c.SetCookie("gotrs_lang", "", -1, "/", "", false, false)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Language preference set",
+	})
+}
 
 // HandleGetSessionTimeout retrieves the user's session timeout preference.
 func HandleGetSessionTimeout(c *gin.Context) {
 	// Get user ID from context (middleware sets "user_id" not "userID")
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "User not authenticated",
@@ -25,26 +104,11 @@ func HandleGetSessionTimeout(c *gin.Context) {
 		return
 	}
 
-	var userID int
-	switch v := userIDInterface.(type) {
-	case uint:
-		userID = int(v)
-	case int:
-		userID = v
-	case string:
-		var err error
-		userID, err = strconv.Atoi(v)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Invalid user ID",
-			})
-			return
-		}
-	default:
+	userID := GetUserIDFromCtx(c, 0)
+	if userID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"error":   "Invalid user ID type",
+			"error":   "Invalid user ID",
 		})
 		return
 	}
@@ -74,8 +138,7 @@ func HandleGetSessionTimeout(c *gin.Context) {
 // HandleSetSessionTimeout sets the user's session timeout preference.
 func HandleSetSessionTimeout(c *gin.Context) {
 	// Get user ID from context (middleware sets "user_id" not "userID")
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "User not authenticated",
@@ -83,26 +146,11 @@ func HandleSetSessionTimeout(c *gin.Context) {
 		return
 	}
 
-	var userID int
-	switch v := userIDInterface.(type) {
-	case uint:
-		userID = int(v)
-	case int:
-		userID = v
-	case string:
-		var err error
-		userID, err = strconv.Atoi(v)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Invalid user ID",
-			})
-			return
-		}
-	default:
+	userID := GetUserIDFromCtx(c, 0)
+	if userID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"error":   "Invalid user ID type",
+			"error":   "Invalid user ID",
 		})
 		return
 	}
@@ -150,8 +198,7 @@ func HandleSetSessionTimeout(c *gin.Context) {
 
 // HandleGetLanguage retrieves the user's language preference.
 func HandleGetLanguage(c *gin.Context) {
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "User not authenticated",
@@ -159,26 +206,11 @@ func HandleGetLanguage(c *gin.Context) {
 		return
 	}
 
-	var userID int
-	switch v := userIDInterface.(type) {
-	case uint:
-		userID = int(v)
-	case int:
-		userID = v
-	case string:
-		var err error
-		userID, err = strconv.Atoi(v)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Invalid user ID",
-			})
-			return
-		}
-	default:
+	userID := GetUserIDFromCtx(c, 0)
+	if userID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"error":   "Invalid user ID type",
+			"error":   "Invalid user ID",
 		})
 		return
 	}
@@ -223,8 +255,7 @@ func HandleGetLanguage(c *gin.Context) {
 
 // HandleSetLanguage sets the user's language preference.
 func HandleSetLanguage(c *gin.Context) {
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "User not authenticated",
@@ -232,26 +263,11 @@ func HandleSetLanguage(c *gin.Context) {
 		return
 	}
 
-	var userID int
-	switch v := userIDInterface.(type) {
-	case uint:
-		userID = int(v)
-	case int:
-		userID = v
-	case string:
-		var err error
-		userID, err = strconv.Atoi(v)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"success": false,
-				"error":   "Invalid user ID",
-			})
-			return
-		}
-	default:
+	userID := GetUserIDFromCtx(c, 0)
+	if userID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"error":   "Invalid user ID type",
+			"error":   "Invalid user ID",
 		})
 		return
 	}
@@ -321,8 +337,7 @@ func HandleSetLanguage(c *gin.Context) {
 
 // HandleGetProfile retrieves the current user's profile information.
 func HandleGetProfile(c *gin.Context) {
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "User not authenticated",
@@ -330,18 +345,11 @@ func HandleGetProfile(c *gin.Context) {
 		return
 	}
 
-	var userID uint
-	switch v := userIDInterface.(type) {
-	case uint:
-		userID = v
-	case int:
-		userID = uint(v)
-	case int64:
-		userID = uint(v)
-	default:
+	userID := GetUserIDFromCtxUint(c, 0)
+	if userID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"error":   "Invalid user ID type",
+			"error":   "Invalid user ID",
 		})
 		return
 	}
@@ -385,8 +393,7 @@ func HandleGetProfile(c *gin.Context) {
 
 // HandleUpdateProfile updates the current user's profile information.
 func HandleUpdateProfile(c *gin.Context) {
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "User not authenticated",
@@ -394,18 +401,11 @@ func HandleUpdateProfile(c *gin.Context) {
 		return
 	}
 
-	var userID uint
-	switch v := userIDInterface.(type) {
-	case uint:
-		userID = v
-	case int:
-		userID = uint(v)
-	case int64:
-		userID = uint(v)
-	default:
+	userID := GetUserIDFromCtxUint(c, 0)
+	if userID == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
-			"error":   "Invalid user ID type",
+			"error":   "Invalid user ID",
 		})
 		return
 	}
@@ -459,5 +459,481 @@ func HandleUpdateProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Profile updated successfully",
+	})
+}
+
+// Available themes - keep in sync with static/js/theme-manager.js
+var availableThemes = []string{"synthwave", "gotrs-classic", "seventies-vibes"}
+
+// HandleGetAvailableThemes returns the list of available themes (public, no auth required).
+// Used on login pages to allow theme selection before authentication.
+func HandleGetAvailableThemes(c *gin.Context) {
+	themeList := make([]gin.H, 0, len(availableThemes))
+	for _, theme := range availableThemes {
+		themeList = append(themeList, gin.H{
+			"id":   theme,
+			"name": theme,
+		})
+	}
+
+	// Get current theme and mode from cookies if set
+	currentTheme, _ := c.Cookie("gotrs_theme")
+	currentMode, _ := c.Cookie("gotrs_mode")
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":       true,
+		"current_theme": currentTheme,
+		"current_mode":  currentMode,
+		"available":     themeList,
+	})
+}
+
+// HandleSetPreLoginTheme sets the theme and mode preference cookies (public, no auth required).
+// This is used on login pages before the user authenticates.
+func HandleSetPreLoginTheme(c *gin.Context) {
+	var request struct {
+		Theme string `json:"theme"`
+		Mode  string `json:"mode"`
+	}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid request body",
+		})
+		return
+	}
+
+	// Validate theme if provided
+	if request.Theme != "" {
+		valid := false
+		for _, t := range availableThemes {
+			if t == request.Theme {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Unsupported theme: " + request.Theme,
+			})
+			return
+		}
+	}
+
+	// Validate mode if provided
+	if request.Mode != "" && request.Mode != "light" && request.Mode != "dark" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Mode must be 'light' or 'dark'",
+		})
+		return
+	}
+
+	// Set theme cookie (30 day expiry)
+	if request.Theme != "" {
+		c.SetCookie("gotrs_theme", request.Theme, 86400*30, "/", "", false, false)
+	}
+
+	// Set mode cookie (30 day expiry)
+	if request.Mode != "" {
+		c.SetCookie("gotrs_mode", request.Mode, 86400*30, "/", "", false, false)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Theme preference set",
+	})
+}
+
+// HandleGetTheme retrieves the user's theme preferences.
+// Uses UserPreferencesService for agents/admins, CustomerPreferencesService for customers.
+func HandleGetTheme(c *gin.Context) {
+	if _, exists := c.Get("user_id"); !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "User not authenticated",
+		})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection error",
+		})
+		return
+	}
+
+	var theme, mode string
+
+	// Check if user is a customer (uses different preferences table)
+	userRole := c.GetString("user_role")
+	if userRole == "Customer" {
+		username := c.GetString("username")
+		if username == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Customer username not found",
+			})
+			return
+		}
+		customerPrefService := service.NewCustomerPreferencesService(db)
+		theme = customerPrefService.GetTheme(username)
+		mode = customerPrefService.GetThemeMode(username)
+	} else {
+		// Agent/Admin user - uses numeric ID
+		userID := GetUserIDFromCtx(c, 0)
+		if userID == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Invalid user ID",
+			})
+			return
+		}
+		userPrefService := service.NewUserPreferencesService(db)
+		theme = userPrefService.GetTheme(userID)
+		mode = userPrefService.GetThemeMode(userID)
+	}
+
+	// Build list of available themes for the UI
+	themeList := make([]gin.H, 0, len(availableThemes))
+	for _, t := range availableThemes {
+		themeList = append(themeList, gin.H{
+			"id":   t,
+			"name": t,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":   true,
+		"theme":     theme,
+		"mode":      mode,
+		"available": themeList,
+	})
+}
+
+// HandleSetTheme sets the user's theme preferences and persists to database.
+// Uses UserPreferencesService for agents/admins, CustomerPreferencesService for customers.
+func HandleSetTheme(c *gin.Context) {
+	if _, exists := c.Get("user_id"); !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "User not authenticated",
+		})
+		return
+	}
+
+	var request struct {
+		Theme string `json:"theme"`
+		Mode  string `json:"mode"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid request format",
+		})
+		return
+	}
+
+	// Validate theme if provided
+	if request.Theme != "" {
+		valid := false
+		for _, t := range availableThemes {
+			if t == request.Theme {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Unsupported theme: " + request.Theme,
+			})
+			return
+		}
+	}
+
+	// Validate mode if provided
+	if request.Mode != "" && request.Mode != "light" && request.Mode != "dark" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Mode must be 'light' or 'dark'",
+		})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection error",
+		})
+		return
+	}
+
+	// Check if user is a customer (uses different preferences table)
+	userRole := c.GetString("user_role")
+	if userRole == "Customer" {
+		username := c.GetString("username")
+		if username == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Customer username not found",
+			})
+			return
+		}
+
+		customerPrefService := service.NewCustomerPreferencesService(db)
+
+		// Save theme preference to customer_preferences table
+		if request.Theme != "" {
+			if err := customerPrefService.SetTheme(username, request.Theme); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"success": false,
+					"error":   "Failed to save theme preference",
+				})
+				return
+			}
+			c.SetCookie("gotrs_theme", request.Theme, 86400*30, "/", "", false, false)
+		}
+
+		// Save mode preference to customer_preferences table
+		if request.Mode != "" {
+			if err := customerPrefService.SetThemeMode(username, request.Mode); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"success": false,
+					"error":   "Failed to save theme mode preference",
+				})
+				return
+			}
+			c.SetCookie("gotrs_mode", request.Mode, 86400*30, "/", "", false, false)
+		}
+	} else {
+		// Agent/Admin user - uses numeric ID and user_preferences table
+		userID := GetUserIDFromCtx(c, 0)
+		if userID == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Invalid user ID",
+			})
+			return
+		}
+
+		userPrefService := service.NewUserPreferencesService(db)
+
+		// Save theme preference to user_preferences table
+		if request.Theme != "" {
+			if err := userPrefService.SetTheme(userID, request.Theme); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"success": false,
+					"error":   "Failed to save theme preference",
+				})
+				return
+			}
+			c.SetCookie("gotrs_theme", request.Theme, 86400*30, "/", "", false, false)
+		}
+
+		// Save mode preference to user_preferences table
+		if request.Mode != "" {
+			if err := userPrefService.SetThemeMode(userID, request.Mode); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"success": false,
+					"error":   "Failed to save theme mode preference",
+				})
+				return
+			}
+			c.SetCookie("gotrs_mode", request.Mode, 86400*30, "/", "", false, false)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Theme preferences saved successfully",
+	})
+}
+
+// HandleAgentPasswordForm renders the agent password change form.
+func HandleAgentPasswordForm(c *gin.Context) {
+	if _, exists := c.Get("user_id"); !exists {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Database connection error")
+		return
+	}
+
+	// Load password policy from sysconfig
+	policy, err := sysconfig.LoadAgentPasswordPolicy(db)
+	if err != nil {
+		log.Printf("Error loading agent password policy: %v", err)
+		policy = sysconfig.DefaultAgentPasswordPolicy()
+	}
+
+	userID := GetUserIDFromCtxUint(c, 0)
+
+	userRepo := repository.NewUserRepository(db)
+	user, err := userRepo.GetByID(userID)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	getPongo2Renderer().HTML(c, http.StatusOK, "pages/password_form.pongo2", pongo2.Context{
+		"Title":      "Change Password",
+		"ActivePage": "profile",
+		"Policy":     policy,
+		"User": map[string]interface{}{
+			"Login":     user.Login,
+			"FirstName": user.FirstName,
+			"LastName":  user.LastName,
+			"Email":     user.Email,
+		},
+	})
+}
+
+// HandleAgentChangePassword processes the agent password change request.
+func HandleAgentChangePassword(c *gin.Context) {
+	if _, exists := c.Get("user_id"); !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "Not authenticated",
+		})
+		return
+	}
+
+	userID := GetUserIDFromCtxUint(c, 0)
+	if userID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid user ID",
+		})
+		return
+	}
+
+	var request struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+		ConfirmPassword string `json:"confirm_password"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Invalid request format",
+		})
+		return
+	}
+
+	// Validate required fields
+	if request.CurrentPassword == "" || request.NewPassword == "" || request.ConfirmPassword == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "All password fields are required",
+		})
+		return
+	}
+
+	// Verify passwords match
+	if request.NewPassword != request.ConfirmPassword {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Passwords do not match",
+		})
+		return
+	}
+
+	db, err := database.GetDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection error",
+		})
+		return
+	}
+
+	// Get current password hash from database
+	var currentHash string
+	err = db.QueryRow(database.ConvertPlaceholders(`
+		SELECT pw FROM users WHERE id = ? AND valid_id = 1
+	`), userID).Scan(&currentHash)
+
+	if err != nil {
+		log.Printf("Error getting agent password for user %d: %v", userID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to verify current password",
+		})
+		return
+	}
+
+	// Verify current password
+	hasher := auth.NewPasswordHasher()
+	if !hasher.VerifyPassword(request.CurrentPassword, currentHash) {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error":   "Current password is incorrect",
+		})
+		return
+	}
+
+	// Check that new password is different from current
+	if request.NewPassword == request.CurrentPassword {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "New password must be different from current password",
+		})
+		return
+	}
+
+	// Load and validate against password policy
+	policy, err := sysconfig.LoadAgentPasswordPolicy(db)
+	if err != nil {
+		log.Printf("Error loading agent password policy: %v", err)
+		policy = sysconfig.DefaultAgentPasswordPolicy()
+	}
+
+	if validationErr := policy.ValidatePassword(request.NewPassword); validationErr != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   validationErr.Message,
+			"code":    validationErr.Code,
+		})
+		return
+	}
+
+	// Hash the new password
+	newHash, err := hasher.HashPassword(request.NewPassword)
+	if err != nil {
+		log.Printf("Error hashing new password: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to process new password",
+		})
+		return
+	}
+
+	// Update password in database
+	_, err = db.Exec(database.ConvertPlaceholders(`
+		UPDATE users SET pw = ?, change_time = CURRENT_TIMESTAMP, change_by = ? WHERE id = ?
+	`), newHash, userID, userID)
+
+	if err != nil {
+		log.Printf("Error updating agent password: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Failed to update password",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Password changed successfully",
 	})
 }

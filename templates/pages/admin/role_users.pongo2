@@ -1,153 +1,149 @@
 {% extends "layouts/base.pongo2" %}
 
-{% block title %}Role Users - {{ Role.Name }} - GOTRS Admin{% endblock %}
+{% block title %}{{ t("role_users.title")|default:"Role Users" }} - {{ Role.Name }} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-    <div class="container mx-auto px-4">
-        <!-- Header with Back Button -->
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg mb-6">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <a href="/admin/roles" class="mr-4 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                        </a>
-                        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                            <i class="fas fa-users mr-2"></i>Users in Role: {{ Role.Name }}
-                        </h1>
-                    </div>
-                    <button onclick="showAddUserModal()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
-                        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        Add User
-                    </button>
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Page header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div class="flex items-center">
+                <a href="/admin/roles" class="gk-btn-secondary mr-4">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    {{ t("common.back") }}
+                </a>
+                <div>
+                    <h1 class="text-3xl font-bold gk-heading">
+                        <span class="gk-text-gradient">{{ t("role_users.heading")|default:"Users in Role" }}: {{ Role.Name }}</span>
+                    </h1>
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("role_users.description")|default:"Manage users assigned to this role" }}</p>
                 </div>
             </div>
-        </div>
-
-        <!-- Role Info -->
-        {% if Role.Comments %}
-        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg mb-6">
-            <div class="px-6 py-4">
-                <p class="text-sm text-blue-700 dark:text-blue-300">{{ Role.Comments }}</p>
+            <div class="mt-4 sm:mt-0">
+                <button onclick="showAddUserModal()" class="gk-btn-neon">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    {{ t("role_users.add_user")|default:"Add User" }}
+                </button>
             </div>
         </div>
-        {% endif %}
+    </header>
 
-        <!-- Users List -->
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            User
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Login
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Email
-                        </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Actions
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="users-list" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for user in Users %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700" data-user-id="{{ user.UserID }}">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0 h-10 w-10">
-                                    <div class="h-10 w-10 rounded-full bg-gotrs-100 dark:bg-gotrs-800 flex items-center justify-center">
-                                        <span class="text-gotrs-600 dark:text-gotrs-400 font-medium">
-                                            {{ user.FirstName|first|upper }}{{ user.LastName|first|upper }}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
-                                        {{ user.FirstName }} {{ user.LastName }}
-                                    </div>
+    <!-- Role Info -->
+    {% if Role.Comments %}
+    <div class="mb-6 p-4 rounded-lg" style="background: rgba(var(--gk-primary-rgb), 0.1); border: 1px solid var(--gk-primary);">
+        <p class="text-sm" style="color: var(--gk-primary);">{{ Role.Comments }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Users List -->
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <table class="gk-table">
+            <thead>
+                <tr>
+                    <th scope="col">{{ t("role_users.columns.user")|default:"User" }}</th>
+                    <th scope="col">{{ t("role_users.columns.login")|default:"Login" }}</th>
+                    <th scope="col">{{ t("role_users.columns.email")|default:"Email" }}</th>
+                    <th scope="col" class="text-right">{{ t("common.actions") }}</th>
+                </tr>
+            </thead>
+            <tbody id="users-list">
+                {% for user in Users %}
+                <tr data-user-id="{{ user.UserID }}">
+                    <td>
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <div class="h-10 w-10 rounded-full flex items-center justify-center" style="background: rgba(var(--gk-primary-rgb), 0.2);">
+                                    <span class="font-medium" style="color: var(--gk-primary);">
+                                        {{ user.FirstName|first|upper }}{{ user.LastName|first|upper }}
+                                    </span>
                                 </div>
                             </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {{ user.Login }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {{ user.Email }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button
-                                onclick="removeUser({{ user.UserID }})"
-                                class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                title="{{ t("role_users.tooltips.remove")|default:"Remove from role" }}">
-                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="px-6 py-12 text-center">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            <div class="ml-4">
+                                <span class="font-medium" style="color: var(--gk-text-primary);">
+                                    {{ user.FirstName }} {{ user.LastName }}
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="color: var(--gk-text-secondary);">{{ user.Login }}</td>
+                    <td style="color: var(--gk-text-secondary);">{{ user.Email }}</td>
+                    <td class="text-right">
+                        <button
+                            onclick="removeUser({{ user.UserID }})"
+                            class="p-1 rounded transition-colors hover:bg-white/10"
+                            style="color: var(--gk-error);"
+                            title="{{ t('role_users.tooltips.remove')|default:'Remove from role' }}">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                             </svg>
-                            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">{{ t("role_users.no_users")|default:"No users assigned" }}</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("role_users.get_started")|default:"Get started by adding users to this role." }}</p>
-                            <div class="mt-6">
-                                <button onclick="showAddUserModal()" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700">
-                                    <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                    Add User
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="px-6 py-12 text-center" style="color: var(--gk-text-muted);">
+                        <svg class="mx-auto h-12 w-12 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        <h3 class="text-sm font-medium mb-1" style="color: var(--gk-text-primary);">{{ t("role_users.no_users")|default:"No users assigned" }}</h3>
+                        <p class="text-sm mb-4" style="color: var(--gk-text-muted);">{{ t("role_users.get_started")|default:"Get started by adding users to this role." }}</p>
+                        <button onclick="showAddUserModal()" class="gk-btn-neon">
+                            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                            </svg>
+                            {{ t("role_users.add_user")|default:"Add User" }}
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
 <!-- Add User Modal -->
 <div id="addUserModal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" onclick="hideAddUserModal()"></div>
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="hideAddUserModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="sm:flex sm:items-start">
-                    <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
-                            {{ t("role_users.modal.title")|default:"Add User to Role" }}
-                        </h3>
-                        <div class="mt-4">
-                            <label for="userSelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("role_users.modal.select_user")|default:"Select User" }}</label>
-                            <select id="userSelect" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
-                                <option value="">-- Select a user --</option>
-                                {% for user in AvailableUsers %}
-                                <option value="{{ user.ID }}">{{ user.FirstName }} {{ user.LastName }} ({{ user.Login }})</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
+
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="gk-modal-header">
+                <div class="flex items-center">
+                    <svg class="h-6 w-6 mr-3" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                    </svg>
+                    <h3 class="text-lg font-semibold" id="modal-title" style="color: var(--gk-text-primary);">
+                        {{ t("role_users.modal.title")|default:"Add User to Role" }}
+                    </h3>
                 </div>
-            </div>
-            <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" onclick="addUser()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">
-                    {{ t("role_users.modal.add_user")|default:"Add User" }}
+                <button type="button" onclick="hideAddUserModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
                 </button>
-                <button type="button" onclick="hideAddUserModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:w-auto sm:text-sm">
-                    Cancel
+            </div>
+
+            <div class="gk-modal-body">
+                <label for="userSelect" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">{{ t("role_users.modal.select_user")|default:"Select User" }}</label>
+                <select id="userSelect" class="gk-select-neon w-full">
+                    <option value="">-- {{ t("role_users.modal.select_user")|default:"Select a user" }} --</option>
+                    {% for user in AvailableUsers %}
+                    <option value="{{ user.ID }}">{{ user.FirstName }} {{ user.LastName }} ({{ user.Login }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="gk-modal-footer">
+                <button type="button" onclick="hideAddUserModal()" class="gk-btn-secondary">
+                    {{ t("common.cancel") }}
+                </button>
+                <button type="button" onclick="addUser()" class="gk-btn-neon">
+                    {{ t("role_users.modal.add_user")|default:"Add User" }}
                 </button>
             </div>
         </div>
@@ -169,7 +165,7 @@ function hideAddUserModal() {
 function addUser() {
     const userId = document.getElementById('userSelect').value;
     if (!userId) {
-        alert('{{ t("messages.please_select_user")|default:"Please select a user" }}');
+        showToast('{{ t("messages.please_select_user")|default:"Please select a user" }}', 'error');
         return;
     }
 
@@ -184,14 +180,15 @@ function addUser() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            location.reload();
+            showToast('{{ t("messages.user_added_success")|default:"User added successfully" }}', 'success');
+            setTimeout(() => location.reload(), 500);
         } else {
-            alert(data.error || '{{ t("messages.failed_add_user")|default:"Failed to add user" }}');
+            showToast(data.error || '{{ t("messages.failed_add_user")|default:"Failed to add user" }}', 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('{{ t("messages.error_occurred")|default:"An error occurred" }}');
+        showToast('{{ t("messages.error_occurred")|default:"An error occurred" }}', 'error');
     });
 }
 
@@ -213,19 +210,35 @@ function removeUser(userId) {
             if (row) {
                 row.remove();
             }
+            showToast('{{ t("messages.user_removed_success")|default:"User removed successfully" }}', 'success');
             // Reload if no users left
             const tbody = document.getElementById('users-list');
             if (tbody.children.length === 0) {
                 location.reload();
             }
         } else {
-            alert(data.error || '{{ t("messages.failed_remove_user")|default:"Failed to remove user" }}');
+            showToast(data.error || '{{ t("messages.failed_remove_user")|default:"Failed to remove user" }}', 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('{{ t("messages.error_occurred")|default:"An error occurred" }}');
+        showToast('{{ t("messages.error_occurred")|default:"An error occurred" }}', 'error');
     });
 }
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50';
+    toast.style.background = type === 'error' ? 'var(--gk-error)' : type === 'success' ? 'var(--gk-success)' : 'var(--gk-primary)';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideAddUserModal();
+    }
+});
 </script>
 {% endblock %}

@@ -3,198 +3,229 @@
 {% block title %}{{ t("acl.title")|default:"Access Control Lists" }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <!-- Header -->
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ t("acl.heading")|default:"ACL Management" }}</h1>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("acl.description")|default:"Access Control Lists define rules for ticket actions and permissions" }}</p>
-                </div>
-                <button onclick="openACLModal()" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600" title="{{ t("acl.tooltips.add_new")|default:"Add new ACL" }}">
-                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Page header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("acl.heading")|default:"ACL Management" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("acl.description")|default:"Access Control Lists define rules for ticket actions and permissions" }}</p>
+            </div>
+            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+                <button onclick="openACLModal()" class="gk-btn-neon" title="{{ t("acl.tooltips.add_new")|default:"Add new ACL" }}">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
                     {{ t("acl.add_acl")|default:"Add ACL" }}
                 </button>
             </div>
         </div>
+    </header>
 
-        <!-- Filters -->
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <form method="GET" action="/admin/acl" class="flex flex-wrap gap-4">
-                <div class="flex-1 min-w-[200px]">
-                    <input type="text" name="search" value="{{ SearchQuery }}"
-                           placeholder="Search ACLs..."
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
-                </div>
-                <div>
-                    <select name="valid" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        <option value="all" {% if ValidFilter == "all" %}selected{% endif %}>All Status</option>
-                        <option value="valid" {% if ValidFilter == "valid" %}selected{% endif %}>Valid Only</option>
-                        <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>Invalid Only</option>
-                    </select>
-                </div>
-                <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" title="{{ t("acl.tooltips.apply_filters")|default:"Apply filters" }}">
-                    Filter
-                </button>
-                {% if SearchQuery or ValidFilter != "all" %}
-                <a href="/admin/acl" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg" title="{{ t("acl.tooltips.clear_filters")|default:"Clear all filters" }}">
-                    Clear
-                </a>
-                {% endif %}
-            </form>
-        </div>
+    <!-- Filters -->
+    <div class="mb-6 gk-card-glow rounded-lg p-4">
+        <form method="GET" action="/admin/acl" class="flex flex-wrap gap-4">
+            <div class="flex-1 min-w-[200px]">
+                <input type="text" name="search" value="{{ SearchQuery }}"
+                    placeholder="Search ACLs..."
+                    class="gk-input-neon w-full"
+                >
+            </div>
+            <div>
+                <select name="valid" class="gk-select-neon">
+                    <option value="all" {% if ValidFilter == "all" %}selected{% endif %}>All Status</option>
+                    <option value="valid" {% if ValidFilter == "valid" %}selected{% endif %}>Valid Only</option>
+                    <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>Invalid Only</option>
+                </select>
+            </div>
+            <button type="submit" class="gk-btn-neon" title="{{ t("acl.tooltips.apply_filters")|default:"Apply filters" }}">
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Filter
+            </button>
+            {% if SearchQuery or ValidFilter != "all" %}
+            <a href="/admin/acl" class="gk-btn-secondary" title="{{ t("acl.tooltips.clear_filters")|default:"Clear all filters" }}">
+                Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
 
-        <!-- ACL List -->
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 dark:bg-gray-900">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            <a href="?sort=id&order={% if SortBy == 'id' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
-                                ID {% if SortBy == 'id' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-                            </a>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            <a href="?sort=name&order={% if SortBy == 'name' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
-                                Name {% if SortBy == 'name' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-                            </a>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Stop After Match</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for acl in ACLs %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{{ acl.ID }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{{ acl.Name }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white max-w-xs truncate" title="{% if acl.Description %}{{ acl.Description }}{% endif %}">
-                            {% if acl.Description %}{{ acl.Description }}{% else %}<span class="text-gray-400">-</span>{% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {% if acl.StopAfterMatch and acl.StopAfterMatch == 1 %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">Yes</span>
-                            {% else %}
-                                <span class="text-gray-400">No</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            {% if acl.ValidID == 1 %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">Valid</span>
-                            {% else %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">Invalid</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button onclick="editACL({{ acl.ID }})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="{{ t("acl.tooltips.edit")|default:"Edit ACL" }}">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+    <!-- ACL Table -->
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <table class="gk-table">
+            <thead>
+                <tr>
+                    <th scope="col">
+                        <a href="?sort=id&order={% if SortBy == 'id' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}" class="flex items-center">
+                            ID {% if SortBy == 'id' %}<span class="ml-1">{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
+                        </a>
+                    </th>
+                    <th scope="col">
+                        <a href="?sort=name&order={% if SortBy == 'name' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}" class="flex items-center">
+                            Name {% if SortBy == 'name' %}<span class="ml-1">{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}
+                        </a>
+                    </th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Stop After Match</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for acl in ACLs %}
+                <tr>
+                    <td style="color: var(--gk-text-muted);">{{ acl.ID }}</td>
+                    <td>
+                        <span class="font-medium" style="color: var(--gk-text-primary);">{{ acl.Name }}</span>
+                    </td>
+                    <td style="color: var(--gk-text-secondary);" class="max-w-xs truncate" title="{% if acl.Description %}{{ acl.Description }}{% endif %}">
+                        {% if acl.Description %}{{ acl.Description }}{% else %}<span style="color: var(--gk-text-muted);">-</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if acl.StopAfterMatch and acl.StopAfterMatch == 1 %}
+                        <span class="gk-badge gk-badge-warning">Yes</span>
+                        {% else %}
+                        <span style="color: var(--gk-text-muted);">No</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if acl.ValidID == 1 %}
+                        <span class="gk-badge gk-badge-success">Valid</span>
+                        {% else %}
+                        <span class="gk-badge gk-badge-error">Invalid</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="flex items-center justify-end space-x-2">
+                            <button onclick="editACL({{ acl.ID }})"
+                                class="p-1 rounded transition-colors hover:bg-white/10"
+                                style="color: var(--gk-primary);"
+                                title="{{ t("acl.tooltips.edit")|default:"Edit ACL" }}"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                             </button>
                             <button onclick="toggleACLStatus({{ acl.ID }}, {{ acl.ValidID }}, '{{ acl.Name }}')"
-                                    class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
-                                    title="{% if acl.ValidID == 1 %}Deactivate{% else %}Activate{% endif %}">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                class="p-1 rounded transition-colors hover:bg-white/10"
+                                style="color: var(--gk-warning);"
+                                title="{% if acl.ValidID == 1 %}Deactivate{% else %}Activate{% endif %}"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     {% if acl.ValidID == 1 %}
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                                     {% else %}
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     {% endif %}
                                 </svg>
                             </button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                            No ACLs found. Click "Add ACL" to create one.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center" style="color: var(--gk-text-muted);">
+                        <svg class="mx-auto h-12 w-12 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <h3 class="text-sm font-medium mb-1" style="color: var(--gk-text-primary);">{{ t("acl.no_acls_found")|default:"No ACLs found" }}</h3>
+                        <p class="text-sm mb-4" style="color: var(--gk-text-muted);">{{ t("acl.click_add_acl")|default:"Click \"Add ACL\" to create one." }}</p>
+                        <button onclick="openACLModal()" class="gk-btn-neon">
+                            {{ t("acl.add_acl")|default:"Add ACL" }}
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
 <!-- ACL Modal -->
-<div id="aclModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("acl.modal.add_title")|default:"Add ACL" }}</h2>
+<div id="aclModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeACLModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full max-h-[90vh] overflow-y-auto">
+            <form id="aclForm" onsubmit="saveACL(event)">
+                <div class="gk-modal-header">
+                    <h2 id="modalTitle" class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("acl.modal.add_title")|default:"Add ACL" }}</h2>
+                    <button type="button" onclick="closeACLModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="gk-modal-body space-y-6">
+                    <input type="hidden" id="aclId" name="id">
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Name *</label>
+                            <input type="text" id="aclName" name="name" required class="gk-input-neon w-full">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Status</label>
+                            <select id="aclValidId" name="valid_id" class="gk-select-neon w-full">
+                                <option value="1">Valid</option>
+                                <option value="2">Invalid</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Description</label>
+                        <input type="text" id="aclDescription" name="description" class="gk-input-neon w-full">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Comments</label>
+                        <textarea id="aclComments" name="comments" rows="2" class="gk-input-neon w-full"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" id="aclStopAfterMatch" name="stop_after_match"
+                                class="w-4 h-4 rounded border-2 bg-transparent"
+                                style="border-color: var(--gk-border); accent-color: var(--gk-primary);"
+                            >
+                            <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">Stop after match (don't process further ACLs)</span>
+                        </label>
+                    </div>
+
+                    <div class="border-t pt-4" style="border-color: var(--gk-border);">
+                        <h3 class="text-base font-medium mb-2" style="color: var(--gk-text-primary);">{{ t("acl.modal.match_conditions")|default:"Match Conditions (Properties)" }}</h3>
+                        <p class="text-sm mb-3" style="color: var(--gk-text-muted);">Define conditions that must match for this ACL to apply. Enter as JSON.</p>
+                        <textarea id="aclConfigMatch" name="config_match" rows="6"
+                            placeholder='{"Properties": {"Queue": ["Raw", "Postmaster"], "State": ["new", "open"]}}'
+                            class="gk-input-neon w-full font-mono text-sm"></textarea>
+                    </div>
+
+                    <div class="border-t pt-4" style="border-color: var(--gk-border);">
+                        <h3 class="text-base font-medium mb-2" style="color: var(--gk-text-primary);">{{ t("acl.modal.change_actions")|default:"Change Actions" }}</h3>
+                        <p class="text-sm mb-3" style="color: var(--gk-text-muted);">Define what changes this ACL makes when conditions match. Enter as JSON.</p>
+                        <textarea id="aclConfigChange" name="config_change" rows="6"
+                            placeholder='{"Possible": {"Action": ["AgentTicketClose", "AgentTicketNote"]}, "PossibleNot": {"Action": ["AgentTicketBounce"]}}'
+                            class="gk-input-neon w-full font-mono text-sm"></textarea>
+                    </div>
+                </div>
+
+                <div class="gk-modal-footer">
+                    <button type="button" onclick="closeACLModal()" class="gk-btn-secondary">
+                        {{ t("buttons.cancel")|default:"Cancel" }}
+                    </button>
+                    <button type="submit" class="gk-btn-neon">
+                        {{ t("buttons.save")|default:"Save" }}
+                    </button>
+                </div>
+            </form>
         </div>
-        <form id="aclForm" onsubmit="saveACL(event)">
-            <div class="p-6 space-y-4">
-                <input type="hidden" id="aclId" name="id">
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
-                        <input type="text" id="aclName" name="name" required
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                        <select id="aclValidId" name="valid_id"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                            <option value="1">Valid</option>
-                            <option value="2">Invalid</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
-                    <input type="text" id="aclDescription" name="description"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comments</label>
-                    <textarea id="aclComments" name="comments" rows="2"
-                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
-                </div>
-
-                <div>
-                    <label class="flex items-center">
-                        <input type="checkbox" id="aclStopAfterMatch" name="stop_after_match" class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-300 focus:ring focus:ring-gotrs-200 focus:ring-opacity-50">
-                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Stop after match (don't process further ACLs)</span>
-                    </label>
-                </div>
-
-                <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">{{ t("acl.modal.match_conditions")|default:"Match Conditions (Properties)" }}</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Define conditions that must match for this ACL to apply. Enter as JSON.</p>
-                    <textarea id="aclConfigMatch" name="config_match" rows="6"
-                              placeholder='{"Properties": {"Queue": ["Raw", "Postmaster"], "State": ["new", "open"]}}'
-                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"></textarea>
-                </div>
-
-                <div class="border-t border-gray-200 dark:border-gray-700 pt-4">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-3">{{ t("acl.modal.change_actions")|default:"Change Actions" }}</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Define what changes this ACL makes when conditions match. Enter as JSON.</p>
-                    <textarea id="aclConfigChange" name="config_change" rows="6"
-                              placeholder='{"Possible": {"Action": ["AgentTicketClose", "AgentTicketNote"]}, "PossibleNot": {"Action": ["AgentTicketBounce"]}}'
-                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"></textarea>
-                </div>
-            </div>
-
-            <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                <button type="button" onclick="closeACLModal()"
-                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    Cancel
-                </button>
-                <button type="submit"
-                        class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:text-sm">
-                    Save
-                </button>
-            </div>
-        </form>
     </div>
 </div>
 
@@ -213,7 +244,7 @@ function openACLModal() {
 
 function editACL(id) {
     fetch(`/admin/api/acl/${id}`)
-        .then(response => response.json())
+
         .then(result => {
             if (result.success) {
                 const acl = result.data;
@@ -316,7 +347,7 @@ function saveACL(event) {
         },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+
     .then(result => {
         if (result.success) {
             showToast(result.message, 'success');
@@ -351,7 +382,7 @@ function toggleACLStatus(id, currentStatus, name) {
             },
             body: JSON.stringify({ valid_id: newStatus })
         })
-        .then(response => response.json())
+
         .then(result => {
             if (result.success) {
                 showToast(`ACL ${action}d successfully`, 'success');

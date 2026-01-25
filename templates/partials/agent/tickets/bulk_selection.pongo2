@@ -1,0 +1,20 @@
+{# Bulk Selection Controls Partial with Synthwave Styling #}
+{# Required variables: Tickets, Pagination #}
+
+<div class="px-4 py-2" style="background: var(--gk-bg-elevated); border-top: 1px solid var(--gk-border-default);">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <button id="select-all-matching" onclick="selectAllMatching()"
+                    class="text-xs gk-link-neon">
+                {{ t("tickets.select_all")|default:"Select all" }} {{ Pagination.TotalCount }} {{ t("tickets.matching_tickets")|default:"matching tickets" }}
+            </button>
+            <span class="text-xs" style="color: var(--gk-text-muted);">|</span>
+            <span id="selection-info" class="text-xs" style="color: var(--gk-text-muted);">
+                {{ t("tickets.select_for_bulk_actions")|default:"Select tickets to use bulk actions" }}
+            </span>
+        </div>
+        <div class="text-xs" style="color: var(--gk-text-muted);">
+            {{ t("tickets.showing")|default:"Showing" }} {{ Tickets|length }} {{ t("tickets.of")|default:"of" }} {{ Pagination.TotalCount }} {{ t("tickets.tickets")|default:"tickets" }}
+        </div>
+    </div>
+</div>

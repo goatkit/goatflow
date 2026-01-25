@@ -3,25 +3,25 @@
 {% block title %}{% if QueueName %}{{ t("tickets.queue") }}: {{ QueueName }}{% else %}{{ t("nav.tickets") }}{% endif %} - GOTRS{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+<div class="container mx-auto py-8 min-h-screen">
     <!-- Page header -->
     <div class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-                    {% if QueueName %}{{ t("tickets.queue") }}: {{ QueueName }}{% else %}{{ t("nav.tickets") }}{% endif %}
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{% if QueueName %}{{ t("tickets.queue") }}: {{ QueueName }}{% else %}{{ t("nav.tickets") }}{% endif %}</span>
                 </h1>
-                <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">
                     {% if QueueName %}{{ t("tickets.view_in_queue") }}{% else %}{{ t("tickets.view_and_manage") }}{% endif %}
                 </p>
                 {% if QueueName %}
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    <a href="/queues" class="text-gotrs-600 hover:text-gotrs-500">← {{ t("tickets.back_to_queues") }}</a>
+                <p class="mt-1 text-sm">
+                    <a href="/queues" class="gk-link-neon">← {{ t("tickets.back_to_queues") }}</a>
                 </p>
                 {% endif %}
             </div>
             <div class="mt-4 sm:ml-16 sm:mt-0 sm:flex-none">
-                <a href="/tickets/new{% if QueueID %}?queue={{ QueueID }}{% endif %}" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
+                <a href="/tickets/new{% if QueueID %}?queue={{ QueueID }}{% endif %}" class="gk-btn-neon w-auto">
                     <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                     </svg>
@@ -46,106 +46,108 @@
           hx-swap="innerHTML"
           role="search"
           aria-label="{{ t('tickets.filter_form_label')|default:'Filter tickets' }}"
-          class="mt-8 space-y-4 bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4">
-        <input type="hidden" name="sort" value="{{ SortBy }}">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div class="relative flex-1">
-                <label for="search-input" class="sr-only">{{ t('tickets.search_placeholder_list')|default:'Search tickets' }}</label>
-                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                    <svg class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
-                    </svg>
+          class="mt-8 gk-card-glow">
+        <div class="gk-card-body space-y-4">
+            <input type="hidden" name="sort" value="{{ SortBy }}">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div class="relative flex-1">
+                    <label for="search-input" class="sr-only">{{ t('tickets.search_placeholder_list')|default:'Search tickets' }}</label>
+                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                        <svg class="h-5 w-5" style="color: var(--gk-text-muted);" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <input type="text"
+                           id="search-input"
+                           name="search"
+                           value="{{ SearchQuery }}"
+                           class="gk-input-neon pl-10"
+                           placeholder="{{ t('tickets.search_placeholder_list')|default:'Search tickets' }}">
                 </div>
-                <input type="text"
-                       id="search-input"
-                       name="search"
-                       value="{{ SearchQuery }}"
-                       class="block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-10 pr-3 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-gotrs-500 focus:outline-none focus:ring-gotrs-500 sm:text-sm"
-                       placeholder="{{ t('tickets.search_placeholder_list')|default:'Search tickets' }}">
+                <button type="submit" class="gk-btn-neon w-auto">
+                    {{ t('search.apply_filters')|default:'Apply Filters' }}
+                </button>
+                <a href="/tickets{% if QueueID %}?queue={{ QueueID }}{% endif %}"
+                   id="clear-filters-btn"
+                   class="gk-btn-secondary">
+                    {{ t('search.clear_filters')|default:'Clear' }}
+                </a>
             </div>
-            <button type="submit" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
-                {{ t('search.apply_filters')|default:'Apply Filters' }}
-            </button>
-            <a href="/tickets{% if QueueID %}?queue={{ QueueID }}{% endif %}"
-               id="clear-filters-btn"
-               class="inline-flex items-center justify-center rounded-md bg-gray-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600">
-                {{ t('search.clear_filters')|default:'Clear' }}
-            </a>
-        </div>
 
-        {% if Statuses or Priorities or Queues %}
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {% if Statuses %}
-            <div>
-                <label for="status-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('tickets.status') }}</label>
-                <select id="status-filter"
-                        name="status"
-                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
-                    <option value="all" {% if FilterStatusRaw == 'all' %}selected{% endif %}>{{ t('tickets.all_statuses')|default:'All statuses' }}</option>
-                    <option value="not_closed" {% if FilterStatusRaw == 'not_closed' or (not FilterStatusRaw and FilterStatus == 'not_closed') %}selected{% endif %}>{{ t('common.not_closed')|default:'Not closed' }}</option>
-            {% for status in Statuses %}
-            <option value="{{ status.Param|default:status.Value }}" {% if FilterStatus == status.Value or (status.Param and FilterStatusRaw and FilterStatusRaw|lower == status.Param|lower) or (FilterStatusRaw and FilterStatusRaw|lower == status.Label|lower) %}selected{% endif %}>{{ status.Label }}</option>
-            {% endfor %}
-                </select>
-            </div>
-            {% endif %}
+            {% if Statuses or Priorities or Queues %}
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                {% if Statuses %}
+                <div>
+                    <label for="status-filter" class="gk-form-label">{{ t('tickets.status') }}</label>
+                    <select id="status-filter"
+                            name="status"
+                            class="gk-input-neon mt-1">
+                        <option value="all" {% if FilterStatusRaw == 'all' %}selected{% endif %}>{{ t('tickets.all_statuses')|default:'All statuses' }}</option>
+                        <option value="not_closed" {% if FilterStatusRaw == 'not_closed' or (not FilterStatusRaw and FilterStatus == 'not_closed') %}selected{% endif %}>{{ t('common.not_closed')|default:'Not closed' }}</option>
+                {% for status in Statuses %}
+                <option value="{{ status.Param|default:status.Value }}" {% if FilterStatus == status.Value or (status.Param and FilterStatusRaw and FilterStatusRaw|lower == status.Param|lower) or (FilterStatusRaw and FilterStatusRaw|lower == status.Label|lower) %}selected{% endif %}>{{ status.Label }}</option>
+                {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
 
-            {% if Priorities %}
-            <div>
-                <label for="priority-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('tickets.priority') }}</label>
-                <select id="priority-filter"
-                        name="priority"
-                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
-                    <option value="">{{ t('tickets.all_priorities')|default:'All priorities' }}</option>
-                    {% for priority in Priorities %}
-                    <option value="{{ priority.name }}"
-                            {% if FilterPriorityRaw and FilterPriorityRaw|lower == priority.name|lower %}selected{% endif %}>{{ priority.name|title }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            {% endif %}
+                {% if Priorities %}
+                <div>
+                    <label for="priority-filter" class="gk-form-label">{{ t('tickets.priority') }}</label>
+                    <select id="priority-filter"
+                            name="priority"
+                            class="gk-input-neon mt-1">
+                        <option value="">{{ t('tickets.all_priorities')|default:'All priorities' }}</option>
+                        {% for priority in Priorities %}
+                        <option value="{{ priority.name }}"
+                                {% if FilterPriorityRaw and FilterPriorityRaw|lower == priority.name|lower %}selected{% endif %}>{{ priority.name|title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
 
-            {% if Queues %}
-            <div>
-                <label for="queue-filter" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('tickets.queue') }}</label>
-                <select id="queue-filter"
-                        name="queue"
-                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
-                    <option value="">{{ t('tickets.all_queues')|default:'All queues' }}</option>
-                    {% for queue in Queues %}
-            <option value="{{ queue.id }}"
-                {% if FilterQueueRaw and FilterQueueRaw == queue.id %}selected{% endif %}>{{ queue.name }}</option>
-                    {% endfor %}
-                </select>
+                {% if Queues %}
+                <div>
+                    <label for="queue-filter" class="gk-form-label">{{ t('tickets.queue') }}</label>
+                    <select id="queue-filter"
+                            name="queue"
+                            class="gk-input-neon mt-1">
+                        <option value="">{{ t('tickets.all_queues')|default:'All queues' }}</option>
+                        {% for queue in Queues %}
+                <option value="{{ queue.id }}"
+                    {% if FilterQueueRaw and FilterQueueRaw == queue.id %}selected{% endif %}>{{ queue.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
             </div>
             {% endif %}
         </div>
-        {% endif %}
     </form>
 
     {% if HasActiveFilters %}
     <div id="active-filters" class="mt-4 flex flex-wrap items-center gap-2 text-sm" aria-live="polite">
-        <span class="font-medium text-gray-700 dark:text-gray-300">{{ t('search.active_filters')|default:'Active filters:' }}</span>
+        <span class="font-medium" style="color: var(--gk-text-secondary);">{{ t('search.active_filters')|default:'Active filters:' }}</span>
         {% if FilterStatusRaw and FilterStatusRaw != 'all' and FilterStatusRaw != 'not_closed' %}
-        <span class="badge inline-flex items-center gap-1 rounded-full bg-gotrs-100 px-3 py-1 text-gotrs-700 dark:bg-gotrs-900/40 dark:text-gotrs-200">
+        <span class="inline-flex items-center gap-1 rounded-full px-3 py-1" style="background: var(--gk-primary-subtle); color: var(--gk-primary);">
             {{ FilterStatusLabel|default:FilterStatusRaw }}
             <span aria-label="{{ t('tickets.remove_status_filter')|default:'Remove status filter' }}" role="button">×</span>
         </span>
         {% endif %}
         {% if FilterPriorityRaw %}
-        <span class="badge inline-flex items-center gap-1 rounded-full bg-gotrs-100 px-3 py-1 text-gotrs-700 dark:bg-gotrs-900/40 dark:text-gotrs-200">
+        <span class="inline-flex items-center gap-1 rounded-full px-3 py-1" style="background: var(--gk-secondary-subtle); color: var(--gk-secondary);">
             {{ FilterPriorityLabel|default:FilterPriorityRaw }}
             <span aria-label="{{ t('tickets.remove_priority_filter')|default:'Remove priority filter' }}" role="button">×</span>
         </span>
         {% endif %}
         {% if FilterQueueRaw %}
-        <span class="badge inline-flex items-center gap-1 rounded-full bg-gotrs-100 px-3 py-1 text-gotrs-700 dark:bg-gotrs-900/40 dark:text-gotrs-200">
+        <span class="inline-flex items-center gap-1 rounded-full px-3 py-1" style="background: var(--gk-tertiary-subtle); color: var(--gk-tertiary);">
             {{ FilterQueueLabel|default:FilterQueueRaw }}
             <span aria-label="{{ t('tickets.remove_queue_filter')|default:'Remove queue filter' }}" role="button">×</span>
         </span>
         {% endif %}
         {% if SearchQuery %}
-        <span class="badge inline-flex items-center gap-1 rounded-full bg-gotrs-100 px-3 py-1 text-gotrs-700 dark:bg-gotrs-900/40 dark:text-gotrs-200">
+        <span class="inline-flex items-center gap-1 rounded-full px-3 py-1" style="background: var(--gk-bg-elevated); color: var(--gk-text-primary);">
             {{ SearchQuery }}
             <span aria-label="{{ t('tickets.remove_search_filter')|default:'Remove search filter' }}" role="button">×</span>
         </span>
@@ -154,136 +156,140 @@
     {% endif %}
 
     <!-- Tickets list -->
-    <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden mt-6" id="ticket-list">
+    <div class="gk-card-glow overflow-hidden mt-6" id="ticket-list">
         {% if Tickets and Tickets|length > 0 %}
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        <button type="button" class="group inline-flex items-center" data-sort="id">
-                            {{ t("tickets.ticket_id") }}
-                            <span class="ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible">
-                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                                </svg>
+        <div class="overflow-x-auto">
+            <table class="gk-table">
+                <thead>
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left">
+                            <button type="button" class="group inline-flex items-center text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-secondary);" data-sort="id">
+                                {{ t("tickets.ticket_id") }}
+                                <span class="ml-2 flex-none rounded group-hover:visible group-focus:visible" style="color: var(--gk-text-muted);">
+                                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                            </button>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left">
+                            <button type="button" class="group inline-flex items-center text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-secondary);" data-sort="subject">
+                                {{ t("tickets.subject") }}
+                                <span class="ml-2 flex-none rounded group-hover:visible group-focus:visible" style="color: var(--gk-text-muted);">
+                                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                            </button>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left">
+                            <button type="button" class="group inline-flex items-center text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-secondary);" data-sort="status">
+                                {{ t("tickets.status") }}
+                                <span class="ml-2 flex-none rounded group-hover:visible group-focus:visible" style="color: var(--gk-text-muted);">
+                                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                            </button>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left">
+                            <button type="button" class="group inline-flex items-center text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-secondary);" data-sort="priority">
+                                {{ t("tickets.priority") }}
+                                <span class="ml-2 flex-none rounded group-hover:visible group-focus:visible" style="color: var(--gk-text-muted);">
+                                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                            </button>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left">
+                            <button type="button" class="group inline-flex items-center text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-secondary);" data-sort="queue">
+                                {{ t("tickets.queue") }}
+                                <span class="ml-2 flex-none rounded group-hover:visible group-focus:visible" style="color: var(--gk-text-muted);">
+                                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                            </button>
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-secondary);">
+                            {{ t("tickets.customer") }}
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-secondary);">
+                            {{ t("tickets.agent") }}
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left">
+                            <button type="button" class="group inline-flex items-center text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-secondary);" data-sort="updated">
+                                {{ t("tickets.updated_at") }}
+                                <span class="ml-2 flex-none rounded group-hover:visible group-focus:visible" style="color: var(--gk-text-muted);">
+                                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                                    </svg>
+                                </span>
+                            </button>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ticket in Tickets %}
+                    <tr>
+                        <td class="whitespace-nowrap font-medium">
+                            <a href="/tickets/{{ ticket.id }}" class="gk-link-neon font-mono">
+                                #{{ ticket.id }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="/tickets/{{ ticket.id }}" class="gk-link-neon">
+                                {{ ticket.subject }}
+                            </a>
+                        </td>
+                        <td class="whitespace-nowrap">
+                            <span class="gk-badge
+                                {% if ticket.status == 'open' %}gk-badge-success
+                                {% elif ticket.status == 'pending' %}gk-badge-warning
+                                {% elif ticket.status == 'closed' %}gk-badge-muted
+                                {% else %}gk-badge-primary{% endif %}">
+                                {{ ticket.status|title }}
                             </span>
-                        </button>
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        <button type="button" class="group inline-flex items-center" data-sort="subject">
-                            {{ t("tickets.subject") }}
-                            <span class="ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible">
-                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                                </svg>
+                        </td>
+                        <td class="whitespace-nowrap">
+                            <span class="gk-badge
+                                {% if ticket.priority == 'critical' %}gk-badge-error
+                                {% elif ticket.priority == 'high' %}gk-badge-warning
+                                {% elif ticket.priority == 'medium' %}gk-badge-tertiary
+                                {% elif ticket.priority == 'low' %}gk-badge-success
+                                {% else %}gk-badge-muted{% endif %}">
+                                {{ ticket.priority|title }}
                             </span>
-                        </button>
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        <button type="button" class="group inline-flex items-center" data-sort="status">
-                            {{ t("tickets.status") }}
-                            <span class="ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible">
-                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                                </svg>
-                            </span>
-                        </button>
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        <button type="button" class="group inline-flex items-center" data-sort="priority">
-                            {{ t("tickets.priority") }}
-                            <span class="ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible">
-                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                                </svg>
-                            </span>
-                        </button>
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        <button type="button" class="group inline-flex items-center" data-sort="queue">
-                            {{ t("tickets.queue") }}
-                            <span class="ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible">
-                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                                </svg>
-                            </span>
-                        </button>
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        {{ t("tickets.customer") }}
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        {{ t("tickets.agent") }}
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        <button type="button" class="group inline-flex items-center" data-sort="updated">
-                            {{ t("tickets.updated_at") }}
-                            <span class="ml-2 flex-none rounded text-gray-400 group-hover:visible group-focus:visible">
-                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-                                </svg>
-                            </span>
-                        </button>
-                    </th>
-                </tr>
-            </thead>
-            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {% for ticket in Tickets %}
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        							<a href="/tickets/{{ ticket.id }}" class="text-gotrs-600 hover:text-gotrs-500">
-                            {{ ticket.id }}
-                        </a>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        <div class="max-w-xs truncate">{{ ticket.subject }}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
-                            {% if ticket.status == 'open' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                            {% elif ticket.status == 'pending' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                            {% elif ticket.status == 'closed' %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200
-                            {% else %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200{% endif %}">
-                            {{ ticket.status|title }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
-                            {% if ticket.priority == 'critical' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
-                            {% elif ticket.priority == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
-                            {% elif ticket.priority == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                            {% elif ticket.priority == 'low' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                            {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200{% endif %}">
-                            {{ ticket.priority|title }}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {{ ticket.queue }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {{ ticket.customer }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {{ ticket.agent }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {{ ticket.updated }}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        </td>
+                        <td style="color: var(--gk-text-secondary);">
+                            {{ ticket.queue }}
+                        </td>
+                        <td style="color: var(--gk-text-secondary);">
+                            {{ ticket.customer }}
+                        </td>
+                        <td class="whitespace-nowrap" style="color: var(--gk-text-secondary);">
+                            {{ ticket.agent }}
+                        </td>
+                        <td class="whitespace-nowrap" style="color: var(--gk-text-muted);">
+                            {{ ticket.updated }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
         <div class="text-center py-12">
-            <svg class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="mx-auto h-12 w-12" style="color: var(--gk-text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets.no_tickets_found")|default:"No tickets found" }}</h3>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <h3 class="mt-2 text-sm font-medium" style="color: var(--gk-text-primary);">{{ t("tickets.no_tickets_found")|default:"No tickets found" }}</h3>
+            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">
                 Get started by creating a new support ticket.
             </p>
             <div class="mt-6">
-                <a href="/ticket/new" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
+                <a href="/ticket/new" class="gk-btn-neon w-auto">
                     <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                     </svg>

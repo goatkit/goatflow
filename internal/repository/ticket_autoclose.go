@@ -16,6 +16,8 @@ type AutoCloseResult struct {
 }
 
 // AutoClosePendingTickets moves tickets out of pending auto-close states when deadlines expire.
+// This includes tickets with no pending date set (legacy/migrated data) - these are treated
+// as due immediately to ensure they get processed.
 func (r *TicketRepository) AutoClosePendingTickets(
 	ctx context.Context,
 	now time.Time,
@@ -85,6 +87,9 @@ func (r *TicketRepository) AutoClosePendingTickets(
 			return nil, fmt.Errorf("ticket state %q not found", to)
 		}
 
+		// Include tickets with:
+		// 1. A set deadline that has passed (until_time > 0 AND until_time <= now)
+		// 2. No deadline set (until_time = 0) - legacy/migrated data
 		update := `
 			UPDATE ticket
 			SET ticket_state_id = ?,
@@ -92,8 +97,7 @@ func (r *TicketRepository) AutoClosePendingTickets(
 			    change_time = CURRENT_TIMESTAMP,
 			    change_by = ?
 			WHERE ticket_state_id = ?
-			  AND until_time > 0
-			  AND until_time <= ?
+			  AND ((until_time > 0 AND until_time <= ?) OR until_time = 0)
 			  AND archive_flag = 0
 		`
 

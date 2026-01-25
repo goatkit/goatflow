@@ -3,81 +3,95 @@
 {% block title %}{{ t("admin.webservices.history") }} - {{ Webservice.Name }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <!-- Header -->
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex justify-between items-center">
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Page header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div class="flex items-center">
+                <a href="/admin/webservices/{{ Webservice.ID }}" class="gk-btn-secondary mr-4">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    {{ t("common.back") }}
+                </a>
                 <div>
+                    <!-- Breadcrumb -->
                     <nav class="flex mb-2" aria-label="Breadcrumb">
                         <ol class="inline-flex items-center space-x-1 md:space-x-3">
                             <li class="inline-flex items-center">
-                                <a href="/admin/webservices" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">{{ t("admin.webservices.title") }}</a>
+                                <a href="/admin/webservices" class="text-sm transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">{{ t("admin.webservices.title") }}</a>
                             </li>
                             <li>
                                 <div class="flex items-center">
-                                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
-                                    <a href="/admin/webservices/{{ Webservice.ID }}" class="ml-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">{{ Webservice.Name }}</a>
+                                    <svg class="w-4 h-4" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+                                    <a href="/admin/webservices/{{ Webservice.ID }}" class="ml-1 text-sm transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">{{ Webservice.Name }}</a>
                                 </div>
                             </li>
                             <li>
                                 <div class="flex items-center">
-                                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
-                                    <span class="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("admin.webservices.history") }}</span>
+                                    <svg class="w-4 h-4" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+                                    <span class="ml-1 text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("admin.webservices.history") }}</span>
                                 </div>
                             </li>
                         </ol>
                     </nav>
-                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ t("admin.webservices.history") }}: {{ Webservice.Name }}</h1>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("admin.webservices.history_description") }}</p>
+                    <h1 class="text-3xl font-bold gk-heading">
+                        <span class="gk-text-gradient">{{ t("admin.webservices.history") }}</span>
+                    </h1>
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ Webservice.Name }} - {{ t("admin.webservices.history_description") }}</p>
                 </div>
-                <a href="/admin/webservices/{{ Webservice.ID }}" class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-                    </svg>
-                    {{ t("common.back") }}
-                </a>
             </div>
         </div>
+    </header>
 
-        <!-- History List -->
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 dark:bg-gray-900">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ t("admin.webservices.config_hash") }}</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ t("common.created") }}</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ t("common.created_by") }}</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{{ t("common.actions") }}</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for h in History %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{{ h.ID }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500 dark:text-gray-400">{{ h.ConfigMD5|truncatechars:12 }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{{ h.CreateTime|date:"2006-01-02 15:04:05" }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{{ h.CreateBy }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button onclick="restoreHistory({{ h.ID }})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="{{ t('admin.webservices.restore') }}">
-                                <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                                </svg>
-                                {{ t("admin.webservices.restore") }}
-                            </button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                            {{ t("admin.webservices.no_history") }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <!-- History Table -->
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <table class="gk-table">
+            <thead>
+                <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">{{ t("admin.webservices.config_hash") }}</th>
+                    <th scope="col">{{ t("common.created") }}</th>
+                    <th scope="col">{{ t("common.created_by") }}</th>
+                    <th scope="col">{{ t("common.actions") }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in History %}
+                <tr>
+                    <td style="color: var(--gk-text-muted);">{{ h.ID }}</td>
+                    <td>
+                        <code class="font-mono text-xs px-2 py-1 rounded" style="background: var(--gk-bg-tertiary); color: var(--gk-primary);">{{ h.ConfigMD5|truncatechars:12 }}</code>
+                    </td>
+                    <td>
+                        <span class="datetime-field" data-utc="{{ h.CreateTime }}" style="color: var(--gk-text-secondary);">{{ h.CreateTime|date:"2006-01-02 15:04:05" }}</span>
+                    </td>
+                    <td style="color: var(--gk-text-secondary);">{{ h.CreateBy }}</td>
+                    <td>
+                        <button onclick="restoreHistory({{ h.ID }})"
+                            class="inline-flex items-center px-3 py-1.5 rounded transition-colors hover:bg-white/10"
+                            style="color: var(--gk-primary);"
+                            title="{{ t('admin.webservices.restore') }}">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            {{ t("admin.webservices.restore") }}
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center" style="color: var(--gk-text-muted);">
+                        <svg class="mx-auto h-12 w-12 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <h3 class="text-sm font-medium mb-1" style="color: var(--gk-text-primary);">{{ t("admin.webservices.no_history") }}</h3>
+                        <p class="text-sm" style="color: var(--gk-text-muted);">No configuration history available for this webservice.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -98,14 +112,25 @@ async function restoreHistory(historyId) {
         const result = await response.json();
 
         if (result.success) {
-            alert('{{ t("admin.webservices.restore_success") }}');
-            window.location.href = '/admin/webservices/{{ Webservice.ID }}';
+            showToast('{{ t("admin.webservices.restore_success") }}', 'success');
+            setTimeout(() => {
+                window.location.href = '/admin/webservices/{{ Webservice.ID }}';
+            }, 500);
         } else {
-            alert('Error: ' + (result.error || 'Unknown error'));
+            showToast('Error: ' + (result.error || 'Unknown error'), 'error');
         }
     } catch (error) {
-        alert('Error restoring configuration: ' + error.message);
+        showToast('Error restoring configuration: ' + error.message, 'error');
     }
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50';
+    toast.style.background = type === 'error' ? 'var(--gk-error)' : type === 'success' ? 'var(--gk-success)' : 'var(--gk-primary)';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 </script>
 {% endblock %}

@@ -1,0 +1,48 @@
+{# Reusable Toast Notification Partial with Synthwave Styling #}
+{# Required variables: ToastID (default: "toast-notification") #}
+
+<div id="{{ ToastID|default:"toast-notification" }}" class="fixed bottom-4 right-4 z-50 hidden">
+    <div class="rounded-lg shadow-lg p-4 max-w-sm" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+        <div class="flex items-start">
+            <div id="{{ ToastID|default:"toast-notification" }}-icon" class="flex-shrink-0"></div>
+            <div class="ml-3">
+                <p id="{{ ToastID|default:"toast-notification" }}-title" class="text-sm font-medium" style="color: var(--gk-text-primary);"></p>
+                <p id="{{ ToastID|default:"toast-notification" }}-message" class="mt-1 text-sm" style="color: var(--gk-text-muted);"></p>
+            </div>
+            <button onclick="hideToast('{{ ToastID|default:"toast-notification" }}')" class="ml-4 flex-shrink-0 transition-colors" style="color: var(--gk-text-muted);" onmouseover="this.style.color='var(--gk-primary)'" onmouseout="this.style.color='var(--gk-text-muted)'">
+                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Generic toast functions - can be overridden by page-specific implementations
+if (typeof showToast === 'undefined') {
+    function showToast(success, title, message, toastId = '{{ ToastID|default:"toast-notification" }}') {
+        const toast = document.getElementById(toastId);
+        const iconEl = document.getElementById(toastId + '-icon');
+        const titleEl = document.getElementById(toastId + '-title');
+        const messageEl = document.getElementById(toastId + '-message');
+
+        if (success) {
+            iconEl.innerHTML = '<svg class="h-6 w-6" style="color: var(--gk-success);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+        } else {
+            iconEl.innerHTML = '<svg class="h-6 w-6" style="color: var(--gk-error);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+        }
+
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        toast.classList.remove('hidden');
+
+        // Auto-hide after 5 seconds
+        setTimeout(() => hideToast(toastId), 5000);
+    }
+
+    function hideToast(toastId = '{{ ToastID|default:"toast-notification" }}') {
+        document.getElementById(toastId).classList.add('hidden');
+    }
+}
+</script>

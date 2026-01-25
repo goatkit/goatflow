@@ -252,6 +252,16 @@ spec:
           handler: HandleSetLanguage
           description: "Update language preference"
 
+        - path: /api/preferences/theme
+          method: GET
+          handler: HandleGetTheme
+          description: "Get current theme preference and available themes"
+
+        - path: /api/preferences/theme
+          method: POST
+          handler: HandleSetTheme
+          description: "Update theme preference (persists to database)"
+
         # User profile API
         - path: /api/profile
           method: GET
@@ -262,3 +272,15 @@ spec:
           method: POST
           handler: HandleUpdateProfile
           description: "Update current user's profile information"
+
+        # Password management
+        - path: /password
+          method: GET
+          handler: HandleAgentPasswordForm
+          template: pages/password_form.pongo2
+          description: "Display password change form"
+
+        - path: /password/change
+          method: POST
+          handler: HandleAgentChangePassword
+          description: "Process password change"

@@ -3,20 +3,22 @@
 {% block title %}{{ t("admin.group_management") }} - {{ t("app.name") }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
-    <div class="mb-8">
+    <header class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("admin.group_management") }}</h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ t("admin.group_management_desc") }}</p>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("admin.group_management") }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.group_management_desc") }}</p>
             </div>
             <div class="mt-4 sm:mt-0">
                 <button
                     type="button"
                     onclick="showAddGroupModal()"
                     title="{{ t("groups.tooltips.add_new")|default:"Add a new group to the system" }}"
-                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+                    class="gk-btn-neon"
                 >
                     <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -25,16 +27,16 @@
                 </button>
             </div>
         </div>
-    </div>
+    </header>
 
     <!-- Search and Filter Bar -->
-    <div class="mb-6 bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+    <div class="mb-6 gk-card p-4">
         <div class="flex flex-col sm:flex-row gap-4">
             <div class="flex-1">
                 <label for="groupSearch" class="sr-only">Search groups</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
@@ -42,7 +44,7 @@
                         type="text"
                         id="groupSearch"
                         name="search"
-                        class="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:border-gotrs-500 sm:text-sm"
+                        class="gk-input-neon pl-10 pr-10"
                         placeholder="Search by name or description..."
                         oninput="handleSearchInput()"
                     >
@@ -54,14 +56,14 @@
                         style="display: none;"
                         title="{{ t("groups.tooltips.clear_search")|default:"Clear search" }}"
                     >
-                        <svg class="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
             </div>
             <div class="flex gap-2">
-                <select id="statusFilter" onchange="filterGroups()" class="block rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                <select id="statusFilter" onchange="filterGroups()" class="gk-select-neon">
                     <option value="">All Status</option>
                     <option value="1">Active</option>
                     <option value="2">Inactive</option>
@@ -70,7 +72,7 @@
                     type="button"
                     onclick="clearFilters()"
                     title="{{ t("groups.tooltips.clear_filters")|default:"Clear all filters" }}"
-                    class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+                    class="gk-btn-secondary"
                 >
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
@@ -79,7 +81,7 @@
                 </button>
             </div>
             <div id="search-indicator" class="htmx-indicator flex items-center">
-                <svg class="animate-spin h-5 w-5 text-gotrs-600" fill="none" viewBox="0 0 24 24">
+                <svg class="animate-spin h-5 w-5" style="color: var(--gk-primary);" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -88,48 +90,46 @@
     </div>
 
     <!-- Groups table -->
-    <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700" id="groupsTable">
-            <thead class="bg-gray-50 dark:bg-gray-900">
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <table class="gk-table" id="groupsTable">
+            <thead>
                 <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onclick="sortTable('name')">
+                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('name')">
                         <div class="flex items-center gap-1">
                             Group Name
                             <span class="sort-icon" data-column="name">
-                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="h-4 w-4" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                                 </svg>
                             </span>
                         </div>
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider">
-                        Description
-                    </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onclick="sortTable('members')">
+                    <th scope="col">Description</th>
+                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('members')">
                         <div class="flex items-center gap-1">
                             Members
                             <span class="sort-icon" data-column="members">
-                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="h-4 w-4" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                                 </svg>
                             </span>
                         </div>
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onclick="sortTable('status')">
+                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('status')">
                         <div class="flex items-center gap-1">
                             Status
                             <span class="sort-icon" data-column="status">
-                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="h-4 w-4" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                                 </svg>
                             </span>
                         </div>
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onclick="sortTable('created')">
+                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('created')">
                         <div class="flex items-center gap-1">
                             Created
                             <span class="sort-icon" data-column="created">
-                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="h-4 w-4" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                                 </svg>
                             </span>
@@ -140,49 +140,46 @@
                     </th>
                 </tr>
             </thead>
-            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700" id="groups-tbody">
+            <tbody id="groups-tbody">
                 {% for group in Groups %}
-                <tr id="group-row-{{ group.ID }}" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900 dark:text-white">
+                <tr id="group-row-{{ group.ID }}">
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="text-sm font-medium" style="color: var(--gk-text-primary);">
                             {{ group.Name }}
                             {% if group.Name == "admin" or group.Name == "users" or group.Name == "stats" %}
-                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-white" title="System group - cannot be deleted">
+                            <span class="ml-2 gk-badge gk-badge-accent" title="System group - cannot be deleted">
                                 System
                             </span>
                             {% endif %}
                         </div>
                     </td>
-                    <td class="px-6 py-4">
-                        <div class="text-sm text-gray-900 dark:text-gray-300 max-w-xs truncate" title="{{ group.Comments }}">
-                            {% if group.Comments %}{{ group.Comments }}{% else %}—{% endif %}
+                    <td class="px-4 py-3">
+                        <div class="text-sm max-w-xs truncate" style="color: var(--gk-text-muted);" title="{{ group.Comments }}">
+                            {% if group.Comments %}{{ group.Comments }}{% else %}-{% endif %}
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <a href="#" onclick="showGroupMembers({{ group.ID }}); return false;" class="text-sm text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-300">
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <a href="#" onclick="showGroupMembers({{ group.ID }}); return false;" class="text-sm hover:underline" style="color: var(--gk-primary);">
                             <span id="member-count-{{ group.ID }}">{{ group.MemberCount }}</span> members
                         </a>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-4 py-3 whitespace-nowrap">
                         {% if group.IsActive %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200">
-                            {{ t("admin.active") }}
-                        </span>
+                        <span class="gk-badge gk-badge-success">{{ t("admin.active") }}</span>
                         {% else %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                            {{ t("admin.inactive") }}
-                        </span>
+                        <span class="gk-badge gk-badge-muted">{{ t("admin.inactive") }}</span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm" style="color: var(--gk-text-muted);">
                         {{ group.CreateTime|default:"-" }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                         <div class="flex items-center justify-end space-x-2">
                             <button
                                 onclick="showEditGroupModal({{ group.ID }})"
                                 title="{{ t("groups.tooltips.edit")|default:"Edit group" }}"
-                                class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-300"
+                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-primary-subtle)]"
+                                style="color: var(--gk-primary);"
                             >
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -191,7 +188,8 @@
                             <button
                                 onclick="showGroupPermissions({{ group.ID }}); return false;"
                                 title="{{ t("groups.tooltips.manage_permissions")|default:"Manage permissions" }}"
-                                class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-info-subtle)]"
+                                style="color: var(--gk-info);"
                             >
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
@@ -201,7 +199,8 @@
                             <button
                                 onclick="confirmDeleteGroup({{ group.ID }}, '{{ group.Name }}')"
                                 title="{{ t("groups.tooltips.delete")|default:"Delete group" }}"
-                                class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-error-subtle)]"
+                                style="color: var(--gk-error);"
                             >
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -211,7 +210,8 @@
                             <button
                                 disabled
                                 title="{{ t("groups.tooltips.system_group_no_delete")|default:"System groups cannot be deleted" }}"
-                                class="text-gray-400 cursor-not-allowed"
+                                class="p-2 rounded-lg cursor-not-allowed"
+                                style="color: var(--gk-text-muted);"
                             >
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -224,8 +224,8 @@
                 {% empty %}
                 <tr>
                     <td colspan="6" class="px-6 py-12 text-center">
-                        <div class="text-gray-500 dark:text-gray-400">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div style="color: var(--gk-text-muted);">
+                            <svg class="mx-auto h-12 w-12" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
                             <p class="mt-2 text-sm">{{ t("admin.no_groups_found") }}</p>
@@ -241,25 +241,25 @@
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="hidden fixed z-20 inset-0 overflow-y-auto" aria-labelledby="delete-modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeDeleteModal()"></div>
+        <div class="gk-modal-backdrop fixed inset-0 transition-opacity" aria-hidden="true" onclick="closeDeleteModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="p-6">
                 <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 sm:mx-0 sm:h-10 sm:w-10">
-                        <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10" style="background: var(--gk-error-subtle);">
+                        <svg class="h-6 w-6" style="color: var(--gk-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                     </div>
                     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="delete-modal-title">
+                        <h3 class="text-lg leading-6 font-medium" style="color: var(--gk-text-primary);" id="delete-modal-title">
                             Delete Group
                         </h3>
                         <div class="mt-2">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                            <p class="text-sm" style="color: var(--gk-text-muted);">
                                 {{ t("messages.confirm.delete_group")|default:"Are you sure you want to delete this group?" }}
                             </p>
-                            <p class="mt-2 text-sm text-red-600 dark:text-red-400">
+                            <p class="mt-2 text-sm" style="color: var(--gk-error);">
                                 <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
@@ -269,23 +269,13 @@
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                    type="button"
-                    onclick="executeDelete()"
-                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors duration-200"
-                >
+            <div class="gk-modal-footer">
+                <button id="deleteCancelButton" type="button" onclick="closeDeleteModal()" class="gk-btn-secondary">{{ t("buttons.close")|default:"Close" }}</button>
+                <button type="button" onclick="executeDelete()" class="gk-btn-danger">
                     <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                     Delete Group
-                </button>
-                <button id="deleteCancelButton"
-                    type="button"
-                    onclick="closeDeleteModal()"
-                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors duration-200"
-                >
-                    Close
                 </button>
             </div>
         </div>
@@ -295,97 +285,68 @@
 <!-- Add/Edit Group Modal -->
 <div id="groupModal" class="hidden fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeGroupModal()"></div>
+        <div class="gk-modal-backdrop fixed inset-0 transition-opacity" aria-hidden="true" onclick="closeGroupModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <form id="groupForm" onsubmit="handleGroupSubmit(event)">
-                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-gotrs-100 dark:bg-gotrs-900 sm:mx-0 sm:h-10 sm:w-10">
-                            <svg class="h-6 w-6 text-gotrs-600 dark:text-gotrs-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="gk-modal-header">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full" style="background: var(--gk-primary-subtle);">
+                            <svg class="h-6 w-6" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                             </svg>
                         </div>
-                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
-                                <span id="modalAction">Add</span> Group
-                            </h3>
-                            <div class="mt-4 space-y-4">
-                                <input type="hidden" id="groupId" name="id">
+                        <h3 class="ml-3 gk-modal-title" id="modal-title">
+                            <span id="modalAction">Add</span> Group
+                        </h3>
+                    </div>
+                    <button type="button" onclick="closeGroupModal()" class="gk-modal-close">
+                        <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="gk-modal-body space-y-4">
+                    <input type="hidden" id="groupId" name="id">
 
-                                <div>
-                                    <label for="groupName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Group Name <span class="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="groupName"
-                                        name="name"
-                                        required
-                                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                                        placeholder="e.g., support_team"
-                                    >
-                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Only letters, numbers, underscore and dash allowed</p>
-                                </div>
+                    <div>
+                        <label for="groupName" class="form-label">
+                            Group Name <span style="color: var(--gk-error);">*</span>
+                        </label>
+                        <input type="text" id="groupName" name="name" required class="gk-input-neon w-full" placeholder="e.g., support_team">
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">Only letters, numbers, underscore and dash allowed</p>
+                    </div>
 
-                                <div>
-                                    <label for="groupComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Description
-                                    </label>
-                                    <textarea
-                                        id="groupComments"
-                                        name="comments"
-                                        rows="3"
-                                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                                        placeholder="Brief description of this group's purpose..."
-                                    ></textarea>
-                                </div>
+                    <div>
+                        <label for="groupComments" class="form-label">Description</label>
+                        <textarea id="groupComments" name="comments" rows="3" class="gk-input-neon w-full" placeholder="Brief description of this group's purpose..."></textarea>
+                    </div>
 
-                                <div>
-                                    <label for="groupStatus" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Status
-                                    </label>
-                                    <select
-                                        id="groupStatus"
-                                        name="valid_id"
-                                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                                    >
-                                        <option value="1">Active</option>
-                                        <option value="2">Inactive</option>
-                                    </select>
-                                </div>
+                    <div>
+                        <label for="groupStatus" class="form-label">Status</label>
+                        <select id="groupStatus" name="valid_id" class="gk-select-neon w-full">
+                            <option value="1">Active</option>
+                            <option value="2">Inactive</option>
+                        </select>
+                    </div>
 
-                                <div id="formError" class="hidden rounded-md bg-red-50 dark:bg-red-900/50 p-4">
-                                    <div class="flex">
-                                        <div class="flex-shrink-0">
-                                            <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                        </div>
-                                        <div class="ml-3">
-                                            <h3 class="text-sm font-medium text-red-800 dark:text-red-200">{{ t("labels.error")|default:"Error" }}</h3>
-                                            <div class="mt-2 text-sm text-red-700 dark:text-red-300" id="errorMessage"></div>
-                                        </div>
-                                    </div>
-                                </div>
+                    <div id="formError" class="hidden gk-alert gk-alert-error">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5" style="color: var(--gk-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium" style="color: var(--gk-error);">{{ t("labels.error")|default:"Error" }}</h3>
+                                <div class="mt-2 text-sm" style="color: var(--gk-error);" id="errorMessage"></div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button
-                        type="submit"
-                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm"
-                    >
-                        Save
-                    </button>
-                <button id="groupModalCancelButton"
-                        type="button"
-                        onclick="closeGroupModal()"
-                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                    >
-                        Cancel
-                    </button>
+                <div class="gk-modal-footer">
+                    <button id="groupModalCancelButton" type="button" onclick="closeGroupModal()" class="gk-btn-secondary">{{ t("buttons.cancel")|default:"Cancel" }}</button>
+                    <button type="submit" class="gk-btn-neon">{{ t("buttons.save")|default:"Save" }}</button>
                 </div>
             </form>
         </div>
@@ -395,65 +356,55 @@
 <!-- Group Members Modal -->
 <div id="groupMembersModal" class="hidden fixed z-10 inset-0 overflow-y-auto" aria-labelledby="members-modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeGroupMembersModal()"></div>
+        <div class="gk-modal-backdrop fixed inset-0 transition-opacity" aria-hidden="true" onclick="closeGroupMembersModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-gotrs-100 dark:bg-gotrs-900 sm:mx-0 sm:h-10 sm:w-10">
-                        <svg class="h-6 w-6 text-gotrs-600 dark:text-gotrs-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+            <div class="gk-modal-header">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full" style="background: var(--gk-primary-subtle);">
+                        <svg class="h-6 w-6" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                         </svg>
                     </div>
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="members-modal-title">
-                            {{ t("groups.members")|default:"Group Members" }}
-                        </h3>
-                        <div class="mt-4">
-                            <input type="hidden" id="currentGroupId" value="">
+                    <h3 class="ml-3 gk-modal-title" id="members-modal-title">
+                        {{ t("groups.members")|default:"Group Members" }}
+                    </h3>
+                </div>
+                <button type="button" onclick="closeGroupMembersModal()" class="gk-modal-close">
+                    <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="gk-modal-body">
+                <input type="hidden" id="currentGroupId" value="">
 
-                            <!-- Add User Section -->
-                            <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">{{ t("groups.add_user")|default:"Add User to Group" }}</h4>
-                                <div class="flex space-x-3">
-                                    <select
-                                        id="addUserSelect"
-                                        class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 dark:bg-gray-700 dark:text-white"
-                                    >
-                                        <option value="">-- Select a user to add --</option>
-                                    </select>
-                                    <button
-                                        type="button"
-                                        onclick="addUserToGroup()"
-                                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
-                                    >
-                                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                        </svg>
-                                        Add User
-                                    </button>
-                                </div>
-                            </div>
+                <!-- Add User Section -->
+                <div class="mb-6 p-4 rounded-lg" style="background: var(--gk-bg-elevated);">
+                    <h4 class="text-sm font-medium mb-3" style="color: var(--gk-text-primary);">{{ t("groups.add_user")|default:"Add User to Group" }}</h4>
+                    <div class="flex space-x-3">
+                        <select id="addUserSelect" class="gk-select-neon flex-1">
+                            <option value="">-- Select a user to add --</option>
+                        </select>
+                        <button type="button" onclick="addUserToGroup()" class="gk-btn-neon">
+                            <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Add User
+                        </button>
+                    </div>
+                </div>
 
-                            <!-- Current Members Section -->
-                            <div>
-                                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">{{ t("groups.current_members")|default:"Current Members" }}</h4>
-                                <div id="groupMembersList" class="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
-                                    <p class="text-gray-500 dark:text-gray-400 text-center py-4">{{ t("groups.loading_members")|default:"Loading members..." }}</p>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Current Members Section -->
+                <div>
+                    <h4 class="text-sm font-medium mb-3" style="color: var(--gk-text-primary);">{{ t("groups.current_members")|default:"Current Members" }}</h4>
+                    <div id="groupMembersList" class="max-h-64 overflow-y-auto rounded-lg" style="border: 1px solid var(--gk-border-default);">
+                        <p class="text-center py-4" style="color: var(--gk-text-muted);">{{ t("groups.loading_members")|default:"Loading members..." }}</p>
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                    type="button"
-                    onclick="closeGroupMembersModal()"
-                    class="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm"
-                >
-                    Close
-                </button>
+            <div class="gk-modal-footer">
+                <button type="button" onclick="closeGroupMembersModal()" class="gk-btn-secondary">{{ t("buttons.close")|default:"Close" }}</button>
             </div>
         </div>
     </div>
@@ -524,8 +475,6 @@ function clearFilters() {
 function filterGroups() {
     const search = document.getElementById('groupSearch').value;
     const status = document.getElementById('statusFilter').value;
-
-    // TODO: Implement HTMX partial update
     console.log('Filtering groups:', { search, status });
 }
 
@@ -540,8 +489,6 @@ function sortTable(column) {
         sortColumn = column;
         sortOrder = 'asc';
     }
-
-    // TODO: Implement sorting
     console.log('Sorting by:', column, sortOrder);
 }
 
@@ -553,7 +500,6 @@ function showAddGroupModal() {
     document.getElementById('formError').classList.add('hidden');
     document.getElementById('groupModal').classList.remove('hidden');
 
-    // Focus on first input when modal opens
     setTimeout(() => {
         document.getElementById('groupName').focus();
     }, 100);
@@ -563,12 +509,11 @@ function showEditGroupModal(groupId) {
     document.getElementById('modalAction').textContent = 'Edit';
     document.getElementById('formError').classList.add('hidden');
 
-    // Fetch group data
     fetch(`/admin/groups/${groupId}`, {
         credentials: 'include'
     })
-        .then(response => response.json())
-        .then(data => {
+    .then(response => response.json())
+    .then(data => {
             if (data.success && data.role) {
                 document.getElementById('groupId').value = data.role.ID;
                 document.getElementById('groupName').value = data.role.Name;
@@ -611,9 +556,7 @@ function handleGroupSubmit(event) {
     })
     .then(response => {
         if (!response.ok) {
-            // Handle HTTP errors (4xx, 5xx)
             return response.json().then(data => {
-                // If server provided Guru Meditation data, show it
                 if (data.guru_meditation) {
                     showGuruMeditation(
                         data.guru_meditation.code || '00000005.GRPERROR',
@@ -624,7 +567,6 @@ function handleGroupSubmit(event) {
                         }
                     );
                 } else {
-                    // Show regular error in form
                     document.getElementById('errorMessage').textContent = data.error || `HTTP ${response.status} Error`;
                     document.getElementById('formError').classList.remove('hidden');
                 }
@@ -636,7 +578,7 @@ function handleGroupSubmit(event) {
     .then(data => {
         if (data.success) {
             closeGroupModal();
-            location.reload(); // Reload to show updated data
+            location.reload();
         } else {
             document.getElementById('errorMessage').textContent = data.error || 'An error occurred';
             document.getElementById('formError').classList.remove('hidden');
@@ -644,7 +586,6 @@ function handleGroupSubmit(event) {
     })
     .catch(error => {
         console.error('Error saving group:', error);
-        // Only show form error if Guru Meditation wasn't already shown
         if (!document.getElementById('guru-meditation').style.display ||
             document.getElementById('guru-meditation').style.display === 'none') {
             document.getElementById('errorMessage').textContent = error.message || 'Failed to save group';
@@ -657,18 +598,10 @@ function handleGroupSubmit(event) {
 let groupToDelete = null;
 
 function confirmDeleteGroup(groupId, groupName) {
-    // Store the group info
     groupToDelete = { id: groupId, name: groupName };
-
-    // Update modal content
-    document.getElementById('deleteGroupName').textContent = groupName;
-
-    // Show the modal
     document.getElementById('deleteModal').classList.remove('hidden');
 
-    // Focus on cancel button for safety
     setTimeout(() => {
-        // Find cancel button by its onclick attribute
         const cancelBtn = document.querySelector('#deleteModal button[onclick="closeDeleteModal()"]');
         if (cancelBtn) cancelBtn.focus();
     }, 100);
@@ -683,8 +616,6 @@ function executeDelete() {
     if (!groupToDelete) return;
 
     const { id, name } = groupToDelete;
-
-    // Disable buttons during deletion
     const deleteBtn = document.querySelector('#deleteModal button[onclick="executeDelete()"]');
     const cancelBtn = document.querySelector('#deleteModal button[onclick="closeDeleteModal()"]');
 
@@ -707,10 +638,8 @@ function executeDelete() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Close modal
             closeDeleteModal();
 
-            // Remove the row with animation
             const row = document.getElementById(`group-row-${id}`);
             if (row) {
                 row.style.transition = 'opacity 0.3s, transform 0.3s';
@@ -718,23 +647,10 @@ function executeDelete() {
                 row.style.transform = 'translateX(-10px)';
                 setTimeout(() => {
                     row.remove();
-                    // Show success message
                     showToast('success', `Group "${name}" has been deleted successfully.`);
                 }, 300);
             }
         } else {
-            // Show error in modal
-            const modalBody = document.querySelector('#deleteModal .text-red-600');
-            if (modalBody) {
-                modalBody.innerHTML = `
-                    <svg class="inline h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Error: ${data.error || 'Failed to delete group'}
-                `;
-            }
-
-            // Re-enable buttons
             if (deleteBtn) {
                 deleteBtn.disabled = false;
                 deleteBtn.innerHTML = `
@@ -750,7 +666,6 @@ function executeDelete() {
     .catch(error => {
         console.error('Error deleting group:', error);
 
-        // Re-enable buttons
         if (deleteBtn) {
             deleteBtn.disabled = false;
             deleteBtn.innerHTML = `
@@ -771,23 +686,33 @@ function showToast(type, message) {
     const toastContainer = document.getElementById('toast-container') || createToastContainer();
 
     const toast = document.createElement('div');
-    toast.className = `transform transition-all duration-300 translate-x-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden`;
+    toast.className = 'transform transition-all duration-300 translate-x-0 max-w-sm w-full shadow-lg rounded-lg pointer-events-auto overflow-hidden';
+    toast.style.background = 'var(--gk-bg-elevated)';
+    toast.style.border = '1px solid var(--gk-border-default)';
 
-    const iconColor = type === 'success' ? 'text-green-500' : 'text-red-500';
+    let iconColor, bgColor;
+    if (type === 'success') {
+        iconColor = 'var(--gk-success)';
+        bgColor = 'var(--gk-success-subtle)';
+    } else {
+        iconColor = 'var(--gk-error)';
+        bgColor = 'var(--gk-error-subtle)';
+    }
+
     const icon = type === 'success'
         ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />'
         : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />';
 
     toast.innerHTML = `
-        <div class="p-4">
+        <div class="p-4" style="background: ${bgColor};">
             <div class="flex items-start">
                 <div class="flex-shrink-0">
-                    <svg class="h-6 w-6 ${iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="h-6 w-6" style="color: ${iconColor};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         ${icon}
                     </svg>
                 </div>
                 <div class="ml-3 w-0 flex-1 pt-0.5">
-                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                    <p class="text-sm font-medium" style="color: ${iconColor};">
                         ${message}
                     </p>
                 </div>
@@ -797,13 +722,11 @@ function showToast(type, message) {
 
     toastContainer.appendChild(toast);
 
-    // Animate in
     setTimeout(() => {
         toast.style.transform = 'translateX(0)';
         toast.style.opacity = '1';
     }, 100);
 
-    // Remove after 3 seconds
     setTimeout(() => {
         toast.style.transform = 'translateX(100%)';
         toast.style.opacity = '0';
@@ -820,14 +743,9 @@ function createToastContainer() {
 }
 
 function showGroupMembers(groupId) {
-    // Show group members modal
     document.getElementById('groupMembersModal').classList.remove('hidden');
     document.getElementById('currentGroupId').value = groupId;
-
-    // Load group members
     loadGroupMembers(groupId);
-
-    // Load available users for adding
     loadAvailableUsers(groupId);
 }
 
@@ -843,28 +761,30 @@ function loadGroupMembers(groupId) {
             membersList.innerHTML = '';
 
             if (members.length === 0) {
-                membersList.innerHTML = '<p class="text-gray-500 dark:text-gray-400 text-center py-4">No members in this group</p>';
+                membersList.innerHTML = '<p class="text-center py-4" style="color: var(--gk-text-muted);">No members in this group</p>';
                 return;
             }
 
             members.forEach(user => {
                 const memberItem = document.createElement('div');
-                memberItem.className = 'flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0';
+                memberItem.className = 'flex items-center justify-between p-3 transition-colors hover:bg-[var(--gk-primary-subtle)]';
+                memberItem.style.borderBottom = '1px solid var(--gk-border-default)';
                 memberItem.innerHTML = `
                     <div class="flex items-center space-x-3">
                         <div class="flex-shrink-0">
-                            <div class="h-8 w-8 rounded-full bg-gotrs-600 flex items-center justify-center">
-                                <span class="text-sm font-medium text-white">${user.first_name ? user.first_name.charAt(0) : user.login.charAt(0)}</span>
+                            <div class="gk-avatar h-8 w-8">
+                                <span class="gk-avatar-text">${user.first_name ? user.first_name.charAt(0) : user.login.charAt(0)}</span>
                             </div>
                         </div>
                         <div>
-                            <p class="text-sm font-medium text-gray-900 dark:text-white">${user.first_name} ${user.last_name}</p>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">${user.login}</p>
+                            <p class="text-sm font-medium" style="color: var(--gk-text-primary);">${user.first_name} ${user.last_name}</p>
+                            <p class="text-sm" style="color: var(--gk-text-muted);">${user.login}</p>
                         </div>
                     </div>
                     <button
                         onclick="removeUserFromGroup(${groupId}, ${user.id})"
-                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                        class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-error-subtle)]"
+                        style="color: var(--gk-error);"
                         title="{{ t("groups.tooltips.remove_user")|default:"Remove user from group" }}"
                     >
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -883,7 +803,7 @@ function loadGroupMembers(groupId) {
     })
     .catch(error => {
         console.error('Error loading group members:', error);
-        document.getElementById('groupMembersList').innerHTML = '<p class="text-red-500 text-center py-4">{{ t("messages.error_loading_members")|default:"Error loading members" }}</p>';
+        document.getElementById('groupMembersList').innerHTML = '<p class="text-center py-4" style="color: var(--gk-error);">{{ t("messages.error_loading_members")|default:"Error loading members" }}</p>';
     });
 }
 
@@ -930,12 +850,10 @@ function addUserToGroup() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Reload members and update count
             loadGroupMembers(groupId);
             loadAvailableUsers(groupId);
             document.getElementById('addUserSelect').value = '';
 
-            // Update the member count in the main table
             fetch(`/admin/groups/${groupId}/members`, {
                 credentials: 'include'
             })
@@ -947,14 +865,14 @@ function addUserToGroup() {
                 }
             });
 
-            showToast('User added to group successfully', 'success');
+            showToast('success', 'User added to group successfully');
         } else {
-            showToast(data.error || 'Failed to add user to group', 'error');
+            showToast('error', data.error || 'Failed to add user to group');
         }
     })
     .catch(error => {
         console.error('Error adding user to group:', error);
-        showToast('Error adding user to group', 'error');
+        showToast('error', 'Error adding user to group');
     });
 }
 
@@ -970,11 +888,9 @@ function removeUserFromGroup(groupId, userId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Reload members and update count
             loadGroupMembers(groupId);
             loadAvailableUsers(groupId);
 
-            // Update the member count in the main table
             fetch(`/admin/groups/${groupId}/members`, {
                 credentials: 'include'
             })
@@ -986,14 +902,14 @@ function removeUserFromGroup(groupId, userId) {
                 }
             });
 
-            showToast('User removed from group successfully', 'success');
+            showToast('success', 'User removed from group successfully');
         } else {
-            showToast(data.error || 'Failed to remove user from group', 'error');
+            showToast('error', data.error || 'Failed to remove user from group');
         }
     })
     .catch(error => {
         console.error('Error removing user from group:', error);
-        showToast('Error removing user from group', 'error');
+        showToast('error', 'Error removing user from group');
     });
 }
 
@@ -1019,13 +935,12 @@ document.getElementById('groupForm').addEventListener('keydown', function(event)
 document.addEventListener('DOMContentLoaded', function() {
     restorePageState();
 
-    // Load member counts for each group
     {% for group in Groups %}
     fetch(`/admin/groups/{{ group.ID }}/members`, {
         credentials: 'include'
     })
-        .then(response => response.json())
-        .then(data => {
+    .then(response => response.json())
+    .then(data => {
             if (data.success) {
                 const members = data.members || data.data || data.users || [];
                 document.getElementById('member-count-{{ group.ID }}').textContent = members.length;
@@ -1038,14 +953,15 @@ document.addEventListener('DOMContentLoaded', function() {
 // Guru Meditation error display (Amiga-style)
 function showGuruMeditation(title, message) {
     const guru = document.createElement('div');
-    guru.className = 'fixed inset-0 z-50 bg-black flex items-center justify-center';
+    guru.className = 'fixed inset-0 z-50 flex items-center justify-center';
+    guru.style.background = 'var(--gk-bg-base)';
     guru.innerHTML = `
-        <div class="text-red-500 font-mono text-center p-8 border-4 border-red-500 bg-black max-w-2xl">
-            <div class="text-4xl mb-4 animate-pulse">Software Failure. Press left mouse button to continue.</div>
-            <div class="text-2xl mb-4">Guru Meditation #00000025.65045338</div>
+        <div class="text-center p-8 max-w-2xl" style="color: var(--gk-error); border: 4px solid var(--gk-error); background: var(--gk-bg-base);">
+            <div class="text-4xl mb-4 animate-pulse font-mono">Software Failure. Press left mouse button to continue.</div>
+            <div class="text-2xl mb-4 font-mono">Guru Meditation #00000025.65045338</div>
             <div class="text-xl mb-4">${title}</div>
-            <div class="text-sm mb-6 text-red-400">${message}</div>
-            <button onclick="this.closest('.fixed').remove()" class="px-6 py-2 bg-red-500 text-white dark:text-gray-900 font-bold hover:bg-red-600">
+            <div class="text-sm mb-6" style="color: var(--gk-error);">${message}</div>
+            <button onclick="this.closest('.fixed').remove()" class="gk-btn-danger px-6 py-2 font-bold">
                 LEFT MOUSE BUTTON
             </button>
         </div>

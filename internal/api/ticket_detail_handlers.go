@@ -97,6 +97,7 @@ func handleTicketDetail(c *gin.Context) {
 	firstArticleID := 0
 	firstArticleVisibleForCustomer := false
 	firstArticleSenderColor := ""
+	firstArticleSenderType := ""
 	noteBodiesJSON := make([]string, 0, len(articles))
 	for i, article := range articles {
 		// Skip the first article as it's shown in the ticket info section
@@ -104,6 +105,17 @@ func handleTicketDetail(c *gin.Context) {
 			firstArticleID = article.ID
 			firstArticleVisibleForCustomer = article.IsVisibleForCustomer == 1
 			firstArticleSenderColor = senderTypeColors[article.SenderTypeID]
+			// Determine first article sender type
+			switch article.SenderTypeID {
+			case 1:
+				firstArticleSenderType = "agent"
+			case 2:
+				firstArticleSenderType = "system"
+			case 3:
+				firstArticleSenderType = "customer"
+			default:
+				firstArticleSenderType = "system"
+			}
 			continue
 		}
 		// Determine sender type from article's SenderTypeID
@@ -525,6 +537,7 @@ func handleTicketDetail(c *gin.Context) {
 		"first_article_id":                   firstArticleID,
 		"first_article_visible_for_customer": firstArticleVisibleForCustomer,
 		"first_article_sender_color":         firstArticleSenderColor,
+		"first_article_sender_type":          firstArticleSenderType,
 		"age":                                age,
 		"status_id":                          ticket.TicketStateID,
 	}

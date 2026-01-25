@@ -1,0 +1,24 @@
+{# Change Priority Modal with Synthwave Styling #}
+
+<div id="priorityModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.8);">
+    <div class="rounded-lg shadow-xl w-full max-w-md mx-4" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+            <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("tickets.change_priority")|default:"Change Priority" }}</h3>
+        </div>
+        <form onsubmit="submitPriority(event)">
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("tickets.priority") }}</label>
+                    <select name="priority_id" required class="gk-select-neon w-full">
+                        <option value="">{{ t("tickets.select_priority")|default:"Select priority..." }}</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+            </div>
+            <div class="px-6 py-4 rounded-b-lg flex justify-end space-x-3" style="background: var(--gk-bg-elevated); border-top: 1px solid var(--gk-border-default);">
+                <button type="button" onclick="closeModal('priorityModal')" class="gk-btn-secondary">{{ t("common.cancel") }}</button>
+                <button type="submit" class="gk-btn-neon">{{ t("common.update")|default:"Update" }}</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -203,11 +203,12 @@ func handleAdminStates(c *gin.Context) {
 	}
 
 	// Render the template or fallback if renderer not initialized
-	if getPongo2Renderer() == nil {
+	renderer := getPongo2Renderer()
+	if renderer == nil || renderer.TemplateSet() == nil {
 		renderFallback()
 		return
 	}
-	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/states.pongo2", pongo2.Context{
+	renderer.HTML(c, http.StatusOK, "pages/admin/states.pongo2", pongo2.Context{
 		"Title":       "Ticket States",
 		"States":      states,
 		"StateTypes":  stateTypes,

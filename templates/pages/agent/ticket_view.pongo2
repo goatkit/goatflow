@@ -4,53 +4,32 @@
 
 {% block styles %}
 <style>
-/* Table styles for article content - with !important to override prose styles */
+/* Synthwave table styles for article content */
 .article-content table {
     border-collapse: collapse !important;
     width: 100% !important;
-    border: 1px solid #d1d5db !important;
+    border: 1px solid var(--gk-border-strong) !important;
 }
 
 .article-content table th,
 .article-content table td {
-    border: 1px solid #d1d5db !important;
+    border: 1px solid var(--gk-border-default) !important;
     padding: 0.5rem 0.75rem !important;
     text-align: left !important;
 }
 
-/* Dark mode table borders */
-.dark .article-content table {
-    border: 1px solid #4b5563 !important;
-}
-
-.dark .article-content table th,
-.dark .article-content table td {
-    border: 1px solid #4b5563 !important;
-}
-
 .article-content table th {
-    background-color: #f9fafb !important;
+    background: var(--gk-bg-elevated) !important;
     font-weight: 600 !important;
-}
-
-.dark .article-content table th {
-    background-color: #1f2937 !important;
+    color: var(--gk-text-primary) !important;
 }
 
 .article-content table tbody tr:nth-child(even) {
-    background-color: #f9fafb !important;
-}
-
-.dark .article-content table tbody tr:nth-child(even) {
-    background-color: rgba(31, 41, 55, 0.3) !important;
+    background: var(--gk-bg-surface) !important;
 }
 
 .article-content table tbody tr:hover {
-    background-color: #f3f4f6 !important;
-}
-
-.dark .article-content table tbody tr:hover {
-    background-color: rgba(55, 65, 81, 0.5) !important;
+    background: var(--gk-primary-subtle) !important;
 }
 </style>
 {% endblock %}
@@ -62,63 +41,67 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Header -->
     <div class="mb-6">
         <div class="flex items-center justify-between">
             <div>
                 <nav class="flex mb-2" aria-label="Breadcrumb">
                     <ol class="flex items-center space-x-2">
-                        <li><a href="/agent/dashboard" class="text-blue-600 hover:text-blue-700">Dashboard</a></li>
-                        <li class="text-gray-400">/</li>
-                        <li><a href="/agent/tickets" class="text-blue-600 hover:text-blue-700">Tickets</a></li>
-                        <li class="text-gray-400">/</li>
-                        <li class="text-gray-600">#{{ ticket.tn }}</li>
+                        <li><a href="/agent/dashboard" class="gk-link-neon">Dashboard</a></li>
+                        <li style="color: var(--gk-text-muted);">/</li>
+                        <li><a href="/tickets" class="gk-link-neon">Tickets</a></li>
+                        <li style="color: var(--gk-text-muted);">/</li>
+                        <li style="color: var(--gk-text-secondary);">#{{ ticket.tn }}</li>
                     </ol>
                 </nav>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white ticket-title">{{ ticket.title }}</h1>
+                <h1 class="text-3xl font-bold gk-heading ticket-title">
+                    <span class="gk-text-gradient">{{ ticket.title }}</span>
+                </h1>
                 <div class="mt-2 flex items-center space-x-4">
-                    <span class="px-2 py-1 text-xs rounded-full
-                        {% if ticket.state_type == 'new' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                        {% elif ticket.state_type == 'open' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
-                        {% elif ticket.state_type == 'pending' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                        {% elif ticket.state_type == 'closed' %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
-                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                    <span class="gk-badge
+                        {% if ticket.state_type == 'new' %}gk-badge-success
+                        {% elif ticket.state_type == 'open' %}gk-badge-primary
+                        {% elif ticket.state_type == 'pending' %}gk-badge-warning
+                        {% elif ticket.state_type == 'closed' %}gk-badge-muted
+                        {% else %}gk-badge-muted{% endif %}">
                         {{ ticket.state }}
                     </span>
-                    <span class="text-sm text-gray-600 dark:text-gray-400">Priority: {{ ticket.priority }}</span>
-                    <span class="text-sm text-gray-600 dark:text-gray-400">Queue: {{ ticket.queue }}</span>
+                    <span class="text-sm" style="color: var(--gk-text-secondary);">Priority: {{ ticket.priority }}</span>
+                    <span class="text-sm" style="color: var(--gk-text-secondary);">Queue: {{ ticket.queue }}</span>
                 </div>
             </div>
             <div class="flex space-x-2">
-                <button onclick="replyToTicket()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                <button onclick="replyToTicket()" class="gk-btn-neon">
                     Reply
                 </button>
-                <button onclick="addNote({{ ticket.id }})" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600">
+                <button onclick="addNote({{ ticket.id }})" class="gk-btn-secondary">
                     Add Note
                 </button>
                 <!-- Actions Dropdown -->
                 <div class="relative">
-                    <button onclick="toggleDropdown('actionsDropdown')" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 inline-flex items-center">
+                    <button onclick="toggleDropdown('actionsDropdown')" class="gk-btn-secondary inline-flex items-center">
                         Actions
-                        <i class="fas fa-chevron-down ml-2"></i>
+                        <svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
                     </button>
-                    <div id="actionsDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-600">
+                    <div id="actionsDropdown" class="hidden absolute right-0 mt-2 w-56 rounded-lg shadow-lg z-10" style="background: var(--gk-bg-elevated); border: 1px solid var(--gk-border-strong);">
                         <div class="py-1">
-                            <a href="#" onclick="changeStatus(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-tasks mr-2"></i>{{ t("tickets.change_status")|default:"Change Status" }}
+                            <a href="#" onclick="changeStatus(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm transition-colors" style="color: var(--gk-text-primary);" onmouseover="this.style.background='var(--gk-primary-subtle)';this.style.color='var(--gk-primary)'" onmouseout="this.style.background='';this.style.color='var(--gk-text-primary)'">
+                                {{ t("tickets.change_status")|default:"Change Status" }}
                             </a>
-                            <a href="#" onclick="assignAgent(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-user-check mr-2"></i>{{ t("tickets.assign_agent")|default:"Assign Agent" }}
+                            <a href="#" onclick="assignAgent(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm transition-colors" style="color: var(--gk-text-primary);" onmouseover="this.style.background='var(--gk-primary-subtle)';this.style.color='var(--gk-primary)'" onmouseout="this.style.background='';this.style.color='var(--gk-text-primary)'">
+                                {{ t("tickets.assign_agent")|default:"Assign Agent" }}
                             </a>
-                            <a href="#" onclick="changePriority(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-flag mr-2"></i>{{ t("tickets.change_priority")|default:"Change Priority" }}
+                            <a href="#" onclick="changePriority(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm transition-colors" style="color: var(--gk-text-primary);" onmouseover="this.style.background='var(--gk-primary-subtle)';this.style.color='var(--gk-primary)'" onmouseout="this.style.background='';this.style.color='var(--gk-text-primary)'">
+                                {{ t("tickets.change_priority")|default:"Change Priority" }}
                             </a>
-                            <a href="#" onclick="moveQueue(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-inbox mr-2"></i>{{ t("tickets.move_to_queue")|default:"Move to Queue" }}
+                            <a href="#" onclick="moveQueue(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm transition-colors" style="color: var(--gk-text-primary);" onmouseover="this.style.background='var(--gk-primary-subtle)';this.style.color='var(--gk-primary)'" onmouseout="this.style.background='';this.style.color='var(--gk-text-primary)'">
+                                {{ t("tickets.move_to_queue")|default:"Move to Queue" }}
                             </a>
-                            <a href="#" onclick="mergeTicket(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <i class="fas fa-code-branch mr-2"></i>{{ t("tickets.merge_ticket")|default:"Merge Ticket" }}
+                            <a href="#" onclick="mergeTicket(); toggleDropdown('actionsDropdown')" class="block px-4 py-2 text-sm transition-colors" style="color: var(--gk-text-primary);" onmouseover="this.style.background='var(--gk-primary-subtle)';this.style.color='var(--gk-primary)'" onmouseout="this.style.background='';this.style.color='var(--gk-text-primary)'">
+                                {{ t("tickets.merge_ticket")|default:"Merge Ticket" }}
                             </a>
                         </div>
                     </div>
@@ -136,31 +119,31 @@
          style="display: none;"></div>
 
     <!-- Tabs: Conversation | History | Links -->
-    <div class="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700">
+    <div class="mt-6 gk-card-glow">
+        <div class="px-6 py-3" style="border-bottom: 1px solid var(--gk-border-default);">
             <nav class="flex space-x-4" aria-label="Ticket tabs">
-                <button id="tab-conversation" onclick="showTab('conversation')" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded">{{ t("customer.ticket_view.conversation")|default:"Conversation" }}</button>
-                <button id="tab-history" hx-get="/agent/tickets/{{ ticket.id }}/history" hx-target="#tab-panel" hx-swap="innerHTML" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 rounded">{{ t("tickets.history")|default:"History" }}</button>
-                <button id="tab-links" hx-get="/agent/tickets/{{ ticket.id }}/links" hx-target="#tab-panel" hx-swap="innerHTML" class="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 rounded">{{ t("tickets.links")|default:"Links" }}</button>
+                <button id="tab-conversation" onclick="showTab('conversation')" class="px-3 py-2 text-sm font-medium rounded transition-colors" style="background: var(--gk-primary-subtle); color: var(--gk-primary);">{{ t("customer.ticket_view.conversation")|default:"Conversation" }}</button>
+                <button id="tab-history" hx-get="/agent/tickets/{{ ticket.id }}/history" hx-target="#tab-panel" hx-swap="innerHTML" class="px-3 py-2 text-sm font-medium rounded transition-colors" style="color: var(--gk-text-secondary);">{{ t("tickets.history")|default:"History" }}</button>
+                <button id="tab-links" hx-get="/agent/tickets/{{ ticket.id }}/links" hx-target="#tab-panel" hx-swap="innerHTML" class="px-3 py-2 text-sm font-medium rounded transition-colors" style="color: var(--gk-text-secondary);">{{ t("tickets.links")|default:"Links" }}</button>
             </nav>
         </div>
         <div id="tab-panel">
             <!-- Default: Conversation content remains (articles) -->
-            <div class="divide-y divide-gray-200 dark:divide-gray-700">
+            <div style="border-color: var(--gk-border-default);">
                 {% for article in notes %}
-                <div class="p-6"{% if article.sender_color %} style="border-left: 4px solid {{ article.sender_color }};"{% endif %}>
+                <div class="p-6" style="border-bottom: 1px solid var(--gk-border-default);{% if article.sender_color %} border-left: 4px solid {{ article.sender_color }};{% endif %}">
                     <div class="flex items-start space-x-4">
                         <div class="flex-shrink-0">
-                            <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ article.from_name|first|upper }}</span>
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background: var(--gk-primary); box-shadow: var(--gk-glow-primary);">
+                                <span class="text-sm font-medium" style="color: var(--gk-text-inverse);">{{ article.from_name|first|upper }}</span>
                             </div>
                         </div>
                         <div class="flex-1">
                             <div class="flex items-center justify-between">
-                                <h3 class="text-sm font-medium text-gray-900 dark:text-white">{{ article.from_name }}</h3>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ article.create_time }}</p>
+                                <h3 class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ article.from_name }}</h3>
+                                <p class="text-sm" style="color: var(--gk-text-muted);">{{ article.create_time }}</p>
                             </div>
-                            <div class="mt-2 max-w-none article-content">
+                            <div class="mt-2 max-w-none article-content gk-article-content">
                                 {% if '<p' in article.body or '<div' in article.body or '<table' in article.body or '<br' in article.body or '<ul' in article.body or '<ol' in article.body or '<h1' in article.body or '<h2' in article.body or '<h3' in article.body %}
                                     <div data-article-body class="article-html">{{ article.body|safe }}</div>
                                 {% else %}
@@ -171,7 +154,7 @@
                     </div>
                 </div>
                 {% empty %}
-                <div class="p-6 text-center text-gray-500 dark:text-gray-400">No articles yet</div>
+                <div class="p-6 text-center" style="color: var(--gk-text-muted);">No articles yet</div>
                 {% endfor %}
             </div>
         </div>
@@ -179,7 +162,7 @@
 
     {% if ticket.pending_reminder %}
     <div class="mb-6">
-    <div class="rounded-md border p-4 text-sm {% if ticket.pending_reminder_overdue %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-900 dark:text-red-100{% else %}border-blue-200 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/60 text-blue-900 dark:text-blue-50{% endif %}">
+    <div class="rounded-lg p-4 text-sm" style="{% if ticket.pending_reminder_overdue %}border: 1px solid var(--gk-error); background: var(--gk-error-subtle); color: var(--gk-error);{% else %}border: 1px solid var(--gk-primary); background: var(--gk-primary-subtle); color: var(--gk-primary);{% endif %}">
             <div class="font-medium">
                 {% if ticket.pending_reminder_has_time %}
                     {% if ticket.pending_reminder_overdue %}
@@ -208,7 +191,7 @@
 
     {% if ticket.auto_close_at %}
     <div class="mb-6">
-        <div class="rounded-md border p-4 text-sm {% if ticket.auto_close_overdue %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-900 dark:text-red-100{% else %}border-amber-200 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100{% endif %}">
+        <div class="rounded-lg p-4 text-sm" style="{% if ticket.auto_close_overdue %}border: 1px solid var(--gk-error); background: var(--gk-error-subtle); color: var(--gk-error);{% else %}border: 1px solid var(--gk-warning); background: var(--gk-warning-subtle); color: var(--gk-warning);{% endif %}">
             <div class="font-medium">
                 {% if ticket.auto_close_overdue %}
                     {{ t("tickets.auto_close.overdue")|default:"Auto-close overdue" }}
@@ -231,55 +214,55 @@
         <!-- Main Content -->
         <div class="lg:col-span-2">
             <!-- Articles -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow"{% if first_article_sender_color %} style="border-left: 4px solid {{ first_article_sender_color }};"{% endif %}>
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("customer.ticket_view.conversation")|default:"Conversation" }}</h2>
+            <div class="gk-card-glow"{% if first_article_sender_color %} style="border-left: 4px solid {{ first_article_sender_color }};"{% endif %}>
+                <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                    <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("customer.ticket_view.conversation")|default:"Conversation" }}</h2>
                 </div>
-                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                <div>
                     {% for article in notes %}
-                    <div class="p-6"{% if article.sender_color %} style="border-left: 4px solid {{ article.sender_color }};"{% endif %}>
+                    <div class="p-6" style="border-bottom: 1px solid var(--gk-border-default);{% if article.sender_color %} border-left: 4px solid {{ article.sender_color }};{% endif %}">
                         <div class="flex items-start space-x-4">
                             <div class="flex-shrink-0">
-                                <div class="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center" style="{% if article.sender_type == 'customer' %}background: var(--gk-primary); box-shadow: var(--gk-glow-primary);{% elif article.sender_type == 'agent' %}background: var(--gk-secondary); box-shadow: var(--gk-glow-secondary);{% else %}background: var(--gk-tertiary); box-shadow: 0 0 15px rgba(255, 138, 61, 0.4);{% endif %}">
+                                    <span class="text-sm font-medium" style="color: var(--gk-text-inverse);">
                                         {{ article.from_name|first|upper }}
                                     </span>
                                 </div>
                             </div>
                             <div class="flex-1">
                                 <div class="flex items-center justify-between">
-                                    <h3 class="text-sm font-medium text-gray-900 dark:text-white">
+                                    <h3 class="text-sm font-medium" style="color: var(--gk-text-primary);">
                                         {{ article.from_name }}
                                         {% if article.sender_type == 'agent' %}
-                                        <span class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">Agent</span>
+                                        <span class="ml-2 gk-badge gk-badge-secondary">Agent</span>
                                         {% elif article.sender_type == 'customer' %}
-                                        <span class="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded">Customer</span>
+                                        <span class="ml-2 gk-badge gk-badge-primary">Customer</span>
                                         {% else %}
-                                        <span class="ml-2 px-2 py-1 text-xs bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 rounded">System</span>
+                                        <span class="ml-2 gk-badge gk-badge-tertiary">System</span>
                                         {% endif %}
                                     </h3>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ article.create_time }}</p>
+                                    <p class="text-sm" style="color: var(--gk-text-muted);">{{ article.create_time }}</p>
                                 </div>
-                                <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                                <div class="mt-2 text-sm" style="color: var(--gk-text-secondary);">
                                     <p>{{ article.subject }}</p>
                                 </div>
-                                <div class="mt-2 max-w-none article-content">
+                                <div class="mt-2 max-w-none article-content gk-article-content">
                                     {# Treat as HTML only if we see common block/line break tags. Otherwise preserve whitespace. #}
                                     {% if '<p' in article.body or '<div' in article.body or '<table' in article.body or '<br' in article.body or '<ul' in article.body or '<ol' in article.body or '<h1' in article.body or '<h2' in article.body or '<h3' in article.body %}
-                                        <div data-article-body class="prose prose-sm dark:prose-invert text-sm text-gray-800 dark:text-gray-200 indent-0">{{ article.body|safe }}</div>
+                                        <div data-article-body class="text-sm" style="color: var(--gk-text-primary);">{{ article.body|safe }}</div>
                                     {% else %}
-                                        <div data-article-body class="whitespace-pre-wrap break-words font-mono text-sm text-gray-800 dark:text-gray-200 indent-0">{{ article.body }}</div>
+                                        <div data-article-body class="whitespace-pre-wrap break-words font-mono text-sm" style="color: var(--gk-text-primary);">{{ article.body }}</div>
                                     {% endif %}
                                 </div>
                                 {% if article.attachments %}
                                 <div class="mt-4">
-                                    <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{{ t("tickets.attachments")|default:"Attachments" }}</h4>
+                                    <h4 class="text-xs font-medium uppercase tracking-wide mb-2" style="color: var(--gk-text-muted);">{{ t("tickets.attachments")|default:"Attachments" }}</h4>
                                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                                         {% for attachment in article.attachments %}
-                                        <div class="relative group bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                        <div class="relative group rounded-lg p-2 transition-colors" style="background: var(--gk-bg-surface);" onmouseover="this.style.background='var(--gk-bg-elevated)'" onmouseout="this.style.background='var(--gk-bg-surface)'">
                                             {% if attachment.content_type and attachment.content_type|slice:":5" == "image" %}
                                             <!-- Image preview -->
-                                            <div class="aspect-square mb-1 overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
+                                            <div class="aspect-square mb-1 overflow-hidden rounded" style="background: var(--gk-bg-elevated);">
                                                 <img data-attachment-url="/agent/tickets/{{ ticket.id }}/articles/{{ article.id }}/attachments/{{ attachment.id }}"
                                                      alt="{{ attachment.filename }}"
                                                      class="w-full h-full object-cover cursor-pointer attachment-image"
@@ -290,25 +273,25 @@
                                             <!-- File icon -->
                                             <div class="flex justify-center items-center h-16 mb-1">
                                                 {% if attachment.content_type == "application/pdf" %}
-                                                <svg class="h-12 w-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg class="h-12 w-12" style="color: var(--gk-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                                                 </svg>
                                                 {% else %}
-                                                <svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg class="h-12 w-12" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
                                                 </svg>
                                                 {% endif %}
                                             </div>
                                             {% endif %}
                                             <div class="text-xs">
-                                                <p class="truncate font-medium text-gray-900 dark:text-white" title="{{ attachment.filename }}">
+                                                <p class="truncate font-medium" style="color: var(--gk-text-primary);" title="{{ attachment.filename }}">
                                                     {{ attachment.filename }}
                                                 </p>
-                                                <p class="text-gray-500 dark:text-gray-400">{{ attachment.size }}</p>
+                                                <p style="color: var(--gk-text-muted);">{{ attachment.size }}</p>
                                             </div>
                                             <a href="/agent/tickets/{{ ticket.id }}/articles/{{ article.id }}/attachments/{{ attachment.id }}"
                                                download="{{ attachment.filename }}"
-                                               class="absolute inset-0 rounded-lg ring-2 ring-transparent hover:ring-blue-500 transition-all"
+                                               class="absolute inset-0 rounded-lg ring-2 ring-transparent hover:ring-[var(--gk-primary)] transition-all"
                                                title="Download {{ attachment.filename }}">
                                                 <span class="sr-only">Download</span>
                                             </a>
@@ -319,13 +302,13 @@
                                 {% endif %}
                                 {% if article.dynamic_fields %}
                                 <!-- Article Dynamic Fields -->
-                                <div class="mt-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-                                    <h4 class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{{ t("dynamic_fields.article_fields")|default:"Article Fields" }}</h4>
+                                <div class="mt-4 pt-4" style="border-top: 1px solid var(--gk-border-default);">
+                                    <h4 class="text-xs font-medium uppercase tracking-wide mb-2" style="color: var(--gk-text-muted);">{{ t("dynamic_fields.article_fields")|default:"Article Fields" }}</h4>
                                     <dl class="grid grid-cols-2 gap-2 text-sm">
                                         {% for df in article.dynamic_fields %}
                                         <div>
-                                            <dt class="text-gray-500 dark:text-gray-400">{{ df.Label }}</dt>
-                                            <dd class="text-gray-900 dark:text-white">{{ df.DisplayValue|default:"-" }}</dd>
+                                            <dt style="color: var(--gk-text-muted);">{{ df.Label }}</dt>
+                                            <dd style="color: var(--gk-text-primary);">{{ df.DisplayValue|default:"-" }}</dd>
                                         </div>
                                         {% endfor %}
                                     </dl>
@@ -335,7 +318,7 @@
                         </div>
                     </div>
                     {% empty %}
-                    <div class="p-6 text-center text-gray-500 dark:text-gray-400">
+                    <div class="p-6 text-center" style="color: var(--gk-text-muted);">
                         No articles yet
                     </div>
                     {% endfor %}
@@ -346,72 +329,72 @@
         <!-- Sidebar -->
         <div class="space-y-6">
             <!-- Ticket Details -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.details")|default:"Details" }}</h2>
+            <div class="gk-card-glow">
+                <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                    <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("tickets.details")|default:"Details" }}</h2>
                 </div>
                 <div class="p-6 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Ticket Number</label>
-                        <p class="mt-1 text-sm text-gray-900 dark:text-white">#{{ ticket.tn }}</p>
+                        <label class="block text-sm font-medium" style="color: var(--gk-text-muted);">Ticket Number</label>
+                        <p class="mt-1 text-sm font-mono" style="color: var(--gk-primary);">#{{ ticket.tn }}</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Customer</label>
-                        <p class="mt-1 text-sm text-gray-900 dark:text-white">
+                        <label class="block text-sm font-medium" style="color: var(--gk-text-muted);">Customer</label>
+                        <p class="mt-1 text-sm" style="color: var(--gk-text-primary);">
                             {{ ticket.customer_name|default:ticket.customer_user_id|default:"-" }}
                             {% if ticket.customer_company %}
-                            <br><span class="text-xs text-gray-500">{{ ticket.customer_company }}</span>
+                            <br><span class="text-xs" style="color: var(--gk-text-muted);">{{ ticket.customer_company }}</span>
                             {% endif %}
                         </p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Assigned To</label>
-                        <p class="mt-1 text-sm text-gray-900 dark:text-white">
+                        <label class="block text-sm font-medium" style="color: var(--gk-text-muted);">Assigned To</label>
+                        <p class="mt-1 text-sm" style="color: var(--gk-text-primary);">
                             {{ ticket.assigned_to|default:"Unassigned" }}
                         </p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Created</label>
-                        <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ ticket.create_time }}</p>
+                        <label class="block text-sm font-medium" style="color: var(--gk-text-muted);">Created</label>
+                        <p class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ ticket.create_time }}</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Last Updated</label>
-                        <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ ticket.change_time }}</p>
+                        <label class="block text-sm font-medium" style="color: var(--gk-text-muted);">Last Updated</label>
+                        <p class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ ticket.change_time }}</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
-                        <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ ticket.type|default:"Unclassified" }}</p>
+                        <label class="block text-sm font-medium" style="color: var(--gk-text-muted);">Type</label>
+                        <p class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ ticket.type|default:"Unclassified" }}</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Service</label>
-                        <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ ticket.service|default:"-" }}</p>
+                        <label class="block text-sm font-medium" style="color: var(--gk-text-muted);">Service</label>
+                        <p class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ ticket.service|default:"-" }}</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">SLA</label>
-                        <p class="mt-1 text-sm text-gray-900 dark:text-white">{{ ticket.sla|default:"-" }}</p>
+                        <label class="block text-sm font-medium" style="color: var(--gk-text-muted);">SLA</label>
+                        <p class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ ticket.sla|default:"-" }}</p>
                     </div>
                 </div>
             </div>
 
             <!-- Quick Actions -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("dashboard.quick_actions")|default:"Quick Actions" }}</h2>
+            <div class="gk-card-glow">
+                <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                    <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("dashboard.quick_actions")|default:"Quick Actions" }}</h2>
                 </div>
                 <div class="p-6 space-y-3">
-                    <button onclick="changeStatus()" class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                    <button onclick="changeStatus()" class="w-full px-4 py-2 text-left text-sm rounded transition-colors" style="color: var(--gk-text-secondary);" onmouseover="this.style.background='var(--gk-primary-subtle)';this.style.color='var(--gk-primary)'" onmouseout="this.style.background='';this.style.color='var(--gk-text-secondary)'">
                         {{ t("tickets.change_status")|default:"Change Status" }}
                     </button>
-                    <button onclick="assignAgent()" class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                    <button onclick="assignAgent()" class="w-full px-4 py-2 text-left text-sm rounded transition-colors" style="color: var(--gk-text-secondary);" onmouseover="this.style.background='var(--gk-primary-subtle)';this.style.color='var(--gk-primary)'" onmouseout="this.style.background='';this.style.color='var(--gk-text-secondary)'">
                         {{ t("tickets.assign_agent")|default:"Assign Agent" }}
                     </button>
-                    <button onclick="changePriority()" class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                    <button onclick="changePriority()" class="w-full px-4 py-2 text-left text-sm rounded transition-colors" style="color: var(--gk-text-secondary);" onmouseover="this.style.background='var(--gk-primary-subtle)';this.style.color='var(--gk-primary)'" onmouseout="this.style.background='';this.style.color='var(--gk-text-secondary)'">
                         {{ t("tickets.change_priority")|default:"Change Priority" }}
                     </button>
-                    <button onclick="moveQueue()" class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                    <button onclick="moveQueue()" class="w-full px-4 py-2 text-left text-sm rounded transition-colors" style="color: var(--gk-text-secondary);" onmouseover="this.style.background='var(--gk-primary-subtle)';this.style.color='var(--gk-primary)'" onmouseout="this.style.background='';this.style.color='var(--gk-text-secondary)'">
                         {{ t("tickets.move_to_queue")|default:"Move to Queue" }}
                     </button>
-                    <button onclick="mergeTicket()" class="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                    <button onclick="mergeTicket()" class="w-full px-4 py-2 text-left text-sm rounded transition-colors" style="color: var(--gk-text-secondary);" onmouseover="this.style.background='var(--gk-primary-subtle)';this.style.color='var(--gk-primary)'" onmouseout="this.style.background='';this.style.color='var(--gk-text-secondary)'">
                         {{ t("tickets.merge_ticket")|default:"Merge Ticket" }}
                     </button>
                 </div>
@@ -421,20 +404,20 @@
 </div>
 
 <!-- Reply Modal - Enhanced with OTRS feature parity -->
-<div id="replyModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto z-50">
+<div id="replyModal" class="hidden fixed inset-0 overflow-y-auto z-50" style="background: rgba(0, 0, 0, 0.8);">
     <div class="flex min-h-full items-center justify-center p-4">
-        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.compose_reply")|default:"Compose Reply" }}</h3>
+        <div class="relative rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("tickets.compose_reply")|default:"Compose Reply" }}</h3>
             </div>
             <form id="replyForm" onsubmit="submitReply(event)">
                 <div class="p-6 space-y-4">
                     <!-- Communication Type and Visibility -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
+                            <label class="gk-form-label">Type</label>
                             <select name="communication_channel_id" id="replyCommunicationType" onchange="updateReplyVisibility()"
-                                    class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                    class="gk-select-neon mt-1">
                                 <option value="1" selected>Email-External</option>
                                 <option value="3">Email-Internal</option>
                                 <option value="2">Phone</option>
@@ -442,8 +425,8 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Next State</label>
-                            <select name="next_state_id" class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                            <label class="gk-form-label">Next State</label>
+                            <select name="next_state_id" class="gk-select-neon mt-1">
                                 <option value="">Keep current state</option>
                                 <option value="2">open</option>
                                 <option value="4">pending reminder</option>
@@ -455,40 +438,39 @@
 
                     <!-- Recipients -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">To</label>
-                        <select id="customerUserSelect" name="to" required
-                                class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                        <label class="gk-form-label">To</label>
+                        <select id="customerUserSelect" name="to" required class="gk-select-neon mt-1">
                             <option value="{{ ticket.customer_user_id }}">{{ ticket.customer_user_id }}</option>
                         </select>
-                        <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        <div class="mt-1 text-xs" style="color: var(--gk-text-muted);">
                             {{ t("messages.loading_customer_users")|default:"Loading customer users..." }}
                         </div>
                     </div>
 
                     <!-- Expandable Cc/Bcc -->
                     <div>
-                        <button type="button" onclick="toggleCcBcc()" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                        <button type="button" onclick="toggleCcBcc()" class="text-sm gk-link-neon">
                             + Add Cc/Bcc
                         </button>
                         <div id="ccBccFields" class="hidden mt-2 space-y-2">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Cc</label>
+                                <label class="gk-form-label">Cc</label>
                                 <input type="email" name="cc" multiple placeholder="{{ t("placeholders.separate_emails")|default:"Separate multiple emails with commas" }}"
-                                       class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                       class="gk-input-neon mt-1">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Bcc</label>
+                                <label class="gk-form-label">Bcc</label>
                                 <input type="email" name="bcc" multiple placeholder="{{ t("placeholders.separate_emails")|default:"Separate multiple emails with commas" }}"
-                                       class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                       class="gk-input-neon mt-1">
                             </div>
                         </div>
                     </div>
 
                     <!-- Subject -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>
+                        <label class="gk-form-label">Subject</label>
                         <input type="text" name="subject" value="Re: {{ ticket.title }}" required
-                               class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                               class="gk-input-neon mt-1">
                     </div>
 
                     <!-- Template Selection -->
@@ -498,10 +480,10 @@
                     <!-- Message with Quote Option -->
                     <div>
                         <div class="flex justify-between items-center mb-2">
-                            <label id="replyEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
+                            <label id="replyEditorLabel" class="gk-form-label">Message</label>
                             <label class="flex items-center text-sm">
-                                <input type="checkbox" name="quote_original" class="mr-2 rounded border-gray-300 dark:border-gray-600">
-                                <span class="text-gray-700 dark:text-gray-300">Quote original message</span>
+                                <input type="checkbox" name="quote_original" class="mr-2 rounded" style="border-color: var(--gk-border-strong);">
+                                <span style="color: var(--gk-text-secondary);">Quote original message</span>
                             </label>
                         </div>
                         <div id="replyEditor" class="mt-1">
@@ -511,41 +493,38 @@
 
                     <!-- Attachments -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Attachments</label>
+                        <label class="gk-form-label">Attachments</label>
                         <input type="file" name="attachments" multiple
-                               class="mt-1 w-full text-sm text-gray-900 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300">
+                               class="mt-1 w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold" style="color: var(--gk-text-secondary); --tw-file-bg: var(--gk-primary-subtle); --tw-file-text: var(--gk-primary);">
                         <div id="reply-template-attachments" class="mt-2"></div>
                     </div>
 
                     <!-- Time Accounting -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Time Units (minutes)</label>
+                            <label class="gk-form-label">Time Units (minutes)</label>
                             <input type="number" name="time_units" min="0" step="1" placeholder="0"
-                                   class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                   class="gk-input-neon mt-1">
                         </div>
                         <div>
                             <label class="flex items-center text-sm mt-7">
                                 <input type="checkbox" name="is_visible_for_customer" id="replyVisibility" value="1" checked
-                                       class="mr-2 rounded border-gray-300 dark:border-gray-600">
-                                <span class="text-gray-700 dark:text-gray-300">Visible to Customer</span>
+                                       class="mr-2 rounded" style="border-color: var(--gk-border-strong);">
+                                <span style="color: var(--gk-text-secondary);">Visible to Customer</span>
                             </label>
                         </div>
                     </div>
                 </div>
 
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between">
-                    <button type="button" onclick="saveDraft()"
-                            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                <div class="px-6 py-4 flex justify-between" style="border-top: 1px solid var(--gk-border-default);">
+                    <button type="button" onclick="saveDraft()" class="gk-btn-secondary">
                         Save as Draft
                     </button>
                     <div class="space-x-3">
-                        <button type="button" onclick="closeModal('replyModal')"
-                                class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                        <button type="button" onclick="closeModal('replyModal')" class="gk-btn-secondary">
                             Cancel
                         </button>
-                        <button type="submit"
-                                class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        <button type="submit" class="gk-btn-neon">
                             Send Reply
                         </button>
                     </div>
@@ -556,18 +535,18 @@
 </div>
 
 <!-- Note Modal -->
-<div id="noteModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto z-50">
+<div id="noteModal" class="hidden fixed inset-0 overflow-y-auto z-50" style="background: rgba(0, 0, 0, 0.8);">
     <div class="flex min-h-full items-center justify-center p-4">
-        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.add_internal_note")|default:"Add Internal Note" }}</h3>
+        <div class="relative rounded-lg shadow-xl w-full max-w-2xl" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("tickets.add_internal_note")|default:"Add Internal Note" }}</h3>
             </div>
             <form id="noteForm" onsubmit="submitNote(event)">
                 <div class="p-6 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Note Type</label>
+                        <label class="gk-form-label">Note Type</label>
                         <select id="noteTypeSelect" name="communication_channel_id" required onchange="updateNoteSubject()"
-                                class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                class="gk-select-neon mt-1">
                             <option value="1">Email</option>
                             <option value="2">Phone</option>
                             <option value="3" selected>Internal</option>
@@ -575,40 +554,38 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>
+                        <label class="gk-form-label">Subject</label>
                         <input type="text" id="noteSubject" name="subject" placeholder="{{ t("placeholders.note_subject")|default:"Note subject" }}" value="Internal Note" required
-                               class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                               class="gk-input-neon mt-1">
                     </div>
                     <!-- Note Template Selection -->
                     {% include "partials/template_selector.pongo2" with QueueID=ticket.queue_id TicketID=ticket.id TemplateType="Note" TargetEditorID="noteEditorInner" SelectID="noteTemplateSelect" %}
                     <div>
-                        <label id="noteEditorInnerLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Note</label>
+                        <label id="noteEditorInnerLabel" class="gk-form-label">Note</label>
                         <div id="noteEditor" class="mt-1">
                             {% include "partials/rich_text_editor.pongo2" with EditorID="noteEditorInner" FieldName="body" Placeholder="Write your note here..." MinHeight="120px" LabelID="noteEditorInnerLabel" %}
                         </div>
                     </div>
                     <div class="flex items-center">
                         <input type="checkbox" name="is_visible_for_customer" id="noteVisibility" value="1"
-                               class="mr-2 rounded border-gray-300 dark:border-gray-600">
-                        <label for="noteVisibility" class="text-sm text-gray-700 dark:text-gray-300">
+                               class="mr-2 rounded" style="border-color: var(--gk-border-strong);">
+                        <label for="noteVisibility" class="text-sm" style="color: var(--gk-text-secondary);">
                             Visible to Customer
                         </label>
                     </div>
                     <!-- Attachments -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Attachments</label>
+                        <label class="gk-form-label">Attachments</label>
                         <input type="file" name="attachments" multiple
-                               class="mt-1 w-full text-sm text-gray-900 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300">
+                               class="mt-1 w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold" style="color: var(--gk-text-secondary);">
                         <div id="note-template-attachments" class="mt-2"></div>
                     </div>
                 </div>
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal('noteModal')"
-                            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                <div class="px-6 py-4 flex justify-end space-x-3" style="border-top: 1px solid var(--gk-border-default);">
+                    <button type="button" onclick="closeModal('noteModal')" class="gk-btn-secondary">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    <button type="submit" class="gk-btn-neon">
                         Add Note
                     </button>
                 </div>
@@ -618,19 +595,19 @@
 </div>
 
 <!-- ENHANCED Status Modal with Pending Time Support -->
-<div id="statusModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto z-50">
+<div id="statusModal" class="hidden fixed inset-0 overflow-y-auto z-50" style="background: rgba(0, 0, 0, 0.8);">
     <div class="flex min-h-full items-center justify-center p-4">
-        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.change_status")|default:"Change Status" }}</h3>
+        <div class="relative rounded-lg shadow-xl w-full max-w-md" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("tickets.change_status")|default:"Change Status" }}</h3>
             </div>
             <form id="statusForm" onsubmit="submitStatus(event)" data-pending-states="{% if PendingStateIDs %}{% for sid in PendingStateIDs %}{{ sid }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
                 <div class="p-6 space-y-4">
                     <!-- Status Selection -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New Status</label>
+                        <label class="gk-form-label mb-2">New Status</label>
                         <select name="status_id" id="statusSelect" required onchange="togglePendingFields()"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                class="gk-select-neon">
                             <option value="">Select status...</option>
                             <option value="1">new</option>
                             <option value="2">open</option>
@@ -643,16 +620,16 @@
                     </div>
 
                     <!-- Pending Time Fields (Hidden by default) -->
-                    <div id="pending-time-fields" style="display: none;" class="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <div id="pending-time-fields" style="display: none; background: var(--gk-warning-subtle); border: 1px solid var(--gk-warning);" class="p-4 rounded-lg">
                         <div class="mb-3">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            <label class="gk-form-label mb-2">
                                 Pending Until
-                                <span class="text-red-500">*</span>
+                                <span style="color: var(--gk-error);">*</span>
                             </label>
                             <input type="datetime-local" name="pending_until" id="pendingUntilInput"
-                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                                   class="gk-input-neon">
                         </div>
-                        <div id="pending-help-text" class="text-sm text-gray-600 dark:text-gray-400">
+                        <div id="pending-help-text" class="text-sm" style="color: var(--gk-text-secondary);">
                             <div id="pending-reminder-help" style="display: none;">
                                 <strong>{{ t("tickets.pending_reminder.title")|default:"Pending Reminder" }}:</strong> {{ t("tickets.pending_reminder.help")|default:"Ticket will return to \"open\" state at specified time." }}
                             </div>
@@ -666,13 +643,11 @@
                     </div>
                 </div>
 
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal('statusModal')"
-                            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                <div class="px-6 py-4 flex justify-end space-x-3" style="border-top: 1px solid var(--gk-border-default);">
+                    <button type="button" onclick="closeModal('statusModal')" class="gk-btn-secondary">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    <button type="submit" class="gk-btn-neon">
                         {{ t("tickets.change_status")|default:"Change Status" }}
                     </button>
                 </div>
@@ -682,27 +657,24 @@
 </div>
 
 <!-- Assign Modal -->
-<div id="assignModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto z-50">
+<div id="assignModal" class="hidden fixed inset-0 overflow-y-auto z-50" style="background: rgba(0, 0, 0, 0.8);">
     <div class="flex min-h-full items-center justify-center p-4">
-        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.assign_agent")|default:"Assign Agent" }}</h3>
+        <div class="relative rounded-lg shadow-xl w-full max-w-md" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("tickets.assign_agent")|default:"Assign Agent" }}</h3>
             </div>
             <form id="assignForm" onsubmit="submitAssign(event)">
                 <div class="p-6">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assign To</label>
-                    <select name="user_id" required
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                    <label class="gk-form-label mb-2">Assign To</label>
+                    <select name="user_id" required class="gk-select-neon">
                         <option value="">Select agent...</option>
                     </select>
                 </div>
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal('assignModal')"
-                            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                <div class="px-6 py-4 flex justify-end space-x-3" style="border-top: 1px solid var(--gk-border-default);">
+                    <button type="button" onclick="closeModal('assignModal')" class="gk-btn-secondary">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    <button type="submit" class="gk-btn-neon">
                         Assign
                     </button>
                 </div>
@@ -712,17 +684,16 @@
 </div>
 
 <!-- Priority Modal -->
-<div id="priorityModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto z-50">
+<div id="priorityModal" class="hidden fixed inset-0 overflow-y-auto z-50" style="background: rgba(0, 0, 0, 0.8);">
     <div class="flex min-h-full items-center justify-center p-4">
-        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.change_priority")|default:"Change Priority" }}</h3>
+        <div class="relative rounded-lg shadow-xl w-full max-w-md" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("tickets.change_priority")|default:"Change Priority" }}</h3>
             </div>
             <form id="priorityForm" onsubmit="submitPriority(event)">
                 <div class="p-6">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New Priority</label>
-                    <select name="priority_id" required
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                    <label class="gk-form-label mb-2">New Priority</label>
+                    <select name="priority_id" required class="gk-select-neon">
                         <option value="">Select priority...</option>
                         <option value="1" {% if ticket.priority_id == 1 %}selected{% endif %}>1 very low</option>
                         <option value="2" {% if ticket.priority_id == 2 %}selected{% endif %}>2 low</option>
@@ -731,13 +702,11 @@
                         <option value="5" {% if ticket.priority_id == 5 %}selected{% endif %}>5 very high</option>
                     </select>
                 </div>
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal('priorityModal')"
-                            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                <div class="px-6 py-4 flex justify-end space-x-3" style="border-top: 1px solid var(--gk-border-default);">
+                    <button type="button" onclick="closeModal('priorityModal')" class="gk-btn-secondary">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    <button type="submit" class="gk-btn-neon">
                         Update Priority
                     </button>
                 </div>
@@ -747,28 +716,25 @@
 </div>
 
 <!-- Queue Modal -->
-<div id="queueModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto z-50">
+<div id="queueModal" class="hidden fixed inset-0 overflow-y-auto z-50" style="background: rgba(0, 0, 0, 0.8);">
     <div class="flex min-h-full items-center justify-center p-4">
-        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.move_to_queue")|default:"Move to Queue" }}</h3>
+        <div class="relative rounded-lg shadow-xl w-full max-w-md" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("tickets.move_to_queue")|default:"Move to Queue" }}</h3>
             </div>
             <form id="queueForm" onsubmit="submitQueue(event)">
                 <div class="p-6">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Queue</label>
-                    <select name="queue_id" required
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                    <label class="gk-form-label mb-2">Select Queue</label>
+                    <select name="queue_id" required class="gk-select-neon">
                         <option value="">Select queue...</option>
                         <!-- Will be populated dynamically -->
                     </select>
                 </div>
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal('queueModal')"
-                            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                <div class="px-6 py-4 flex justify-end space-x-3" style="border-top: 1px solid var(--gk-border-default);">
+                    <button type="button" onclick="closeModal('queueModal')" class="gk-btn-secondary">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    <button type="submit" class="gk-btn-neon">
                         Move Ticket
                     </button>
                 </div>
@@ -778,30 +744,28 @@
 </div>
 
 <!-- Merge Modal -->
-<div id="mergeModal" class="hidden fixed inset-0 bg-gray-500 bg-opacity-75 overflow-y-auto z-50">
+<div id="mergeModal" class="hidden fixed inset-0 overflow-y-auto z-50" style="background: rgba(0, 0, 0, 0.8);">
     <div class="flex min-h-full items-center justify-center p-4">
-        <div class="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.merge_ticket")|default:"Merge Ticket" }}</h3>
+        <div class="relative rounded-lg shadow-xl w-full max-w-md" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("tickets.merge_ticket")|default:"Merge Ticket" }}</h3>
             </div>
             <form id="mergeForm" onsubmit="submitMerge(event)">
                 <div class="p-6">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label class="gk-form-label mb-2">
                         Merge into Ticket Number
                     </label>
                     <input type="text" name="target_tn" placeholder="e.g., 2025010000001" required
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
-                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                           class="gk-input-neon">
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
                         This ticket will be closed and merged into the target ticket.
                     </p>
                 </div>
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                    <button type="button" onclick="closeModal('mergeModal')"
-                            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                <div class="px-6 py-4 flex justify-end space-x-3" style="border-top: 1px solid var(--gk-border-default);">
+                    <button type="button" onclick="closeModal('mergeModal')" class="gk-btn-secondary">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                    <button type="submit" class="gk-btn-neon" style="background: var(--gk-error); box-shadow: 0 0 15px rgba(255, 60, 110, 0.4);">
                         Merge Tickets
                     </button>
                 </div>

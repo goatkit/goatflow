@@ -469,9 +469,9 @@ api-call:
 		exit 1; \
 	fi
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
-		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox bash scripts/api-test.sh "$$METHOD" "$(ENDPOINT)" "$(BODY)"; \
+		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm -e 'API_BODY=$(BODY)' toolbox bash scripts/api-test.sh "$$METHOD" "$(ENDPOINT)"; \
 	else \
-		$(COMPOSE_CMD) --profile toolbox run --rm toolbox bash scripts/api-test.sh "$$METHOD" "$(ENDPOINT)" "$(BODY)"; \
+		$(COMPOSE_CMD) --profile toolbox run --rm -e 'API_BODY=$(BODY)' toolbox bash scripts/api-test.sh "$$METHOD" "$(ENDPOINT)"; \
 	fi
 
 # API testing for form-urlencoded bodies with automatic authentication

@@ -4,12 +4,65 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 )
+
+// GetUserIDFromCtx extracts the authenticated user's ID from gin context.
+// Handles multiple types since different auth middleware may set different types.
+// Returns the fallback value if user_id is not found or cannot be converted.
+func GetUserIDFromCtx(c *gin.Context, fallback int) int {
+	v, ok := c.Get("user_id")
+	if !ok {
+		return fallback
+	}
+	switch id := v.(type) {
+	case int:
+		return id
+	case int64:
+		return int(id)
+	case uint:
+		return int(id)
+	case uint64:
+		return int(id)
+	case float64:
+		return int(id)
+	case string:
+		if n, err := strconv.Atoi(id); err == nil {
+			return n
+		}
+	}
+	return fallback
+}
+
+// GetUserIDFromCtxUint is like GetUserIDFromCtx but returns uint.
+func GetUserIDFromCtxUint(c *gin.Context, fallback uint) uint {
+	v, ok := c.Get("user_id")
+	if !ok {
+		return fallback
+	}
+	switch id := v.(type) {
+	case int:
+		return uint(id)
+	case int64:
+		return uint(id)
+	case uint:
+		return id
+	case uint64:
+		return uint(id)
+	case float64:
+		return uint(id)
+	case string:
+		if n, err := strconv.Atoi(id); err == nil {
+			return uint(n)
+		}
+	}
+	return fallback
+}
 
 // formatFileSize formats a file size in bytes to a human-readable string.
 func formatFileSize(size int64) string {

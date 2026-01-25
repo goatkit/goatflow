@@ -37,10 +37,20 @@ func TestComputePendingReminderMetaMissingUntilTime(t *testing.T) {
 	if !meta.pending {
 		t.Fatalf("expected pending reminder state to be recognized")
 	}
-	if meta.at != pendingReminderNoTimeLabel {
-		t.Fatalf("expected fallback label for missing reminder time, got %q", meta.at)
+	// When UntilTime is 0, the function now defaults to now + 24 hours
+	// rather than returning a fallback label
+	if !meta.hasTime {
+		// hasTime should be false when no explicit time is set
+	} else {
+		t.Fatalf("expected hasTime to be false for missing until_time")
 	}
-	if meta.relative != "" {
-		t.Fatalf("expected empty relative duration, got %q", meta.relative)
+	if meta.at == "" {
+		t.Fatalf("expected at to be a formatted timestamp, got empty string")
+	}
+	if meta.relative == "" {
+		t.Fatalf("expected relative to be set to humanized duration")
+	}
+	if meta.message != "Default reminder time (24h from now)" {
+		t.Fatalf("expected message about default time, got %q", meta.message)
 	}
 }

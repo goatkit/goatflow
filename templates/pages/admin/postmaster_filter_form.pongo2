@@ -3,16 +3,16 @@
 {% block title %}{% if IsNew %}{{ t("admin.modules.postmaster_filter.new_filter") }}{% else %}{{ t("admin.modules.postmaster_filter.edit_filter") }}{% endif %} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow max-w-4xl mx-auto">
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <div class="gk-card-glow rounded-lg max-w-4xl mx-auto">
         <!-- Header -->
-        <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-                        {% if IsNew %}{{ t("admin.modules.postmaster_filter.new_filter") }}{% else %}{{ t("admin.modules.postmaster_filter.edit_filter") }}{% endif %}
+                    <h2 class="text-xl font-semibold gk-heading">
+                        <span class="gk-text-gradient">{% if IsNew %}{{ t("admin.modules.postmaster_filter.new_filter") }}{% else %}{{ t("admin.modules.postmaster_filter.edit_filter") }}{% endif %}</span>
                     </h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p class="text-sm mt-1" style="color: var(--gk-text-muted);">
                         {% if IsNew %}
                         {{ t("admin.modules.postmaster_filter.create_filter") }}
                         {% else %}
@@ -20,9 +20,10 @@
                         {% endif %}
                     </p>
                 </div>
-                <a href="/admin/postmaster-filters"
-                   class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                    <i class="fas fa-times text-xl"></i>
+                <a href="/admin/postmaster-filters" class="p-2 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
                 </a>
             </div>
         </div>
@@ -30,8 +31,8 @@
         <form id="filterForm" class="px-6 py-6 space-y-6">
             <!-- Filter Name -->
             <div>
-                <label for="filterName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {{ t("admin.modules.postmaster_filter.filter_name") }} <span class="text-red-500">*</span>
+                <label for="filterName" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                    {{ t("admin.modules.postmaster_filter.filter_name") }} <span style="color: var(--gk-error);">*</span>
                 </label>
                 <input type="text"
                        id="filterName"
@@ -39,9 +40,9 @@
                        value="{% if Filter %}{{ Filter.Name }}{% endif %}"
                        required
                        {% if not IsNew %}data-original-name="{{ Filter.Name }}"{% endif %}
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       class="gk-input-neon w-full"
                        placeholder="{{ t("admin.modules.postmaster_filter.filter_name_placeholder") }}">
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">
                     {{ t("admin.modules.postmaster_filter.filter_name_help") }}
                 </p>
             </div>
@@ -52,23 +53,27 @@
                        id="filterStop"
                        name="stop"
                        {% if Filter and Filter.Stop %}checked{% endif %}
-                       class="w-4 h-4 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500">
-                <label for="filterStop" class="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                       class="h-4 w-4 rounded focus:ring-2"
+                       style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                <label for="filterStop" class="ml-2 text-sm" style="color: var(--gk-text-secondary);">
                     {{ t("admin.modules.postmaster_filter.stop_processing") }}
                 </label>
             </div>
 
             <!-- Match Conditions Section -->
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div class="pt-6" style="border-top: 1px solid var(--gk-border);">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin.modules.postmaster_filter.match_conditions") }}</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("admin.modules.postmaster_filter.match_conditions_help") }}</p>
+                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.modules.postmaster_filter.match_conditions") }}</h3>
+                        <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("admin.modules.postmaster_filter.match_conditions_help") }}</p>
                     </div>
                     <button type="button"
                             onclick="addMatchRow()"
-                            class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
-                        <i class="fas fa-plus mr-1"></i>{{ t("admin.modules.postmaster_filter.add_condition") }}
+                            class="gk-btn-secondary px-3 py-1 text-sm">
+                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        {{ t("admin.modules.postmaster_filter.add_condition") }}
                     </button>
                 </div>
 
@@ -78,16 +83,19 @@
             </div>
 
             <!-- Set Actions Section -->
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+            <div class="pt-6" style="border-top: 1px solid var(--gk-border);">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin.modules.postmaster_filter.set_actions") }}</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("admin.modules.postmaster_filter.set_actions_help") }}</p>
+                        <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.modules.postmaster_filter.set_actions") }}</h3>
+                        <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("admin.modules.postmaster_filter.set_actions_help") }}</p>
                     </div>
                     <button type="button"
                             onclick="addSetRow()"
-                            class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
-                        <i class="fas fa-plus mr-1"></i>{{ t("admin.modules.postmaster_filter.add_action") }}
+                            class="gk-btn-secondary px-3 py-1 text-sm">
+                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        {{ t("admin.modules.postmaster_filter.add_action") }}
                     </button>
                 </div>
 
@@ -97,13 +105,11 @@
             </div>
 
             <!-- Form Actions -->
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-6 flex justify-end space-x-3">
-                <a href="/admin/postmaster-filters"
-                   class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <div class="pt-6 flex justify-end space-x-3" style="border-top: 1px solid var(--gk-border);">
+                <a href="/admin/postmaster-filters" class="gk-btn-secondary">
                     {{ t("buttons.cancel") }}
                 </a>
-                <button type="submit"
-                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button type="submit" class="gk-btn-neon">
                     {% if IsNew %}{{ t("buttons.create") }}{% else %}{{ t("buttons.save") }}{% endif %}
                 </button>
             </div>
@@ -191,7 +197,7 @@ function escapeHtml(text) {
 function buildSearchableSelect(data, displayField, currentValue = '') {
     const id = 'typeahead-' + Math.random().toString(36).substr(2, 9);
     let html = `<input type="text"
-           class="set-value flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+           class="set-value gk-input-neon flex-1"
            list="${id}"
            value="${escapeHtml(currentValue)}"
            placeholder="${escapeHtml(i18n.typeToSearch)}">
@@ -208,7 +214,7 @@ function buildSearchableSelect(data, displayField, currentValue = '') {
 // Build boolean select for X-GOTRS-Ignore
 function buildBooleanSelect(currentValue = '') {
     const isTrue = currentValue === '1' || currentValue === 'true' || currentValue === 'yes';
-    return `<select class="set-value flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+    return `<select class="set-value gk-select-neon flex-1">
         <option value="1" ${isTrue ? 'selected' : ''}>${escapeHtml(i18n.yesIgnore)}</option>
         <option value="0" ${!isTrue ? 'selected' : ''}>${escapeHtml(i18n.no)}</option>
     </select>`;
@@ -217,7 +223,7 @@ function buildBooleanSelect(currentValue = '') {
 // Build plain text input
 function buildTextInput(currentValue = '') {
     return `<input type="text"
-           class="set-value flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+           class="set-value gk-input-neon flex-1"
            value="${escapeHtml(currentValue)}"
            placeholder="${escapeHtml(i18n.valuePlaceholder)}">`;
 }
@@ -292,15 +298,16 @@ function addMatchRow(key = '', value = '', not = false) {
     const notLabel = document.createElement('label');
     notLabel.className = 'flex items-center space-x-1 min-w-[60px]';
     notLabel.innerHTML = `
-        <input type="checkbox" class="match-not w-4 h-4 text-red-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded"
+        <input type="checkbox" class="match-not h-4 w-4 rounded focus:ring-2"
+               style="accent-color: var(--gk-error); border-color: var(--gk-border);"
                ${not ? 'checked' : ''}>
-        <span class="text-sm text-gray-600 dark:text-gray-400">${escapeHtml(i18n.not)}</span>
+        <span class="text-sm" style="color: var(--gk-text-muted);">${escapeHtml(i18n.not)}</span>
     `;
 
     // Key input with datalist
     const keyInput = document.createElement('input');
     keyInput.type = 'text';
-    keyInput.className = 'match-key w-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+    keyInput.className = 'match-key gk-input-neon w-40';
     keyInput.placeholder = i18n.header;
     keyInput.value = key;
     keyInput.setAttribute('list', 'headerKeysList');
@@ -308,15 +315,16 @@ function addMatchRow(key = '', value = '', not = false) {
     // Value input
     const valueInput = document.createElement('input');
     valueInput.type = 'text';
-    valueInput.className = 'match-value flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+    valueInput.className = 'match-value gk-input-neon flex-1';
     valueInput.placeholder = i18n.regexPlaceholder;
     valueInput.value = value;
 
     // Remove button
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
-    removeBtn.className = 'px-2 py-2 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300';
-    removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+    removeBtn.className = 'px-2 py-2 rounded transition-colors hover:bg-white/10';
+    removeBtn.style.color = 'var(--gk-error)';
+    removeBtn.innerHTML = '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
     removeBtn.onclick = function() { removeMatchRow(rowId); };
 
     row.appendChild(notLabel);
@@ -346,7 +354,7 @@ function addSetRow(key = '', value = '') {
 
     // Key select
     const keySelect = document.createElement('select');
-    keySelect.className = 'set-key w-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+    keySelect.className = 'set-key gk-select-neon w-64';
     keySelect.innerHTML = `<option value="">${escapeHtml(i18n.selectAction)}</option>` +
         setKeys.map(k => `<option value="${k.value}" ${k.value === key ? 'selected' : ''}>${escapeHtml(k.label)}</option>`).join('');
 
@@ -357,8 +365,9 @@ function addSetRow(key = '', value = '') {
     // Remove button
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
-    removeBtn.className = 'px-2 py-2 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300';
-    removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+    removeBtn.className = 'px-2 py-2 rounded transition-colors hover:bg-white/10';
+    removeBtn.style.color = 'var(--gk-error)';
+    removeBtn.innerHTML = '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
     removeBtn.onclick = function() { removeSetRow(rowId); };
 
     row.appendChild(keySelect);
@@ -445,7 +454,7 @@ function saveFilter(event) {
         },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+
     .then(result => {
         if (result.success) {
             showSuccess(isNew ? i18n.createSuccess : i18n.updateSuccess);
@@ -471,14 +480,16 @@ function showError(message) {
 
 function showToast(message, type) {
     const toast = document.createElement('div');
-    toast.className = `px-4 py-3 rounded-lg shadow-lg mb-4 transform transition-all duration-300 ${
-        type === 'success'
-            ? 'bg-green-500 text-white'
-            : 'bg-red-500 text-white'
-    }`;
+    toast.className = 'px-4 py-3 rounded-lg shadow-lg mb-4 transform transition-all duration-300';
+    toast.style.background = type === 'success' ? 'var(--gk-success)' : 'var(--gk-error)';
+    toast.style.color = 'white';
     toast.innerHTML = `
         <div class="flex items-center">
-            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${type === 'success'
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>'
+                    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'}
+            </svg>
             <span>${message}</span>
         </div>
     `;

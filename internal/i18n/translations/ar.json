@@ -14,7 +14,9 @@
             "apply_filters": "تطبيق filters",
             "clear_filters": "مسح all filters",
             "edit": "تحرير قائمة التحكم"
-        }
+        },
+        "no_acls_found": "لم يتم العثور على قوائم ACL",
+        "click_add_acl": "انقر على \"إضافة ACL\" لإنشاء واحدة."
     },
     "admin": {
         "action_labels": {
@@ -74,7 +76,7 @@
                 "saved_sets": "مجموعات التصفية المحفوظة",
                 "set_name_placeholder": "أدخل اسم مجموعة التصفية..."
             },
-            "no_data_available": "لا data available",
+            "no_data_available": "لا توجد بيانات متاحة",
             "pagination": {
                 "next": "التالي",
                 "per_page": "لكل صفحة",
@@ -82,12 +84,12 @@
                 "show": "عرض"
             },
             "refresh": "تحديث",
-            "saved_filter_sets": "حفظd تصفية Sets",
+            "saved_filter_sets": "مجموعات التصفية المحفوظة",
             "search": {
                 "placeholder": "بحث..."
             },
             "selected": "محدد",
-            "show_hide_columns": "Show/Hide Columns",
+            "show_hide_columns": "إظهار/إخفاء الأعمدة",
             "status": {
                 "active": "نشط",
                 "inactive": "غير نشط",
@@ -302,7 +304,13 @@
         "leave_blank_to_keep": "اتركه فارغًا للاحتفاظ بكلمة المرور الحالية",
         "login": "تسجيل الدخول",
         "lookups": {
-            "description": "إدارة البيانات المرجعية"
+            "description": "إدارة البيانات المرجعية",
+            "add_priority": "إضافة أولوية",
+            "edit_priority": "تعديل أولوية",
+            "add_state": "إضافة حالة",
+            "edit_state": "تعديل حالة",
+            "add_type": "إضافة نوع",
+            "edit_type": "تعديل نوع"
         },
         "lookups_desc": "إدارة البيانات المرجعية",
         "lookups_title": "البيانات المرجعية",
@@ -1307,101 +1315,109 @@
         }
     },
     "admin_dashboard": {
+        "activity": "النشاط",
+        "tickets_closed": "تذاكر مغلقة",
+        "tickets_created": "تذاكر تم إنشاؤها",
+        "tickets_open": "تذاكر مفتوحة",
+        "right_now": "الآن",
+        "last_24_hours": "آخر 24 ساعة",
+        "last_7_days": "آخر 7 أيام",
+        "last_30_days": "آخر 30 يومًا",
         "acl": "قوائم التحكم في الوصول",
         "acl_desc": "تحديد قواعد الوصول الشرطي",
         "ticket_attribute_relations": "علاقات سمات التذاكر",
         "ticket_attribute_relations_desc": "تحديد تبعيات السمات لنماذج التذاكر",
         "active_users_customers": "الوكلاء والعملاء النشطون",
-        "activity": {
-            "config_updated": "[AR] System configuration updated",
-            "logs_reviewed": "[AR] Audit logs reviewed",
-            "user_created": "[AR] User account created"
+        "recent_activity_items": {
+            "config_updated": "تم تحديث تكوين النظام",
+            "logs_reviewed": "تمت مراجعة سجلات التدقيق",
+            "user_created": "تم إنشاء حساب المستخدم"
         },
-        "attachments": "مرفقات",
-        "attachments_desc": "Manage default attachment templates",
-        "audit_logs": "تدقيق سجلات",
-        "audit_logs_desc": "Review changes and access history",
-        "auto_responses": "Auto Responses",
-        "auto_responses_desc": "Configure automatic email replies",
-        "customer_administration": "عميل مديرistration",
-        "customer_groups": "عميل مجموعات",
-        "customer_groups_desc": "Organize customer access permissions",
-        "customer_organizations": "عميل المنظمةs",
-        "customer_organizations_desc": "Manage companies and departments",
-        "customer_portal": "عميل Portal",
-        "customer_portal_desc": "Customize the self-service interface",
-        "customer_user_groups": "عميل مستخدم مجموعات",
-        "customer_user_groups_desc": "Link customer users to customer groups",
-        "customer_user_services": "عميل مستخدم خدمات",
-        "customer_user_services_desc": "Link customers to services",
-        "customer_users": "عميل مستخدمون",
-        "customer_users_desc": "Individual customer accounts",
-        "dynamic_fields": "Dynamic Fields",
-        "dynamic_fields_desc": "إنشاء custom ticket attributes",
-        "email_identities": "البريد الإلكتروني Identities",
-        "email_identities_desc": "Manage salutations, addresses, signatures",
-        "generic_agent": "Generic وكيل",
-        "generic_agent_desc": "Automated ticket actions and batch jobs",
+        "attachments": "المرفقات",
+        "attachments_desc": "إدارة قوالب المرفقات الافتراضية",
+        "audit_logs": "سجلات التدقيق",
+        "audit_logs_desc": "مراجعة التغييرات وسجل الوصول",
+        "auto_responses": "الردود التلقائية",
+        "auto_responses_desc": "تكوين ردود البريد الإلكتروني التلقائية",
+        "customer_administration": "إدارة العملاء",
+        "customer_groups": "مجموعات العملاء",
+        "customer_groups_desc": "تنظيم أذونات وصول العملاء",
+        "customer_organizations": "منظمات العملاء",
+        "customer_organizations_desc": "إدارة الشركات والأقسام",
+        "customer_portal": "بوابة العملاء",
+        "customer_portal_desc": "تخصيص واجهة الخدمة الذاتية",
+        "customer_user_groups": "مجموعات مستخدمي العملاء",
+        "customer_user_groups_desc": "ربط مستخدمي العملاء بمجموعات العملاء",
+        "customer_user_services": "خدمات مستخدمي العملاء",
+        "customer_user_services_desc": "ربط العملاء بالخدمات",
+        "customer_users": "مستخدمو العملاء",
+        "customer_users_desc": "حسابات العملاء الفردية",
+        "dynamic_fields": "الحقول الديناميكية",
+        "dynamic_fields_desc": "إنشاء سمات التذاكر المخصصة",
+        "email_identities": "هويات البريد الإلكتروني",
+        "email_identities_desc": "إدارة التحيات والعناوين والتوقيعات",
+        "generic_agent": "الوكيل العام",
+        "generic_agent_desc": "إجراءات التذاكر الآلية والمهام الدفعية",
         "group_management": "إدارة المجموعات",
         "group_management_desc": "تكوين الفرق ومسارات التصعيد",
-        "inbound_mail": "Inbound Mail Accounts",
-        "inbound_mail_desc": "Configure POP/IMAP polling and dispatch rules",
-        "key_metrics": "Key metrics",
-        "lookups": "البحث",
-        "lookups_desc": "Manage ticket priorities, states, types",
+        "inbound_mail": "حسابات البريد الوارد",
+        "inbound_mail_desc": "تكوين قواعد استلام POP/IMAP والتوزيع",
+        "key_metrics": "المقاييس الرئيسية",
+        "lookups": "القوائم المرجعية",
+        "lookups_desc": "إدارة أولويات وحالات وأنواع التذاكر",
         "permissions": "الأذونات",
         "permissions_desc": "ضبط مستويات وصول الوكيل",
-        "postmaster_filters": "Postmaster تصفيةs",
-        "postmaster_filters_desc": "Configure email routing rules based on headers",
-        "queue_auto_responses": "قائمة انتظار Auto Responses",
-        "queue_auto_responses_desc": "Link auto responses to queues",
-        "queue_templates": "[AR] Queue Templates",
-        "queue_templates_desc": "[AR] Manage queue to template assignments",
+        "postmaster_filters": "مرشحات مدير البريد",
+        "postmaster_filters_desc": "تكوين قواعد توجيه البريد حسب الترويسات",
+        "queue_auto_responses": "الردود التلقائية لقوائم الانتظار",
+        "queue_auto_responses_desc": "ربط الردود التلقائية بقوائم الانتظار",
+        "queue_templates": "قوالب قوائم الانتظار",
+        "queue_templates_desc": "إدارة تعيينات القوالب لقوائم الانتظار",
         "queues": "قوائم الانتظار",
-        "queues_desc": "تذكرة routing and organization",
-        "queues_monitored": "قوائم الانتظار monitored",
-        "recent_activity": "Recent مدير نشاط",
-        "reports_analytics": "[AR] Reports & Analytics",
-        "reports_analytics_desc": "[AR] Track performance insights",
+        "queues_desc": "توجيه وتنظيم التذاكر",
+        "queues_monitored": "قوائم الانتظار المراقبة",
+        "recent_activity": "النشاط الأخير للمسؤول",
+        "reports_analytics": "التقارير والتحليلات",
+        "reports_analytics_desc": "تتبع رؤى الأداء",
         "roles": "الأدوار",
         "roles_desc": "إدارة الأدوار وأذونات مجموعات الأدوار",
-        "services": "خدمات",
-        "services_desc": "Define service catalog entries",
-        "signatures": "توقيعات",
-        "signatures_desc": "Configure email signatures for responses",
-        "sla": "خدمة Level Agreements",
-        "sla_desc": "Configure response and resolution targets",
+        "services": "الخدمات",
+        "services_desc": "تحديد إدخالات كتالوج الخدمات",
+        "signatures": "التوقيعات",
+        "signatures_desc": "تكوين توقيعات البريد الإلكتروني للردود",
+        "sla": "اتفاقيات مستوى الخدمة",
+        "sla_desc": "تكوين أهداف الاستجابة والحل",
         "system_administration": "إدارة النظام",
-        "system_config": "نظام تكوين",
-        "system_config_desc": "Adjust global settings and behavior",
+        "system_config": "تكوين النظام",
+        "system_config_desc": "ضبط الإعدادات والسلوك العام",
         "system_health": "صحة النظام",
-        "system_maintenance": "[AR] System Maintenance",
-        "system_maintenance_desc": "[AR] Schedule maintenance windows and notify users",
-        "template_attachments": "[AR] Template Attachments",
-        "template_attachments_desc": "[AR] Manage template to attachment assignments",
-        "templates": "قوالب",
-        "templates_desc": "Reusable response and email templates",
-        "ticket_notifications": "تذكرة إشعارات",
-        "ticket_notifications_desc": "Configure automated notifications for ticket events",
+        "system_maintenance": "صيانة النظام",
+        "system_maintenance_desc": "جدولة نوافذ الصيانة وإبلاغ المستخدمين",
+        "template_attachments": "مرفقات القوالب",
+        "template_attachments_desc": "إدارة تعيينات المرفقات للقوالب",
+        "templates": "القوالب",
+        "templates_desc": "قوالب الردود والبريد الإلكتروني القابلة لإعادة الاستخدام",
+        "ticket_notifications": "إشعارات التذاكر",
+        "ticket_notifications_desc": "تكوين الإشعارات الآلية لأحداث التذاكر",
         "uptime_this_month": "وقت التشغيل هذا الشهر",
         "user_management": "إدارة المستخدمين",
         "user_management_desc": "إدارة حسابات الوكلاء والعملاء"
     },
     "admin_queues": {
         "add_queue": "إضافة قائمة انتظار",
-        "advanced_settings": "Advanced إعدادات",
-        "basic_info": "Basic معلوماتrmation",
+        "advanced_settings": "الإعدادات المتقدمة",
+        "basic_info": "المعلومات الأساسية",
         "calendar": "التقويم",
         "edit_queue": "تحرير قائمة انتظار",
-        "email_settings": "البريد الإلكتروني إعدادات",
-        "follow_up_settings": "Folمنخفض-up إعدادات",
-        "get_started": "Get started by creating a new queue.",
+        "email_settings": "إعدادات البريد الإلكتروني",
+        "follow_up_settings": "إعدادات المتابعة",
+        "get_started": "ابدأ بإنشاء قائمة انتظار جديدة.",
         "manage_email_identities": "إدارة هويات البريد",
-        "new_queue": "جديد قائمة انتظار",
-        "no_queues": "لا queues",
-        "no_signature": "لا signature selected",
-        "ticket_settings": "تذكرة إعدادات",
-        "unlock_timeout": "Unlock الوقتout"
+        "new_queue": "قائمة انتظار جديدة",
+        "no_queues": "لا توجد قوائم انتظار",
+        "no_signature": "لم يتم اختيار توقيع",
+        "ticket_settings": "إعدادات التذاكر",
+        "unlock_timeout": "مهلة إلغاء القفل"
     },
     "admin_tickets": {
         "title": "تذاكر"
@@ -1455,8 +1471,10 @@
         "signin": "دخول",
         "signing_in": "جاري تسجيل الدخول...",
         "signup": "تسجيل",
-        "too_many_attempts": "Too many failed attempts. Please wait",
-        "username": "اسم المستخدم"
+        "too_many_attempts": "محاولات فاشلة كثيرة جداً. يرجى الانتظار",
+        "username": "اسم المستخدم",
+        "username_placeholder": "أدخل اسم المستخدم",
+        "password_placeholder": "أدخل كلمة المرور"
     },
     "bulk_actions": {
         "all_selected": "تم تحديد الكل",
@@ -1545,7 +1563,10 @@
         "update": "تحديث",
         "upload": "رفع",
         "view_all": "عرض الكل",
-        "warning": "تحذير"
+        "warning": "تحذير",
+        "disable": "تعطيل",
+        "enable": "تفعيل",
+        "save_changes": "حفظ التغييرات"
     },
     "changes": {
         "backout_plan": "خطة التراجع",
@@ -1574,8 +1595,8 @@
         "close": "إغلاق",
         "comments": "التعليقات",
         "confirm_action": "تأكيد الإجراء",
-        "copy_details": "Copy Guru details",
-        "copy_to_clipboard": "Copy to clipboard",
+        "copy_details": "نسخ تفاصيل المعالج",
+        "copy_to_clipboard": "نسخ إلى الحافظة",
         "create": "إنشاء",
         "created": "تم الإنشاء",
         "created_by": "أنشئ بواسطة",
@@ -1603,9 +1624,9 @@
         "name": "الاسم",
         "next": "التالي",
         "no": "لا",
-        "no_data_available": "لا data available",
+        "no_data_available": "لا توجد بيانات متاحة",
         "no_results": "لم يتم العثور على نتائج",
-        "no_results_found": "لا results found",
+        "no_results_found": "لم يتم العثور على نتائج",
         "last_update": "آخر تحديث",
         "save_and_finish": "حفظ وإنهاء",
         "save_changes": "حفظ التغييرات",
@@ -1630,7 +1651,8 @@
         "submit": "إرسال",
         "success": "نجاح",
         "to": "إلى",
-        "toggle_dark_mode": "Toggle dark mode",
+        "toggle_dark_mode": "تبديل الوضع الداكن",
+        "select_language": "اختر اللغة",
         "total": "الإجمالي",
         "unassigned": "غير مُسند",
         "until": "حتى",
@@ -1650,7 +1672,9 @@
             "password": "كلمة المرور",
             "sign_in": "دخول",
             "signing_in": "جاري تسجيل الدخول...",
-            "too_many_attempts": "محاولات فاشلة كثيرة جدًا. يرجى الانتظار %d ثانية والمحاولة مرة أخرى."
+            "too_many_attempts": "محاولات فاشلة كثيرة جدًا. يرجى الانتظار %d ثانية والمحاولة مرة أخرى.",
+            "login_placeholder": "أدخل اسم المستخدم أو البريد الإلكتروني",
+            "password_placeholder": "أدخل كلمة المرور"
         },
         "common": {
             "required": "*"
@@ -1782,193 +1806,194 @@
         }
     },
     "customer_companies": {
-        "description": "Manage customer organizations and their branded portals",
-        "heading": "عميل Companies",
-        "title": "عميل Companies",
+        "description": "إدارة مؤسسات العملاء وبواباتهم ذات العلامة التجارية",
+        "heading": "شركات العملاء",
+        "title": "شركات العملاء",
         "tooltips": {
-            "activate": "Activate الشركة",
-            "deactivate": "Deactivate الشركة",
+            "activate": "تفعيل الشركة",
+            "deactivate": "إلغاء تفعيل الشركة",
             "edit": "تحرير الشركة",
-            "manage_services": "Manage خدمات",
-            "portal_settings": "Portal إعدادات"
+            "manage_services": "إدارة الخدمات",
+            "portal_settings": "إعدادات البوابة"
         }
     },
     "customer_company_form": {
-        "assigned_services": "Assigned خدمات",
-        "branding": "Branding",
-        "company_details": "الشركة تفاصيل",
-        "features": "Features",
-        "portal_settings": "Portal إعدادات"
+        "assigned_services": "الخدمات المعينة",
+        "branding": "العلامة التجارية",
+        "company_details": "تفاصيل الشركة",
+        "features": "الميزات",
+        "portal_settings": "إعدادات البوابة"
     },
     "customer_company_services": {
-        "heading": "عميل الشركة خدمات",
-        "title": "عميل الشركة خدمات"
+        "heading": "خدمات شركة العميل",
+        "title": "خدمات شركة العميل"
     },
     "customer_company_tickets": {
-        "heading": "عميل الشركة تذاكر",
-        "title": "عميل الشركة تذاكر"
+        "heading": "تذاكر شركة العميل",
+        "title": "تذاكر شركة العميل"
     },
     "customer_company_users": {
-        "heading": "عميل الشركة مستخدمون",
-        "title": "عميل الشركة مستخدمون"
+        "heading": "مستخدمو شركة العميل",
+        "title": "مستخدمو شركة العميل"
     },
     "customer_group": {
-        "by_group_heading": "عميل أذونات by مجموعة",
-        "customer_permissions": "عميل أذونات",
-        "edit_heading": "تحرير عميل مجموعة أذونات",
-        "group_permissions": "مجموعة أذونات"
+        "by_group_heading": "أذونات العملاء حسب المجموعة",
+        "customer_permissions": "أذونات العملاء",
+        "edit_heading": "تحرير أذونات مجموعة العملاء",
+        "group_permissions": "أذونات المجموعة"
     },
     "customer_group_by_group": {
-        "customer_permissions": "عميل أذونات"
+        "customer_permissions": "أذونات العملاء"
     },
     "customer_group_edit": {
-        "group_permissions": "مجموعة أذونات"
+        "group_permissions": "أذونات المجموعة"
     },
     "customer_groups": {
-        "about_heading": "About عميل مجموعة أذونات",
-        "heading": "عميل مجموعة أذونات"
+        "about_heading": "حول أذونات مجموعات العملاء",
+        "heading": "أذونات مجموعات العملاء"
     },
     "customer_portal": {
         "placeholders": {
-            "footer": "Powered by GOTRS",
-            "title": "عميل Portal"
+            "footer": "مدعوم من GOTRS",
+            "title": "بوابة العملاء"
         }
     },
     "customer_portal_settings": {
-        "heading": "عميل Portal إعدادات",
-        "title": "عميل Portal إعدادات"
+        "heading": "إعدادات بوابة العملاء",
+        "title": "إعدادات بوابة العملاء"
     },
     "customer_user_services": {
-        "title": "عميل مستخدم خدمات"
+        "title": "خدمات مستخدم العميل"
     },
     "customer_users": {
-        "add_modal_title": "إضافة عميل مستخدم",
-        "add_user": "إضافة عميل مستخدم",
-        "description": "Manage customer user accounts and access",
-        "edit_modal_title": "تحرير عميل مستخدم",
+        "add_modal_title": "إضافة مستخدم عميل",
+        "add_user": "إضافة مستخدم عميل",
+        "description": "إدارة حسابات مستخدمي العملاء والوصول",
+        "edit_modal_title": "تحرير مستخدم عميل",
         "export": "تصدير",
         "import_csv": "استيراد CSV",
-        "import_title": "استيراد عميل مستخدمون",
+        "import_title": "استيراد مستخدمي العملاء",
         "search": "بحث",
         "section": {
-            "address_info": "العنوان معلوماتrmation",
-            "basic_info": "Basic معلوماتrmation",
-            "contact_info": "Contact معلوماتrmation",
-            "personal_info": "Personal معلوماتrmation"
+            "address_info": "معلومات العنوان",
+            "basic_info": "المعلومات الأساسية",
+            "contact_info": "معلومات الاتصال",
+            "personal_info": "المعلومات الشخصية"
         },
-        "table_heading": "عميل مستخدمون",
-        "tickets_title": "عميل تذاكر",
-        "title": "عميل مستخدم Management",
+        "table_heading": "مستخدمو العملاء",
+        "tickets_title": "تذاكر العميل",
+        "title": "إدارة مستخدمي العملاء",
         "tooltips": {
-            "delete": "حذف customer user",
-            "disable": "تعطيل customer user",
-            "edit": "تحرير customer user",
-            "enable": "تفعيل customer user"
-        }
+            "delete": "حذف مستخدم العميل",
+            "disable": "تعطيل مستخدم العميل",
+            "edit": "تحرير مستخدم العميل",
+            "enable": "تفعيل مستخدم العميل"
+        },
+        "save_button": "حفظ مستخدم العميل"
     },
     "dashboard": {
-        "my_queues": "My قوائم الانتظار",
+        "my_queues": "قوائم الانتظار الخاصة بي",
         "my_tickets": "تذاكري",
-        "no_queues_assigned": "لا queues assigned",
-        "no_recent_tickets": "لا recent tickets",
-        "no_tickets_found": "لا tickets found",
-        "no_tickets_in_system": "لا tickets found in the system",
+        "no_queues_assigned": "لا توجد قوائم انتظار معينة",
+        "no_recent_tickets": "لا توجد تذاكر حديثة",
+        "no_tickets_found": "لم يتم العثور على تذاكر",
+        "no_tickets_in_system": "لم يتم العثور على تذاكر في النظام",
         "open_tickets": "التذاكر المفتوحة",
         "overview": "نظرة عامة",
         "performance": "الأداء",
         "quick_actions": "إجراءات سريعة",
         "quick_stats": "إحصائيات سريعة",
         "realtime": {
-            "title": "Real-time لوحة التحكم"
+            "title": "لوحة التحكم الفورية"
         },
         "recent_activity": "النشاط الأخير",
         "recent_tickets": "التذاكر الأخيرة",
         "statistics": "الإحصائيات",
         "stats": {
             "closed_today": "مغلق اليوم",
-            "my_open": "My فتح",
-            "my_pending": "My قيد الانتظار",
+            "my_open": "المفتوحة لي",
+            "my_pending": "المعلقة لي",
             "new_today": "جديد اليوم",
-            "open_tickets": "فتح تذاكر",
+            "open_tickets": "التذاكر المفتوحة",
             "overdue": "متأخر",
             "pending": "قيد الانتظار",
-            "total_assigned": "المجموع Assigned",
-            "unassigned": "Unassigned"
+            "total_assigned": "إجمالي المعينة",
+            "unassigned": "غير معينة"
         },
         "tickets_count": "تذاكر",
         "title": "لوحة التحكم",
-        "unassigned_count": "unassigned",
+        "unassigned_count": "غير معينة",
         "welcome_back": "مرحبًا بعودتك",
         "welcome_message": "إليك ما يحدث مع تذاكرك اليوم"
     },
     "dynamic_field_form": {
-        "basic_information": "Basic معلوماتrmation",
-        "field_configuration": "Field تكوين"
+        "basic_information": "المعلومات الأساسية",
+        "field_configuration": "تكوين الحقل"
     },
     "dynamic_field_screens": {
-        "screen_configuration": "Screen تكوين",
-        "title": "Dynamic Field Screens"
+        "screen_configuration": "تكوين الشاشة",
+        "title": "شاشات الحقول الديناميكية"
     },
     "dynamic_fields": {
         "additional_fields": "حقول إضافية",
         "article_fields": "حقول المقال",
-        "available_field_types": "Available Field النوعs",
-        "description": "إنشاء and manage dynamic fields for tickets, articles, and other objects",
-        "heading": "Dynamic Fields Management",
-        "no_dynamic_fields": "لا dynamic fields",
+        "available_field_types": "أنواع الحقول المتاحة",
+        "description": "إنشاء وإدارة الحقول الديناميكية للتذاكر والمقالات والكائنات الأخرى",
+        "heading": "إدارة الحقول الديناميكية",
+        "no_dynamic_fields": "لا توجد حقول ديناميكية",
         "placeholders": {
-            "label": "My Custom Field",
+            "label": "حقلي المخصص",
             "name": "MyCustomField"
         },
         "select": "اختر...",
         "title": "حقول إضافية",
         "tooltips": {
-            "add_new": "إضافة new dynamic field",
-            "apply_filters": "تطبيق filters",
-            "clear_filters": "مسح filters",
-            "delete": "حذف field",
-            "edit": "تحرير field"
+            "add_new": "إضافة حقل ديناميكي جديد",
+            "apply_filters": "تطبيق الفلاتر",
+            "clear_filters": "مسح الفلاتر",
+            "delete": "حذف الحقل",
+            "edit": "تحرير الحقل"
         }
     },
     "dynamic_test": {
         "heading": "اختبار الوحدة الديناميكية",
-        "testing_instructions": "Testing Instructions",
+        "testing_instructions": "تعليمات الاختبار",
         "title": "اختبار الوحدة الديناميكية"
     },
     "email_identities": {
         "add_signature": "إضافة توقيع",
-        "add_system_address": "إضافة نظام العنوان",
-        "description": "Manage outbound email identities, salutations, and signatures used by queues.",
-        "heading": "البريد الإلكتروني Identities",
-        "salutations": "تحيةs",
-        "signatures": "توقيعات",
-        "system_addresses": "نظام العنوانes",
-        "title": "البريد الإلكتروني Identities"
+        "add_system_address": "إضافة عنوان النظام",
+        "description": "إدارة هويات البريد الإلكتروني الصادر والتحيات والتوقيعات المستخدمة في قوائم الانتظار.",
+        "heading": "هويات البريد الإلكتروني",
+        "salutations": "التحيات",
+        "signatures": "التوقيعات",
+        "system_addresses": "عناوين النظام",
+        "title": "هويات البريد الإلكتروني"
     },
     "email_queue": {
-        "description": "عرض and manage queued email messages",
-        "heading": "البريد الإلكتروني قائمة انتظار Management",
-        "queue_actions": "قائمة انتظار الإجراءات",
-        "title": "البريد الإلكتروني قائمة انتظار",
+        "description": "عرض وإدارة رسائل البريد الإلكتروني في قائمة الانتظار",
+        "heading": "إدارة قائمة انتظار البريد الإلكتروني",
+        "queue_actions": "إجراءات قائمة الانتظار",
+        "title": "قائمة انتظار البريد الإلكتروني",
         "tooltips": {
-            "apply_filters": "تطبيق filters",
-            "clear_filters": "مسح filters",
-            "delete": "حذف from queue",
+            "apply_filters": "تطبيق الفلاتر",
+            "clear_filters": "مسح الفلاتر",
+            "delete": "حذف من قائمة الانتظار",
             "retry": "إعادة الإرسال",
-            "view_details": "عرض details"
+            "view_details": "عرض التفاصيل"
         }
     },
     "entity_selector": {
         "add_new": "إضافة جديد",
-        "added": "إضافةed",
+        "added": "تمت الإضافة",
         "manage_members": "إدارة الأعضاء",
-        "no_members": "لا members yet",
-        "no_results": "لا results found",
-        "removed": "إزالةd",
-        "select_items": "اختيار Items",
-        "selected_items": "محدد Items",
-        "type_to_search": "النوع at least {min} characters to search",
-        "type_to_search_hint": "النوع at least 2 characters to search",
+        "no_members": "لا يوجد أعضاء بعد",
+        "no_results": "لم يتم العثور على نتائج",
+        "removed": "تمت الإزالة",
+        "select_items": "اختيار العناصر",
+        "selected_items": "العناصر المحددة",
+        "type_to_search": "اكتب {min} حرف على الأقل للبحث",
+        "type_to_search_hint": "اكتب حرفين على الأقل للبحث",
         "undo": "تراجع"
     },
     "error": {
@@ -2015,46 +2040,46 @@
         "select": "اختر"
     },
     "group_form": {
-        "heading": "مجموعة Form",
-        "title": "مجموعة Form"
+        "heading": "نموذج المجموعة",
+        "title": "نموذج المجموعة"
     },
     "group_members": {
-        "heading": "مجموعة Members",
-        "title": "مجموعة Members"
+        "heading": "أعضاء المجموعة",
+        "title": "أعضاء المجموعة"
     },
     "group_permissions": {
-        "permission_matrix": "إذن Matrix",
-        "queue_permissions": "قائمة انتظار أذونات",
+        "permission_matrix": "مصفوفة الأذونات",
+        "queue_permissions": "أذونات قوائم الانتظار",
         "queues": "قوائم الانتظار",
-        "title": "مجموعة أذونات"
+        "title": "أذونات المجموعة"
     },
     "group_view": {
-        "heading": "مجموعة تفاصيل",
-        "title": "مجموعة"
+        "heading": "تفاصيل المجموعة",
+        "title": "المجموعة"
     },
     "groups": {
         "add_group": "إضافة مجموعة",
-        "add_user": "إضافة مستخدم to مجموعة",
+        "add_user": "إضافة مستخدم إلى المجموعة",
         "add_user_btn": "إضافة مستخدم",
-        "confirm_delete": "Are you sure you want to delete this group?",
+        "confirm_delete": "هل أنت متأكد من أنك تريد حذف هذه المجموعة؟",
         "current_members": "الأعضاء الحاليون",
-        "delete_success": "مجموعة deleted successfully",
-        "group": "مجموعة",
-        "group_form": "مجموعة Form",
-        "group_members": "مجموعة Members",
-        "loading_members": "جاري التحميل members...",
-        "members": "مجموعة Members",
-        "save_success": "مجموعة saved successfully",
-        "select_user": "اختيار a user to add",
+        "delete_success": "تم حذف المجموعة بنجاح",
+        "group": "المجموعة",
+        "group_form": "نموذج المجموعة",
+        "group_members": "أعضاء المجموعة",
+        "loading_members": "جاري تحميل الأعضاء...",
+        "members": "أعضاء المجموعة",
+        "save_success": "تم حفظ المجموعة بنجاح",
+        "select_user": "اختر مستخدماً للإضافة",
         "tooltips": {
-            "add_new": "إضافة a new group to the system",
-            "clear_filters": "مسح all filters",
-            "clear_search": "مسح search",
-            "delete": "حذف group",
-            "edit": "تحرير group",
-            "manage_permissions": "Manage permissions",
-            "remove_user": "إزالة user from group",
-            "system_group_no_delete": "نظام groups cannot be deleted"
+            "add_new": "إضافة مجموعة جديدة إلى النظام",
+            "clear_filters": "مسح جميع الفلاتر",
+            "clear_search": "مسح البحث",
+            "delete": "حذف المجموعة",
+            "edit": "تحرير المجموعة",
+            "manage_permissions": "إدارة الأذونات",
+            "remove_user": "إزالة المستخدم من المجموعة",
+            "system_group_no_delete": "لا يمكن حذف مجموعات النظام"
         }
     },
     "incidents": {
@@ -2145,119 +2170,119 @@
     "messages": {
         "access_denied": "تم رفض الوصول",
         "changes_saved": "تم حفظ التغييرات بنجاح",
-        "code_copied": "Code copied to clipboard!",
+        "code_copied": "تم نسخ الكود إلى الحافظة!",
         "confirm": {
-            "activate_acl": "Are you sure you want to activate",
-            "activate_company": "Are you sure you want to activate this company? This will alمنخفض users from this company to access the portal.",
-            "activate_item": "Are you sure you want to activate this item?",
-            "activate_service": "Are you sure you want to activate this service?",
-            "activate_sla": "Are you sure you want to activate this اتفاقية مستوى الخدمة?",
-            "bulk_action": "Are you sure you want to {action} {count} customer user(s)?",
-            "bulk_delete_customer_users": "Are you sure you want to delete the selected customer user(s)?",
-            "bulk_disable_customer_users": "Are you sure you want to disable the selected customer user(s)?",
-            "bulk_enable_customer_users": "Are you sure you want to enable the selected customer user(s)?",
-            "deactivate_acl": "Are you sure you want to deactivate",
-            "deactivate_company": "Are you sure you want to deactivate this company? This will prevent all users from this company from accessing the portal.",
-            "deactivate_item": "Are you sure you want to deactivate this item?",
-            "deactivate_service": "Are you sure you want to deactivate this service?",
-            "deactivate_sla": "Are you sure you want to deactivate this اتفاقية مستوى الخدمة?",
-            "delete_attachment": "Are you sure you want to delete this attachment?",
-            "delete_bulk": "Are you sure you want to delete the selected item(s)? لا يمكن التراجع عن هذا الإجراء.",
-            "delete_customer_user": "Are you sure you want to delete this customer user? لا يمكن التراجع عن هذا الإجراء.",
-            "delete_dynamic_field": "Are you sure you want to delete this dynamic field? This will also delete all stored values for this field.",
-            "delete_filter_sets": "حذف all saved filter sets?",
-            "delete_group": "Are you sure you want to delete this group?",
-            "delete_item": "Are you sure you want to delete this item?",
-            "delete_lookup": "Are you sure you want to delete this item? لا يمكن التراجع عن هذا الإجراء.",
-            "delete_priority": "Are you sure you want to delete this priority? لا يمكن التراجع عن هذا الإجراء.",
-            "delete_queue": "Are you sure you want to delete this queue? الكل tickets in this queue will need to be reassigned. لا يمكن التراجع عن هذا الإجراء.",
-            "delete_queue_simple": "Are you sure you want to delete this queue?",
-            "delete_queues_bulk": "Are you sure you want to delete the selected queue(s)?",
-            "delete_state": "Are you sure you want to delete this state?",
-            "delete_webservice": "Are you sure you want to delete this webservice? لا يمكن التراجع عن هذا الإجراء.",
-            "disable_customer_user": "Are you sure you want to disable this customer user?",
-            "disable_queue": "Are you sure you want to disable this queue?",
-            "enable_customer_user": "Are you sure you want to enable this customer user?",
-            "enable_queue": "Are you sure you want to enable this queue?",
-            "lock_ticket": "Are you sure you want to lock this ticket?",
-            "proceed_action": "Are you sure you want to proceed with this action?",
-            "remove_user_from_group": "Are you sure you want to remove this user from the group?",
-            "reset_config": "Are you sure you want to reset this configuration to its default value? لا يمكن التراجع عن هذا الإجراء.",
-            "toggle_customer_status": "Are you sure you want to {action} this customer user?",
-            "toggle_status_bulk": "Are you sure you want to toggle the status of the selected item(s)?"
+            "activate_acl": "هل أنت متأكد من أنك تريد تفعيل",
+            "activate_company": "هل أنت متأكد من أنك تريد تفعيل هذه الشركة؟ سيسمح هذا للمستخدمين من هذه الشركة بالوصول إلى البوابة.",
+            "activate_item": "هل أنت متأكد من أنك تريد تفعيل هذا العنصر؟",
+            "activate_service": "هل أنت متأكد من أنك تريد تفعيل هذه الخدمة؟",
+            "activate_sla": "هل أنت متأكد من أنك تريد تفعيل اتفاقية مستوى الخدمة هذه؟",
+            "bulk_action": "هل أنت متأكد من أنك تريد {action} {count} مستخدم(مستخدمين) عميل؟",
+            "bulk_delete_customer_users": "هل أنت متأكد من أنك تريد حذف مستخدمي العملاء المحددين؟",
+            "bulk_disable_customer_users": "هل أنت متأكد من أنك تريد تعطيل مستخدمي العملاء المحددين؟",
+            "bulk_enable_customer_users": "هل أنت متأكد من أنك تريد تمكين مستخدمي العملاء المحددين؟",
+            "deactivate_acl": "هل أنت متأكد من أنك تريد إلغاء تفعيل",
+            "deactivate_company": "هل أنت متأكد من أنك تريد إلغاء تفعيل هذه الشركة؟ سيمنع هذا جميع المستخدمين من هذه الشركة من الوصول إلى البوابة.",
+            "deactivate_item": "هل أنت متأكد من أنك تريد إلغاء تفعيل هذا العنصر؟",
+            "deactivate_service": "هل أنت متأكد من أنك تريد إلغاء تفعيل هذه الخدمة؟",
+            "deactivate_sla": "هل أنت متأكد من أنك تريد إلغاء تفعيل اتفاقية مستوى الخدمة هذه؟",
+            "delete_attachment": "هل أنت متأكد من أنك تريد حذف هذا المرفق؟",
+            "delete_bulk": "هل أنت متأكد من أنك تريد حذف العنصر(العناصر) المحددة؟ لا يمكن التراجع عن هذا الإجراء.",
+            "delete_customer_user": "هل أنت متأكد من أنك تريد حذف مستخدم العميل هذا؟ لا يمكن التراجع عن هذا الإجراء.",
+            "delete_dynamic_field": "هل أنت متأكد من أنك تريد حذف هذا الحقل الديناميكي؟ سيتم أيضاً حذف جميع القيم المخزنة لهذا الحقل.",
+            "delete_filter_sets": "حذف جميع مجموعات التصفية المحفوظة؟",
+            "delete_group": "هل أنت متأكد من أنك تريد حذف هذه المجموعة؟",
+            "delete_item": "هل أنت متأكد من أنك تريد حذف هذا العنصر؟",
+            "delete_lookup": "هل أنت متأكد من أنك تريد حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.",
+            "delete_priority": "هل أنت متأكد من أنك تريد حذف هذه الأولوية؟ لا يمكن التراجع عن هذا الإجراء.",
+            "delete_queue": "هل أنت متأكد من أنك تريد حذف هذه القائمة؟ ستحتاج جميع التذاكر في هذه القائمة إلى إعادة تعيين. لا يمكن التراجع عن هذا الإجراء.",
+            "delete_queue_simple": "هل أنت متأكد من أنك تريد حذف هذه القائمة؟",
+            "delete_queues_bulk": "هل أنت متأكد من أنك تريد حذف القائمة (القوائم) المحددة؟",
+            "delete_state": "هل أنت متأكد من أنك تريد حذف هذه الحالة؟",
+            "delete_webservice": "هل أنت متأكد من أنك تريد حذف خدمة الويب هذه؟ لا يمكن التراجع عن هذا الإجراء.",
+            "disable_customer_user": "هل أنت متأكد من أنك تريد تعطيل مستخدم العميل هذا؟",
+            "disable_queue": "هل أنت متأكد من أنك تريد تعطيل هذه القائمة؟",
+            "enable_customer_user": "هل أنت متأكد من أنك تريد تمكين مستخدم العميل هذا؟",
+            "enable_queue": "هل أنت متأكد من أنك تريد تمكين هذه القائمة؟",
+            "lock_ticket": "هل أنت متأكد من أنك تريد قفل هذه التذكرة؟",
+            "proceed_action": "هل أنت متأكد من أنك تريد المتابعة بهذا الإجراء؟",
+            "remove_user_from_group": "هل أنت متأكد من أنك تريد إزالة هذا المستخدم من المجموعة؟",
+            "reset_config": "هل أنت متأكد من أنك تريد إعادة تعيين هذا التكوين إلى قيمته الافتراضية؟ لا يمكن التراجع عن هذا الإجراء.",
+            "toggle_customer_status": "هل أنت متأكد من أنك تريد {action} مستخدم العميل هذا؟",
+            "toggle_status_bulk": "هل أنت متأكد من أنك تريد تبديل حالة العنصر(العناصر) المحددة؟"
         },
         "confirm_action": "هل أنت متأكد من أنك تريد تنفيذ هذا الإجراء؟",
         "confirm_delete": "هل أنت متأكد من أنك تريد حذف هذا العنصر؟",
-        "confirm_delete_ticket": "Are you sure you want to delete this ticket? لا يمكن التراجع عن هذا الإجراء.",
-        "confirm_remove_user_from_role": "Are you sure you want to remove this user from the role?",
-        "connection_test_failed": "Connection test failed",
-        "connection_test_success": "Connection test successful!",
-        "error_loading_agents": "خطأ loading agents",
-        "error_loading_columns": "خطأ loading columns",
-        "error_loading_config": "خطأ loading configuration details",
-        "error_loading_members": "خطأ loading members",
-        "error_loading_tables": "خطأ loading tables",
+        "confirm_delete_ticket": "هل أنت متأكد من أنك تريد حذف هذه التذكرة؟ لا يمكن التراجع عن هذا الإجراء.",
+        "confirm_remove_user_from_role": "هل أنت متأكد من أنك تريد إزالة هذا المستخدم من الدور؟",
+        "connection_test_failed": "فشل اختبار الاتصال",
+        "connection_test_success": "نجح اختبار الاتصال!",
+        "error_loading_agents": "خطأ في تحميل الوكلاء",
+        "error_loading_columns": "خطأ في تحميل الأعمدة",
+        "error_loading_config": "خطأ في تحميل تفاصيل التكوين",
+        "error_loading_members": "خطأ في تحميل الأعضاء",
+        "error_loading_tables": "خطأ في تحميل الجداول",
         "error_occurred": "حدث خطأ",
-        "error_saving_field": "خطأ saving field",
+        "error_saving_field": "خطأ في حفظ الحقل",
         "error_saving_permissions": "خطأ في حفظ الأذونات",
         "error_saving_preferences": "خطأ في حفظ التفضيلات",
         "error_saving_profile": "خطأ في حفظ الملف الشخصي",
         "error_saving": "خطأ في حفظ التغييرات",
-        "error_screen_config": "Failed to update screen configuration",
-        "error_testing_connection": "خطأ testing connection",
-        "failed_add_user": "Failed to add user",
-        "failed_delete_signature": "Failed to delete signature",
-        "failed_remove_user": "Failed to remove user",
-        "failed_save_field": "Failed to save field",
-        "failed_update_screen_config": "Failed to update screen configuration",
-        "failed_update_services": "Failed to update services",
+        "error_screen_config": "فشل تحديث تكوين الشاشة",
+        "error_testing_connection": "خطأ في اختبار الاتصال",
+        "failed_add_user": "فشل إضافة المستخدم",
+        "failed_delete_signature": "فشل حذف التوقيع",
+        "failed_remove_user": "فشل إزالة المستخدم",
+        "failed_save_field": "فشل حفظ الحقل",
+        "failed_update_screen_config": "فشل تحديث تكوين الشاشة",
+        "failed_update_services": "فشل تحديث الخدمات",
         "groups": {
-            "select_user": "Please select a user to add"
+            "select_user": "الرجاء اختيار مستخدم للإضافة"
         },
         "info": "معلومات",
         "item_created": "تم إنشاء العنصر بنجاح",
         "item_deleted": "تم حذف العنصر بنجاح",
         "item_updated": "تم تحديث العنصر بنجاح",
         "loading": "جاري التحميل...",
-        "loading_customer_users": "جاري التحميل customer users...",
+        "loading_customer_users": "جاري تحميل مستخدمي العملاء...",
         "network_error": "خطأ في الشبكة",
-        "no_agents_available": "لا agents available",
+        "no_agents_available": "لا يوجد وكلاء متاحون",
         "no_data": "لا توجد بيانات متاحة",
         "no_results": "لم يتم العثور على نتائج",
-        "no_selection": "لا اختيارion",
-        "not_enough_tickets": "لاt Enough تذاكر",
+        "no_selection": "لا يوجد اختيار",
+        "not_enough_tickets": "لا توجد تذاكر كافية",
         "operation_failed": "فشلت العملية",
         "page_not_found": "الصفحة غير موجودة",
-        "please_enter_close_notes": "Please enter close notes",
-        "please_enter_note_content": "Please enter note content.",
-        "please_enter_reopen_reason": "Please enter a reason for reopening",
+        "please_enter_close_notes": "الرجاء إدخال ملاحظات الإغلاق",
+        "please_enter_note_content": "الرجاء إدخال محتوى الملاحظة.",
+        "please_enter_reopen_reason": "الرجاء إدخال سبب إعادة الفتح",
         "please_enter_sql_query": "الرجاء إدخال استعلام SQL",
         "please_select": "يرجى الاختيار",
         "please_select_agent": "الرجاء اختيار وكيل",
-        "please_select_both_users": "Please select both source and target users",
-        "please_select_ticket": "Please select at least one ticket",
+        "please_select_both_users": "الرجاء اختيار المستخدم المصدر والهدف",
+        "please_select_ticket": "الرجاء اختيار تذكرة واحدة على الأقل",
         "please_select_user": "الرجاء اختيار مستخدم",
         "please_wait": "يرجى الانتظار...",
         "processing": "جاري المعالجة...",
         "required_fields": "يرجى ملء جميع الحقول المطلوبة",
-        "save_company_before_services": "حفظ the company before assigning services.",
-        "save_company_first": "حفظ the company before assigning services.",
+        "save_company_before_services": "احفظ الشركة قبل تعيين الخدمات.",
+        "save_company_first": "احفظ الشركة قبل تعيين الخدمات.",
         "saving": "جاري الحفظ...",
-        "select_at_least_one_queue": "Please select at least one queue",
-        "select_template_type": "Please select at least one template type.",
-        "select_two_to_merge": "Please select at least two tickets to merge",
+        "select_at_least_one_queue": "الرجاء اختيار قائمة انتظار واحدة على الأقل",
+        "select_template_type": "الرجاء اختيار نوع قالب واحد على الأقل.",
+        "select_two_to_merge": "الرجاء اختيار تذكرتين على الأقل للدمج",
         "server_error": "خطأ في الخادم",
-        "services_updated": "خدمات updated successfully",
-        "services_updated_success": "خدمات updated successfully",
+        "services_updated": "تم تحديث الخدمات بنجاح",
+        "services_updated_success": "تم تحديث الخدمات بنجاح",
         "session_expired": "انتهت صلاحية جلستك",
         "success": "نجاح",
         "unauthorized": "غير مصرح",
         "unknown_error": "خطأ غير معروف",
         "validation": {
-            "please_enter_content": "Please enter content",
+            "please_enter_content": "الرجاء إدخال المحتوى",
             "please_enter_query": "الرجاء إدخال استعلام",
             "please_enter_subject": "الرجاء إدخال موضوع",
-            "please_select_state": "Please select a state"
+            "please_select_state": "الرجاء اختيار حالة"
         },
         "validation_error": "خطأ في التحقق",
         "warning": "تحذير"
@@ -2296,15 +2321,18 @@
         "push_notifications": "إشعارات الدفع",
         "reminder": {
             "dismiss": "تجاهل التذكير",
+            "dismiss_all": "تجاهل الكل",
             "due_in": "يستحق في",
-            "open_ticket": "فتح تذكرة",
-            "overdue_by": "متأخر by",
-            "reminder_at": "Reminder at",
+            "open_ticket": "فتح التذكرة",
+            "overdue_by": "متأخر بـ",
+            "reminder_at": "التذكير في",
             "reminder_ready": "التذكير جاهز",
-            "snooze_failed": "Failed to snooze reminder",
-            "snoozed_until": "تأجيل التذكير حتى",
+            "reminders": "تذكيرات",
+            "snooze_failed": "فشل تأجيل التذكير",
+            "snoozed": "تم التأجيل",
+            "snoozed_until": "تم تأجيل التذكير حتى",
             "ticket_label": "تذكرة",
-            "ticket_reminder": "تذكرة reminder"
+            "ticket_reminder": "تذكير التذكرة"
         },
         "settings": "إعدادات الإشعارات",
         "sound": "الصوت",
@@ -2316,7 +2344,7 @@
                 "title": "وكيل لوحة التحكم"
             },
             "queues": {
-                "description": "عرض and manage ticket queues assigned to you",
+                "description": "عرض وإدارة قوائم انتظار التذاكر المعينة لك",
                 "title": "إدارة قوائم الانتظار"
             },
             "tickets": {
@@ -2347,55 +2375,58 @@
         "total": "الإجمالي"
     },
     "permissions": {
-        "change_priority": "Change الأولوية",
-        "debug_heading": "DEBUG - أذونات",
-        "debug_permissions": "DEBUG - أذونات",
-        "description": "Manage user permissions across groups (OTRS دور Management)",
-        "error_saving": "خطأ saving permissions",
-        "groups": "مجموعات:",
-        "groups_heading": "مجموعات:",
-        "heading": "إذن Management",
-        "matrix_heading": "إذن Matrix",
-        "no_data": "لا permissions data available",
-        "no_user_selected": "لا user selected",
-        "permission_matrix": "إذن Matrix",
-        "please_select_user": "Please select a user to view permissions.",
-        "select_group": "Please select a group to modify",
-        "select_user": "اختيار a user to view permissions",
-        "simple_test": "Simple أذونات Test",
-        "standalone_heading": "إذن Management",
-        "title": "إذن Management",
+        "group": "المجموعة",
+        "clone_user_permissions": "نسخ صلاحيات المستخدم",
+        "change_priority": "تغيير الأولوية",
+        "debug_heading": "تصحيح الأخطاء - الأذونات",
+        "debug_permissions": "تصحيح الأخطاء - الأذونات",
+        "description": "إدارة أذونات المستخدمين عبر المجموعات (إدارة أدوار OTRS)",
+        "error_saving": "خطأ في حفظ الأذونات",
+        "groups": "المجموعات:",
+        "groups_heading": "المجموعات:",
+        "heading": "إدارة الأذونات",
+        "matrix_heading": "مصفوفة الأذونات",
+        "no_data": "لا توجد بيانات أذونات متاحة",
+        "no_user_selected": "لم يتم اختيار مستخدم",
+        "permission_matrix": "مصفوفة الأذونات",
+        "please_select_user": "الرجاء اختيار مستخدم لعرض الأذونات.",
+        "select_group": "الرجاء اختيار مجموعة للتعديل",
+        "select_user": "اختر مستخدماً لعرض الأذونات",
+        "simple_test": "اختبار الأذونات البسيط",
+        "standalone_heading": "إدارة الأذونات",
+        "title": "إدارة الأذونات",
         "tooltips": {
-            "clear_all_group": "مسح all permissions for this group",
-            "clone": "Clone permissions from one user to another",
-            "create": "إنشاء tickets",
-            "grant_all": "اختيارing this will grant all permissions",
-            "move_into": "Move tickets into queue",
-            "note": "إضافة notes",
+            "clear_all_group": "مسح جميع الأذونات لهذه المجموعة",
+            "clone": "نسخ الأذونات من مستخدم إلى آخر",
+            "create": "إنشاء التذاكر",
+            "grant_all": "اختيار هذا سيمنح جميع الأذونات",
+            "move_into": "نقل التذاكر إلى قائمة الانتظار",
+            "note": "إضافة ملاحظات",
             "owner": "كن المالك",
-            "priority": "Change priority",
-            "ro": "قراءة Only",
-            "select_all_group": "تحديد الكل permissions for this group"
+            "priority": "تغيير الأولوية",
+            "ro": "قراءة فقط",
+            "select_all_group": "تحديد جميع الأذونات لهذه المجموعة"
         },
-        "user_selection": "مستخدم اختيارion",
-        "users": "مستخدمون:",
-        "users_heading": "مستخدمون:",
-        "working_heading": "إذن Management"
+        "user_selection": "اختيار المستخدم",
+        "users": "المستخدمون:",
+        "users_heading": "المستخدمون:",
+        "working_heading": "إدارة الأذونات",
+        "clone_permissions": "نسخ الأذونات"
     },
     "permissions_working": {
-        "title": "إذن Management"
+        "title": "إدارة الأذونات"
     },
     "placeholders": {
-        "contains": "Contains...",
-        "note_subject": "ملاحظة subject",
-        "separate_emails": "Separate multiple emails with commas"
+        "contains": "يحتوي على...",
+        "note_subject": "موضوع الملاحظة",
+        "separate_emails": "افصل بين البريد الإلكتروني بفواصل"
     },
     "priorities": {
-        "heading": "الأولوية Management",
-        "priorities_management": "الأولويات Management",
-        "title": "الأولوية Management",
+        "heading": "إدارة الأولويات",
+        "priorities_management": "إدارة الأولويات",
+        "title": "إدارة الأولويات",
         "tooltips": {
-            "edit": "تحرير priority"
+            "edit": "تحرير الأولوية"
         }
     },
     "password": {
@@ -2466,17 +2497,17 @@
         "Spam and junk emails": "رسائل البريد العشوائي وغير المرغوب فيها"
     },
     "queue_detail": {
-        "back_to_queues": "رجوع to قوائم الانتظار",
-        "description": "قائمة انتظار تفاصيل and إحصائيات",
-        "group_id": "مجموعة ID",
-        "no_description": "لا description available",
-        "no_tickets": "لا tickets in this queue",
-        "queue_id": "قائمة انتظار ID",
-        "queue_name": "قائمة انتظار الاسم",
-        "recent_tickets": "Recent تذاكر",
-        "ticket_assignments_heading": "تذكرة Assignments",
-        "ticket_list_heading": "تذاكر in قائمة انتظار",
-        "tickets_in_queue": "تذاكر in this queue",
+        "back_to_queues": "العودة إلى قوائم الانتظار",
+        "description": "تفاصيل وإحصائيات قائمة الانتظار",
+        "group_id": "معرف المجموعة",
+        "no_description": "لا يوجد وصف متاح",
+        "no_tickets": "لا توجد تذاكر في هذه القائمة",
+        "queue_id": "معرف القائمة",
+        "queue_name": "اسم القائمة",
+        "recent_tickets": "التذاكر الأخيرة",
+        "ticket_assignments_heading": "تعيينات التذاكر",
+        "ticket_list_heading": "التذاكر في القائمة",
+        "tickets_in_queue": "التذاكر في هذه القائمة",
         "title": "قائمة انتظار"
     },
     "queues": {
@@ -2526,75 +2557,82 @@
         "ticket_volume": "تذكرة Volume (24h)"
     },
     "realtime_dashboard": {
-        "title": "Real-time لوحة التحكم"
+        "title": "لوحة التحكم في الوقت الفعلي"
     },
     "roadmap": {
         "current_phase": "المرحلة الحالية",
-        "enhancements_heading": "تحسينات",
-        "error_loading": "خطأ جاري التحميل Roadmap",
-        "features_heading": "Features",
+        "enhancements_heading": "التحسينات",
+        "error_loading": "خطأ في تحميل خارطة الطريق",
+        "features_heading": "الميزات",
         "fixes_heading": "إصلاحات الأخطاء",
-        "heading": "Development Roadmap",
-        "module_checklist": "Module Checklist",
-        "module_health_status": "Module Health الحالة",
-        "other_heading": "Other Changes",
-        "performance_trends": "Performance Trends",
-        "quick_navigation": "Quick Navigation",
-        "recent_updates": "Recent تحديثs",
-        "title": "نظام Roadmap"
+        "heading": "خارطة طريق التطوير",
+        "module_checklist": "قائمة فحص الوحدات",
+        "module_health_status": "حالة صحة الوحدات",
+        "other_heading": "تغييرات أخرى",
+        "performance_trends": "اتجاهات الأداء",
+        "quick_navigation": "التنقل السريع",
+        "recent_updates": "التحديثات الأخيرة",
+        "title": "خارطة طريق النظام"
     },
     "role_permissions": {
         "tooltips": {
             "create": "إنشاء",
-            "move_into": "Move Into",
+            "move_into": "نقل إلى",
             "note": "ملاحظة",
             "owner": "المالك",
             "priority": "الأولوية",
-            "ro": "قراءة Only",
+            "ro": "قراءة فقط",
             "select_all": "تحديد الكل",
-            "select_none": "اختيار لا شيء"
+            "select_none": "إلغاء تحديد الكل"
         }
     },
     "role_users": {
-        "get_started": "Get started by adding users to this role.",
-        "heading": "مستخدمون in دور",
+        "get_started": "ابدأ بإضافة مستخدمين إلى هذا الدور.",
+        "heading": "مستخدمون في الدور",
         "modal": {
             "add_user": "إضافة مستخدم",
             "select_user": "اختيار مستخدم",
-            "title": "إضافة مستخدم to دور"
+            "title": "إضافة مستخدم إلى الدور"
         },
-        "no_users": "لا users assigned",
+        "no_users": "لا يوجد مستخدمون معينون",
         "tooltips": {
-            "remove": "إزالة from role"
+            "remove": "إزالة من الدور"
         }
     },
     "roles": {
         "add_role": "إضافة دور",
-        "description": "Manage system roles and their permissions (OTRS مديردور equivalent)",
+        "create_new_role": "إنشاء دور جديد",
+        "update_role": "تحديث الدور",
+        "description": "إدارة أدوار النظام وصلاحياتها",
         "edit_role": "تحرير دور",
-        "manage_users": "Manage دور مستخدمون",
-        "title": "دور Management",
+        "manage_users": "إدارة مستخدمي الدور",
+        "title": "إدارة الأدوار",
         "tooltips": {
-            "edit": "تحرير role",
-            "manage_permissions": "Manage group permissions for this role",
-            "manage_users": "Manage users in this role"
-        }
+            "edit": "تحرير الدور",
+            "manage_permissions": "إدارة صلاحيات المجموعة لهذا الدور",
+            "manage_users": "إدارة مستخدمي هذا الدور"
+        },
+        "create_role": "إنشاء دور"
     },
     "schema_discovery": {
-        "available_tables": "Available Tables",
+        "available_tables": "الجداول المتاحة",
         "heading": "اكتشاف المخطط",
-        "query_error": "Query خطأ",
-        "query_results": "Query Results",
-        "sql_explorer": "SQL Query Explorer",
-        "title": "اكتشاف المخطط"
+        "query_error": "خطأ في الاستعلام",
+        "query_results": "نتائج الاستعلام",
+        "sql_explorer": "مستكشف استعلام SQL",
+        "title": "اكتشاف المخطط",
+        "generate_module": "إنشاء وحدة",
+        "save_module": "حفظ الوحدة",
+        "view_columns": "عرض الأعمدة",
+        "generate": "توليد"
     },
     "schema_monitoring": {
-        "alerts_heading": "نشط Alerts",
-        "heading": "Schema Discovery Monitor",
-        "loading_status": "جاري التحميل module status...",
-        "module_health_status": "Module Health الحالة",
-        "performance_heading": "Performance Metrics",
-        "title": "Schema Monitoring"
+        "alerts_heading": "التنبيهات النشطة",
+        "heading": "مراقب اكتشاف المخطط",
+        "loading_status": "جاري تحميل حالة الوحدة...",
+        "module_health_status": "حالة صحة الوحدة",
+        "performance_heading": "مقاييس الأداء",
+        "title": "مراقبة المخطط"
     },
     "search": {
         "active_filters": "الفلاتر النشطة:",
@@ -2777,7 +2815,7 @@
         "articles": "المقالات",
         "assign": "تعيين",
         "assign_agent": "تعيين وكيل",
-        "assigned": "[AR] Assigned",
+        "assigned": "مُسند",
         "assigned_to": "مُسند إلى",
         "attachments": "المرفقات",
         "auto_close": {
@@ -2831,6 +2869,7 @@
         "internal_note": "ملاحظة داخلية",
         "internal_note_default_subject": "ملاحظة",
         "internal_only_badge": "داخلي فقط",
+        "customer_wrote_badge": "كتب العميل هذا",
         "keep_current_state": "الإبقاء على الحالة الحالية",
         "link": "ربط",
         "linked_tickets": "التذاكر المرتبطة",
@@ -2843,11 +2882,13 @@
         "merge": "دمج",
         "merge_target_placeholder": "أدخل رقم التذكرة للدمج معها",
         "merge_ticket": "دمج التذكرة",
+        "merge_warning": "لا يمكن التراجع عن هذا الإجراء. سيتم نقل جميع المقالات إلى التذكرة المستهدفة.",
+        "target_ticket_number": "رقم التذكرة المستهدفة",
         "messages": "الرسائل",
         "minutes": "دقائق",
         "miscellaneous": "متفرقات",
         "move_to_queue": "نقل إلى قائمة",
-        "my_tickets": "My تذاكر",
+        "my_tickets": "تذاكري",
         "new": {
             "email_ticket": "تذكرة بريد إلكتروني جديدة",
             "phone_ticket": "تذكرة هاتفية جديدة"
@@ -2887,7 +2928,7 @@
         "phone_call": "مكالمة هاتفية",
         "print": "طباعة",
         "priority": "الأولوية",
-        "priority_short": "[AR] Prio",
+        "priority_short": "أول.",
         "queue": "قائمة الانتظار",
         "remove_priority_filter": "إزالة فلتر الأولوية",
         "remove_queue_filter": "إزالة فلتر القائمة",
@@ -2931,7 +2972,6 @@
             "ticket": "تذكرة"
         },
         "target_state": "الحالة المستهدفة",
-        "target_ticket_number": "رقم التذكرة المستهدفة",
         "ticket": "تذكرة",
         "ticket_id": "معرف التذكرة",
         "ticket_number": "التذكرة #",
@@ -3033,6 +3073,7 @@
     },
     "tooltips": {
         "quick_assign": "Quick Assign",
+        "quick_priority": "أولوية سريعة",
         "view_details": "عرض تفاصيل"
     },
     "types": {
@@ -3087,5 +3128,32 @@
     },
     "welcome": {
         "greeting": "مرحبًا"
+    },
+    "theme": {
+        "select_theme": "السمة",
+        "appearance": "المظهر",
+        "light": "فاتح",
+        "dark": "داكن",
+        "synthwave": "Synthwave",
+        "synthwave_desc": "طراز النيون الرجعي",
+        "classic": "كلاسيكي",
+        "classic_desc": "نظيف واحترافي",
+        "seventies": "أجواء السبعينات",
+        "seventies_desc": "درجات الألوان الترابية الدافئة"
+    },
+    "attachments": {
+        "title": "المرفقات",
+        "add_new": "إضافة مرفقات",
+        "attach_files": "إرفاق ملفات",
+        "click_to_upload": "انقر للتحميل",
+        "or_drag_and_drop": "أو اسحب وأفلت",
+        "file_types": "PDF, PNG, JPG, GIF, DOC, XLS, TXT (الحد الأقصى 10 ميجابايت)",
+        "file_too_large": "الملف كبير جداً",
+        "no_attachments": "لم يتم العثور على مرفقات",
+        "upload_success": "تم تحميل المرفقات بنجاح",
+        "upload_error": "فشل في التحميل",
+        "view": "عرض",
+        "download": "تحميل",
+        "delete": "حذف"
     }
 }

@@ -55,21 +55,13 @@ func RegisterAgentRoutes(r *gin.RouterGroup, db *sql.DB) {
 func handleAgentTickets(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user ID from context (middleware sets "user_id" not "userID")
-		userIDInterface, exists := c.Get("user_id")
-		if !exists {
+		if _, exists := c.Get("user_id"); !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
 			return
 		}
 
-		userID := uint(0)
-		switch v := userIDInterface.(type) {
-		case uint:
-			userID = v
-		case int:
-			userID = uint(v)
-		case float64:
-			userID = uint(v)
-		default:
+		userID := GetUserIDFromCtxUint(c, 0)
+		if userID == 0 {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
 			return
 		}
@@ -546,23 +538,15 @@ func handleTicketCustomerUsers(db *sql.DB) gin.HandlerFunc {
 func handleAgentQueues(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user ID from context (middleware sets "user_id" not "userID")
-		userIDInterface, exists := c.Get("user_id")
-		if !exists {
+		if _, exists := c.Get("user_id"); !exists {
 			log.Printf("handleAgentQueues: user_id not found in context")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Not authenticated"})
 			return
 		}
 
-		userID := uint(0)
-		switch v := userIDInterface.(type) {
-		case uint:
-			userID = v
-		case int:
-			userID = uint(v)
-		case float64:
-			userID = uint(v)
-		default:
-			log.Printf("handleAgentQueues: user_id has unexpected type %T", userIDInterface)
+		userID := GetUserIDFromCtxUint(c, 0)
+		if userID == 0 {
+			log.Printf("handleAgentQueues: user_id is 0 after conversion")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
 			return
 		}

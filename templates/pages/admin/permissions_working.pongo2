@@ -3,24 +3,26 @@
 {% block title %}{{ t("permissions_working.title")|default:"Permission Management" }} - GOTRS{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
     <div class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("permissions.working_heading")|default:"Permission Management" }}</h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Manage user permissions across groups</p>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("permissions.working_heading")|default:"Permission Management" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">Manage user permissions across groups</p>
             </div>
         </div>
     </div>
 
     <!-- User Selection -->
-    <div class="mb-6 bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+    <div class="mb-6 gk-card-glow rounded-lg p-4">
         <div class="flex items-center gap-4">
-            <label for="userSelect" class="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label for="userSelect" class="text-sm font-medium" style="color: var(--gk-text-secondary);">
                 Select User:
             </label>
-            <select id="userSelect" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
+            <select id="userSelect" class="gk-select-neon">
                 <option value="">Select a user...</option>
                 {% for user in Users %}
                 <option value="{{ user.ID }}" {% if user.ID == SelectedUserID %}selected{% endif %}>
@@ -33,40 +35,38 @@
 
     <!-- Permission Matrix -->
     {% if PermissionMatrix %}
-    <div class="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="text-lg font-medium text-gray-900 dark:text-white">
-                Permissions for: {{ PermissionMatrix.User.FirstName }} {{ PermissionMatrix.User.LastName }}
+    <div class="gk-card-glow rounded-lg overflow-hidden">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+            <h2 class="text-lg font-medium" style="color: var(--gk-text-primary);">
+                Permissions for: <span style="color: var(--gk-primary);">{{ PermissionMatrix.User.FirstName }} {{ PermissionMatrix.User.LastName }}</span>
             </h2>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-700">
+            <table class="gk-table">
+                <thead>
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Group
-                        </th>
+                        <th scope="col">Group</th>
                         {% for key in PermissionKeys %}
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            {{ key }}
-                        </th>
+                        <th scope="col" class="text-center">{{ key }}</th>
                         {% endfor %}
                     </tr>
                 </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody>
                     {% for groupPerm in PermissionMatrix.Groups %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                            {{ groupPerm.Group.Name }}
+                    <tr class="transition-colors hover:bg-white/5">
+                        <td class="whitespace-nowrap">
+                            <span class="font-medium" style="color: var(--gk-text-primary);">{{ groupPerm.Group.Name }}</span>
                             {% if groupPerm.Group.ValidID != 1 %}
-                            <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">(Inactive)</span>
+                            <span class="ml-2 text-xs" style="color: var(--gk-text-muted);">(Inactive)</span>
                             {% endif %}
                         </td>
                         {% for key in PermissionKeys %}
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <input type="checkbox" class="rounded border-gray-300 dark:border-gray-600 text-gotrs-600 focus:ring-gotrs-500"
-                                {% if groupPerm.Permissions[key] %}checked{% endif %}>
+                        <td class="whitespace-nowrap text-center">
+                            <input type="checkbox"
+                                   class="h-4 w-4 rounded focus:ring-2"
+                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                   {% if groupPerm.Permissions[key] %}checked{% endif %}>
                         </td>
                         {% endfor %}
                     </tr>
@@ -76,8 +76,8 @@
         </div>
     </div>
     {% else %}
-    <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-8 text-center">
-        <p class="text-gray-500 dark:text-gray-400">{{ t("permissions.please_select_user")|default:"Please select a user to view permissions." }}</p>
+    <div class="gk-card-glow rounded-lg p-8 text-center">
+        <p style="color: var(--gk-text-muted);">{{ t("permissions.please_select_user")|default:"Please select a user to view permissions." }}</p>
     </div>
     {% endif %}
 </div>

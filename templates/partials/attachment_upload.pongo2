@@ -1,0 +1,205 @@
+{# Shared Attachment Upload Component #}
+{# Required variables: #}
+{# - UploadEndpoint: The API endpoint to upload files to (e.g., "/api/tickets/123/attachments") #}
+{# - ListEndpoint: The API endpoint to get the attachment list (e.g., "/api/tickets/123/attachments") #}
+{# - InputID: Unique ID for the file input (default: "attachments") #}
+{# - InputName: Name attribute for the file input (default: "attachments") #}
+{# - Multiple: Whether to allow multiple file selection (default: true) #}
+{# - ShowUploadButton: Whether to show a separate upload button (default: false, uploads on change) #}
+{# - AllowDelete: Whether to show delete buttons (default: true for agents, false for customers) #}
+{# - MaxFileSize: Maximum file size in MB (default: 10) #}
+{# - AcceptTypes: File types to accept (default: common document and image types) #}
+
+{% set inputId = InputID|default:"attachments" %}
+{% set inputName = InputName|default:"attachments" %}
+{% set allowMultiple = Multiple|default:true %}
+{% set showButton = ShowUploadButton|default:false %}
+{% set canDelete = AllowDelete|default:true %}
+{% set maxSize = MaxFileSize|default:10 %}
+{% set acceptTypes = AcceptTypes|default:".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.doc,.docx,.xls,.xlsx,.csv,.zip" %}
+
+<div class="attachment-upload-component" data-max-size="{{ maxSize }}">
+    {# Drop Zone #}
+    <div id="{{ inputId }}-dropzone"
+         class="flex items-center justify-center w-full cursor-pointer"
+         ondragover="handleDragOver(event, '{{ inputId }}')"
+         ondragleave="handleDragLeave(event, '{{ inputId }}')"
+         ondrop="handleDrop(event, '{{ inputId }}')">
+        <label for="{{ inputId }}"
+               class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all duration-200"
+               style="border-color: var(--gk-border); background: var(--gk-bg-tertiary);">
+            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                <svg class="w-10 h-10 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                </svg>
+                <p class="mb-2 text-sm" style="color: var(--gk-text-muted);">
+                    <span class="font-semibold">{{ t("attachments.click_to_upload")|default:"Click to upload" }}</span>
+                    {{ t("attachments.or_drag_and_drop")|default:"or drag and drop" }}
+                </p>
+                <p class="text-xs" style="color: var(--gk-text-muted);">
+                    {{ t("attachments.file_types")|default:"PDF, PNG, JPG, GIF, DOC, XLS, TXT (max 10MB)" }}
+                </p>
+            </div>
+            <input id="{{ inputId }}"
+                   name="{{ inputName }}"
+                   type="file"
+                   class="hidden"
+                   {% if allowMultiple %}multiple{% endif %}
+                   accept="{{ acceptTypes }}"
+                   onchange="handleFileSelect(event, '{{ inputId }}', {{ maxSize }})" />
+        </label>
+    </div>
+
+    {# Preview List (for files selected but not yet uploaded) #}
+    <div id="{{ inputId }}-preview" class="mt-4 space-y-2 hidden"></div>
+
+    {# Existing Attachments List (loaded via HTMX when endpoints provided) #}
+    {% if ListEndpoint %}
+    <div id="{{ inputId }}-list"
+         class="mt-4"
+         hx-get="{{ ListEndpoint }}"
+         hx-trigger="load, attachments-updated from:body"
+         hx-swap="innerHTML">
+        <div class="text-center py-4 text-sm" style="color: var(--gk-text-muted);">
+            {{ t("labels.loading")|default:"Loading..." }}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+(function() {
+    // File handling functions
+    window.handleDragOver = function(e, inputId) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dropzone = document.getElementById(inputId + '-dropzone');
+        const label = dropzone.querySelector('label');
+        label.style.borderColor = 'var(--gk-primary)';
+        label.style.background = 'rgba(var(--gk-primary-rgb), 0.1)';
+    };
+
+    window.handleDragLeave = function(e, inputId) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dropzone = document.getElementById(inputId + '-dropzone');
+        const label = dropzone.querySelector('label');
+        label.style.borderColor = 'var(--gk-border)';
+        label.style.background = 'var(--gk-bg-tertiary)';
+    };
+
+    window.handleDrop = function(e, inputId) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dropzone = document.getElementById(inputId + '-dropzone');
+        const label = dropzone.querySelector('label');
+        label.style.borderColor = 'var(--gk-border)';
+        label.style.background = 'var(--gk-bg-tertiary)';
+
+        const input = document.getElementById(inputId);
+        const maxSize = parseInt(dropzone.closest('.attachment-upload-component').dataset.maxSize || '10');
+
+        if (e.dataTransfer.files.length > 0) {
+            // Create a new DataTransfer to set files on input
+            const dt = new DataTransfer();
+            Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+            input.files = dt.files;
+            displaySelectedFiles(input.files, inputId, maxSize);
+        }
+    };
+
+    window.handleFileSelect = function(e, inputId, maxSize) {
+        displaySelectedFiles(e.target.files, inputId, maxSize);
+    };
+
+    function displaySelectedFiles(files, inputId, maxSize) {
+        const previewContainer = document.getElementById(inputId + '-preview');
+        if (!previewContainer) return;
+
+        previewContainer.innerHTML = '';
+        previewContainer.classList.remove('hidden');
+
+        if (!files || files.length === 0) {
+            previewContainer.classList.add('hidden');
+            return;
+        }
+
+        const maxBytes = maxSize * 1024 * 1024;
+
+        Array.from(files).forEach((file, index) => {
+            const isTooLarge = file.size > maxBytes;
+            const item = document.createElement('div');
+            item.className = 'flex items-center justify-between p-3 rounded-lg';
+            item.style.background = isTooLarge ? 'var(--gk-error-subtle)' : 'var(--gk-bg-surface)';
+            item.style.border = '1px solid ' + (isTooLarge ? 'var(--gk-error)' : 'var(--gk-border)');
+
+            // Thumbnail or icon
+            let thumbnailHTML = '';
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                const imgId = inputId + '-thumb-' + index;
+                reader.onload = function(ev) {
+                    const img = document.getElementById(imgId);
+                    if (img) img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+                thumbnailHTML = `<img id="${imgId}" class="w-10 h-10 rounded object-cover" style="border: 1px solid var(--gk-border);" src="" alt="Preview">`;
+            } else if (file.type === 'application/pdf') {
+                thumbnailHTML = `<div class="w-10 h-10 rounded flex items-center justify-center" style="background: var(--gk-error-subtle);"><svg class="w-5 h-5" style="color: var(--gk-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg></div>`;
+            } else {
+                thumbnailHTML = `<div class="w-10 h-10 rounded flex items-center justify-center" style="background: var(--gk-bg-elevated);"><svg class="w-5 h-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg></div>`;
+            }
+
+            item.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    ${thumbnailHTML}
+                    <div>
+                        <p class="text-sm font-medium" style="color: var(--gk-text-primary);">${escapeHtml(file.name)}</p>
+                        <p class="text-xs" style="color: ${isTooLarge ? 'var(--gk-error)' : 'var(--gk-text-muted)'};">
+                            ${formatFileSize(file.size)}
+                            ${isTooLarge ? ' - {{ t("attachments.file_too_large")|default:"File too large" }}' : ''}
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="removeSelectedFile('${inputId}', ${index})"
+                        class="p-1 rounded transition-colors"
+                        style="color: var(--gk-text-muted);"
+                        onmouseover="this.style.color='var(--gk-error)'"
+                        onmouseout="this.style.color='var(--gk-text-muted)'"
+                        title="{{ t("buttons.remove")|default:"Remove" }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            `;
+            previewContainer.appendChild(item);
+        });
+    }
+
+    window.removeSelectedFile = function(inputId, index) {
+        const input = document.getElementById(inputId);
+        const dt = new DataTransfer();
+        const files = Array.from(input.files);
+        files.forEach((f, i) => {
+            if (i !== index) dt.items.add(f);
+        });
+        input.files = dt.files;
+        const maxSize = parseInt(input.closest('.attachment-upload-component').dataset.maxSize || '10');
+        displaySelectedFiles(input.files, inputId, maxSize);
+    };
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+})();
+</script>

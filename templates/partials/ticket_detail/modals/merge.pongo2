@@ -1,0 +1,27 @@
+{# Merge Ticket Modal with Synthwave Styling #}
+
+<div id="mergeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.8);">
+    <div class="rounded-lg shadow-xl w-full max-w-md mx-4" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+            <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("tickets.merge_ticket")|default:"Merge Ticket" }}</h3>
+        </div>
+        <form onsubmit="submitMerge(event)">
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("tickets.target_ticket_number")|default:"Target Ticket Number" }}</label>
+                    <input type="text" name="target_tn" required placeholder="{{ t('tickets.merge_target_placeholder')|default:'Enter ticket number to merge into' }}"
+                           class="gk-input-neon w-full">
+                </div>
+                <div class="rounded-lg p-3" style="background: var(--gk-warning-subtle); border: 1px solid var(--gk-warning);">
+                    <p class="text-sm" style="color: var(--gk-warning);">
+                        {{ t("tickets.merge_warning")|default:"This action cannot be undone. All articles will be moved to the target ticket." }}
+                    </p>
+                </div>
+            </div>
+            <div class="px-6 py-4 rounded-b-lg flex justify-end space-x-3" style="background: var(--gk-bg-elevated); border-top: 1px solid var(--gk-border-default);">
+                <button type="button" onclick="closeModal('mergeModal')" class="gk-btn-secondary">{{ t("common.cancel") }}</button>
+                <button type="submit" class="gk-btn-danger">{{ t("tickets.merge")|default:"Merge" }}</button>
+            </div>
+        </form>
+    </div>
+</div>

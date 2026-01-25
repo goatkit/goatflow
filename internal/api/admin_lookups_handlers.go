@@ -419,21 +419,96 @@ func handleAdminDashboard(c *gin.Context) {
 	activeTickets := 0
 	queueCount := 0
 
-	if db, _ := database.GetDB(); db != nil { //nolint:errcheck // Dashboard stats - default to 0 on error
+	db, _ := database.GetDB() //nolint:errcheck // Dashboard stats - default to 0 on error
+	if db != nil {
 		_ = db.QueryRow("SELECT COUNT(*) FROM users WHERE valid_id = 1").Scan(&userCount)                      //nolint:errcheck
 		_ = db.QueryRow("SELECT COUNT(*) FROM groups WHERE valid_id = 1").Scan(&groupCount)                    //nolint:errcheck
 		_ = db.QueryRow("SELECT COUNT(*) FROM queue WHERE valid_id = 1").Scan(&queueCount)                     //nolint:errcheck
 		_ = db.QueryRow("SELECT COUNT(*) FROM ticket WHERE ticket_state_id IN (1,2,3,4)").Scan(&activeTickets) //nolint:errcheck
 	}
 
+	// Get ticket activity metrics from cache with fallback to calculation
+	ticketActivity := getTicketActivityFromCache(c, db)
+
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/admin/dashboard.pongo2", pongo2.Context{
-		"UserCount":     userCount,
-		"GroupCount":    groupCount,
-		"ActiveTickets": activeTickets,
-		"QueueCount":    queueCount,
-		"User":          getUserMapForTemplate(c),
-		"ActivePage":    "admin",
+		"UserCount":       userCount,
+		"GroupCount":      groupCount,
+		"ActiveTickets":   activeTickets,
+		"QueueCount":      queueCount,
+		"TicketActivity":  ticketActivity,
+		"User":            getUserMapForTemplate(c),
+		"ActivePage":      "admin",
 	})
+}
+
+// getTicketActivityFromCache retrieves ticket activity metrics from Valkey cache,
+// falling back to direct calculation if cache is unavailable or empty.
+func getTicketActivityFromCache(c *gin.Context, db *sql.DB) map[string]int {
+	// Default values
+	metrics := map[string]int{
+		"closed_day":   0,
+		"closed_week":  0,
+		"closed_month": 0,
+		"created_day":  0,
+		"created_week": 0,
+		"created_month": 0,
+		"open":         0,
+	}
+
+	// Try cache first
+	if valkeyCache != nil {
+		var cached map[string]int
+		if err := valkeyCache.GetObject(c, "metrics:ticket_activity", &cached); err == nil && cached != nil {
+			return cached
+		}
+	}
+
+	// Cache miss - calculate directly
+	if db != nil {
+		metrics["closed_day"] = getTicketCountForDashboard(db, "closed", 1)
+		metrics["closed_week"] = getTicketCountForDashboard(db, "closed", 7)
+		metrics["closed_month"] = getTicketCountForDashboard(db, "closed", 30)
+		metrics["created_day"] = getTicketCountForDashboard(db, "created", 1)
+		metrics["created_week"] = getTicketCountForDashboard(db, "created", 7)
+		metrics["created_month"] = getTicketCountForDashboard(db, "created", 30)
+		metrics["open"] = getOpenTicketCountForDashboard(db)
+	}
+
+	return metrics
+}
+
+// getTicketCountForDashboard returns the count of tickets closed or created within the specified days.
+func getTicketCountForDashboard(db *sql.DB, countType string, days int) int {
+	var query string
+	if countType == "closed" {
+		query = database.ConvertPlaceholders(`
+			SELECT COUNT(*)
+			FROM ticket
+			WHERE ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)
+			  AND change_time >= DATE_SUB(NOW(), INTERVAL ? DAY)
+		`)
+	} else {
+		query = database.ConvertPlaceholders(`
+			SELECT COUNT(*)
+			FROM ticket
+			WHERE create_time >= DATE_SUB(NOW(), INTERVAL ? DAY)
+		`)
+	}
+	var count int
+	_ = db.QueryRow(query, days).Scan(&count) //nolint:errcheck
+	return count
+}
+
+// getOpenTicketCountForDashboard returns the count of currently open tickets.
+func getOpenTicketCountForDashboard(db *sql.DB) int {
+	query := `
+		SELECT COUNT(*)
+		FROM ticket
+		WHERE ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2, 4))
+	`
+	var count int
+	_ = db.QueryRow(query).Scan(&count) //nolint:errcheck
+	return count
 }
 
 // Helper function to show under construction message.

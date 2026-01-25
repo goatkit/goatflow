@@ -78,26 +78,42 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 
 			// Public (unauthenticated) paths bypass auth
 			path := c.Request.URL.Path
-			if path == "/login" || path == "/api/auth/login" || path == "/api/auth/customer/login" || path == "/health" || path == "/metrics" || path == "/favicon.ico" || strings.HasPrefix(path, "/static/") || path == "/customer/login" || path == "/auth/customer" {
+			if path == "/login" || path == "/api/auth/login" || path == "/api/auth/customer/login" || path == "/health" || path == "/metrics" || path == "/favicon.ico" || strings.HasPrefix(path, "/static/") || path == "/customer/login" || path == "/auth/customer" || path == "/api/languages" || path == "/api/themes" {
 				c.Next()
 				return
 			}
 
 			// Check for token in cookie (auth_token) or Authorization header
-			token, err := c.Cookie("auth_token")
-			if err != nil || token == "" {
-				// Accept legacy cookie name used by non-YAML routes
-				if alt, err2 := c.Cookie("access_token"); err2 == nil && alt != "" {
-					token = alt
+			var token string
+
+			// For customer portal paths, check customer-specific cookies first
+			// This prevents agent/customer session conflicts in the same browser
+			if strings.HasPrefix(path, "/customer") {
+				if ct, err := c.Cookie("customer_auth_token"); err == nil && ct != "" {
+					token = ct
+				} else if ct, err := c.Cookie("customer_access_token"); err == nil && ct != "" {
+					token = ct
 				}
 			}
-			if err != nil || token == "" {
-				// Check Authorization header as fallback
-				authHeader := c.GetHeader("Authorization")
-				if authHeader != "" {
-					parts := strings.Split(authHeader, " ")
-					if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
-						token = parts[1]
+
+			// If no customer token found, check standard cookies
+			if token == "" {
+				var err error
+				token, err = c.Cookie("auth_token")
+				if err != nil || token == "" {
+					// Accept legacy cookie name used by non-YAML routes
+					if alt, err2 := c.Cookie("access_token"); err2 == nil && alt != "" {
+						token = alt
+					}
+				}
+				if token == "" {
+					// Check Authorization header as fallback
+					authHeader := c.GetHeader("Authorization")
+					if authHeader != "" {
+						parts := strings.Split(authHeader, " ")
+						if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+							token = parts[1]
+						}
 					}
 				}
 			}
@@ -121,9 +137,11 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			jwtManager := shared.GetJWTManager()
 			claims, err := jwtManager.ValidateToken(token)
 			if err != nil {
-				// Clear invalid cookie
+				// Clear invalid cookies (both standard and customer-specific)
 				c.SetCookie("auth_token", "", -1, "/", "", false, true)
 				c.SetCookie("access_token", "", -1, "/", "", false, true)
+				c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
+				c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
 				if wantsHTMLResponse(c) {
 					loginPath := "/login"
 					if strings.HasPrefix(path, "/customer") {
@@ -138,7 +156,16 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 			}
 
 			// Validate session exists in database (session was not killed)
-			if sessionID, cookieErr := c.Cookie("session_id"); cookieErr == nil && sessionID != "" {
+			// Check for customer-specific session cookie first for /customer paths
+			isCustomerPath := strings.HasPrefix(path, "/customer")
+			sessionID, cookieErr := c.Cookie("session_id")
+			if isCustomerPath {
+				if custSessionID, err := c.Cookie("customer_session_id"); err == nil && custSessionID != "" {
+					sessionID = custSessionID
+					cookieErr = nil
+				}
+			}
+			if cookieErr == nil && sessionID != "" {
 				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
 					session, sessionErr := sessionSvc.GetSession(sessionID)
 					if sessionErr != nil || session == nil {
@@ -146,6 +173,9 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 						c.SetCookie("auth_token", "", -1, "/", "", false, true)
 						c.SetCookie("access_token", "", -1, "/", "", false, true)
 						c.SetCookie("session_id", "", -1, "/", "", false, true)
+						c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
+						c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
+						c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
 						if wantsHTMLResponse(c) {
 							loginPath := "/login"
 							if strings.HasPrefix(path, "/customer") {

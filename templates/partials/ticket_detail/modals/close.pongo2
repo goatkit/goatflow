@@ -1,0 +1,172 @@
+{# Close Ticket Modal with Synthwave Styling #}
+{# Required variables: Ticket, CloseFormDynamicFields, CloseArticleDynamicFields #}
+
+<div id="closeTicketDialog" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-screen items-center justify-center px-4 py-12">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 transition-opacity" style="background: rgba(0, 0, 0, 0.8);" onclick="hideCloseDialog()"></div>
+
+        <!-- Dialog -->
+        <div class="relative z-50 w-full max-w-2xl rounded-lg shadow-xl" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">
+                    {{ t("tickets.close")|default:"Close" }} {{ t("tickets.ticket")|default:"Ticket" }} - {{ Ticket.tn }}
+                </h3>
+            </div>
+
+            <form id="closeTicketForm" class="p-6">
+                <!-- State Selection -->
+                <div class="mb-4">
+                    <label for="closeState" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("tickets.close_state")|default:"Close State" }} <span style="color: var(--gk-error);">*</span>
+                    </label>
+                    <select id="closeState" name="closeState" required class="gk-select-neon w-full">
+                        <option value="3">{{ t("tickets.closed_successful")|default:"Closed Successful" }}</option>
+                        <option value="4">{{ t("tickets.closed_unsuccessful")|default:"Closed Unsuccessful" }}</option>
+                    </select>
+                </div>
+
+                <!-- Resolution -->
+                <div class="mb-4">
+                    <label for="resolution" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("tickets.resolution")|default:"Resolution/Solution" }}
+                    </label>
+                    <textarea id="resolution" name="resolution" rows="3"
+                        placeholder="{{ t('tickets.resolution_placeholder')|default:'Describe the resolution or solution provided...' }}"
+                        class="gk-input-neon w-full"></textarea>
+                </div>
+
+                <!-- Close Notes -->
+                <div class="mb-4">
+                    <label for="closeNotes" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("tickets.close_notes")|default:"Close Notes" }} <span style="color: var(--gk-error);">*</span>
+                    </label>
+                    <textarea id="closeNotes" name="closeNotes" rows="4" required
+                        placeholder="{{ t('tickets.close_notes_placeholder')|default:'Add notes about closing this ticket...' }}"
+                        class="gk-input-neon w-full"></textarea>
+                </div>
+
+                <!-- Time Units -->
+                <div class="mb-4">
+                    <label for="timeUnits" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("tickets.time_units_minutes")|default:"Time Units (minutes)" }}
+                    </label>
+                    <input type="number" id="timeUnits" name="timeUnits" min="0" step="1"
+                        placeholder="{{ t('tickets.time_spent_placeholder')|default:'Time spent on resolution' }}"
+                        class="gk-input-neon w-full">
+                </div>
+
+                <!-- Dynamic Fields for Close Form -->
+                {% if CloseFormDynamicFields %}
+                <div class="mb-4 pt-4" style="border-top: 1px solid var(--gk-border-default);">
+                    <h4 class="text-sm font-medium mb-3" style="color: var(--gk-text-secondary);">{{ t("tickets.additional_fields")|default:"Additional Fields" }}</h4>
+                    {% for df in CloseFormDynamicFields %}
+                    <div class="mb-3">
+                        <label for="close_DynamicField_{{ df.Field.Name }}" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ df.Field.Label }}{% if df.ConfigValue == 2 %} <span style="color: var(--gk-error);">*</span>{% endif %}
+                        </label>
+                        {% if df.Field.FieldType == "Text" %}
+                        <input type="text" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="gk-input-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% elif df.Field.FieldType == "TextArea" %}
+                        <textarea id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}" rows="2"
+                            class="gk-input-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}></textarea>
+                        {% elif df.Field.FieldType == "Checkbox" %}
+                        <input type="checkbox" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}" value="1"
+                            class="h-4 w-4 rounded" style="accent-color: var(--gk-primary);">
+                        {% elif df.Field.FieldType == "Dropdown" %}
+                        <select id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="gk-select-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}>
+                            <option value="">-- Select --</option>
+                            {% for opt in df.Field.PossibleValues %}
+                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif df.Field.FieldType == "Multiselect" %}
+                        <select id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}[]" multiple
+                            class="gk-select-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}>
+                            {% for opt in df.Field.PossibleValues %}
+                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif df.Field.FieldType == "Date" %}
+                        <input type="date" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="gk-input-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% elif df.Field.FieldType == "DateTime" %}
+                        <input type="datetime-local" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
+                            class="gk-input-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Article Dynamic Fields for Close Form -->
+                {% if CloseArticleDynamicFields %}
+                <div class="mb-4 pt-4" style="border-top: 1px solid var(--gk-border-default);">
+                    <h4 class="text-sm font-medium mb-3" style="color: var(--gk-text-secondary);">{{ t("dynamic_fields.article_fields")|default:"Article Fields" }}</h4>
+                    {% for df in CloseArticleDynamicFields %}
+                    <div class="mb-3">
+                        <label for="close_ArticleDynamicField_{{ df.Field.Name }}" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ df.Field.Label }}{% if df.ConfigValue == 2 %} <span style="color: var(--gk-error);">*</span>{% endif %}
+                        </label>
+                        {% if df.Field.FieldType == "Text" %}
+                        <input type="text" id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}"
+                            class="gk-input-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% elif df.Field.FieldType == "TextArea" %}
+                        <textarea id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}" rows="2"
+                            class="gk-input-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}></textarea>
+                        {% elif df.Field.FieldType == "Checkbox" %}
+                        <input type="checkbox" id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}" value="1"
+                            class="h-4 w-4 rounded" style="accent-color: var(--gk-primary);">
+                        {% elif df.Field.FieldType == "Dropdown" %}
+                        <select id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}"
+                            class="gk-select-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}>
+                            <option value="">-- Select --</option>
+                            {% for opt in df.Field.PossibleValues %}
+                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif df.Field.FieldType == "Multiselect" %}
+                        <select id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}[]" multiple
+                            class="gk-select-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}>
+                            {% for opt in df.Field.PossibleValues %}
+                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif df.Field.FieldType == "Date" %}
+                        <input type="date" id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}"
+                            class="gk-input-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% elif df.Field.FieldType == "DateTime" %}
+                        <input type="datetime-local" id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}"
+                            class="gk-input-neon w-full text-sm" {% if df.ConfigValue == 2 %}required{% endif %}>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Notify Customer -->
+                <div class="mb-6">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="notifyCustomer" name="notifyCustomer" checked
+                            class="h-4 w-4 rounded" style="accent-color: var(--gk-primary);">
+                        <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">
+                            {{ t("tickets.notify_close")|default:"Notify customer about ticket closure" }}
+                        </span>
+                    </label>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="hideCloseDialog()" class="gk-btn-secondary">
+                        {{ t("common.cancel") }}
+                    </button>
+                    <button type="submit" class="gk-btn-danger">
+                        {{ t("tickets.close")|default:"Close" }} {{ t("tickets.ticket")|default:"Ticket" }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

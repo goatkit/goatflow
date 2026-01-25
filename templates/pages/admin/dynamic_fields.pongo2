@@ -3,42 +3,36 @@
 {% block title %}{{ t("dynamic_fields.title")|default:"Dynamic Fields" }} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
-    <div class="mb-8">
+    <header class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("dynamic_fields.heading")|default:"Dynamic Fields Management" }}</h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ t("dynamic_fields.description")|default:"Create and manage dynamic fields for tickets, articles, and other objects" }}</p>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("dynamic_fields.heading")|default:"Dynamic Fields Management" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("dynamic_fields.description")|default:"Create and manage dynamic fields for tickets, articles, and other objects" }}</p>
             </div>
             <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex flex-wrap gap-3">
-                <a href="/admin/dynamic-fields/import"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
-                >
+                <a href="/admin/dynamic-fields/import" class="gk-btn-secondary">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                     </svg>
                     {{ t("admin.dynamic_fields.import_export.import") }}
                 </a>
-                <a href="/admin/dynamic-fields/export"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
-                >
+                <a href="/admin/dynamic-fields/export" class="gk-btn-secondary">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                     {{ t("admin.dynamic_fields.import_export.export") }}
                 </a>
-                <a href="/admin/dynamic-fields/screens"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
-                >
+                <a href="/admin/dynamic-fields/screens" class="gk-btn-secondary">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
                     </svg>
                     {{ t("admin.dynamic_fields.screen_config") }}
                 </a>
-                <a href="/admin/dynamic-fields/new"
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
-                >
+                <a href="/admin/dynamic-fields/new" class="gk-btn-neon">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
@@ -46,20 +40,21 @@
                 </a>
             </div>
         </div>
-    </div>
+    </header>
 
     <!-- Object Type Tabs -->
     <div x-data="{ activeTab: 'Ticket' }" class="mb-6">
-        <div class="border-b border-gray-200 dark:border-gray-700">
+        <div class="border-b" style="border-color: var(--gk-border);">
             <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                 {% for objectType in ObjectTypes %}
                 <button
                     @click="activeTab = '{{ objectType }}'"
-                    :class="activeTab === '{{ objectType }}' ? 'border-gotrs-500 text-gotrs-600 dark:text-gotrs-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'"
-                    class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+                    :class="activeTab === '{{ objectType }}' ? 'border-b-2' : 'border-transparent'"
+                    :style="activeTab === '{{ objectType }}' ? 'border-color: var(--gk-primary); color: var(--gk-primary);' : 'color: var(--gk-text-muted);'"
+                    class="whitespace-nowrap py-4 px-1 font-medium text-sm transition-colors hover:opacity-80"
                 >
                     {{ objectType }}
-                    <span class="ml-2 px-2 py-0.5 text-xs rounded-full bg-gray-100 dark:bg-gray-700">
+                    <span class="ml-2 px-2 py-0.5 text-xs rounded-full" style="background: var(--gk-bg-tertiary);">
                         {{ FieldsGrouped|length }}
                     </span>
                 </button>
@@ -71,80 +66,45 @@
         {% for objectType in ObjectTypes %}
         <div x-show="activeTab === '{{ objectType }}'" class="mt-6">
             {% if FieldsGrouped[objectType] %}
-            <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
+            <div class="gk-card-glow overflow-hidden rounded-lg">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead class="bg-gray-50 dark:bg-gray-900">
+                    <table class="gk-table">
+                        <thead>
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Name
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Label
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Type
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Order
-                                </th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                    Status
-                                </th>
-                                <th scope="col" class="relative px-6 py-3">
-                                    <span class="sr-only">Actions</span>
-                                </th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Label</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Order</th>
+                                <th scope="col">Status</th>
+                                <th scope="col"><span class="sr-only">Actions</span></th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        <tbody>
                             {% for field in FieldsGrouped[objectType] %}
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                    {{ field.Name }}
+                            <tr>
+                                <td>
+                                    <span class="font-medium" style="color: var(--gk-text-primary);">{{ field.Name }}</span>
                                     {% if field.InternalField == 1 %}
-                                    <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                                        System
-                                    </span>
+                                    <span class="ml-2 gk-badge gk-badge-muted">System</span>
                                     {% endif %}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    {{ field.Label }}
+                                <td style="color: var(--gk-text-secondary);">{{ field.Label }}</td>
+                                <td>
+                                    <span class="gk-badge gk-badge-accent">{{ field.FieldType }}</span>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                        {% if field.FieldType == 'Text' %}bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100{% endif %}
-                                        {% if field.FieldType == 'TextArea' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100{% endif %}
-                                        {% if field.FieldType == 'Dropdown' %}bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100{% endif %}
-                                        {% if field.FieldType == 'Multiselect' %}bg-pink-100 text-pink-800 dark:bg-pink-800 dark:text-pink-100{% endif %}
-                                        {% if field.FieldType == 'Checkbox' %}bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100{% endif %}
-                                        {% if field.FieldType == 'Date' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100{% endif %}
-                                        {% if field.FieldType == 'DateTime' %}bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100{% endif %}
-                                        {% if field.FieldType == 'WebserviceDropdown' %}bg-cyan-100 text-cyan-800 dark:bg-cyan-800 dark:text-cyan-100{% endif %}
-                                        {% if field.FieldType == 'WebserviceMultiselect' %}bg-teal-100 text-teal-800 dark:bg-teal-800 dark:text-teal-100{% endif %}
-                                        {% if field.FieldType == 'ActivityID' %}bg-rose-100 text-rose-800 dark:bg-rose-800 dark:text-rose-100{% endif %}
-                                        {% if field.FieldType == 'ProcessID' %}bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100{% endif %}
-                                    ">
-                                        {{ field.FieldType }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                    {{ field.FieldOrder }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
+                                <td style="color: var(--gk-text-muted);">{{ field.FieldOrder }}</td>
+                                <td>
                                     {% if field.ValidID == 1 %}
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-                                        Active
-                                    </span>
+                                    <span class="gk-badge gk-badge-success">Active</span>
                                     {% else %}
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
-                                        Inactive
-                                    </span>
+                                    <span class="gk-badge gk-badge-error">Inactive</span>
                                     {% endif %}
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <td>
                                     <div class="flex items-center justify-end space-x-2">
                                         <a href="/admin/dynamic-fields/{{ field.ID }}"
-                                            class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-300"
+                                            class="p-1 rounded transition-colors hover:bg-white/10"
+                                            style="color: var(--gk-primary);"
                                             title="{{ t("dynamic_fields.tooltips.edit")|default:"Edit field" }}"
                                         >
                                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,7 +114,8 @@
                                         {% if field.InternalField != 1 %}
                                         <button
                                             onclick="deleteField({{ field.ID }}, '{{ field.Name }}')"
-                                            class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                            class="p-1 rounded transition-colors hover:bg-white/10"
+                                            style="color: var(--gk-error);"
                                             title="{{ t("dynamic_fields.tooltips.delete")|default:"Delete field" }}"
                                         >
                                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,16 +132,14 @@
                 </div>
             </div>
             {% else %}
-            <div class="text-center py-12">
-                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="text-center py-12 gk-card-glow rounded-lg">
+                <svg class="mx-auto h-12 w-12" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">{{ t("dynamic_fields.no_dynamic_fields")|default:"No dynamic fields" }}</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Get started by creating a new dynamic field for {{ objectType }}.</p>
+                <h3 class="mt-2 text-sm font-medium" style="color: var(--gk-text-primary);">{{ t("dynamic_fields.no_dynamic_fields")|default:"No dynamic fields" }}</h3>
+                <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">Get started by creating a new dynamic field for {{ objectType }}.</p>
                 <div class="mt-6">
-                    <a href="/admin/dynamic-fields/new?object_type={{ objectType }}"
-                        class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700"
-                    >
+                    <a href="/admin/dynamic-fields/new?object_type={{ objectType }}" class="gk-btn-neon">
                         <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
@@ -194,26 +153,12 @@
     </div>
 
     <!-- Field Types Legend -->
-    <div class="mt-8 bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
-        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{{ t("dynamic_fields.available_field_types")|default:"Available Field Types" }}</h3>
+    <div class="mt-8 gk-card-glow rounded-lg p-6">
+        <h3 class="text-sm font-medium mb-4" style="color: var(--gk-text-secondary);">{{ t("dynamic_fields.available_field_types")|default:"Available Field Types" }}</h3>
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             {% for fieldType in FieldTypes %}
             <div class="flex items-center space-x-2">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                    {% if fieldType == 'Text' %}bg-blue-100 text-blue-800{% endif %}
-                    {% if fieldType == 'TextArea' %}bg-indigo-100 text-indigo-800{% endif %}
-                    {% if fieldType == 'Dropdown' %}bg-purple-100 text-purple-800{% endif %}
-                    {% if fieldType == 'Multiselect' %}bg-pink-100 text-pink-800{% endif %}
-                    {% if fieldType == 'Checkbox' %}bg-green-100 text-green-800{% endif %}
-                    {% if fieldType == 'Date' %}bg-yellow-100 text-yellow-800{% endif %}
-                    {% if fieldType == 'DateTime' %}bg-orange-100 text-orange-800{% endif %}
-                    {% if fieldType == 'WebserviceDropdown' %}bg-cyan-100 text-cyan-800{% endif %}
-                    {% if fieldType == 'WebserviceMultiselect' %}bg-teal-100 text-teal-800{% endif %}
-                    {% if fieldType == 'ActivityID' %}bg-rose-100 text-rose-800{% endif %}
-                    {% if fieldType == 'ProcessID' %}bg-amber-100 text-amber-800{% endif %}
-                ">
-                    {{ fieldType }}
-                </span>
+                <span class="gk-badge gk-badge-accent">{{ fieldType }}</span>
             </div>
             {% endfor %}
         </div>

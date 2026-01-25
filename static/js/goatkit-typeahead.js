@@ -25,8 +25,10 @@
 	function matchesList(node){
 		if(!node) return false;
 		if(node.getAttribute && node.getAttribute('role')==='listbox') return true;
-		if(node.tagName==='UL' || node.tagName==='OL') return true;
-		if(node.classList && (node.classList.contains('typeahead-list')||node.classList.contains('suggestions'))) return true;
+		// Only match UL/OL if they have typeahead-specific markers (not any random list)
+		if(node.classList && (node.classList.contains('typeahead-list')||node.classList.contains('suggestions')||node.classList.contains('gk-autocomplete-list'))) return true;
+		// Match datalist elements
+		if(node.tagName==='DATALIST') return true;
 		return false;
 	}
 	function isVisible(el){
@@ -145,9 +147,9 @@
 		observer.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});
 	})();
 
-	// Inject minimal styles once
+	// Inject minimal styles once (using CSS variables for theme support)
 	const style=document.createElement('style');
-	style.textContent=`.gk-ta-active{background:#2563eb;color:#fff !important}.dark .gk-ta-active{background:#1d4ed8}.gk-ta-committed{outline:2px solid #2563eb;}`;
+	style.textContent=`.gk-ta-active{background:var(--gk-primary);color:var(--gk-text-inverse, #fff) !important}.gk-ta-committed{outline:2px solid var(--gk-primary);}`;
 	document.head.appendChild(style);
 
 	// Customer info panel integration (specific enhancement; no dependency)

@@ -3,11 +3,11 @@
 {% block title %}{{ t("navigation.queues") }} - {{ t("app.name") }}{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+<div class="container mx-auto py-8">
     <!-- Page header -->
     <div class="md:flex md:items-center md:justify-between">
         <div class="min-w-0 flex-1">
-            <h2 class="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:truncate sm:text-3xl sm:tracking-tight">
+            <h2 class="text-2xl font-bold leading-7 gk-heading" style="color: var(--gk-text-primary); sm:truncate sm:text-3xl sm:tracking-tight">
                 {{ t("navigation.queues") }}
             </h2>
         </div>
@@ -24,7 +24,7 @@
     </div>
 
     <!-- Search and Filters -->
-    <div class="mt-8 bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+    <div class="mt-8 gk-card-glow rounded-lg p-4">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div class="sm:col-span-2">
                 <label for="search" class="sr-only">{{ t("common.search") }}</label>
@@ -64,13 +64,13 @@
     </div>
 
     <!-- Queues List -->
-    <div class="mt-8 bg-white dark:bg-gray-800 shadow rounded-lg" id="queue-list">
+    <div class="mt-8 gk-card-glow rounded-lg" id="queue-list">
         <!-- Bulk Actions Bar -->
-        <div class="border-b border-gray-200 dark:border-gray-700 px-4 py-3" id="bulk-actions-toolbar" style="display: none">
+        <div class="border-b " style="border-color: var(--gk-border); px-4 py-3" id="bulk-actions-toolbar" style="display: none">
             <div class="flex items-center justify-between">
                 <div class="flex items-center">
                     <input type="checkbox" id="select-all-queues" class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 rounded">
-                    <label for="select-all-queues" class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ t("buttons.select_all")|default:"Select All" }}</label>
+                    <label for="select-all-queues" class="ml-2 text-sm " style="color: var(--gk-text-secondary);">{{ t("buttons.select_all")|default:"Select All" }}</label>
                 </div>
                 <div class="flex items-center space-x-2">
                     <button class="inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50">
@@ -85,7 +85,7 @@
 
         <div class="px-4 py-5 sm:p-6">
             <div class="flow-root">
-                <ul role="list" class="-my-5 divide-y divide-gray-200 dark:divide-gray-700">
+                <ul role="list" class="-my-5 divide-y divide-y" style="border-color: var(--gk-border);">
                     {% for queue in Queues %}
                     <li class="py-4">
                         <div class="flex items-center justify-between">
@@ -99,12 +99,12 @@
                                     </div>
                                 </div>
                                 <div class="ml-4 truncate">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
+                                    <p class="truncate text-sm font-medium gk-heading" style="color: var(--gk-text-primary);">
                                         <a href="/queues/{{ queue.id }}" class="hover:text-gotrs-600">
                                             {{ queue.name }}
                                         </a>
                                     </p>
-                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">
+                                    <p class="truncate text-sm " style="color: var(--gk-text-muted);">
                                         {{ queue.ticket_count }} {{ t("tickets.tickets") }}
                                     </p>
                                 </div>
@@ -142,8 +142,8 @@
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                 </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-white">{{ t("queues.no_queues") }}</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("queues.no_queues_description") }}</p>
+                <h3 class="mt-2 text-sm font-medium gk-heading" style="color: var(--gk-text-primary);">{{ t("queues.no_queues") }}</h3>
+                <p class="mt-1 text-sm " style="color: var(--gk-text-muted);">{{ t("queues.no_queues_description") }}</p>
                 <div class="mt-6">
                     <a href="/queues/new" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700">
                         <svg class="-ml-1 mr-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -158,7 +158,7 @@
 
         <!-- Pagination -->
         {% if Pagination and Pagination.TotalPages > 1 %}
-        <div class="bg-white dark:bg-gray-800 px-4 py-3 border-t border-gray-200 dark:border-gray-700 sm:px-6">
+        <div class="gk-card-glow px-4 py-3 border-t " style="border-color: var(--gk-border); sm:px-6">
             <div class="flex items-center justify-between">
                 <div class="flex-1 flex justify-between sm:hidden">
                     {% if Pagination.HasPrev %}
@@ -174,7 +174,7 @@
                 </div>
                 <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
-                        <p class="text-sm text-gray-700 dark:text-gray-300">
+                        <p class="text-sm " style="color: var(--gk-text-secondary);">
                             {{ t("common.showing") }} <span class="font-medium">{{ Pagination.StartItem }}</span> {{ t("common.to") }}
                             <span class="font-medium">{{ Pagination.EndItem }}</span> {{ t("common.of") }}
                             <span class="font-medium">{{ Pagination.TotalItems }}</span> {{ t("common.results") }}

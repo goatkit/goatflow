@@ -9,49 +9,52 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="container mx-auto py-8 min-h-screen">
     <!-- Header -->
     <div class="mb-6">
         <nav class="mb-4" aria-label="Breadcrumb">
             <ol class="flex items-center space-x-2 text-sm">
                 <li>
-                    <a href="/customer/dashboard" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <a href="/customer/dashboard" class="gk-link-neon">
                         {{ t("customer.nav.dashboard") }}
                     </a>
                 </li>
                 <li>
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-5 h-5" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
                     </svg>
                 </li>
                 <li>
-                    <a href="/customer/tickets" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <a href="/customer/tickets" class="gk-link-neon">
                         {{ t("customer.nav.my_tickets") }}
                     </a>
                 </li>
                 <li>
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-5 h-5" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
                     </svg>
                 </li>
-                <li class="text-gray-900 dark:text-white font-medium">
+                <li class="font-medium" style="color: var(--gk-text-primary);">
                     {{ t("customer.tickets.ticket_number") }}{{ Ticket.tn }}
                 </li>
             </ol>
         </nav>
-        
+
         <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ Ticket.title }}</h1>
+            <h1 class="text-2xl font-bold gk-heading">
+                <span class="gk-text-gradient">{{ Ticket.title }}</span>
+            </h1>
             <div class="flex items-center space-x-3">
-                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
-                    {% if 'new' in Ticket.state|lower %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% endif %}
-                    {% if 'open' in Ticket.state|lower %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200{% endif %}
-                    {% if 'pending' in Ticket.state|lower %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}
-                    {% if 'closed' in Ticket.state|lower %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
+                <span class="gk-badge
+                    {% if 'new' in Ticket.state|lower %}gk-badge-success
+                    {% elif 'open' in Ticket.state|lower %}gk-badge-primary
+                    {% elif 'pending' in Ticket.state|lower %}gk-badge-warning
+                    {% elif 'closed' in Ticket.state|lower %}gk-badge-muted
+                    {% else %}gk-badge-primary{% endif %}">
                     {{ Ticket.state }}
                 </span>
                 {% if Ticket.can_close %}
-                <button onclick="confirmCloseTicket()" class="px-4 py-2 border border-red-300 dark:border-red-600 text-sm font-medium rounded-md text-red-700 dark:text-red-400 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900">
+                <button onclick="confirmCloseTicket()" class="gk-btn-secondary" style="border-color: var(--gk-error); color: var(--gk-error);">
                     {{ t("customer.tickets.close_ticket") }}
                 </button>
                 {% endif %}
@@ -60,33 +63,33 @@
     </div>
 
     <!-- Ticket Info -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("customer.ticket_view.ticket_info") }}</h2>
+    <div class="gk-card-glow mb-6">
+        <div class="gk-card-header">
+            <h2 class="gk-card-title">{{ t("customer.ticket_view.ticket_info") }}</h2>
         </div>
-        <div class="p-6">
+        <div class="gk-card-body">
             <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-3">
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.ticket_view.ticket_number") }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white font-mono">#{{ Ticket.tn }}</dd>
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("customer.ticket_view.ticket_number") }}</dt>
+                    <dd class="mt-1 text-sm font-mono" style="color: var(--gk-primary);">#{{ Ticket.tn }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.ticket_view.priority") }}</dt>
-                    <dd class="mt-1 text-sm font-medium" {% if Ticket.priority_color %}style="color: {{ Ticket.priority_color }}"{% endif %}>
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("customer.ticket_view.priority") }}</dt>
+                    <dd class="mt-1 text-sm font-medium" {% if Ticket.priority_color %}style="color: {{ Ticket.priority_color }}"{% else %}style="color: var(--gk-text-primary);"{% endif %}>
                         {{ Ticket.priority }}
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.ticket_view.service") }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ Ticket.service|default:"-" }}</dd>
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("customer.ticket_view.service") }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ Ticket.service|default:"-" }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.ticket_view.queue") }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ Ticket.queue }}</dd>
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("customer.ticket_view.queue") }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ Ticket.queue }}</dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.ticket_view.created") }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("customer.ticket_view.created") }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">
                         {% if Ticket.created_at_iso %}
                         <span data-relative-time data-mode="since" data-direction="past" data-timestamp="{{ Ticket.created_at_iso }}">{{ Ticket.age }}</span> {{ t("customer.tickets.ago") }}
                         {% else %}
@@ -95,8 +98,8 @@
                     </dd>
                 </div>
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.ticket_view.last_updated") }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("customer.ticket_view.last_updated") }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">
                         {% if Ticket.updated_at_iso %}
                         <span data-relative-time data-mode="since" data-direction="past" data-timestamp="{{ Ticket.updated_at_iso }}">{{ Ticket.last_changed }}</span> {{ t("customer.tickets.ago") }}
                         {% else %}
@@ -106,21 +109,21 @@
                 </div>
                 {% if Ticket.owner %}
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.ticket_view.owner") }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ Ticket.owner }}</dd>
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("customer.ticket_view.owner") }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ Ticket.owner }}</dd>
                 </div>
                 {% endif %}
                 {% if Ticket.responsible %}
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.ticket_view.assigned_to") }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ Ticket.responsible }}</dd>
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ t("customer.ticket_view.assigned_to") }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ Ticket.responsible }}</dd>
                 </div>
                 {% endif %}
                 <!-- Dynamic Fields -->
                 {% for df in DynamicFields %}
                 <div>
-                    <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ df.Field.Label }}</dt>
-                    <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ df.DisplayValue|default:"-" }}</dd>
+                    <dt class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ df.Field.Label }}</dt>
+                    <dd class="mt-1 text-sm" style="color: var(--gk-text-primary);">{{ df.DisplayValue|default:"-" }}</dd>
                 </div>
                 {% endfor %}
             </dl>
@@ -128,17 +131,17 @@
     </div>
 
     <!-- Articles/Messages -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("customer.ticket_view.conversation") }}</h2>
+    <div class="gk-card-glow mb-6">
+        <div class="gk-card-header">
+            <h2 class="gk-card-title">{{ t("customer.ticket_view.conversation") }}</h2>
         </div>
-        <div class="divide-y divide-gray-200 dark:divide-gray-700">
+        <div class="divide-y" style="border-color: var(--gk-border-default);">
             {% for article in Articles %}
-            <div class="p-6 {% if article.is_customer %}bg-blue-50 dark:bg-blue-900/20{% endif %}">
+            <div class="p-6 {% if article.is_customer %}{% endif %}" style="{% if article.is_customer %}background: var(--gk-primary-subtle);{% endif %}">
                 <div class="flex items-start space-x-4">
                     <div class="flex-shrink-0">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center {% if article.is_customer %}bg-blue-500{% else %}bg-gray-500{% endif %}">
-                            <span class="text-white text-sm font-medium">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center" style="{% if article.is_customer %}background: var(--gk-primary); box-shadow: var(--gk-glow-primary);{% else %}background: var(--gk-secondary); box-shadow: var(--gk-glow-secondary);{% endif %}">
+                            <span class="text-sm font-medium" style="color: var(--gk-text-inverse);">
                                 {% if article.is_customer %}C{% else %}A{% endif %}
                             </span>
                         </div>
@@ -146,27 +149,27 @@
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center justify-between mb-2">
                             <div>
-                                <span class="text-sm font-medium text-gray-900 dark:text-white">
+                                <span class="text-sm font-medium" style="color: var(--gk-text-primary);">
                                     {{ article.author }}
                                 </span>
-                                <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                <span class="ml-2 text-xs" style="color: var(--gk-text-muted);">
                                     {% if article.is_customer %}({{ t("customer.ticket_view.customer") }}){% else %}({{ t("customer.ticket_view.agent") }}){% endif %}
                                 </span>
                             </div>
-                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                            <span class="text-xs" style="color: var(--gk-text-muted);">
                                 {{ article.create_time }}
                             </span>
                         </div>
                         {% if article.subject and article.subject != Ticket.title %}
-                        <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <div class="text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
                             {{ article.subject }}
                         </div>
                         {% endif %}
-                        <div class="text-sm text-gray-700 dark:text-gray-300">
+                        <div class="text-sm" style="color: var(--gk-text-primary);">
                             {% if '<p' in article.body or '<div' in article.body or '<table' in article.body or '<br' in article.body or '<ul' in article.body or '<ol' in article.body or '<h1' in article.body or '<h2' in article.body or '<h3' in article.body %}
-                                <div data-article-body class="text-sm text-gray-700 dark:text-gray-300">{{ article.body|safe }}</div>
+                                <div data-article-body class="gk-article-content">{{ article.body|safe }}</div>
                             {% else %}
-                                <div data-article-body class="whitespace-pre-wrap break-words font-mono text-sm text-gray-700 dark:text-gray-300">{{ article.body }}</div>
+                                <div data-article-body class="whitespace-pre-wrap break-words font-mono text-sm" style="color: var(--gk-text-primary);">{{ article.body }}</div>
                             {% endif %}
                         </div>
                     </div>
@@ -176,49 +179,67 @@
         </div>
     </div>
 
+    <!-- Attachments Section -->
+    <div class="gk-card-glow mb-6">
+        <div class="gk-card-header">
+            <h2 class="gk-card-title">{{ t("attachments.title")|default:"Attachments" }}</h2>
+        </div>
+        <div class="gk-card-body">
+            {# Display existing attachments #}
+            <div id="ticket-attachments-list"
+                 hx-get="/customer/tickets/{{ Ticket.id }}/attachments"
+                 hx-trigger="load, attachments-updated from:body"
+                 hx-swap="innerHTML">
+                <div class="text-center py-4 text-sm" style="color: var(--gk-text-muted);">
+                    {{ t("labels.loading")|default:"Loading..." }}
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Reply Form -->
     {% if Ticket.state_id != 3 %}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow" id="reply">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("customer.ticket_view.add_reply") }}</h2>
+    <div class="gk-card-glow" id="reply">
+        <div class="gk-card-header">
+            <h2 class="gk-card-title">{{ t("customer.ticket_view.add_reply") }}</h2>
         </div>
-        <form method="post" action="/customer/tickets/{{ Ticket.id }}/reply" class="p-6">
+        <form method="post" action="/customer/tickets/{{ Ticket.id }}/reply" enctype="multipart/form-data" class="gk-card-body">
             <div class="mb-4">
-                <label id="replyEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {{ t("customer.ticket_view.your_message") }} <span class="text-red-500">{{ t("customer.common.required") }}</span>
+                <label id="replyEditorLabel" class="form-label">
+                    {{ t("customer.ticket_view.your_message") }} <span style="color: var(--gk-error);">{{ t("customer.common.required") }}</span>
                 </label>
                 {% include "partials/rich_text_editor.pongo2" with EditorID="replyEditor" FieldName="message" Placeholder=t("customer.ticket_view.reply_placeholder") LabelID="replyEditorLabel" %}
             </div>
-            
+
             <!-- Article Dynamic Fields -->
             {% if ReplyArticleDynamicFields %}
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mb-4">
-                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ t("admin.dynamic_fields.additional_fields") }}</h3>
+            <div class="pt-4 mb-4" style="border-top: 1px solid var(--gk-border-default);">
+                <h3 class="text-sm font-medium mb-3" style="color: var(--gk-text-secondary);">{{ t("admin.dynamic_fields.additional_fields") }}</h3>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {% for dfc in ReplyArticleDynamicFields %}
                     <div>
-                        <label for="ArticleDynamicField_{{ dfc.Field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <label for="ArticleDynamicField_{{ dfc.Field.Name }}" class="form-label">
                             {{ dfc.Field.Label }}
-                            {% if dfc.ConfigValue == 2 %}<span class="text-red-500">*</span>{% endif %}
+                            {% if dfc.ConfigValue == 2 %}<span style="color: var(--gk-error);">*</span>{% endif %}
                         </label>
                         {% if dfc.Field.FieldType == "Text" %}
                         <input type="text" name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                               class="gk-input-neon mt-1"
                                {% if dfc.ConfigValue == 2 %}required{% endif %}>
                         {% elif dfc.Field.FieldType == "TextArea" %}
                         <textarea name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}" rows="3"
-                                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                                  class="gk-input-neon mt-1"
                                   {% if dfc.ConfigValue == 2 %}required{% endif %}></textarea>
                         {% elif dfc.Field.FieldType == "Checkbox" %}
                         <div class="mt-1">
                             <input type="hidden" name="ArticleDynamicField_{{ dfc.Field.Name }}" value="0">
                             <input type="checkbox" name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}" value="1"
-                                   class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600">
-                            <label for="ArticleDynamicField_{{ dfc.Field.Name }}" class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ dfc.Field.Label }}</label>
+                                   class="rounded" style="accent-color: var(--gk-primary);">
+                            <label for="ArticleDynamicField_{{ dfc.Field.Name }}" class="ml-2 text-sm" style="color: var(--gk-text-secondary);">{{ dfc.Field.Label }}</label>
                         </div>
                         {% elif dfc.Field.FieldType == "Dropdown" %}
                         <select name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                                class="gk-select-neon mt-1"
                                 {% if dfc.ConfigValue == 2 %}required{% endif %}>
                             <option value="">- {{ t("admin.dynamic_fields.select") }} -</option>
                             {% for key, val in dfc.Field.Config.PossibleValues %}
@@ -227,7 +248,7 @@
                         </select>
                         {% elif dfc.Field.FieldType == "Multiselect" %}
                         <select name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}" multiple
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                                class="gk-select-neon mt-1"
                                 {% if dfc.ConfigValue == 2 %}required{% endif %}>
                             {% for key, val in dfc.Field.Config.PossibleValues %}
                             <option value="{{ key }}">{{ val }}</option>
@@ -235,11 +256,11 @@
                         </select>
                         {% elif dfc.Field.FieldType == "Date" %}
                         <input type="date" name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                               class="gk-input-neon mt-1"
                                {% if dfc.ConfigValue == 2 %}required{% endif %}>
                         {% elif dfc.Field.FieldType == "DateTime" %}
                         <input type="datetime-local" name="ArticleDynamicField_{{ dfc.Field.Name }}" id="ArticleDynamicField_{{ dfc.Field.Name }}"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm"
+                               class="gk-input-neon mt-1"
                                {% if dfc.ConfigValue == 2 %}required{% endif %}>
                         {% endif %}
                     </div>
@@ -247,12 +268,20 @@
                 </div>
             </div>
             {% endif %}
-            
-            <div class="flex items-center justify-between">
-                <a href="/customer/tickets" class="text-sm text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+
+            <!-- Attachment with Reply -->
+            <div class="pt-4 mb-4" style="border-top: 1px solid var(--gk-border-default);">
+                <label class="text-sm font-medium mb-2 block" style="color: var(--gk-text-secondary);">
+                    {{ t("attachments.attach_files")|default:"Attach Files" }}
+                </label>
+                {% include "partials/attachment_upload.pongo2" with InputID="reply-attachments" InputName="attachments" Multiple=true MaxFileSize=10 %}
+            </div>
+
+            <div class="flex items-center justify-between pt-4" style="border-top: 1px solid var(--gk-border-default);">
+                <a href="/customer/tickets" class="gk-link-neon text-sm">
                     ← {{ t("customer.new_ticket.back_to_tickets") }}
                 </a>
-                <button type="submit" class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <button type="submit" class="gk-btn-neon w-auto">
                     {{ t("customer.ticket_view.send_reply") }}
                 </button>
             </div>
@@ -260,12 +289,12 @@
     </div>
     {% else %}
     <!-- Ticket is closed -->
-    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 text-center">
-        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="gk-card-glow text-center p-8">
+        <svg class="mx-auto h-12 w-12 mb-4" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
         </svg>
-        <p class="text-gray-600 dark:text-gray-400">{{ t("customer.ticket_view.ticket_closed") }}</p>
-        <a href="/customer/tickets" class="mt-4 inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+        <p style="color: var(--gk-text-muted);">{{ t("customer.ticket_view.ticket_closed") }}</p>
+        <a href="/customer/tickets" class="mt-4 inline-flex gk-btn-secondary">
             ← {{ t("customer.new_ticket.back_to_tickets") }}
         </a>
     </div>

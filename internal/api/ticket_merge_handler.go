@@ -454,30 +454,11 @@ func resolveActorID(c *gin.Context) int {
 	if c == nil {
 		return 1
 	}
-	if raw, ok := c.Get("user_id"); ok {
-		switch v := raw.(type) {
-		case int:
-			if v > 0 {
-				return v
-			}
-		case uint:
-			if v > 0 {
-				return int(v)
-			}
-		case int64:
-			if v > 0 {
-				return int(v)
-			}
-		case uint64:
-			if v > 0 {
-				return int(v)
-			}
-		case string:
-			if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
-				return parsed
-			}
-		}
+	// Use helper for user_id extraction
+	if userID := GetUserIDFromCtx(c, 0); userID > 0 {
+		return userID
 	}
+	// Fallback to user object if present
 	if userVal, ok := c.Get("user"); ok {
 		if user, ok := userVal.(*models.User); ok && user.ID > 0 {
 			return int(user.ID)

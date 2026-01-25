@@ -1,0 +1,12 @@
+{# Links Tab Panel with Synthwave Styling #}
+{# Required variables: Ticket #}
+
+<div id="tab-links" class="tab-panel hidden">
+    <div class="gk-card p-6 text-sm"
+         style="color: var(--gk-text-secondary);"
+         hx-get="/agent/tickets/{{ Ticket.id }}/links"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <div style="color: var(--gk-text-muted);">{{ t("common.loading_links")|default:"Loading links..." }}</div>
+    </div>
+</div>

@@ -13,6 +13,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/gotrs-io/gotrs-ce/internal/ticketutil"
 )
 
 // Service coordinates Generic Agent job execution.
@@ -396,9 +397,16 @@ func (s *Service) applyActions(ctx context.Context, ticketID int, actions *model
 	var setClauses []string
 	var args []interface{}
 
+	// Track if we're setting a pending state so we can ensure pending_until is set
+	var newStateIsPending bool
 	if id := actions.NewStateID(); id != nil {
 		setClauses = append(setClauses, "ticket_state_id = ?")
 		args = append(args, *id)
+		// Check if new state is a pending state
+		stateRepo := repository.NewTicketStateRepository(s.db)
+		if state, err := stateRepo.GetByID(uint(*id)); err == nil && state != nil {
+			newStateIsPending = ticketutil.IsPendingStateType(state.TypeID)
+		}
 	}
 
 	if id := actions.NewQueueID(); id != nil {
@@ -457,13 +465,26 @@ func (s *Service) applyActions(ctx context.Context, ticketID int, actions *model
 	}
 
 	// Handle pending time
+	// If we're setting a pending state, ensure until_time is set (either from config or default)
+	pendingTimeSet := false
 	if t := actions.NewPendingTime(); t != nil {
 		setClauses = append(setClauses, "until_time = ?")
 		args = append(args, t.Unix())
+		pendingTimeSet = true
 	} else if diff := actions.NewPendingTimeDiff(); diff != 0 {
 		pendingTime := now.Add(time.Duration(diff) * time.Minute)
 		setClauses = append(setClauses, "until_time = ?")
 		args = append(args, pendingTime.Unix())
+		pendingTimeSet = true
+	}
+
+	// If we're transitioning to a pending state but no explicit pending time was set,
+	// use the default (now + 24h) to ensure pending tickets always have a deadline
+	if newStateIsPending && !pendingTimeSet {
+		defaultPendingTime := ticketutil.EnsurePendingTime(0)
+		setClauses = append(setClauses, "until_time = ?")
+		args = append(args, defaultPendingTime)
+		s.logger.Printf("genericagent: setting default pending time for ticket %d (now + 24h)", ticketID)
 	}
 
 	// Always update change_time and change_by

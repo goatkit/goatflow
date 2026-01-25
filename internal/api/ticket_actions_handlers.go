@@ -385,10 +385,11 @@ func handleReopenTicket(c *gin.Context) {
 		log.Printf("history snapshot (reopen before) failed: %v", prevErr)
 	}
 
-	// Default to state 2 (open) if not specified or invalid
+	// Default to state 4 (open) if not specified or invalid
+	// State IDs: 1=new, 2=closed successful, 3=closed unsuccessful, 4=open
 	targetStateID := reopenData.StateID
-	if targetStateID != 1 && targetStateID != 2 {
-		targetStateID = 2 // Default to open
+	if targetStateID != 1 && targetStateID != 4 {
+		targetStateID = 4 // Default to open
 	}
 
 	userID := 1
@@ -416,16 +417,30 @@ func handleReopenTicket(c *gin.Context) {
 		reopenNote += fmt.Sprintf("\nAdditional notes: %s", reopenData.Notes)
 	}
 
-	// Insert history/note entry
-	_, err = db.Exec(database.ConvertPlaceholders(`
-		INSERT INTO article (ticket_id, article_type_id, subject, body, created_time, created_by, change_time, change_by)
-		VALUES (?, 1, ?, ?, NOW(), ?, NOW(), ?)
-	`),
-		ticketIDInt, "Ticket Reopened", reopenNote, userID)
+	// Insert article for reopen note (internal note, channel 3)
+	// First insert article record
+	articleResult, err := db.Exec(database.ConvertPlaceholders(`
+		INSERT INTO article (ticket_id, article_sender_type_id, communication_channel_id,
+			is_visible_for_customer, search_index_needs_rebuild, create_time, create_by, change_time, change_by)
+		VALUES (?, 1, 3, 0, 1, NOW(), ?, NOW(), ?)
+	`), ticketIDInt, userID, userID)
 
 	if err != nil {
 		// Log the error but don't fail the reopen operation
-		fmt.Printf("Warning: Failed to add reopen note: %v\n", err)
+		fmt.Printf("Warning: Failed to add reopen article: %v\n", err)
+	} else {
+		// Insert article_data_mime with the actual content
+		articleID, _ := articleResult.LastInsertId()
+		if articleID > 0 {
+			_, mimeErr := db.Exec(database.ConvertPlaceholders(`
+				INSERT INTO article_data_mime (article_id, a_from, a_subject, a_body,
+					a_content_type, incoming_time, create_time, create_by, change_time, change_by)
+				VALUES (?, 'System', ?, ?, 'text/plain', 0, NOW(), ?, NOW(), ?)
+			`), articleID, "Ticket Reopened", reopenNote, userID, userID)
+			if mimeErr != nil {
+				fmt.Printf("Warning: Failed to add reopen article mime data: %v\n", mimeErr)
+			}
+		}
 	}
 
 	if updatedTicket, terr := ticketRepo.GetByID(uint(ticketIDInt)); terr == nil {

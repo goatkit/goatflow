@@ -1,0 +1,72 @@
+{# Reopen Ticket Modal with Synthwave Styling #}
+{# Required variables: Ticket #}
+
+<div id="reopenTicketDialog" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-screen items-center justify-center px-4 py-12">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 transition-opacity" style="background: rgba(0, 0, 0, 0.8);" onclick="hideReopenDialog()"></div>
+
+        <!-- Dialog -->
+        <div class="relative z-50 w-full max-w-2xl rounded-lg shadow-xl" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">
+                    {{ t("tickets.reopen") }} {{ t("tickets.ticket")|default:"Ticket" }} - {{ Ticket.tn }}
+                </h3>
+            </div>
+
+            <form id="reopenTicketForm" class="p-6">
+                <!-- Target State Selection -->
+                <div class="mb-4">
+                    <label for="reopenState" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("tickets.target_state")|default:"Target State" }} <span style="color: var(--gk-error);">*</span>
+                    </label>
+                    <select id="reopenState" name="reopenState" required class="gk-select-neon w-full">
+                        <option value="1">{{ t("status.new") }}</option>
+                        <option value="2" selected>{{ t("status.open") }}</option>
+                    </select>
+                </div>
+
+                <!-- Reason for Reopening -->
+                <div class="mb-4">
+                    <label for="reopenReason" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("tickets.reopen_reason")|default:"Reason for Reopening" }} <span style="color: var(--gk-error);">*</span>
+                    </label>
+                    <textarea id="reopenReason" name="reopenReason" rows="3" required
+                        placeholder="{{ t('tickets.reopen_reason_placeholder')|default:'Explain why this ticket needs to be reopened...' }}"
+                        class="gk-input-neon w-full"></textarea>
+                </div>
+
+                <!-- Additional Notes -->
+                <div class="mb-4">
+                    <label for="reopenNotes" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("tickets.additional_notes")|default:"Additional Notes" }}
+                    </label>
+                    <textarea id="reopenNotes" name="reopenNotes" rows="3"
+                        placeholder="{{ t('tickets.additional_info_placeholder')|default:'Any additional information or context...' }}"
+                        class="gk-input-neon w-full"></textarea>
+                </div>
+
+                <!-- Notify Customer -->
+                <div class="mb-6">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="notifyCustomerReopen" name="notifyCustomerReopen" checked
+                            class="h-4 w-4 rounded" style="accent-color: var(--gk-primary);">
+                        <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">
+                            {{ t("tickets.notify_reopen")|default:"Notify customer about ticket reopening" }}
+                        </span>
+                    </label>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="hideReopenDialog()" class="gk-btn-secondary">
+                        {{ t("common.cancel") }}
+                    </button>
+                    <button type="submit" class="gk-btn-success">
+                        {{ t("tickets.reopen") }} {{ t("tickets.ticket")|default:"Ticket" }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

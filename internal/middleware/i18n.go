@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -68,8 +69,13 @@ func (m *I18nMiddleware) detectLanguage(c *gin.Context) string {
 		}
 	}
 
-	// 2. Check cookie
+	// 2. Check cookie (check both "lang" and "gotrs_lang" for pre-login selection)
 	if lang, err := c.Cookie("lang"); err == nil && lang != "" {
+		if m.isSupported(lang) {
+			return lang
+		}
+	}
+	if lang, err := c.Cookie("gotrs_lang"); err == nil && lang != "" {
 		if m.isSupported(lang) {
 			return lang
 		}
@@ -123,23 +129,12 @@ func (m *I18nMiddleware) parseAcceptLanguage(header string) string {
 // getUserLanguage gets the language preference from authenticated user.
 func (m *I18nMiddleware) getUserLanguage(c *gin.Context) string {
 	// Check if user is authenticated
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
+	if _, exists := c.Get("user_id"); !exists {
 		return ""
 	}
 
-	// Convert user ID to int
-	var userID int
-	switch v := userIDInterface.(type) {
-	case int:
-		userID = v
-	case int64:
-		userID = int(v)
-	case uint:
-		userID = int(v)
-	case float64:
-		userID = int(v)
-	default:
+	userID := getI18nUserIDFromCtx(c, 0)
+	if userID == 0 {
 		return ""
 	}
 
@@ -154,6 +149,32 @@ func (m *I18nMiddleware) getUserLanguage(c *gin.Context) string {
 	return prefService.GetLanguage(userID)
 }
 
+// getI18nUserIDFromCtx extracts the authenticated user's ID from gin context as int.
+// Local helper to avoid circular import with shared package.
+func getI18nUserIDFromCtx(c *gin.Context, fallback int) int {
+	v, ok := c.Get("user_id")
+	if !ok {
+		return fallback
+	}
+	switch id := v.(type) {
+	case int:
+		return id
+	case int64:
+		return int(id)
+	case uint:
+		return int(id)
+	case uint64:
+		return int(id)
+	case float64:
+		return int(id)
+	case string:
+		if n, err := strconv.Atoi(id); err == nil {
+			return n
+		}
+	}
+	return fallback
+}
+
 // isSupported checks if a language is supported.
 func (m *I18nMiddleware) isSupported(lang string) bool {
 	supportedLangs := m.i18n.GetSupportedLanguages()
@@ -166,12 +187,35 @@ func (m *I18nMiddleware) isSupported(lang string) bool {
 }
 
 // GetLanguage gets the current language from context.
+// Falls back to cookie detection if not set in context.
 func GetLanguage(c *gin.Context) string {
 	if lang, exists := c.Get(LanguageContextKey); exists {
 		if langStr, ok := lang.(string); ok {
 			return langStr
 		}
 	}
+
+	// Fallback: check cookies directly (for pages without i18n middleware)
+	i18nInst := i18n.GetInstance()
+	supportedLangs := i18nInst.GetSupportedLanguages()
+	isSupported := func(lang string) bool {
+		for _, supported := range supportedLangs {
+			if supported == lang {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Check lang cookie first
+	if lang, err := c.Cookie("lang"); err == nil && lang != "" && isSupported(lang) {
+		return lang
+	}
+	// Check gotrs_lang cookie (pre-login selection)
+	if lang, err := c.Cookie("gotrs_lang"); err == nil && lang != "" && isSupported(lang) {
+		return lang
+	}
+
 	return DefaultLanguage
 }
 

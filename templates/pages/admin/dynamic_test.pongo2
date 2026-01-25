@@ -3,32 +3,34 @@
 {% block title %}{{ t("dynamic_test.title")|default:"Dynamic Module Testing" }} - Side by Side Comparison{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Header -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("dynamic_test.heading")|default:"Dynamic Module Testing" }}</h1>
-        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <h1 class="text-3xl font-bold gk-heading">
+            <span class="gk-text-gradient">{{ t("dynamic_test.heading")|default:"Dynamic Module Testing" }}</span>
+        </h1>
+        <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
             Compare static and dynamic module implementations side by side
         </p>
     </div>
 
     <!-- Test Instructions -->
-    <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-8">
+    <div class="gk-card-glow rounded-lg p-4 mb-8" style="border-left: 4px solid var(--gk-primary);">
         <div class="flex">
             <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="h-5 w-5" style="color: var(--gk-primary);" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                 </svg>
             </div>
             <div class="ml-3">
-                <h3 class="text-sm font-medium text-blue-800 dark:text-blue-200">{{ t("dynamic_test.testing_instructions")|default:"Testing Instructions" }}</h3>
-                <div class="mt-2 text-sm text-blue-700 dark:text-blue-300">
+                <h3 class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ t("dynamic_test.testing_instructions")|default:"Testing Instructions" }}</h3>
+                <div class="mt-2 text-sm" style="color: var(--gk-text-secondary);">
                     <ul class="list-disc pl-5 space-y-1">
                         <li>Open static and dynamic versions in separate tabs</li>
                         <li>Test all CRUD operations (Create, Read, Update, Delete)</li>
                         <li>Verify search, filters, and sorting work identically</li>
                         <li>Check modal dialogs and form validation</li>
-                        <li>Ensure dark mode works in both versions</li>
+                        <li>Ensure theme works in both versions</li>
                         <li>Test CSV import/export if available</li>
                     </ul>
                 </div>
@@ -37,88 +39,78 @@
     </div>
 
     <!-- Module Comparison Table -->
-    <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
-        <div class="px-4 py-5 sm:px-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+    <div class="gk-card-glow rounded-lg overflow-hidden">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">
                 Available Modules for Testing
             </h3>
         </div>
-        <div class="border-t border-gray-200 dark:border-gray-700">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-700">
+        <div class="overflow-x-auto">
+            <table class="gk-table">
+                <thead>
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Module
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Static Version
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Dynamic Alias
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Status
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Actions
-                        </th>
+                        <th>Module</th>
+                        <th>Static Version</th>
+                        <th>Dynamic Alias</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody>
                     {% for module in Modules %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900 dark:text-white">
+                    <tr class="transition-colors hover:bg-white/5">
+                        <td>
+                            <span class="font-medium" style="color: var(--gk-text-primary);">
                                 {{ module.name|title }}
-                            </div>
+                            </span>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td>
                             {% if module.has_static %}
                             <a href="{{ module.static_url }}"
                                target="_blank"
-                               class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">
+                               class="hover:underline"
+                               style="color: var(--gk-primary);">
                                 {{ module.static_url }}
                             </a>
                             {% else %}
-                            <span class="text-gray-400 dark:text-gray-500">Not implemented</span>
+                            <span style="color: var(--gk-text-muted);">Not implemented</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td>
                             {% if module.has_friendly %}
                             <a href="{{ module.friendly_url }}"
                                target="_blank"
-                               class="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300">
+                               class="hover:underline"
+                               style="color: var(--gk-success);">
                                 {{ module.friendly_url }}
                             </a>
                             {% else %}
-                            <span class="text-gray-400 dark:text-gray-500">Alias pending</span>
+                            <span style="color: var(--gk-text-muted);">Alias pending</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td>
                             {% if module.has_static %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                                Ready for comparison
-                            </span>
+                            <span class="gk-badge gk-badge-warning">Ready for comparison</span>
                             {% else %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                Dynamic only
-                            </span>
+                            <span class="gk-badge gk-badge-success">Dynamic only</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <td class="text-sm">
                             {% if module.has_static %}
                             <button onclick="runComparison('{{ module.name }}')"
-                                    class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-3">
+                                    class="mr-3 hover:underline"
+                                    style="color: var(--gk-accent);">
                                 Run Tests
                             </button>
                             {% endif %}
                             {% if module.has_friendly %}
                             <button onclick="openSideBySide('{{ module.name }}', '{{ module.friendly_url|escapejs }}', {% if module.has_static %}true{% else %}false{% endif %})"
-                                    class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300">
+                                    class="hover:underline"
+                                    style="color: var(--gk-primary);">
                                 Open Side by Side
                             </button>
                             {% else %}
-                            <span class="text-gray-400 dark:text-gray-500">Side-by-side unavailable</span>
+                            <span style="color: var(--gk-text-muted);">Side-by-side unavailable</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -129,13 +121,13 @@
     </div>
 
     <!-- Test Results Section -->
-    <div class="mt-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg hidden" id="test-results">
-        <div class="px-4 py-5 sm:px-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+    <div class="mt-8 gk-card-glow rounded-lg hidden" id="test-results">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">
                 Test Results
             </h3>
         </div>
-        <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-5 sm:px-6">
+        <div class="px-6 py-4">
             <div id="test-output" class="space-y-2"></div>
         </div>
     </div>
@@ -173,7 +165,7 @@ function runComparison(module) {
     const outputDiv = document.getElementById('test-output');
 
     resultsDiv.classList.remove('hidden');
-    outputDiv.innerHTML = '<div class="text-gray-500">Running automated tests...</div>';
+    outputDiv.innerHTML = '<div style="color: var(--gk-text-muted);">Running automated tests...</div>';
 
     // This is where Playwright tests would be triggered
     // For now, show manual test checklist
@@ -185,23 +177,22 @@ function runComparison(module) {
         'Edit existing item works',
         'Delete/deactivate item works',
         'Modal dialogs work',
-        'Dark mode works',
+        'Theme works correctly',
         'Form validation works',
         'Pagination works'
     ];
 
     outputDiv.innerHTML = `
         <div class="space-y-2">
-            <div class="font-medium text-gray-900 dark:text-white">Manual Test Checklist for ${module}:</div>
+            <div class="font-medium" style="color: var(--gk-text-primary);">Manual Test Checklist for ${module}:</div>
             ${tests.map(test => `
                 <label class="flex items-center space-x-3">
-                    <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700">
-                    <span class="text-sm text-gray-700 dark:text-gray-300">${test}</span>
+                    <input type="checkbox" class="h-4 w-4 rounded focus:ring-2" style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                    <span class="text-sm" style="color: var(--gk-text-secondary);">${test}</span>
                 </label>
             `).join('')}
-            <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <button onclick="saveTestResults('${module}')"
-                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            <div class="mt-4 pt-4" style="border-top: 1px solid var(--gk-border);">
+                <button onclick="saveTestResults('${module}')" class="gk-btn-neon">
                     Save Test Results
                 </button>
             </div>

@@ -1,0 +1,43 @@
+{# Ticket Meta Grid (OTRS-style top info bar) with Synthwave Styling #}
+{# Required variables: Ticket, DynamicFields (optional) #}
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="gk-card p-4">
+        <div class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ t("tickets.queue") }}</div>
+        <div class="text-sm" style="color: var(--gk-text-primary);">{{ Ticket.queue }}</div>
+    </div>
+    <div class="gk-card p-4">
+        <div class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ t("tickets.state") }}</div>
+        <div class="text-sm" style="color: var(--gk-text-primary);">{{ Ticket.status|title }}</div>
+    </div>
+    <div class="gk-card p-4">
+        <div class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ t("tickets.priority") }}</div>
+        <div class="text-sm" style="color: var(--gk-text-primary);">{{ Ticket.priority|title }}</div>
+    </div>
+    <div class="gk-card p-4">
+        <div class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ t("tickets.owner")|default:"Owner" }}</div>
+        <div class="text-sm" style="color: var(--gk-text-primary);">{{ Ticket.owner|default:"Unassigned" }}</div>
+    </div>
+    <div class="gk-card p-4">
+        <div class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ t("tickets.age")|default:"Age" }}</div>
+        <div class="text-sm" style="color: var(--gk-text-primary);">
+            {% if Ticket.created_iso %}
+            <span data-relative-time data-mode="since" data-direction="past" data-timestamp="{{ Ticket.created_iso }}">{{ Ticket.age }}</span>
+            {% else %}
+            {{ Ticket.age }}
+            {% endif %}
+        </div>
+    </div>
+    <div class="gk-card p-4">
+        <div class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ t("tickets.customer_id")|default:"CustomerID" }}</div>
+        <div class="text-sm" style="color: var(--gk-text-primary);">{{ Ticket.customer_id|default:"-" }}</div>
+    </div>
+    {% if DynamicFields %}
+    {% for df in DynamicFields %}
+    <div class="gk-card p-4">
+        <div class="text-xs uppercase" style="color: var(--gk-text-muted);">{{ df.Field.Label }}</div>
+        <div class="text-sm" style="color: var(--gk-text-primary);">{{ df.DisplayValue }}</div>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>

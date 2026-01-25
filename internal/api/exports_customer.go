@@ -43,4 +43,11 @@ var (
 	HandleCustomerSetLanguage        = wrapAdapterDBHandler(handleCustomerSetLanguage)
 	HandleCustomerGetSessionTimeout  = wrapAdapterDBHandler(handleCustomerGetSessionTimeout)
 	HandleCustomerSetSessionTimeout  = wrapAdapterDBHandler(handleCustomerSetSessionTimeout)
+
+	// Customer attachment handlers
+	HandleCustomerGetAttachments    = wrapAdapterDBHandler(handleCustomerGetAttachments)
+	HandleCustomerUploadAttachment  = wrapAdapterDBHandler(handleCustomerUploadAttachment)
+	HandleCustomerDownloadAttachment = wrapAdapterDBHandler(handleCustomerDownloadAttachment)
+	HandleCustomerGetThumbnail      = wrapAdapterDBHandler(handleCustomerGetThumbnail)
+	HandleCustomerViewAttachment    = wrapAdapterDBHandler(handleCustomerViewAttachment)
 )

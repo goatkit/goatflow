@@ -8,15 +8,50 @@
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 
-    <!-- Dark mode detection script (must be inline to avoid flash) -->
+    <!-- GoatKit Theme initialization (must be inline to prevent flash) -->
     <script>
-        // Set dark mode class before Tailwind loads to prevent flash
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            document.documentElement.classList.add('dark')
-        } else {
-            document.documentElement.classList.remove('dark')
-        }
+        (function() {
+            // Helper to get cookie value
+            function getCookie(name) {
+                var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                return match ? match[2] : null;
+            }
+
+            // Check cookies first (server-side user preferences take precedence)
+            var cookieTheme = getCookie('gotrs_theme');
+            var cookieMode = getCookie('gotrs_mode');
+
+            // Get localStorage values as fallback
+            var storedMode = localStorage.getItem('gk-theme-mode');
+            var storedTheme = localStorage.getItem('gk-theme-name') || 'synthwave';
+
+            // Determine final values: cookies override localStorage if set
+            var theme = cookieTheme || storedTheme;
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var mode = cookieMode || storedMode || (prefersDark ? 'dark' : 'light');
+
+            // Sync cookies to localStorage (so future page loads are consistent)
+            if (cookieTheme && cookieTheme !== storedTheme) {
+                localStorage.setItem('gk-theme-name', cookieTheme);
+            }
+            if (cookieMode && cookieMode !== storedMode) {
+                localStorage.setItem('gk-theme-mode', cookieMode);
+            }
+
+            // Apply mode class immediately
+            document.documentElement.classList.add(mode);
+            document.documentElement.setAttribute('data-theme', theme);
+
+            // Write the correct theme stylesheet link dynamically
+            document.write('<link id="gk-theme-stylesheet" rel="stylesheet" href="/static/css/themes/' + theme + '.css">');
+        })();
     </script>
+    <noscript>
+        <link id="gk-theme-stylesheet" rel="stylesheet" href="/static/css/themes/synthwave.css">
+    </noscript>
+
+    <!-- Vendored Fonts (Inter, Space Grotesk) - theme-specific fonts loaded dynamically -->
+    <link rel="stylesheet" href="/static/css/fonts.css">
 
     <!-- Tailwind CSS (production build) -->
     <link rel="stylesheet" href="/static/css/output.css">
@@ -63,9 +98,12 @@
         "reminder_at": "{{ t("notifications.reminder.reminder_at")|default:"Reminder at" }}",
         "open_ticket": "{{ t("notifications.reminder.open_ticket")|default:"Open Ticket" }}",
         "dismiss": "{{ t("notifications.reminder.dismiss")|default:"Dismiss reminder" }}",
+        "dismiss_all": "{{ t("notifications.reminder.dismiss_all")|default:"Dismiss all" }}",
         "ticket_label": "{{ t("notifications.reminder.ticket_label")|default:"Ticket" }}",
+        "snoozed": "{{ t("notifications.reminder.snoozed")|default:"Snoozed" }}",
         "snoozed_until": "{{ t("notifications.reminder.snoozed_until")|default:"Reminder snoozed until" }}",
         "snooze_failed": "{{ t("notifications.reminder.snooze_failed")|default:"Failed to snooze reminder" }}",
+        "reminders": "{{ t("notifications.reminder.reminders")|default:"reminders" }}",
         "years": "{{ t("time.years")|default:"years" }}",
         "year": "{{ t("time.year")|default:"year" }}",
         "months": "{{ t("time.months")|default:"months" }}",
@@ -79,6 +117,8 @@
 
     <!-- Common utilities - loads after i18n data blocks -->
     <script src="/static/js/common.js"></script>
+    <!-- GoatKit Theme Manager -->
+    <script src="/static/js/theme-manager.js"></script>
     <!-- GoatKit typeahead enhancement -->
     <script src="/static/js/goatkit-typeahead.js"></script>
     <script src="/static/js/goatkit-autocomplete.js"></script>
@@ -87,12 +127,28 @@
 
     <!-- Custom styles -->
     <style>
-        /* Smooth transitions for dark mode */
+        /* Smooth transitions for theme switching */
         * {
-            transition: background-color 0.2s, border-color 0.2s;
+            transition: background-color var(--gk-transition-normal, 0.2s),
+                        border-color var(--gk-transition-normal, 0.2s),
+                        color var(--gk-transition-normal, 0.2s),
+                        box-shadow var(--gk-transition-normal, 0.2s);
         }
 
-        /* Custom scrollbar */
+        /* Apply theme fonts */
+        body {
+            font-family: var(--gk-font-body);
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--gk-font-heading);
+        }
+
+        code, pre, .font-mono {
+            font-family: var(--gk-font-mono);
+        }
+
+        /* Custom scrollbar - theme aware */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -103,20 +159,12 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
+            background: var(--gk-border-strong);
             border-radius: 4px;
         }
 
-        .dark ::-webkit-scrollbar-thumb {
-            background: #475569;
-        }
-
         ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-
-        .dark ::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
+            background: var(--gk-primary);
         }
 
         /* Details/Summary arrow rotation */
@@ -132,40 +180,40 @@
 
     {% block head %}{% endblock %}
 </head>
-<body class="h-full bg-gray-50 dark:bg-gray-900">
-    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 rounded-md">{{ t("common.skip_to_content")|default:"Skip to content" }}</a>
+<body class="h-full" style="background-color: var(--gk-bg-base); color: var(--gk-text-primary);">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 gk-card-glow px-3 py-2 rounded-md" style="color: var(--gk-text-primary);">{{ t("common.skip_to_content")|default:"Skip to content" }}</a>
 
     <!-- System Maintenance Notifications -->
     {% if MaintenanceActive %}
-    <div class="bg-red-600 text-white" role="alert">
-        <div class="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+    <div class="gk-alert-error" role="alert" style="border-radius: 0; border-left: 0; border-right: 0; border-top: 0;">
+        <div class="mx-auto px-4 xl:px-8 2xl:px-12 py-3 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between flex-wrap">
                 <div class="flex items-center">
-                    <span class="flex p-2 rounded-lg bg-red-800">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span class="flex p-2 rounded-lg" style="background: var(--gk-error-subtle);">
+                        <svg class="h-5 w-5" style="color: var(--gk-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                     </span>
-                    <p class="ml-3 font-medium">
+                    <p class="ml-3 font-medium" style="color: var(--gk-error);">
                         <span class="font-bold">{{ t("notifications.maintenance_active") }}:</span>
                         {{ MaintenanceActive.GetNotifyMessage }}
-                        <span class="ml-2 text-red-200">({{ t("common.from") }} {{ MaintenanceActive.StartDateFormatted }} {{ t("common.until") }} {{ MaintenanceActive.StopDateFormatted }})</span>
+                        <span class="ml-2" style="opacity: 0.8;">({{ t("common.from") }} {{ MaintenanceActive.StartDateFormatted }} {{ t("common.until") }} {{ MaintenanceActive.StopDateFormatted }})</span>
                     </p>
                 </div>
             </div>
         </div>
     </div>
     {% elif MaintenanceComing %}
-    <div class="bg-yellow-500 text-yellow-900" role="alert">
-        <div class="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+    <div class="gk-alert-warning" role="alert" style="border-radius: 0; border-left: 0; border-right: 0; border-top: 0;">
+        <div class="mx-auto px-4 xl:px-8 2xl:px-12 py-3 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between flex-wrap">
                 <div class="flex items-center">
-                    <span class="flex p-2 rounded-lg bg-yellow-600">
-                        <svg class="h-5 w-5 text-yellow-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span class="flex p-2 rounded-lg" style="background: var(--gk-warning-subtle);">
+                        <svg class="h-5 w-5" style="color: var(--gk-warning);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                     </span>
-                    <p class="ml-3 font-medium">
+                    <p class="ml-3 font-medium" style="color: var(--gk-warning);">
                         <span class="font-bold">{{ t("notifications.maintenance_upcoming") }}:</span>
                         {{ t("common.from") }} {{ MaintenanceComing.StartDateFormatted }} {{ t("common.until") }} {{ MaintenanceComing.StopDateFormatted }}
                         {% if MaintenanceComing.GetNotifyMessage %}<span class="ml-2">({{ MaintenanceComing.GetNotifyMessage }})</span>{% endif %}
@@ -216,59 +264,59 @@
     {% endif %}
 
     <!-- Navigation -->
-    <nav class="bg-white dark:bg-gray-800 shadow-sm" role="navigation" aria-label="Main navigation" x-data="{ mobileMenuOpen: false }">
-            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <nav class="gk-navbar" role="navigation" aria-label="Main navigation" x-data="{ mobileMenuOpen: false }">
+            <div class="mx-auto px-4 xl:px-8 2xl:px-12 sm:px-6 lg:px-8">
                 <div class="flex h-16 justify-between">
                     <div class="flex">
                         <div class="flex flex-shrink-0 items-center">
-                            <img src="/static/favicon.svg" alt="GOTRS Logo" class="h-8 w-8 mr-2">
-                            <span class="text-2xl font-bold text-gotrs-600 dark:text-gotrs-400">GOTRS</span>
+                            <div class="gk-logo-glow h-8 w-8 mr-2" style="color: var(--gk-primary);">
+                                <img src="/static/favicon.svg" alt="GOTRS Logo" class="h-full w-full">
+                            </div>
+                            <span class="gk-navbar-brand">GOTRS</span>
                         </div>
-                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-                            <a href="{{ dashboardHref }}" class="{% if ActivePage == 'dashboard' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                        <div class="hidden sm:ml-6 sm:flex sm:space-x-2 sm:items-center">
+                            <a href="{{ dashboardHref }}" class="gk-nav-link {% if ActivePage == 'dashboard' %}active{% endif %}">
                                 {{ navDashboard }}
                             </a>
-                            <a href="{{ ticketsHref }}" class="{% if ActivePage == 'tickets' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                            <a href="{{ ticketsHref }}" class="gk-nav-link {% if ActivePage == 'tickets' %}active{% endif %}">
                                 {{ navTickets }}
                             </a>
                             {% if not isCustomer %}
-                            <a href="{{ queuesHref }}" rel="nofollow" class="{% if ActivePage == 'queues' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                            <a href="{{ queuesHref }}" rel="nofollow" class="gk-nav-link {% if ActivePage == 'queues' %}active{% endif %}">
                                 {{ navQueues }}
                             </a>
-                            <a href="/tickets/new?type=phone" class="border-transparent text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                            <a href="/tickets/new?type=phone" class="gk-nav-link">
                                 <i class="fa-solid fa-phone mr-1"></i> {{ t("tickets.new.phone_ticket") }}
                             </a>
-                            <a href="/tickets/new?type=email" class="border-transparent text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                            <a href="/tickets/new?type=email" class="gk-nav-link">
                                 <i class="fa-solid fa-envelope mr-1"></i> {{ t("tickets.new.email_ticket") }}
                             </a>
                             {% endif %}
                             {% if not isCustomer and (User and (User.Role == "Admin" or User.IsInAdminGroup or IsInAdminGroup)) %}
-                            <a href="/admin" class="{% if ActivePage == 'admin' %}border-gotrs-500 text-gray-900 dark:text-white{% else %}border-transparent text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200{% endif %} inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium">
+                            <a href="/admin" class="gk-nav-link {% if ActivePage == 'admin' %}active{% endif %}">
                                 {{ navAdmin }}
                             </a>
                             {% endif %}
                         </div>
                     </div>
                     <div class="hidden sm:ml-6 sm:flex sm:items-center">
-                        <!-- Dark mode toggle -->
-                        {% include "partials/theme_toggle.pongo2" %}
+                        <!-- Theme selector dropdown -->
+                        {% include "partials/theme_selector.pongo2" %}
 
                         <!-- User menu -->
                         <div class="relative ml-3" x-data="{ open: false }">
-                            <button @click="open = !open" type="button" class="flex rounded-full bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
-                                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-500">
-                                    <span class="text-sm font-medium leading-none text-white">{% if Customer and Customer.initials %}{{ Customer.initials }}{% elif User and (User.FirstName or User.LastName) %}{{ User.FirstName|default:""|slice:"0:1"|upper }}{{ User.LastName|default:""|slice:"0:1"|upper }}{% else %}?{% endif %}</span>
-                                </span>
+                            <button @click="open = !open" type="button" class="gk-avatar h-8 w-8 focus:outline-none" style="box-shadow: var(--gk-focus-ring);">
+                                <span class="gk-avatar-text">{% if Customer and Customer.initials %}{{ Customer.initials }}{% elif User and (User.FirstName or User.LastName) %}{{ User.FirstName|default:""|slice:"0:1"|upper }}{{ User.LastName|default:""|slice:"0:1"|upper }}{% else %}?{% endif %}</span>
                             </button>
-                            <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white dark:bg-gray-800 py-1 shadow-lg ring-1 ring-black ring-opacity-5">
-                                <a href="{{ profileHref }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">{{ t("navigation.profile") }}</a>
-                                <hr class="my-1 border-gray-200 dark:border-gray-700">
-                                <a href="{{ logoutHref }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">{{ t("auth.logout") }}</a>
+                            <div x-show="open" @click.away="open = false" x-transition class="gk-user-menu absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-lg overflow-hidden">
+                                <a href="{{ profileHref }}" class="gk-user-menu-item">{{ t("navigation.profile") }}</a>
+                                <div class="gk-divider"></div>
+                                <a href="{{ logoutHref }}" class="gk-user-menu-item">{{ t("auth.logout") }}</a>
                             </div>
                         </div>
                     </div>
                     <div class="-mr-2 flex items-center sm:hidden">
-                        <button @click="mobileMenuOpen = !mobileMenuOpen" type="button" class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-gotrs-500" aria-label="Toggle navigation">
+                        <button @click="mobileMenuOpen = !mobileMenuOpen" type="button" class="inline-flex items-center justify-center rounded-md p-2 transition-all duration-200" style="color: var(--gk-text-secondary);" aria-label="Toggle navigation">
                             <svg x-show="!mobileMenuOpen" class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                             </svg>
@@ -278,52 +326,80 @@
                         </button>
                     </div>
                 </div>
-                <div x-show="mobileMenuOpen" class="sm:hidden" x-transition>
+                <div x-show="mobileMenuOpen" class="sm:hidden" x-transition style="background: var(--gk-bg-surface);">
                     <div class="space-y-1 pb-3 pt-2">
-                            <a href="{{ dashboardHref }}" class="block border-l-4 px-3 py-2 text-base font-medium {% if ActivePage == 'dashboard' %}bg-gray-100 border-gotrs-500 text-gray-900 dark:bg-gray-900 dark:text-white{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 dark:text-gray-300 dark:hover:text-white{% endif %}">
+                            <a href="{{ dashboardHref }}" class="gk-sidebar-link {% if ActivePage == 'dashboard' %}active{% endif %}">
                                 {{ navDashboard }}
                             </a>
-                            <a href="{{ ticketsHref }}" class="block border-l-4 px-3 py-2 text-base font-medium {% if ActivePage == 'tickets' %}bg-gray-100 border-gotrs-500 text-gray-900 dark:bg-gray-900 dark:text-white{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 dark:text-gray-300 dark:hover:text-white{% endif %}">
+                            <a href="{{ ticketsHref }}" class="gk-sidebar-link {% if ActivePage == 'tickets' %}active{% endif %}">
                                 {{ navTickets }}
                             </a>
                             {% if not isCustomer %}
-                            <a href="{{ queuesHref }}" class="block border-l-4 px-3 py-2 text-base font-medium {% if ActivePage == 'queues' %}bg-gray-100 border-gotrs-500 text-gray-900 dark:bg-gray-900 dark:text-white{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 dark:text-gray-300 dark:hover:text-white{% endif %}">
+                            <a href="{{ queuesHref }}" class="gk-sidebar-link {% if ActivePage == 'queues' %}active{% endif %}">
                                 {{ navQueues }}
                             </a>
-                            <a href="/tickets/new?type=phone" class="block border-l-4 px-3 py-2 text-base font-medium border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 dark:text-gray-300 dark:hover:text-white">
+                            <a href="/tickets/new?type=phone" class="gk-sidebar-link">
                                 <i class="fa-solid fa-phone mr-2"></i> {{ t("tickets.new.phone_ticket") }}
                             </a>
-                            <a href="/tickets/new?type=email" class="block border-l-4 px-3 py-2 text-base font-medium border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 dark:text-gray-300 dark:hover:text-white">
+                            <a href="/tickets/new?type=email" class="gk-sidebar-link">
                                 <i class="fa-solid fa-envelope mr-2"></i> {{ t("tickets.new.email_ticket") }}
                             </a>
                             {% endif %}
                         {% if not isCustomer and (User and (User.Role == "Admin" or User.IsInAdminGroup or IsInAdminGroup)) %}
-                        <a href="/admin" class="block border-l-4 px-3 py-2 text-base font-medium {% if ActivePage == 'admin' %}bg-gray-100 border-gotrs-500 text-gray-900 dark:bg-gray-900 dark:text-white{% else %}border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 dark:text-gray-300 dark:hover:text-white{% endif %}">
+                        <a href="/admin" class="gk-sidebar-link {% if ActivePage == 'admin' %}active{% endif %}">
                                     {{ navAdmin }}
                         </a>
                         {% endif %}
                     </div>
                     {% if User or Customer %}
-                    <div class="border-t border-gray-200 dark:border-gray-700 pb-3 pt-4">
+                    <div class="pb-3 pt-4" style="border-top: 1px solid var(--gk-border-default);">
                         <div class="flex items-center px-4">
                             <div class="flex-shrink-0">
-                                <span class="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-500">
-                                    <span class="text-sm font-medium leading-none text-white">{% if Customer and Customer.initials %}{{ Customer.initials }}{% elif User and (User.FirstName or User.LastName) %}{{ User.FirstName|default:""|slice:"0:1"|upper }}{{ User.LastName|default:""|slice:"0:1"|upper }}{% else %}?{% endif %}</span>
+                                <span class="gk-avatar h-10 w-10">
+                                    <span class="gk-avatar-text">{% if Customer and Customer.initials %}{{ Customer.initials }}{% elif User and (User.FirstName or User.LastName) %}{{ User.FirstName|default:""|slice:"0:1"|upper }}{{ User.LastName|default:""|slice:"0:1"|upper }}{% else %}?{% endif %}</span>
                                 </span>
                             </div>
                             <div class="ml-3">
                                 {% if User %}
-                                <div class="text-base font-medium text-gray-800 dark:text-gray-200">{{ User.FullName|default:User.Email|default:"Demo User" }}</div>
-                                <div class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ User.Email|default:"demo@example.com" }}</div>
+                                <div class="text-base font-medium" style="color: var(--gk-text-primary);">{{ User.FullName|default:User.Email|default:"Demo User" }}</div>
+                                <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ User.Email|default:"demo@example.com" }}</div>
                                 {% elif Customer %}
-                                <div class="text-base font-medium text-gray-800 dark:text-gray-200">{{ Customer.first_name }} {{ Customer.last_name }}</div>
-                                <div class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ Customer.email }}</div>
+                                <div class="text-base font-medium" style="color: var(--gk-text-primary);">{{ Customer.first_name }} {{ Customer.last_name }}</div>
+                                <div class="text-sm font-medium" style="color: var(--gk-text-muted);">{{ Customer.email }}</div>
                                 {% endif %}
                             </div>
                         </div>
                         <div class="mt-3 space-y-1">
-                            <a href="{{ profileHref }}" class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white">{{ t("navigation.profile") }}</a>
-                            <a href="{{ logoutHref }}" class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white">{{ t("auth.logout") }}</a>
+                            <a href="{{ profileHref }}" class="gk-sidebar-link">{{ t("navigation.profile") }}</a>
+                            <a href="{{ logoutHref }}" class="gk-sidebar-link">{{ t("auth.logout") }}</a>
+                        </div>
+                        <!-- Mobile Theme Selector -->
+                        <div class="mt-4 px-4 py-3" style="border-top: 1px solid var(--gk-border-default);">
+                            <p class="text-xs font-semibold uppercase tracking-wider mb-3" style="color: var(--gk-text-muted);">{{ t('theme.select_theme')|default:'Theme' }}</p>
+                            <div class="flex flex-col gap-2">
+                                <button onclick="ThemeManager.applyTheme('synthwave'); document.dispatchEvent(new CustomEvent('theme-changed'));"
+                                        class="mobile-theme-btn flex items-center gap-3 px-3 py-2 rounded-md text-sm"
+                                        data-theme="synthwave" style="color: var(--gk-text-primary);">
+                                    <span class="w-5 h-5 rounded-full" style="background: linear-gradient(135deg, #00E5FF, #FF2FD4);"></span>
+                                    {{ t('theme.synthwave')|default:'Synthwave' }}
+                                </button>
+                                <button onclick="ThemeManager.applyTheme('gotrs-classic'); document.dispatchEvent(new CustomEvent('theme-changed'));"
+                                        class="mobile-theme-btn flex items-center gap-3 px-3 py-2 rounded-md text-sm"
+                                        data-theme="gotrs-classic" style="color: var(--gk-text-primary);">
+                                    <span class="w-5 h-5 rounded-full" style="background: linear-gradient(135deg, #3b82f6, #4f46e5);"></span>
+                                    {{ t('theme.classic')|default:'Classic' }}
+                                </button>
+                            </div>
+                            <div class="flex gap-2 mt-3">
+                                <button onclick="ThemeManager.applyMode('light');" class="mobile-mode-btn flex-1 px-3 py-2 rounded-md text-sm flex items-center justify-center gap-2" data-mode="light" style="color: var(--gk-text-secondary); background: var(--gk-bg-elevated);">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"></path></svg>
+                                    {{ t('theme.light')|default:'Light' }}
+                                </button>
+                                <button onclick="ThemeManager.applyMode('dark');" class="mobile-mode-btn flex-1 px-3 py-2 rounded-md text-sm flex items-center justify-center gap-2" data-mode="dark" style="color: var(--gk-text-secondary); background: var(--gk-bg-elevated);">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                                    {{ t('theme.dark')|default:'Dark' }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                     {% endif %}
@@ -332,12 +408,12 @@
         </nav>
 
         <!-- Main content -->
-        <main id="main-content" role="main">
+        <main id="main-content" role="main" class="gk-grid-bg min-h-screen">
             {% block content %}{% endblock %}
         </main>
 
         {% if Portal and Portal.FooterText %}
-        <footer class="mt-10 border-t border-gray-200 dark:border-gray-700 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+        <footer class="mt-10 py-6 text-center text-sm" style="border-top: 1px solid var(--gk-border); color: var(--gk-text-muted);">
             {{ Portal.FooterText }}
         </footer>
         {% endif %}
@@ -349,13 +425,19 @@
     <!-- Include Guru Meditation component for error handling -->
     {% include "components/guru_meditation.pongo2" %}
 
-    <!-- Dark mode toggle and lightweight helpers -->
+    <!-- Theme toggle and lightweight helpers -->
     <script>
+        // Legacy function - delegates to ThemeManager
         function toggleDarkMode() {
-            const root = document.documentElement
-            const enableDark = !root.classList.contains('dark')
-            root.classList.toggle('dark', enableDark)
-            localStorage.theme = enableDark ? 'dark' : 'light'
+            if (typeof ThemeManager !== 'undefined') {
+                return ThemeManager.toggleMode();
+            }
+            // Fallback if ThemeManager not loaded
+            const root = document.documentElement;
+            const enableDark = !root.classList.contains('dark');
+            root.classList.toggle('dark', enableDark);
+            localStorage.setItem('gk-theme-mode', enableDark ? 'dark' : 'light');
+            return enableDark ? 'dark' : 'light';
         }
 
         document.addEventListener('htmx:responseError', function (event) {

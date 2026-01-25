@@ -1,0 +1,83 @@
+{# Reusable Pagination Partial with Synthwave Styling #}
+{# Required variables: Pagination, CurrentFilters, CurrentDFFilters (optional) #}
+{# Pagination should have: Page, TotalPages, PerPage, HasFirst, HasLast, PrevPage, NextPage, PageNumbers #}
+
+<div class="px-6 py-3" style="background: var(--gk-bg-elevated); border-top: 1px solid var(--gk-border-default);">
+    <div class="flex items-center justify-between">
+        <div class="text-sm" style="color: var(--gk-text-secondary);">
+            {{ t("pagination.page")|default:"Page" }} {{ Pagination.Page }} {{ t("pagination.of")|default:"of" }} {{ Pagination.TotalPages }}
+        </div>
+        <div class="flex items-center space-x-1">
+            <!-- First Page -->
+            {% if Pagination.HasFirst %}
+            <a href="?page=1&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
+               class="px-2 py-1 text-sm rounded transition-colors"
+               style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default); color: var(--gk-text-secondary);"
+               onmouseover="this.style.borderColor='var(--gk-primary)';this.style.color='var(--gk-primary)'"
+               onmouseout="this.style.borderColor='var(--gk-border-default)';this.style.color='var(--gk-text-secondary)'"
+               title="{{ t("pagination.first_page")|default:"First page" }}">
+                &laquo;
+            </a>
+            {% else %}
+            <span class="px-2 py-1 text-sm rounded cursor-not-allowed" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default); color: var(--gk-text-muted);">&laquo;</span>
+            {% endif %}
+
+            <!-- Previous Page -->
+            {% if Pagination.Page > 1 %}
+            <a href="?page={{ Pagination.PrevPage }}&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
+               class="px-2 py-1 text-sm rounded transition-colors"
+               style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default); color: var(--gk-text-secondary);"
+               onmouseover="this.style.borderColor='var(--gk-primary)';this.style.color='var(--gk-primary)'"
+               onmouseout="this.style.borderColor='var(--gk-border-default)';this.style.color='var(--gk-text-secondary)'"
+               title="{{ t("pagination.previous_page")|default:"Previous page" }}">
+                &lsaquo;
+            </a>
+            {% else %}
+            <span class="px-2 py-1 text-sm rounded cursor-not-allowed" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default); color: var(--gk-text-muted);">&lsaquo;</span>
+            {% endif %}
+
+            <!-- Page Numbers -->
+            {% for pageNum in Pagination.PageNumbers %}
+                {% if pageNum == Pagination.Page %}
+                <span class="px-3 py-1 text-sm rounded font-medium" style="background: var(--gk-primary); color: var(--gk-text-inverse); box-shadow: var(--gk-glow-primary);">{{ pageNum }}</span>
+                {% else %}
+                <a href="?page={{ pageNum }}&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
+                   class="px-3 py-1 text-sm rounded transition-colors"
+                   style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default); color: var(--gk-text-secondary);"
+                   onmouseover="this.style.borderColor='var(--gk-primary)';this.style.color='var(--gk-primary)'"
+                   onmouseout="this.style.borderColor='var(--gk-border-default)';this.style.color='var(--gk-text-secondary)'">
+                    {{ pageNum }}
+                </a>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Next Page -->
+            {% if Pagination.Page < Pagination.TotalPages %}
+            <a href="?page={{ Pagination.NextPage }}&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
+               class="px-2 py-1 text-sm rounded transition-colors"
+               style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default); color: var(--gk-text-secondary);"
+               onmouseover="this.style.borderColor='var(--gk-primary)';this.style.color='var(--gk-primary)'"
+               onmouseout="this.style.borderColor='var(--gk-border-default)';this.style.color='var(--gk-text-secondary)'"
+               title="{{ t("pagination.next_page")|default:"Next page" }}">
+                &rsaquo;
+            </a>
+            {% else %}
+            <span class="px-2 py-1 text-sm rounded cursor-not-allowed" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default); color: var(--gk-text-muted);">&rsaquo;</span>
+            {% endif %}
+
+            <!-- Last Page -->
+            {% if Pagination.HasLast %}
+            <a href="?page={{ Pagination.TotalPages }}&per_page={{ Pagination.PerPage }}&status={{ CurrentFilters.status }}&queue={{ CurrentFilters.queue }}&assignee={{ CurrentFilters.assignee }}{% if CurrentFilters.search %}&search={{ CurrentFilters.search }}{% endif %}&sort={{ CurrentFilters.sort }}&order={{ CurrentFilters.order }}{% for key, val in CurrentDFFilters %}{% if val %}&df_{{ key }}={{ val }}{% endif %}{% endfor %}"
+               class="px-2 py-1 text-sm rounded transition-colors"
+               style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default); color: var(--gk-text-secondary);"
+               onmouseover="this.style.borderColor='var(--gk-primary)';this.style.color='var(--gk-primary)'"
+               onmouseout="this.style.borderColor='var(--gk-border-default)';this.style.color='var(--gk-text-secondary)'"
+               title="{{ t("pagination.last_page")|default:"Last page" }}">
+                &raquo;
+            </a>
+            {% else %}
+            <span class="px-2 py-1 text-sm rounded cursor-not-allowed" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default); color: var(--gk-text-muted);">&raquo;</span>
+            {% endif %}
+        </div>
+    </div>
+</div>

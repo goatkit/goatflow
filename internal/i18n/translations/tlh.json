@@ -1,20 +1,22 @@
 {
     "acl": {
-        "add_acl": "chel ACL",
-        "description": "Access Control Lists define rules for ticket actions and permissions",
-        "heading": "ACL Management",
+        "add_acl": "ACL chel",
+        "description": "'el SeH tetlhmey chaw' ta'mey 'ej chaw'mey nab pIm",
+        "heading": "ACL SeH",
         "modal": {
-            "add_title": "chel ACL",
-            "change_actions": "Change ta'mey",
-            "match_conditions": "Match Conditions (Properties)"
+            "add_title": "ACL chel",
+            "change_actions": "ta'mey choH",
+            "match_conditions": "rap Dotlhmey (DochmeyHom)"
         },
         "title": "'el SeH tetlh",
         "tooltips": {
-            "add_new": "chel new ACL",
-            "apply_filters": "Apply filters",
-            "clear_filters": "Say'moH all filters",
-            "edit": "choH ACL"
-        }
+            "add_new": "ACL chu' chel",
+            "apply_filters": "chuqmey lo'",
+            "clear_filters": "Hoch chuqmey Say'moH",
+            "edit": "ACL choH"
+        },
+        "no_acls_found": "ACL tu'be'",
+        "click_add_acl": "\"ACL chel\" yIqIp."
     },
     "admin": {
         "action_labels": {
@@ -74,7 +76,7 @@
                 "saved_sets": "choqlu'bogh wIv ghommey",
                 "set_name_placeholder": "wIv ghom pong lan..."
             },
-            "no_data_available": "ghobe' data available",
+            "no_data_available": "De' tu'be'",
             "pagination": {
                 "next": "veb",
                 "per_page": "nav",
@@ -82,12 +84,12 @@
                 "show": "cha'"
             },
             "refresh": "chu'qa'",
-            "saved_filter_sets": "pold chuq Sets",
+            "saved_filter_sets": "choqlu'bogh chuq ghommey",
             "search": {
                 "placeholder": "nej..."
             },
             "selected": "wIvlu'ta'",
-            "show_hide_columns": "Show/Hide Columns",
+            "show_hide_columns": "cha'/So' ngutlhmey",
             "status": {
                 "active": "Qap",
                 "inactive": "Qapbe'",
@@ -322,7 +324,13 @@
         "leave_blank_to_keep": "DaH pegh mu' choq chIm lan",
         "login": "'el",
         "lookups": {
-            "description": "nej De' SeH"
+            "description": "nej De' SeH",
+            "add_priority": "potlh chel",
+            "edit_priority": "potlh choH",
+            "add_state": "Dotlh chel",
+            "edit_state": "Dotlh choH",
+            "add_type": "Segh chel",
+            "edit_type": "Segh choH"
         },
         "lookups_desc": "nej De' SeH",
         "lookups_title": "nejwI'mey",
@@ -1327,12 +1335,20 @@
         }
     },
     "admin_dashboard": {
+        "activity": "vum",
+        "tickets_closed": "naQmoHpu' chaw'mey",
+        "tickets_created": "chenmoHpu' chaw'mey",
+        "tickets_open": "poSbogh chaw'mey",
+        "right_now": "DaH",
+        "last_24_hours": "vorgh 24 rep",
+        "last_7_days": "vorgh 7 jaj",
+        "last_30_days": "vorgh 30 jaj",
         "acl": "'el SeH tetlh",
         "acl_desc": "'el chut conditional mojaq",
         "ticket_attribute_relations": "chaw' DaH mIw",
         "ticket_attribute_relations_desc": "chaw' ngoq Doch potlh mIw",
         "active_users_customers": "Duy'a' agents customers je",
-        "activity": {
+        "recent_activity_items": {
             "config_updated": "[TLH] System configuration updated",
             "logs_reviewed": "[TLH] Audit logs reviewed",
             "user_created": "[TLH] User account created"
@@ -1476,7 +1492,9 @@
         "signing_in": "'elchoH...",
         "signup": "teywI'",
         "too_many_attempts": "Too many failed attempts. Please wait",
-        "username": "lo'wI' pong"
+        "username": "lo'wI' pong",
+        "username_placeholder": "lo'wI' pong yIngu'",
+        "password_placeholder": "pegh mu' yIngu'"
     },
     "bulk_actions": {
         "all_selected": "Hoch wIvlu'",
@@ -1565,7 +1583,10 @@
         "update": "Dub",
         "upload": "ngeH",
         "view_all": "Hoch legh",
-        "warning": "yIqIm"
+        "warning": "yIqIm",
+        "disable": "mev",
+        "enable": "paw'",
+        "save_changes": "choHwI' pol"
     },
     "changes": {
         "backout_plan": "Dob mIw",
@@ -1623,9 +1644,9 @@
         "name": "pong",
         "next": "veb",
         "no": "ghobe'",
-        "no_data_available": "ghobe' data available",
+        "no_data_available": "De' tu'be'",
         "no_results": "pagh tu'lu'",
-        "no_results_found": "ghobe' results found",
+        "no_results_found": "pagh tu'lu'",
         "last_update": "Qav choHmeH poH",
         "save_and_finish": "Qop 'ej rIn",
         "save_changes": "choHmey pol",
@@ -1650,7 +1671,8 @@
         "submit": "ngeH",
         "success": "Qapla'",
         "to": "-Daq",
-        "toggle_dark_mode": "Toggle dark mode",
+        "toggle_dark_mode": "Hurgh choH",
+        "select_language": "Hol wIv",
         "total": "Hoch",
         "unassigned": "lanbe'lu'",
         "until": "'op",
@@ -1670,7 +1692,9 @@
             "password": "pegh mu'",
             "sign_in": "'el",
             "signing_in": "'elchoH...",
-            "too_many_attempts": "nID law'qu'. %ds loS 'ej nIDqa'."
+            "too_many_attempts": "nID law'qu'. %ds loS 'ej nIDqa'.",
+            "login_placeholder": "lo'wI' pong pagh QIn Daq yIngu'",
+            "password_placeholder": "pegh mu' yIngu'"
         },
         "common": {
             "required": "*"
@@ -1884,7 +1908,8 @@
             "disable": "Disable customer user",
             "edit": "choH customer user",
             "enable": "Enable customer user"
-        }
+        },
+        "save_button": "ngan lo'wI' pol"
     },
     "dashboard": {
         "my_queues": "tlhoywIj",
@@ -1899,23 +1924,23 @@
         "quick_actions": "nom ta'mey",
         "quick_stats": "nom ngoD",
         "realtime": {
-            "title": "Real-time SeHlaw"
+            "title": "DaHjaj SeHlaw"
         },
         "recent_activity": "Qav ta'",
         "recent_tickets": "Qav chaw'mey",
         "statistics": "ngoD mI'mey",
         "stats": {
-            "closed_today": "SoQmoHd Today",
-            "my_open": "My poS",
-            "my_pending": "My Pending",
-            "new_today": "chu' Today",
-            "open_tickets": "poS Tickets",
-            "total_assigned": "Total Assigned",
-            "unassigned": "Unassigned"
+            "closed_today": "DaHjaj SoQmoH",
+            "my_open": "jIH poS",
+            "my_pending": "jIH loS",
+            "new_today": "DaHjaj chu'",
+            "open_tickets": "poS chaw'mey",
+            "total_assigned": "Hoch noblu'ta'",
+            "unassigned": "noblu'be'"
         },
-        "tickets_count": "tickets",
+        "tickets_count": "chaw'mey",
         "title": "HaSta",
-        "unassigned_count": "unassigned",
+        "unassigned_count": "noblu'be'",
         "welcome_back": "nuqneH chegh",
         "welcome_message": "DaHjaj chaw'lIj vangmey legh"
     },
@@ -2164,44 +2189,44 @@
         "changes_saved": "choHmey choqlu'ta' Qapla'",
         "code_copied": "Code copied to clipboard!",
         "confirm": {
-            "activate_acl": "Are you sure you want to activate",
-            "activate_company": "Are you sure you want to activate this company? This will albIng users from this company to access the portal.",
-            "activate_item": "Are you sure you want to activate this item?",
-            "activate_service": "Are you sure you want to activate this service?",
-            "activate_sla": "Are you sure you want to activate this SLA?",
-            "bulk_action": "Are you sure you want to {action} {count} customer user(s)?",
-            "bulk_delete_customer_users": "Are you sure you want to delete the selected customer user(s)?",
-            "bulk_disable_customer_users": "Are you sure you want to disable the selected customer user(s)?",
-            "bulk_enable_customer_users": "Are you sure you want to enable the selected customer user(s)?",
-            "deactivate_acl": "Are you sure you want to deactivate",
-            "deactivate_company": "Are you sure you want to deactivate this company? This will prevent all users from this company from accessing the portal.",
-            "deactivate_item": "Are you sure you want to deactivate this item?",
-            "deactivate_service": "Are you sure you want to deactivate this service?",
-            "deactivate_sla": "Are you sure you want to deactivate this SLA?",
-            "delete_attachment": "Are you sure you want to delete this attachment?",
-            "delete_bulk": "Are you sure you want to delete the selected item(s)? This action cannot be undone.",
-            "delete_customer_user": "Are you sure you want to delete this customer user? This action cannot be undone.",
-            "delete_dynamic_field": "Are you sure you want to delete this dynamic field? This will also delete all stored values for this field.",
-            "delete_filter_sets": "Qaw' all saved filter sets?",
-            "delete_group": "Are you sure you want to delete this group?",
-            "delete_item": "Are you sure you want to delete this item?",
-            "delete_lookup": "Are you sure you want to delete this item? This action cannot be undone.",
-            "delete_priority": "Are you sure you want to delete this priority? This action cannot be undone.",
-            "delete_queue": "Are you sure you want to delete this queue? All tickets in this queue will need to be reassigned. This action cannot be undone.",
-            "delete_queue_simple": "Are you sure you want to delete this queue?",
-            "delete_queues_bulk": "Are you sure you want to delete the selected queue(s)?",
-            "delete_state": "Are you sure you want to delete this state?",
-            "delete_webservice": "Are you sure you want to delete this webservice? This action cannot be undone.",
-            "disable_customer_user": "Are you sure you want to disable this customer user?",
-            "disable_queue": "Are you sure you want to disable this queue?",
-            "enable_customer_user": "Are you sure you want to enable this customer user?",
-            "enable_queue": "Are you sure you want to enable this queue?",
-            "lock_ticket": "Are you sure you want to lock this ticket?",
-            "proceed_action": "Are you sure you want to proceed with this action?",
-            "remove_user_from_group": "Are you sure you want to remove this user from the group?",
-            "reset_config": "Are you sure you want to reset this configuration to its default value? This action cannot be undone.",
-            "toggle_customer_status": "Are you sure you want to {action} this customer user?",
-            "toggle_status_bulk": "Are you sure you want to toggle the status of the selected item(s)?"
+            "activate_acl": "ACL Dachu'moH 'e' DaneH'a'?",
+            "activate_company": "tuqvam Dachu'moH 'e' DaneH'a'? tuqvam lo'wI'pu' lojmItmeyDaq 'ellaH.",
+            "activate_item": "Dochvam Dachu'moH 'e' DaneH'a'?",
+            "activate_service": "tajvamvam Dachu'moH 'e' DaneH'a'?",
+            "activate_sla": "SLA Dachu'moH 'e' DaneH'a'?",
+            "bulk_action": "{count} qorDu' lo'wI'pu' {action} 'e' DaneH'a'?",
+            "bulk_delete_customer_users": "wIvlu'bogh qorDu' lo'wI'pu' DaQaw' 'e' DaneH'a'?",
+            "bulk_disable_customer_users": "wIvlu'bogh qorDu' lo'wI'pu' DamevmoH 'e' DaneH'a'?",
+            "bulk_enable_customer_users": "wIvlu'bogh qorDu' lo'wI'pu' Dachu'moH 'e' DaneH'a'?",
+            "deactivate_acl": "ACL DamevmoH 'e' DaneH'a'?",
+            "deactivate_company": "tuqvam DamevmoH 'e' DaneH'a'? tuqvam lo'wI'pu' Hoch lojmItmeyDaq 'ellaHbe'.",
+            "deactivate_item": "Dochvam DamevmoH 'e' DaneH'a'?",
+            "deactivate_service": "tajvamvam DamevmoH 'e' DaneH'a'?",
+            "deactivate_sla": "SLA DamevmoH 'e' DaneH'a'?",
+            "delete_attachment": "rarwI'vam DaQaw' 'e' DaneH'a'?",
+            "delete_bulk": "wIvlu'bogh Dochmey DaQaw' 'e' DaneH'a'? ta'vam lIjlaHbe'.",
+            "delete_customer_user": "qorDu' lo'wI'vam DaQaw' 'e' DaneH'a'? ta'vam lIjlaHbe'.",
+            "delete_dynamic_field": "yoS choHlaHboghvam DaQaw' 'e' DaneH'a'? yoSvam De' Hoch je Qaw'lu'.",
+            "delete_filter_sets": "choHlu'bogh Hoch DaQaw''a'?",
+            "delete_group": "ghomvam DaQaw' 'e' DaneH'a'?",
+            "delete_item": "Dochvam DaQaw' 'e' DaneH'a'?",
+            "delete_lookup": "Dochvam DaQaw' 'e' DaneH'a'? ta'vam lIjlaHbe'.",
+            "delete_priority": "potlhvam DaQaw' 'e' DaneH'a'? ta'vam lIjlaHbe'.",
+            "delete_queue": "tlheghvam DaQaw' 'e' DaneH'a'? tlheghvam tIqwIjmey Hoch choHnIS. ta'vam lIjlaHbe'.",
+            "delete_queue_simple": "tlheghvam DaQaw' 'e' DaneH'a'?",
+            "delete_queues_bulk": "wIvlu'bogh tlheghmey DaQaw' 'e' DaneH'a'?",
+            "delete_state": "Dotlhvam DaQaw' 'e' DaneH'a'?",
+            "delete_webservice": "webtajvamvam DaQaw' 'e' DaneH'a'? ta'vam lIjlaHbe'.",
+            "disable_customer_user": "qorDu' lo'wI'vam DamevmoH 'e' DaneH'a'?",
+            "disable_queue": "tlheghvam DamevmoH 'e' DaneH'a'?",
+            "enable_customer_user": "qorDu' lo'wI'vam Dachu'moH 'e' DaneH'a'?",
+            "enable_queue": "tlheghvam Dachu'moH 'e' DaneH'a'?",
+            "lock_ticket": "tIqwIjvam DangaghmoH 'e' DaneH'a'?",
+            "proceed_action": "ta'vam DaruchmoH 'e' DaneH'a'?",
+            "remove_user_from_group": "ghom vo' lo'wI'vam DapolHa' 'e' DaneH'a'?",
+            "reset_config": "DujHa'vam 'e' DaneH'a'? ta'vam lIjlaHbe'.",
+            "toggle_customer_status": "qorDu' lo'wI'vam {action} 'e' DaneH'a'?",
+            "toggle_status_bulk": "wIvlu'bogh Dochmey Dotlh DachoH 'e' DaneH'a'?"
         },
         "confirm_action": "ta'vam Data' 'e' DaneH'a'?",
         "confirm_delete": "Dochvam DaHeghmoH 'e' DaneH'a'?",
@@ -2312,16 +2337,19 @@
         "notifications": "QInmey",
         "push_notifications": "neH QInmey",
         "reminder": {
-            "dismiss": "Dismiss reminder",
-            "due_in": "Due in",
-            "open_ticket": "poS Ticket",
-            "overdue_by": "Overdue by",
-            "reminder_at": "Reminder at",
-            "reminder_ready": "Reminder is ready",
-            "snooze_failed": "Failed to snooze reminder",
-            "snoozed_until": "Reminder snoozed until",
+            "dismiss": "qawmoH junmoH",
+            "dismiss_all": "Hoch junmoH",
+            "due_in": "poH ret",
+            "open_ticket": "ta' poS",
+            "overdue_by": "qaStaHvIS",
+            "reminder_at": "qawmoH",
+            "reminder_ready": "qawmoH SuD",
+            "reminders": "qawmoHwI'mey",
+            "snooze_failed": "qawmoH Qong luj",
+            "snoozed": "QongmoHta'",
+            "snoozed_until": "qawmoH QongmoHta'",
             "ticket_label": "ta'",
-            "ticket_reminder": "Ticket reminder"
+            "ticket_reminder": "ta' qawmoH"
         },
         "settings": "QIn DuHmey",
         "sound": "wab",
@@ -2364,40 +2392,43 @@
         "total": "Hoch"
     },
     "permissions": {
-        "change_priority": "Change Priority",
-        "debug_heading": "DEBUG - Permissions",
-        "debug_permissions": "DEBUG - Permissions",
-        "description": "Manage user permissions across groups (OTRS Role Management)",
-        "error_saving": "Qagh saving permissions",
+        "group": "ghom",
+        "clone_user_permissions": "lo'wI' chaw' chen",
+        "change_priority": "potlh patlh choH",
+        "debug_heading": "DEBUG - chaw'mey",
+        "debug_permissions": "DEBUG - chaw'mey",
+        "description": "ghommey qel lo'wI' chaw'mey SeH (OTRS patlh SeH)",
+        "error_saving": "Qagh: chaw'mey pollu'ta'",
         "groups": "ghommey:",
         "groups_heading": "ghommey:",
-        "heading": "Permission Management",
-        "matrix_heading": "Permission Matrix",
-        "no_data": "ghobe' permissions data available",
-        "no_user_selected": "ghobe' user selected",
-        "permission_matrix": "Permission Matrix",
-        "please_select_user": "Please select a user to view permissions.",
-        "select_group": "Please select a group to modify",
-        "select_user": "Select a user to view permissions",
-        "simple_test": "Simple Permissions Test",
-        "standalone_heading": "Permission Management",
-        "title": "Permission Management",
+        "heading": "chaw' SeH",
+        "matrix_heading": "chaw' quv",
+        "no_data": "chaw' De' tu'be'",
+        "no_user_selected": "lo'wI' wIvbe'lu'",
+        "permission_matrix": "chaw' quv",
+        "please_select_user": "chaw'mey lulegh lo'wI' yIwIv.",
+        "select_group": "choHmeH ghom yIwIv",
+        "select_user": "chaw'mey lulegh lo'wI' yIwIv",
+        "simple_test": "ngeDbe' chaw' ngoq",
+        "standalone_heading": "chaw' SeH",
+        "title": "chaw' SeH",
         "tooltips": {
-            "clear_all_group": "Say'moH all permissions for this group",
-            "clone": "Clone permissions from one user to another",
-            "create": "chenmoH tickets",
-            "grant_all": "Selecting this will grant all permissions",
-            "move_into": "Move tickets into queue",
-            "note": "chel notes",
+            "clear_all_group": "ghomvam chaw'mey Hoch Say'moH",
+            "clone": "lo'wI' vo' latlh chaw' chen",
+            "create": "chaw'mey chenmoH",
+            "grant_all": "wIvvam Hoch chaw'mey nob",
+            "move_into": "tlheghmey chaw' vIH",
+            "note": "ghItlhmey chel",
             "owner": "ghaj choH",
-            "priority": "Change priority",
-            "ro": "Read Only",
-            "select_all_group": "Hoch wIv permissions for this group"
+            "priority": "potlh patlh choH",
+            "ro": "laD neH",
+            "select_all_group": "ghomvam Hoch chaw'mey wIv"
         },
-        "user_selection": "lo'wI' Selection",
+        "user_selection": "lo'wI' wIv",
         "users": "lo'wI'pu':",
         "users_heading": "lo'wI'pu':",
-        "working_heading": "Permission Management"
+        "working_heading": "Permission Management",
+        "clone_permissions": "chaw'mey leng"
     },
     "permissions_working": {
         "title": "Permission Management"
@@ -2543,75 +2574,82 @@
         "ticket_volume": "Ticket Volume (24h)"
     },
     "realtime_dashboard": {
-        "title": "Real-time SeHlaw"
+        "title": "DaHjaj SeHlaw"
     },
     "roadmap": {
         "current_phase": "DaH mIw",
-        "enhancements_heading": "DubtaH",
-        "error_loading": "Qagh lulmeH Roadmap",
-        "features_heading": "Features",
-        "fixes_heading": "Qagh tI'",
-        "heading": "Development Roadmap",
-        "module_checklist": "Module Checklist",
-        "module_health_status": "Module Health Dotlh",
-        "other_heading": "Other Changes",
-        "performance_trends": "Performance Trends",
-        "quick_navigation": "Quick Navigation",
-        "recent_updates": "Recent choHs",
-        "title": "pat Roadmap"
+        "enhancements_heading": "DubtaHghach",
+        "error_loading": "Qagh: He ngoD lulmeH",
+        "features_heading": "laHmey",
+        "fixes_heading": "Qagh tI'ghach",
+        "heading": "chenmoH He ngoD",
+        "module_checklist": "bobcho' toD ghItlh",
+        "module_health_status": "bobcho' pIvtaHghach Dotlh",
+        "other_heading": "latlh choHmey",
+        "performance_trends": "pIvtaHghach ghoSmey",
+        "quick_navigation": "nom jaH",
+        "recent_updates": "Qav choHmey",
+        "title": "pat He ngoD"
     },
     "role_permissions": {
         "tooltips": {
             "create": "chenmoH",
-            "move_into": "Move Into",
-            "note": "ghobe'te",
+            "move_into": "voD",
+            "note": "QIn",
             "owner": "ghaj",
-            "priority": "Priority",
-            "ro": "Read Only",
+            "priority": "potlh",
+            "ro": "laD neH",
             "select_all": "Hoch wIv",
-            "select_none": "Select ghobe'ne"
+            "select_none": "pagh wIv"
         }
     },
     "role_users": {
-        "get_started": "Get started by adding users to this role.",
-        "heading": "lo'wI'pu' in Role",
+        "get_started": "lo'wI'pu' chel 'e' yItagh.",
+        "heading": "Quch lo'wI'pu'",
         "modal": {
-            "add_user": "chel lo'wI'",
-            "select_user": "Select lo'wI'",
-            "title": "chel lo'wI' to Role"
+            "add_user": "lo'wI' chel",
+            "select_user": "lo'wI' wIv",
+            "title": "Quch lo'wI' chel"
         },
-        "no_users": "ghobe' users assigned",
+        "no_users": "lo'wI' pagh tu'lu'",
         "tooltips": {
-            "remove": "teq from role"
+            "remove": "Quch vo' teq"
         }
     },
     "roles": {
-        "add_role": "chel Role",
-        "description": "Manage system roles and their permissions (OTRS pInRole equivalent)",
-        "edit_role": "choH Role",
-        "manage_users": "Manage Role lo'wI'pu'",
-        "title": "Role Management",
+        "add_role": "Quch chel",
+        "create_new_role": "chu' Quch chenmoH",
+        "update_role": "Quch choH",
+        "description": "pat Quchmey je chaw'meychaj SeH",
+        "edit_role": "Quch choH",
+        "manage_users": "Quch lo'wI'pu' SeH",
+        "title": "Quchmey SeHmeH",
         "tooltips": {
-            "edit": "choH role",
-            "manage_permissions": "Manage group permissions for this role",
-            "manage_users": "Manage users in this role"
-        }
+            "edit": "Quch choH",
+            "manage_permissions": "Quchvam ghom chaw'mey SeH",
+            "manage_users": "Quchvam lo'wI'pu' SeH"
+        },
+        "create_role": "Quch chenmoH"
     },
     "schema_discovery": {
-        "available_tables": "Available Tables",
-        "heading": "Schema Discovery",
-        "query_error": "Query Qagh",
-        "query_results": "Query Results",
-        "sql_explorer": "SQL Query Explorer",
-        "title": "Schema Discovery"
+        "available_tables": "jIlbogh raSmey",
+        "heading": "ngoD tu'",
+        "query_error": "ghel Qagh",
+        "query_results": "ghel ngoD",
+        "sql_explorer": "SQL ghel DaHta'",
+        "title": "ngoD tu'",
+        "generate_module": "bobcho' chenmoH",
+        "save_module": "bobcho' pol",
+        "view_columns": "tIq legh",
+        "generate": "chenmoH"
     },
     "schema_monitoring": {
-        "alerts_heading": "Active Alerts",
-        "heading": "Schema Discovery Monitor",
-        "loading_status": "lulmeH module status...",
-        "module_health_status": "Module Health Dotlh",
-        "performance_heading": "Performance Metrics",
-        "title": "Schema Monitoring"
+        "alerts_heading": "taH ghuHmey",
+        "heading": "ngoD tu' beqwI'",
+        "loading_status": "bobcho' Dotlh lulmeH...",
+        "module_health_status": "bobcho' pIvtaHghach Dotlh",
+        "performance_heading": "pIvtaHghach 'aqroSmey",
+        "title": "ngoD beqwI'"
     },
     "search": {
         "active_filters": "Qap wIvmey:",
@@ -2847,6 +2885,7 @@
         "internal_note": "qach ghItlh",
         "internal_note_default_subject": "ghItlh",
         "internal_only_badge": "qach neH",
+        "customer_wrote_badge": "qorwI' De'wI' ghItlh",
         "keep_current_state": "DaH Dotlh choq",
         "link": "rar",
         "linked_tickets": "rarlu'bogh chaw'mey",
@@ -2859,6 +2898,8 @@
         "merge": "muv",
         "merge_target_placeholder": "muvmeH chaw' mI' lan",
         "merge_ticket": "chaw' muv",
+        "merge_warning": "Hoch mIw vIghaj'be'. Hoch QIn tIk moj.",
+        "target_ticket_number": "DoS chaw' mI'",
         "messages": "QInmey",
         "minutes": "tup",
         "miscellaneous": "latlh",
@@ -2947,7 +2988,6 @@
             "ticket": "ta'"
         },
         "target_state": "DoS Dotlh",
-        "target_ticket_number": "DoS chaw' mI'",
         "ticket": "chaw'",
         "ticket_id": "chaw' ID",
         "ticket_number": "chaw' #",
@@ -3031,6 +3071,7 @@
     },
     "tooltips": {
         "quick_assign": "Quick Assign",
+        "quick_priority": "nom potlh",
         "view_details": "legh De' Sov"
     },
     "types": {
@@ -3085,5 +3126,32 @@
     },
     "welcome": {
         "greeting": "nuqneH"
+    },
+    "theme": {
+        "select_theme": "qorDu'",
+        "appearance": "leS",
+        "light": "wov",
+        "dark": "Hurgh",
+        "synthwave": "Synthwave",
+        "synthwave_desc": "neon retro",
+        "classic": "ngo'",
+        "classic_desc": "Say' 'ej professional",
+        "seventies": "70s vIb",
+        "seventies_desc": "tuj puS rItlh"
+    },
+    "attachments": {
+        "title": "ngoqmey",
+        "add_new": "ngoq chel",
+        "attach_files": "De' rarlu'",
+        "click_to_upload": "pum 'ej ngeH",
+        "or_drag_and_drop": "pagh yIraD",
+        "file_types": "PDF, PNG, JPG, GIF, DOC, XLS, TXT (HochHom 10MB)",
+        "file_too_large": "De' tIn law'",
+        "no_attachments": "ngoq tu'lu'be'",
+        "upload_success": "ngoqmey ngeHlu'ta'",
+        "upload_error": "ngeHlaHbe'",
+        "view": "legh",
+        "download": "Suq",
+        "delete": "DoH"
     }
 }

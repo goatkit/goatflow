@@ -3,127 +3,139 @@
 {% block title %}{{ t("admin.modules.notification_event.title") }} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <!-- Header -->
-        <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-                        {{ t("admin.modules.notification_event.title") }}
-                    </h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        {{ t("admin.modules.notification_event.description") }}
-                    </p>
-                </div>
-                <div class="flex items-center space-x-3">
-                    <a href="/admin"
-                       class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                        <i class="fas fa-arrow-left mr-2"></i>{{ t("common.back") }}
-                    </a>
-                    <a href="/admin/notification-events/new"
-                       class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                        <i class="fas fa-plus mr-2"></i>{{ t("admin.modules.notification_event.actions.new") }}
-                    </a>
-                </div>
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Page header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("admin.modules.notification_event.title") }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.modules.notification_event.description") }}</p>
+            </div>
+            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex space-x-2">
+                <a href="/admin" class="gk-btn-secondary">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ t("common.back") }}
+                </a>
+                <a href="/admin/notification-events/new" class="gk-btn-neon">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    {{ t("admin.modules.notification_event.actions.new") }}
+                </a>
             </div>
         </div>
+    </header>
 
-        <!-- Table -->
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            {{ t("admin.modules.notification_event.fields.name") }}
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            {{ t("admin.modules.notification_event.fields.comments") }}
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            {{ t("admin.modules.notification_event.fields.valid_id") }}
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            {{ t("admin.modules.notification_event.fields.change_time") }}
-                        </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            {{ t("common.actions") }}
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for event in Events %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 {% if event.ValidID != 1 %}opacity-50{% endif %}">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <a href="/admin/notification-events/{{ event.ID }}" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                                {{ event.Name }}
-                            </a>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                            {{ event.Comments|truncatechars:50 }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            {% if event.ValidID == 1 %}
-                            <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                {{ t("common.valid") }}
-                            </span>
-                            {% else %}
-                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                                {{ t("common.invalid") }}
-                            </span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            <span class="datetime-field" data-utc="{{ event.ChangeTime }}">{{ event.ChangeTime }}</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+    <!-- Table -->
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <table class="gk-table">
+            <thead>
+                <tr>
+                    <th scope="col">{{ t("admin.modules.notification_event.fields.name") }}</th>
+                    <th scope="col">{{ t("admin.modules.notification_event.fields.comments") }}</th>
+                    <th scope="col">{{ t("admin.modules.notification_event.fields.valid_id") }}</th>
+                    <th scope="col">{{ t("admin.modules.notification_event.fields.change_time") }}</th>
+                    <th scope="col">{{ t("common.actions") }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in Events %}
+                <tr class="{% if event.ValidID != 1 %}opacity-50{% endif %}">
+                    <td>
+                        <a href="/admin/notification-events/{{ event.ID }}" class="font-medium" style="color: var(--gk-primary);">
+                            {{ event.Name }}
+                        </a>
+                    </td>
+                    <td style="color: var(--gk-text-secondary);">
+                        {{ event.Comments|truncatechars:50 }}
+                    </td>
+                    <td>
+                        {% if event.ValidID == 1 %}
+                        <span class="gk-badge gk-badge-success">{{ t("common.valid") }}</span>
+                        {% else %}
+                        <span class="gk-badge gk-badge-muted">{{ t("common.invalid") }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: var(--gk-text-muted);">
+                        <span class="datetime-field" data-utc="{{ event.ChangeTime }}">{{ event.ChangeTime }}</span>
+                    </td>
+                    <td>
+                        <div class="flex items-center justify-end space-x-2">
                             <a href="/admin/notification-events/{{ event.ID }}"
-                               class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 mr-3"
-                               title="{{ t('common.edit') }}">
-                                <i class="fas fa-edit"></i>
+                                class="p-1 rounded transition-colors hover:bg-white/10"
+                                style="color: var(--gk-primary);"
+                                title="{{ t('common.edit') }}"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
                             </a>
                             <button onclick="deleteNotification({{ event.ID }}, '{{ event.Name|escapejs }}')"
-                                    class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                                    title="{{ t('common.delete') }}">
-                                <i class="fas fa-trash"></i>
+                                class="p-1 rounded transition-colors hover:bg-white/10"
+                                style="color: var(--gk-error);"
+                                title="{{ t('common.delete') }}"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
                             </button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                            <i class="fas fa-bell-slash text-4xl mb-3"></i>
-                            <p>{{ t("admin.modules.notification_event.no_notifications") }}</p>
-                            <a href="/admin/notification-events/new" class="text-blue-600 dark:text-blue-400 hover:underline mt-2 inline-block">
-                                {{ t("admin.modules.notification_event.actions.new") }}
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center" style="color: var(--gk-text-muted);">
+                        <svg class="mx-auto h-12 w-12 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <h3 class="text-sm font-medium mb-1" style="color: var(--gk-text-primary);">{{ t("admin.modules.notification_event.no_notifications") }}</h3>
+                        <p class="text-sm mb-4" style="color: var(--gk-text-muted);">{{ t("admin.modules.notification_event.get_started")|default:"Create your first notification event." }}</p>
+                        <a href="/admin/notification-events/new" class="gk-btn-neon">
+                            {{ t("admin.modules.notification_event.actions.new") }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div class="p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                {{ t("admin.modules.notification_event.delete_title") }}
-            </h3>
-            <p class="text-gray-600 dark:text-gray-400 mb-4">
-                {{ t("admin.modules.notification_event.delete_confirm") }}
-            </p>
-            <p class="text-gray-900 dark:text-white font-medium mb-6" id="deleteNotificationName"></p>
-            <div class="flex justify-end space-x-3">
-                <button onclick="closeDeleteModal()"
-                        class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+<div id="deleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeDeleteModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+            <div class="gk-modal-header">
+                <div class="flex items-center">
+                    <svg class="h-6 w-6 mr-3" style="color: var(--gk-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("admin.modules.notification_event.delete_title") }}</h3>
+                </div>
+                <button type="button" onclick="closeDeleteModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="gk-modal-body">
+                <p class="text-sm mb-2" style="color: var(--gk-text-secondary);">{{ t("admin.modules.notification_event.delete_confirm") }}</p>
+                <p id="deleteNotificationName" class="font-medium" style="color: var(--gk-text-primary);"></p>
+            </div>
+
+            <div class="gk-modal-footer">
+                <button type="button" onclick="closeDeleteModal()" class="gk-btn-secondary">
                     {{ t("common.cancel") }}
                 </button>
-                <button onclick="confirmDelete()"
-                        class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                <button type="button" onclick="confirmDelete()" class="gk-btn-danger">
                     {{ t("common.delete") }}
                 </button>
             </div>
@@ -138,13 +150,11 @@ function deleteNotification(id, name) {
     deleteId = id;
     document.getElementById('deleteNotificationName').textContent = name;
     document.getElementById('deleteModal').classList.remove('hidden');
-    document.getElementById('deleteModal').classList.add('flex');
 }
 
 function closeDeleteModal() {
     deleteId = null;
     document.getElementById('deleteModal').classList.add('hidden');
-    document.getElementById('deleteModal').classList.remove('flex');
 }
 
 async function confirmDelete() {
@@ -161,15 +171,34 @@ async function confirmDelete() {
         const result = await response.json();
 
         if (result.success) {
-            window.location.reload();
+            showToast('Notification deleted successfully', 'success');
+            setTimeout(() => window.location.reload(), 500);
         } else {
-            alert('Error: ' + (result.error || 'Failed to delete notification'));
+            showToast('Error: ' + (result.error || 'Failed to delete notification'), 'error');
         }
     } catch (error) {
-        alert('Error: ' + error.message);
+        showToast('Error: ' + error.message, 'error');
     }
 
     closeDeleteModal();
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeDeleteModal();
+    }
+});
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
+        type === 'error' ? 'bg-red-600' :
+        type === 'success' ? 'bg-green-600' :
+        'bg-blue-600'
+    }`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 </script>
 {% endblock %}

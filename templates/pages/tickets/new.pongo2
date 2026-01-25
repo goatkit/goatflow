@@ -4,25 +4,27 @@
 
 {% block content %}
 
-<div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
+<div class="container mx-auto py-8">
     <div class="md:flex md:items-center md:justify-between mb-8">
         <div class="min-w-0 flex-1">
-            <h2 class="text-2xl font-bold leading-7 text-gray-900 dark:text-white sm:truncate sm:text-3xl sm:tracking-tight">{{ t("tickets.new_ticket") }}</h2>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t("forms.mandatory_note")|default:"All fields marked with an asterisk (*) are mandatory." }}</p>
+            <h2 class="text-2xl font-bold leading-7 gk-heading sm:truncate sm:text-3xl sm:tracking-tight">
+                <span class="gk-text-gradient">{{ t("tickets.new_ticket") }}</span>
+            </h2>
+            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("forms.mandatory_note")|default:"All fields marked with an asterisk (*) are mandatory." }}</p>
         </div>
         <div class="mt-4 flex md:ml-4 md:mt-0">
-            <a href="/tickets" class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">{{ t("tickets.back_to_list")|default:"Back" }}</a>
+            <a href="/tickets" class="gk-btn-secondary">{{ t("tickets.back_to_list")|default:"Back" }}</a>
         </div>
     </div>
 
-    <div id="ticket-form-container" class="bg-white dark:bg-gray-800 shadow rounded-lg transition-all duration-200" x-data="{ }" style="border-left: 4px solid transparent;">
-    <form method="post" action="/api/tickets" hx-post="/api/tickets" hx-target="#form-messages" hx-swap="innerHTML" hx-encoding="multipart/form-data" enctype="multipart/form-data" data-gk-validate class="space-y-6 p-6">
+    <div id="ticket-form-container" class="gk-card-glow transition-all duration-200" x-data="{ }" style="border-left: 4px solid transparent;">
+    <form method="post" action="/api/tickets" hx-post="/api/tickets" hx-target="#form-messages" hx-swap="innerHTML" hx-encoding="multipart/form-data" enctype="multipart/form-data" data-gk-validate class="space-y-6 gk-card-body">
             <div id="form-messages"></div>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <div class="space-y-6">
                     <div>
-                        <label for="subject" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets.subject") }} <span class="text-red-500">*</span></label>
+                        <label for="subject" class="form-label">{{ t("tickets.subject") }} <span style="color: var(--gk-error);">*</span></label>
                         <div class="mt-2">
                             <input type="text"
                                    name="subject"
@@ -32,41 +34,41 @@
                                    data-min-length="3"
                                    data-msg-required-key="validation.required"
                                    data-msg-minlength-key="validation.minlength"
-                                   class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6" />
+                                   class="gk-input-neon" />
                         </div>
                     </div>
                     <div>
-                        <label for="customer_user_input" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.customer_user") }} <span class="text-red-500">*</span></label>
+                        <label for="customer_user_input" class="form-label">{{ t("tickets_form.customer_user") }} <span style="color: var(--gk-error);">*</span></label>
                         <div class="mt-2 relative">
-                            <input type="text" id="customer_user_input" data-typeahead data-gk-autocomplete="customer-user" data-display-template="{firstName} {lastName} ({email})" data-value-field="login" data-min-chars="1" data-hidden-target="customer_user_id" aria-controls="customer_user_suggestions" autocomplete="off" placeholder="{{ t("tickets_form.customer_user_placeholder") }}" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6" required data-msg-required-key="validation.required">
+                            <input type="text" id="customer_user_input" data-typeahead data-gk-autocomplete="customer-user" data-display-template="{firstName} {lastName} ({email})" data-value-field="login" data-min-chars="1" data-hidden-target="customer_user_id" aria-controls="customer_user_suggestions" autocomplete="off" placeholder="{{ t("tickets_form.customer_user_placeholder") }}" class="gk-input-neon" required data-msg-required-key="validation.required">
                             <input type="hidden" name="customer_user_id" id="customer_user_id" required>
-                            <div id="customer_user_suggestions" role="listbox" class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm hidden"></div>
+                            <div id="customer_user_suggestions" role="listbox" class="absolute z-10 mt-1 w-full max-h-60 rounded-md py-1 text-base overflow-auto focus:outline-none sm:text-sm hidden" style="background: var(--gk-bg-elevated); border: 1px solid var(--gk-border-strong); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);"></div>
                         </div>
-                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ t("tickets_form.customer_user_help") }}</p>
+                        <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("tickets_form.customer_user_help") }}</p>
                     </div>
-                    <div id="customer-info-panel" class="hidden border border-gray-200 dark:border-gray-700 rounded-md p-4 bg-gray-50 dark:bg-gray-900"></div>
+                    <div id="customer-info-panel" class="hidden rounded-md p-4" style="background: var(--gk-bg-elevated); border: 1px solid var(--gk-border-default);"></div>
                 </div>
                 <div class="space-y-6">
                     <div>
-                        <label for="priority" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets.priority") }}</label>
+                        <label for="priority" class="form-label">{{ t("tickets.priority") }}</label>
                         <div class="mt-2">
-                            <select name="priority" id="priority" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                            <select name="priority" id="priority" class="gk-select-neon">
                                 {% for priority in Priorities %}<option value="{{ priority.ID }}" {% if priority.ID == 3 %}selected{% endif %}>{{ priority.Name }}</option>{% endfor %}
                             </select>
                         </div>
                     </div>
                     <div>
-                        <label for="queue_id" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets.queue") }}</label>
+                        <label for="queue_id" class="form-label">{{ t("tickets.queue") }}</label>
                         <div class="mt-2">
-                            <select name="queue_id" id="queue_id" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                            <select name="queue_id" id="queue_id" class="gk-select-neon">
                                 {% for queue in Queues %}<option value="{{ queue.ID }}" {% if queue.ID == 1 %}selected{% endif %}>{{ queue.Name }}</option>{% endfor %}
                             </select>
                         </div>
                     </div>
                     <div>
-                        <label for="service_id" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets.service")|default:"Service" }}</label>
+                        <label for="service_id" class="form-label">{{ t("tickets.service")|default:"Service" }}</label>
                         <div class="mt-2">
-                            <select name="service_id" id="service_id" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                            <select name="service_id" id="service_id" class="gk-select-neon">
                                 <option value="">{{ t("tickets_form.no_service")|default:"-- No Service --" }}</option>
                                 {% for service in Services %}<option value="{{ service.ID }}">{{ service.Name }}</option>{% endfor %}
                             </select>
@@ -75,66 +77,64 @@
                     {# Hide Type field (not used like OTRS) but retain default via hidden input #}
                     <input type="hidden" name="type_id" id="type_id" value="{{ Types.0.ID|default:1 }}">
                     <div>
-                        <label for="interaction_type" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.initial_interaction") }}</label>
+                        <label for="interaction_type" class="form-label">{{ t("tickets_form.initial_interaction") }}</label>
                         <div class="mt-2">
-                            <select name="interaction_type" id="interaction_type" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                            <select name="interaction_type" id="interaction_type" class="gk-select-neon">
                                 <option value="email" {% if PreSelectedType == "email" %}selected{% endif %}>{{ t("tickets_form.interaction.email") }} ({{ t("tickets_form.customer_visible") }})</option>
                                 <option value="phone" {% if PreSelectedType == "phone" or not PreSelectedType %}selected{% endif %}>{{ t("tickets_form.interaction.phone") }} ({{ t("tickets_form.customer_visible") }})</option>
                                 <option value="internal_note">{{ t("tickets_form.interaction.internal_note") }} ({{ t("tickets_form.private") }})</option>
                                 <option value="external_note">{{ t("tickets_form.interaction.external_note") }} ({{ t("tickets_form.customer_visible") }})</option>
                             </select>
                         </div>
-                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ t("tickets_form.initial_interaction_help") }}</p>
+                        <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("tickets_form.initial_interaction_help") }}</p>
                     </div>
                 </div>
             </div>
 
             <div>
-                <label id="bodyEditorLabel" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.message") }} <span class="text-red-500">*</span></label>
+                <label id="bodyEditorLabel" class="form-label">{{ t("tickets_form.message") }} <span style="color: var(--gk-error);">*</span></label>
                 <div class="mt-2">
                     {% include "partials/rich_text_editor.pongo2" with EditorID="bodyEditor" FieldName="body" Placeholder=t("tickets_form.body_placeholder") MinHeight="120px" LabelID="bodyEditorLabel" %}
                 </div>
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ t("tickets_form.message_help") }}</p>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("tickets_form.message_help") }}</p>
             </div>
 
             {# Dynamic Fields #}
             {% include "partials/dynamic_fields.pongo2" with DynamicFields=DynamicFields %}
 
             <div>
-                <label class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.attachments") }}</label>
+                <label class="form-label">{{ t("tickets_form.attachments") }}</label>
                 <div class="mt-2">
-                    <div class="flex justify-center rounded-lg border border-dashed border-gray-900/25 dark:border-gray-600 px-6 py-10">
+                    <div class="flex justify-center rounded-lg px-6 py-10" style="border: 2px dashed var(--gk-border-strong); background: var(--gk-bg-elevated);">
                         <div class="text-center">
-                            <svg class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clip-rule="evenodd" /></svg>
-                            <label for="file-upload" class="relative cursor-pointer"><span class="mt-4 text-sm leading-6 text-gray-600 dark:text-gray-400"><span class="font-semibold text-gotrs-600 dark:text-gotrs-400 hover:text-gotrs-500">{{ t("tickets_form.upload_files") }}</span><span class="ml-1">{{ t("tickets_form.or_drag_and_drop") }}</span></span><input id="file-upload" name="attachments" type="file" class="sr-only" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.doc,.docx,.xls,.xlsx"></label>
-                            <p class="text-xs leading-5 text-gray-600 dark:text-gray-400 mt-2">{{ t("tickets_form.upload_hint") }}</p>
-                            <div id="file-list" class="mt-4 text-sm text-gray-600 dark:text-gray-400"></div>
+                            <svg class="mx-auto h-12 w-12" style="color: var(--gk-text-muted);" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clip-rule="evenodd" /></svg>
+                            <label for="file-upload" class="relative cursor-pointer">
+                                <span class="mt-4 text-sm leading-6" style="color: var(--gk-text-secondary);">
+                                    <span class="font-semibold gk-link-neon">{{ t("tickets_form.upload_files") }}</span>
+                                    <span class="ml-1">{{ t("tickets_form.or_drag_and_drop") }}</span>
+                                </span>
+                                <input id="file-upload" name="attachments" type="file" class="sr-only" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.doc,.docx,.xls,.xlsx">
+                            </label>
+                            <p class="text-xs leading-5 mt-2" style="color: var(--gk-text-muted);">{{ t("tickets_form.upload_hint") }}</p>
+                            <div id="file-list" class="mt-4 text-sm" style="color: var(--gk-text-secondary);"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <a href="/tickets" class="inline-flex items-center rounded-md bg-white dark:bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">{{ t("common.cancel")|default:"Cancel" }}</a>
-                <button type="submit" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <span class="htmx-indicator absolute left-0 inset-y-0 flex items-center pl-3"><svg class="animate-spin h-4 w-4 text-gotrs-300" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></span>
-                    {{ t("tickets_form.create_ticket") }}
-                </button>
-            </div>
-
             {# Accounting: Time units (work units) #}
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <div>
-                    <label for="time_units" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.time_units")|default:"Time units (work units)" }}</label>
+                    <label for="time_units" class="form-label">{{ t("tickets_form.time_units")|default:"Time units (work units)" }}</label>
                     <div class="mt-2">
-                        <input type="number" min="0" step="1" name="time_units" id="time_units" placeholder="0" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6" />
+                        <input type="number" min="0" step="1" name="time_units" id="time_units" placeholder="0" class="gk-input-neon" />
                     </div>
-                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ t("tickets_form.time_units_help")|default:"Record work units spent on this ticket." }}</p>
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("tickets_form.time_units_help")|default:"Record work units spent on this ticket." }}</p>
                 </div>
                 <div>
-                    <label for="next_state" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.next_state")|default:"Next Ticket State" }}</label>
+                    <label for="next_state" class="form-label">{{ t("tickets_form.next_state")|default:"Next Ticket State" }}</label>
                     <div class="mt-2">
-                        <select name="next_state" id="next_state" class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                        <select name="next_state" id="next_state" class="gk-select-neon">
                             <option value="" data-state-id="" data-state-type="" selected>{{ t("tickets_form.state.keep_open")|default:"(leave as open)" }}</option>
                             {% if TicketStates %}
                                 {% for state in TicketStates %}
@@ -145,10 +145,23 @@
                         <input type="hidden" name="next_state_id" id="next_state_id" value="">
                     </div>
                     <div class="mt-4" id="pending_until_wrap" style="display:none;">
-                        <label for="pending_until" class="block text-sm font-medium text-gray-900 dark:text-white">{{ t("tickets_form.pending_until")|default:"Pending date (for pending states)" }}</label>
-                        <input type="datetime-local" name="pending_until" id="pending_until" class="mt-2 block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm sm:leading-6">
+                        <label for="pending_until" class="form-label">{{ t("tickets_form.pending_until")|default:"Pending date (for pending states)" }}</label>
+                        <input type="datetime-local" name="pending_until" id="pending_until" class="mt-2 gk-input-neon">
                     </div>
                 </div>
+            </div>
+
+            <div class="flex items-center justify-end space-x-3 pt-6" style="border-top: 1px solid var(--gk-border-default);">
+                <a href="/tickets" class="gk-btn-secondary">{{ t("common.cancel")|default:"Cancel" }}</a>
+                <button type="submit" class="gk-btn-neon">
+                    <span class="htmx-indicator absolute left-0 inset-y-0 flex items-center pl-3">
+                        <svg class="animate-spin h-4 w-4" style="color: var(--gk-primary);" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                    {{ t("tickets_form.create_ticket") }}
+                </button>
             </div>
         </form>
     </div>
@@ -326,7 +339,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Thumbnail for images
             if (file.type && file.type.startsWith('image/')) {
                 const img = document.createElement('img');
-                img.className = 'h-10 w-10 rounded object-cover ring-1 ring-gray-200 dark:ring-gray-700 flex-none';
+                img.className = 'h-10 w-10 rounded object-cover flex-none';
+                img.style.cssText = 'border: 1px solid var(--gk-border-default);';
                 const reader = new FileReader();
                 reader.onload = (ev) => { img.src = ev.target.result; };
                 reader.readAsDataURL(file);
@@ -335,11 +349,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const nameSpan = document.createElement('span');
             nameSpan.className = 'truncate';
+            nameSpan.style.color = 'var(--gk-text-primary)';
             nameSpan.textContent = file.name;
             left.appendChild(nameSpan);
 
             const sizeSpan = document.createElement('span');
-            sizeSpan.className = 'text-xs text-gray-500 flex-none';
+            sizeSpan.className = 'text-xs flex-none';
+            sizeSpan.style.color = 'var(--gk-text-muted)';
             sizeSpan.textContent = `${(file.size / 1024).toFixed(1)} KB`;
 
             li.appendChild(left);
@@ -362,15 +378,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = JSON.parse(evt.detail.xhr.response);
             const successTpl = `{{ t("tickets_form.created_success_redirect") }}`.replace("{{number}}", response.ticket_number || "?");
             document.getElementById('form-messages').innerHTML = `
-                <div class="rounded-md bg-green-50 dark:bg-green-900/20 p-4 mb-4">
+                <div class="rounded-md p-4 mb-4" style="background: var(--gk-success-subtle); border: 1px solid var(--gk-success);">
                     <div class="flex">
                         <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                            <svg class="h-5 w-5" style="color: var(--gk-success);" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.236 4.53L7.53 10.361a.75.75 0 00-1.06 1.06l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" />
                             </svg>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-green-800 dark:text-green-200">${successTpl}</p>
+                            <p class="text-sm font-medium" style="color: var(--gk-success);">${successTpl}</p>
                         </div>
                     </div>
                 </div>`;
@@ -395,15 +411,15 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             document.getElementById('form-messages').innerHTML = `
-                <div class="rounded-md bg-red-50 dark:bg-red-900/20 p-4 mb-4">
+                <div class="rounded-md p-4 mb-4" style="background: var(--gk-error-subtle); border: 1px solid var(--gk-error);">
                     <div class="flex">
                         <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                            <svg class="h-5 w-5" style="color: var(--gk-error);" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
                             </svg>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm font-medium text-red-800 dark:text-red-200">
+                            <p class="text-sm font-medium" style="color: var(--gk-error);">
                                 ${errorMessage}
                             </p>
                         </div>
@@ -440,9 +456,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Fallback colors if database colors not configured
             var fallbackColors = {
-                'agent': '#3b82f6',       // blue-500
-                'system': '#f59e0b',      // amber-500
-                'customer': '#10b981'     // emerald-500
+                'agent': '#00E5FF',       // cyan (primary)
+                'system': '#FF8A3D',      // orange (tertiary)
+                'customer': '#00FF85'     // green (success)
             };
 
             function getColorForType(interactionType) {
@@ -529,10 +545,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             return;
                         }
                         infoPanel.classList.remove('hidden');
-                        infoPanel.innerHTML = '<div class="text-sm">'
-                            + '<div><strong>User:</strong> ' + (u.firstName || '') + ' ' + (u.lastName || '') + ' &lt;' + (u.email || '') + '&gt;</div>'
-                            + (cid ? '<div><strong>Customer ID:</strong> ' + cid + '</div>' : '')
-                            + (u.preferredQueueId ? '<div><strong>Preferred Queue:</strong> ' + (u.preferredQueueName ? (u.preferredQueueName + ' (#' + u.preferredQueueId + ')') : u.preferredQueueId) + '</div>' : '')
+                        infoPanel.innerHTML = '<div class="text-sm" style="color: var(--gk-text-primary);">'
+                            + '<div><strong style="color: var(--gk-primary);">User:</strong> ' + (u.firstName || '') + ' ' + (u.lastName || '') + ' &lt;' + (u.email || '') + '&gt;</div>'
+                            + (cid ? '<div><strong style="color: var(--gk-primary);">Customer ID:</strong> ' + cid + '</div>' : '')
+                            + (u.preferredQueueId ? '<div><strong style="color: var(--gk-primary);">Preferred Queue:</strong> ' + (u.preferredQueueName ? (u.preferredQueueName + ' (#' + u.preferredQueueId + ')') : u.preferredQueueId) + '</div>' : '')
                             + '</div>';
                     }
                 }

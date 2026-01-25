@@ -228,17 +228,12 @@ func HandleCreateInternalNote(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	authorID := GetUserIDFromCtx(c, 0)
 	userName, exists := c.Get("user_name")
 	if !exists {
 		userName = "Test User"
 	}
 
-	// Safe type assertions for user context
-	authorID := 0
-	if id, ok := userID.(int); ok {
-		authorID = id
-	}
 	authorName := "Test User"
 	if name, ok := userName.(string); ok {
 		authorName = name
@@ -384,14 +379,8 @@ func HandleUpdateInternalNote(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	currentUserID := GetUserIDFromCtx(c, 0)
 	userRole, _ := c.Get("user_role")
-
-	// Safe type assertions
-	currentUserID := 0
-	if id, ok := userID.(int); ok {
-		currentUserID = id
-	}
 
 	// Check permissions
 	if userRole != "admin" && note.AuthorID != currentUserID {
@@ -471,14 +460,8 @@ func HandleDeleteInternalNote(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	currentUserID := GetUserIDFromCtx(c, 0)
 	userRole, _ := c.Get("user_role")
-
-	// Safe type assertion
-	currentUserID := 0
-	if id, ok := userID.(int); ok {
-		currentUserID = id
-	}
 
 	// Check permissions
 	if userRole != "admin" && note.AuthorID != currentUserID {
@@ -663,17 +646,12 @@ func handleCreateNoteFromTemplate(c *gin.Context) {
 		templateContent = strings.ReplaceAll(templateContent, placeholder, value)
 	}
 
-	userID, _ := c.Get("user_id")
+	authorID := GetUserIDFromCtx(c, 0)
 	userName, exists := c.Get("user_name")
 	if !exists {
 		userName = "Test User"
 	}
 
-	// Safe type assertions
-	authorID := 0
-	if id, ok := userID.(int); ok {
-		authorID = id
-	}
 	authorName := "Test User"
 	if name, ok := userName.(string); ok {
 		authorName = name

@@ -145,7 +145,8 @@ fi
 METHOD="$1"
 ENDPOINT="$2"
 if [[ -z "$METHOD" ]]; then METHOD="GET"; fi
-BODY="${3:-}"
+# Use API_BODY env var (preserves quotes) or fall back to third positional arg
+BODY="${API_BODY:-${3:-}}"
 
 if [[ "${GOTRS_DEBUG:-}" == "1" || "${VERBOSE:-}" == "1" ]]; then
     echo "DEBUG: METHOD=$METHOD, ENDPOINT=$ENDPOINT, BODY=$BODY"

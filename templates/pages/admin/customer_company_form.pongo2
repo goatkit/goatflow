@@ -1,18 +1,18 @@
 {% extends "layouts/base.pongo2" %}
 {% block title %}{% if IsNew %}New{% else %}Edit{% endif %} Customer Company - Admin{% endblock %}
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
   <div class="mb-6 flex items-center justify-between">
     <div>
-      <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Customer Companies</p>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-        {% if IsNew %}Create New Customer Company{% else %}Edit Customer Company{% endif %}
+      <p class="text-sm font-medium" style="color: var(--gk-text-muted);">Customer Companies</p>
+      <h1 class="text-2xl font-bold gk-heading">
+        <span class="gk-text-gradient">{% if IsNew %}Create New Customer Company{% else %}Edit Customer Company{% endif %}</span>
       </h1>
-      <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+      <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">
   {% if IsNew %}Create a new customer organization{% else %}Manage company settings and portal customization{% endif %}
       </p>
     </div>
-    <a href="/admin/customer/companies" class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+    <a href="/admin/customer/companies" class="gk-btn-secondary">
       <svg class="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
       </svg>
@@ -22,7 +22,7 @@
 
   <!-- Toast notification -->
   {% if SuccessMessage %}
-  <div id="toast" class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+  <div id="toast" class="fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50" style="background: var(--gk-success); color: white;">
     <div class="flex items-center">
       <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -40,17 +40,17 @@
   </script>
   {% endif %}
 
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+  <div class="gk-card-glow rounded-lg overflow-hidden">
     <!-- Tabs -->
-    <div class="border-b border-gray-200 dark:border-gray-700">
+    <div style="border-bottom: 1px solid var(--gk-border);">
       <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
-        <button onclick="switchTab('general')" id="tab-general" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+        <button onclick="switchTab('general')" id="tab-general" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" style="border-color: transparent; color: var(--gk-text-muted);">
           General
         </button>
-        <button onclick="switchTab('portal')" id="tab-portal" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+        <button onclick="switchTab('portal')" id="tab-portal" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" style="border-color: transparent; color: var(--gk-text-muted);">
           Portal Settings
         </button>
-        <button onclick="switchTab('services')" id="tab-services" class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+        <button onclick="switchTab('services')" id="tab-services" class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors" style="border-color: transparent; color: var(--gk-text-muted);">
           Services
         </button>
       </nav>
@@ -61,52 +61,51 @@
       <form method="post" action="{% if IsNew %}/admin/customer/companies{% else %}/admin/customer/companies/{{ Company.customer_id|default:'' }}/edit{% endif %}">
         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div>
-            <label for="customer_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Customer ID *</label>
+            <label for="customer_id" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Customer ID *</label>
             <input type="text" name="customer_id" id="customer_id"
                    value="{{ Company.customer_id|default:'' }}"
                    {% if not IsNew %}readonly{% endif %} required
-                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                   class="gk-input-neon mt-1 block w-full">
           </div>
 
           <div>
-            <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Name *</label>
+            <label for="name" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Company Name *</label>
             <input type="text" name="name" id="name" value="{{ Company.name|default:'' }}" required
-                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                   class="gk-input-neon mt-1 block w-full">
           </div>
 
           <div>
-            <label for="street" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Street Address</label>
+            <label for="street" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Street Address</label>
             <input type="text" name="street" id="street" value="{{ Company.street|default:'' }}"
-                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                   class="gk-input-neon mt-1 block w-full">
           </div>
 
           <div>
-            <label for="zip" class="block text-sm font-medium text-gray-700 dark:text-gray-300">ZIP/Postal Code</label>
+            <label for="zip" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">ZIP/Postal Code</label>
             <input type="text" name="zip" id="zip" value="{{ Company.zip|default:'' }}"
-                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                   class="gk-input-neon mt-1 block w-full">
           </div>
 
           <div>
-            <label for="city" class="block text-sm font-medium text-gray-700 dark:text-gray-300">City</label>
+            <label for="city" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">City</label>
             <input type="text" name="city" id="city" value="{{ Company.city|default:'' }}"
-                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                   class="gk-input-neon mt-1 block w-full">
           </div>
 
           <div>
-            <label for="country" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Country</label>
-            {% include "partials/forms/country_select.pongo2" with field_id="country" field_name="country" selected_country=Company.country|default:'' %}
+            <label for="country" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Country</label>
+            {% include "partials/forms/country_select.pongo2" with field_id="country" field_name="country" selected_country=Company.country|default:'' select_classes="gk-select-neon mt-1 block w-full" %}
           </div>
 
           <div>
-            <label for="url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Website URL</label>
+            <label for="url" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Website URL</label>
             <input type="url" name="url" id="url" value="{{ Company.url|default:'' }}"
-                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                   class="gk-input-neon mt-1 block w-full">
           </div>
 
           <div>
-            <label for="valid_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-            <select name="valid_id" id="valid_id"
-                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+            <label for="valid_id" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Status</label>
+            <select name="valid_id" id="valid_id" class="gk-select-neon mt-1 block w-full">
               <option value="1" {% if Company.valid_id == 1 %}selected{% endif %}>Active</option>
               <option value="2" {% if Company.valid_id == 2 %}selected{% endif %}>Inactive</option>
             </select>
@@ -114,13 +113,13 @@
         </div>
 
         <div class="mt-6">
-          <label for="comments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Comments</label>
+          <label for="comments" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Comments</label>
           <textarea name="comments" id="comments" rows="3"
-                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">{{ Company.comments|default:'' }}</textarea>
+                    class="gk-input-neon mt-1 block w-full">{{ Company.comments|default:'' }}</textarea>
         </div>
 
         <div class="mt-6 flex justify-end">
-          <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
+          <button type="submit" class="gk-btn-neon">
             {% if IsNew %}Create Company{% else %}Update Company{% endif %}
           </button>
         </div>
@@ -130,89 +129,91 @@
     <!-- Portal Settings Tab -->
     <div id="content-portal" class="tab-content p-6 hidden">
       {% if IsNew %}
-      <div class="rounded-md border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/30 p-4 text-sm text-gray-600 dark:text-gray-300">
+      <div class="rounded-md p-4 text-sm" style="border: 1px dashed var(--gk-border); background: var(--gk-bg-tertiary); color: var(--gk-text-secondary);">
         Save the company before configuring portal settings.
       </div>
       {% else %}
       <form method="post" action="/admin/customer/companies/{{ Company.customer_id }}/portal-settings">
         <div class="space-y-6">
           <div>
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("customer_company_form.branding")|default:"Branding" }}</h3>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Customize the appearance of the customer portal</p>
+            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer_company_form.branding")|default:"Branding" }}</h3>
+            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">Customize the appearance of the customer portal</p>
           </div>
 
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
-              <label for="logo_url" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo URL</label>
+              <label for="logo_url" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Logo URL</label>
               <input type="url" name="logo_url" id="logo_url" value="{{ PortalConfig.logo_url|default:'' }}"
-                     class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                     class="gk-input-neon mt-1 block w-full">
             </div>
 
             <div>
-              <label for="custom_domain" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Custom Domain</label>
+              <label for="custom_domain" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Custom Domain</label>
               <input type="text" name="custom_domain" id="custom_domain" value="{{ PortalConfig.custom_domain|default:'' }}" placeholder="portal.company.com"
-                     class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                     class="gk-input-neon mt-1 block w-full">
             </div>
 
             <div>
-              <label for="primary_color" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Primary Color</label>
+              <label for="primary_color" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Primary Color</label>
               <input type="color" name="primary_color" id="primary_color" value="{{ PortalConfig.primary_color|default:'#1e40af' }}"
-                     class="mt-1 h-10 w-20 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
+                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border); background: var(--gk-bg-surface);">
             </div>
 
             <div>
-              <label for="secondary_color" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Secondary Color</label>
+              <label for="secondary_color" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Secondary Color</label>
               <input type="color" name="secondary_color" id="secondary_color" value="{{ PortalConfig.secondary_color|default:'#64748b' }}"
-                     class="mt-1 h-10 w-20 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
+                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border); background: var(--gk-bg-surface);">
             </div>
 
             <div>
-              <label for="header_bg" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Header Background</label>
+              <label for="header_bg" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Header Background</label>
               <input type="color" name="header_bg" id="header_bg" value="{{ PortalConfig.header_bg|default:'#ffffff' }}"
-                     class="mt-1 h-10 w-20 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
+                     class="mt-1 h-10 w-20 rounded-md shadow-sm" style="border: 1px solid var(--gk-border); background: var(--gk-bg-surface);">
             </div>
           </div>
 
           <div>
-            <label for="welcome_message" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Welcome Message</label>
+            <label for="welcome_message" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Welcome Message</label>
             <input type="text" name="welcome_message" id="welcome_message" value="{{ PortalConfig.welcome_message|default:'' }}"
-                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                   class="gk-input-neon mt-1 block w-full">
           </div>
 
           <div>
-            <label for="footer_text" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Footer Text</label>
+            <label for="footer_text" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Footer Text</label>
             <input type="text" name="footer_text" id="footer_text" value="{{ PortalConfig.footer_text|default:'' }}"
-                   class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                   class="gk-input-neon mt-1 block w-full">
           </div>
 
           <div>
-            <label for="custom_css" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Custom CSS</label>
+            <label for="custom_css" class="block text-sm font-medium" style="color: var(--gk-text-secondary);">Custom CSS</label>
             <textarea name="custom_css" id="custom_css" rows="4"
-                      class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm font-mono text-sm">{{ PortalConfig.custom_css|default:'' }}</textarea>
+                      class="gk-input-neon mt-1 block w-full font-mono text-sm">{{ PortalConfig.custom_css|default:'' }}</textarea>
           </div>
 
           <div class="space-y-4">
-            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("customer_company_form.features")|default:"Features" }}</h3>
+            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer_company_form.features")|default:"Features" }}</h3>
 
             <div class="flex items-center">
               <input type="checkbox" name="enable_kb" id="enable_kb" value="1" {% if PortalConfig.enable_kb %}checked{% endif %}
-                     class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 dark:border-gray-600 rounded">
-              <label for="enable_kb" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                     class="h-4 w-4 rounded focus:ring-2"
+                     style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+              <label for="enable_kb" class="ml-2 block text-sm" style="color: var(--gk-text-secondary);">
                 Enable Knowledge Base
               </label>
             </div>
 
             <div class="flex items-center">
               <input type="checkbox" name="enable_downloads" id="enable_downloads" value="1" {% if PortalConfig.enable_downloads %}checked{% endif %}
-                     class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 dark:border-gray-600 rounded">
-              <label for="enable_downloads" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                     class="h-4 w-4 rounded focus:ring-2"
+                     style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+              <label for="enable_downloads" class="ml-2 block text-sm" style="color: var(--gk-text-secondary);">
                 Enable File Downloads
               </label>
             </div>
           </div>
 
           <div class="mt-6 flex justify-end">
-            <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
+            <button type="submit" class="gk-btn-neon">
               Save Portal Settings
             </button>
           </div>
@@ -225,8 +226,8 @@
     <div id="content-services" class="tab-content p-6 hidden">
       <div class="space-y-6">
         <div>
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("customer_company_form.assigned_services")|default:"Assigned Services" }}</h3>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage which services are available to this customer company</p>
+          <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer_company_form.assigned_services")|default:"Assigned Services" }}</h3>
+          <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">Manage which services are available to this customer company</p>
         </div>
 
         <div id="services-list" class="space-y-2">
@@ -234,7 +235,7 @@
         </div>
 
         <div class="mt-6 flex justify-end">
-          <button type="button" onclick="saveServices()" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
+          <button type="button" onclick="saveServices()" class="gk-btn-neon">
             Save Services
           </button>
         </div>
@@ -252,14 +253,15 @@ function switchTab(tabName) {
 
   // Remove active state from all tab buttons
   document.querySelectorAll('[id^="tab-"]').forEach(btn => {
-    btn.classList.remove('border-gotrs-500', 'text-gotrs-600', 'dark:text-gotrs-400');
-    btn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+    btn.style.borderColor = 'transparent';
+    btn.style.color = 'var(--gk-text-muted)';
   });
 
   // Show selected tab
   document.getElementById('content-' + tabName).classList.remove('hidden');
-  document.getElementById('tab-' + tabName).classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
-  document.getElementById('tab-' + tabName).classList.add('border-gotrs-500', 'text-gotrs-600', 'dark:text-gotrs-400');
+  const activeTab = document.getElementById('tab-' + tabName);
+  activeTab.style.borderColor = 'var(--gk-primary)';
+  activeTab.style.color = 'var(--gk-primary)';
 
   // Load services if switching to services tab
   if (tabName === 'services') {
@@ -270,7 +272,7 @@ function switchTab(tabName) {
 {% if IsNew %}
 function loadServices() {
   const container = document.getElementById('services-list');
-  container.innerHTML = '<p class="text-sm text-gray-600 dark:text-gray-300">Save the company to assign services.</p>';
+  container.innerHTML = '<p class="text-sm" style="color: var(--gk-text-muted);">Save the company to assign services.</p>';
 }
 
 function saveServices() {
@@ -279,20 +281,22 @@ function saveServices() {
 {% else %}
 function loadServices() {
   fetch(`/admin/customer/companies/{{ Company.customer_id }}/services`)
-    .then(res => res.json())
+    .then(response => response.json())
     .then(data => {
       const container = document.getElementById('services-list');
       container.innerHTML = '';
 
       data.services.forEach(service => {
         const div = document.createElement('div');
-        div.className = 'flex items-center p-3 border border-gray-200 dark:border-gray-700 rounded-lg';
+        div.className = 'flex items-center p-3 rounded-lg';
+        div.style.border = '1px solid var(--gk-border)';
         div.innerHTML = `
           <input type="checkbox" name="services" value="${service.id}" ${service.assigned ? 'checked' : ''}
-                 class="h-4 w-4 text-gotrs-600 focus:ring-gotrs-500 border-gray-300 dark:border-gray-600 rounded">
+                 class="h-4 w-4 rounded focus:ring-2"
+                 style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
           <div class="ml-3">
-            <div class="text-sm font-medium text-gray-900 dark:text-white">${service.name}</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">${service.description || 'No description'}</div>
+            <div class="text-sm font-medium" style="color: var(--gk-text-primary);">${service.name}</div>
+            <div class="text-xs" style="color: var(--gk-text-muted);">${service.description || 'No description'}</div>
           </div>
         `;
         container.appendChild(div);
@@ -309,7 +313,7 @@ function saveServices() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ services: selectedServices })
   })
-  .then(res => res.json())
+  .then(response => response.json())
   .then(data => {
     if (data.success) {
       alert('{{ t("messages.services_updated_success")|default:"Services updated successfully" }}');

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/gotrs-io/gotrs-ce/internal/constants"
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
 // UserPreferencesService handles user preference operations.
@@ -21,11 +22,11 @@ func NewUserPreferencesService(db *sql.DB) *UserPreferencesService {
 // GetPreference retrieves a user preference by key.
 func (s *UserPreferencesService) GetPreference(userID int, key string) (string, error) {
 	var value []byte
-	query := `
-		SELECT preferences_value 
-		FROM user_preferences 
+	query := database.ConvertPlaceholders(`
+		SELECT preferences_value
+		FROM user_preferences
 		WHERE user_id = ? AND preferences_key = ?
-	`
+	`)
 
 	err := s.db.QueryRow(query, userID, key).Scan(&value)
 	if err != nil {
@@ -39,37 +40,44 @@ func (s *UserPreferencesService) GetPreference(userID int, key string) (string, 
 }
 
 // SetPreference sets a user preference.
+// Uses delete-then-insert within a transaction to avoid duplicates and ensure atomicity.
+// (MySQL reports 0 rows affected when UPDATE sets the same value, which would cause
+// incorrect INSERT with the old update-then-insert pattern.)
 func (s *UserPreferencesService) SetPreference(userID int, key string, value string) error {
-	// First, try to update existing preference
-	updateQuery := `
-		UPDATE user_preferences
-		SET preferences_value = ?
-		WHERE user_id = ? AND preferences_key = ?
-	`
-
-	// Parameters must match query order: value, userID, key
-	result, err := s.db.Exec(updateQuery, []byte(value), userID, key)
+	tx, err := s.db.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to update preference: %w", err)
+		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-
-	// Check if any rows were updated
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	// If no rows were updated, insert new preference
-	if rowsAffected == 0 {
-		insertQuery := `
-			INSERT INTO user_preferences (user_id, preferences_key, preferences_value)
-			VALUES (?, ?, ?)
-		`
-
-		_, err = s.db.Exec(insertQuery, userID, key, []byte(value))
+	defer func() {
 		if err != nil {
-			return fmt.Errorf("failed to insert preference: %w", err)
+			tx.Rollback()
 		}
+	}()
+
+	// Delete any existing rows for this user_id + key (handles duplicates too)
+	deleteQuery := database.ConvertPlaceholders(`
+		DELETE FROM user_preferences
+		WHERE user_id = ? AND preferences_key = ?
+	`)
+
+	_, err = tx.Exec(deleteQuery, userID, key)
+	if err != nil {
+		return fmt.Errorf("failed to delete existing preference: %w", err)
+	}
+
+	// Insert the new value
+	insertQuery := database.ConvertPlaceholders(`
+		INSERT INTO user_preferences (user_id, preferences_key, preferences_value)
+		VALUES (?, ?, ?)
+	`)
+
+	_, err = tx.Exec(insertQuery, userID, key, []byte(value))
+	if err != nil {
+		return fmt.Errorf("failed to insert preference: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil
@@ -77,7 +85,9 @@ func (s *UserPreferencesService) SetPreference(userID int, key string, value str
 
 // DeletePreference removes a user preference.
 func (s *UserPreferencesService) DeletePreference(userID int, key string) error {
-	query := `DELETE FROM user_preferences WHERE user_id = ? AND preferences_key = ?`
+	query := database.ConvertPlaceholders(`
+		DELETE FROM user_preferences WHERE user_id = ? AND preferences_key = ?
+	`)
 
 	_, err := s.db.Exec(query, userID, key)
 	if err != nil {
@@ -145,13 +155,49 @@ func (s *UserPreferencesService) SetLanguage(userID int, lang string) error {
 	return s.SetPreference(userID, "Language", lang)
 }
 
+// GetTheme returns the user's preferred theme.
+// Returns empty string if no preference is set.
+func (s *UserPreferencesService) GetTheme(userID int) string {
+	value, err := s.GetPreference(userID, "Theme")
+	if err != nil || value == "" {
+		return ""
+	}
+	return value
+}
+
+// SetTheme sets the user's preferred theme.
+func (s *UserPreferencesService) SetTheme(userID int, theme string) error {
+	if theme == "" {
+		return s.DeletePreference(userID, "Theme")
+	}
+	return s.SetPreference(userID, "Theme", theme)
+}
+
+// GetThemeMode returns the user's preferred theme mode (light/dark).
+// Returns empty string if no preference is set.
+func (s *UserPreferencesService) GetThemeMode(userID int) string {
+	value, err := s.GetPreference(userID, "ThemeMode")
+	if err != nil || value == "" {
+		return ""
+	}
+	return value
+}
+
+// SetThemeMode sets the user's preferred theme mode (light/dark).
+func (s *UserPreferencesService) SetThemeMode(userID int, mode string) error {
+	if mode == "" {
+		return s.DeletePreference(userID, "ThemeMode")
+	}
+	return s.SetPreference(userID, "ThemeMode", mode)
+}
+
 // GetAllPreferences returns all preferences for a user.
 func (s *UserPreferencesService) GetAllPreferences(userID int) (map[string]string, error) {
-	query := `
-		SELECT preferences_key, preferences_value 
-		FROM user_preferences 
+	query := database.ConvertPlaceholders(`
+		SELECT preferences_key, preferences_value
+		FROM user_preferences
 		WHERE user_id = ?
-	`
+	`)
 
 	rows, err := s.db.Query(query, userID)
 	if err != nil {

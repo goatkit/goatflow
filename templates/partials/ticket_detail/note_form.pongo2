@@ -1,0 +1,208 @@
+{# Add Note Form with Synthwave Styling #}
+{# Required variables: Ticket, TicketStates, RequireNoteTimeUnits, NoteFormDynamicFields, NoteArticleDynamicFields, PendingStateIDs #}
+
+<div class="gk-card p-6" data-testid="add-note-section">
+    <h2 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);" data-testid="add-note-title">{{ t("tickets.add_note")|default:"Add Note" }}</h2>
+    <form id="noteForm" class="space-y-4" enctype="multipart/form-data" data-testid="note-form" data-require-time="{% if RequireNoteTimeUnits %}true{% else %}false{% endif %}" data-pending-states="{% if PendingStateIDs %}{% for sid in PendingStateIDs %}{{ sid }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
+        <div>
+            <label for="note_subject" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                {{ t("tickets.subject")|default:"Subject" }} <span class="text-xs font-normal" style="color: var(--gk-text-muted);">({{ t("tickets.optional")|default:"optional" }})</span>
+            </label>
+            <input type="text" id="note_subject" name="subject" value="{{ t("tickets.internal_note_default_subject")|default:"Note" }}"
+                   data-testid="note-subject-input" aria-label="Note subject"
+                   class="gk-input-neon w-full" />
+        </div>
+
+        <!-- Template Selection for Notes -->
+        {% include "partials/template_selector.pongo2" with QueueID=Ticket.queue_id TicketID=Ticket.id TemplateType="Note" TargetEditorID="noteEditor" SelectID="detailNoteTemplateSelect" %}
+
+        <div>
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="note_visible_customer" name="is_visible_for_customer" value="1"
+                       data-testid="note-visible-checkbox" aria-label="Make note visible to customer"
+                       class="h-4 w-4 rounded" style="accent-color: var(--gk-primary);">
+                <label for="note_visible_customer" class="text-sm" style="color: var(--gk-text-secondary);">{{ t("tickets.visible_for_customer")|default:"Visible to customer" }}</label>
+            </div>
+            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("tickets.visible_for_customer_help")|default:"Leave unchecked to keep this note internal." }}</p>
+        </div>
+
+        <div>
+            <label id="noteEditorLabel" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                {{ t("tickets.note_content")|default:"Note Content" }} <span class="ml-1" style="color: var(--gk-error);">*</span>
+            </label>
+            {% include "partials/rich_text_editor.pongo2" with EditorID="noteEditor" FieldName="body" Placeholder="Add your note or update..." MinHeight="120px" LabelID="noteEditorLabel" %}
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+            <div>
+                <label for="note_next_state" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                    {{ t("tickets.next_state")|default:"Next State" }}
+                </label>
+                <select id="note_next_state" name="next_state_id"
+                        data-testid="note-next-state" aria-label="Next ticket state"
+                        class="gk-select-neon w-full">
+                    <option value="" selected>{{ t("tickets.keep_current_state")|default:"Keep current state" }} ({{ Ticket.status }})</option>
+                    {% for state in TicketStates %}
+                    <option value="{{ state.id }}"{% if state.type_id == 5 %} data-pending="true"{% endif %}>{{ state.name }}</option>
+                    {% endfor %}
+                </select>
+                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("tickets.next_state_help")|default:"Choose a new state or leave unchanged." }}</p>
+            </div>
+            <div id="note_pending_container" class="hidden">
+                <label for="note_pending_until" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                    {{ t("tickets.pending_until")|default:"Pending Until" }} <span class="ml-1" style="color: var(--gk-error);">*</span>
+                </label>
+                <input type="datetime-local" id="note_pending_until" name="pending_until" value="{{ Ticket.pending_until }}"
+                       class="gk-input-neon w-full" />
+                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("tickets.pending_until_help")|default:"Pending states require a follow-up time." }}</p>
+            </div>
+        </div>
+
+        <div>
+            <label for="note_time_units" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                {{ t("tickets.time_units_minutes")|default:"Time Units (minutes)" }}{% if RequireNoteTimeUnits %}<span class="ml-1" style="color: var(--gk-error);">*</span>{% endif %}
+            </label>
+            <input type="number" id="note_time_units" name="time_units" min="{% if RequireNoteTimeUnits %}1{% else %}0{% endif %}" step="1"
+                   placeholder="{% if RequireNoteTimeUnits %}1{% else %}0{% endif %}"{% if RequireNoteTimeUnits %} required aria-required="true"{% endif %}
+                   class="gk-input-neon w-40" />
+            <p class="mt-1 text-xs" style="color: {% if RequireNoteTimeUnits %}var(--gk-error){% else %}var(--gk-text-muted){% endif %};">
+                {% if RequireNoteTimeUnits %}
+                    {{ t("tickets.time_units_required_help")|default:"Entering work minutes is required for each note." }}
+                {% else %}
+                    {{ t("tickets.time_units_help")|default:"Record work minutes to add to this ticket." }}
+                {% endif %}
+            </p>
+        </div>
+
+        {% if NoteFormDynamicFields %}
+        <!-- Dynamic Fields Section -->
+        <div class="pt-4 mt-4" style="border-top: 1px solid var(--gk-border-default);">
+            <h3 class="text-sm font-medium mb-3" style="color: var(--gk-text-secondary);">{{ t("dynamic_fields.title")|default:"Additional Fields" }}</h3>
+            <div class="grid gap-4 md:grid-cols-2">
+                {% for fwc in NoteFormDynamicFields %}
+                <div>
+                    <label for="DynamicField_{{ fwc.Field.Name }}" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                        {{ fwc.Field.Label }}{% if fwc.ConfigValue == 2 %}<span class="ml-1" style="color: var(--gk-error);">*</span>{% endif %}
+                    </label>
+                    {% if fwc.Field.FieldType == "Text" %}
+                    <input type="text" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
+                           {% if fwc.ConfigValue == 2 %}required{% endif %}
+                           class="gk-input-neon w-full" />
+                    {% elif fwc.Field.FieldType == "TextArea" %}
+                    <textarea id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}" rows="3"
+                              {% if fwc.ConfigValue == 2 %}required{% endif %}
+                              class="gk-input-neon w-full"></textarea>
+                    {% elif fwc.Field.FieldType == "Checkbox" %}
+                    <input type="checkbox" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}" value="1"
+                           class="h-4 w-4 rounded" style="accent-color: var(--gk-primary);" />
+                    {% elif fwc.Field.FieldType == "Date" %}
+                    <input type="date" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
+                           {% if fwc.ConfigValue == 2 %}required{% endif %}
+                           class="gk-input-neon w-full" />
+                    {% elif fwc.Field.FieldType == "DateTime" %}
+                    <input type="datetime-local" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
+                           {% if fwc.ConfigValue == 2 %}required{% endif %}
+                           class="gk-input-neon w-full" />
+                    {% elif fwc.Field.FieldType == "Dropdown" %}
+                    <select id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
+                            {% if fwc.ConfigValue == 2 %}required{% endif %}
+                            class="gk-select-neon w-full">
+                        <option value="">-- {{ t("forms.select")|default:"Select" }} --</option>
+                        {% if fwc.Field.Config and fwc.Field.Config.PossibleValues %}
+                        {% for key, val in fwc.Field.Config.PossibleValues %}
+                        <option value="{{ key }}">{{ val }}</option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                    {% elif fwc.Field.FieldType == "Multiselect" %}
+                    <select id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}[]" multiple
+                            {% if fwc.ConfigValue == 2 %}required{% endif %}
+                            class="gk-select-neon w-full">
+                        {% if fwc.Field.Config and fwc.Field.Config.PossibleValues %}
+                        {% for key, val in fwc.Field.Config.PossibleValues %}
+                        <option value="{{ key }}">{{ val }}</option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if NoteArticleDynamicFields %}
+        <!-- Article-Level Dynamic Fields Section -->
+        <div class="pt-4 mt-4" style="border-top: 1px solid var(--gk-border-default);">
+            <h3 class="text-sm font-medium mb-3" style="color: var(--gk-text-secondary);">{{ t("dynamic_fields.article_fields")|default:"Article Fields" }}</h3>
+            <div class="grid gap-4 md:grid-cols-2">
+                {% for fwc in NoteArticleDynamicFields %}
+                <div>
+                    <label for="ArticleDynamicField_{{ fwc.Field.Name }}" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                        {{ fwc.Field.Label }}{% if fwc.ConfigValue == 2 %}<span class="ml-1" style="color: var(--gk-error);">*</span>{% endif %}
+                    </label>
+                    {% if fwc.Field.FieldType == "Text" %}
+                    <input type="text" id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}"
+                           {% if fwc.ConfigValue == 2 %}required{% endif %}
+                           class="gk-input-neon w-full" />
+                    {% elif fwc.Field.FieldType == "TextArea" %}
+                    <textarea id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}" rows="3"
+                              {% if fwc.ConfigValue == 2 %}required{% endif %}
+                              class="gk-input-neon w-full"></textarea>
+                    {% elif fwc.Field.FieldType == "Checkbox" %}
+                    <input type="checkbox" id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}" value="1"
+                           class="h-4 w-4 rounded" style="accent-color: var(--gk-primary);" />
+                    {% elif fwc.Field.FieldType == "Date" %}
+                    <input type="date" id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}"
+                           {% if fwc.ConfigValue == 2 %}required{% endif %}
+                           class="gk-input-neon w-full" />
+                    {% elif fwc.Field.FieldType == "DateTime" %}
+                    <input type="datetime-local" id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}"
+                           {% if fwc.ConfigValue == 2 %}required{% endif %}
+                           class="gk-input-neon w-full" />
+                    {% elif fwc.Field.FieldType == "Dropdown" %}
+                    <select id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}"
+                            {% if fwc.ConfigValue == 2 %}required{% endif %}
+                            class="gk-select-neon w-full">
+                        <option value="">-- {{ t("forms.select")|default:"Select" }} --</option>
+                        {% if fwc.Field.Config and fwc.Field.Config.PossibleValues %}
+                        {% for key, val in fwc.Field.Config.PossibleValues %}
+                        <option value="{{ key }}">{{ val }}</option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                    {% elif fwc.Field.FieldType == "Multiselect" %}
+                    <select id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}[]" multiple
+                            {% if fwc.ConfigValue == 2 %}required{% endif %}
+                            class="gk-select-neon w-full">
+                        {% if fwc.Field.Config and fwc.Field.Config.PossibleValues %}
+                        {% for key, val in fwc.Field.Config.PossibleValues %}
+                        <option value="{{ key }}">{{ val }}</option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Attachments for Note -->
+        <div>
+            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                {{ t("tickets.attachments")|default:"Attachments" }}
+            </label>
+            <input type="file" name="attachments" multiple
+                   class="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:cursor-pointer"
+                   style="color: var(--gk-text-secondary); file:background: var(--gk-bg-elevated); file:color: var(--gk-primary);">
+            <div id="note-template-attachments" class="mt-2"></div>
+        </div>
+
+        <div class="flex justify-end">
+            <button type="submit" class="gk-btn-neon">
+                {{ t("tickets.add_note")|default:"Add Note" }}
+            </button>
+        </div>
+    </form>
+</div>

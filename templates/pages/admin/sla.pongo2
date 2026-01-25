@@ -14,123 +14,136 @@ input[type="number"] {
     -moz-appearance: textfield;
 }
 </style>
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <!-- Header -->
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex justify-between items-center">
-                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ t("sla.title")|default:"SLA Management" }}</h1>
-                <button onclick="openSLAModal()" class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600" title="{{ t("sla.tooltips.add_new")|default:"Add new SLA" }}">
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("sla.title")|default:"SLA Management" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                    {{ t("sla.description")|default:"Manage Service Level Agreements" }}
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <button onclick="openSLAModal()" class="gk-btn-neon" title="{{ t('sla.tooltips.add_new')|default:'Add new SLA' }}">
                     <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
                     </svg>
-                    Add SLA
+                    {{ t("sla.add_sla")|default:"Add SLA" }}
                 </button>
             </div>
         </div>
+    </header>
 
-        <!-- Filters -->
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <form method="GET" action="/admin/sla" class="flex flex-wrap gap-4">
-                <div class="flex-1 min-w-[200px]">
-                    <input type="text" name="search" value="{{ SearchQuery }}"
-                           placeholder="Search SLAs..."
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
-                </div>
-                <div>
-                    <select name="valid" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        <option value="all" {% if ValidFilter == "all" %}selected{% endif %}>All Status</option>
-                        <option value="valid" {% if ValidFilter == "valid" %}selected{% endif %}>Valid Only</option>
-                        <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>Invalid Only</option>
-                    </select>
-                </div>
-                <button type="submit" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" title="{{ t("sla.tooltips.apply_filters")|default:"Apply filters" }}">
-                    Filter
-                </button>
-                {% if SearchQuery or ValidFilter != "all" %}
-                <a href="/admin/sla" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg" title="{{ t("sla.tooltips.clear_filters")|default:"Clear all filters" }}">
-                    Clear
-                </a>
-                {% endif %}
-            </form>
-        </div>
+    <!-- Filters -->
+    <div class="mb-6 gk-card-glow rounded-lg p-4">
+        <form method="GET" action="/admin/sla" class="flex flex-wrap gap-4 items-end">
+            <div class="flex-1 min-w-[200px]">
+                <label for="searchInput" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.search")|default:"Search" }}</label>
+                <input type="text" name="search" id="searchInput" value="{{ SearchQuery }}"
+                       placeholder="{{ t('sla.search_placeholder')|default:'Search SLAs...' }}"
+                       class="gk-input-neon w-full">
+            </div>
+            <div class="min-w-[150px]">
+                <label for="validFilter" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.status")|default:"Status" }}</label>
+                <select name="valid" id="validFilter" class="gk-select-neon w-full">
+                    <option value="all" {% if ValidFilter == "all" %}selected{% endif %}>{{ t("common.all_status")|default:"All Status" }}</option>
+                    <option value="valid" {% if ValidFilter == "valid" %}selected{% endif %}>{{ t("common.valid_only")|default:"Valid Only" }}</option>
+                    <option value="invalid" {% if ValidFilter == "invalid" %}selected{% endif %}>{{ t("common.invalid_only")|default:"Invalid Only" }}</option>
+                </select>
+            </div>
+            <button type="submit" class="gk-btn-secondary" title="{{ t('sla.tooltips.apply_filters')|default:'Apply filters' }}">
+                {{ t("common.filter")|default:"Filter" }}
+            </button>
+            {% if SearchQuery or ValidFilter != "all" %}
+            <a href="/admin/sla" class="gk-btn-secondary" title="{{ t('sla.tooltips.clear_filters')|default:'Clear all filters' }}">
+                {{ t("common.clear")|default:"Clear" }}
+            </a>
+            {% endif %}
+        </form>
+    </div>
 
-        <!-- SLA List -->
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 dark:bg-gray-900">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            <a href="?sort=id&order={% if SortBy == 'id' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
-                                ID {% if SortBy == 'id' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-                            </a>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            <a href="?sort=name&order={% if SortBy == 'name' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
-                                Name {% if SortBy == 'name' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-                            </a>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            <a href="?sort=first_response_time&order={% if SortBy == 'first_response_time' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
-                                First Response {% if SortBy == 'first_response_time' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-                            </a>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            <a href="?sort=solution_time&order={% if SortBy == 'solution_time' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
-                                Solution Time {% if SortBy == 'solution_time' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-                            </a>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Calendar</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            <a href="?sort=ticket_count&order={% if SortBy == 'ticket_count' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}">
-                                Tickets {% if SortBy == 'ticket_count' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
-                            </a>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for sla in SLAs %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{{ sla.ID }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{{ sla.Name }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {% if sla.FirstResponseTime %}
-                                {{ sla.FirstResponseTime }} min
-                            {% else %}
-                                <span class="text-gray-400">-</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {% if sla.SolutionTime %}
-                                {{ sla.SolutionTime }} min
-                            {% else %}
-                                <span class="text-gray-400">-</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {% if sla.CalendarName %}
-                                {{ sla.CalendarName }}
-                            {% else %}
-                                <span class="text-gray-400">24x7</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {% if sla.TicketCount > 0 %}
-                                <span class="text-gotrs-blue">{{ sla.TicketCount }}</span>
-                            {% else %}
-                                <span class="text-gray-400">0</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                            {% if sla.ValidID == 1 %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">Valid</span>
-                            {% else %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">Invalid</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+    <!-- SLA Table -->
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <table class="gk-table">
+            <thead>
+                <tr>
+                    <th scope="col">
+                        <a href="?sort=id&order={% if SortBy == 'id' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}" style="color: inherit;">
+                            {{ t("common.id")|default:"ID" }} {% if SortBy == 'id' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th scope="col">
+                        <a href="?sort=name&order={% if SortBy == 'name' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}" style="color: inherit;">
+                            {{ t("common.name")|default:"Name" }} {% if SortBy == 'name' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th scope="col">
+                        <a href="?sort=first_response_time&order={% if SortBy == 'first_response_time' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}" style="color: inherit;">
+                            {{ t("sla.first_response")|default:"First Response" }} {% if SortBy == 'first_response_time' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th scope="col">
+                        <a href="?sort=solution_time&order={% if SortBy == 'solution_time' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}" style="color: inherit;">
+                            {{ t("sla.solution_time")|default:"Solution Time" }} {% if SortBy == 'solution_time' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th scope="col">{{ t("sla.calendar")|default:"Calendar" }}</th>
+                    <th scope="col">
+                        <a href="?sort=ticket_count&order={% if SortBy == 'ticket_count' and SortOrder == 'asc' %}desc{% else %}asc{% endif %}&search={{ SearchQuery }}&valid={{ ValidFilter }}" style="color: inherit;">
+                            {{ t("common.tickets")|default:"Tickets" }} {% if SortBy == 'ticket_count' %}{% if SortOrder == 'asc' %}↑{% else %}↓{% endif %}{% endif %}
+                        </a>
+                    </th>
+                    <th scope="col">{{ t("common.status")|default:"Status" }}</th>
+                    <th scope="col">{{ t("common.actions")|default:"Actions" }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sla in SLAs %}
+                <tr>
+                    <td style="color: var(--gk-text-primary);">{{ sla.ID }}</td>
+                    <td>
+                        <span class="font-medium" style="color: var(--gk-text-primary);">{{ sla.Name }}</span>
+                    </td>
+                    <td style="color: var(--gk-text-primary);">
+                        {% if sla.FirstResponseTime %}
+                            {{ sla.FirstResponseTime }} {{ t("common.min")|default:"min" }}
+                        {% else %}
+                            <span style="color: var(--gk-text-muted);">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: var(--gk-text-primary);">
+                        {% if sla.SolutionTime %}
+                            {{ sla.SolutionTime }} {{ t("common.min")|default:"min" }}
+                        {% else %}
+                            <span style="color: var(--gk-text-muted);">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: var(--gk-text-primary);">
+                        {% if sla.CalendarName %}
+                            {{ sla.CalendarName }}
+                        {% else %}
+                            <span style="color: var(--gk-text-muted);">24x7</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if sla.TicketCount > 0 %}
+                            <span style="color: var(--gk-primary);">{{ sla.TicketCount }}</span>
+                        {% else %}
+                            <span style="color: var(--gk-text-muted);">0</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if sla.ValidID == 1 %}
+                            <span class="gk-badge gk-badge-success">{{ t("common.valid")|default:"Valid" }}</span>
+                        {% else %}
+                            <span class="gk-badge gk-badge-error">{{ t("common.invalid")|default:"Invalid" }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="flex items-center space-x-2">
                             <button onclick="editSLA({
                                 id: {{ sla.ID }},
                                 name: '{{ sla.Name }}',
@@ -143,14 +156,15 @@ input[type="number"] {
                                 solution_notify: {% if sla.SolutionNotify %}{{ sla.SolutionNotify }}{% else %}null{% endif %},
                                 comments: {% if sla.Comments %}'{{ sla.Comments }}'{% else %}null{% endif %},
                                 valid_id: {{ sla.ValidID }}
-                            })" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3" title="{{ t("sla.tooltips.edit")|default:"Edit SLA" }}">
+                            })" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-primary);" title="{{ t('sla.tooltips.edit')|default:'Edit SLA' }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                                 </svg>
                             </button>
                             <button onclick="toggleSLAStatus({{ sla.ID }}, {{ sla.ValidID }}, '{{ sla.Name }}')"
-                                    class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
-                                    title="{% if sla.ValidID == 1 %}Deactivate SLA{% else %}Activate SLA{% endif %}">
+                                    class="p-1 rounded transition-colors hover:bg-white/10"
+                                    style="color: {% if sla.ValidID == 1 %}var(--gk-warning){% else %}var(--gk-success){% endif %};"
+                                    title="{% if sla.ValidID == 1 %}{{ t('sla.deactivate')|default:'Deactivate SLA' }}{% else %}{{ t('sla.activate')|default:'Activate SLA' }}{% endif %}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     {% if sla.ValidID == 1 %}
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
@@ -159,138 +173,141 @@ input[type="number"] {
                                     {% endif %}
                                 </svg>
                             </button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                            No SLAs found. Click "Add SLA" to create one.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="px-6 py-12 text-center" style="color: var(--gk-text-muted);">
+                        {{ t("sla.no_slas")|default:"No SLAs found. Click \"Add SLA\" to create one." }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
 <!-- SLA Modal -->
-<div id="slaModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 id="modalTitle" class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("sla.add_sla")|default:"Add SLA" }}</h2>
+<div id="slaModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeSLAModal()"></div>
+
+        <div class="gk-modal inline-block text-left overflow-hidden transform transition-all sm:my-8 sm:max-w-2xl sm:w-full max-h-[90vh] overflow-y-auto">
+            <div class="gk-modal-header">
+                <div class="flex items-center">
+                    <svg class="h-6 w-6 mr-3" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h2 id="modalTitle" class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("sla.add_sla")|default:"Add SLA" }}</h2>
+                </div>
+                <button type="button" onclick="closeSLAModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <form id="slaForm" onsubmit="saveSLA(event)">
+                <div class="gk-modal-body space-y-4">
+                    <input type="hidden" id="slaId" name="id">
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.name")|default:"Name" }} <span style="color: var(--gk-error);">*</span></label>
+                        <input type="text" id="slaName" name="name" required class="gk-input-neon w-full">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("sla.calendar")|default:"Calendar" }}</label>
+                        <select id="slaCalendar" name="calendar_name" class="gk-select-neon w-full">
+                            <option value="">24x7 ({{ t("common.default")|default:"Default" }})</option>
+                            {% for calendar in Calendars %}
+                            <option value="{{ calendar }}">{{ calendar }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("sla.first_response_time")|default:"First Response Time" }} <span style="color: var(--gk-error);">*</span></label>
+                            <div class="flex gap-2">
+                                <input type="number" id="slaFirstResponseValue" min="0" required class="gk-input-neon flex-1">
+                                <select id="slaFirstResponseUnit" class="gk-select-neon w-24">
+                                    <option value="1">{{ t("common.minutes")|default:"Min" }}</option>
+                                    <option value="60">{{ t("common.hours")|default:"Hours" }}</option>
+                                    <option value="1440">{{ t("common.days")|default:"Days" }}</option>
+                                </select>
+                            </div>
+                            <input type="hidden" id="slaFirstResponse" name="first_response_time">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("sla.notify_before")|default:"Notify Before (%)" }}</label>
+                            <input type="number" id="slaFirstResponseNotify" name="first_response_notify" min="0" max="100" placeholder="e.g. 20" class="gk-input-neon w-full">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("sla.update_time")|default:"Update Time" }} <span style="color: var(--gk-error);">*</span></label>
+                            <div class="flex gap-2">
+                                <input type="number" id="slaUpdateTimeValue" min="0" required class="gk-input-neon flex-1">
+                                <select id="slaUpdateTimeUnit" class="gk-select-neon w-24">
+                                    <option value="1">{{ t("common.minutes")|default:"Min" }}</option>
+                                    <option value="60">{{ t("common.hours")|default:"Hours" }}</option>
+                                    <option value="1440">{{ t("common.days")|default:"Days" }}</option>
+                                </select>
+                            </div>
+                            <input type="hidden" id="slaUpdateTime" name="update_time">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("sla.notify_before")|default:"Notify Before (%)" }}</label>
+                            <input type="number" id="slaUpdateNotify" name="update_notify" min="0" max="100" placeholder="e.g. 20" class="gk-input-neon w-full">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("sla.solution_time")|default:"Solution Time" }} <span style="color: var(--gk-error);">*</span></label>
+                            <div class="flex gap-2">
+                                <input type="number" id="slaSolutionTimeValue" min="0" required class="gk-input-neon flex-1">
+                                <select id="slaSolutionTimeUnit" class="gk-select-neon w-24">
+                                    <option value="1">{{ t("common.minutes")|default:"Min" }}</option>
+                                    <option value="60">{{ t("common.hours")|default:"Hours" }}</option>
+                                    <option value="1440">{{ t("common.days")|default:"Days" }}</option>
+                                </select>
+                            </div>
+                            <input type="hidden" id="slaSolutionTime" name="solution_time">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("sla.notify_before")|default:"Notify Before (%)" }}</label>
+                            <input type="number" id="slaSolutionNotify" name="solution_notify" min="0" max="100" placeholder="e.g. 20" class="gk-input-neon w-full">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.comments")|default:"Comments" }}</label>
+                        <textarea id="slaComments" name="comments" rows="3" class="gk-input-neon w-full"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.status")|default:"Status" }}</label>
+                        <select id="slaValidId" name="valid_id" class="gk-select-neon w-full">
+                            <option value="1">{{ t("common.valid")|default:"Valid" }}</option>
+                            <option value="2">{{ t("common.invalid")|default:"Invalid" }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="gk-modal-footer">
+                    <button type="button" onclick="closeSLAModal()" class="gk-btn-secondary">
+                        {{ t("common.cancel")|default:"Cancel" }}
+                    </button>
+                    <button type="submit" class="gk-btn-neon">
+                        {{ t("common.save")|default:"Save" }}
+                    </button>
+                </div>
+            </form>
         </div>
-        <form id="slaForm" onsubmit="saveSLA(event)">
-            <div class="p-6 space-y-4">
-                <input type="hidden" id="slaId" name="id">
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
-                    <input type="text" id="slaName" name="name" required
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Calendar</label>
-                    <select id="slaCalendar" name="calendar_name"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        <option value="">24x7 (Default)</option>
-                        {% for calendar in Calendars %}
-                        <option value="{{ calendar }}">{{ calendar }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Response Time *</label>
-                        <div class="flex gap-2">
-                            <input type="number" id="slaFirstResponseValue" min="0" required
-                                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                            <select id="slaFirstResponseUnit" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                <option value="1">Minutes</option>
-                                <option value="60">Hours</option>
-                                <option value="1440">Days</option>
-                            </select>
-                        </div>
-                        <input type="hidden" id="slaFirstResponse" name="first_response_time">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notify Before (% of time)</label>
-                        <input type="number" id="slaFirstResponseNotify" name="first_response_notify" min="0" max="100" placeholder="e.g. 20"
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Update Time *</label>
-                        <div class="flex gap-2">
-                            <input type="number" id="slaUpdateTimeValue" min="0" required
-                                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                            <select id="slaUpdateTimeUnit" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                <option value="1">Minutes</option>
-                                <option value="60">Hours</option>
-                                <option value="1440">Days</option>
-                            </select>
-                        </div>
-                        <input type="hidden" id="slaUpdateTime" name="update_time">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notify Before (% of time)</label>
-                        <input type="number" id="slaUpdateNotify" name="update_notify" min="0" max="100" placeholder="e.g. 20"
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Solution Time *</label>
-                        <div class="flex gap-2">
-                            <input type="number" id="slaSolutionTimeValue" min="0" required
-                                   class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                            <select id="slaSolutionTimeUnit" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                <option value="1">Minutes</option>
-                                <option value="60">Hours</option>
-                                <option value="1440">Days</option>
-                            </select>
-                        </div>
-                        <input type="hidden" id="slaSolutionTime" name="solution_time">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notify Before (% of time)</label>
-                        <input type="number" id="slaSolutionNotify" name="solution_notify" min="0" max="100" placeholder="e.g. 20"
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comments</label>
-                    <textarea id="slaComments" name="comments" rows="3"
-                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                    <select id="slaValidId" name="valid_id"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        <option value="1">Valid</option>
-                        <option value="2">Invalid</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                <button type="button" onclick="closeSLAModal()"
-                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                    Cancel
-                </button>
-                <button type="submit"
-                        class="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:text-sm">
-                    Save
-                </button>
-            </div>
-        </form>
     </div>
 </div>
 
@@ -298,7 +315,7 @@ input[type="number"] {
 <script>
 // SLA Modal Functions
 function openSLAModal() {
-    document.getElementById('modalTitle').textContent = 'Add SLA';
+    document.getElementById('modalTitle').textContent = '{{ t("sla.add_sla")|default:"Add SLA" }}';
     document.getElementById('slaForm').reset();
     document.getElementById('slaId').value = '';
     // Reset unit dropdowns to minutes
@@ -320,7 +337,7 @@ function minutesToUnit(minutes) {
 }
 
 function editSLA(sla) {
-    document.getElementById('modalTitle').textContent = 'Edit SLA';
+    document.getElementById('modalTitle').textContent = '{{ t("sla.edit_sla")|default:"Edit SLA" }}';
     document.getElementById('slaId').value = sla.id;
     document.getElementById('slaName').value = sla.name;
     document.getElementById('slaCalendar').value = sla.calendar_name || '';
@@ -363,7 +380,7 @@ function saveSLA(event) {
     // Disable submit button to prevent double submission
     const submitBtn = event.target.querySelector('button[type="submit"]');
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Saving...';
+    submitBtn.textContent = '{{ t("common.saving")|default:"Saving..." }}';
 
     // Convert value+unit pairs to minutes
     const getMinutes = (valueId, unitId) => {
@@ -424,18 +441,18 @@ function saveSLA(event) {
             // Immediate reload for better UX
             window.location.reload();
         } else {
-            showToast(result.error || 'An error occurred', 'error');
+            showToast(result.error || '{{ t("errors.error_occurred")|default:"An error occurred" }}', 'error');
             // Re-enable button on error
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Save';
+            submitBtn.textContent = '{{ t("common.save")|default:"Save" }}';
         }
     })
     .catch(error => {
         console.error('Save error:', error);
-        showToast('An error occurred: ' + error.message, 'error');
+        showToast('{{ t("errors.error_occurred")|default:"An error occurred" }}: ' + error.message, 'error');
         // Re-enable button on error
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Save';
+        submitBtn.textContent = '{{ t("common.save")|default:"Save" }}';
     });
 }
 
@@ -462,17 +479,17 @@ function toggleSLAStatus(id, currentStatus, name) {
         })
         .then(result => {
             if (result.success) {
-                showToast(`SLA ${action}d successfully`, 'success');
+                showToast(`{{ t("messages.sla")|default:"SLA" }} ${action}d {{ t("messages.successfully")|default:"successfully" }}`, 'success');
                 setTimeout(() => {
                     window.location.reload();
                 }, 500);
             } else {
-                showToast(result.error || 'An error occurred', 'error');
+                showToast(result.error || '{{ t("errors.error_occurred")|default:"An error occurred" }}', 'error');
             }
         })
         .catch(error => {
             console.error('Toggle error:', error);
-            showToast('An error occurred: ' + error.message, 'error');
+            showToast('{{ t("errors.error_occurred")|default:"An error occurred" }}: ' + error.message, 'error');
         });
     }
 }
@@ -495,11 +512,11 @@ document.getElementById('slaForm').addEventListener('keypress', function(event) 
 // Toast notification
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
-    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
-        type === 'error' ? 'bg-red-600' :
-        type === 'success' ? 'bg-green-600' :
-        'bg-blue-600'
-    }`;
+    const bgColor = type === 'error' ? 'var(--gk-error)' :
+                    type === 'success' ? 'var(--gk-success)' :
+                    'var(--gk-primary)';
+    toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50';
+    toast.style.background = bgColor;
     toast.textContent = message;
 
     document.body.appendChild(toast);

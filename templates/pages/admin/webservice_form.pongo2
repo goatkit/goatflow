@@ -3,26 +3,28 @@
 {% block title %}{% if IsNew %}{{ t("admin.webservices.new") }}{% else %}{{ t("admin.webservices.edit") }}{% endif %}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8" x-data="webserviceForm()">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+<div class="container mx-auto px-4 py-8 min-h-screen" x-data="webserviceForm()">
+    <div class="gk-card-glow rounded-lg">
         <!-- Header -->
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div class="p-6 border-b" style="border-color: var(--gk-border);">
             <div class="flex justify-between items-center">
                 <div>
                     <nav class="flex mb-2" aria-label="Breadcrumb">
                         <ol class="inline-flex items-center space-x-1 md:space-x-3">
                             <li class="inline-flex items-center">
-                                <a href="/admin/webservices" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">{{ t("admin.webservices.title") }}</a>
+                                <a href="/admin/webservices" class="text-sm transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">{{ t("admin.webservices.title") }}</a>
                             </li>
                             <li>
                                 <div class="flex items-center">
-                                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
-                                    <span class="ml-1 text-sm font-medium text-gray-500 dark:text-gray-400">{% if IsNew %}{{ t("admin.webservices.new") }}{% else %}{{ Webservice.Name }}{% endif %}</span>
+                                    <svg class="w-4 h-4" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg>
+                                    <span class="ml-1 text-sm font-medium" style="color: var(--gk-text-muted);">{% if IsNew %}{{ t("admin.webservices.new") }}{% else %}{{ Webservice.Name }}{% endif %}</span>
                                 </div>
                             </li>
                         </ol>
                     </nav>
-                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{% if IsNew %}{{ t("admin.webservices.new") }}{% else %}{{ t("admin.webservices.edit") }}: {{ Webservice.Name }}{% endif %}</h1>
+                    <h1 class="text-2xl font-semibold gk-heading">
+                        <span class="gk-text-gradient">{% if IsNew %}{{ t("admin.webservices.new") }}{% else %}{{ t("admin.webservices.edit") }}: {{ Webservice.Name }}{% endif %}</span>
+                    </h1>
                 </div>
             </div>
         </div>
@@ -30,20 +32,19 @@
         <!-- Form -->
         <form @submit.prevent="saveWebservice()" class="p-6 space-y-6">
             <!-- Basic Settings -->
-            <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.webservices.basic_settings") }}</h3>
+            <div class="rounded-lg p-4" style="background: var(--gk-bg-tertiary);">
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.webservices.basic_settings") }}</h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.name") }} *</label>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.name") }} <span style="color: var(--gk-error);">*</span></label>
                         <input type="text" x-model="formData.name" required
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                               class="gk-input-neon w-full"
                                placeholder="{{ t('admin.webservices.name_placeholder') }}">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("common.status") }}</label>
-                        <select x-model="formData.valid_id"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.status") }}</label>
+                        <select x-model="formData.valid_id" class="gk-select-neon w-full">
                             <option value="1">{{ t("common.valid") }}</option>
                             <option value="2">{{ t("common.invalid") }}</option>
                         </select>
@@ -51,46 +52,44 @@
                 </div>
 
                 <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.description") }}</label>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.description") }}</label>
                     <textarea x-model="formData.description" rows="2"
-                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                              class="gk-input-neon w-full"
                               placeholder="{{ t('admin.webservices.description_placeholder') }}"></textarea>
                 </div>
 
                 <div class="mt-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.remote_system") }}</label>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.remote_system") }}</label>
                     <input type="text" x-model="formData.remote_system"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                           class="gk-input-neon w-full"
                            placeholder="{{ t('admin.webservices.remote_system_placeholder') }}">
                 </div>
             </div>
 
             <!-- Transport Settings -->
-            <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.webservices.transport_settings") }}</h3>
+            <div class="rounded-lg p-4" style="background: var(--gk-bg-tertiary);">
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.webservices.transport_settings") }}</h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.transport") }}</label>
-                        <select x-model="formData.config.Requester.Transport.Type"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.transport") }}</label>
+                        <select x-model="formData.config.Requester.Transport.Type" class="gk-select-neon w-full">
                             <option value="HTTP::REST">REST</option>
                             <option value="HTTP::SOAP">SOAP</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.host") }} *</label>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.host") }} <span style="color: var(--gk-error);">*</span></label>
                         <input type="url" x-model="formData.config.Requester.Transport.Config.Host"
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                               class="gk-input-neon w-full"
                                placeholder="https://api.example.com">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.default_command") }}</label>
-                        <select x-model="formData.config.Requester.Transport.Config.DefaultCommand"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.default_command") }}</label>
+                        <select x-model="formData.config.Requester.Transport.Config.DefaultCommand" class="gk-select-neon w-full">
                             <option value="GET">GET</option>
                             <option value="POST">POST</option>
                             <option value="PUT">PUT</option>
@@ -98,24 +97,23 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.timeout") }}</label>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.timeout") }}</label>
                         <input type="number" x-model="formData.config.Requester.Transport.Config.Timeout"
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                               class="gk-input-neon w-full"
                                placeholder="30" min="1" max="300">
-                        <p class="mt-1 text-xs text-gray-500">{{ t("admin.webservices.timeout_hint") }}</p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.webservices.timeout_hint") }}</p>
                     </div>
                 </div>
             </div>
 
             <!-- Authentication Settings -->
-            <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.webservices.authentication") }}</h3>
+            <div class="rounded-lg p-4" style="background: var(--gk-bg-tertiary);">
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.webservices.authentication") }}</h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.auth_type") }}</label>
-                        <select x-model="formData.config.Requester.Transport.Config.Authentication.AuthType"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.auth_type") }}</label>
+                        <select x-model="formData.config.Requester.Transport.Config.Authentication.AuthType" class="gk-select-neon w-full">
                             <option value="">{{ t("common.none") }}</option>
                             <option value="BasicAuth">{{ t("admin.webservices.auth_basic") }}</option>
                             <option value="APIKey">{{ t("admin.webservices.auth_apikey") }}</option>
@@ -127,14 +125,14 @@
                 <template x-if="formData.config.Requester.Transport.Config.Authentication.AuthType === 'BasicAuth'">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.auth_user") }}</label>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.auth_user") }}</label>
                             <input type="text" x-model="formData.config.Requester.Transport.Config.Authentication.BasicAuthUser"
-                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                                   class="gk-input-neon w-full">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.auth_password") }}</label>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.auth_password") }}</label>
                             <input type="password" x-model="formData.config.Requester.Transport.Config.Authentication.BasicAuthPassword"
-                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                                   class="gk-input-neon w-full">
                         </div>
                     </div>
                 </template>
@@ -143,29 +141,28 @@
                 <template x-if="formData.config.Requester.Transport.Config.Authentication.AuthType === 'APIKey'">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.apikey_header") }}</label>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.apikey_header") }}</label>
                             <input type="text" x-model="formData.config.Requester.Transport.Config.Authentication.APIKeyHeader"
-                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue"
+                                   class="gk-input-neon w-full"
                                    placeholder="X-API-Key">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.apikey_value") }}</label>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.apikey_value") }}</label>
                             <input type="password" x-model="formData.config.Requester.Transport.Config.Authentication.APIKey"
-                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-gotrs-blue">
+                                   class="gk-input-neon w-full">
                         </div>
                     </div>
                 </template>
             </div>
 
             <!-- Debugger Settings -->
-            <div class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.webservices.debugger") }}</h3>
+            <div class="rounded-lg p-4" style="background: var(--gk-bg-tertiary);">
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.webservices.debugger") }}</h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("admin.webservices.debug_threshold") }}</label>
-                        <select x-model="formData.config.Debugger.DebugThreshold"
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.debug_threshold") }}</label>
+                        <select x-model="formData.config.Debugger.DebugThreshold" class="gk-select-neon w-full">
                             <option value="error">Error</option>
                             <option value="notice">Notice</option>
                             <option value="info">Info</option>
@@ -173,10 +170,10 @@
                         </select>
                     </div>
                     <div>
-                        <label class="flex items-center mt-6">
+                        <label class="flex items-center mt-6 cursor-pointer">
                             <input type="checkbox" x-model="testMode"
-                                   class="rounded border-gray-300 text-gotrs-600 focus:ring-gotrs-500 dark:border-gray-600 dark:bg-gray-700">
-                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ t("admin.webservices.test_mode") }}</span>
+                                   class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border);">
+                            <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.webservices.test_mode") }}</span>
                         </label>
                     </div>
                 </div>
@@ -184,15 +181,21 @@
 
             <!-- Form Actions -->
             <div class="flex justify-end space-x-4">
-                <a href="/admin/webservices" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                <a href="/admin/webservices" class="gk-btn-secondary">
                     {{ t("common.cancel") }}
                 </a>
                 {% if not IsNew %}
-                <button type="button" @click="testConnection()" class="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700">
+                <button type="button" @click="testConnection()" class="gk-btn-secondary" style="border-color: var(--gk-success); color: var(--gk-success);">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
                     {{ t("admin.webservices.test_connection") }}
                 </button>
                 {% endif %}
-                <button type="submit" class="px-4 py-2 text-white bg-gotrs-600 rounded-lg hover:bg-gotrs-700" :disabled="saving">
+                <button type="submit" class="gk-btn-neon" :disabled="saving">
+                    <svg x-show="!saving" class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
                     <span x-show="!saving">{{ t("common.save") }}</span>
                     <span x-show="saving">{{ t("common.saving") }}...</span>
                 </button>
@@ -264,10 +267,10 @@ function webserviceForm() {
                 if (result.success) {
                     window.location.href = '/admin/webservices';
                 } else {
-                    alert('Error: ' + (result.error || 'Unknown error'));
+                    this.showToast('Error: ' + (result.error || 'Unknown error'), 'error');
                 }
             } catch (error) {
-                alert('Error saving webservice: ' + error.message);
+                this.showToast('Error saving webservice: ' + error.message, 'error');
             } finally {
                 this.saving = false;
             }
@@ -285,13 +288,25 @@ function webserviceForm() {
                 const result = await response.json();
 
                 if (result.success) {
-                    alert('{{ t("messages.connection_test_success")|default:"Connection test successful!" }}');
+                    this.showToast('{{ t("messages.connection_test_success")|default:"Connection test successful!" }}', 'success');
                 } else {
-                    alert('{{ t("messages.connection_test_failed")|default:"Connection test failed" }}: ' + (result.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'));
+                    this.showToast('{{ t("messages.connection_test_failed")|default:"Connection test failed" }}: ' + (result.error || '{{ t("messages.unknown_error")|default:"Unknown error" }}'), 'error');
                 }
             } catch (error) {
-                alert('{{ t("messages.error_testing_connection")|default:"Error testing connection" }}: ' + error.message);
+                this.showToast('{{ t("messages.error_testing_connection")|default:"Error testing connection" }}: ' + error.message, 'error');
             }
+        },
+
+        showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
+                type === 'error' ? 'bg-red-600' :
+                type === 'success' ? 'bg-green-600' :
+                'bg-blue-600'
+            }`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
     };
 }

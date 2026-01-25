@@ -3,190 +3,196 @@
 {% block title %}{{ t("services.title")|default:"Service Management" }} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-    <div class="container mx-auto px-4">
-        <!-- Header -->
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg mb-6">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between">
-                    <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                        <i class="fas fa-concierge-bell mr-2"></i>Service Management
-                    </h1>
-                    <button onclick="openCreateModal()"
-                            class="bg-gotrs-primary hover:bg-gotrs-primary-dark text-white font-medium py-2 px-4 rounded-lg transition duration-150 ease-in-out">
-                        <i class="fas fa-plus mr-2"></i>Add Service
-                    </button>
-                </div>
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("services.heading")|default:"Service Management" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                    {{ t("services.description")|default:"Manage services for ticket categorization" }}
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <button onclick="openCreateModal()" class="gk-btn-neon">
+                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    {{ t("services.add_service")|default:"Add Service" }}
+                </button>
             </div>
         </div>
+    </header>
 
-        <!-- Services Table -->
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-4">
-                        <div class="relative">
-                            <input type="text"
-                                   id="searchInput"
-                                   placeholder="Search services..."
-                                   class="w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gotrs-primary focus:border-transparent dark:bg-gray-700 dark:text-white"
-                                   onkeyup="filterServices()">
-                            <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
-                        </div>
-                        <select id="validityFilter" onchange="filterServices()"
-                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gotrs-primary focus:border-transparent dark:bg-gray-700 dark:text-white">
-                            <option value="">All States</option>
-                            <option value="valid">Valid</option>
-                            <option value="invalid">Invalid</option>
-                            <option value="invalid-temporarily">Invalid Temporarily</option>
-                        </select>
-                    </div>
-                    <div class="text-sm text-gray-600 dark:text-gray-400">
-                        Total: <span id="serviceCount">{{ Services|length }}</span> services
+    <!-- Filters -->
+    <div class="mb-6 gk-card-glow rounded-lg p-4">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center space-x-4">
+                <div class="relative flex-1 min-w-[200px]">
+                    <label for="searchInput" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.search")|default:"Search" }}</label>
+                    <input type="text" id="searchInput" placeholder="{{ t('services.search_placeholder')|default:'Search services...' }}"
+                           class="gk-input-neon w-full pl-10" onkeyup="filterServices()">
+                    <div class="absolute left-3 bottom-2.5">
+                        <svg class="h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                     </div>
                 </div>
+                <div class="min-w-[180px]">
+                    <label for="validityFilter" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.status")|default:"Status" }}</label>
+                    <select id="validityFilter" onchange="filterServices()" class="gk-select-neon w-full">
+                        <option value="">{{ t("common.all_states")|default:"All States" }}</option>
+                        <option value="valid">{{ t("common.valid")|default:"Valid" }}</option>
+                        <option value="invalid">{{ t("common.invalid")|default:"Invalid" }}</option>
+                        <option value="invalid-temporarily">{{ t("common.invalid_temp")|default:"Invalid Temporarily" }}</option>
+                    </select>
+                </div>
             </div>
+            <div class="text-sm" style="color: var(--gk-text-muted);">
+                {{ t("common.total")|default:"Total" }}: <span id="serviceCount" style="color: var(--gk-primary);">{{ Services|length }}</span> {{ t("common.services")|default:"services" }}
+            </div>
+        </div>
+    </div>
 
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" onclick="sortTable(0)">
-                                Name <i class="fas fa-sort ml-1"></i>
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Comments
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" onclick="sortTable(2)">
-                                Tickets <i class="fas fa-sort ml-1"></i>
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Validity
-                            </th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="servicesTableBody" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {% for service in Services %}
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 service-row"
-                            data-name="{{ service.Name|lower }}"
-                            data-validity="{{ service.Validity }}">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900 dark:text-white">
-                                    {{ service.Name }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm text-gray-600 dark:text-gray-400">
-                                    {{ service.Comments|default:"-" }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-600 dark:text-gray-400">
-                                    {% if service.TicketCount > 0 %}
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100">
-                                            {{ service.TicketCount }}
-                                        </span>
+    <!-- Services Table -->
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <table class="gk-table">
+            <thead>
+                <tr>
+                    <th scope="col" class="cursor-pointer" onclick="sortTable(0)">
+                        {{ t("common.name")|default:"Name" }} <span class="sort-indicator">↕</span>
+                    </th>
+                    <th scope="col">{{ t("common.comments")|default:"Comments" }}</th>
+                    <th scope="col" class="cursor-pointer" onclick="sortTable(2)">
+                        {{ t("common.tickets")|default:"Tickets" }} <span class="sort-indicator">↕</span>
+                    </th>
+                    <th scope="col">{{ t("common.validity")|default:"Validity" }}</th>
+                    <th scope="col">{{ t("common.actions")|default:"Actions" }}</th>
+                </tr>
+            </thead>
+            <tbody id="servicesTableBody">
+                {% for service in Services %}
+                <tr class="service-row"
+                    data-name="{{ service.Name|lower }}"
+                    data-validity="{{ service.Validity }}">
+                    <td>
+                        <span class="font-medium" style="color: var(--gk-text-primary);">{{ service.Name }}</span>
+                    </td>
+                    <td style="color: var(--gk-text-muted);">
+                        {{ service.Comments|default:"-" }}
+                    </td>
+                    <td>
+                        {% if service.TicketCount > 0 %}
+                            <span class="gk-badge gk-badge-accent">{{ service.TicketCount }}</span>
+                        {% else %}
+                            <span style="color: var(--gk-text-muted);">0</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if service.ValidID == 1 %}
+                            <span class="gk-badge gk-badge-success">{{ t("common.valid")|default:"Valid" }}</span>
+                        {% elif service.ValidID == 2 %}
+                            <span class="gk-badge gk-badge-error">{{ t("common.invalid")|default:"Invalid" }}</span>
+                        {% elif service.ValidID == 3 %}
+                            <span class="gk-badge gk-badge-warning">{{ t("common.invalid_temp")|default:"Invalid Temporarily" }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="editService({{ service.ID }}, '{{ service.Name|escapejs }}', '{{ service.Comments|default:""|escapejs }}', {{ service.ValidID }})"
+                                    class="p-1 rounded transition-colors hover:bg-white/10"
+                                    style="color: var(--gk-primary);"
+                                    title="{{ t('services.tooltips.edit')|default:'Edit Service' }}">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                            <button onclick="toggleServiceValidity({{ service.ID }}, {{ service.ValidID }})"
+                                    class="p-1 rounded transition-colors hover:bg-white/10"
+                                    style="color: {% if service.ValidID == 1 %}var(--gk-warning){% else %}var(--gk-success){% endif %};"
+                                    title="{% if service.ValidID == 1 %}{{ t('common.deactivate')|default:'Set Invalid' }}{% else %}{{ t('common.activate')|default:'Set Valid' }}{% endif %}">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {% if service.ValidID == 1 %}
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                                     {% else %}
-                                        <span class="text-gray-400">0</span>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     {% endif %}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                {% if service.ValidID == 1 %}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-                                        <i class="fas fa-check-circle mr-1"></i>Valid
-                                    </span>
-                                {% elif service.ValidID == 2 %}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
-                                        <i class="fas fa-times-circle mr-1"></i>Invalid
-                                    </span>
-                                {% elif service.ValidID == 3 %}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100">
-                                        <i class="fas fa-clock mr-1"></i>Invalid Temporarily
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button onclick="editService({{ service.ID }}, '{{ service.Name|escapejs }}', '{{ service.Comments|default:""|escapejs }}', {{ service.ValidID }})"
-                                        class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
-                                        title="{{ t("services.tooltips.edit")|default:"Edit Service" }}">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button onclick="toggleServiceValidity({{ service.ID }}, {{ service.ValidID }})"
-                                        class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
-                                        title="{% if service.ValidID == 1 %}Set Invalid{% else %}Set Valid{% endif %}">
-                                    <i class="fas fa-{% if service.ValidID == 1 %}toggle-on{% else %}toggle-off{% endif %}"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-8 text-center" style="color: var(--gk-text-muted);">
+                        {{ t("services.no_services")|default:"No services found" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
 <!-- Create/Edit Service Modal -->
 <div id="serviceModal" class="fixed z-50 inset-0 overflow-y-auto hidden">
-    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <form id="serviceForm" onsubmit="saveService(event)">
-                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="mb-4">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modalTitle">
-                            Add New Service
+                <div class="gk-modal-header">
+                    <div class="flex items-center">
+                        <svg class="h-6 w-6 mr-3" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <h3 id="modalTitle" class="text-lg font-semibold" style="color: var(--gk-text-primary);">
+                            {{ t("services.add_service")|default:"Add New Service" }}
                         </h3>
                     </div>
-                    <div class="space-y-4">
-                        <div>
-                            <label for="serviceName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Service Name <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text"
-                                   id="serviceName"
-                                   name="name"
-                                   required
-                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gotrs-primary dark:bg-gray-700 dark:text-white"
-                                   placeholder="{{ t("services.placeholders.name")|default:"Enter service name" }}">
-                        </div>
-                        <div>
-                            <label for="serviceComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Comments
-                            </label>
-                            <textarea id="serviceComments"
-                                      name="comments"
-                                      rows="3"
-                                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gotrs-primary dark:bg-gray-700 dark:text-white"
-                                      placeholder="{{ t("services.placeholders.comments")|default:"Optional comments" }}"></textarea>
-                        </div>
-                        <div>
-                            <label for="serviceValidID" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                Validity
-                            </label>
-                            <select id="serviceValidID"
-                                    name="valid_id"
-                                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-gotrs-primary dark:bg-gray-700 dark:text-white">
-                                <option value="1">Valid</option>
-                                <option value="2">Invalid</option>
-                                <option value="3">Invalid Temporarily</option>
-                            </select>
-                        </div>
+                    <button type="button" onclick="closeModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="gk-modal-body space-y-4">
+                    <div>
+                        <label for="serviceName" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("services.service_name")|default:"Service Name" }} <span style="color: var(--gk-error);">*</span>
+                        </label>
+                        <input type="text" id="serviceName" name="name" required class="gk-input-neon w-full"
+                               placeholder="{{ t('services.placeholders.name')|default:'Enter service name' }}">
+                    </div>
+                    <div>
+                        <label for="serviceComments" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("common.comments")|default:"Comments" }}
+                        </label>
+                        <textarea id="serviceComments" name="comments" rows="3" class="gk-input-neon w-full"
+                                  placeholder="{{ t('services.placeholders.comments')|default:'Optional comments' }}"></textarea>
+                    </div>
+                    <div>
+                        <label for="serviceValidID" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("common.validity")|default:"Validity" }}
+                        </label>
+                        <select id="serviceValidID" name="valid_id" class="gk-select-neon w-full">
+                            <option value="1">{{ t("common.valid")|default:"Valid" }}</option>
+                            <option value="2">{{ t("common.invalid")|default:"Invalid" }}</option>
+                            <option value="3">{{ t("common.invalid_temp")|default:"Invalid Temporarily" }}</option>
+                        </select>
                     </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit"
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-primary text-base font-medium text-white hover:bg-gotrs-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-primary sm:ml-3 sm:w-auto sm:text-sm">
-                        Save
+
+                <div class="gk-modal-footer">
+                    <button type="button" onclick="closeModal()" class="gk-btn-secondary">
+                        {{ t("common.cancel")|default:"Cancel" }}
                     </button>
-                    <button type="button"
-                            onclick="closeModal()"
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                        Cancel
+                    <button type="submit" class="gk-btn-neon">
+                        {{ t("common.save")|default:"Save" }}
                     </button>
                 </div>
             </form>
@@ -198,8 +204,9 @@
 // Toast notification function
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
-    const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
-    toast.className = `fixed bottom-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-500`;
+    const bgColor = type === 'success' ? 'var(--gk-success)' : 'var(--gk-error)';
+    toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity duration-500 text-white';
+    toast.style.background = bgColor;
     toast.textContent = message;
     document.body.appendChild(toast);
 
@@ -213,14 +220,14 @@ let currentServiceId = null;
 
 function openCreateModal() {
     currentServiceId = null;
-    document.getElementById('modalTitle').textContent = 'Add New Service';
+    document.getElementById('modalTitle').textContent = '{{ t("services.add_service")|default:"Add New Service" }}';
     document.getElementById('serviceForm').reset();
     document.getElementById('serviceModal').classList.remove('hidden');
 }
 
 function editService(id, name, comments, validId) {
     currentServiceId = id;
-    document.getElementById('modalTitle').textContent = 'Edit Service';
+    document.getElementById('modalTitle').textContent = '{{ t("services.edit_service")|default:"Edit Service" }}';
     document.getElementById('serviceName').value = name;
     document.getElementById('serviceComments').value = comments;
     document.getElementById('serviceValidID').value = validId;
@@ -265,15 +272,15 @@ function saveService(event) {
     })
     .then(data => {
         if (data.success || data.id) {
-            showToast(currentServiceId ? 'Service updated successfully' : 'Service created successfully', 'success');
+            showToast(currentServiceId ? '{{ t("messages.service_updated")|default:"Service updated successfully" }}' : '{{ t("messages.service_created")|default:"Service created successfully" }}', 'success');
             closeModal();
             setTimeout(() => location.reload(), 1000);
         } else {
-            showToast(data.error || 'Failed to save service', 'error');
+            showToast(data.error || '{{ t("errors.failed_save_service")|default:"Failed to save service" }}', 'error');
         }
     })
     .catch(error => {
-        showToast('An error occurred: ' + error, 'error');
+        showToast('{{ t("errors.error_occurred")|default:"An error occurred" }}: ' + error, 'error');
     });
 }
 
@@ -364,14 +371,14 @@ function toggleServiceValidity(id, currentValidId) {
         })
         .then(data => {
             if (data.success) {
-                showToast(`Service ${action}d successfully`, 'success');
+                showToast(`{{ t("messages.service")|default:"Service" }} ${action}d {{ t("messages.successfully")|default:"successfully" }}`, 'success');
                 setTimeout(() => location.reload(), 1000);
             } else {
-                showToast(data.error || `Failed to ${action} service`, 'error');
+                showToast(data.error || `{{ t("errors.failed_to")|default:"Failed to" }} ${action} {{ t("common.service")|default:"service" }}`, 'error');
             }
         })
         .catch(error => {
-            showToast('An error occurred: ' + error, 'error');
+            showToast('{{ t("errors.error_occurred")|default:"An error occurred" }}: ' + error, 'error');
         });
     }
 }

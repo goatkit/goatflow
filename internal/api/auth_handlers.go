@@ -116,6 +116,13 @@ var HandleAuthLogin = func(c *gin.Context) {
 		if userTimeout := prefService.GetSessionTimeout(int(user.ID)); userTimeout > 0 {
 			sessionTimeout = shared.ResolveSessionTimeout(userTimeout)
 		}
+
+		// Persist pre-login language selection to user preferences
+		if preLoginLang, err := c.Cookie("gotrs_lang"); err == nil && preLoginLang != "" {
+			if setErr := prefService.SetLanguage(int(user.ID), preLoginLang); setErr != nil {
+				log.Printf("Failed to save language preference: %v", setErr)
+			}
+		}
 	}
 	if sessionTimeout <= 0 {
 		sessionTimeout = constants.DefaultSessionTimeout
@@ -161,11 +168,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 	}
 
 	// Create session record in database for admin session management
-	log.Printf("DEBUG: HandleAuthLogin - attempting to create session for user %s (ID: %d)", username, user.ID)
-	sessionSvc := shared.GetSessionService()
-	if sessionSvc == nil {
-		log.Printf("DEBUG: HandleAuthLogin - session service is nil!")
-	} else {
+	if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
 		sessionID, err := sessionSvc.CreateSession(
 			int(user.ID),
 			username,
@@ -177,11 +180,14 @@ var HandleAuthLogin = func(c *gin.Context) {
 			// Log error but don't fail login - session tracking is non-critical
 			log.Printf("Failed to create session record: %v", err)
 		} else {
-			log.Printf("DEBUG: HandleAuthLogin - session created: %s", sessionID)
 			// Store session ID in a cookie for logout cleanup
 			c.SetCookie("session_id", sessionID, sessionTimeout, "/", "", false, true)
 		}
 	}
+
+	// Set a non-httpOnly indicator so JavaScript can detect authentication
+	// (auth tokens are httpOnly for security, but JS needs to know user is logged in)
+	c.SetCookie("gotrs_logged_in", "1", sessionTimeout, "/", "", false, false)
 
 	redirectTarget := "/dashboard"
 	if strings.EqualFold(user.Role, "customer") {
@@ -219,6 +225,7 @@ var HandleAuthLogout = func(c *gin.Context) {
 	c.SetCookie("access_token", "", -1, "/", "", false, true)
 	c.SetCookie("refresh_token", "", -1, "/", "", false, true)
 	c.SetCookie("session_id", "", -1, "/", "", false, true)
+	c.SetCookie("gotrs_logged_in", "", -1, "/", "", false, false)
 
 	// Redirect to login
 	c.Redirect(http.StatusSeeOther, "/login")

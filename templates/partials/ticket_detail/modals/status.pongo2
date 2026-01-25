@@ -1,0 +1,30 @@
+{# Change Status Modal with Synthwave Styling #}
+{# Required variables: PendingStateIDs (optional) #}
+
+<div id="statusModal" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0, 0, 0, 0.8);">
+    <div class="rounded-lg shadow-xl w-full max-w-md mx-4" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+            <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("tickets.change_status")|default:"Change Status" }}</h3>
+        </div>
+        <form onsubmit="submitStatus(event)" data-pending-states="{% if PendingStateIDs %}{% for sid in PendingStateIDs %}{{ sid }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
+            <div class="p-6">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("tickets.status") }}</label>
+                    <select name="status_id" required class="gk-select-neon w-full">
+                        <option value="">{{ t("tickets.select_status")|default:"Select status..." }}</option>
+                        <!-- Will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="mb-4" id="pendingTimeContainer" style="display: none;">
+                    <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("tickets.pending_until")|default:"Pending Until" }}</label>
+                    <input type="datetime-local" name="pending_until" class="gk-input-neon w-full">
+                    <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("tickets.pending_required")|default:"Required for pending states" }}</p>
+                </div>
+            </div>
+            <div class="px-6 py-4 rounded-b-lg flex justify-end space-x-3" style="background: var(--gk-bg-elevated); border-top: 1px solid var(--gk-border-default);">
+                <button type="button" onclick="closeModal('statusModal')" class="gk-btn-secondary">{{ t("common.cancel") }}</button>
+                <button type="submit" class="gk-btn-neon">{{ t("common.update")|default:"Update" }}</button>
+            </div>
+        </form>
+    </div>
+</div>

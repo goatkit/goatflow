@@ -3,70 +3,129 @@
 {% block title %}{{ t("email_identities.title")|default:"Email Identities" }} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <header class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("email_identities.heading")|default:"Email Identities" }}</h1>
-        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            {{ t("email_identities.description")|default:"Manage outbound email identities, salutations, and signatures used by queues." }}
-        </p>
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div class="flex items-center">
+                <a href="/admin" class="gk-btn-secondary mr-4">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    {{ t("common.back") }}
+                </a>
+                <div>
+                    <h1 class="text-3xl font-bold gk-heading">
+                        <span class="gk-text-gradient">{{ t("email_identities.heading")|default:"Email Identities" }}</span>
+                    </h1>
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                        {{ t("email_identities.description")|default:"Manage outbound email identities, salutations, and signatures used by queues." }}
+                    </p>
+                </div>
+            </div>
+        </div>
     </header>
 
     <div x-data="{ tab: '{{ CurrentTab|default:"system-addresses" }}' }">
-        <div class="border-b border-gray-200 dark:border-gray-700 mb-6 flex flex-wrap gap-2" role="tablist">
-            <button type="button" @click="tab = 'system-addresses'" :class="tab === 'system-addresses' ? 'border-gotrs-500 text-gotrs-600 dark:text-gotrs-300' : 'border-transparent text-gray-500 dark:text-gray-400'" class="px-4 py-2 text-sm font-medium border-b-2 focus:outline-none">
-                System Addresses
+        <!-- Tab Navigation -->
+        <div class="mb-6 flex flex-wrap gap-2 border-b" style="border-color: var(--gk-border);" role="tablist">
+            <button type="button" @click="tab = 'system-addresses'"
+                :class="tab === 'system-addresses' ? 'border-b-2' : ''"
+                :style="tab === 'system-addresses' ? 'color: var(--gk-primary); border-color: var(--gk-primary);' : 'color: var(--gk-text-muted); border-color: transparent;'"
+                class="px-4 py-2 text-sm font-medium focus:outline-none transition-colors">
+                <svg class="inline-block h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                {{ t("email_identities.system_addresses")|default:"System Addresses" }}
             </button>
-            <button type="button" @click="tab = 'salutations'" :class="tab === 'salutations' ? 'border-gotrs-500 text-gotrs-600 dark:text-gotrs-300' : 'border-transparent text-gray-500 dark:text-gray-400'" class="px-4 py-2 text-sm font-medium border-b-2 focus:outline-none">
-                Salutations
+            <button type="button" @click="tab = 'salutations'"
+                :class="tab === 'salutations' ? 'border-b-2' : ''"
+                :style="tab === 'salutations' ? 'color: var(--gk-primary); border-color: var(--gk-primary);' : 'color: var(--gk-text-muted); border-color: transparent;'"
+                class="px-4 py-2 text-sm font-medium focus:outline-none transition-colors">
+                <svg class="inline-block h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                </svg>
+                {{ t("email_identities.salutations")|default:"Salutations" }}
             </button>
-            <button type="button" @click="tab = 'signatures'" :class="tab === 'signatures' ? 'border-gotrs-500 text-gotrs-600 dark:text-gotrs-300' : 'border-transparent text-gray-500 dark:text-gray-400'" class="px-4 py-2 text-sm font-medium border-b-2 focus:outline-none">
-                Signatures
+            <button type="button" @click="tab = 'signatures'"
+                :class="tab === 'signatures' ? 'border-b-2' : ''"
+                :style="tab === 'signatures' ? 'color: var(--gk-primary); border-color: var(--gk-primary);' : 'color: var(--gk-text-muted); border-color: transparent;'"
+                class="px-4 py-2 text-sm font-medium focus:outline-none transition-colors">
+                <svg class="inline-block h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                </svg>
+                {{ t("email_identities.signatures")|default:"Signatures" }}
             </button>
         </div>
 
+        <!-- System Addresses Tab -->
         <section x-show="tab === 'system-addresses'" x-cloak>
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("email_identities.system_addresses")|default:"System Addresses" }}</h2>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Routing identities tied to queues.</p>
+                    <h2 class="text-xl font-semibold" style="color: var(--gk-text-primary);">{{ t("email_identities.system_addresses")|default:"System Addresses" }}</h2>
+                    <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("email_identities.system_addresses_description")|default:"Routing identities tied to queues." }}</p>
                 </div>
-                <button type="button" onclick="openSystemAddressModal()" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
+                <button type="button" onclick="openSystemAddressModal()" class="gk-btn-neon">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
                     {{ t("email_identities.add_system_address")|default:"Add System Address" }}
                 </button>
             </div>
-            <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-700">
+            <div class="gk-card-glow overflow-hidden rounded-lg">
+                <table class="gk-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Email</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Display Name</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Queue</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Status</th>
-                            <th scope="col" class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Actions</th>
+                            <th scope="col">{{ t("email_identities.fields.email")|default:"Email" }}</th>
+                            <th scope="col">{{ t("email_identities.fields.display_name")|default:"Display Name" }}</th>
+                            <th scope="col">{{ t("email_identities.fields.queue")|default:"Queue" }}</th>
+                            <th scope="col">{{ t("common.status") }}</th>
+                            <th scope="col">{{ t("common.actions") }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                    <tbody>
                         {% for addr in SystemAddresses %}
-                        <tr>
-                            <td class="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium">{{ addr.Email }}</td>
-                            <td class="px-4 py-4 text-sm text-gray-700 dark:text-gray-200">{{ addr.DisplayName }}</td>
-                            <td class="px-4 py-4 text-sm text-gray-700 dark:text-gray-200">{{ addr.QueueName|default:"Unassigned" }}</td>
-                            <td class="px-4 py-4 text-sm">
+                        <tr class="{% if addr.ValidID != 1 %}opacity-50{% endif %}">
+                            <td>
+                                <span class="font-medium" style="color: var(--gk-text-primary);">{{ addr.Email }}</span>
+                            </td>
+                            <td style="color: var(--gk-text-secondary);">{{ addr.DisplayName }}</td>
+                            <td style="color: var(--gk-text-secondary);">{{ addr.QueueName|default:"Unassigned" }}</td>
+                            <td>
                                 {% if addr.ValidID == 1 %}
-                                <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>
+                                <span class="gk-badge gk-badge-success">{{ t("common.valid") }}</span>
                                 {% else %}
-                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">Inactive</span>
+                                <span class="gk-badge gk-badge-muted">{{ t("common.invalid") }}</span>
                                 {% endif %}
                             </td>
-                            <td class="px-4 py-4 text-sm text-right">
-                                <button type="button" onclick="openSystemAddressModal(this)" data-id="{{ addr.ID }}" data-email="{{ addr.Email|escape }}" data-display-name="{{ addr.DisplayName|escape }}" data-queue-id="{{ addr.QueueID }}" data-comments="{{ addr.Comments|default:''|escape }}" data-valid-id="{{ addr.ValidID }}" class="text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-300 dark:hover:text-gotrs-100">
-                                    Edit
+                            <td>
+                                <button type="button" onclick="openSystemAddressModal(this)"
+                                    data-id="{{ addr.ID }}"
+                                    data-email="{{ addr.Email|escape }}"
+                                    data-display-name="{{ addr.DisplayName|escape }}"
+                                    data-queue-id="{{ addr.QueueID }}"
+                                    data-comments="{{ addr.Comments|default:''|escape }}"
+                                    data-valid-id="{{ addr.ValidID }}"
+                                    class="p-1 rounded transition-colors hover:bg-white/10"
+                                    style="color: var(--gk-primary);"
+                                    title="{{ t('common.edit') }}">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
                                 </button>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">No system addresses configured.</td>
+                            <td colspan="5" class="px-6 py-12 text-center" style="color: var(--gk-text-muted);">
+                                <svg class="mx-auto h-12 w-12 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                <h3 class="text-sm font-medium mb-1" style="color: var(--gk-text-primary);">{{ t("email_identities.no_system_addresses")|default:"No system addresses configured" }}</h3>
+                                <p class="text-sm mb-4" style="color: var(--gk-text-muted);">{{ t("email_identities.get_started_addresses")|default:"Create your first system address." }}</p>
+                                <button type="button" onclick="openSystemAddressModal()" class="gk-btn-neon">
+                                    {{ t("email_identities.add_system_address")|default:"Add System Address" }}
+                                </button>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -74,41 +133,62 @@
             </div>
         </section>
 
+        <!-- Salutations Tab -->
         <section x-show="tab === 'salutations'" x-cloak>
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("email_identities.salutations")|default:"Salutations" }}</h2>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Reusable greeting blocks rendered before responses.</p>
+                    <h2 class="text-xl font-semibold" style="color: var(--gk-text-primary);">{{ t("email_identities.salutations")|default:"Salutations" }}</h2>
+                    <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("email_identities.salutations_description")|default:"Reusable greeting blocks rendered before responses." }}</p>
                 </div>
-                <button type="button" onclick="openSalutationModal()" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
-                    Add Salutation
+                <button type="button" onclick="openSalutationModal()" class="gk-btn-neon">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    {{ t("email_identities.add_salutation")|default:"Add Salutation" }}
                 </button>
             </div>
-            <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-700">
+            <div class="gk-card-glow overflow-hidden rounded-lg">
+                <table class="gk-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Name</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Content Type</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Status</th>
-                            <th scope="col" class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Actions</th>
+                            <th scope="col">{{ t("email_identities.fields.name")|default:"Name" }}</th>
+                            <th scope="col">{{ t("email_identities.fields.content_type")|default:"Content Type" }}</th>
+                            <th scope="col">{{ t("common.status") }}</th>
+                            <th scope="col">{{ t("common.actions") }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                    <tbody>
                         {% for sal in Salutations %}
-                        <tr>
-                            <td class="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium">{{ sal.Name }}</td>
-                            <td class="px-4 py-4 text-sm text-gray-700 dark:text-gray-200">{{ sal.ContentType|default:"text/plain" }}</td>
-                            <td class="px-4 py-4 text-sm">
+                        <tr class="{% if sal.ValidID != 1 %}opacity-50{% endif %}">
+                            <td>
+                                <span class="font-medium" style="color: var(--gk-text-primary);">{{ sal.Name }}</span>
+                            </td>
+                            <td>
+                                <span class="gk-badge {% if sal.ContentType == 'text/html' %}gk-badge-accent{% else %}gk-badge-muted{% endif %}">
+                                    {{ sal.ContentType|default:"text/plain" }}
+                                </span>
+                            </td>
+                            <td>
                                 {% if sal.ValidID == 1 %}
-                                <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>
+                                <span class="gk-badge gk-badge-success">{{ t("common.valid") }}</span>
                                 {% else %}
-                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">Inactive</span>
+                                <span class="gk-badge gk-badge-muted">{{ t("common.invalid") }}</span>
                                 {% endif %}
                             </td>
-                            <td class="px-4 py-4 text-sm text-right">
-                                <button type="button" onclick="openSalutationModal(this)" data-id="{{ sal.ID }}" data-name="{{ sal.Name|escape }}" data-content-type="{{ sal.ContentType|default:'text/plain' }}" data-comments="{{ sal.Comments|default:''|escape }}" data-valid-id="{{ sal.ValidID }}" data-text-id="salutation-text-{{ sal.ID }}" class="text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-300 dark:hover:text-gotrs-100">
-                                    Edit
+                            <td>
+                                <button type="button" onclick="openSalutationModal(this)"
+                                    data-id="{{ sal.ID }}"
+                                    data-name="{{ sal.Name|escape }}"
+                                    data-content-type="{{ sal.ContentType|default:'text/plain' }}"
+                                    data-comments="{{ sal.Comments|default:''|escape }}"
+                                    data-valid-id="{{ sal.ValidID }}"
+                                    data-text-id="salutation-text-{{ sal.ID }}"
+                                    class="p-1 rounded transition-colors hover:bg-white/10"
+                                    style="color: var(--gk-primary);"
+                                    title="{{ t('common.edit') }}">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
                                 </button>
                                 {% if sal.ContentType == 'text/html' %}
                                 <textarea id="salutation-text-{{ sal.ID }}" class="hidden" data-content-type="text/html">{{ sal.Text|safe }}</textarea>
@@ -119,7 +199,16 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">No salutations defined.</td>
+                            <td colspan="4" class="px-6 py-12 text-center" style="color: var(--gk-text-muted);">
+                                <svg class="mx-auto h-12 w-12 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                                </svg>
+                                <h3 class="text-sm font-medium mb-1" style="color: var(--gk-text-primary);">{{ t("email_identities.no_salutations")|default:"No salutations defined" }}</h3>
+                                <p class="text-sm mb-4" style="color: var(--gk-text-muted);">{{ t("email_identities.get_started_salutations")|default:"Create your first salutation." }}</p>
+                                <button type="button" onclick="openSalutationModal()" class="gk-btn-neon">
+                                    {{ t("email_identities.add_salutation")|default:"Add Salutation" }}
+                                </button>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -127,41 +216,62 @@
             </div>
         </section>
 
+        <!-- Signatures Tab -->
         <section x-show="tab === 'signatures'" x-cloak>
             <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("email_identities.signatures")|default:"Signatures" }}</h2>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Footer blocks appended to outbound messages.</p>
+                    <h2 class="text-xl font-semibold" style="color: var(--gk-text-primary);">{{ t("email_identities.signatures")|default:"Signatures" }}</h2>
+                    <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("email_identities.signatures_description")|default:"Footer blocks appended to outbound messages." }}</p>
                 </div>
-                <button type="button" onclick="openSignatureModal()" class="inline-flex items-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500">
+                <button type="button" onclick="openSignatureModal()" class="gk-btn-neon">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
                     {{ t("email_identities.add_signature")|default:"Add Signature" }}
                 </button>
             </div>
-            <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-700">
+            <div class="gk-card-glow overflow-hidden rounded-lg">
+                <table class="gk-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Name</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Content Type</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Status</th>
-                            <th scope="col" class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">Actions</th>
+                            <th scope="col">{{ t("email_identities.fields.name")|default:"Name" }}</th>
+                            <th scope="col">{{ t("email_identities.fields.content_type")|default:"Content Type" }}</th>
+                            <th scope="col">{{ t("common.status") }}</th>
+                            <th scope="col">{{ t("common.actions") }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                    <tbody>
                         {% for sig in Signatures %}
-                        <tr>
-                            <td class="px-4 py-4 text-sm text-gray-900 dark:text-white font-medium">{{ sig.Name }}</td>
-                            <td class="px-4 py-4 text-sm text-gray-700 dark:text-gray-200">{{ sig.ContentType|default:"text/plain" }}</td>
-                            <td class="px-4 py-4 text-sm">
+                        <tr class="{% if sig.ValidID != 1 %}opacity-50{% endif %}">
+                            <td>
+                                <span class="font-medium" style="color: var(--gk-text-primary);">{{ sig.Name }}</span>
+                            </td>
+                            <td>
+                                <span class="gk-badge {% if sig.ContentType == 'text/html' %}gk-badge-accent{% else %}gk-badge-muted{% endif %}">
+                                    {{ sig.ContentType|default:"text/plain" }}
+                                </span>
+                            </td>
+                            <td>
                                 {% if sig.ValidID == 1 %}
-                                <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>
+                                <span class="gk-badge gk-badge-success">{{ t("common.valid") }}</span>
                                 {% else %}
-                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-700 dark:text-gray-300">Inactive</span>
+                                <span class="gk-badge gk-badge-muted">{{ t("common.invalid") }}</span>
                                 {% endif %}
                             </td>
-                            <td class="px-4 py-4 text-sm text-right">
-                                <button type="button" onclick="openSignatureModal(this)" data-id="{{ sig.ID }}" data-name="{{ sig.Name|escape }}" data-content-type="{{ sig.ContentType|default:'text/plain' }}" data-comments="{{ sig.Comments|default:''|escape }}" data-valid-id="{{ sig.ValidID }}" data-text-id="signature-text-{{ sig.ID }}" class="text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-300 dark:hover:text-gotrs-100">
-                                    Edit
+                            <td>
+                                <button type="button" onclick="openSignatureModal(this)"
+                                    data-id="{{ sig.ID }}"
+                                    data-name="{{ sig.Name|escape }}"
+                                    data-content-type="{{ sig.ContentType|default:'text/plain' }}"
+                                    data-comments="{{ sig.Comments|default:''|escape }}"
+                                    data-valid-id="{{ sig.ValidID }}"
+                                    data-text-id="signature-text-{{ sig.ID }}"
+                                    class="p-1 rounded transition-colors hover:bg-white/10"
+                                    style="color: var(--gk-primary);"
+                                    title="{{ t('common.edit') }}">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
                                 </button>
                                 {% if sig.ContentType == 'text/html' %}
                                 <textarea id="signature-text-{{ sig.ID }}" class="hidden" data-content-type="text/html">{{ sig.Text|safe }}</textarea>
@@ -172,7 +282,16 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">No signatures defined.</td>
+                            <td colspan="4" class="px-6 py-12 text-center" style="color: var(--gk-text-muted);">
+                                <svg class="mx-auto h-12 w-12 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                </svg>
+                                <h3 class="text-sm font-medium mb-1" style="color: var(--gk-text-primary);">{{ t("email_identities.no_signatures")|default:"No signatures defined" }}</h3>
+                                <p class="text-sm mb-4" style="color: var(--gk-text-muted);">{{ t("email_identities.get_started_signatures")|default:"Create your first signature." }}</p>
+                                <button type="button" onclick="openSignatureModal()" class="gk-btn-neon">
+                                    {{ t("email_identities.add_signature")|default:"Add Signature" }}
+                                </button>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -183,119 +302,165 @@
 </div>
 
 <!-- System Address Modal -->
-<div id="systemAddressModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
-    <div class="relative flex min-h-full items-end justify-center px-4 pt-4 pb-20 text-center sm:items-center sm:p-0">
-        <div class="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-        <div class="relative inline-block w-full sm:w-3/4 max-w-3xl transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all dark:bg-gray-800">
+<div id="systemAddressModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeSystemAddressModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-xl sm:w-full">
             <form onsubmit="submitSystemAddress(event)">
                 <input type="hidden" name="id">
-                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4" id="system-address-modal-title">{{ t("email_identities.add_system_address")|default:"Add System Address" }}</h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email *</label>
-                            <input type="email" name="email" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Display Name *</label>
-                            <input type="text" name="display_name" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Queue *</label>
-                            <select name="queue_id" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
-                                <option value="">Select queue</option>
-                                {% for queue in Queues %}
-                                <option value="{{ queue.ID }}">{{ queue.Name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Comments</label>
-                            <textarea name="comments" rows="2" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                            <select name="valid_id" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
-                                <option value="1">Active</option>
-                                <option value="2">Inactive</option>
-                            </select>
-                        </div>
+                <div class="gk-modal-header">
+                    <div class="flex items-center">
+                        <svg class="h-6 w-6 mr-3" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        <h3 id="system-address-modal-title" class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("email_identities.add_system_address")|default:"Add System Address" }}</h3>
+                    </div>
+                    <button type="button" onclick="closeSystemAddressModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="gk-modal-body space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("email_identities.fields.email")|default:"Email" }} *</label>
+                        <input type="email" name="email" required class="gk-input-neon w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("email_identities.fields.display_name")|default:"Display Name" }} *</label>
+                        <input type="text" name="display_name" required class="gk-input-neon w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("email_identities.fields.queue")|default:"Queue" }} *</label>
+                        <select name="queue_id" required class="gk-select-neon w-full">
+                            <option value="">{{ t("common.select") }}...</option>
+                            {% for queue in Queues %}
+                            <option value="{{ queue.ID }}">{{ queue.Name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.comments") }}</label>
+                        <textarea name="comments" rows="2" class="gk-input-neon w-full"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.status") }}</label>
+                        <select name="valid_id" class="gk-select-neon w-full">
+                            <option value="1">{{ t("common.valid") }}</option>
+                            <option value="2">{{ t("common.invalid") }}</option>
+                        </select>
                     </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">{{ t("buttons.save")|default:"Save" }}</button>
-                    <button type="button" onclick="closeSystemAddressModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">{{ t("buttons.cancel")|default:"Cancel" }}</button>
+
+                <div class="gk-modal-footer">
+                    <button type="button" onclick="closeSystemAddressModal()" class="gk-btn-secondary">
+                        {{ t("common.cancel") }}
+                    </button>
+                    <button type="submit" class="gk-btn-neon">
+                        {{ t("common.save") }}
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Shared Rich Text Modal -->
+<!-- Shared Rich Text Modal (Salutations/Signatures) -->
 <div id="templateBlockModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
-    <div class="relative flex min-h-full items-end justify-center px-4 pt-4 pb-20 text-center sm:items-center sm:p-0">
-        <div class="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-        <div class="relative inline-block w-full sm:w-3/4 max-w-4xl transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all dark:bg-gray-800">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeTemplateBlockModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
             <form onsubmit="submitTemplateBlock(event)" data-block-type="signature">
                 <input type="hidden" name="id">
-                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4" id="template-block-modal-title">{{ t("email_identities.add_signature")|default:"Add Signature" }}</h3>
-                    <div class="space-y-4">
+                <div class="gk-modal-header">
+                    <div class="flex items-center">
+                        <svg class="h-6 w-6 mr-3" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                        </svg>
+                        <h3 id="template-block-modal-title" class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("email_identities.add_signature")|default:"Add Signature" }}</h3>
+                    </div>
+                    <button type="button" onclick="closeTemplateBlockModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="gk-modal-body space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name *</label>
-                            <input type="text" name="name" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("email_identities.fields.name")|default:"Name" }} *</label>
+                            <input type="text" name="name" required class="gk-input-neon w-full">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Content Type</label>
-                            <select name="content_type" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("email_identities.fields.content_type")|default:"Content Type" }}</label>
+                            <select name="content_type" class="gk-select-neon w-full">
                                 <option value="text/plain">text/plain</option>
                                 <option value="text/html">text/html</option>
                             </select>
                         </div>
-                        <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-6">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Body *</label>
-                                <textarea name="text" rows="5" required id="template-block-text" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"></textarea>
-                                <div id="template-block-editor" class="mt-3 hidden"></div>
-                                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Rich text editor supports formatting, links, tables, and images.</p>
-                            </div>
-                            <aside id="template-variable-panel" class="mt-6 lg:mt-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30 p-4 space-y-3" aria-labelledby="template-variable-panel-heading">
-                                <div class="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p id="template-variable-panel-heading" class="text-sm font-semibold text-gray-900 dark:text-white">Template Variables</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">Click a placeholder to insert it into the body.</p>
-                                    </div>
-                                </div>
+                    </div>
+
+                    <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("email_identities.fields.body")|default:"Body" }} *</label>
+                            <textarea name="text" rows="8" required id="template-block-text" class="gk-input-neon w-full font-mono"></textarea>
+                            <div id="template-block-editor" class="mt-3 hidden"></div>
+                            <p class="mt-2 text-xs" style="color: var(--gk-text-muted);">{{ t("email_identities.rich_text_note")|default:"Rich text editor supports formatting, links, tables, and images." }}</p>
+                        </div>
+
+                        <!-- Template Variables Panel -->
+                        <aside id="template-variable-panel" class="mt-6 lg:mt-0 rounded-lg p-4 space-y-3" style="background: var(--gk-bg-tertiary); border: 1px solid var(--gk-border);" aria-labelledby="template-variable-panel-heading">
+                            <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <label for="template-variable-search" class="sr-only">Search template variables</label>
-                                    <div class="relative">
-                                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
-                                            <i class="fas fa-search text-xs" aria-hidden="true"></i>
-                                        </span>
-                                        <input id="template-variable-search" type="search" autocomplete="off" placeholder="{{ t("common.search_tokens")|default:"Search tokens" }}" class="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 pl-9 pr-3 py-1.5 text-sm text-gray-900 dark:text-white focus:border-gotrs-500 focus:ring-gotrs-500" />
-                                    </div>
+                                    <p id="template-variable-panel-heading" class="text-sm font-semibold" style="color: var(--gk-text-primary);">{{ t("email_identities.template_variables")|default:"Template Variables" }}</p>
+                                    <p class="text-xs" style="color: var(--gk-text-muted);">{{ t("email_identities.click_to_insert")|default:"Click a placeholder to insert it into the body." }}</p>
                                 </div>
-                                <div id="template-variable-categories" class="flex flex-wrap gap-2"></div>
-                                <div id="template-variable-list" class="space-y-2 max-h-72 overflow-y-auto pr-1 text-sm"></div>
-                                <p class="text-[11px] text-gray-500 dark:text-gray-400">Tokens follow OTRS smart-tag rules. Unsupported tags render as dashes.</p>
-                            </aside>
+                            </div>
+                            <div>
+                                <label for="template-variable-search" class="sr-only">{{ t("common.search") }}</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-3 flex items-center" style="color: var(--gk-text-muted);">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                        </svg>
+                                    </span>
+                                    <input id="template-variable-search" type="search" autocomplete="off" placeholder="{{ t('common.search_tokens')|default:'Search tokens' }}" class="gk-input-neon w-full pl-9 text-sm">
+                                </div>
+                            </div>
+                            <div id="template-variable-categories" class="flex flex-wrap gap-2"></div>
+                            <div id="template-variable-list" class="space-y-2 max-h-72 overflow-y-auto pr-1 text-sm"></div>
+                            <p class="text-[11px]" style="color: var(--gk-text-muted);">{{ t("email_identities.otrs_tag_note")|default:"Tokens follow OTRS smart-tag rules. Unsupported tags render as dashes." }}</p>
+                        </aside>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.comments") }}</label>
+                            <textarea name="comments" rows="2" class="gk-input-neon w-full"></textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Comments</label>
-                            <textarea name="comments" rows="2" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                            <select name="valid_id" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
-                                <option value="1">Active</option>
-                                <option value="2">Inactive</option>
+                            <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.status") }}</label>
+                            <select name="valid_id" class="gk-select-neon w-full">
+                                <option value="1">{{ t("common.valid") }}</option>
+                                <option value="2">{{ t("common.invalid") }}</option>
                             </select>
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">{{ t("buttons.save")|default:"Save" }}</button>
-                    <button type="button" onclick="closeTemplateBlockModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">{{ t("buttons.cancel")|default:"Cancel" }}</button>
+
+                <div class="gk-modal-footer">
+                    <button type="button" onclick="closeTemplateBlockModal()" class="gk-btn-secondary">
+                        {{ t("common.cancel") }}
+                    </button>
+                    <button type="submit" class="gk-btn-neon">
+                        {{ t("common.save") }}
+                    </button>
                 </div>
             </form>
         </div>
@@ -310,15 +475,15 @@
 <script>
 const templateBlockConfigs = {
     signature: {
-        titleAdd: 'Add Signature',
-        titleEdit: 'Edit Signature',
+        titleAdd: '{{ t("email_identities.add_signature")|default:"Add Signature" }}',
+        titleEdit: '{{ t("email_identities.edit_signature")|default:"Edit Signature" }}',
         apiBase: '/api/v1/signatures',
         redirect: '/admin/email-identities?tab=signatures',
         defaultContentType: 'text/html'
     },
     salutation: {
-        titleAdd: 'Add Salutation',
-        titleEdit: 'Edit Salutation',
+        titleAdd: '{{ t("email_identities.add_salutation")|default:"Add Salutation" }}',
+        titleEdit: '{{ t("email_identities.edit_salutation")|default:"Edit Salutation" }}',
         apiBase: '/api/v1/salutations',
         redirect: '/admin/email-identities?tab=salutations',
         defaultContentType: 'text/plain'
@@ -391,26 +556,6 @@ const templateVariableCatalog = [
         ]
     },
     {
-        id: 'dynamic-fields',
-        label: 'Dynamic Fields',
-        description: 'Custom ticket metadata',
-        tokens: [
-            { label: 'Dynamic Value', snippet: '<OTRS_TICKET_DynamicField_TestField>', hint: 'Internal value for dynamic field “TestField”.' },
-            { label: 'Dynamic Label', snippet: '<OTRS_TICKET_DynamicField_TestField_Value>', hint: 'Display label for dropdown/multiselect answers.' },
-            { label: 'Free Text 1', snippet: '<OTRS_TICKET_DynamicField_TicketFreeText1>', hint: 'Legacy free-text dynamic field.' }
-        ]
-    },
-    {
-        id: 'comments-dates',
-        label: 'Comments & Dates',
-        description: 'Quoted history and date stamps',
-        tokens: [
-            { label: 'Comment Snippet', snippet: '<OTRS_COMMENT[3]>', hint: 'First three lines from the existing comment.' },
-            { label: 'Email Date', snippet: '<OTRS_EMAIL_DATE>', hint: 'Received date in system timezone.' },
-            { label: 'Email Date (TZ)', snippet: '<OTRS_EMAIL_DATE[Europe/Berlin]>', hint: 'Received date rendered in the supplied timezone.' }
-        ]
-    },
-    {
         id: 'config',
         label: 'System Config',
         description: 'Hostnames, hooks, and script aliases',
@@ -420,15 +565,6 @@ const templateVariableCatalog = [
             { label: 'HTTP Type', snippet: '<OTRS_CONFIG_HttpType>', hint: 'http or https based on system config.' },
             { label: 'FQDN', snippet: '<OTRS_CONFIG_FQDN>', hint: 'Fully qualified domain name.' },
             { label: 'Script Alias', snippet: '<OTRS_CONFIG_ScriptAlias>', hint: 'Relative script alias path.' }
-        ]
-    },
-    {
-        id: 'calendar',
-        label: 'Calendar',
-        description: 'Appointment reminders',
-        tokens: [
-            { label: 'Appointment Title', snippet: '<OTRS_APPOINTMENT_TITLE>', hint: 'Calendar appointment title.' },
-            { label: 'Appointment Link ID', snippet: '<OTRS_APPOINTMENT_APPOINTMENTID>', hint: 'ID for building appointment links.' }
         ]
     }
 ]
@@ -484,7 +620,10 @@ function renderTemplateVariableCategories() {
         button.type = 'button'
         button.dataset.category = category.id
         const isActive = templateVariableState.category === category.id
-        button.className = `text-xs px-3 py-1 rounded-full border ${isActive ? 'bg-gotrs-600 text-white border-gotrs-600' : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gotrs-400 hover:text-gotrs-600 dark:hover:text-gotrs-200'}`
+        button.className = `text-xs px-3 py-1 rounded-full border transition-colors ${isActive ? 'gk-btn-neon' : ''}`
+        if (!isActive) {
+            button.style.cssText = 'border-color: var(--gk-border); color: var(--gk-text-muted);'
+        }
         button.textContent = category.label
         button.addEventListener('click', () => {
             templateVariableState.category = category.id
@@ -525,7 +664,8 @@ function renderTemplateVariableList() {
 
     if (!matches.length) {
         const emptyState = document.createElement('p')
-        emptyState.className = 'text-xs text-gray-500 dark:text-gray-400'
+        emptyState.className = 'text-xs'
+        emptyState.style.color = 'var(--gk-text-muted)'
         emptyState.textContent = 'No placeholders match the current filters.'
         fragments.appendChild(emptyState)
     } else {
@@ -533,35 +673,35 @@ function renderTemplateVariableList() {
             const button = document.createElement('button')
             button.type = 'button'
             button.dataset.templateSnippet = token.snippet
-            button.className = 'w-full text-left rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 hover:border-gotrs-400 focus:outline-none focus:ring-2 focus:ring-gotrs-500'
+            button.className = 'w-full text-left rounded-md p-3 transition-colors hover:bg-white/5'
+            button.style.cssText = 'background: var(--gk-bg-surface); border: 1px solid var(--gk-border);'
 
             const titleRow = document.createElement('div')
             titleRow.className = 'flex items-center justify-between gap-2'
             const title = document.createElement('span')
-            title.className = 'text-sm font-semibold text-gray-900 dark:text-white'
+            title.className = 'text-sm font-semibold'
+            title.style.color = 'var(--gk-text-primary)'
             title.textContent = token.label
             const badge = document.createElement('span')
-            badge.className = 'text-[11px] font-medium text-gray-500 dark:text-gray-400'
+            badge.className = 'text-[11px] font-medium'
+            badge.style.color = 'var(--gk-text-muted)'
             badge.textContent = group.label
             titleRow.appendChild(title)
             titleRow.appendChild(badge)
 
             const code = document.createElement('code')
-            code.className = 'mt-1 block font-mono text-xs text-gotrs-600 dark:text-gotrs-300 break-words'
+            code.className = 'mt-1 block font-mono text-xs break-words'
+            code.style.color = 'var(--gk-primary)'
             code.textContent = token.snippet
 
             const hint = document.createElement('p')
-            hint.className = 'mt-1 text-xs text-gray-500 dark:text-gray-400'
+            hint.className = 'mt-1 text-xs'
+            hint.style.color = 'var(--gk-text-muted)'
             hint.textContent = token.hint
-
-            const cta = document.createElement('span')
-            cta.className = 'mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-gotrs-600 dark:text-gotrs-300'
-            cta.innerHTML = '<i class="fas fa-plus text-[10px]"></i> Insert'
 
             button.appendChild(titleRow)
             button.appendChild(code)
             button.appendChild(hint)
-            button.appendChild(cta)
             fragments.appendChild(button)
         })
     }
@@ -658,10 +798,10 @@ function openSystemAddressModal(trigger) {
     const heading = document.getElementById('system-address-modal-title')
     form.reset()
     form.querySelector('[name="id"]').value = ''
-    heading.textContent = 'Add System Address'
+    heading.textContent = '{{ t("email_identities.add_system_address")|default:"Add System Address" }}'
 
     if (trigger && trigger.dataset.id) {
-        heading.textContent = 'Edit System Address'
+        heading.textContent = '{{ t("email_identities.edit_system_address")|default:"Edit System Address" }}'
         fillForm(form, {
             id: trigger.dataset.id,
             email: trigger.dataset.email,
@@ -705,7 +845,7 @@ async function submitSystemAddress(event) {
     }
 
     const data = await response.json().catch(() => ({}))
-    alert(data.error || 'Failed to save system address')
+    showToast(data.error || 'Failed to save system address', 'error')
 }
 
 function getTemplateBlockConfig(type) {
@@ -795,7 +935,7 @@ function ensureBlockEditor(content) {
 
     if (!blockEditorInitialized) {
         blockEditorInstance = TiptapEditor.init('template-block-editor', {
-            placeholder: 'Compose content…',
+            placeholder: 'Compose content...',
             content: editorReadyContent,
             editorMode: 'richtext',
             onUpdate: (html) => {
@@ -852,7 +992,7 @@ async function submitTemplateBlock(event) {
     }
 
     const data = await response.json().catch(() => ({}))
-    alert(data.error || `Failed to save ${blockType}`)
+    showToast(data.error || `Failed to save ${blockType}`, 'error')
 }
 
 function openSignatureModal(trigger) {
@@ -863,10 +1003,6 @@ function closeSignatureModal() {
     closeTemplateBlockModal()
 }
 
-async function submitSignature(event) {
-    return submitTemplateBlock(event)
-}
-
 function openSalutationModal(trigger) {
     openTemplateBlockModal('salutation', trigger)
 }
@@ -875,32 +1011,13 @@ function closeSalutationModal() {
     closeTemplateBlockModal()
 }
 
-async function submitSalutation(event) {
-    return submitTemplateBlock(event)
-}
-
-function closeSignatureModal() {
-    closeTemplateBlockModal()
-}
-
-function openSignatureModal(trigger) {
-    openTemplateBlockModal('signature', trigger)
-}
-
-async function submitSignature(event) {
-    return submitTemplateBlock(event)
-}
-
-function closeSalutationModal() {
-    closeTemplateBlockModal()
-}
-
-function openSalutationModal(trigger) {
-    openTemplateBlockModal('salutation', trigger)
-}
-
-async function submitSalutation(event) {
-    return submitTemplateBlock(event)
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div')
+    toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50'
+    toast.style.background = type === 'error' ? 'var(--gk-error)' : type === 'success' ? 'var(--gk-success)' : 'var(--gk-primary)'
+    toast.textContent = message
+    document.body.appendChild(toast)
+    setTimeout(() => toast.remove(), 3000)
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -921,6 +1038,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     ensureBlockEditor('')
     initTemplateVariableHelper()
+})
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeSystemAddressModal()
+        closeTemplateBlockModal()
+    }
 })
 </script>
 {% endblock %}

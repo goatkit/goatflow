@@ -1,0 +1,43 @@
+{# Assign Agent Modal with Synthwave Styling #}
+{# Required variables: Ticket #}
+
+<div id="assignAgentDialog" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex min-h-screen items-center justify-center px-4 py-12">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 transition-opacity" style="background: rgba(0, 0, 0, 0.8);" onclick="hideAssignDialog()"></div>
+
+        <!-- Dialog -->
+        <div class="relative z-50 w-full max-w-md rounded-lg shadow-xl" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
+                <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">
+                    {{ t("tickets.assign_agent")|default:"Assign Agent" }} {{ t("tickets.to")|default:"to" }} {{ t("tickets.ticket")|default:"Ticket" }} #{{ Ticket.tn }}
+                </h3>
+            </div>
+
+            <form id="assignAgentForm" class="p-6">
+                <!-- Agent Selection -->
+                <div class="mb-4">
+                    <label for="assignAgent" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("tickets.select_agent")|default:"Select Agent" }} <span style="color: var(--gk-error);">*</span>
+                    </label>
+                    <select id="assignAgent" name="assignAgent" required class="gk-select-neon w-full">
+                        <option value="">{{ t("tickets.loading_agents")|default:"Loading agents..." }}</option>
+                    </select>
+                    <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">
+                        {{ t("tickets.agents_with_permissions_only")|default:"Only agents with permissions for this queue are shown" }}
+                    </p>
+                </div>
+
+                <!-- Action buttons -->
+                <div class="flex justify-end gap-3">
+                    <button type="button" onclick="hideAssignDialog()" class="gk-btn-secondary">
+                        {{ t("common.cancel") }}
+                    </button>
+                    <button type="submit" class="gk-btn-neon">
+                        {{ t("tickets.assign_agent")|default:"Assign Agent" }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

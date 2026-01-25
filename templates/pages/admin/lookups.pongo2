@@ -3,87 +3,75 @@
 {% block title %}{{ t("admin.lookups_title") }} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
-    <div class="mb-8">
-        <div class="sm:flex sm:items-center sm:justify-between">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("admin.lookups_title") }}</h1>
-                <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                    {{ t("admin.lookups.description") }}
-                </p>
-            </div>
-        </div>
-    </div>
+    <header class="mb-8">
+        <h1 class="text-3xl font-bold gk-heading">
+            <span class="gk-text-gradient">{{ t("admin.lookups_title") }}</span>
+        </h1>
+        <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.lookups.description") }}</p>
+    </header>
 
     <!-- Tabs for different lookup types -->
-    <div class="border-b border-gray-200 dark:border-gray-700">
+    <div class="border-b mb-6" style="border-color: var(--gk-border);">
         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-            <button
-                onclick="switchTab('priorities')"
-                id="tab-priorities"
-                class="tab-button whitespace-nowrap border-b-2 py-2 px-1 text-sm font-medium">
+            <button onclick="switchTab('priorities')" id="tab-priorities"
+                class="tab-button whitespace-nowrap border-b-2 py-2 px-1 text-sm font-medium transition-colors">
                 {{ t("admin.priorities") }}
             </button>
-            <button
-                onclick="switchTab('states')"
-                id="tab-states"
-                class="tab-button whitespace-nowrap border-b-2 py-2 px-1 text-sm font-medium">
+            <button onclick="switchTab('states')" id="tab-states"
+                class="tab-button whitespace-nowrap border-b-2 py-2 px-1 text-sm font-medium transition-colors">
                 {{ t("admin.states") }}
             </button>
-            <button
-                onclick="switchTab('types')"
-                id="tab-types"
-                class="tab-button whitespace-nowrap border-b-2 py-2 px-1 text-sm font-medium">
+            <button onclick="switchTab('types')" id="tab-types"
+                class="tab-button whitespace-nowrap border-b-2 py-2 px-1 text-sm font-medium transition-colors">
                 {{ t("admin.types") }}
             </button>
         </nav>
     </div>
 
     <!-- Tab Content -->
-    <div class="mt-6">
+    <div>
         <!-- Priorities Tab -->
         <div id="tab-content-priorities" class="tab-content">
             <div class="sm:flex sm:items-center sm:justify-between mb-6">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("admin.priorities") }}</h2>
-                <button
-                    onclick="openPriorityModal()"
-                    class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
-                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                <h2 class="text-xl font-semibold" style="color: var(--gk-text-primary);">{{ t("admin.priorities") }}</h2>
+                <button onclick="openPriorityModal()" class="gk-btn-neon">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
                     {{ t("admin.add_priority") }}
                 </button>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-                <ul class="divide-y divide-gray-200 dark:divide-gray-700" id="priorities-list">
+            <div class="gk-card-glow overflow-hidden rounded-lg">
+                <ul class="divide-y" style="border-color: var(--gk-border);" id="priorities-list">
                     {% for priority in Priorities %}
-                    <li class="px-4 py-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <li class="px-4 py-4 sm:px-6 hover:bg-white/5 transition-colors">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center">
-                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gotrs-100 dark:bg-gotrs-900 flex items-center justify-center">
-                                    <span class="text-gotrs-600 dark:text-gotrs-400 font-medium">{{ priority.ID }}</span>
+                                <div class="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center" style="background: rgba(var(--gk-primary-rgb), 0.2);">
+                                    <span class="font-medium" style="color: var(--gk-primary);">{{ priority.ID }}</span>
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ priority.Name }}</div>
+                                    <div class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ priority.Name }}</div>
                                     {% if priority.Color %}
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                    <div class="text-sm flex items-center gap-2" style="color: var(--gk-text-muted);">
                                         <span class="inline-block w-3 h-3 rounded-full" style="background-color: {{ priority.Color }}"></span>
                                         {{ priority.Color }}
                                     </div>
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="flex items-center space-x-2">
-                                <button
-                                    onclick="editPriority({{ priority.ID }}, '{{ priority.Name|addslashes }}', '{{ priority.Color|default:"" }}')"
-                                    class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-200">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
-                                </button>
-                            </div>
+                            <button onclick="editPriority({{ priority.ID }}, '{{ priority.Name|addslashes }}', '{{ priority.Color|default:"" }}')"
+                                class="p-1 rounded transition-colors hover:bg-white/10"
+                                style="color: var(--gk-primary);"
+                                title="{{ t('common.edit') }}"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
                         </div>
                     </li>
                     {% endfor %}
@@ -94,42 +82,40 @@
         <!-- States Tab -->
         <div id="tab-content-states" class="tab-content hidden">
             <div class="sm:flex sm:items-center sm:justify-between mb-6">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("admin.states") }}</h2>
-                <button
-                    onclick="openStateModal()"
-                    class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
-                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                <h2 class="text-xl font-semibold" style="color: var(--gk-text-primary);">{{ t("admin.states") }}</h2>
+                <button onclick="openStateModal()" class="gk-btn-neon">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
                     {{ t("admin.add_state") }}
                 </button>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-                <ul class="divide-y divide-gray-200 dark:divide-gray-700" id="states-list">
+            <div class="gk-card-glow overflow-hidden rounded-lg">
+                <ul class="divide-y" style="border-color: var(--gk-border);" id="states-list">
                     {% for state in TicketStates %}
-                    <li class="px-4 py-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <li class="px-4 py-4 sm:px-6 hover:bg-white/5 transition-colors">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center">
-                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gotrs-100 dark:bg-gotrs-900 flex items-center justify-center">
-                                    <span class="text-gotrs-600 dark:text-gotrs-400 font-medium">{{ state.ID }}</span>
+                                <div class="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center" style="background: rgba(var(--gk-primary-rgb), 0.2);">
+                                    <span class="font-medium" style="color: var(--gk-primary);">{{ state.ID }}</span>
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ state.Name }}</div>
+                                    <div class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ state.Name }}</div>
                                     {% if state.TypeName %}
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">Type: {{ state.TypeName }}</div>
+                                    <div class="text-sm" style="color: var(--gk-text-muted);">Type: {{ state.TypeName }}</div>
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="flex items-center space-x-2">
-                                <button
-                                    onclick="editState({{ state.ID }}, '{{ state.Name|addslashes }}', {{ state.TypeID }}, '{{ state.Comments|default:""|addslashes }}')"
-                                    class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-200">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
-                                </button>
-                            </div>
+                            <button onclick="editState({{ state.ID }}, '{{ state.Name|addslashes }}', {{ state.TypeID }}, '{{ state.Comments|default:""|addslashes }}')"
+                                class="p-1 rounded transition-colors hover:bg-white/10"
+                                style="color: var(--gk-primary);"
+                                title="{{ t('common.edit') }}"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
                         </div>
                     </li>
                     {% endfor %}
@@ -140,42 +126,40 @@
         <!-- Types Tab -->
         <div id="tab-content-types" class="tab-content hidden">
             <div class="sm:flex sm:items-center sm:justify-between mb-6">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ t("admin.types") }}</h2>
-                <button
-                    onclick="openTypeModal()"
-                    class="inline-flex items-center justify-center rounded-md bg-gotrs-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gotrs-600">
-                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                <h2 class="text-xl font-semibold" style="color: var(--gk-text-primary);">{{ t("admin.types") }}</h2>
+                <button onclick="openTypeModal()" class="gk-btn-neon">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
                     {{ t("admin.add_type") }}
                 </button>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
-                <ul class="divide-y divide-gray-200 dark:divide-gray-700" id="types-list">
+            <div class="gk-card-glow overflow-hidden rounded-lg">
+                <ul class="divide-y" style="border-color: var(--gk-border);" id="types-list">
                     {% for type in TicketTypes %}
-                    <li class="px-4 py-4 sm:px-6 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <li class="px-4 py-4 sm:px-6 hover:bg-white/5 transition-colors">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center">
-                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gotrs-100 dark:bg-gotrs-900 flex items-center justify-center">
-                                    <span class="text-gotrs-600 dark:text-gotrs-400 font-medium">{{ type.ID }}</span>
+                                <div class="flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center" style="background: rgba(var(--gk-primary-rgb), 0.2);">
+                                    <span class="font-medium" style="color: var(--gk-primary);">{{ type.ID }}</span>
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ type.Name }}</div>
+                                    <div class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ type.Name }}</div>
                                     {% if type.Comments %}
-                                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ type.Comments }}</div>
+                                    <div class="text-sm" style="color: var(--gk-text-muted);">{{ type.Comments }}</div>
                                     {% endif %}
                                 </div>
                             </div>
-                            <div class="flex items-center space-x-2">
-                                <button
-                                    onclick="editType({{ type.ID }}, '{{ type.Name|addslashes }}', '{{ type.Comments|default:""|addslashes }}')"
-                                    class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-200">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                    </svg>
-                                </button>
-                            </div>
+                            <button onclick="editType({{ type.ID }}, '{{ type.Name|addslashes }}', '{{ type.Comments|default:""|addslashes }}')"
+                                class="p-1 rounded transition-colors hover:bg-white/10"
+                                style="color: var(--gk-primary);"
+                                title="{{ t('common.edit') }}"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                            </button>
                         </div>
                     </li>
                     {% endfor %}
@@ -186,46 +170,37 @@
 </div>
 
 <!-- Priority Modal -->
-<div id="priorityModal" class="fixed z-50 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="priorityModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closePriorityModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <form id="priorityForm" onsubmit="savePriority(event)">
-                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="priority-modal-title">
-                                Add Priority
-                            </h3>
-                            <div class="mt-4">
-                                <input type="hidden" id="priorityId" name="id">
-
-                                <div class="mb-4">
-                                    <label for="priorityName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                                    <input type="text" name="name" id="priorityName" required
-                                           class="mt-1 focus:ring-gotrs-500 focus:border-gotrs-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
-                                </div>
-
-                                <div class="mb-4">
-                                    <label for="priorityColor" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Color</label>
-                                    <input type="color" name="color" id="priorityColor"
-                                           class="mt-1 block h-10 w-20">
-                                </div>
-                            </div>
+                <div class="gk-modal-header">
+                    <h3 id="priority-modal-title" class="text-lg font-semibold" style="color: var(--gk-text-primary);" data-add="{{ t("admin.lookups.add_priority")|default:"Add Priority" }}" data-edit="{{ t("admin.lookups.edit_priority")|default:"Edit Priority" }}">{{ t("admin.lookups.add_priority")|default:"Add Priority" }}</h3>
+                    <button type="button" onclick="closePriorityModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="gk-modal-body">
+                    <input type="hidden" id="priorityId" name="id">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="priorityName" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Name</label>
+                            <input type="text" name="name" id="priorityName" required class="gk-input-neon w-full">
+                        </div>
+                        <div>
+                            <label for="priorityColor" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Color</label>
+                            <input type="color" name="color" id="priorityColor" class="h-10 w-20 rounded cursor-pointer" style="background: transparent; border: 1px solid var(--gk-border);">
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit"
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">
-                        Save
-                    </button>
-                    <button type="button" onclick="closePriorityModal()"
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                        Cancel
-                    </button>
+                <div class="gk-modal-footer">
+                    <button type="button" onclick="closePriorityModal()" class="gk-btn-secondary">{{ t("buttons.cancel")|default:"Cancel" }}</button>
+                    <button type="submit" class="gk-btn-neon">{{ t("buttons.save")|default:"Save" }}</button>
                 </div>
             </form>
         </div>
@@ -233,57 +208,46 @@
 </div>
 
 <!-- State Modal -->
-<div id="stateModal" class="fixed z-50 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="stateModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeStateModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <form id="stateForm" onsubmit="saveState(event)">
-                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="state-modal-title">
-                                Add State
-                            </h3>
-                            <div class="mt-4">
-                                <input type="hidden" id="stateId" name="id">
-
-                                <div class="mb-4">
-                                    <label for="stateName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                                    <input type="text" name="name" id="stateName" required
-                                           class="mt-1 focus:ring-gotrs-500 focus:border-gotrs-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
-                                </div>
-
-                                <div class="mb-4">
-                                    <label for="stateTypeId" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
-                                    <select name="type_id" id="stateTypeId" required
-                                            class="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-gotrs-500 focus:border-gotrs-500 sm:text-sm dark:text-white">
-                                        <option value="1">New</option>
-                                        <option value="2">Open</option>
-                                        <option value="3">Pending</option>
-                                        <option value="4">Closed</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-4">
-                                    <label for="stateComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Comments</label>
-                                    <textarea name="comments" id="stateComments" rows="2"
-                                              class="mt-1 focus:ring-gotrs-500 focus:border-gotrs-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"></textarea>
-                                </div>
-                            </div>
+                <div class="gk-modal-header">
+                    <h3 id="state-modal-title" class="text-lg font-semibold" style="color: var(--gk-text-primary);" data-add="{{ t("admin.lookups.add_state")|default:"Add State" }}" data-edit="{{ t("admin.lookups.edit_state")|default:"Edit State" }}">{{ t("admin.lookups.add_state")|default:"Add State" }}</h3>
+                    <button type="button" onclick="closeStateModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="gk-modal-body">
+                    <input type="hidden" id="stateId" name="id">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="stateName" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Name</label>
+                            <input type="text" name="name" id="stateName" required class="gk-input-neon w-full">
+                        </div>
+                        <div>
+                            <label for="stateTypeId" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Type</label>
+                            <select name="type_id" id="stateTypeId" required class="gk-select-neon w-full">
+                                <option value="1">New</option>
+                                <option value="2">Open</option>
+                                <option value="3">Pending</option>
+                                <option value="4">Closed</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="stateComments" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Comments</label>
+                            <textarea name="comments" id="stateComments" rows="2" class="gk-input-neon w-full"></textarea>
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit"
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">
-                        Save
-                    </button>
-                    <button type="button" onclick="closeStateModal()"
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                        Cancel
-                    </button>
+                <div class="gk-modal-footer">
+                    <button type="button" onclick="closeStateModal()" class="gk-btn-secondary">{{ t("buttons.cancel")|default:"Cancel" }}</button>
+                    <button type="submit" class="gk-btn-neon">{{ t("buttons.save")|default:"Save" }}</button>
                 </div>
             </form>
         </div>
@@ -291,46 +255,37 @@
 </div>
 
 <!-- Type Modal -->
-<div id="typeModal" class="fixed z-50 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="typeModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeTypeModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <form id="typeForm" onsubmit="saveType(event)">
-                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="type-modal-title">
-                                Add Type
-                            </h3>
-                            <div class="mt-4">
-                                <input type="hidden" id="typeId" name="id">
-
-                                <div class="mb-4">
-                                    <label for="typeName" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
-                                    <input type="text" name="name" id="typeName" required
-                                           class="mt-1 focus:ring-gotrs-500 focus:border-gotrs-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md">
-                                </div>
-
-                                <div class="mb-4">
-                                    <label for="typeComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Comments</label>
-                                    <textarea name="comments" id="typeComments" rows="2"
-                                              class="mt-1 focus:ring-gotrs-500 focus:border-gotrs-500 block w-full shadow-sm sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md"></textarea>
-                                </div>
-                            </div>
+                <div class="gk-modal-header">
+                    <h3 id="type-modal-title" class="text-lg font-semibold" style="color: var(--gk-text-primary);" data-add="{{ t("admin.lookups.add_type")|default:"Add Type" }}" data-edit="{{ t("admin.lookups.edit_type")|default:"Edit Type" }}">{{ t("admin.lookups.add_type")|default:"Add Type" }}</h3>
+                    <button type="button" onclick="closeTypeModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="gk-modal-body">
+                    <input type="hidden" id="typeId" name="id">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="typeName" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Name</label>
+                            <input type="text" name="name" id="typeName" required class="gk-input-neon w-full">
+                        </div>
+                        <div>
+                            <label for="typeComments" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">Comments</label>
+                            <textarea name="comments" id="typeComments" rows="2" class="gk-input-neon w-full"></textarea>
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit"
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">
-                        Save
-                    </button>
-                    <button type="button" onclick="closeTypeModal()"
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                        Cancel
-                    </button>
+                <div class="gk-modal-footer">
+                    <button type="button" onclick="closeTypeModal()" class="gk-btn-secondary">{{ t("buttons.cancel")|default:"Cancel" }}</button>
+                    <button type="submit" class="gk-btn-neon">{{ t("buttons.save")|default:"Save" }}</button>
                 </div>
             </form>
         </div>
@@ -338,76 +293,68 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="fixed z-50 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="deleteModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeDeleteModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 sm:mx-0 sm:h-10 sm:w-10">
-                        <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                    </div>
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                            Delete <span id="deleteItemType"></span>
-                        </h3>
-                        <div class="mt-2">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                {{ t("messages.confirm.delete_lookup")|default:"Are you sure you want to delete this item? This action cannot be undone." }}
-                            </p>
-                        </div>
-                    </div>
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+            <div class="gk-modal-header">
+                <div class="flex items-center">
+                    <svg class="h-6 w-6 mr-3" style="color: var(--gk-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">Delete <span id="deleteItemType"></span></h3>
                 </div>
+                <button type="button" onclick="closeDeleteModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" onclick="confirmDelete()"
-                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
-                    Delete
-                </button>
-                <button type="button" onclick="closeDeleteModal()"
-                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                    Cancel
-                </button>
+            <div class="gk-modal-body">
+                <p class="text-sm" style="color: var(--gk-text-secondary);">
+                    {{ t("messages.confirm.delete_lookup")|default:"Are you sure you want to delete this item? This action cannot be undone." }}
+                </p>
+            </div>
+            <div class="gk-modal-footer">
+                <button type="button" onclick="closeDeleteModal()" class="gk-btn-secondary">{{ t("buttons.cancel")|default:"Cancel" }}</button>
+                <button type="button" onclick="confirmDelete()" class="gk-btn-danger">{{ t("buttons.delete")|default:"Delete" }}</button>
             </div>
         </div>
     </div>
 </div>
 
+<style>
+.tab-button {
+    border-color: transparent;
+    color: var(--gk-text-muted);
+}
+.tab-button:hover {
+    color: var(--gk-text-secondary);
+}
+.tab-button.active {
+    border-color: var(--gk-primary);
+    color: var(--gk-primary);
+}
+</style>
+
 <script>
 let currentEditId = null;
 let deleteContext = { type: '', id: null };
-let currentTab = 'priorities'; // Default tab
+let currentTab = 'priorities';
 
 function switchTab(tabName) {
     currentTab = tabName;
-
-    // Update URL with current tab
     const url = new URL(window.location);
     url.searchParams.set('tab', tabName);
     window.history.pushState({}, '', url);
 
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.add('hidden');
-    });
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+    document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
 
-    // Remove active state from all tab buttons
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.classList.remove('border-gotrs-500', 'text-gotrs-600', 'dark:text-gotrs-400');
-        button.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
-    });
-
-    // Show selected tab content
     document.getElementById('tab-content-' + tabName).classList.remove('hidden');
-
-    // Set active state on selected tab button
-    const activeButton = document.getElementById('tab-' + tabName);
-    activeButton.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
-    activeButton.classList.add('border-gotrs-500', 'text-gotrs-600', 'dark:text-gotrs-400');
+    document.getElementById('tab-' + tabName).classList.add('active');
 }
 
 function getCurrentTabFromURL() {
@@ -424,7 +371,8 @@ function reloadWithCurrentTab() {
 // Priority functions
 function openPriorityModal() {
     currentEditId = null;
-    document.getElementById('priority-modal-title').textContent = 'Add Priority';
+    const title = document.getElementById('priority-modal-title');
+    title.textContent = title.dataset.add;
     document.getElementById('priorityForm').reset();
     document.getElementById('priorityModal').classList.remove('hidden');
 }
@@ -435,7 +383,8 @@ function closePriorityModal() {
 
 function editPriority(id, name, color) {
     currentEditId = id;
-    document.getElementById('priority-modal-title').textContent = 'Edit Priority';
+    const title = document.getElementById('priority-modal-title');
+    title.textContent = title.dataset.edit;
     document.getElementById('priorityId').value = id;
     document.getElementById('priorityName').value = name;
     document.getElementById('priorityColor').value = color || '#cccccc';
@@ -445,10 +394,7 @@ function editPriority(id, name, color) {
 async function savePriority(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
-    const data = {
-        name: formData.get('name'),
-        color: formData.get('color')
-    };
+    const data = { name: formData.get('name'), color: formData.get('color') };
 
     const url = currentEditId ? `/admin/priorities/${currentEditId}` : '/admin/priorities';
     const method = currentEditId ? 'PUT' : 'POST';
@@ -459,7 +405,6 @@ async function savePriority(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
         if (response.ok) {
             closePriorityModal();
             reloadWithCurrentTab();
@@ -472,17 +417,11 @@ async function savePriority(event) {
     }
 }
 
-function deletePriority(id) {
-    deleteContext = { type: 'priority', id: id };
-    document.getElementById('deleteItemType').textContent = 'Priority';
-    document.getElementById('deleteItemTypeDesc').textContent = 'priority';
-    document.getElementById('deleteModal').classList.remove('hidden');
-}
-
 // State functions
 function openStateModal() {
     currentEditId = null;
-    document.getElementById('state-modal-title').textContent = 'Add State';
+    const title = document.getElementById('state-modal-title');
+    title.textContent = title.dataset.add;
     document.getElementById('stateForm').reset();
     document.getElementById('stateModal').classList.remove('hidden');
 }
@@ -493,7 +432,8 @@ function closeStateModal() {
 
 function editState(id, name, typeId, comments) {
     currentEditId = id;
-    document.getElementById('state-modal-title').textContent = 'Edit State';
+    const title = document.getElementById('state-modal-title');
+    title.textContent = title.dataset.edit;
     document.getElementById('stateId').value = id;
     document.getElementById('stateName').value = name;
     document.getElementById('stateTypeId').value = typeId;
@@ -519,7 +459,6 @@ async function saveState(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
         if (response.ok) {
             closeStateModal();
             reloadWithCurrentTab();
@@ -532,17 +471,11 @@ async function saveState(event) {
     }
 }
 
-function deleteState(id) {
-    deleteContext = { type: 'state', id: id };
-    document.getElementById('deleteItemType').textContent = 'State';
-    document.getElementById('deleteItemTypeDesc').textContent = 'state';
-    document.getElementById('deleteModal').classList.remove('hidden');
-}
-
 // Type functions
 function openTypeModal() {
     currentEditId = null;
-    document.getElementById('type-modal-title').textContent = 'Add Type';
+    const title = document.getElementById('type-modal-title');
+    title.textContent = title.dataset.add;
     document.getElementById('typeForm').reset();
     document.getElementById('typeModal').classList.remove('hidden');
 }
@@ -553,7 +486,8 @@ function closeTypeModal() {
 
 function editType(id, name, comments) {
     currentEditId = id;
-    document.getElementById('type-modal-title').textContent = 'Edit Type';
+    const title = document.getElementById('type-modal-title');
+    title.textContent = title.dataset.edit;
     document.getElementById('typeId').value = id;
     document.getElementById('typeName').value = name;
     document.getElementById('typeComments').value = comments || '';
@@ -563,10 +497,7 @@ function editType(id, name, comments) {
 async function saveType(event) {
     event.preventDefault();
     const formData = new FormData(event.target);
-    const data = {
-        name: formData.get('name'),
-        comments: formData.get('comments') || null
-    };
+    const data = { name: formData.get('name'), comments: formData.get('comments') || null };
 
     const url = currentEditId ? `/api/types/${currentEditId}` : '/api/types';
     const method = currentEditId ? 'PUT' : 'POST';
@@ -577,7 +508,6 @@ async function saveType(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-
         if (response.ok) {
             closeTypeModal();
             reloadWithCurrentTab();
@@ -590,14 +520,7 @@ async function saveType(event) {
     }
 }
 
-function deleteType(id) {
-    deleteContext = { type: 'type', id: id };
-    document.getElementById('deleteItemType').textContent = 'Type';
-    document.getElementById('deleteItemTypeDesc').textContent = 'type';
-    document.getElementById('deleteModal').classList.remove('hidden');
-}
-
-// Delete confirmation
+// Delete functions
 function closeDeleteModal() {
     document.getElementById('deleteModal').classList.add('hidden');
     deleteContext = { type: '', id: null };
@@ -607,20 +530,12 @@ async function confirmDelete() {
     if (!deleteContext.type || !deleteContext.id) return;
 
     let url;
-    if (deleteContext.type === 'priority') {
-        url = `/admin/priorities/${deleteContext.id}`;
-    } else if (deleteContext.type === 'state') {
-        url = `/api/states/${deleteContext.id}`;
-    } else {
-        url = `/api/types/${deleteContext.id}`;
-    }
+    if (deleteContext.type === 'priority') url = `/admin/priorities/${deleteContext.id}`;
+    else if (deleteContext.type === 'state') url = `/api/states/${deleteContext.id}`;
+    else url = `/api/types/${deleteContext.id}`;
 
     try {
-        const response = await fetch(url, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' }
-        });
-
+        const response = await fetch(url, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } });
         if (response.ok) {
             closeDeleteModal();
             reloadWithCurrentTab();
@@ -633,44 +548,28 @@ async function confirmDelete() {
     }
 }
 
-// Toast notification
 function showToast(message, type = 'info') {
-    // Create toast element
     const toast = document.createElement('div');
     toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
-        type === 'error' ? 'bg-red-600' :
-        type === 'success' ? 'bg-green-600' :
-        'bg-blue-600'
+        type === 'error' ? 'bg-red-600' : type === 'success' ? 'bg-green-600' : 'bg-blue-600'
     }`;
     toast.textContent = message;
-
     document.body.appendChild(toast);
-
-    // Remove after 3 seconds
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+    setTimeout(() => toast.remove(), 3000);
 }
 
-// Initialize page on load
 document.addEventListener('DOMContentLoaded', function() {
-    // Set current tab from URL or default to priorities
     currentTab = getCurrentTabFromURL();
     switchTab(currentTab);
+});
 
-    // Allow Enter key to submit modal forms
-    const modals = ['priorityModal', 'stateModal', 'typeModal'];
-    modals.forEach(modalId => {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-                    e.preventDefault();
-                    modal.querySelector('form').requestSubmit();
-                }
-            });
-        }
-    });
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closePriorityModal();
+        closeStateModal();
+        closeTypeModal();
+        closeDeleteModal();
+    }
 });
 </script>
 {% endblock %}

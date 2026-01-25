@@ -3,130 +3,222 @@
 {% block title %}{{ t("roadmap.title")|default:"System Roadmap" }} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
-    <div class="container mx-auto px-4">
-        <!-- Header with Back Button -->
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg mb-6">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <a href="/admin"
-                           class="mr-4 inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-primary transition-colors">
-                            <svg class="mr-2 -ml-0.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                            </svg>
-                            Back to Dashboard
-                        </a>
-                        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                            <i class="fas fa-road mr-2"></i>{{ t("roadmap.heading")|default:"Development Roadmap" }}
-                        </h1>
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Header with Back Button -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div class="flex items-center">
+                <a href="/admin" class="gk-btn-secondary mr-4">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    {{ t("common.back") }}
+                </a>
+                <div>
+                    <h1 class="text-3xl font-bold gk-heading">
+                        <span class="gk-text-gradient">{{ t("roadmap.heading")|default:"Development Roadmap" }}</span>
+                    </h1>
+                </div>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <span class="text-sm" style="color: var(--gk-text-muted);">
+                    <svg class="inline-block h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {{ t("roadmap.generated_from")|default:"Generated from ROADMAP.md" }}
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Roadmap Content -->
+    <div class="gk-card-glow rounded-lg overflow-hidden mb-6">
+        <div class="p-6 lg:p-8">
+            {% if Error %}
+            <div class="rounded-lg p-4" style="background: rgba(var(--gk-error-rgb), 0.1); border: 1px solid var(--gk-error);">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5" style="color: var(--gk-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                     </div>
-                    <div class="text-sm text-gray-500 dark:text-gray-400">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        Generated from ROADMAP.md
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium" style="color: var(--gk-error);">
+                            {{ t("roadmap.error_loading")|default:"Error Loading Roadmap" }}
+                        </h3>
+                        <p class="mt-1 text-sm" style="color: var(--gk-text-secondary);">
+                            {{ Error }}
+                        </p>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Roadmap Content -->
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
-            <div class="px-6 py-8">
-                {% if Error %}
-                    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <h3 class="text-sm font-medium text-red-800 dark:text-red-200">
-                                    {{ t("roadmap.error_loading")|default:"Error Loading Roadmap" }}
-                                </h3>
-                                <p class="mt-1 text-sm text-red-700 dark:text-red-300">
-                                    {{ Error }}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                {% else %}
-                    <div class="prose prose-lg max-w-none dark:prose-invert">
-                        {{ HTMLContent|safe }}
-                    </div>
-                {% endif %}
+            {% else %}
+            <div class="prose prose-lg max-w-none gk-prose">
+                {{ HTMLContent|safe }}
             </div>
+            {% endif %}
         </div>
+    </div>
 
-        <!-- Quick Stats Summary -->
-        <div class="mt-6 bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("roadmap.quick_navigation")|default:"Quick Navigation" }}</h2>
-            </div>
-            <div class="px-6 py-4">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <a href="#phase-2a-admin-ui-implementation-current-top-priority"
-                       class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                        <h3 class="font-medium text-gray-900 dark:text-white mb-1">{{ t("roadmap.current_phase")|default:"Current Phase" }}</h3>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Admin UI Implementation</p>
-                    </a>
-                    <a href="#admin-ui-module-checklist-71-total"
-                       class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                        <h3 class="font-medium text-gray-900 dark:text-white mb-1">{{ t("roadmap.module_checklist")|default:"Module Checklist" }}</h3>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">71 Total Modules</p>
-                    </a>
-                    <a href="#recent-accomplishments-august-22-2025"
-                       class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
-                        <h3 class="font-medium text-gray-900 dark:text-white mb-1">{{ t("roadmap.recent_updates")|default:"Recent Updates" }}</h3>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Latest accomplishments</p>
-                    </a>
-                </div>
+    <!-- Quick Stats Summary -->
+    <div class="gk-card-glow rounded-lg overflow-hidden">
+        <div class="px-6 py-4 border-b" style="border-color: var(--gk-border);">
+            <h2 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("roadmap.quick_navigation")|default:"Quick Navigation" }}</h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <a href="#phase-2a-admin-ui-implementation-current-top-priority"
+                   class="block p-4 rounded-lg transition-colors hover:bg-white/5"
+                   style="background: var(--gk-bg-tertiary);">
+                    <h3 class="font-medium mb-1" style="color: var(--gk-text-primary);">{{ t("roadmap.current_phase")|default:"Current Phase" }}</h3>
+                    <p class="text-sm" style="color: var(--gk-text-muted);">Admin UI Implementation</p>
+                </a>
+                <a href="#admin-ui-module-checklist-71-total"
+                   class="block p-4 rounded-lg transition-colors hover:bg-white/5"
+                   style="background: var(--gk-bg-tertiary);">
+                    <h3 class="font-medium mb-1" style="color: var(--gk-text-primary);">{{ t("roadmap.module_checklist")|default:"Module Checklist" }}</h3>
+                    <p class="text-sm" style="color: var(--gk-text-muted);">71 Total Modules</p>
+                </a>
+                <a href="#recent-accomplishments-august-22-2025"
+                   class="block p-4 rounded-lg transition-colors hover:bg-white/5"
+                   style="background: var(--gk-bg-tertiary);">
+                    <h3 class="font-medium mb-1" style="color: var(--gk-text-primary);">{{ t("roadmap.recent_updates")|default:"Recent Updates" }}</h3>
+                    <p class="text-sm" style="color: var(--gk-text-muted);">Latest accomplishments</p>
+                </a>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-/* Additional styling for markdown content */
-.prose h1:target,
-.prose h2:target,
-.prose h3:target {
-    scroll-margin-top: 2rem;
-    padding-top: 2rem;
-    animation: highlight 2s ease-in-out;
+/* Prose styling for roadmap content */
+.gk-prose {
+    color: var(--gk-text-primary);
 }
 
-@keyframes highlight {
-    0% { background-color: rgba(59, 130, 246, 0.2); }
+.gk-prose h1,
+.gk-prose h2,
+.gk-prose h3,
+.gk-prose h4 {
+    color: var(--gk-text-primary);
+    font-weight: 600;
+}
+
+.gk-prose h1 { font-size: 2rem; margin-top: 2rem; margin-bottom: 1rem; }
+.gk-prose h2 { font-size: 1.5rem; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--gk-border); padding-bottom: 0.5rem; }
+.gk-prose h3 { font-size: 1.25rem; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+.gk-prose h4 { font-size: 1.125rem; margin-top: 1rem; margin-bottom: 0.5rem; }
+
+.gk-prose p {
+    color: var(--gk-text-secondary);
+    margin-bottom: 1rem;
+    line-height: 1.75;
+}
+
+.gk-prose a {
+    color: var(--gk-primary);
+    text-decoration: none;
+}
+.gk-prose a:hover {
+    text-decoration: underline;
+}
+
+.gk-prose ul,
+.gk-prose ol {
+    color: var(--gk-text-secondary);
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.gk-prose li {
+    margin-bottom: 0.25rem;
+}
+
+.gk-prose code {
+    background: var(--gk-bg-tertiary);
+    color: var(--gk-primary);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+}
+
+.gk-prose pre {
+    background: var(--gk-bg-surface);
+    border: 1px solid var(--gk-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+}
+
+.gk-prose pre code {
+    background: transparent;
+    padding: 0;
+    color: var(--gk-text-primary);
+}
+
+.gk-prose blockquote {
+    border-left: 4px solid var(--gk-primary);
+    padding-left: 1rem;
+    margin-left: 0;
+    color: var(--gk-text-muted);
+    font-style: italic;
+}
+
+.gk-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.gk-prose th,
+.gk-prose td {
+    border: 1px solid var(--gk-border);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+}
+
+.gk-prose th {
+    background: var(--gk-bg-tertiary);
+    color: var(--gk-text-primary);
+    font-weight: 600;
+}
+
+.gk-prose td {
+    color: var(--gk-text-secondary);
+}
+
+/* Target highlighting for anchor links */
+.gk-prose h1:target,
+.gk-prose h2:target,
+.gk-prose h3:target {
+    scroll-margin-top: 2rem;
+    padding-top: 0.5rem;
+    animation: gk-highlight 2s ease-in-out;
+}
+
+@keyframes gk-highlight {
+    0% { background-color: rgba(var(--gk-primary-rgb), 0.2); }
     100% { background-color: transparent; }
 }
 
 /* Style for checked/unchecked items */
-.prose input[type="checkbox"] {
+.gk-prose input[type="checkbox"] {
     margin-right: 0.5rem;
+    accent-color: var(--gk-success);
 }
 
-.prose input[type="checkbox"]:checked + label,
-.prose li:has(input[type="checkbox"]:checked) {
-    color: rgb(34, 197, 94);
-}
-
-/* Better code block styling */
-.prose pre code {
-    background: transparent;
-    padding: 0;
-    color: inherit;
+.gk-prose input[type="checkbox"]:checked + label,
+.gk-prose li:has(input[type="checkbox"]:checked) {
+    color: var(--gk-success);
 }
 
 /* Responsive tables */
-.prose table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-}
-
 @media (max-width: 640px) {
-    .prose table {
+    .gk-prose table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
         font-size: 0.875rem;
     }
 }

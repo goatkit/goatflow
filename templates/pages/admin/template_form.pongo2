@@ -9,33 +9,33 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8" data-testid="template-form-page">
+<div class="container mx-auto px-4 py-8 min-h-screen" data-testid="template-form-page">
     <!-- Page header -->
-    <div class="mb-8">
+    <header class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white" data-testid="page-title">
-                    {% if IsNew %}{{ t("admin.modules.template.form.create_title") }}{% else %}{{ t("admin.modules.template.form.edit_title") }}{% endif %}
-                </h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    {% if IsNew %}{{ t("admin.modules.template.form.create_description") }}{% else %}{{ t("admin.modules.template.form.edit_description") }}{% endif %}
-                </p>
-            </div>
-            <div class="mt-4 sm:mt-0">
-                <a href="/admin/templates"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                >
+            <div class="flex items-center">
+                <a href="/admin/templates" class="gk-btn-secondary mr-4">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
                     {{ t("admin.modules.template.actions.back_to_list") }}
                 </a>
+                <div>
+                    <h1 class="text-3xl font-bold gk-heading" data-testid="page-title">
+                        <span class="gk-text-gradient">
+                            {% if IsNew %}{{ t("admin.modules.template.form.create_title") }}{% else %}{{ t("admin.modules.template.form.edit_title") }}{% endif %}
+                        </span>
+                    </h1>
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                        {% if IsNew %}{{ t("admin.modules.template.form.create_description") }}{% else %}{{ t("admin.modules.template.form.edit_description") }}{% endif %}
+                    </p>
+                </div>
             </div>
         </div>
-    </div>
+    </header>
 
     <!-- Form -->
-    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+    <div class="gk-card-glow rounded-lg overflow-hidden">
         <form
             id="templateForm"
             method="POST"
@@ -49,14 +49,14 @@
             class="space-y-6 p-6"
         >
             <!-- Basic Information -->
-            <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.modules.template.form.basic_info") }}</h3>
+            <div class="border-b pb-6" style="border-color: var(--gk-border);">
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.modules.template.form.basic_info") }}</h3>
 
                 <div class="grid grid-cols-1 gap-6">
                     <!-- Name -->
                     <div class="max-w-lg">
-                        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {{ t("admin.modules.template.fields.name") }} <span class="text-red-500">*</span>
+                        <label for="name" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.modules.template.fields.name") }} <span style="color: var(--gk-error);">*</span>
                         </label>
                         <input
                             type="text"
@@ -65,31 +65,30 @@
                             value="{{ Template.Name }}"
                             required
                             data-testid="name-input"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                            placeholder="{{ t("admin.modules.template.form.name_placeholder") }}"
+                            class="gk-input-neon w-full"
+                            placeholder="{{ t('admin.modules.template.form.name_placeholder') }}"
                         >
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.modules.template.form.name_help") }}</p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.modules.template.form.name_help") }}</p>
                     </div>
 
                     <!-- Template Types -->
                     <div class="max-w-lg">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            {{ t("admin.modules.template.fields.template_type") }} <span class="text-red-500">*</span>
+                        <label class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.modules.template.fields.template_type") }} <span style="color: var(--gk-error);">*</span>
                         </label>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">{{ t("admin.modules.template.form.template_types_help") }}</p>
+                        <p class="text-xs mb-3" style="color: var(--gk-text-muted);">{{ t("admin.modules.template.form.template_types_help") }}</p>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="template-types-container">
                             {% for tt in TemplateTypes %}
-                            <label class="relative flex items-start py-2">
-                                <div class="min-w-0 flex-1 text-sm">
-                                    <input
-                                        type="checkbox"
-                                        name="template_type"
-                                        value="{{ tt.Key }}"
-                                        {% if tt.Key in Template.TemplateType %}checked{% endif %}
-                                        class="focus:ring-gotrs-500 h-4 w-4 text-gotrs-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
-                                    >
-                                    <span class="ml-2 font-medium text-gray-700 dark:text-gray-300">{{ tt.Label }}</span>
-                                </div>
+                            <label class="relative flex items-start py-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    name="template_type"
+                                    value="{{ tt.Key }}"
+                                    {% if tt.Key in Template.TemplateType %}checked{% endif %}
+                                    class="rounded text-gotrs-600 focus:ring-gotrs-500 h-4 w-4"
+                                    style="border-color: var(--gk-border); background: var(--gk-bg-surface);"
+                                >
+                                <span class="ml-2 text-sm font-medium" style="color: var(--gk-text-secondary);">{{ tt.Label }}</span>
                             </label>
                             {% endfor %}
                         </div>
@@ -97,30 +96,30 @@
 
                     <!-- Content Type -->
                     <div class="max-w-lg">
-                        <label for="content_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <label for="content_type" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
                             {{ t("admin.modules.template.fields.content_type") }}
                         </label>
                         <select
                             name="content_type"
                             id="content_type"
                             data-testid="content-type-select"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            class="gk-select-neon w-full"
                         >
                             <option value="text/plain" {% if Template.ContentType == "text/plain" or not Template.ContentType %}selected{% endif %}>{{ t("admin.modules.template.content_types.plain_text") }}</option>
                             <option value="text/html" {% if Template.ContentType == "text/html" %}selected{% endif %}>{{ t("admin.modules.template.content_types.html") }}</option>
                         </select>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.modules.template.form.content_type_help") }}</p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.modules.template.form.content_type_help") }}</p>
                     </div>
 
                     <!-- Status -->
                     <div class="max-w-lg">
-                        <label for="valid_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <label for="valid_id" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
                             {{ t("admin.modules.template.filters.status") }}
                         </label>
                         <select
                             name="valid_id"
                             id="valid_id"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            class="gk-select-neon w-full"
                         >
                             <option value="1" {% if Template.ValidID == 1 or not Template.ID %}selected{% endif %}>{{ t("admin.modules.template.fields.valid") }}</option>
                             <option value="2" {% if Template.ValidID == 2 %}selected{% endif %}>{{ t("admin.modules.template.fields.invalid") }}</option>
@@ -130,7 +129,7 @@
 
                     <!-- Comments -->
                     <div class="max-w-lg">
-                        <label for="comments" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <label for="comments" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
                             {{ t("admin.modules.template.fields.comments") }}
                         </label>
                         <input
@@ -138,8 +137,8 @@
                             name="comments"
                             id="comments"
                             value="{{ Template.Comments }}"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                            placeholder="{{ t("admin.modules.template.form.comments_placeholder") }}"
+                            class="gk-input-neon w-full"
+                            placeholder="{{ t('admin.modules.template.form.comments_placeholder') }}"
                         >
                     </div>
                 </div>
@@ -147,51 +146,46 @@
 
             <!-- Template Content -->
             <div class="pb-6">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("admin.modules.template.form.template_content") }}</h3>
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.modules.template.form.template_content") }}</h3>
 
                 <div>
-                    <label id="templateEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label id="templateEditorLabel" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
                         {{ t("admin.modules.template.fields.text") }}
                     </label>
 
                     <!-- Available placeholders -->
-                    <div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
-                        <p class="mb-1">{{ t("admin.modules.template.form.available_placeholders") }}:</p>
-                        <p class="mb-2 text-blue-600 dark:text-blue-400">Both <code>&lt;GOTRS_*&gt;</code> and <code>&lt;OTRS_*&gt;</code> prefixes are supported.</p>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 font-mono text-xs">
-                            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_OWNER_Salutation&gt;')">&lt;GOTRS_OWNER_Salutation&gt;</span>
-                            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_OWNER_FirstName&gt;')">&lt;GOTRS_OWNER_FirstName&gt;</span>
-                            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_OWNER_LastName&gt;')">&lt;GOTRS_OWNER_LastName&gt;</span>
-                            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_TICKET_TicketNumber&gt;')">&lt;GOTRS_TICKET_TicketNumber&gt;</span>
-                            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_TICKET_Title&gt;')">&lt;GOTRS_TICKET_Title&gt;</span>
-                            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_CUSTOMER_UserEmail&gt;')">&lt;GOTRS_CUSTOMER_UserEmail&gt;</span>
-                            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_CUSTOMER_UserFirstname&gt;')">&lt;GOTRS_CUSTOMER_UserFirstname&gt;</span>
-                            <span class="bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_CUSTOMER_UserLastname&gt;')">&lt;GOTRS_CUSTOMER_UserLastname&gt;</span>
+                    <div class="mb-4 p-4 rounded-lg" style="background: var(--gk-bg-tertiary); border: 1px solid var(--gk-border);">
+                        <p class="text-sm mb-2" style="color: var(--gk-text-secondary);">{{ t("admin.modules.template.form.available_placeholders") }}:</p>
+                        <p class="text-xs mb-3" style="color: var(--gk-primary);">Both <code class="px-1 rounded" style="background: var(--gk-bg-surface);">&lt;GOTRS_*&gt;</code> and <code class="px-1 rounded" style="background: var(--gk-bg-surface);">&lt;OTRS_*&gt;</code> prefixes are supported.</p>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_OWNER_Salutation&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_OWNER_Salutation&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_OWNER_FirstName&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_OWNER_FirstName&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_OWNER_LastName&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_OWNER_LastName&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_TICKET_TicketNumber&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_TICKET_TicketNumber&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_TICKET_Title&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_TICKET_Title&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_CUSTOMER_UserEmail&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_CUSTOMER_UserEmail&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_CUSTOMER_UserFirstname&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_CUSTOMER_UserFirstname&gt;</button>
+                            <button type="button" onclick="insertEditorPlaceholder('templateEditor', '&lt;GOTRS_CUSTOMER_UserLastname&gt;')" class="text-xs font-mono px-2 py-1 rounded transition-colors hover:bg-white/10" style="background: var(--gk-bg-surface); color: var(--gk-text-secondary);">&lt;GOTRS_CUSTOMER_UserLastname&gt;</button>
                         </div>
-                        <p class="mt-2 text-xs text-gray-400">{{ t("admin.modules.template.form.placeholder_click_hint") }}</p>
+                        <p class="mt-2 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.modules.template.form.placeholder_click_hint") }}</p>
                     </div>
 
                     {% include "partials/rich_text_editor.pongo2" with EditorID="templateEditor" FieldName="text" InitialContent=Template.Text Placeholder="Enter your template content here..." MinHeight="300px" EditorMode="markdown" LabelID="templateEditorLabel" %}
 
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <p class="mt-2 text-xs" style="color: var(--gk-text-muted);">
                         {{ t("admin.modules.template.form.template_text_help") }}
                     </p>
                 </div>
             </div>
 
             <!-- Form Actions -->
-            <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <a href="/admin/templates"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600"
-                >
+            <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: var(--gk-border);">
+                <a href="/admin/templates" class="gk-btn-secondary">
                     {{ t("admin.modules.template.actions.cancel") }}
                 </a>
-                <button type="submit"
-                    data-testid="save-button"
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
-                >
+                <button type="submit" data-testid="save-button" class="gk-btn-neon">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                     </svg>
                     {% if IsNew %}{{ t("admin.modules.template.actions.create") }}{% else %}{{ t("admin.modules.template.actions.save") }}{% endif %}
                 </button>
@@ -201,37 +195,46 @@
 </div>
 
 <script>
-    // Handle form submission response
-    document.body.addEventListener('htmx:afterRequest', function(event) {
-        if (event.detail.xhr.status >= 400) {
-            try {
-                const response = JSON.parse(event.detail.xhr.responseText);
-                alert('Error: ' + (response.error || 'Unknown error'));
-            } catch (e) {
-                alert('Error: ' + event.detail.xhr.statusText);
-            }
+// Handle form submission response
+document.body.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.xhr.status >= 400) {
+        try {
+            const response = JSON.parse(event.detail.xhr.responseText);
+            showToast('Error: ' + (response.error || 'Unknown error'), 'error');
+        } catch (e) {
+            showToast('Error: ' + event.detail.xhr.statusText, 'error');
         }
-    });
+    }
+});
 
-    // Sync editor content before HTMX sends request
-    document.getElementById('templateForm').addEventListener('htmx:configRequest', function(e) {
-        // Ensure hidden field has latest content from editor
-        if (typeof TiptapEditor !== 'undefined') {
-            const content = TiptapEditor.getContent('templateEditor');
-            document.getElementById('text').value = content;
-            // Also update the request parameters directly
-            e.detail.parameters['text'] = content;
-        }
-    });
+// Sync editor content before HTMX sends request
+document.getElementById('templateForm').addEventListener('htmx:configRequest', function(e) {
+    // Ensure hidden field has latest content from editor
+    if (typeof TiptapEditor !== 'undefined') {
+        const content = TiptapEditor.getContent('templateEditor');
+        document.getElementById('text').value = content;
+        // Also update the request parameters directly
+        e.detail.parameters['text'] = content;
+    }
+});
 
-    // Validate template type selection before submit
-    document.getElementById('templateForm').addEventListener('htmx:confirm', function(e) {
-        const checkboxes = document.querySelectorAll('input[name="template_type"]:checked');
-        if (checkboxes.length === 0) {
-            e.preventDefault();
-            alert('{{ t("messages.select_template_type")|default:"Please select at least one template type." }}');
-            return false;
-        }
-    });
+// Validate template type selection before submit
+document.getElementById('templateForm').addEventListener('htmx:confirm', function(e) {
+    const checkboxes = document.querySelectorAll('input[name="template_type"]:checked');
+    if (checkboxes.length === 0) {
+        e.preventDefault();
+        showToast('{{ t("messages.select_template_type")|default:"Please select at least one template type." }}', 'error');
+        return false;
+    }
+});
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50';
+    toast.style.background = type === 'error' ? 'var(--gk-error)' : type === 'success' ? 'var(--gk-success)' : 'var(--gk-primary)';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
 </script>
 {% endblock %}

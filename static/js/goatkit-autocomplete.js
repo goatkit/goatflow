@@ -320,7 +320,7 @@
         state.filtered = filtered;
         list.innerHTML = "";
         if (filtered.length === 0) {
-            list.innerHTML = `<div class="px-3 py-2 text-sm text-gray-500" data-empty>No results</div>`;
+            list.innerHTML = `<div class="px-3 py-2 text-sm" style="color: var(--gk-text-muted);" data-empty>No results</div>`;
             openList(list);
             dispatch(list, "noresults");
             return;
@@ -329,8 +329,8 @@
             const div = document.createElement("div");
             div.id = `${input.id}-opt-${i}`;
             div.setAttribute("role", "option");
-            div.className =
-                "cursor-pointer select-none relative py-2 pl-3 pr-9 text-gray-900 dark:text-white hover:bg-gotrs-600 hover:text-white";
+            div.className = "gk-autocomplete-item cursor-pointer select-none relative py-2 pl-3 pr-9";
+            div.style.cssText = "color: var(--gk-text-primary);";
             div.textContent = compileTemplate(displayTemplate(input), item);
             const login = item.login || item[valueField(input)] || "";
             if (login) {

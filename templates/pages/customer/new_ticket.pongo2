@@ -10,64 +10,64 @@
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="container mx-auto py-8">
     <!-- Header -->
     <div class="mb-8">
         <nav class="mb-4" aria-label="Breadcrumb">
             <ol class="flex items-center space-x-2 text-sm">
                 <li>
-                    <a href="/customer/dashboard" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <a href="/customer/dashboard" class="transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                         {{ t("customer.nav.dashboard") }}
                     </a>
                 </li>
                 <li>
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-5 h-5" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
                     </svg>
                 </li>
                 <li>
-                    <a href="/customer/tickets" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <a href="/customer/tickets" class="transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
                         {{ t("customer.nav.my_tickets") }}
                     </a>
                 </li>
                 <li>
-                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-5 h-5" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
                     </svg>
                 </li>
-                <li class="text-gray-900 dark:text-white font-medium">
+                <li class="font-medium" style="color: var(--gk-text-primary);">
                     {{ t("customer.nav.new_ticket") }}
                 </li>
             </ol>
         </nav>
-        
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("customer.new_ticket.title") }}</h1>
-        <p class="mt-2 text-gray-600 dark:text-gray-400">
+
+        <h1 class="text-3xl font-bold gk-heading"><span class="gk-text-gradient">{{ t("customer.new_ticket.title") }}</span></h1>
+        <p class="mt-2" style="color: var(--gk-text-muted);">
             {{ t("customer.new_ticket.subtitle") }}
         </p>
     </div>
 
     <!-- Ticket Form -->
     <form method="post" action="/customer/tickets/create" enctype="multipart/form-data" class="space-y-6">
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("customer.new_ticket.ticket_info") }}</h2>
+        <div class="gk-card-glow rounded-lg">
+            <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+                <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("customer.new_ticket.ticket_info") }}</h2>
             </div>
-            
+
             <div class="p-6 space-y-6">
                 <!-- Subject -->
                 <div>
-                    <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {{ t("customer.new_ticket.subject") }} <span class="text-red-500">{{ t("customer.common.required") }}</span>
+                    <label for="title" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("customer.new_ticket.subject") }} <span style="color: var(--gk-error);">{{ t("customer.common.required") }}</span>
                     </label>
-                    <input type="text" 
-                           id="title" 
-                           name="title" 
+                    <input type="text"
+                           id="title"
+                           name="title"
                            required
                            maxlength="255"
                            placeholder="{{ t("customer.new_ticket.subject_placeholder") }}"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500">
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                           class="gk-input-neon w-full">
+                    <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">
                         {{ t("customer.new_ticket.subject_help") }}
                     </p>
                 </div>
@@ -75,18 +75,18 @@
                 <!-- Service -->
                 {% if Services %}
                 <div>
-                    <label for="service_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="service_id" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
                         {{ t("customer.new_ticket.service_category") }}
                     </label>
-                    <select id="service_id" 
+                    <select id="service_id"
                             name="service_id"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500">
+                            class="gk-select-neon w-full">
                         <option value="">{{ t("customer.new_ticket.select_service") }}</option>
                         {% for service in Services %}
                         <option value="{{ service.id }}">{{ service.name }}</option>
                         {% endfor %}
                     </select>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">
                         {{ t("customer.new_ticket.service_help") }}
                     </p>
                 </div>
@@ -94,49 +94,49 @@
 
                 <!-- Priority -->
                 <div>
-                    <label for="priority_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label for="priority_id" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
                         {{ t("customer.new_ticket.priority") }}
                     </label>
-                    <select id="priority_id" 
+                    <select id="priority_id"
                             name="priority_id"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500">
+                            class="gk-select-neon w-full">
                         {% for priority in Priorities %}
                         <option value="{{ priority.id }}" {% if priority.name == "3 normal" %}selected{% endif %}>
                             {{ priority.name }}
                         </option>
                         {% endfor %}
                     </select>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">
                         {{ t("customer.new_ticket.priority_help") }}
                     </p>
                 </div>
 
                 <!-- Dynamic Fields -->
                 {% if CustomerDynamicFields %}
-                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">{{ t("tickets.additional_fields")|default:"Additional Information" }}</h3>
+                <div class="pt-4" style="border-top: 1px solid var(--gk-border);">
+                    <h3 class="text-sm font-medium mb-4" style="color: var(--gk-text-secondary);">{{ t("tickets.additional_fields")|default:"Additional Information" }}</h3>
                     {% for df in CustomerDynamicFields %}
                     <div class="mb-4">
-                        <label for="DynamicField_{{ df.Field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            {{ df.Field.Label }}{% if df.ConfigValue == 2 %} <span class="text-red-500">{{ t("customer.common.required") }}</span>{% endif %}
+                        <label for="DynamicField_{{ df.Field.Name }}" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                            {{ df.Field.Label }}{% if df.ConfigValue == 2 %} <span style="color: var(--gk-error);">{{ t("customer.common.required") }}</span>{% endif %}
                         </label>
                         {% if df.Field.FieldType == "Text" %}
                         <input type="text" id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            class="gk-input-neon w-full"
                             {% if df.ConfigValue == 2 %}required{% endif %}>
                         {% elif df.Field.FieldType == "TextArea" %}
                         <textarea id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}" rows="3"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            class="gk-input-neon w-full"
                             {% if df.ConfigValue == 2 %}required{% endif %}></textarea>
                         {% elif df.Field.FieldType == "Checkbox" %}
                         <div class="flex items-center">
                             <input type="checkbox" id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}" value="1"
-                                class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">{{ df.Field.Label }}</span>
+                                class="rounded" style="border-color: var(--gk-border); accent-color: var(--gk-primary);">
+                            <span class="ml-2 text-sm" style="color: var(--gk-text-muted);">{{ df.Field.Label }}</span>
                         </div>
                         {% elif df.Field.FieldType == "Dropdown" %}
                         <select id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            class="gk-select-neon w-full"
                             {% if df.ConfigValue == 2 %}required{% endif %}>
                             <option value="">-- {{ t("common.select")|default:"Select" }} --</option>
                             {% for opt in df.Field.PossibleValues %}
@@ -145,7 +145,7 @@
                         </select>
                         {% elif df.Field.FieldType == "Multiselect" %}
                         <select id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}[]" multiple
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            class="gk-select-neon w-full"
                             {% if df.ConfigValue == 2 %}required{% endif %}>
                             {% for opt in df.Field.PossibleValues %}
                             <option value="{{ opt.Key }}">{{ opt.Value }}</option>
@@ -153,11 +153,11 @@
                         </select>
                         {% elif df.Field.FieldType == "Date" %}
                         <input type="date" id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            class="gk-input-neon w-full"
                             {% if df.ConfigValue == 2 %}required{% endif %}>
                         {% elif df.Field.FieldType == "DateTime" %}
                         <input type="datetime-local" id="DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                            class="gk-input-neon w-full"
                             {% if df.ConfigValue == 2 %}required{% endif %}>
                         {% endif %}
                     </div>
@@ -167,54 +167,38 @@
 
                 <!-- Message -->
                 <div>
-                    <label id="messageEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {{ t("customer.new_ticket.description") }} <span class="text-red-500">{{ t("customer.common.required") }}</span>
+                    <label id="messageEditorLabel" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("customer.new_ticket.description") }} <span style="color: var(--gk-error);">{{ t("customer.common.required") }}</span>
                     </label>
                     {% include "partials/rich_text_editor.pongo2" with EditorID="messageEditor" FieldName="message" Placeholder=t("customer.new_ticket.description_placeholder") LabelID="messageEditorLabel" %}
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">
                         {{ t("customer.new_ticket.description_help") }}
                     </p>
                 </div>
 
-                <!-- Attachments (future feature) -->
-                <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {{ t("customer.new_ticket.attachments") }}
+                <!-- Attachments -->
+                <div class="pt-4" style="border-top: 1px solid var(--gk-border);">
+                    <label class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("attachments.title")|default:"Attachments" }}
                     </label>
-                    <div class="flex items-center justify-center w-full">
-                        <label for="attachments" class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500">
-                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                                <svg class="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                                </svg>
-                                <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                                    <span class="font-semibold">{{ t("customer.new_ticket.click_to_upload") }}</span> {{ t("customer.new_ticket.or_drag_and_drop") }}
-                                </p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">
-                                    {{ t("customer.new_ticket.file_types") }}
-                                </p>
-                            </div>
-                            <input id="attachments" name="attachments" type="file" class="hidden" multiple accept=".pdf,.png,.jpg,.jpeg,.gif,.txt,.doc,.docx,.xls,.xlsx" />
-                        </label>
-                    </div>
+                    {% include "partials/attachment_upload.pongo2" with InputID="attachments" InputName="attachments" Multiple=true MaxFileSize=10 %}
                 </div>
             </div>
         </div>
 
         <!-- Form Actions -->
         <div class="flex items-center justify-between">
-            <a href="/customer/tickets" class="text-sm text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-                ← {{ t("customer.new_ticket.back_to_tickets") }}
+            <a href="/customer/tickets" class="text-sm transition-colors hover:opacity-80" style="color: var(--gk-text-muted);">
+                {{ t("customer.new_ticket.back_to_tickets") }}
             </a>
-            
+
             <div class="flex space-x-3">
-                <button type="button" 
+                <button type="button"
                         onclick="if(confirm('{{ t("customer.new_ticket.cancel_confirm") }}')) { window.location='/customer/tickets'; }"
-                        class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        class="gk-btn-secondary">
                     {{ t("customer.new_ticket.cancel") }}
                 </button>
-                <button type="submit" 
-                        class="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <button type="submit" class="gk-btn-neon">
                     {{ t("customer.new_ticket.create_ticket") }}
                 </button>
             </div>
@@ -222,31 +206,31 @@
     </form>
 
     <!-- Help Section -->
-    <div class="mt-8 bg-blue-50 dark:bg-blue-900 rounded-lg p-6">
-        <h3 class="text-lg font-medium text-blue-900 dark:text-blue-100 mb-4">
+    <div class="mt-8 rounded-lg p-6" style="background: rgba(var(--gk-primary-rgb), 0.1); border: 1px solid var(--gk-primary);">
+        <h3 class="text-lg font-medium mb-4" style="color: var(--gk-primary);">
             {{ t("customer.new_ticket.tips_title") }}
         </h3>
-        <ul class="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+        <ul class="space-y-2 text-sm" style="color: var(--gk-text-secondary);">
             <li class="flex items-start">
-                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style="color: var(--gk-primary);" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                 </svg>
                 <span>{{ t("customer.new_ticket.tip_1") }}</span>
             </li>
             <li class="flex items-start">
-                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style="color: var(--gk-primary);" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                 </svg>
                 <span>{{ t("customer.new_ticket.tip_2") }}</span>
             </li>
             <li class="flex items-start">
-                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style="color: var(--gk-primary);" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                 </svg>
                 <span>{{ t("customer.new_ticket.tip_3") }}</span>
             </li>
             <li class="flex items-start">
-                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" style="color: var(--gk-primary);" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
                 </svg>
                 <span>{{ t("customer.new_ticket.tip_4") }}</span>
@@ -257,61 +241,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const fileInput = document.getElementById('attachments');
-    const dropZone = fileInput.parentElement;
-    
-    // Handle file selection
-    fileInput.addEventListener('change', function(e) {
-        const files = Array.from(e.target.files);
-        displaySelectedFiles(files);
-    });
-    
-    // Handle drag and drop
-    dropZone.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        dropZone.classList.add('border-blue-500', 'bg-blue-50');
-    });
-    
-    dropZone.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        dropZone.classList.remove('border-blue-500', 'bg-blue-50');
-    });
-    
-    dropZone.addEventListener('drop', function(e) {
-        e.preventDefault();
-        dropZone.classList.remove('border-blue-500', 'bg-blue-50');
-        const files = Array.from(e.dataTransfer.files);
-        fileInput.files = e.dataTransfer.files;
-        displaySelectedFiles(files);
-    });
-    
-    function displaySelectedFiles(files) {
-        // Remove existing file list
-        const existingList = dropZone.querySelector('.file-list');
-        if (existingList) {
-            existingList.remove();
-        }
-        
-        if (files.length > 0) {
-            const fileList = document.createElement('div');
-            fileList.className = 'file-list mt-4 space-y-2';
-            
-            files.forEach(file => {
-                const fileItem = document.createElement('div');
-                fileItem.className = 'flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-700 rounded';
-                fileItem.innerHTML = `
-                    <span class="text-sm text-gray-700 dark:text-gray-300">${file.name}</span>
-                    <span class="text-xs text-gray-500">${(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                `;
-                fileList.appendChild(fileItem);
-            });
-            
-            dropZone.appendChild(fileList);
-        }
-    }
-
-    // Rich text editor is initialized by the partial include
-
     // Initialize ticket attribute relations filtering
     if (window.TicketAttributeRelations) {
         TicketAttributeRelations.init({

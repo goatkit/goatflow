@@ -1,41 +1,39 @@
-<div class="space-y-3">
-  <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ t("forms.customer_info.panel_title") }}</h3>
-  <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.title") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ user.Title|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.first_name") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ user.FirstName|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.last_name") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ user.LastName|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.username") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ user.Login|default:"" }}</dd>
-  <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.email") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100 break-words">{{ user.Email|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.phone") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ user.Phone|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.mobile") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ user.Mobile|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.customer") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ company.Name|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.street") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ company.Street|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.postcode") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ company.Postcode|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.city") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ company.City|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.country") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ company.Country|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.url") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100 break-words">
+<div class="space-y-3 overflow-hidden">
+  <h3 class="text-sm font-semibold" style="color: var(--gk-text-secondary);">{{ t("forms.customer_info.panel_title") }}</h3>
+  <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm overflow-hidden">
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.title") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ user.Title|default:"" }}">{{ user.Title|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.first_name") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ user.FirstName|default:"" }}">{{ user.FirstName|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.last_name") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ user.LastName|default:"" }}">{{ user.LastName|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.username") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ user.Login|default:"" }}">{{ user.Login|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.email") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ user.Email|default:"" }}">{{ user.Email|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.phone") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ user.Phone|default:"" }}">{{ user.Phone|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.mobile") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ user.Mobile|default:"" }}">{{ user.Mobile|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.customer") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ company.Name|default:"" }}">{{ company.Name|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.street") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ company.Street|default:"" }}">{{ company.Street|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.postcode") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);">{{ company.Postcode|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.city") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ company.City|default:"" }}">{{ company.City|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.country") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ company.Country|default:"" }}">{{ company.Country|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.url") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);">
       {% if company.URL %}
-        <a href="{{ company.URL }}" class="text-gotrs-600 dark:text-gotrs-400 hover:underline break-words" target="_blank" rel="noopener">{{ company.URL }}</a>
-      {% else %}
-        
+        <a href="{{ company.URL }}" class="hover:opacity-80 transition-opacity truncate block" style="color: var(--gk-primary);" target="_blank" rel="noopener" title="{{ company.URL }}">{{ company.URL }}</a>
       {% endif %}
     </dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.comment") }}</dt>
-  <dd class="text-gray-900 dark:text-gray-100">{{ user.Comment|default:"" }}</dd>
-    <dt class="font-medium text-gray-600 dark:text-gray-400">{{ t("forms.customer_info.open_tickets") }}</dt>
-    <dd class="text-gray-900 dark:text-gray-100">{{ open }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.comment") }}</dt>
+    <dd class="min-w-0 truncate" style="color: var(--gk-text-primary);" title="{{ user.Comment|default:"" }}">{{ user.Comment|default:"" }}</dd>
+    <dt class="font-medium" style="color: var(--gk-text-muted);">{{ t("forms.customer_info.open_tickets") }}</dt>
+    <dd class="min-w-0" style="color: var(--gk-text-primary);">{{ open }}</dd>
   </dl>
 </div>

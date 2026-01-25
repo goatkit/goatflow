@@ -3,244 +3,237 @@
 {% block title %}{{ Title }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <!-- Header -->
-        <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-            <div class="flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-                    {{ Title }}
-                </h2>
-                <button id="addStateBtn"
-                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        onclick="openStateModal()"
-                        aria-label="Add new state">
-                    <i class="fas fa-plus mr-2"></i>Add New State
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Page header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ Title }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                    {{ t("admin_states.description")|default:"Manage ticket states and state types" }}
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <button id="addStateBtn" onclick="openStateModal()" class="gk-btn-neon" aria-label="{{ t('admin_states.add_state')|default:'Add new state' }}">
+                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                    </svg>
+                    {{ t("admin_states.add_state")|default:"Add New State" }}
                 </button>
             </div>
         </div>
+    </header>
 
-        <!-- Filters -->
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex flex-wrap gap-4">
-                <!-- Search -->
-                <div class="flex-1 min-w-[200px]">
-                    <div class="relative">
-                        <input type="text"
-                               id="searchInput"
-                               value="{{ SearchQuery }}"
-                               placeholder="Search states..."
-                               class="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                               onkeyup="debounceSearch(this.value)">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                        <button id="clearSearchBtn"
-                                class="absolute inset-y-0 right-0 pr-3 flex items-center {% if not SearchQuery %}hidden{% endif %}"
-                                onclick="clearSearch()">
-                            <i class="fas fa-times text-gray-400 hover:text-gray-600"></i>
-                        </button>
+    <!-- Filters -->
+    <div class="mb-6 gk-card-glow rounded-lg p-4">
+        <div class="flex flex-wrap gap-4">
+            <!-- Search -->
+            <div class="flex-1 min-w-[200px]">
+                <label for="searchInput" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.search")|default:"Search" }}</label>
+                <div class="relative">
+                    <input type="text"
+                           id="searchInput"
+                           value="{{ SearchQuery }}"
+                           placeholder="{{ t('admin_states.search_placeholder')|default:'Search states...' }}"
+                           class="gk-input-neon w-full pl-10"
+                           onkeyup="debounceSearch(this.value)">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                     </div>
-                </div>
-
-                <!-- Type Filter -->
-                <div class="min-w-[200px]">
-                    <select id="typeFilter"
-                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            onchange="filterByType(this.value)">
-                        <option value="">All Types</option>
-                        {% for type in StateTypes %}
-                        <option value="{{ type.ID }}" {% if TypeFilter == type.ID %}selected{% endif %}>
-                            {{ type.Name }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <button id="clearSearchBtn"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center {% if not SearchQuery %}hidden{% endif %}"
+                            onclick="clearSearch()"
+                            style="color: var(--gk-text-muted);">
+                        <svg class="h-5 w-5 hover:opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
             </div>
-        </div>
 
-        <!-- Table -->
-        <div class="overflow-x-auto">
-            <table class="w-full" data-states-table>
-                <thead class="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
-                            onclick="sortTable('id')">
-                            ID <i class="fas fa-sort text-gray-400"></i>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
-                            onclick="sortTable('name')">
-                            Name <i class="fas fa-sort text-gray-400"></i>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
-                            onclick="sortTable('type_name')">
-                            Type <i class="fas fa-sort text-gray-400"></i>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Comments
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Validity
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
-                            onclick="sortTable('ticket_count')">
-                            Tickets <i class="fas fa-sort text-gray-400"></i>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                            Actions
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for state in States %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            {{ state.ID }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-sm font-medium text-gray-900 dark:text-white">
-                                {{ state.Name }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-1 text-xs rounded-full bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-200">
-                                {{ state.TypeName }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                            {{ state.Comments|default:"-" }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            {% if state.ValidID == 1 %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                                    valid
-                                </span>
-                            {% elif state.ValidID == 2 %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
-                                    invalid
-                                </span>
-                            {% elif state.ValidID == 3 %}
-                                <span class="px-2 py-1 text-xs rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
-                                    invalid-temporarily
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {% if state.TicketCount > 0 %}
-                                <span class="text-blue-600 dark:text-blue-400">{{ state.TicketCount }}</span>
-                            {% else %}
-                                <span class="text-gray-400">0</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button onclick="editStateFromRow(this)"
-                                    data-id="{{ state.ID }}"
-                                    data-name="{{ state.Name }}"
-                                    data-type="{{ state.TypeID }}"
-                                    data-comments="{{ state.Comments|default:"" }}"
-                                    data-valid="{{ state.ValidID }}"
-                                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                                    aria-label="Edit state">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                            No states found
-                        </td>
-                    </tr>
+            <!-- Type Filter -->
+            <div class="min-w-[200px]">
+                <label for="typeFilter" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("common.type")|default:"Type" }}</label>
+                <select id="typeFilter" class="gk-select-neon w-full" onchange="filterByType(this.value)">
+                    <option value="">{{ t("common.all_types")|default:"All Types" }}</option>
+                    {% for type in StateTypes %}
+                    <option value="{{ type.ID }}" {% if TypeFilter == type.ID %}selected{% endif %}>
+                        {{ type.Name }}
+                    </option>
                     {% endfor %}
-                </tbody>
-            </table>
+                </select>
+            </div>
         </div>
+    </div>
+
+    <!-- Table -->
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <table class="gk-table" data-states-table>
+            <thead>
+                <tr>
+                    <th scope="col" class="cursor-pointer" onclick="sortTable('id')">
+                        {{ t("common.id")|default:"ID" }} <span class="sort-indicator">↕</span>
+                    </th>
+                    <th scope="col" class="cursor-pointer" onclick="sortTable('name')">
+                        {{ t("common.name")|default:"Name" }} <span class="sort-indicator">↕</span>
+                    </th>
+                    <th scope="col" class="cursor-pointer" onclick="sortTable('type_name')">
+                        {{ t("common.type")|default:"Type" }} <span class="sort-indicator">↕</span>
+                    </th>
+                    <th scope="col">{{ t("common.comments")|default:"Comments" }}</th>
+                    <th scope="col">{{ t("common.validity")|default:"Validity" }}</th>
+                    <th scope="col" class="cursor-pointer" onclick="sortTable('ticket_count')">
+                        {{ t("common.tickets")|default:"Tickets" }} <span class="sort-indicator">↕</span>
+                    </th>
+                    <th scope="col">{{ t("common.actions")|default:"Actions" }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for state in States %}
+                <tr>
+                    <td style="color: var(--gk-text-primary);">
+                        {{ state.ID }}
+                    </td>
+                    <td>
+                        <span class="font-medium" style="color: var(--gk-text-primary);">
+                            {{ state.Name }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="gk-badge gk-badge-accent">
+                            {{ state.TypeName }}
+                        </span>
+                    </td>
+                    <td style="color: var(--gk-text-muted);">
+                        {{ state.Comments|default:"-" }}
+                    </td>
+                    <td>
+                        {% if state.ValidID == 1 %}
+                            <span class="gk-badge gk-badge-success">{{ t("common.valid")|default:"valid" }}</span>
+                        {% elif state.ValidID == 2 %}
+                            <span class="gk-badge gk-badge-error">{{ t("common.invalid")|default:"invalid" }}</span>
+                        {% elif state.ValidID == 3 %}
+                            <span class="gk-badge gk-badge-warning">{{ t("common.invalid_temp")|default:"invalid-temporarily" }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if state.TicketCount > 0 %}
+                            <span style="color: var(--gk-primary);">{{ state.TicketCount }}</span>
+                        {% else %}
+                            <span style="color: var(--gk-text-muted);">0</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button onclick="editStateFromRow(this)"
+                                data-id="{{ state.ID }}"
+                                data-name="{{ state.Name }}"
+                                data-type="{{ state.TypeID }}"
+                                data-comments="{{ state.Comments|default:"" }}"
+                                data-valid="{{ state.ValidID }}"
+                                class="p-1 rounded transition-colors hover:bg-white/10"
+                                style="color: var(--gk-primary);"
+                                aria-label="{{ t('common.edit')|default:'Edit state' }}">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-6 py-8 text-center" style="color: var(--gk-text-muted);">
+                        {{ t("admin_states.no_states")|default:"No states found" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
 <!-- State Modal -->
-<div id="stateModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
-    <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 id="modalTitle" class="text-lg font-semibold text-gray-900 dark:text-white">
-                    Add New State
-                </h3>
+<div id="stateModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeStateModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+            <div class="gk-modal-header">
+                <div class="flex items-center">
+                    <svg class="h-6 w-6 mr-3" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                    </svg>
+                    <h3 id="modalTitle" class="text-lg font-semibold" style="color: var(--gk-text-primary);">
+                        {{ t("admin_states.add_state")|default:"Add New State" }}
+                    </h3>
+                </div>
+                <button type="button" onclick="closeStateModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
 
             <form id="stateForm" onsubmit="saveState(event)">
-                <div class="px-6 py-4 space-y-4">
+                <div class="gk-modal-body space-y-4">
                     <input type="hidden" id="stateId">
 
                     <div>
-                        <label for="stateName" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Name <span class="text-red-500">*</span>
+                        <label for="stateName" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("common.name")|default:"Name" }} <span style="color: var(--gk-error);">*</span>
                         </label>
-                        <input type="text"
-                               id="stateName"
-                               name="name"
-                               required
-                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <span id="nameError" class="text-red-500 text-sm hidden"></span>
+                        <input type="text" id="stateName" name="name" required class="gk-input-neon w-full">
+                        <span id="nameError" class="text-sm hidden" style="color: var(--gk-error);"></span>
                     </div>
 
                     <div>
-                        <label for="stateType" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Type <span class="text-red-500">*</span>
+                        <label for="stateType" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("common.type")|default:"Type" }} <span style="color: var(--gk-error);">*</span>
                         </label>
-                        <select id="stateType"
-                                name="type_id"
-                                required
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">Select a type...</option>
+                        <select id="stateType" name="type_id" required class="gk-select-neon w-full">
+                            <option value="">{{ t("admin_states.select_type")|default:"Select a type..." }}</option>
                             {% for type in StateTypes %}
                             <option value="{{ type.ID }}">{{ type.Name }}</option>
                             {% endfor %}
                         </select>
-                        <span id="typeError" class="text-red-500 text-sm hidden"></span>
+                        <span id="typeError" class="text-sm hidden" style="color: var(--gk-error);"></span>
                     </div>
 
                     <div>
-                        <label for="stateValidity" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Validity <span class="text-red-500">*</span>
+                        <label for="stateValidity" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("common.validity")|default:"Validity" }} <span style="color: var(--gk-error);">*</span>
                         </label>
-                        <select id="stateValidity"
-                                name="valid_id"
-                                required
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="1">valid</option>
-                            <option value="2">invalid</option>
-                            <option value="3">invalid-temporarily</option>
+                        <select id="stateValidity" name="valid_id" required class="gk-select-neon w-full">
+                            <option value="1">{{ t("common.valid")|default:"valid" }}</option>
+                            <option value="2">{{ t("common.invalid")|default:"invalid" }}</option>
+                            <option value="3">{{ t("common.invalid_temp")|default:"invalid-temporarily" }}</option>
                         </select>
                     </div>
 
                     <div>
-                        <label for="stateComments" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Comments
+                        <label for="stateComments" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("common.comments")|default:"Comments" }}
                         </label>
-                        <textarea id="stateComments"
-                                  name="comments"
-                                  rows="3"
-                                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                        <textarea id="stateComments" name="comments" rows="3" class="gk-input-neon w-full"></textarea>
                     </div>
                 </div>
 
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-                    <button type="button"
-                            onclick="closeStateModal()"
-                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
-                        Cancel
+                <div class="gk-modal-footer">
+                    <button type="button" onclick="closeStateModal()" class="gk-btn-secondary">
+                        {{ t("common.cancel")|default:"Cancel" }}
                     </button>
-                    <button type="submit"
-                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        Save State
+                    <button type="submit" class="gk-btn-neon">
+                        {{ t("admin_states.save_state")|default:"Save State" }}
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
 
 <!-- Toast Container -->
 <div id="toastContainer" class="fixed top-4 right-4 z-50"></div>
@@ -334,7 +327,7 @@ function sortTable(column) {
 
 // State management modal
 function openStateModal() {
-    document.getElementById('modalTitle').textContent = 'Add New State';
+    document.getElementById('modalTitle').textContent = '{{ t("admin_states.add_state")|default:"Add New State" }}';
     document.getElementById('stateForm').reset();
     document.getElementById('stateId').value = '';
     clearErrors();
@@ -343,7 +336,7 @@ function openStateModal() {
 }
 
 function editState(id, name, typeId, comments, validId) {
-    document.getElementById('modalTitle').textContent = 'Edit State';
+    document.getElementById('modalTitle').textContent = '{{ t("admin_states.edit_state")|default:"Edit State" }}';
     document.getElementById('stateId').value = id;
     document.getElementById('stateName').value = name;
     document.getElementById('stateType').value = typeId;
@@ -418,18 +411,18 @@ function saveState(event) {
     .then(result => {
         console.log('Response data:', result);
         if (result.success) {
-            showSuccess(isEdit ? 'State updated successfully' : 'State created successfully');
+            showSuccess(isEdit ? '{{ t("messages.state_updated")|default:"State updated successfully" }}' : '{{ t("messages.state_created")|default:"State created successfully" }}');
             closeStateModal();
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
         } else {
-            showError(result.error || 'Failed to save state');
+            showError(result.error || '{{ t("errors.failed_save_state")|default:"Failed to save state" }}');
         }
     })
     .catch(error => {
         console.error('Save error:', error);
-        showError('An error occurred: ' + error.message);
+        showError('{{ t("errors.error_occurred")|default:"An error occurred" }}: ' + error.message);
     });
 }
 
@@ -441,7 +434,7 @@ function confirmDelete(id, name, ticketCount) {
 
     if (ticketCount > 0) {
         document.getElementById('deleteWarning').textContent =
-            `Warning: This state is used by ${ticketCount} ticket(s). Deletion will fail.`;
+            `{{ t("messages.state_in_use_warning")|default:"Warning: This state is used by" }} ${ticketCount} {{ t("common.tickets")|default:"ticket(s)" }}. {{ t("messages.deletion_will_fail")|default:"Deletion will fail." }}`;
         document.getElementById('deleteWarning').classList.remove('hidden');
     } else {
         document.getElementById('deleteWarning').classList.add('hidden');
@@ -474,20 +467,20 @@ function deleteState() {
     fetch(`/admin/states/${deleteStateId}/delete`, {
         method: 'DELETE'
     })
-    .then(response => response.json())
+
     .then(result => {
         if (result.success) {
-            showSuccess('State deleted successfully');
+            showSuccess('{{ t("messages.state_deleted")|default:"State deleted successfully" }}');
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
         } else {
-            showError(result.error || 'Failed to delete state');
+            showError(result.error || '{{ t("errors.failed_delete_state")|default:"Failed to delete state" }}');
             closeDeleteModal();
         }
     })
     .catch(error => {
-        showError('An error occurred: ' + error.message);
+        showError('{{ t("errors.error_occurred")|default:"An error occurred" }}: ' + error.message);
         closeDeleteModal();
     });
 }
@@ -501,13 +494,13 @@ function validateForm() {
     const typeId = document.getElementById('stateType').value;
 
     if (!name) {
-        document.getElementById('nameError').textContent = 'Name is required';
+        document.getElementById('nameError').textContent = '{{ t("validation.name_required")|default:"Name is required" }}';
         document.getElementById('nameError').classList.remove('hidden');
         isValid = false;
     }
 
     if (!typeId) {
-        document.getElementById('typeError').textContent = 'Type is required';
+        document.getElementById('typeError').textContent = '{{ t("validation.type_required")|default:"Type is required" }}';
         document.getElementById('typeError').classList.remove('hidden');
         isValid = false;
     }
@@ -545,14 +538,17 @@ function showError(message) {
 
 function showToast(message, type) {
     const toast = document.createElement('div');
-    toast.className = `px-4 py-3 rounded-lg shadow-lg mb-4 transform transition-all duration-300 ${
-        type === 'success'
-            ? 'bg-green-500 text-white'
-            : 'bg-red-500 text-white'
-    }`;
+    const bgColor = type === 'success' ? 'var(--gk-success)' : 'var(--gk-error)';
+    toast.className = 'px-4 py-3 rounded-lg shadow-lg mb-4 transform transition-all duration-300 text-white';
+    toast.style.background = bgColor;
     toast.innerHTML = `
         <div class="flex items-center">
-            <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${type === 'success'
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                }
+            </svg>
             <span>${message}</span>
         </div>
     `;

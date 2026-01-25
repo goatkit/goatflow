@@ -119,12 +119,7 @@ func HandleCreateTicketAPI(c *gin.Context) {
 		return
 	}
 
-	userID := 1
-	if uid, exists := c.Get("user_id"); exists {
-		if id, ok := uid.(int); ok {
-			userID = id
-		}
-	}
+	userID := GetUserIDFromCtx(c, 1)
 
 	// Get database connection (required for real creation)
 	db, err := database.GetDB()

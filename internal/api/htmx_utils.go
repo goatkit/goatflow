@@ -24,6 +24,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
+	"github.com/gotrs-io/gotrs-ce/internal/ticketutil"
 )
 
 // queryInt safely parses an integer query parameter with a default value.
@@ -315,8 +316,11 @@ func computeAutoCloseMeta(ticket *models.Ticket, stateName string, stateTypeID i
 	if ticket == nil {
 		return meta
 	}
-	if ticket.UntilTime > 0 {
-		autoCloseAt := time.Unix(int64(ticket.UntilTime), 0).UTC()
+
+	// Use the effective pending time - this handles legacy/migrated data with no date set
+	// by defaulting to now + 24 hours
+	if meta.pending || ticket.UntilTime > 0 {
+		autoCloseAt := ticketutil.GetEffectivePendingTime(ticket.UntilTime)
 		diff := autoCloseAt.Sub(now)
 		meta.overdue = diff < 0
 		if meta.overdue {
@@ -326,10 +330,6 @@ func computeAutoCloseMeta(ticket *models.Ticket, stateName string, stateTypeID i
 		}
 		meta.at = autoCloseAt.Format("2006-01-02 15:04:05 UTC")
 		meta.atISO = autoCloseAt.Format(time.RFC3339)
-		return meta
-	}
-	if meta.pending {
-		meta.at = autoCloseNoTimeLabel
 	}
 	return meta
 }
@@ -350,11 +350,14 @@ func computePendingReminderMeta(ticket *models.Ticket, stateName string, stateTy
 		return meta
 	}
 	meta.pending = isPendingReminderState(stateName, stateTypeID)
-	if ticket.UntilTime > 0 {
-		reminderAt := time.Unix(int64(ticket.UntilTime), 0).UTC()
+
+	// Use the effective pending time - this handles legacy/migrated data with no date set
+	// by defaulting to now + 24 hours
+	if meta.pending || ticket.UntilTime > 0 {
+		reminderAt := ticketutil.GetEffectivePendingTime(ticket.UntilTime)
 		diff := reminderAt.Sub(now)
 		meta.overdue = diff < 0
-		meta.hasTime = true
+		meta.hasTime = ticket.UntilTime > 0 // Track if time was explicitly set
 		if meta.overdue {
 			meta.relative = humanizeDuration(-diff)
 		} else {
@@ -362,11 +365,9 @@ func computePendingReminderMeta(ticket *models.Ticket, stateName string, stateTy
 		}
 		meta.at = reminderAt.Format("2006-01-02 15:04:05 UTC")
 		meta.atISO = reminderAt.Format(time.RFC3339)
-		return meta
-	}
-	if meta.pending {
-		meta.at = pendingReminderNoTimeLabel
-		meta.message = pendingReminderNoTimeLabel
+		if !meta.hasTime {
+			meta.message = "Default reminder time (24h from now)"
+		}
 	}
 	return meta
 }
@@ -621,6 +622,21 @@ func getUserMapForTemplate(c *gin.Context) gin.H {
 	return guestUserMap()
 }
 
+// computeInitials returns the initials from first and last name (e.g., "JD" for John Doe).
+func computeInitials(firstName, lastName string) string {
+	var initials string
+	if len(firstName) > 0 {
+		initials += strings.ToUpper(string([]rune(firstName)[0]))
+	}
+	if len(lastName) > 0 {
+		initials += strings.ToUpper(string([]rune(lastName)[0]))
+	}
+	if initials == "" {
+		return "?"
+	}
+	return initials
+}
+
 func buildUserMapFromModel(user *models.User) gin.H {
 	isAdmin := user.ID == 1 || strings.Contains(strings.ToLower(user.Login), "admin")
 	isInAdminGroup := false
@@ -632,6 +648,7 @@ func buildUserMapFromModel(user *models.User) gin.H {
 		"Login":          user.Login,
 		"FirstName":      user.FirstName,
 		"LastName":       user.LastName,
+		"Initials":       computeInitials(user.FirstName, user.LastName),
 		"Title":          user.Title,
 		"Email":          user.Email,
 		"IsActive":       user.ValidID == 1,
@@ -681,6 +698,7 @@ func buildUserMapFromContext(c *gin.Context, userID interface{}) gin.H {
 		"Login":          login,
 		"FirstName":      firstName,
 		"LastName":       lastName,
+		"Initials":       computeInitials(firstName, lastName),
 		"Title":          title,
 		"Email":          login,
 		"IsActive":       true,

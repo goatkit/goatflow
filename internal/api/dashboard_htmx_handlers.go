@@ -313,24 +313,24 @@ func handleDashboardStats(c *gin.Context) {
 		return i18nInstance.T(lang, key)
 	}
 
-	// Return HTML for HTMX
+	// Return HTML for HTMX with Synthwave styling
 	c.Header("Content-Type", "text/html")
 	html := fmt.Sprintf(`
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">%s</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
+        <div class="gk-stat-card">
+            <dt class="gk-stat-label">%s</dt>
+            <dd class="gk-stat-value mt-1">%d</dd>
         </div>
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">%s</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
+        <div class="gk-stat-card success">
+            <dt class="gk-stat-label">%s</dt>
+            <dd class="gk-stat-value mt-1">%d</dd>
         </div>
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">%s</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
+        <div class="gk-stat-card warning">
+            <dt class="gk-stat-label">%s</dt>
+            <dd class="gk-stat-value mt-1">%d</dd>
         </div>
-        <div class="overflow-hidden rounded-lg bg-white dark:bg-gray-800 px-4 py-5 shadow sm:p-6">
-            <dt class="truncate text-sm font-medium text-gray-500 dark:text-gray-400">%s</dt>
-            <dd class="mt-1 text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">%d</dd>
+        <div class="gk-stat-card error">
+            <dt class="gk-stat-label">%s</dt>
+            <dd class="gk-stat-value mt-1">%d</dd>
         </div>`,
 		t("dashboard.stats.open_tickets"), openTickets,
 		t("dashboard.stats.new_today"), closedToday,
@@ -394,17 +394,17 @@ func handleRecentTickets(c *gin.Context) {
 		tickets = ticketResponse.Tickets
 	}
 
-	// Build HTML response
+	// Build HTML response with Synthwave styling
 	var html strings.Builder
-	html.WriteString(`<ul role="list" class="-my-5 divide-y divide-gray-200 dark:divide-gray-700">`)
+	html.WriteString(`<ul role="list" class="-my-5 divide-y" style="border-color: var(--gk-border-default);">`)
 
 	if len(tickets) == 0 {
 		html.WriteString(fmt.Sprintf(`
                         <li class="py-4">
                             <div class="flex items-center space-x-4">
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">%s</p>
-                                    <p class="truncate text-sm text-gray-500 dark:text-gray-400">%s</p>
+                                    <p class="truncate text-sm font-medium" style="color: var(--gk-text-primary);">%s</p>
+                                    <p class="truncate text-sm" style="color: var(--gk-text-muted);">%s</p>
                                 </div>
                             </div>
                         </li>`, t("dashboard.no_recent_tickets"), t("dashboard.no_tickets_in_system")))
@@ -432,47 +432,47 @@ func handleRecentTickets(c *gin.Context) {
 				priorityName = priorityRow.Name
 			}
 
-			priorityClass := "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+			// Synthwave badge styles
+			priorityStyle := "background: var(--gk-success-subtle); color: var(--gk-success);"
 			switch strings.ToLower(priorityName) {
 			case "1 very low", "2 low":
-				priorityClass = "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+				priorityStyle = "background: var(--gk-bg-elevated); color: var(--gk-text-secondary);"
 			case "3 normal":
-				priorityClass = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+				priorityStyle = "background: var(--gk-success-subtle); color: var(--gk-success);"
 			case "4 high", "5 very high":
-				priorityClass = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+				priorityStyle = "background: var(--gk-warning-subtle); color: var(--gk-warning);"
 			case "critical":
-				priorityClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+				priorityStyle = "background: var(--gk-error-subtle); color: var(--gk-error);"
 			}
 
-			statusClass := "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+			statusStyle := "background: var(--gk-primary-subtle); color: var(--gk-primary);"
 			switch strings.ToLower(statusLabel) {
 			case "new":
-				statusClass = "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+				statusStyle = "background: var(--gk-secondary-subtle); color: var(--gk-secondary);"
 			case "open":
-				statusClass = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+				statusStyle = "background: var(--gk-success-subtle); color: var(--gk-success);"
 			case "pending":
-				statusClass = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+				statusStyle = "background: var(--gk-warning-subtle); color: var(--gk-warning);"
 			case "closed":
-				statusClass = "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+				statusStyle = "background: var(--gk-bg-elevated); color: var(--gk-text-secondary);"
 			}
 
-			const custBadge = "px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 " +
-				"text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+			const custBadge = "px-2.5 py-0.5 rounded-full text-xs font-medium"
 			html.WriteString(fmt.Sprintf(`
-			<li class="py-4">
+			<li class="py-4 transition-all duration-200 hover:translate-x-1" style="border-color: var(--gk-border-default);">
 				<div class="flex items-start space-x-4">
 					<div class="min-w-0 flex-1">
-						<a href="/tickets/%s" class="text-sm font-medium text-gray-900 dark:text-white">
+						<a href="/tickets/%s" class="gk-link-neon text-sm font-medium">
 							%s: %s
 						</a>
 						<div class="mt-2 flex flex-wrap gap-1">
-							<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium %s">
+							<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="%s">
 								%s
 							</span>
-							<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium %s">
+							<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style="%s">
 								%s
 							</span>
-							<span class="`+custBadge+`">%s</span>
+							<span class="`+custBadge+`" style="background: var(--gk-bg-elevated); color: var(--gk-text-secondary);">%s</span>
 						</div>
 					</div>
 				</div>
@@ -480,9 +480,9 @@ func handleRecentTickets(c *gin.Context) {
 				ticket.TicketNumber,
 				ticket.TicketNumber,
 				ticket.Title,
-				priorityClass,
+				priorityStyle,
 				priorityName,
-				statusClass,
+				statusStyle,
 				statusLabel,
 				func() string {
 					if ticket.CustomerUserID != nil {
@@ -579,23 +579,35 @@ func dashboard_queue_status(c *gin.Context) {
 	}
 	defer rows.Close()
 
-	// Build HTML response with table format
-	const thClass = "px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase"
+	// Build HTML response with table format using GoatKit CSS variables
+	const thClass = "px-3 py-2 text-left text-xs font-medium uppercase"
+	const thQueueClass = "px-3 py-2 text-left text-xs font-medium uppercase"
 	var html strings.Builder
-	html.WriteString(fmt.Sprintf(`<div class="mt-6">
-	<div class="overflow-x-auto">
-		<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-			<thead class="bg-gray-50 dark:bg-gray-700">
+	html.WriteString(fmt.Sprintf(`<style>
+		.gk-queue-table { border-color: var(--gk-border-default); width: 100%%; table-layout: fixed; }
+		.gk-queue-table th { color: var(--gk-text-muted); }
+		.gk-queue-table td { color: var(--gk-text-primary); }
+		.gk-queue-table thead { background: var(--gk-bg-elevated); }
+		.gk-queue-table tbody { background: var(--gk-bg-surface); }
+		.gk-queue-table tbody tr { border-color: var(--gk-border-default); }
+		.gk-queue-table tbody tr:hover { background: var(--gk-bg-elevated); }
+		.gk-queue-table a { color: var(--gk-text-primary); }
+		.gk-queue-table a:hover { color: var(--gk-primary); }
+		.gk-queue-table .queue-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	</style>
+	<div class="mt-4">
+		<table class="gk-queue-table divide-y">
+			<thead>
 				<tr>
-					<th scope="col" class="`+thClass+`">%s</th>
-					<th scope="col" class="`+thClass+`">%s</th>
-					<th scope="col" class="`+thClass+`">%s</th>
-					<th scope="col" class="`+thClass+`">%s</th>
-					<th scope="col" class="`+thClass+`">%s</th>
-					<th scope="col" class="`+thClass+`">%s</th>
+					<th scope="col" class="`+thQueueClass+`" style="width: 40%%;">%s</th>
+					<th scope="col" class="`+thClass+`" style="width: 12%%;">%s</th>
+					<th scope="col" class="`+thClass+`" style="width: 12%%;">%s</th>
+					<th scope="col" class="`+thClass+`" style="width: 12%%;">%s</th>
+					<th scope="col" class="`+thClass+`" style="width: 12%%;">%s</th>
+					<th scope="col" class="`+thClass+`" style="width: 12%%;">%s</th>
 				</tr>
 			</thead>
-			<tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">`,
+			<tbody class="divide-y">`,
 		t("labels.queue"), t("ticket.states.new"), t("ticket.states.open"),
 		t("ticket.states.pending"), t("ticket.states.closed"), t("labels.total")))
 
@@ -610,27 +622,27 @@ func dashboard_queue_status(c *gin.Context) {
 
 		totalCount := newCount + openCount + pendingCount + closedCount
 
-		const tdClass = "px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white"
-		const badgeClass = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+		const tdClass = "px-3 py-2 whitespace-nowrap text-sm"
+		const badgeClass = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
 		html.WriteString(fmt.Sprintf(`
-		<tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-			<td class="px-6 py-4 whitespace-nowrap">
-				<a href="/queues/%d" class="text-sm font-medium text-gray-900 dark:text-white">%s</a>
+		<tr>
+			<td class="px-3 py-2 queue-name" title="%s">
+				<a href="/queues/%d" class="text-sm font-medium">%s</a>
 			</td>
 			<td class="`+tdClass+`">
-				<span class="`+badgeClass+` bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">%d</span>
+				<span class="`+badgeClass+`" style="background: var(--gk-info-subtle); color: var(--gk-info);">%d</span>
 			</td>
 			<td class="`+tdClass+`">
-				<span class="`+badgeClass+` bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">%d</span>
+				<span class="`+badgeClass+`" style="background: var(--gk-success-subtle); color: var(--gk-success);">%d</span>
 			</td>
 			<td class="`+tdClass+`">
-				<span class="`+badgeClass+` bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300">%d</span>
+				<span class="`+badgeClass+`" style="background: var(--gk-warning-subtle); color: var(--gk-warning);">%d</span>
 			</td>
 			<td class="`+tdClass+`">
-				<span class="`+badgeClass+` bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300">%d</span>
+				<span class="`+badgeClass+`" style="background: var(--gk-bg-elevated); color: var(--gk-text-muted);">%d</span>
 			</td>
-			<td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">%d</td>
-		</tr>`, queueID, queueName, newCount, openCount, pendingCount, closedCount, totalCount))
+			<td class="px-3 py-2 whitespace-nowrap text-sm font-medium">%d</td>
+		</tr>`, queueName, queueID, queueName, newCount, openCount, pendingCount, closedCount, totalCount))
 		queueCount++
 	}
 	if err := rows.Err(); err != nil {
@@ -640,18 +652,17 @@ func dashboard_queue_status(c *gin.Context) {
 	// If no queues found, show a message
 	if queueCount == 0 {
 		html.WriteString(fmt.Sprintf(`
-                    <tr>
-                        <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                            %s
-                        </td>
-                    </tr>`, t("queues.no_queues_found")))
+				<tr>
+					<td colspan="6" class="px-3 py-4 text-center text-sm" style="color: var(--gk-text-muted);">
+						%s
+					</td>
+				</tr>`, t("queues.no_queues_found")))
 	}
 
 	html.WriteString(`
-                </tbody>
-            </table>
-        </div>
-    </div>`)
+			</tbody>
+		</table>
+	</div>`)
 
 	c.Header("Content-Type", "text/html")
 	c.String(http.StatusOK, html.String())
@@ -659,40 +670,47 @@ func dashboard_queue_status(c *gin.Context) {
 
 func renderDashboardQueueStatusFallback(c *gin.Context, t func(string) string) {
 	// Provide deterministic HTML so link checks have stable content without DB access
-	const thClass = "px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase"
-	const tdClass = "px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300"
-	const tdName = "px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white"
-	stub := fmt.Sprintf(`
-<div class="mt-6">
-	<div class="overflow-x-auto">
-		<table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-			<thead class="bg-gray-50 dark:bg-gray-700">
-				<tr>
-					<th scope="col" class="`+thClass+`">%s</th>
-					<th scope="col" class="`+thClass+`">%s</th>
-					<th scope="col" class="`+thClass+`">%s</th>
-					<th scope="col" class="`+thClass+`">%s</th>
-					<th scope="col" class="`+thClass+`">%s</th>
-				</tr>
-			</thead>
-			<tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-				<tr>
-					<td class="`+tdName+`">Raw</td>
-					<td class="`+tdClass+`">2</td>
-					<td class="`+tdClass+`">4</td>
-					<td class="`+tdClass+`">1</td>
-					<td class="`+tdClass+`">0</td>
-				</tr>
-				<tr>
-					<td class="`+tdName+`">Support</td>
-					<td class="`+tdClass+`">0</td>
-					<td class="`+tdClass+`">3</td>
-					<td class="`+tdClass+`">1</td>
-					<td class="`+tdClass+`">5</td>
-				</tr>
-			</tbody>
-		</table>
-	</div>
+	const thClass = "px-3 py-2 text-left text-xs font-medium uppercase"
+	const tdClass = "px-3 py-2 whitespace-nowrap text-sm"
+	const tdName = "px-3 py-2 whitespace-nowrap text-sm font-medium"
+	stub := fmt.Sprintf(`<style>
+		.gk-queue-table { border-color: var(--gk-border-default); width: 100%%; table-layout: fixed; }
+		.gk-queue-table th { color: var(--gk-text-muted); }
+		.gk-queue-table td { color: var(--gk-text-primary); }
+		.gk-queue-table thead { background: var(--gk-bg-elevated); }
+		.gk-queue-table tbody { background: var(--gk-bg-surface); }
+		.gk-queue-table tbody tr { border-color: var(--gk-border-default); }
+		.gk-queue-table tbody tr:hover { background: var(--gk-bg-elevated); }
+		.gk-queue-table .queue-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	</style>
+<div class="mt-4">
+	<table class="gk-queue-table divide-y">
+		<thead>
+			<tr>
+				<th scope="col" class="`+thClass+`" style="width: 40%%;">%s</th>
+				<th scope="col" class="`+thClass+`" style="width: 15%%;">%s</th>
+				<th scope="col" class="`+thClass+`" style="width: 15%%;">%s</th>
+				<th scope="col" class="`+thClass+`" style="width: 15%%;">%s</th>
+				<th scope="col" class="`+thClass+`" style="width: 15%%;">%s</th>
+			</tr>
+		</thead>
+		<tbody class="divide-y">
+			<tr>
+				<td class="`+tdName+` queue-name" title="Raw">Raw</td>
+				<td class="`+tdClass+`">2</td>
+				<td class="`+tdClass+`">4</td>
+				<td class="`+tdClass+`">1</td>
+				<td class="`+tdClass+`">0</td>
+			</tr>
+			<tr>
+				<td class="`+tdName+` queue-name" title="Support">Support</td>
+				<td class="`+tdClass+`">0</td>
+				<td class="`+tdClass+`">3</td>
+				<td class="`+tdClass+`">1</td>
+				<td class="`+tdClass+`">5</td>
+			</tr>
+		</tbody>
+	</table>
 </div>`, t("labels.queue"), t("ticket.states.new"), t("ticket.states.open"),
 		t("ticket.states.pending"), t("ticket.states.closed"))
 	c.Header("Content-Type", "text/html; charset=utf-8")

@@ -3,33 +3,33 @@
 {% block title %}{% if IsNew %}{{ t("admin.dynamic_fields.new_title")|default:"New Dynamic Field" }}{% else %}{{ t("admin.dynamic_fields.edit_title")|default:"Edit Dynamic Field" }}{% endif %} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
-    <div class="mb-8">
+    <header class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-                    {% if IsNew %}{{ t("admin.dynamic_fields.create_heading")|default:"Create Dynamic Field" }}{% else %}{{ t("admin.dynamic_fields.edit_heading")|default:"Edit Dynamic Field" }}{% endif %}
-                </h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    {% if IsNew %}Define a new custom field for your data{% else %}Modify the dynamic field configuration{% endif %}
-                </p>
-            </div>
-            <div class="mt-4 sm:mt-0">
-                <a href="/admin/dynamic-fields"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                >
+            <div class="flex items-center">
+                <a href="/admin/dynamic-fields" class="gk-btn-secondary mr-4">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                     </svg>
-                    Back to List
+                    {{ t("common.back") }}
                 </a>
+                <div>
+                    <h1 class="text-3xl font-bold gk-heading">
+                        <span class="gk-text-gradient">
+                            {% if IsNew %}{{ t("admin.dynamic_fields.create_heading")|default:"Create Dynamic Field" }}{% else %}{{ t("admin.dynamic_fields.edit_heading")|default:"Edit Dynamic Field" }}{% endif %}
+                        </span>
+                    </h1>
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                        {% if IsNew %}{{ t("admin.dynamic_fields.create_description")|default:"Define a new custom field for your data" }}{% else %}{{ t("admin.dynamic_fields.edit_description")|default:"Modify the dynamic field configuration" }}{% endif %}
+                    </p>
+                </div>
             </div>
         </div>
-    </div>
+    </header>
 
     <!-- Form -->
-    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+    <div class="gk-card-glow rounded-lg overflow-hidden">
         <form
             id="dynamicFieldForm"
             method="POST"
@@ -44,14 +44,14 @@
             class="space-y-6 p-6"
         >
             <!-- Basic Information -->
-            <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("dynamic_field_form.basic_information")|default:"Basic Information" }}</h3>
+            <div class="border-b pb-6" style="border-color: var(--gk-border);">
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("dynamic_field_form.basic_information")|default:"Basic Information" }}</h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Name -->
                     <div>
-                        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Name <span class="text-red-500">*</span>
+                        <label for="name" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.dynamic_fields.fields.name")|default:"Name" }} <span style="color: var(--gk-error);">*</span>
                         </label>
                         <input
                             type="text"
@@ -61,16 +61,16 @@
                             pattern="[A-Za-z0-9]+"
                             required
                             {% if not IsNew and Field.InternalField == 1 %}readonly{% endif %}
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                            placeholder="{{ t("dynamic_fields.placeholders.name")|default:"MyCustomField" }}"
+                            class="gk-input-neon w-full"
+                            placeholder="{{ t('dynamic_fields.placeholders.name')|default:'MyCustomField' }}"
                         >
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Alphanumeric only, no spaces or special characters</p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.name_hint")|default:"Alphanumeric only, no spaces or special characters" }}</p>
                     </div>
 
                     <!-- Label -->
                     <div>
-                        <label for="label" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Label <span class="text-red-500">*</span>
+                        <label for="label" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.dynamic_fields.fields.label")|default:"Label" }} <span style="color: var(--gk-error);">*</span>
                         </label>
                         <input
                             type="text"
@@ -78,23 +78,23 @@
                             id="label"
                             value="{{ Field.Label }}"
                             required
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                            placeholder="{{ t("dynamic_fields.placeholders.label")|default:"My Custom Field" }}"
+                            class="gk-input-neon w-full"
+                            placeholder="{{ t('dynamic_fields.placeholders.label')|default:'My Custom Field' }}"
                         >
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Display label shown to users</p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.label_hint")|default:"Display label shown to users" }}</p>
                     </div>
 
                     <!-- Object Type -->
                     <div>
-                        <label for="object_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Object Type <span class="text-red-500">*</span>
+                        <label for="object_type" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.dynamic_fields.fields.object_type")|default:"Object Type" }} <span style="color: var(--gk-error);">*</span>
                         </label>
                         <select
                             name="object_type"
                             id="object_type"
                             required
                             {% if not IsNew %}disabled{% endif %}
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            class="gk-select-neon w-full"
                         >
                             {% for ot in ObjectTypes %}
                             <option value="{{ ot }}" {% if Field.ObjectType == ot %}selected{% endif %}>{{ ot }}</option>
@@ -103,13 +103,13 @@
                         {% if not IsNew %}
                         <input type="hidden" name="object_type" value="{{ Field.ObjectType }}">
                         {% endif %}
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Type of object this field applies to</p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.object_type_hint")|default:"Type of object this field applies to" }}</p>
                     </div>
 
                     <!-- Field Type -->
                     <div>
-                        <label for="field_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Field Type <span class="text-red-500">*</span>
+                        <label for="field_type" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.dynamic_fields.fields.field_type")|default:"Field Type" }} <span style="color: var(--gk-error);">*</span>
                         </label>
                         <select
                             name="field_type"
@@ -117,7 +117,7 @@
                             x-model="fieldType"
                             required
                             {% if not IsNew %}disabled{% endif %}
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            class="gk-select-neon w-full"
                         >
                             {% for ft in FieldTypes %}
                             <option value="{{ ft }}" {% if Field.FieldType == ft %}selected{% endif %}>{{ ft }}</option>
@@ -126,13 +126,13 @@
                         {% if not IsNew %}
                         <input type="hidden" name="field_type" value="{{ Field.FieldType }}">
                         {% endif %}
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Data type for this field</p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.field_type_hint")|default:"Data type for this field" }}</p>
                     </div>
 
                     <!-- Field Order -->
                     <div>
-                        <label for="field_order" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Display Order
+                        <label for="field_order" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("admin.dynamic_fields.fields.field_order")|default:"Display Order" }}
                         </label>
                         <input
                             type="number"
@@ -140,68 +140,69 @@
                             id="field_order"
                             value="{{ Field.FieldOrder }}"
                             min="1"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            class="gk-input-neon w-full"
                         >
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Order in which field appears (lower = first)</p>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.field_order_hint")|default:"Order in which field appears (lower = first)" }}</p>
                     </div>
 
                     <!-- Status -->
                     <div>
-                        <label for="valid_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Status
+                        <label for="valid_id" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                            {{ t("common.status") }}
                         </label>
                         <select
                             name="valid_id"
                             id="valid_id"
-                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                            class="gk-select-neon w-full"
                         >
-                            <option value="1" {% if Field.ValidID == 1 %}selected{% endif %}>Active</option>
-                            <option value="2" {% if Field.ValidID == 2 %}selected{% endif %}>Inactive</option>
+                            <option value="1" {% if Field.ValidID == 1 %}selected{% endif %}>{{ t("common.valid") }}</option>
+                            <option value="2" {% if Field.ValidID == 2 %}selected{% endif %}>{{ t("common.invalid") }}</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- Auto-Config Option (only for supported field types) -->
-                <div x-show="supportsAutoConfig()" class="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div x-show="supportsAutoConfig()" class="mt-6 p-4 rounded-lg" style="background: var(--gk-bg-tertiary);">
                     <label class="flex items-center">
                         <input
                             type="checkbox"
                             name="auto_config"
                             value="1"
                             x-model="autoConfig"
-                            class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"
+                            class="rounded text-gotrs-600 focus:ring-gotrs-500"
+                            style="border-color: var(--gk-border); background: var(--gk-bg-surface);"
                         >
-                        <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">{{ t("admin.dynamic_fields.use_auto_config") }}</span>
+                        <span class="ml-2 text-sm font-medium" style="color: var(--gk-text-secondary);">{{ t("admin.dynamic_fields.use_auto_config")|default:"Use default configuration" }}</span>
                     </label>
-                    <p class="mt-1 ml-6 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.auto_config_description") }}</p>
+                    <p class="mt-1 ml-6 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.auto_config_description")|default:"Automatically configure sensible defaults for this field type" }}</p>
                 </div>
             </div>
 
             <!-- Type-Specific Configuration -->
-            <div class="border-b border-gray-200 dark:border-gray-700 pb-6">
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("dynamic_field_form.field_configuration")|default:"Field Configuration" }}</h3>
+            <div class="border-b pb-6" style="border-color: var(--gk-border);">
+                <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("dynamic_field_form.field_configuration")|default:"Field Configuration" }}</h3>
 
                 <!-- Auto-config info message -->
-                <div x-show="autoConfig && supportsAutoConfig()" class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div x-show="autoConfig && supportsAutoConfig()" class="mb-6 p-4 rounded-lg" style="background: rgba(var(--gk-primary-rgb), 0.1); border: 1px solid var(--gk-primary);">
                     <div class="flex">
-                        <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="h-5 w-5" style="color: var(--gk-primary);" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                         </svg>
-                        <p class="ml-3 text-sm text-blue-700 dark:text-blue-300">{{ t("admin.dynamic_fields.no_configuration_needed") }}</p>
+                        <p class="ml-3 text-sm" style="color: var(--gk-primary);">{{ t("admin.dynamic_fields.no_configuration_needed")|default:"Using auto-configuration. No manual settings required." }}</p>
                     </div>
                 </div>
 
                 <!-- Default Value (all types) -->
                 <div class="mb-6">
-                    <label for="default_value" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Default Value
+                    <label for="default_value" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                        {{ t("admin.dynamic_fields.fields.default_value")|default:"Default Value" }}
                     </label>
                     <input
                         type="text"
                         name="default_value"
                         id="default_value"
                         value="{% if Field.Config %}{{ Field.Config.DefaultValue }}{% endif %}"
-                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                        class="gk-input-neon w-full"
                     >
                 </div>
 
@@ -210,18 +211,18 @@
                     <!-- Dropdown/Multiselect Options -->
                     <div x-show="fieldType === 'Dropdown' || fieldType === 'Multiselect'" class="space-y-4">
                         <div>
-                            <label for="possible_values" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Possible Values <span class="text-red-500">*</span>
+                            <label for="possible_values" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                {{ t("admin.dynamic_fields.fields.possible_values")|default:"Possible Values" }} <span style="color: var(--gk-error);">*</span>
                             </label>
                             <textarea
                                 name="possible_values"
                                 id="possible_values"
                                 rows="6"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm font-mono"
+                                class="gk-input-neon w-full font-mono"
                                 placeholder="Option1&#10;Option2&#10;key=Display Value"
                             >{% if Field.Config and Field.Config.PossibleValues %}{% for key, value in Field.Config.PossibleValues %}{% if key == value %}{{ value }}{% else %}{{ key }}={{ value }}{% endif %}
 {% endfor %}{% endif %}</textarea>
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">One option per line. Use key=value format for different display text.</p>
+                            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.possible_values_hint")|default:"One option per line. Use key=value format for different display text." }}</p>
                         </div>
 
                         <div class="flex items-center space-x-6">
@@ -231,9 +232,10 @@
                                     name="possible_none"
                                     value="1"
                                     {% if Field.Config and Field.Config.PossibleNone == 1 %}checked{% endif %}
-                                    class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"
+                                    class="rounded text-gotrs-600 focus:ring-gotrs-500"
+                                    style="border-color: var(--gk-border); background: var(--gk-bg-surface);"
                                 >
-                                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Allow empty selection</span>
+                                <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.dynamic_fields.allow_empty")|default:"Allow empty selection" }}</span>
                             </label>
 
                             <label class="flex items-center">
@@ -242,9 +244,10 @@
                                     name="translatable_values"
                                     value="1"
                                     {% if Field.Config and Field.Config.TranslatableValues == 1 %}checked{% endif %}
-                                    class="rounded border-gray-300 text-gotrs-600 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"
+                                    class="rounded text-gotrs-600 focus:ring-gotrs-500"
+                                    style="border-color: var(--gk-border); background: var(--gk-bg-surface);"
                                 >
-                                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Values are translatable</span>
+                                <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.dynamic_fields.translatable")|default:"Values are translatable" }}</span>
                             </label>
                         </div>
                     </div>
@@ -252,41 +255,41 @@
                     <!-- Text Field Options -->
                     <div x-show="fieldType === 'Text'" class="space-y-4">
                         <div>
-                            <label for="regex_list" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Validation Pattern (RegEx)
+                            <label for="regex_list" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                {{ t("admin.dynamic_fields.fields.regex")|default:"Validation Pattern (RegEx)" }}
                             </label>
                             <input
                                 type="text"
                                 name="regex_list"
                                 id="regex_list"
                                 value="{% if Field.Config and Field.Config.RegExList %}{{ Field.Config.RegExList.0.Value }}{% endif %}"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm font-mono"
+                                class="gk-input-neon w-full font-mono"
                                 placeholder="^[A-Z]{2}[0-9]{6}$"
                             >
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Optional regular expression for validation</p>
+                            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.regex_hint")|default:"Optional regular expression for validation" }}</p>
                         </div>
 
                         <div>
-                            <label for="link" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Link Template
+                            <label for="link" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                {{ t("admin.dynamic_fields.fields.link")|default:"Link Template" }}
                             </label>
                             <input
                                 type="text"
                                 name="link"
                                 id="link"
                                 value="{% if Field.Config %}{{ Field.Config.Link }}{% endif %}"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                class="gk-input-neon w-full"
                                 placeholder="https://example.com/lookup?id=[% Data.Value | uri %]"
                             >
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Template to create clickable links from field values</p>
+                            <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.link_hint")|default:"Template to create clickable links from field values" }}</p>
                         </div>
                     </div>
 
                     <!-- TextArea Options -->
                     <div x-show="fieldType === 'TextArea'" class="grid grid-cols-2 gap-4">
                         <div>
-                            <label for="rows" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Rows
+                            <label for="rows" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                {{ t("admin.dynamic_fields.fields.rows")|default:"Rows" }}
                             </label>
                             <input
                                 type="number"
@@ -295,13 +298,13 @@
                                 value="{% if Field.Config and Field.Config.Rows %}{{ Field.Config.Rows }}{% else %}4{% endif %}"
                                 min="2"
                                 max="20"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                class="gk-input-neon w-full"
                             >
                         </div>
 
                         <div>
-                            <label for="cols" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Columns
+                            <label for="cols" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                {{ t("admin.dynamic_fields.fields.cols")|default:"Columns" }}
                             </label>
                             <input
                                 type="number"
@@ -310,7 +313,7 @@
                                 value="{% if Field.Config and Field.Config.Cols %}{{ Field.Config.Cols }}{% else %}60{% endif %}"
                                 min="20"
                                 max="200"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                class="gk-input-neon w-full"
                             >
                         </div>
                     </div>
@@ -319,8 +322,8 @@
                     <div x-show="fieldType === 'Date' || fieldType === 'DateTime'" class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="years_in_past" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Years in Past
+                                <label for="years_in_past" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("admin.dynamic_fields.fields.years_past")|default:"Years in Past" }}
                                 </label>
                                 <input
                                     type="number"
@@ -328,13 +331,13 @@
                                     id="years_in_past"
                                     value="{% if Field.Config and Field.Config.YearsInPast %}{{ Field.Config.YearsInPast }}{% else %}5{% endif %}"
                                     min="0"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    class="gk-input-neon w-full"
                                 >
                             </div>
 
                             <div>
-                                <label for="years_in_future" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Years in Future
+                                <label for="years_in_future" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("admin.dynamic_fields.fields.years_future")|default:"Years in Future" }}
                                 </label>
                                 <input
                                     type="number"
@@ -342,126 +345,140 @@
                                     id="years_in_future"
                                     value="{% if Field.Config and Field.Config.YearsInFuture %}{{ Field.Config.YearsInFuture }}{% else %}5{% endif %}"
                                     min="0"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    class="gk-input-neon w-full"
                                 >
                             </div>
                         </div>
 
+                        <div>
+                            <label for="date_restriction" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                {{ t("admin.dynamic_fields.fields.date_restriction")|default:"Date Restriction" }}
+                            </label>
+                            <select
+                                name="date_restriction"
+                                id="date_restriction"
+                                class="gk-select-neon w-full"
+                            >
+                                <option value="" {% if not Field.Config or not Field.Config.DateRestriction %}selected{% endif %}>{{ t("common.none")|default:"None" }}</option>
+                                <option value="DisablePastDates" {% if Field.Config and Field.Config.DateRestriction == 'DisablePastDates' %}selected{% endif %}>{{ t("admin.dynamic_fields.disable_past")|default:"Disable Past Dates" }}</option>
+                                <option value="DisableFutureDates" {% if Field.Config and Field.Config.DateRestriction == 'DisableFutureDates' %}selected{% endif %}>{{ t("admin.dynamic_fields.disable_future")|default:"Disable Future Dates" }}</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- WebserviceDropdown/WebserviceMultiselect Options -->
                     <div x-show="fieldType === 'WebserviceDropdown' || fieldType === 'WebserviceMultiselect'" class="space-y-4">
-                        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
-                            <p class="text-sm text-blue-700 dark:text-blue-300">
-                                {{ t("admin.dynamic_fields.webservice.info") }}
+                        <div class="p-4 rounded-lg mb-4" style="background: rgba(var(--gk-primary-rgb), 0.1); border: 1px solid var(--gk-primary);">
+                            <p class="text-sm" style="color: var(--gk-primary);">
+                                {{ t("admin.dynamic_fields.webservice.info")|default:"Configure the webservice connection for dynamic data retrieval." }}
                             </p>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <!-- Webservice Selection -->
                             <div>
-                                <label for="webservice" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {{ t("admin.dynamic_fields.webservice.webservice") }} <span class="text-red-500">*</span>
+                                <label for="webservice" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("admin.dynamic_fields.webservice.webservice")|default:"Webservice" }} <span style="color: var(--gk-error);">*</span>
                                 </label>
                                 <select
                                     name="webservice"
                                     id="webservice"
                                     x-model="webservice"
                                     @change="loadInvokers()"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    class="gk-select-neon w-full"
                                 >
                                     <option value="">{{ t("common.select") }}...</option>
                                     {% for ws in Webservices %}
                                     <option value="{{ ws.Name }}" {% if Field.Config and Field.Config.Webservice == ws.Name %}selected{% endif %}>{{ ws.Name }}</option>
                                     {% endfor %}
                                 </select>
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.webservice_hint") }}</p>
+                                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.webservice.webservice_hint")|default:"Select the webservice to query" }}</p>
                             </div>
 
                             <!-- Search Invoker -->
                             <div>
-                                <label for="invoker_search" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {{ t("admin.dynamic_fields.webservice.invoker_search") }} <span class="text-red-500">*</span>
+                                <label for="invoker_search" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("admin.dynamic_fields.webservice.invoker_search")|default:"Search Invoker" }} <span style="color: var(--gk-error);">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     name="invoker_search"
                                     id="invoker_search"
                                     value="{% if Field.Config %}{{ Field.Config.InvokerSearch }}{% endif %}"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                                    placeholder="{{ t("common.search")|default:"Search" }}"
+                                    class="gk-input-neon w-full"
+                                    placeholder="{{ t('common.search')|default:'Search' }}"
                                 >
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.invoker_search_hint") }}</p>
+                                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.webservice.invoker_search_hint")|default:"Invoker used for autocomplete searches" }}</p>
                             </div>
 
                             <!-- Get Invoker -->
                             <div>
-                                <label for="invoker_get" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {{ t("admin.dynamic_fields.webservice.invoker_get") }}
+                                <label for="invoker_get" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("admin.dynamic_fields.webservice.invoker_get")|default:"Get Invoker" }}
                                 </label>
                                 <input
                                     type="text"
                                     name="invoker_get"
                                     id="invoker_get"
                                     value="{% if Field.Config %}{{ Field.Config.InvokerGet }}{% endif %}"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    class="gk-input-neon w-full"
                                     placeholder="Get"
                                 >
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.invoker_get_hint") }}</p>
+                                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.webservice.invoker_get_hint")|default:"Invoker for fetching display values" }}</p>
                             </div>
 
                             <!-- Stored Value -->
                             <div>
-                                <label for="stored_value" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {{ t("admin.dynamic_fields.webservice.stored_value") }} <span class="text-red-500">*</span>
+                                <label for="stored_value" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("admin.dynamic_fields.webservice.stored_value")|default:"Stored Value" }} <span style="color: var(--gk-error);">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     name="stored_value"
                                     id="stored_value"
                                     value="{% if Field.Config %}{{ Field.Config.StoredValue }}{% endif %}"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    class="gk-input-neon w-full"
                                     placeholder="ID"
                                 >
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.stored_value_hint") }}</p>
+                                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.webservice.stored_value_hint")|default:"Response field to store" }}</p>
                             </div>
-                        </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <!-- Displayed Values -->
                             <div>
-                                <label for="displayed_values" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {{ t("admin.dynamic_fields.webservice.displayed_values") }} <span class="text-red-500">*</span>
+                                <label for="displayed_values" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("admin.dynamic_fields.webservice.displayed_values")|default:"Displayed Values" }} <span style="color: var(--gk-error);">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     name="displayed_values"
                                     id="displayed_values"
                                     value="{% if Field.Config %}{{ Field.Config.DisplayedValues }}{% endif %}"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    class="gk-input-neon w-full"
                                     placeholder="Name, Code"
                                 >
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.displayed_values_hint") }}</p>
+                                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.webservice.displayed_values_hint")|default:"Comma-separated fields to display" }}</p>
                             </div>
 
                             <!-- Displayed Values Separator -->
                             <div>
-                                <label for="displayed_values_separator" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {{ t("admin.dynamic_fields.webservice.separator") }}
+                                <label for="displayed_values_separator" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("admin.dynamic_fields.webservice.separator")|default:"Separator" }}
                                 </label>
                                 <input
                                     type="text"
                                     name="displayed_values_separator"
                                     id="displayed_values_separator"
                                     value="{% if Field.Config and Field.Config.DisplayedValuesSeparator %}{{ Field.Config.DisplayedValuesSeparator }}{% else %} - {% endif %}"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    class="gk-input-neon w-full"
                                     placeholder=" - "
                                 >
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.separator_hint") }}</p>
+                                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.webservice.separator_hint")|default:"Separator between display fields" }}</p>
                             </div>
 
                             <!-- Autocomplete Min Length -->
                             <div>
-                                <label for="autocomplete_min_length" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {{ t("admin.dynamic_fields.webservice.autocomplete_min") }}
+                                <label for="autocomplete_min_length" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("admin.dynamic_fields.webservice.autocomplete_min")|default:"Min Search Length" }}
                                 </label>
                                 <input
                                     type="number"
@@ -470,15 +487,15 @@
                                     value="{% if Field.Config and Field.Config.AutocompleteMinLength %}{{ Field.Config.AutocompleteMinLength }}{% else %}3{% endif %}"
                                     min="1"
                                     max="10"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    class="gk-input-neon w-full"
                                 >
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.autocomplete_min_hint") }}</p>
+                                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.webservice.autocomplete_min_hint")|default:"Minimum characters before search triggers" }}</p>
                             </div>
 
                             <!-- Result Limit -->
                             <div>
-                                <label for="limit" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {{ t("admin.dynamic_fields.webservice.limit") }}
+                                <label for="limit" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("admin.dynamic_fields.webservice.limit")|default:"Result Limit" }}
                                 </label>
                                 <input
                                     type="number"
@@ -487,15 +504,15 @@
                                     value="{% if Field.Config and Field.Config.Limit %}{{ Field.Config.Limit }}{% else %}20{% endif %}"
                                     min="1"
                                     max="100"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    class="gk-input-neon w-full"
                                 >
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.limit_hint") }}</p>
+                                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.webservice.limit_hint")|default:"Maximum results to return" }}</p>
                             </div>
 
                             <!-- Cache TTL -->
                             <div>
-                                <label for="cache_ttl" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {{ t("admin.dynamic_fields.webservice.cache_ttl") }}
+                                <label for="cache_ttl" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                                    {{ t("admin.dynamic_fields.webservice.cache_ttl")|default:"Cache TTL (seconds)" }}
                                 </label>
                                 <input
                                     type="number"
@@ -504,9 +521,9 @@
                                     value="{% if Field.Config and Field.Config.CacheTTL %}{{ Field.Config.CacheTTL }}{% else %}60{% endif %}"
                                     min="0"
                                     max="3600"
-                                    class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
+                                    class="gk-input-neon w-full"
                                 >
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("admin.dynamic_fields.webservice.cache_ttl_hint") }}</p>
+                                <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.dynamic_fields.webservice.cache_ttl_hint")|default:"How long to cache results" }}</p>
                             </div>
                         </div>
 
@@ -516,47 +533,26 @@
                             <button
                                 type="button"
                                 onclick="testWebserviceConfig({{ Field.ID }})"
-                                class="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                                class="gk-btn-secondary"
                             >
                                 <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
-                                {{ t("admin.dynamic_fields.webservice.test") }}
+                                {{ t("admin.dynamic_fields.webservice.test")|default:"Test Connection" }}
                             </button>
                         </div>
                         {% endif %}
-                    </div>
-
-                        <div>
-                            <label for="date_restriction" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Date Restriction
-                            </label>
-                            <select
-                                name="date_restriction"
-                                id="date_restriction"
-                                class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm"
-                            >
-                                <option value="" {% if not Field.Config or not Field.Config.DateRestriction %}selected{% endif %}>None</option>
-                                <option value="DisablePastDates" {% if Field.Config and Field.Config.DateRestriction == 'DisablePastDates' %}selected{% endif %}>Disable Past Dates</option>
-                                <option value="DisableFutureDates" {% if Field.Config and Field.Config.DateRestriction == 'DisableFutureDates' %}selected{% endif %}>Disable Future Dates</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Form Actions -->
             <div class="flex items-center justify-end space-x-4 pt-4">
-                <a href="/admin/dynamic-fields"
-                    class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                >
-                    Cancel
+                <a href="/admin/dynamic-fields" class="gk-btn-secondary">
+                    {{ t("common.cancel") }}
                 </a>
-                <button
-                    type="submit"
-                    class="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
-                >
-                    {% if IsNew %}Create Field{% else %}Save Changes{% endif %}
+                <button type="submit" class="gk-btn-neon">
+                    {% if IsNew %}{{ t("admin.dynamic_fields.actions.create")|default:"Create Field" }}{% else %}{{ t("admin.dynamic_fields.actions.save")|default:"Save Changes" }}{% endif %}
                 </button>
             </div>
         </form>
@@ -596,11 +592,25 @@ document.getElementById('dynamicFieldForm').addEventListener('htmx:afterRequest'
     if (xhr.status >= 400) {
         try {
             const response = JSON.parse(xhr.responseText);
-            alert('Error: ' + (response.error || '{{ t("messages.failed_save_field")|default:"Failed to save field" }}'));
+            showToast('Error: ' + (response.error || '{{ t("messages.failed_save_field")|default:"Failed to save field" }}'), 'error');
         } catch (e) {
-            alert('{{ t("messages.error_saving_field")|default:"Error saving field" }}');
+            showToast('{{ t("messages.error_saving_field")|default:"Error saving field" }}', 'error');
         }
     }
 });
+
+function testWebserviceConfig(fieldId) {
+    showToast('Testing webservice configuration...', 'info');
+    // Implementation would call the test API endpoint
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50';
+    toast.style.background = type === 'error' ? 'var(--gk-error)' : type === 'success' ? 'var(--gk-success)' : 'var(--gk-primary)';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
 </script>
 {% endblock %}

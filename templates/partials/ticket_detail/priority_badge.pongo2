@@ -1,0 +1,16 @@
+{# Reusable Priority Badge with Synthwave Styling #}
+{# Required variables: priority #}
+
+{% if priority == 'critical' or priority == '5 very high' %}
+<span class="gk-badge gk-badge-error">{{ priority|title }} {{ t("priority.title")|default:"Priority" }}</span>
+{% elif priority == 'high' or priority == '4 high' %}
+<span class="gk-badge gk-badge-warning">{{ priority|title }} {{ t("priority.title")|default:"Priority" }}</span>
+{% elif priority == 'medium' or priority == '3 normal' %}
+<span class="gk-badge gk-badge-primary">{{ priority|title }} {{ t("priority.title")|default:"Priority" }}</span>
+{% elif priority == 'low' or priority == '2 low' %}
+<span class="gk-badge gk-badge-success">{{ priority|title }} {{ t("priority.title")|default:"Priority" }}</span>
+{% elif priority == '1 very low' %}
+<span class="gk-badge gk-badge-muted">{{ priority|title }} {{ t("priority.title")|default:"Priority" }}</span>
+{% else %}
+<span class="gk-badge gk-badge-muted">{{ priority|title }} {{ t("priority.title")|default:"Priority" }}</span>
+{% endif %}

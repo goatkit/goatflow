@@ -3,16 +3,18 @@
 {% block title %}{{ t("customer_companies.title")|default:"Customer Companies" }} - Admin{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Header -->
     <div class="mb-6 flex items-center justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("customer_companies.heading")|default:"Customer Companies" }}</h1>
-            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            <h1 class="text-3xl font-bold gk-heading">
+                <span class="gk-text-gradient">{{ t("customer_companies.heading")|default:"Customer Companies" }}</span>
+            </h1>
+            <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
                 {{ t("customer_companies.description")|default:"Manage customer organizations and their branded portals" }}
             </p>
         </div>
-        <a href="/admin/customer/companies/new" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+        <a href="/admin/customer/companies/new" class="gk-btn-neon inline-flex items-center">
             <svg class="mr-2 -ml-1 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
@@ -21,106 +23,91 @@
     </div>
 
     <!-- Filters -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+    <div class="gk-card-glow rounded-lg mb-6">
         <div class="p-4">
             <form method="get" action="/admin/customer/companies" class="flex items-center space-x-4">
                 <div class="flex-1">
                     <input type="text" name="search" value="{{ CurrentFilters.search }}"
                            placeholder="Search by company name, ID, or city..."
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                           class="gk-input-neon w-full">
                 </div>
-                <select name="valid" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white">
+                <select name="valid" class="gk-select-neon">
                     <option value="all" {% if CurrentFilters.valid == "all" %}selected{% endif %}>All Companies</option>
                     <option value="valid" {% if CurrentFilters.valid == "valid" %}selected{% endif %}>Valid Only</option>
                     <option value="invalid" {% if CurrentFilters.valid == "invalid" %}selected{% endif %}>Invalid Only</option>
                 </select>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Search
-                </button>
-                <a href="/admin/customer/companies" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">
-                    Clear
-                </a>
+                <button type="submit" class="gk-btn-neon">{{ t("buttons.search")|default:"Search" }}</button>
+                <a href="/admin/customer/companies" class="gk-btn-secondary">Clear</a>
             </form>
         </div>
     </div>
 
     <!-- Companies Table -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <table class="w-full">
-            <thead class="bg-gray-50 dark:bg-gray-700">
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <table class="gk-table">
+            <thead>
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Company ID
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Name
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Location
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Users
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Tickets
-                    </th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Status
-                    </th>
-                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Actions
-                    </th>
+                    <th>Company ID</th>
+                    <th>Name</th>
+                    <th>Location</th>
+                    <th>Users</th>
+                    <th>Tickets</th>
+                    <th>Status</th>
+                    <th class="text-right">Actions</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody>
                 {% for company in Companies %}
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-medium text-gray-900 dark:text-white">
+                        <div class="text-sm font-medium" style="color: var(--gk-text-primary);">
                             {{ company.customer_id }}
                         </div>
                     </td>
                     <td class="px-6 py-4">
-                        <div class="text-sm text-gray-900 dark:text-white font-medium">
+                        <div class="text-sm font-medium" style="color: var(--gk-text-primary);">
                             {{ company.name }}
                         </div>
                         {% if company.url %}
-                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                        <div class="text-xs" style="color: var(--gk-text-muted);">
                             {{ company.url }}
                         </div>
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900 dark:text-white">
+                        <div class="text-sm" style="color: var(--gk-text-primary);">
                             {% if company.city %}{{ company.city }}{% endif %}
                             {% if company.country %}, {{ company.country }}{% endif %}
                         </div>
                         {% if company.zip %}
-                        <div class="text-xs text-gray-500 dark:text-gray-400">
+                        <div class="text-xs" style="color: var(--gk-text-muted);">
                             {{ company.zip }}
                         </div>
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <a href="#" onclick="showCompanyUsers('{{ company.customer_id }}')" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                        <a href="#" onclick="showCompanyUsers('{{ company.customer_id }}')" class="text-sm hover:underline" style="color: var(--gk-primary);">
                             {{ company.user_count }} users
                         </a>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <a href="#" onclick="showCompanyTickets('{{ company.customer_id }}')" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                        <a href="#" onclick="showCompanyTickets('{{ company.customer_id }}')" class="text-sm hover:underline" style="color: var(--gk-primary);">
                             {{ company.ticket_count }} tickets
                         </a>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {% if company.valid_id == 1 %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
-                            {{ company.valid_name }}
-                        </span>
+                        {% if company.valid_id == 1 %}
+                            <span class="gk-badge gk-badge-success">{{ company.valid_name }}</span>
+                        {% else %}
+                            <span class="gk-badge gk-badge-error">{{ company.valid_name }}</span>
+                        {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div class="flex items-center justify-end space-x-2">
                             <!-- Portal Settings -->
                             <button onclick="showPortalSettings('{{ company.customer_id }}')"
-                                    class="text-purple-600 hover:text-purple-700 dark:text-purple-400"
+                                    class="p-1 rounded transition-colors hover:bg-white/10"
+                                    style="color: var(--gk-accent);"
                                     title="{{ t("customer_companies.tooltips.portal_settings")|default:"Portal Settings" }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
@@ -128,7 +115,8 @@
                             </button>
                             <!-- Services -->
                             <button onclick="showCompanyServices('{{ company.customer_id }}')"
-                                    class="text-green-600 hover:text-green-700 dark:text-green-400"
+                                    class="p-1 rounded transition-colors hover:bg-white/10"
+                                    style="color: var(--gk-success);"
                                     title="{{ t("customer_companies.tooltips.manage_services")|default:"Manage Services" }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
@@ -136,7 +124,8 @@
                             </button>
                             <!-- Edit -->
                             <a href="/admin/customer/companies/{{ company.customer_id }}/edit"
-                               class="text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                               class="p-1 rounded transition-colors hover:bg-white/10"
+                               style="color: var(--gk-primary);"
                                title="{{ t("customer_companies.tooltips.edit")|default:"Edit Company" }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -145,7 +134,8 @@
                             <!-- Deactivate -->
                             {% if company.valid_id == 1 %}
                             <button onclick="deleteCompany('{{ company.customer_id }}', '{{ company.name }}')"
-                                    class="text-yellow-600 hover:text-yellow-700 dark:text-yellow-400"
+                                    class="p-1 rounded transition-colors hover:bg-white/10"
+                                    style="color: var(--gk-warning);"
                                     title="{{ t("customer_companies.tooltips.deactivate")|default:"Deactivate Company" }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path>
@@ -153,7 +143,8 @@
                             </button>
                             {% else %}
                             <button onclick="activateCompany('{{ company.customer_id }}', '{{ company.name }}')"
-                                    class="text-green-600 hover:text-green-700 dark:text-green-400"
+                                    class="p-1 rounded transition-colors hover:bg-white/10"
+                                    style="color: var(--gk-success);"
                                     title="{{ t("customer_companies.tooltips.activate")|default:"Activate Company" }}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -165,8 +156,8 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                        No customer companies found. <a href="/admin/customer/companies/new" class="text-blue-600 hover:text-blue-700 dark:text-blue-400">Add the first company</a>
+                    <td colspan="7" class="px-6 py-12 text-center" style="color: var(--gk-text-muted);">
+                        No customer companies found. <a href="/admin/customer/companies/new" class="hover:underline" style="color: var(--gk-primary);">Add the first company</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -176,18 +167,23 @@
 </div>
 
 <!-- Modal for various actions -->
-<div id="companyModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-    <div class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white dark:bg-gray-800">
-        <div class="flex items-center justify-between mb-4">
-            <h3 id="modalTitle" class="text-lg font-semibold text-gray-900 dark:text-white"></h3>
-            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-500">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-            </button>
-        </div>
-        <div id="modalContent" class="mt-4">
-            <!-- Dynamic content loaded here -->
+<div id="companyModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0" aria-hidden="true" onclick="closeModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+            <div class="gk-modal-header">
+                <h3 id="modalTitle" class="text-lg font-semibold" style="color: var(--gk-text-primary);"></h3>
+                <button onclick="closeModal()" class="p-1 rounded transition-colors hover:bg-white/10" style="color: var(--gk-text-muted);">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="modalContent" class="gk-modal-body">
+                <!-- Dynamic content loaded here -->
+            </div>
         </div>
     </div>
 </div>
@@ -195,24 +191,25 @@
 <script>
 function showCompanyUsers(companyId) {
     fetch(`/admin/customer/companies/${companyId}/users`)
-        .then(res => res.json())
+        .then(response => response.json())
         .then(data => {
             document.getElementById('modalTitle').textContent = `Users in ${data.company_name}`;
-            let content = '<div class="overflow-x-auto"><table class="w-full"><thead class="bg-gray-50 dark:bg-gray-700"><tr>';
-            content += '<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Login</th>';
-            content += '<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Name</th>';
-            content += '<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Email</th>';
-            content += '<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Tickets</th>';
-            content += '<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Status</th>';
-            content += '</tr></thead><tbody class="divide-y divide-gray-200 dark:divide-gray-700">';
+            let content = '<div class="overflow-x-auto"><table class="gk-table">';
+            content += '<thead><tr>';
+            content += '<th>Login</th>';
+            content += '<th>Name</th>';
+            content += '<th>Email</th>';
+            content += '<th>Tickets</th>';
+            content += '<th>Status</th>';
+            content += '</tr></thead><tbody>';
 
             data.users.forEach(user => {
-                content += '<tr class="hover:bg-gray-50 dark:hover:bg-gray-700">';
-                content += `<td class="px-4 py-2 text-sm text-gray-900 dark:text-white">${user.login}</td>`;
-                content += `<td class="px-4 py-2 text-sm text-gray-900 dark:text-white">${user.first_name} ${user.last_name}</td>`;
-                content += `<td class="px-4 py-2 text-sm text-gray-900 dark:text-white">${user.email}</td>`;
-                content += `<td class="px-4 py-2 text-sm text-gray-900 dark:text-white">${user.ticket_count}</td>`;
-                content += `<td class="px-4 py-2 text-sm"><span class="px-2 py-1 text-xs rounded-full ${user.valid_id === 1 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}">${user.valid_name}</span></td>`;
+                content += '<tr class="transition-colors hover:bg-white/5">';
+                content += `<td style="color: var(--gk-text-primary);">${user.login}</td>`;
+                content += `<td style="color: var(--gk-text-primary);">${user.first_name} ${user.last_name}</td>`;
+                content += `<td style="color: var(--gk-text-primary);">${user.email}</td>`;
+                content += `<td style="color: var(--gk-text-primary);">${user.ticket_count}</td>`;
+                content += `<td><span class="gk-badge ${user.valid_id === 1 ? 'gk-badge-success' : 'gk-badge-error'}">${user.valid_name}</span></td>`;
                 content += '</tr>';
             });
 
@@ -224,24 +221,25 @@ function showCompanyUsers(companyId) {
 
 function showCompanyTickets(companyId) {
     fetch(`/admin/customer/companies/${companyId}/tickets`)
-        .then(res => res.json())
+        .then(response => response.json())
         .then(data => {
             document.getElementById('modalTitle').textContent = 'Recent Tickets';
-            let content = '<div class="overflow-x-auto max-h-96"><table class="w-full"><thead class="bg-gray-50 dark:bg-gray-700 sticky top-0"><tr>';
-            content += '<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Ticket #</th>';
-            content += '<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Title</th>';
-            content += '<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">State</th>';
-            content += '<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Priority</th>';
-            content += '<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Created</th>';
-            content += '</tr></thead><tbody class="divide-y divide-gray-200 dark:divide-gray-700">';
+            let content = '<div class="overflow-x-auto max-h-96"><table class="gk-table">';
+            content += '<thead class="sticky top-0" style="background: var(--gk-bg-tertiary);"><tr>';
+            content += '<th>Ticket #</th>';
+            content += '<th>Title</th>';
+            content += '<th>State</th>';
+            content += '<th>Priority</th>';
+            content += '<th>Created</th>';
+            content += '</tr></thead><tbody>';
 
             data.tickets.forEach(ticket => {
-                content += '<tr class="hover:bg-gray-50 dark:hover:bg-gray-700">';
-                content += `<td class="px-4 py-2 text-sm font-mono text-gray-900 dark:text-white">#${ticket.tn}</td>`;
-                content += `<td class="px-4 py-2 text-sm text-gray-900 dark:text-white">${ticket.title}</td>`;
-                content += `<td class="px-4 py-2 text-sm text-gray-900 dark:text-white">${ticket.state}</td>`;
-                content += `<td class="px-4 py-2 text-sm text-gray-900 dark:text-white">${ticket.priority}</td>`;
-                content += `<td class="px-4 py-2 text-sm text-gray-900 dark:text-white">${ticket.create_time}</td>`;
+                content += '<tr class="transition-colors hover:bg-white/5">';
+                content += `<td class="font-mono" style="color: var(--gk-text-primary);">#${ticket.tn}</td>`;
+                content += `<td style="color: var(--gk-text-primary);">${ticket.title}</td>`;
+                content += `<td style="color: var(--gk-text-primary);">${ticket.state}</td>`;
+                content += `<td style="color: var(--gk-text-primary);">${ticket.priority}</td>`;
+                content += `<td style="color: var(--gk-text-muted);">${ticket.create_time}</td>`;
                 content += '</tr>';
             });
 
@@ -265,7 +263,7 @@ function deleteCompany(companyId, companyName) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         })
-        .then(res => res.json())
+        .then(response => response.json())
         .then(data => {
             if (data.success) {
                 window.location.reload();
@@ -282,7 +280,7 @@ function activateCompany(companyId, companyName) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         })
-        .then(res => res.json())
+        .then(response => response.json())
         .then(data => {
             if (data.success) {
                 window.location.reload();

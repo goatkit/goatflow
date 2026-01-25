@@ -20,25 +20,14 @@ import (
 func RequireQueueAccess(permType string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user ID from context (set by auth middleware)
-		userID, exists := c.Get("user_id")
-		if !exists {
+		if _, exists := c.Get("user_id"); !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			c.Abort()
 			return
 		}
 
-		// Convert user ID to uint
-		var userIDUint uint
-		switch v := userID.(type) {
-		case int:
-			userIDUint = uint(v)
-		case int64:
-			userIDUint = uint(v)
-		case uint:
-			userIDUint = v
-		case uint64:
-			userIDUint = uint(v)
-		default:
+		userIDUint := getQueueAccessUserIDFromCtxUint(c, 0)
+		if userIDUint == 0 {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
 			c.Abort()
 			return
@@ -151,25 +140,14 @@ func RequireQueueAccess(permType string) gin.HandlerFunc {
 func RequireQueueAccessFromTicket(permType string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user ID from context (set by auth middleware)
-		userID, exists := c.Get("user_id")
-		if !exists {
+		if _, exists := c.Get("user_id"); !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			c.Abort()
 			return
 		}
 
-		// Convert user ID to uint
-		var userIDUint uint
-		switch v := userID.(type) {
-		case int:
-			userIDUint = uint(v)
-		case int64:
-			userIDUint = uint(v)
-		case uint:
-			userIDUint = v
-		case uint64:
-			userIDUint = uint(v)
-		default:
+		userIDUint := getQueueAccessUserIDFromCtxUint(c, 0)
+		if userIDUint == 0 {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
 			c.Abort()
 			return
@@ -273,25 +251,14 @@ func RequireQueueAccessFromTicket(permType string) gin.HandlerFunc {
 func RequireAnyQueueAccess(permType string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user ID from context (set by auth middleware)
-		userID, exists := c.Get("user_id")
-		if !exists {
+		if _, exists := c.Get("user_id"); !exists {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
 			c.Abort()
 			return
 		}
 
-		// Convert user ID to uint
-		var userIDUint uint
-		switch v := userID.(type) {
-		case int:
-			userIDUint = uint(v)
-		case int64:
-			userIDUint = uint(v)
-		case uint:
-			userIDUint = v
-		case uint64:
-			userIDUint = uint(v)
-		default:
+		userIDUint := getQueueAccessUserIDFromCtxUint(c, 0)
+		if userIDUint == 0 {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
 			c.Abort()
 			return
@@ -345,4 +312,29 @@ func RequireAnyQueueAccess(permType string) gin.HandlerFunc {
 		// User has access, continue
 		c.Next()
 	}
+}
+
+// getQueueAccessUserIDFromCtxUint extracts the authenticated user's ID from gin context as uint.
+// Local helper to avoid circular import with shared package.
+func getQueueAccessUserIDFromCtxUint(c *gin.Context, fallback uint) uint {
+	v, ok := c.Get("user_id")
+	if !ok {
+		return fallback
+	}
+	switch id := v.(type) {
+	case int:
+		return uint(id)
+	case int64:
+		return uint(id)
+	case uint:
+		return id
+	case uint64:
+		return uint(id)
+	case float64:
+		return uint(id)
+	case string:
+		// Don't parse strings as user IDs - they should be numeric types
+		return fallback
+	}
+	return fallback
 }

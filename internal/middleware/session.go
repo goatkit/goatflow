@@ -18,19 +18,34 @@ type contextKey string
 // SessionMiddleware validates JWT tokens from cookies or Authorization header.
 func SessionMiddleware(jwtManager *auth.JWTManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Check for token in cookie first
-		token, err := c.Cookie("access_token")
-		if err != nil || token == "" {
-			// Fallback to legacy cookie name used by some login flows
-			if at, err2 := c.Cookie("auth_token"); err2 == nil && at != "" {
-				token = at
-			} else {
-				// Check Authorization header as fallback
-				authHeader := c.GetHeader("Authorization")
-				if authHeader != "" {
-					parts := strings.Split(authHeader, " ")
-					if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
-						token = parts[1]
+		var token string
+
+		// For customer portal paths, check customer-specific cookies first
+		// This prevents agent/customer session conflicts in the same browser
+		if strings.HasPrefix(c.Request.URL.Path, "/customer") {
+			if ct, err := c.Cookie("customer_access_token"); err == nil && ct != "" {
+				token = ct
+			} else if ct, err := c.Cookie("customer_auth_token"); err == nil && ct != "" {
+				token = ct
+			}
+		}
+
+		// If no customer token found (or not a customer path), check standard cookies
+		if token == "" {
+			var err error
+			token, err = c.Cookie("access_token")
+			if err != nil || token == "" {
+				// Fallback to legacy cookie name used by some login flows
+				if at, err2 := c.Cookie("auth_token"); err2 == nil && at != "" {
+					token = at
+				} else {
+					// Check Authorization header as fallback
+					authHeader := c.GetHeader("Authorization")
+					if authHeader != "" {
+						parts := strings.Split(authHeader, " ")
+						if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+							token = parts[1]
+						}
 					}
 				}
 			}
@@ -190,16 +205,15 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 
 // GetCurrentUser retrieves the current user from context.
 func GetCurrentUser(c *gin.Context) (uint, string, string, bool) {
-	userID, idExists := c.Get("user_id")
 	email, emailExists := c.Get("user_email")
 	role, roleExists := c.Get("user_role")
 
-	if !idExists || !emailExists || !roleExists {
+	if !emailExists || !roleExists {
 		return 0, "", "", false
 	}
 
-	id, ok := userID.(uint)
-	if !ok {
+	id := getSessionUserIDFromCtxUint(c, 0)
+	if id == 0 {
 		return 0, "", "", false
 	}
 
@@ -214,6 +228,32 @@ func GetCurrentUser(c *gin.Context) (uint, string, string, bool) {
 	}
 
 	return id, emailStr, roleStr, true
+}
+
+// getSessionUserIDFromCtxUint extracts the authenticated user's ID from gin context as uint.
+// Local helper to avoid circular import with shared package.
+func getSessionUserIDFromCtxUint(c *gin.Context, fallback uint) uint {
+	v, ok := c.Get("user_id")
+	if !ok {
+		return fallback
+	}
+	switch id := v.(type) {
+	case int:
+		return uint(id)
+	case int64:
+		return uint(id)
+	case uint:
+		return id
+	case uint64:
+		return uint(id)
+	case float64:
+		return uint(id)
+	case string:
+		if n, err := strconv.Atoi(id); err == nil {
+			return uint(n)
+		}
+	}
+	return fallback
 }
 
 // isAPIRequest checks if the request is for an API endpoint.
@@ -260,6 +300,7 @@ func OptionalAuth(jwtManager *auth.JWTManager) gin.HandlerFunc {
 				c.Set("user_email", claims.Email)
 				c.Set("user_role", claims.Role)
 				c.Set("user_name", claims.Email) // Use email as name for now
+				c.Set("username", claims.Login)  // Required by customer portal handlers
 				c.Set("authenticated", true)
 			}
 		}

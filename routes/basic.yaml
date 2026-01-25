@@ -105,3 +105,25 @@ spec:
           method: GET
           handler: handleHealthCheck
           description: "Quick liveness probe"
+
+        # Public language API - for login page language selector
+        - path: /api/languages
+          method: GET
+          handler: HandleGetAvailableLanguages
+          description: "Get available languages and current preference (no auth required)"
+
+        - path: /api/languages
+          method: POST
+          handler: HandleSetPreLoginLanguage
+          description: "Set language preference cookie (no auth required)"
+
+        # Public theme API - for login page theme selector
+        - path: /api/themes
+          method: GET
+          handler: HandleGetAvailableThemes
+          description: "Get available themes and current preference (no auth required)"
+
+        - path: /api/themes
+          method: POST
+          handler: HandleSetPreLoginTheme
+          description: "Set theme and mode preference cookies (no auth required)"

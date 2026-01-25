@@ -5,80 +5,57 @@
 {% block head %}
 {{ block.super }}
 <style>
+/* Note content table styles */
 div[id^="note-content-"] {
     margin: 0 !important;
     padding: 0 !important;
     text-indent: 0 !important;
 }
 
-/* Table styles for note content */
 div[id^="note-content-"] table {
     border-collapse: collapse !important;
     width: 100% !important;
-    border: 1px solid #d1d5db !important;
+    border: 1px solid var(--gk-border-default) !important;
     margin-bottom: 1rem !important;
 }
 
 div[id^="note-content-"] table th,
 div[id^="note-content-"] table td {
-    border: 1px solid #d1d5db !important;
+    border: 1px solid var(--gk-border-default) !important;
     padding: 0.5rem 0.75rem !important;
     text-align: left !important;
 }
 
 div[id^="note-content-"] table th {
-    background-color: #f9fafb !important;
+    background-color: var(--gk-bg-elevated) !important;
     font-weight: 600 !important;
     font-size: 0.75rem !important;
     text-transform: uppercase !important;
     letter-spacing: 0.05em !important;
-    color: #6b7280 !important;
-}
-
-.dark div[id^="note-content-"] table th {
-    background-color: #374151 !important;
-    color: #9ca3af !important;
+    color: var(--gk-text-muted) !important;
 }
 
 div[id^="note-content-"] table td {
-    color: #374151 !important;
-}
-
-.dark div[id^="note-content-"] table td {
-    color: #d1d5db !important;
+    color: var(--gk-text-secondary) !important;
 }
 
 div[id^="note-content-"] table tbody tr {
-    border-bottom: 1px solid #d1d5db !important;
-}
-
-.dark div[id^="note-content-"] table tbody tr {
-    border-bottom: 1px solid #4b5563 !important;
+    border-bottom: 1px solid var(--gk-border-default) !important;
 }
 
 div[id^="note-content-"] blockquote {
     margin: 1rem 0 1rem 1.5rem !important;
     padding: 0.75rem 0 0.75rem 1.25rem !important;
-    border-left: 4px solid #e5e7eb !important;
-    background-color: #f9fafb !important;
-}
-
-.dark div[id^="note-content-"] blockquote {
-    border-left-color: #4b5563 !important;
-    background-color: #1f2937 !important;
+    border-left: 4px solid var(--gk-primary) !important;
+    background-color: var(--gk-bg-elevated) !important;
 }
 
 div[id^="note-content-"].prose :where(blockquote):not(:where([class~="not-prose"] *)) {
     margin: 1rem 0 1rem 1.5rem !important;
     padding: 0.75rem 0 0.75rem 1.25rem !important;
     border-left-width: 4px !important;
-    border-left: 4px solid #e5e7eb !important;
-    background-color: #f9fafb !important;
-}
-
-.dark div[id^="note-content-"].prose :where(blockquote):not(:where([class~="not-prose"] *)) {
-    border-left-color: #4b5563 !important;
-    background-color: #1f2937 !important;
+    border-left: 4px solid var(--gk-primary) !important;
+    background-color: var(--gk-bg-elevated) !important;
 }
 
 div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
@@ -96,38 +73,24 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
 .note-entry .prose :where(blockquote):not(:where([class~="not-prose"] *)) {
     margin: 1rem 0 1rem 1.5rem !important;
     padding: 0.75rem 0 0.75rem 1.25rem !important;
-    border-left: 4px solid #e5e7eb !important;
-    background-color: #f9fafb !important;
-}
-
-.dark .note-entry .prose :where(blockquote):not(:where([class~="not-prose"] *)) {
-    border-left-color: #4b5563 !important;
-    background-color: #1f2937 !important;
+    border-left: 4px solid var(--gk-primary) !important;
+    background-color: var(--gk-bg-elevated) !important;
 }
 
 #descriptionViewer blockquote,
 #descriptionViewer.prose :where(blockquote):not(:where([class~="not-prose"] *)) {
     margin: 1rem 0 1rem 1.5rem !important;
     padding: 0.75rem 0 0.75rem 1.25rem !important;
-    border-left: 4px solid #e5e7eb !important;
-    background-color: #f9fafb !important;
-}
-
-.dark #descriptionViewer blockquote,
-.dark #descriptionViewer.prose :where(blockquote):not(:where([class~="not-prose"] *)) {
-    border-left-color: #4b5563 !important;
-    background-color: #1f2937 !important;
+    border-left: 4px solid var(--gk-primary) !important;
+    background-color: var(--gk-bg-elevated) !important;
 }
 
 .note-highlight {
-    outline: 3px solid rgba(59, 130, 246, 0.45);
+    outline: 3px solid var(--gk-primary);
     outline-offset: 4px;
     border-radius: 0.75rem;
     transition: outline-color 0.2s ease-in-out;
-}
-
-.dark .note-highlight {
-    outline-color: rgba(191, 219, 254, 0.7);
+    box-shadow: var(--gk-glow-primary);
 }
 </style>
 {% endblock %}
@@ -139,1048 +102,62 @@ div[id^="note-content-"] :where(p):not(:where([class~="not-prose"] *)) {
 {% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Page header -->
-    <div class="mb-8">
-        <div class="sm:flex sm:items-center sm:justify-between">
-            <div>
-                <nav class="flex" aria-label="Breadcrumb">
-                    <ol class="flex items-center space-x-4">
-                        <li>
-                            <a href="/tickets" class="text-gray-900 dark:text-white hover:text-gotrs-500">{{ t("tickets.title") }}</a>
-                        </li>
-                        <li>
-                            <svg class="flex-shrink-0 h-5 w-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                                <path d="M5.555 17.776l8-16 .894.448-8 16-.894-.448z" />
-                            </svg>
-                        </li>
-                        <li>
-                            <span class="text-gray-500 dark:text-gray-400">{{ Ticket.tn }}</span>
-                        </li>
-                    </ol>
-                </nav>
-                <h1 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ Ticket.subject }}</h1>
-                <div class="mt-2 flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
-                        {% if Ticket.status == 'open' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                        {% elif Ticket.status == 'pending' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                        {% elif Ticket.status == 'closed' %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200
-                        {% else %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200{% endif %}">
-                        {{ Ticket.status|title }}
-                    </span>
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full
-                        {% if Ticket.priority == 'critical' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
-                        {% elif Ticket.priority == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
-                        {% elif Ticket.priority == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                        {% elif Ticket.priority == 'low' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                        {% else %}bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200{% endif %}">
-                        {{ Ticket.priority|title }} {{ t("priority.title")|default:"Priority" }}
-                    </span>
-                    <span>{{ Ticket.queue }}</span>
-                    <span>{{ t("common.created")|default:"Created" }} {{ Ticket.created }}</span>
-                    <span>{{ t("tickets.updated_at")|default:"Updated" }} {{ Ticket.updated }}</span>
+<div class="min-h-screen">
+    <div class="container mx-auto py-8">
+        <!-- Page Header -->
+        {% include "partials/ticket_detail/header.pongo2" %}
+
+        <!-- Alerts (Pending Reminder & Auto-Close) -->
+        {% include "partials/ticket_detail/alerts.pongo2" %}
+
+        <!-- Meta Grid -->
+        {% include "partials/ticket_detail/meta_grid.pongo2" %}
+
+        <!-- Tabs Navigation -->
+        {% include "partials/ticket_detail/tabs.pongo2" %}
+
+        <!-- Communication Tab -->
+        <div id="tab-comm" class="tab-panel">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Main Content -->
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Ticket Description -->
+                    {% include "partials/ticket_detail/description.pongo2" %}
+
+                    <!-- Ticket Notes/History -->
+                    {% include "partials/ticket_detail/notes.pongo2" %}
+
+                    <!-- Add Note Form -->
+                    {% include "partials/ticket_detail/note_form.pongo2" %}
+
+                    <!-- Attachments Section -->
+                    {% include "partials/ticket_detail/attachments.pongo2" %}
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Add hidden ticket attributes for JavaScript (used by ticket attribute relations filtering) -->
-    <div data-queue-id="{{ Ticket.queue_id }}"
-         data-queue-name="{{ Ticket.queue_name }}"
-         data-status-id="{{ Ticket.status_id }}"
-         data-status-name="{{ Ticket.status_name }}"
-         data-priority-id="{{ Ticket.priority_id }}"
-         style="display: none;"></div>
-
-    {% if Ticket.pending_reminder %}
-    <div class="mb-6">
-    <div class="rounded-md border p-4 text-sm {% if Ticket.pending_reminder_overdue %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-900 dark:text-red-100{% else %}border-blue-200 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/60 text-blue-900 dark:text-blue-50{% endif %}">
-            <div class="font-medium">
-                {% if Ticket.pending_reminder_has_time %}
-                    {% if Ticket.pending_reminder_overdue %}
-                        {{ t("tickets.pending_reminder.overdue")|default:"Reminder overdue" }}
-                    {% else %}
-                        {{ t("tickets.pending_reminder.scheduled")|default:"Reminder scheduled" }}
-                    {% endif %}
-                {% else %}
-                    {{ t("tickets.pending_reminder.not_scheduled")|default:"Reminder not scheduled" }}
-                {% endif %}
-            </div>
-            <p class="mt-1">
-                {% if Ticket.pending_reminder_has_time %}
-                    {% if Ticket.pending_reminder_overdue %}
-                        {{ t("tickets.pending_reminder.was_scheduled_for")|default:"Reminder was scheduled for" }} <span class="font-semibold">{{ Ticket.pending_reminder_at }}</span>{% if Ticket.pending_reminder_relative and Ticket.pending_reminder_at_iso %} (<span data-relative-time data-mode="duration" data-direction="past" data-timestamp="{{ Ticket.pending_reminder_at_iso }}">{{ Ticket.pending_reminder_relative }}</span> {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% elif Ticket.pending_reminder_relative %} ({{ Ticket.pending_reminder_relative }} {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% endif %}.
-                    {% else %}
-                        {{ t("tickets.pending_reminder.will_reopen_at")|default:"Ticket will re-open at" }} <span class="font-semibold">{{ Ticket.pending_reminder_at }}</span>{% if Ticket.pending_reminder_relative and Ticket.pending_reminder_at_iso %} ({{ t("tickets.pending_reminder.in")|default:"in" }} <span data-relative-time data-mode="duration" data-direction="future" data-timestamp="{{ Ticket.pending_reminder_at_iso }}">{{ Ticket.pending_reminder_relative }}</span>){% elif Ticket.pending_reminder_relative %} ({{ t("tickets.pending_reminder.in")|default:"in" }} {{ Ticket.pending_reminder_relative }}){% endif %}.
-                    {% endif %}
-                {% else %}
-                    {{ Ticket.pending_reminder_message|default:t("tickets.pending_reminder.no_time_scheduled")|default:"No reminder time scheduled." }}
-                {% endif %}
-            </p>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if Ticket.auto_close_at %}
-    <div class="mb-6">
-        <div class="rounded-md border p-4 text-sm {% if Ticket.auto_close_overdue %}border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/30 text-red-900 dark:text-red-100{% else %}border-amber-200 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100{% endif %}">
-            <div class="font-medium">
-                {% if Ticket.auto_close_overdue %}
-                    {{ t("tickets.auto_close.overdue")|default:"Auto-close overdue" }}
-                {% else %}
-                    {{ t("tickets.auto_close.scheduled")|default:"Auto-close scheduled" }}
-                {% endif %}
-            </div>
-            <p class="mt-1">
-                {% if Ticket.auto_close_overdue %}
-                    {{ t("tickets.auto_close.should_have_closed_at")|default:"Ticket should have auto-closed at" }} <span class="font-semibold">{{ Ticket.auto_close_at }}</span>{% if Ticket.auto_close_relative and Ticket.auto_close_at_iso %} (<span data-relative-time data-mode="duration" data-direction="past" data-timestamp="{{ Ticket.auto_close_at_iso }}">{{ Ticket.auto_close_relative }}</span> {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% elif Ticket.auto_close_relative %} ({{ Ticket.auto_close_relative }} {{ t("tickets.pending_reminder.ago")|default:"ago" }}){% endif %}.
-                {% else %}
-                    {{ t("tickets.auto_close.will_close_at")|default:"Ticket will auto-close" }}{% if Ticket.auto_close_pending %} {{ t("tickets.auto_close.while_pending")|default:"while in pending auto close state" }}{% endif %} {{ t("tickets.auto_close.at")|default:"at" }} <span class="font-semibold">{{ Ticket.auto_close_at }}</span>{% if Ticket.auto_close_relative and Ticket.auto_close_at_iso %} ({{ t("tickets.pending_reminder.in")|default:"in" }} <span data-relative-time data-mode="duration" data-direction="future" data-timestamp="{{ Ticket.auto_close_at_iso }}">{{ Ticket.auto_close_relative }}</span>){% elif Ticket.auto_close_relative %} ({{ t("tickets.pending_reminder.in")|default:"in" }} {{ Ticket.auto_close_relative }}){% endif %}.
-                {% endif %}
-            </p>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Meta grid like OTRS top info bar -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.queue") }}</div>
-            <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.queue }}</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.state") }}</div>
-            <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.status|title }}</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.priority") }}</div>
-            <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.priority|title }}</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.owner")|default:"Owner" }}</div>
-            <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.owner|default:"Unassigned" }}</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.age")|default:"Age" }}</div>
-            <div class="text-sm text-gray-900 dark:text-white">
-                {% if Ticket.created_iso %}
-                <span data-relative-time data-mode="since" data-direction="past" data-timestamp="{{ Ticket.created_iso }}">{{ Ticket.age }}</span>
-                {% else %}
-                {{ Ticket.age }}
-                {% endif %}
-            </div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ t("tickets.customer_id")|default:"CustomerID" }}</div>
-            <div class="text-sm text-gray-900 dark:text-white">{{ Ticket.customer_id|default:"-" }}</div>
-        </div>
-        {% if DynamicFields %}
-        {% for df in DynamicFields %}
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-            <div class="text-xs uppercase text-gray-500 dark:text-gray-400">{{ df.Field.Label }}</div>
-            <div class="text-sm text-gray-900 dark:text-white">{{ df.DisplayValue }}</div>
-        </div>
-        {% endfor %}
-        {% endif %}
-    </div>
-
-    <!-- Tabs like OTRS: Communication, Time Accounting, History, Links -->
-    <div class="mb-6">
-        <div class="border-b border-gray-200 dark:border-gray-700">
-            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150 hover:text-gotrs-500 dark:hover:text-gotrs-200" data-target="tab-comm" data-default-active="true">{{ t("tickets.communication")|default:"Communication" }}</a>
-                <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150 hover:text-gotrs-500 dark:hover:text-gotrs-200" data-target="tab-time">{{ t("tickets.time_accounting")|default:"Time Accounting" }}</a>
-                <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150 hover:text-gotrs-500 dark:hover:text-gotrs-200" data-target="tab-history">{{ t("tickets.history")|default:"History" }}</a>
-                <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150 hover:text-gotrs-500 dark:hover:text-gotrs-200" data-target="tab-links">{{ t("tickets.links")|default:"Links" }}</a>
-            </nav>
-        </div>
-    </div>
-
-    <div id="tab-comm" class="tab-panel">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Main content -->
-        <div class="lg:col-span-2 space-y-6">
-            {% set description_badge_text = t("tickets.internal_only_badge")|default:"Internal only" %}
-            {% if Ticket.first_article_visible_for_customer %}
-                {% set description_card_classes = "shadow-sm rounded-lg p-6 border border-emerald-200/80 bg-emerald-50/70 dark:border-emerald-500/40 dark:bg-emerald-500/10" %}
-                {% set description_badge_classes = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200" %}
-                {% set description_badge_text = t("tickets.customer_visible_badge")|default:"Customer sees this" %}
-            {% else %}
-                {% set description_card_classes = "shadow-sm rounded-lg p-6 border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/40" %}
-                {% set description_badge_classes = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200" %}
-            {% endif %}
-            <!-- Ticket Description -->
-            <div class="{{ description_card_classes }}"{% if Ticket.first_article_sender_color %} style="border-left: 4px solid {{ Ticket.first_article_sender_color }};"{% endif %}>
-                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                    <h2 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("tickets.description") }}</h2>
-                    <span class="{{ description_badge_classes }}">
-                        {{ description_badge_text }}
-                    </span>
-                </div>
-                <div class="relative"{% if Ticket.first_article_id %} id="note-{{ Ticket.first_article_id }}"{% endif %}>
-                    {% if Ticket.description_is_html %}
-                    <div id="descriptionViewer" class="prose dark:prose-invert max-w-none">
-                        {{ Ticket.description|safe }}
-                    </div>
-                    {% else %}
-                    <div id="descriptionViewer" data-plain="1" class="text-sm leading-5 whitespace-pre-wrap break-words text-gray-800 dark:text-gray-200 bg-transparent p-0 m-0 font-normal" style="line-height:1.25;">
-{{ Ticket.description }}
-                    </div>
-                    {% endif %}
-                    {% if Ticket.first_article_id and Ticket.time_by_article and Ticket.time_by_article[Ticket.first_article_id] and Ticket.time_by_article[Ticket.first_article_id] > 0 %}
-                    <span class="absolute bottom-2 right-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-                        ⏱ {{ Ticket.time_by_article[Ticket.first_article_id] }} {{ t("tickets.minutes")|default:"minutes" }}
-                    </span>
-                    {% endif %}
-                </div>
-            </div>
-
-
-
-            <!-- Ticket Notes/History -->
-            {% if Ticket.notes and Ticket.notes|length > 0 %}
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.notes_updates")|default:"Notes & Updates" }}</h2>
-                <div class="flow-root">
-                    <ul class="-mb-8">
-                        {% set note_counter = 0 %}
-                        {% for note in Ticket.notes %}
-                        {% set note_counter = note_counter + 1 %}
-                        {% set note_anchor = note.id|default:note_counter %}
-                        {% set is_customer_visible = note.is_visible_for_customer %}
-                        {% if is_customer_visible %}
-                            {% set icon_bg = "bg-emerald-500" %}
-                            {% set card_classes = "border border-emerald-200/80 bg-emerald-50/70 dark:border-emerald-500/40 dark:bg-emerald-500/10" %}
-                            {% set badge_classes = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200" %}
-                            {% set badge_text = t("tickets.customer_visible_badge")|default:"Customer sees this" %}
-                        {% else %}
-                            {% set icon_bg = "bg-gotrs-500" %}
-                            {% set card_classes = "border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/40" %}
-                            {% set badge_classes = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200" %}
-                            {% set badge_text = t("tickets.internal_only_badge")|default:"Internal only" %}
-                        {% endif %}
-                        <li id="note-{{ note_anchor }}" class="note-entry" data-testid="note-entry">
-                            <div class="relative pb-8">
-                                {% if not forloop.last %}
-                                <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200 dark:bg-gray-600" aria-hidden="true"></span>
-                                {% endif %}
-                                <div class="relative flex space-x-3">
-                                    <div>
-                                        <span class="h-8 w-8 rounded-full {{ icon_bg }} flex items-center justify-center ring-8 ring-white dark:ring-gray-800">
-                                            <svg class="h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd" />
-                                            </svg>
-                                        </span>
-                                    </div>
-                                    <div class="min-w-0 flex-1">
-                                        <div>
-                                            <div class="text-sm">
-                                                <span class="font-medium text-gray-900 dark:text-white">{{ note.author }}</span>
-                                            </div>
-                                            <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{{ note.time }}</p>
-                                        </div>
-                                        {% if note.subject %}
-                                        <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                                            <p class="font-medium">{{ note.subject }}</p>
-                                        </div>
-                                        {% endif %}
-                                        <div class="mt-2 text-sm text-gray-700 dark:text-gray-300">
-                                            <div class="rounded-lg p-4 shadow-sm {{ card_classes }}"{% if note.sender_color %} style="border-left: 4px solid {{ note.sender_color }};"{% endif %}>
-                                                <div class="flex flex-wrap items-center gap-2 justify-between mb-3">
-                                                    <span class="{{ badge_classes }}">
-                                                        {{ badge_text }}
-                                                    </span>
-                                                    {% if Ticket.time_by_article and Ticket.time_by_article[note.id] and Ticket.time_by_article[note.id] > 0 %}
-                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-                                                        ⏱ {{ Ticket.time_by_article[note.id] }} {{ t("tickets.minutes")|default:"minutes" }}
-                                                    </span>
-                                                    {% endif %}
-                                                </div>
-                                                {% if note.has_html %}
-                                                <div id="note-content-{{ note_counter }}" class="prose prose-sm dark:prose-invert max-w-none break-words article-content" data-article-body data-testid="note-content">
-                                                    {{ note.body|safe }}
-                                                </div>
-                                                {% else %}
-                                                <div id="note-content-{{ note_counter }}" class="article-plain article-content" data-article-body data-testid="note-content">{{- note.body|escape -}}</div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Add Note Form -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6" data-testid="add-note-section">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4" data-testid="add-note-title">{{ t("tickets.add_note")|default:"Add Note" }}</h2>
-                <form id="noteForm" class="space-y-4" enctype="multipart/form-data" data-testid="note-form" data-require-time="{% if RequireNoteTimeUnits %}true{% else %}false{% endif %}" data-pending-states="{% if PendingStateIDs %}{% for sid in PendingStateIDs %}{{ sid }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
-                    <div>
-                        <label for="note_subject" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {{ t("tickets.subject")|default:"Subject" }} <span class="text-xs font-normal text-gray-500 dark:text-gray-400">({{ t("tickets.optional")|default:"optional" }})</span>
-                        </label>
-                        <input type="text" id="note_subject" name="subject" value="{{ t("tickets.internal_note_default_subject")|default:"Note" }}"
-                               data-testid="note-subject-input" aria-label="Note subject"
-                               class="mt-1 block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
-                    </div>
-                    <!-- Template Selection for Notes -->
-                    {% include "partials/template_selector.pongo2" with QueueID=Ticket.queue_id TicketID=Ticket.id TemplateType="Note" TargetEditorID="noteEditor" SelectID="detailNoteTemplateSelect" %}
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" id="note_visible_customer" name="is_visible_for_customer" value="1"
-                                   data-testid="note-visible-checkbox" aria-label="Make note visible to customer"
-                                   class="h-4 w-4 rounded border-gray-300 text-gotrs-600 focus:ring-gotrs-500">
-                            <label for="note_visible_customer" class="text-sm text-gray-700 dark:text-gray-300">{{ t("tickets.visible_for_customer")|default:"Visible to customer" }}</label>
-                        </div>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("tickets.visible_for_customer_help")|default:"Leave unchecked to keep this note internal." }}</p>
-                    </div>
-                    <div>
-                        <label id="noteEditorLabel" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {{ t("tickets.note_content")|default:"Note Content" }} <span class="ml-1 text-red-500">*</span>
-                        </label>
-                        {% include "partials/rich_text_editor.pongo2" with EditorID="noteEditor" FieldName="body" Placeholder="Add your note or update..." MinHeight="120px" LabelID="noteEditorLabel" %}
-                    </div>
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label for="note_next_state" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                {{ t("tickets.next_state")|default:"Next State" }}
-                            </label>
-                            <select id="note_next_state" name="next_state_id"
-                                    data-testid="note-next-state" aria-label="Next ticket state"
-                                    class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm">
-                                <option value="" selected>{{ t("tickets.keep_current_state")|default:"Keep current state" }} ({{ Ticket.status }})</option>
-                                {% for state in TicketStates %}
-                                <option value="{{ state.id }}"{% if state.type_id == 5 %} data-pending="true"{% endif %}>{{ state.name }}</option>
-                                {% endfor %}
-                            </select>
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("tickets.next_state_help")|default:"Choose a new state or leave unchanged." }}</p>
-                        </div>
-                        <div id="note_pending_container" class="hidden">
-                            <label for="note_pending_until" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                {{ t("tickets.pending_until")|default:"Pending Until" }} <span class="ml-1 text-red-500">*</span>
-                            </label>
-                            <input type="datetime-local" id="note_pending_until" name="pending_until" value="{{ Ticket.pending_until }}"
-                                   class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("tickets.pending_until_help")|default:"Pending states require a follow-up time." }}</p>
-                        </div>
-                    </div>
-                    <div>
-                        <label for="note_time_units" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            {{ t("tickets.time_units_minutes")|default:"Time Units (minutes)" }}{% if RequireNoteTimeUnits %}<span class="ml-1 text-red-500">*</span>{% endif %}
-                        </label>
-                        <input type="number" id="note_time_units" name="time_units" min="{% if RequireNoteTimeUnits %}1{% else %}0{% endif %}" step="1"
-                               placeholder="{% if RequireNoteTimeUnits %}1{% else %}0{% endif %}"{% if RequireNoteTimeUnits %} required aria-required="true"{% endif %}
-                               class="block w-40 rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
-                        <p class="mt-1 text-xs {% if RequireNoteTimeUnits %}text-red-600 dark:text-red-400{% else %}text-gray-500 dark:text-gray-400{% endif %}">
-                            {% if RequireNoteTimeUnits %}
-                                {{ t("tickets.time_units_required_help")|default:"Entering work minutes is required for each note." }}
-                            {% else %}
-                                {{ t("tickets.time_units_help")|default:"Record work minutes to add to this ticket." }}
-                            {% endif %}
-                        </p>
-                    </div>
-                    {% if NoteFormDynamicFields %}
-                    <!-- Dynamic Fields Section -->
-                    <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ t("dynamic_fields.title")|default:"Additional Fields" }}</h3>
-                        <div class="grid gap-4 md:grid-cols-2">
-                            {% for fwc in NoteFormDynamicFields %}
-                            <div>
-                                <label for="DynamicField_{{ fwc.Field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {{ fwc.Field.Label }}{% if fwc.ConfigValue == 2 %}<span class="ml-1 text-red-500">*</span>{% endif %}
-                                </label>
-                                {% if fwc.Field.FieldType == "Text" %}
-                                <input type="text" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
-                                       {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                       class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
-                                {% elif fwc.Field.FieldType == "TextArea" %}
-                                <textarea id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}" rows="3"
-                                          {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                          class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm"></textarea>
-                                {% elif fwc.Field.FieldType == "Checkbox" %}
-                                <input type="checkbox" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}" value="1"
-                                       class="h-4 w-4 rounded border-gray-300 text-gotrs-600 focus:ring-gotrs-500" />
-                                {% elif fwc.Field.FieldType == "Date" %}
-                                <input type="date" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
-                                       {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                       class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
-                                {% elif fwc.Field.FieldType == "DateTime" %}
-                                <input type="datetime-local" id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
-                                       {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                       class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
-                                {% elif fwc.Field.FieldType == "Dropdown" %}
-                                <select id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}"
-                                        {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                        class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm">
-                                    <option value="">-- {{ t("forms.select")|default:"Select" }} --</option>
-                                    {% if fwc.Field.Config and fwc.Field.Config.PossibleValues %}
-                                    {% for key, val in fwc.Field.Config.PossibleValues %}
-                                    <option value="{{ key }}">{{ val }}</option>
-                                    {% endfor %}
-                                    {% endif %}
-                                </select>
-                                {% elif fwc.Field.FieldType == "Multiselect" %}
-                                <select id="DynamicField_{{ fwc.Field.Name }}" name="DynamicField_{{ fwc.Field.Name }}[]" multiple
-                                        {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                        class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm">
-                                    {% if fwc.Field.Config and fwc.Field.Config.PossibleValues %}
-                                    {% for key, val in fwc.Field.Config.PossibleValues %}
-                                    <option value="{{ key }}">{{ val }}</option>
-                                    {% endfor %}
-                                    {% endif %}
-                                </select>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-                    {% if NoteArticleDynamicFields %}
-                    <!-- Article-Level Dynamic Fields Section -->
-                    <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ t("dynamic_fields.article_fields")|default:"Article Fields" }}</h3>
-                        <div class="grid gap-4 md:grid-cols-2">
-                            {% for fwc in NoteArticleDynamicFields %}
-                            <div>
-                                <label for="ArticleDynamicField_{{ fwc.Field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    {{ fwc.Field.Label }}{% if fwc.ConfigValue == 2 %}<span class="ml-1 text-red-500">*</span>{% endif %}
-                                </label>
-                                {% if fwc.Field.FieldType == "Text" %}
-                                <input type="text" id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}"
-                                       {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                       class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
-                                {% elif fwc.Field.FieldType == "TextArea" %}
-                                <textarea id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}" rows="3"
-                                          {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                          class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm"></textarea>
-                                {% elif fwc.Field.FieldType == "Checkbox" %}
-                                <input type="checkbox" id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}" value="1"
-                                       class="h-4 w-4 rounded border-gray-300 text-gotrs-600 focus:ring-gotrs-500" />
-                                {% elif fwc.Field.FieldType == "Date" %}
-                                <input type="date" id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}"
-                                       {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                       class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
-                                {% elif fwc.Field.FieldType == "DateTime" %}
-                                <input type="datetime-local" id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}"
-                                       {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                       class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm" />
-                                {% elif fwc.Field.FieldType == "Dropdown" %}
-                                <select id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}"
-                                        {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                        class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm">
-                                    <option value="">-- {{ t("forms.select")|default:"Select" }} --</option>
-                                    {% if fwc.Field.Config and fwc.Field.Config.PossibleValues %}
-                                    {% for key, val in fwc.Field.Config.PossibleValues %}
-                                    <option value="{{ key }}">{{ val }}</option>
-                                    {% endfor %}
-                                    {% endif %}
-                                </select>
-                                {% elif fwc.Field.FieldType == "Multiselect" %}
-                                <select id="ArticleDynamicField_{{ fwc.Field.Name }}" name="ArticleDynamicField_{{ fwc.Field.Name }}[]" multiple
-                                        {% if fwc.ConfigValue == 2 %}required{% endif %}
-                                        class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 dark:text-white bg-white dark:bg-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 focus:ring-2 focus:ring-inset focus:ring-gotrs-600 dark:focus:ring-gotrs-500 sm:text-sm">
-                                    {% if fwc.Field.Config and fwc.Field.Config.PossibleValues %}
-                                    {% for key, val in fwc.Field.Config.PossibleValues %}
-                                    <option value="{{ key }}">{{ val }}</option>
-                                    {% endfor %}
-                                    {% endif %}
-                                </select>
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-                    <!-- Attachments for Note -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            {{ t("tickets.attachments")|default:"Attachments" }}
-                        </label>
-                        <input type="file" name="attachments" multiple
-                               class="block w-full text-sm text-gray-900 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-gray-700 dark:file:text-gray-300">
-                        <div id="note-template-attachments" class="mt-2"></div>
-                    </div>
-                    <div class="flex justify-end">
-                        <button type="submit"
-                            class="rounded-md bg-gotrs-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gotrs-500 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
-                            {{ t("tickets.add_note")|default:"Add Note" }}
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Attachments Section (moved below Add Note) -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("ticket.attachments")|default:"Attachments" }}</h2>
-                    <form id="attachmentUploadForm" hx-post="/api/tickets/{{ Ticket.tn }}/attachments" hx-trigger="change from:#attachment-upload" hx-swap="none" enctype="multipart/form-data" hx-encoding="multipart/form-data">
-                        <input id="attachment-upload" type="file" name="file" class="hidden" />
-                        <button type="button" onclick="document.getElementById('attachment-upload').click()"
-                                class="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm leading-5 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
-                            Upload
-                        </button>
-                    </form>
-                </div>
-                <div id="attachments-list"
-                     hx-get="/api/tickets/{{ Ticket.tn }}/attachments"
-                     hx-trigger="load, attachments-updated from:#attachmentUploadForm, changed from:#attachment-uploaded"
-                     hx-swap="innerHTML">
-                    <div class="text-center py-4 text-sm text-gray-500 dark:text-gray-400">{{ t("labels.loading")|default:"Loading..." }}</div>
-                </div>
-                <input type="hidden" id="attachment-uploaded" />
+                <!-- Sidebar -->
+                {% include "partials/ticket_detail/sidebar.pongo2" %}
             </div>
         </div>
 
-        <!-- Sidebar -->
-        <div class="space-y-6">
-            <!-- Time Tracking -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.time_tracking")|default:"Time Tracking" }}</h2>
-                <dl class="space-y-3">
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("tickets.total_time")|default:"Total Time" }}</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">
-                            {% if Ticket.time_total_has_hours %}
-                                {{ Ticket.time_total_hours }}h{% if Ticket.time_total_remaining_minutes > 0 %} {{ Ticket.time_total_remaining_minutes }}m{% endif %}
-                            {% else %}
-                                {{ Ticket.time_total_minutes|default:0 }} {{ t("tickets.minutes")|default:"minutes" }}
-                            {% endif %}
-                        </dd>
-                    </div>
-                </dl>
-            </div>
-            <!-- Customer Information (reused partial from creation panel) -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                {% if CustomerPanelUser and CustomerPanelUser.Login %}
-                    {% include "partials/tickets/customer_info.pongo2" with user=CustomerPanelUser company=CustomerPanelCompany open=CustomerPanelOpen %}
-                {% else %}
-                    <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-2">{{ t("tickets.customer") }}</h2>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ t("tickets.no_customer_assigned")|default:"No customer is assigned to this ticket." }}</p>
-                {% endif %}
-            </div>
+        <!-- Time Accounting Tab -->
+        {% include "partials/ticket_detail/tab_time.pongo2" %}
 
-            <!-- Responsible Agent (OTRS Responsible field) -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.responsible")|default:"Responsible" }}</h2>
-                <dl class="space-y-3">
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("common.name")|default:"Name" }}</dt>
-                        <dd class="text-sm text-gray-900 dark:text-white">{{ Ticket.assigned_to|default:"Unassigned" }}</dd>
-                    </div>
-                </dl>
-            </div>
+        <!-- History Tab -->
+        {% include "partials/ticket_detail/tab_history.pongo2" %}
 
-            <!-- Ticket Actions -->
-            <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-                <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("common.actions") }}</h2>
-                <div class="space-y-3">
-                    {% if Ticket.is_closed %}
-                    {# TODO: Check config option for allowing ticket reopen #}
-                    <button type="button" onclick="reopenTicket()"
-                        class="w-full rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                        <i class="fas fa-undo mr-2"></i>{{ t("tickets.reopen") }} {{ t("tickets.ticket")|default:"Ticket" }}
-                    </button>
-                    {% else %}
-                    {% if Ticket.status != 'merged' and Ticket.status != 'removed' %}
-                    <button type="button" onclick="closeTicket()"
-                        class="w-full rounded-md bg-gray-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                        <i class="fas fa-times mr-2"></i>{{ t("tickets.close")|default:"Close" }} {{ t("tickets.ticket")|default:"Ticket" }}
-                    </button>
-                    {% endif %}
-                    {% endif %}
-                    <button type="button" onclick="changeStatus()"
-                        class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
-                        <i class="fas fa-tasks mr-2"></i>{{ t("tickets.change_status")|default:"Change Status" }}
-                    </button>
-                    <button type="button" onclick="assignTicket()"
-                        class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
-                        <i class="fas fa-user-check mr-2"></i>{{ t("tickets.assign_agent")|default:"Assign Agent" }}
-                    </button>
-                    <button type="button" onclick="changePriority()"
-                        class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
-                        <i class="fas fa-flag mr-2"></i>{{ t("tickets.change_priority")|default:"Change Priority" }}
-                    </button>
-                    <button type="button" onclick="moveQueue()"
-                        class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:ring-offset-2">
-                        <i class="fas fa-inbox mr-2"></i>{{ t("tickets.move_to_queue")|default:"Move to Queue" }}
-                    </button>
-                    <button type="button" onclick="mergeTicket()"
-                        class="w-full rounded-md border border-red-300 dark:border-red-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm font-semibold text-red-700 dark:text-red-300 shadow-sm hover:bg-red-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
-                        <i class="fas fa-code-branch mr-2"></i>{{ t("tickets.merge_ticket")|default:"Merge Ticket" }}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
-
-    <div id="tab-time" class="tab-panel hidden">
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
-            <h2 class="text-lg font-medium text-gray-900 dark:text-white mb-4">{{ t("tickets.time_accounting")|default:"Time Accounting" }}</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">{{ t("tickets.total_time")|default:"Total Time" }}: <strong>{{ Ticket.time_total_minutes|default:0 }}</strong> {{ t("tickets.minutes")|default:"minutes" }}</p>
-            {% if Ticket.time_entries and Ticket.time_entries|length > 0 %}
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("common.date")|default:"Date" }}</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("tickets.minutes")|default:"Minutes" }}</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("tickets.article")|default:"Article" }}</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {% for e in Ticket.time_entries %}
-                        <tr>
-                            <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">{{ e.create_time }}</td>
-                            <td class="px-4 py-2 text-sm text-gray-900 dark:text-white">{{ e.minutes }}</td>
-                            <td class="px-4 py-2 text-sm text-gotrs-600">
-                                {% if e.article_id %}
-                                    <a href="#note-{{ e.article_id }}" class="time-entry-note-link hover:underline" data-note-target="note-{{ e.article_id }}">#{{ e.article_id }}</a>
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="text-sm text-gray-500 dark:text-gray-400">{{ t("tickets.no_time_entries")|default:"No time entries recorded yet." }}</div>
-            {% endif %}
-        </div>
-    </div>
-
-    <div id="tab-history" class="tab-panel hidden">
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 text-sm text-gray-600 dark:text-gray-300"
-             hx-get="/agent/tickets/{{ Ticket.id }}/history"
-             hx-trigger="load"
-             hx-swap="innerHTML">
-            <div class="text-gray-500 dark:text-gray-400">{{ t("common.loading_history")|default:"Loading history..." }}</div>
-        </div>
-    </div>
-
-    <div id="tab-links" class="tab-panel hidden">
-        <div class="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 text-sm text-gray-600 dark:text-gray-300"
-             hx-get="/agent/tickets/{{ Ticket.id }}/links"
-             hx-trigger="load"
-             hx-swap="innerHTML">
-            <div class="text-gray-500 dark:text-gray-400">{{ t("common.loading_links")|default:"Loading links..." }}</div>
-        </div>
+        <!-- Links Tab -->
+        {% include "partials/ticket_detail/tab_links.pongo2" %}
     </div>
 </div>
 
-<!-- Assign Agent Dialog -->
-<div id="assignAgentDialog" class="hidden fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex min-h-screen items-center justify-center px-4 py-12">
-        <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="hideAssignDialog()"></div>
-
-        <!-- Dialog -->
-        <div class="relative z-50 w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    {{ t("tickets.assign_agent")|default:"Assign Agent" }} {{ t("tickets.to")|default:"to" }} {{ t("tickets.ticket")|default:"Ticket" }} #{{ Ticket.tn }}
-                </h3>
-            </div>
-
-            <form id="assignAgentForm" class="p-6">
-                <!-- Agent Selection -->
-                <div class="mb-4">
-                    <label for="assignAgent" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {{ t("tickets.select_agent")|default:"Select Agent" }} <span class="text-red-500">*</span>
-                    </label>
-                    <select id="assignAgent" name="assignAgent" required
-                        class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-gray-900">
-                        <option value="">{{ t("tickets.loading_agents")|default:"Loading agents..." }}</option>
-                    </select>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        {{ t("tickets.agents_with_permissions_only")|default:"Only agents with permissions for this queue are shown" }}
-                    </p>
-                </div>
-
-                <!-- Action buttons -->
-                <div class="flex justify-end gap-3">
-                    <button type="button" onclick="hideAssignDialog()"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600">
-                        {{ t("common.cancel") }}
-                    </button>
-                    <button type="submit"
-                        class="px-4 py-2 text-sm font-medium text-white bg-gotrs-600 rounded-md hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
-                        {{ t("tickets.assign_agent")|default:"Assign Agent" }}
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Close Ticket Dialog -->
-<div id="closeTicketDialog" class="hidden fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex min-h-screen items-center justify-center px-4 py-12">
-        <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="hideCloseDialog()"></div>
-
-        <!-- Dialog -->
-        <div class="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    {{ t("tickets.close")|default:"Close" }} {{ t("tickets.ticket")|default:"Ticket" }} - {{ Ticket.tn }}
-                </h3>
-            </div>
-
-            <form id="closeTicketForm" class="p-6">
-                <!-- State Selection -->
-                <div class="mb-4">
-                    <label for="closeState" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {{ t("tickets.close_state")|default:"Close State" }} <span class="text-red-500">*</span>
-                    </label>
-                    <select id="closeState" name="closeState" required
-                        class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-gray-900">
-                        <option value="3">{{ t("tickets.closed_successful")|default:"Closed Successful" }}</option>
-                        <option value="4">{{ t("tickets.closed_unsuccessful")|default:"Closed Unsuccessful" }}</option>
-                    </select>
-                </div>
-
-                <!-- Resolution -->
-                <div class="mb-4">
-                    <label for="resolution" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {{ t("tickets.resolution")|default:"Resolution/Solution" }}
-                    </label>
-                    <textarea id="resolution" name="resolution" rows="3"
-                        placeholder="{{ t('tickets.resolution_placeholder')|default:'Describe the resolution or solution provided...' }}"
-                        class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"></textarea>
-                </div>
-
-                <!-- Close Notes -->
-                <div class="mb-4">
-                    <label for="closeNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {{ t("tickets.close_notes")|default:"Close Notes" }} <span class="text-red-500">*</span>
-                    </label>
-                    <textarea id="closeNotes" name="closeNotes" rows="4" required
-                        placeholder="{{ t('tickets.close_notes_placeholder')|default:'Add notes about closing this ticket...' }}"
-                        class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"></textarea>
-                </div>
-
-                <!-- Time Units -->
-                <div class="mb-4">
-                    <label for="timeUnits" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {{ t("tickets.time_units_minutes")|default:"Time Units (minutes)" }}
-                    </label>
-                    <input type="number" id="timeUnits" name="timeUnits" min="0" step="1"
-                        placeholder="{{ t('tickets.time_spent_placeholder')|default:'Time spent on resolution' }}"
-                        class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500">
-                </div>
-
-                <!-- Dynamic Fields for Close Form -->
-                {% if CloseFormDynamicFields %}
-                <div class="mb-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ t("tickets.additional_fields")|default:"Additional Fields" }}</h4>
-                    {% for df in CloseFormDynamicFields %}
-                    <div class="mb-3">
-                        <label for="close_DynamicField_{{ df.Field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            {{ df.Field.Label }}{% if df.ConfigValue == 2 %} <span class="text-red-500">*</span>{% endif %}
-                        </label>
-                        {% if df.Field.FieldType == "Text" %}
-                        <input type="text" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}>
-                        {% elif df.Field.FieldType == "TextArea" %}
-                        <textarea id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}" rows="2"
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}></textarea>
-                        {% elif df.Field.FieldType == "Checkbox" %}
-                        <input type="checkbox" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}" value="1"
-                            class="rounded border-gray-300 dark:border-gray-600 text-gotrs-600 focus:ring-gotrs-500">
-                        {% elif df.Field.FieldType == "Dropdown" %}
-                        <select id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}>
-                            <option value="">-- Select --</option>
-                            {% for opt in df.Field.PossibleValues %}
-                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
-                            {% endfor %}
-                        </select>
-                        {% elif df.Field.FieldType == "Multiselect" %}
-                        <select id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}[]" multiple
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}>
-                            {% for opt in df.Field.PossibleValues %}
-                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
-                            {% endfor %}
-                        </select>
-                        {% elif df.Field.FieldType == "Date" %}
-                        <input type="date" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}>
-                        {% elif df.Field.FieldType == "DateTime" %}
-                        <input type="datetime-local" id="close_DynamicField_{{ df.Field.Name }}" name="DynamicField_{{ df.Field.Name }}"
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                <!-- Article Dynamic Fields for Close Form -->
-                {% if CloseArticleDynamicFields %}
-                <div class="mb-4 border-t border-gray-200 dark:border-gray-700 pt-4">
-                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{{ t("dynamic_fields.article_fields")|default:"Article Fields" }}</h4>
-                    {% for df in CloseArticleDynamicFields %}
-                    <div class="mb-3">
-                        <label for="close_ArticleDynamicField_{{ df.Field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            {{ df.Field.Label }}{% if df.ConfigValue == 2 %} <span class="text-red-500">*</span>{% endif %}
-                        </label>
-                        {% if df.Field.FieldType == "Text" %}
-                        <input type="text" id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}"
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}>
-                        {% elif df.Field.FieldType == "TextArea" %}
-                        <textarea id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}" rows="2"
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}></textarea>
-                        {% elif df.Field.FieldType == "Checkbox" %}
-                        <input type="checkbox" id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}" value="1"
-                            class="rounded border-gray-300 dark:border-gray-600 text-gotrs-600 focus:ring-gotrs-500">
-                        {% elif df.Field.FieldType == "Dropdown" %}
-                        <select id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}"
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}>
-                            <option value="">-- Select --</option>
-                            {% for opt in df.Field.PossibleValues %}
-                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
-                            {% endfor %}
-                        </select>
-                        {% elif df.Field.FieldType == "Multiselect" %}
-                        <select id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}[]" multiple
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}>
-                            {% for opt in df.Field.PossibleValues %}
-                            <option value="{{ opt.Key }}">{{ opt.Value }}</option>
-                            {% endfor %}
-                        </select>
-                        {% elif df.Field.FieldType == "Date" %}
-                        <input type="date" id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}"
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}>
-                        {% elif df.Field.FieldType == "DateTime" %}
-                        <input type="datetime-local" id="close_ArticleDynamicField_{{ df.Field.Name }}" name="ArticleDynamicField_{{ df.Field.Name }}"
-                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-sm"
-                            {% if df.ConfigValue == 2 %}required{% endif %}>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
-                {% endif %}
-
-                <!-- Notify Customer -->
-                <div class="mb-6">
-                    <label class="flex items-center">
-                        <input type="checkbox" id="notifyCustomer" name="notifyCustomer" checked
-                            class="rounded border-gray-300 dark:border-gray-600 text-gotrs-600 focus:ring-gotrs-500">
-                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                            {{ t("tickets.notify_close")|default:"Notify customer about ticket closure" }}
-                        </span>
-                    </label>
-                </div>
-
-                <!-- Action buttons -->
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="hideCloseDialog()"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500">
-                        {{ t("common.cancel") }}
-                    </button>
-                    <button type="submit"
-                        class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500">
-                        {{ t("tickets.close")|default:"Close" }} {{ t("tickets.ticket")|default:"Ticket" }}
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Reopen Ticket Dialog -->
-<div id="reopenTicketDialog" class="hidden fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex min-h-screen items-center justify-center px-4 py-12">
-        <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="hideReopenDialog()"></div>
-
-        <!-- Dialog -->
-        <div class="relative z-50 w-full max-w-2xl bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    {{ t("tickets.reopen") }} {{ t("tickets.ticket")|default:"Ticket" }} - {{ Ticket.tn }}
-                </h3>
-            </div>
-
-            <form id="reopenTicketForm" class="p-6">
-                <!-- Target State Selection -->
-                <div class="mb-4">
-                    <label for="reopenState" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {{ t("tickets.target_state")|default:"Target State" }} <span class="text-red-500">*</span>
-                    </label>
-                    <select id="reopenState" name="reopenState" required
-                        class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 text-gray-900">
-                        <option value="1">{{ t("status.new") }}</option>
-                        <option value="2" selected>{{ t("status.open") }}</option>
-                    </select>
-                </div>
-
-                <!-- Reason for Reopening -->
-                <div class="mb-4">
-                    <label for="reopenReason" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {{ t("tickets.reopen_reason")|default:"Reason for Reopening" }} <span class="text-red-500">*</span>
-                    </label>
-                    <textarea id="reopenReason" name="reopenReason" rows="3" required
-                        placeholder="{{ t('tickets.reopen_reason_placeholder')|default:'Explain why this ticket needs to be reopened...' }}"
-                        class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"></textarea>
-                </div>
-
-                <!-- Additional Notes -->
-                <div class="mb-4">
-                    <label for="reopenNotes" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        {{ t("tickets.additional_notes")|default:"Additional Notes" }}
-                    </label>
-                    <textarea id="reopenNotes" name="reopenNotes" rows="3"
-                        placeholder="{{ t('tickets.additional_info_placeholder')|default:'Any additional information or context...' }}"
-                        class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500"></textarea>
-                </div>
-
-                <!-- Notify Customer -->
-                <div class="mb-6">
-                    <label class="flex items-center">
-                        <input type="checkbox" id="notifyCustomerReopen" name="notifyCustomerReopen" checked
-                            class="rounded border-gray-300 dark:border-gray-600 text-gotrs-600 focus:ring-gotrs-500">
-                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                            {{ t("tickets.notify_reopen")|default:"Notify customer about ticket reopening" }}
-                        </span>
-                    </label>
-                </div>
-
-                <!-- Action buttons -->
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="hideReopenDialog()"
-                        class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gotrs-500">
-                        {{ t("common.cancel") }}
-                    </button>
-                    <button type="submit"
-                        class="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
-                        {{ t("tickets.reopen") }} {{ t("tickets.ticket")|default:"Ticket" }}
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Queue Modal -->
-<div id="queueModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.move_to_queue")|default:"Move to Queue" }}</h3>
-        </div>
-        <form onsubmit="submitQueue(event)">
-            <div class="p-6">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("tickets.queue") }}</label>
-                    <select name="queue_id" required
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
-                        <option value="">{{ t("tickets.select_queue")|default:"Select queue..." }}</option>
-                        <!-- Will be populated dynamically -->
-                    </select>
-                </div>
-            </div>
-            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
-                <button type="button" onclick="closeModal('queueModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">{{ t("common.cancel") }}</button>
-                <button type="submit" class="px-4 py-2 bg-gotrs-600 text-white rounded hover:bg-gotrs-700">{{ t("common.move")|default:"Move" }}</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Priority Modal -->
-<div id="priorityModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.change_priority")|default:"Change Priority" }}</h3>
-        </div>
-        <form onsubmit="submitPriority(event)">
-            <div class="p-6">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("tickets.priority") }}</label>
-                    <select name="priority_id" required
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
-                        <option value="">{{ t("tickets.select_priority")|default:"Select priority..." }}</option>
-                        <!-- Will be populated dynamically -->
-                    </select>
-                </div>
-            </div>
-            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
-                <button type="button" onclick="closeModal('priorityModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">{{ t("common.cancel") }}</button>
-                <button type="submit" class="px-4 py-2 bg-gotrs-600 text-white rounded hover:bg-gotrs-700">{{ t("common.update")|default:"Update" }}</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Status Modal -->
-<div id="statusModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.change_status")|default:"Change Status" }}</h3>
-        </div>
-    <form onsubmit="submitStatus(event)" data-pending-states="{% if PendingStateIDs %}{% for sid in PendingStateIDs %}{{ sid }}{% if not forloop.last %},{% endif %}{% endfor %}{% endif %}">
-            <div class="p-6">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("tickets.status") }}</label>
-                    <select name="status_id" required
-                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
-                        <option value="">{{ t("tickets.select_status")|default:"Select status..." }}</option>
-                        <!-- Will be populated dynamically -->
-                    </select>
-                </div>
-                <div class="mb-4" id="pendingTimeContainer" style="display: none;">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("tickets.pending_until")|default:"Pending Until" }}</label>
-                    <input type="datetime-local" name="pending_until"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ t("tickets.pending_required")|default:"Required for pending states" }}</p>
-                </div>
-            </div>
-            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
-                <button type="button" onclick="closeModal('statusModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">{{ t("common.cancel") }}</button>
-                <button type="submit" class="px-4 py-2 bg-gotrs-600 text-white rounded hover:bg-gotrs-700">{{ t("common.update")|default:"Update" }}</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Merge Modal -->
-<div id="mergeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("tickets.merge_ticket")|default:"Merge Ticket" }}</h3>
-        </div>
-        <form onsubmit="submitMerge(event)">
-            <div class="p-6">
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t("tickets.target_ticket_number")|default:"Target Ticket Number" }}</label>
-              <input type="text" name="target_tn" required placeholder="{{ t('tickets.merge_target_placeholder')|default:'Enter ticket number to merge into' }}"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white">
-                </div>
-            </div>
-            <div class="px-6 py-4 bg-gray-100 dark:bg-gray-700 rounded-b-lg flex justify-end space-x-3">
-                <button type="button" onclick="closeModal('mergeModal')" class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">{{ t("common.cancel") }}</button>
-                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">{{ t("tickets.merge")|default:"Merge" }}</button>
-            </div>
-        </form>
-    </div>
-</div>
+<!-- Modals -->
+{% include "partials/ticket_detail/modals/assign.pongo2" %}
+{% include "partials/ticket_detail/modals/close.pongo2" %}
+{% include "partials/ticket_detail/modals/reopen.pongo2" %}
+{% include "partials/ticket_detail/modals/queue.pongo2" %}
+{% include "partials/ticket_detail/modals/priority.pongo2" %}
+{% include "partials/ticket_detail/modals/status.pongo2" %}
+{% include "partials/ticket_detail/modals/merge.pongo2" %}
 
 {% endblock %}
 
@@ -1193,8 +170,9 @@ const ticketId = '{{ Ticket.id }}';
 const tabLinks = Array.from(document.querySelectorAll('.tab-link'));
 const tabPanels = Array.from(document.querySelectorAll('.tab-panel'));
 const tabIds = new Set(tabPanels.map(panel => panel.id));
-const activeTabClasses = ['border-gotrs-500', 'text-gotrs-600', 'dark:text-gotrs-200'];
-const inactiveTabClasses = ['border-transparent', 'text-gray-500', 'dark:text-gray-200'];
+const activeTabClasses = ['active-tab'];
+const activeTabStyle = { borderColor: 'var(--gk-primary)', color: 'var(--gk-primary)' };
+const inactiveTabStyle = { borderColor: 'transparent', color: 'var(--gk-text-secondary)' };
 
 function setActiveTab(target, updateHash = false) {
     const targetPanel = document.getElementById(target);
@@ -1204,8 +182,8 @@ function setActiveTab(target, updateHash = false) {
 
     tabLinks.forEach(link => {
         const isActive = link.dataset.target === target;
-        link.classList.remove(...activeTabClasses, ...inactiveTabClasses);
-        link.classList.add(...(isActive ? activeTabClasses : inactiveTabClasses));
+        link.classList.toggle('active-tab', isActive);
+        Object.assign(link.style, isActive ? activeTabStyle : inactiveTabStyle);
         link.setAttribute('aria-current', isActive ? 'page' : 'false');
     });
 
@@ -1287,11 +265,16 @@ document.addEventListener('click', (event) => {
     focusNote(hrefTarget);
 });
 
-// Helper function to show notifications instead of alerts
+// Helper function to show notifications
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
-    const bgColor = type === 'error' ? 'bg-red-50 text-red-800 border-red-200' : 'bg-blue-50 text-blue-800 border-blue-200';
-    notification.className = `${bgColor} p-4 rounded-lg border mb-4 fixed top-20 right-4 z-50 max-w-md shadow-lg`;
+    const bgStyle = type === 'error'
+        ? 'background: var(--gk-error-subtle); color: var(--gk-error); border: 1px solid var(--gk-error);'
+        : type === 'success'
+        ? 'background: var(--gk-success-subtle); color: var(--gk-success); border: 1px solid var(--gk-success);'
+        : 'background: var(--gk-bg-surface); color: var(--gk-text-primary); border: 1px solid var(--gk-border-strong);';
+    notification.className = 'p-4 rounded-lg mb-4 fixed top-20 right-4 z-50 max-w-md shadow-lg';
+    notification.style.cssText = bgStyle;
     notification.innerHTML = `
         <div class="flex items-start">
             <div class="flex-1">
@@ -1312,20 +295,15 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-
-
 function closeTicket() {
-    // Show the close ticket dialog instead of using confirm()
     document.getElementById('closeTicketDialog').classList.remove('hidden');
 }
 
 function hideCloseDialog() {
     document.getElementById('closeTicketDialog').classList.add('hidden');
-    // Reset form
     document.getElementById('closeTicketForm').reset();
 }
 
-// Handle close ticket form submission
 document.getElementById('closeTicketForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -1340,7 +318,6 @@ document.getElementById('closeTicketForm').addEventListener('submit', function(e
         return;
     }
 
-    // Collect ticket dynamic field values
     const dynamicFields = {};
     this.querySelectorAll('[name^="DynamicField_"]').forEach(input => {
         const name = input.name.replace('[]', '');
@@ -1354,7 +331,6 @@ document.getElementById('closeTicketForm').addEventListener('submit', function(e
         }
     });
 
-    // Collect article dynamic field values
     const articleDynamicFields = {};
     this.querySelectorAll('[name^="ArticleDynamicField_"]').forEach(input => {
         const name = input.name.replace('[]', '');
@@ -1375,9 +351,7 @@ document.getElementById('closeTicketForm').addEventListener('submit', function(e
 
     apiFetch(`/api/tickets/${ticketId}/close`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             state_id: parseInt(closeState),
             resolution: resolution,
@@ -1388,7 +362,6 @@ document.getElementById('closeTicketForm').addEventListener('submit', function(e
             article_dynamic_fields: articleDynamicFields
         })
     })
-    .then(response => response.json())
     .then(data => {
         if (data.success) {
             showNotification('Ticket closed successfully', 'success');
@@ -1407,7 +380,6 @@ document.getElementById('closeTicketForm').addEventListener('submit', function(e
     });
 });
 
-// Handle reopen ticket form submission
 document.getElementById('reopenTicketForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -1428,9 +400,7 @@ document.getElementById('reopenTicketForm').addEventListener('submit', function(
 
     apiFetch(`/api/tickets/${ticketId}/reopen`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             state_id: parseInt(reopenState),
             reason: reopenReason,
@@ -1438,7 +408,6 @@ document.getElementById('reopenTicketForm').addEventListener('submit', function(
             notify_customer: notifyCustomerReopen
         })
     })
-    .then(response => response.json())
     .then(data => {
         if (data.success) {
             showNotification('Ticket reopened successfully', 'success');
@@ -1458,31 +427,20 @@ document.getElementById('reopenTicketForm').addEventListener('submit', function(
 });
 
 function reopenTicket() {
-    // Show the reopen ticket dialog instead of using confirm()
     document.getElementById('reopenTicketDialog').classList.remove('hidden');
 }
 
 function hideReopenDialog() {
     document.getElementById('reopenTicketDialog').classList.add('hidden');
-    // Reset form
     document.getElementById('reopenTicketForm').reset();
 }
 
-// Queue modal wiring
-
-// Priority modal wiring
-// Priority/Queue handlers are provided by /static/js/ticket-zoom.js (API-backed)
-
-// Status modal wiring handled by /static/js/ticket-zoom.js (API-backed)
-
 function assignTicket() {
-    // Show the assign agent dialog
     document.getElementById('assignAgentDialog').classList.remove('hidden');
 
-    // Load available agents
     const queueId = {{ Ticket.queue_id }};
     apiFetch(`/api/v1/queues/${queueId}/agents`)
-        .then(response => response.json())
+        
         .then(data => {
             const select = document.getElementById('assignAgent');
             select.innerHTML = '<option value="">Select an agent...</option>';
@@ -1507,11 +465,9 @@ function assignTicket() {
 
 function hideAssignDialog() {
     document.getElementById('assignAgentDialog').classList.add('hidden');
-    // Reset form
     document.getElementById('assignAgentForm').reset();
 }
 
-// Handle assign agent form submission
 document.getElementById('assignAgentForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -1534,7 +490,7 @@ document.getElementById('assignAgentForm').addEventListener('submit', function(e
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    
     .then(data => {
         if (data.success) {
             showNotification('Ticket assigned successfully', 'success');
@@ -1569,9 +525,9 @@ if (noteForm) {
 
         const div = document.createElement('div');
         div.id = 'note-error';
-        div.className = 'bg-red-50 text-red-800 p-3 rounded mb-3';
+        div.className = 'p-3 rounded mb-3';
+        div.style.cssText = 'background: var(--gk-error-subtle); color: var(--gk-error); border: 1px solid var(--gk-error);';
 
-        // Try to find a parent element to prepend to (noteEditor is the rich text editor container)
         const noteEditor = document.getElementById('noteEditor');
         if (noteEditor && noteEditor.parentElement) {
             noteEditor.parentElement.prepend(div);
@@ -1619,7 +575,6 @@ if (noteForm) {
         e.preventDefault();
         clearNoteError();
 
-        // The rich text editor stores content in a hidden textarea with id="body" (FieldName from the partial)
         const contentEl = document.getElementById('body');
         if (!contentEl) {
             ensureErrorDiv().textContent = 'Note content field not found.';
@@ -1700,12 +655,10 @@ if (noteForm) {
             body: formData
         })
         .then(data => {
-            // apiFetch already parses JSON and returns the data directly
             if (data && data.success === false) {
                 const errMsg = data.error || data.message || 'Unknown error';
                 throw new Error(errMsg);
             }
-            // Success - reload the page
             location.reload();
         })
         .catch(error => {
@@ -1717,9 +670,6 @@ if (noteForm) {
     });
 }
 
-// Note editor initialized by partial include
-
-// Delete attachment function for HTMX-rendered attachment list
 function deleteAttachment(attachmentId, filename) {
     if (!confirm('{{ t("messages.confirm.delete_attachment")|default:"Are you sure you want to delete this attachment?" }}')) {
         return;
@@ -1739,7 +689,6 @@ function deleteAttachment(attachmentId, filename) {
     .then(data => {
         if (data.success) {
             showNotification('Attachment deleted successfully', 'success');
-            // Reload to refresh the attachments list
             setTimeout(() => location.reload(), 1000);
         } else {
             throw new Error(data.error || 'Failed to delete attachment');

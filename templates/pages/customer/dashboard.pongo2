@@ -3,11 +3,13 @@
 {% block title %}{{ t("customer.portal.title") }} - GOTRS{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Welcome Header -->
     <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("customer.dashboard.welcome") }}</h1>
-        <p class="mt-2 text-gray-600 dark:text-gray-400">
+        <h1 class="text-3xl font-bold gk-heading">
+            <span class="gk-text-gradient">{{ t("customer.dashboard.welcome") }}</span>
+        </h1>
+        <p class="mt-2" style="color: var(--gk-text-secondary);">
             {% if Customer.first_name %}
                 {{ t("customer.dashboard.hello") }} {{ Customer.first_name }}{% if Customer.last_name %} {{ Customer.last_name }}{% endif %}!
             {% else %}
@@ -19,43 +21,49 @@
 
     <!-- Quick Actions -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <a href="/customer/tickets/new" class="block">
-            <div class="bg-blue-500 hover:bg-blue-600 text-white rounded-lg shadow-lg p-6 transition">
+        <a href="/customer/tickets/new" class="block group">
+            <div class="gk-card-glow p-6 transition-all duration-300 group-hover:scale-[1.02]" style="border-color: var(--gk-primary);">
                 <div class="flex items-center">
-                    <svg class="w-10 h-10 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
+                    <div class="p-3 rounded-lg mr-4" style="background: var(--gk-primary-subtle);">
+                        <svg class="w-8 h-8" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                    </div>
                     <div>
-                        <h3 class="text-xl font-semibold">{{ t("customer.dashboard.create_ticket_title") }}</h3>
-                        <p class="text-blue-100">{{ t("customer.dashboard.create_ticket_desc") }}</p>
+                        <h3 class="text-xl font-semibold" style="color: var(--gk-text-primary);">{{ t("customer.dashboard.create_ticket_title") }}</h3>
+                        <p style="color: var(--gk-text-secondary);">{{ t("customer.dashboard.create_ticket_desc") }}</p>
                     </div>
                 </div>
             </div>
         </a>
-        
-        <a href="/customer/tickets?status=open" class="block">
-            <div class="bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-lg p-6 transition">
+
+        <a href="/customer/tickets?status=open" class="block group">
+            <div class="gk-card-glow p-6 transition-all duration-300 group-hover:scale-[1.02]" style="border-color: var(--gk-success);">
                 <div class="flex items-center">
-                    <svg class="w-10 h-10 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                    </svg>
+                    <div class="p-3 rounded-lg mr-4" style="background: var(--gk-success-subtle);">
+                        <svg class="w-8 h-8" style="color: var(--gk-success);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                    </div>
                     <div>
-                        <h3 class="text-xl font-semibold">{{ t("customer.dashboard.view_open_tickets") }}</h3>
-                        <p class="text-green-100">{{ Stats.OpenTickets }} {{ t("customer.dashboard.open_tickets") }}</p>
+                        <h3 class="text-xl font-semibold" style="color: var(--gk-text-primary);">{{ t("customer.dashboard.view_open_tickets") }}</h3>
+                        <p style="color: var(--gk-success);">{{ Stats.OpenTickets }} {{ t("customer.dashboard.open_tickets") }}</p>
                     </div>
                 </div>
             </div>
         </a>
-        
-        <a href="/customer/kb" class="block">
-            <div class="bg-purple-500 hover:bg-purple-600 text-white rounded-lg shadow-lg p-6 transition">
+
+        <a href="/customer/kb" class="block group">
+            <div class="gk-card-glow p-6 transition-all duration-300 group-hover:scale-[1.02]" style="border-color: var(--gk-secondary);">
                 <div class="flex items-center">
-                    <svg class="w-10 h-10 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                    </svg>
+                    <div class="p-3 rounded-lg mr-4" style="background: var(--gk-secondary-subtle);">
+                        <svg class="w-8 h-8" style="color: var(--gk-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                    </div>
                     <div>
-                        <h3 class="text-xl font-semibold">{{ t("customer.nav.knowledge_base") }}</h3>
-                        <p class="text-purple-100">{{ t("customer.dashboard.find_answers") }}</p>
+                        <h3 class="text-xl font-semibold" style="color: var(--gk-text-primary);">{{ t("customer.nav.knowledge_base") }}</h3>
+                        <p style="color: var(--gk-text-secondary);">{{ t("customer.dashboard.find_answers") }}</p>
                     </div>
                 </div>
             </div>
@@ -65,13 +73,13 @@
     <!-- Statistics -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <a href="/customer/tickets?status=open" class="block">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer">
+            <div class="gk-stat-card">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.dashboard.open_tickets") }}</p>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ Stats.OpenTickets }}</p>
+                        <dt class="gk-stat-label">{{ t("customer.dashboard.open_tickets") }}</dt>
+                        <dd class="gk-stat-value mt-1">{{ Stats.OpenTickets }}</dd>
                     </div>
-                    <div class="text-blue-500">
+                    <div style="color: var(--gk-primary);">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                         </svg>
@@ -81,13 +89,13 @@
         </a>
 
         <a href="/customer/tickets?status=closed" class="block">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer">
+            <div class="gk-stat-card success">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.dashboard.closed_tickets") }}</p>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ Stats.ClosedTickets }}</p>
+                        <dt class="gk-stat-label">{{ t("customer.dashboard.closed_tickets") }}</dt>
+                        <dd class="gk-stat-value mt-1">{{ Stats.ClosedTickets }}</dd>
                     </div>
-                    <div class="text-green-500">
+                    <div style="color: var(--gk-success);">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
@@ -97,13 +105,13 @@
         </a>
 
         <a href="/customer/tickets?status=all" class="block">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition cursor-pointer">
+            <div class="gk-stat-card">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.dashboard.total_tickets") }}</p>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ Stats.TotalTickets }}</p>
+                        <dt class="gk-stat-label">{{ t("customer.dashboard.total_tickets") }}</dt>
+                        <dd class="gk-stat-value mt-1">{{ Stats.TotalTickets }}</dd>
                     </div>
-                    <div class="text-purple-500">
+                    <div style="color: var(--gk-secondary);">
                         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
                         </svg>
@@ -112,19 +120,19 @@
             </div>
         </a>
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div class="gk-stat-card warning">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ t("customer.dashboard.last_activity") }}</p>
-                    <p class="text-lg font-bold text-gray-900 dark:text-white">
+                    <dt class="gk-stat-label">{{ t("customer.dashboard.last_activity") }}</dt>
+                    <dd class="gk-stat-value mt-1 text-lg">
                         {% if Stats.HasLastTicket %}
                             {{ Stats.LastTicketDate|date:"Jan 02, 2006 15:04" }}
                         {% else %}
                             {{ t("customer.dashboard.no_tickets_yet") }}
                         {% endif %}
-                    </p>
+                    </dd>
                 </div>
-                <div class="text-orange-500">
+                <div style="color: var(--gk-tertiary);">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
@@ -135,17 +143,17 @@
 
     <!-- Announcements (if any) -->
     {% if Announcements %}
-    <div class="bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-400 p-4 mb-8">
+    <div class="gk-card-glow mb-8 p-4" style="border-left: 4px solid var(--gk-warning);">
         <div class="flex">
             <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="h-5 w-5" style="color: var(--gk-warning);" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
                 </svg>
             </div>
             <div class="ml-3">
-                <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">{{ t("customer.dashboard.announcements") }}</h3>
+                <h3 class="text-sm font-medium" style="color: var(--gk-warning);">{{ t("customer.dashboard.announcements") }}</h3>
                 {% for announcement in Announcements %}
-                <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                <div class="mt-2 text-sm" style="color: var(--gk-text-secondary);">
                     <p>{{ announcement.message }}</p>
                 </div>
                 {% endfor %}
@@ -155,96 +163,98 @@
     {% endif %}
 
     <!-- Recent Tickets -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+    <div class="gk-card-glow">
+        <div class="gk-card-header">
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ t("customer.dashboard.recent_tickets") }}</h2>
-                <a href="/customer/tickets" class="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400">
+                <h2 class="gk-card-title">{{ t("customer.dashboard.recent_tickets") }}</h2>
+                <a href="/customer/tickets" class="gk-link-neon text-sm">
                     {{ t("customer.dashboard.view_all") }} →
                 </a>
             </div>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("customer.tickets.ticket_number") }}</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("customer.tickets.subject") }}</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("customer.tickets.status") }}</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("customer.tickets.priority") }}</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("customer.tickets.last_updated") }}</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("customer.tickets.messages") }}</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{{ t("customer.tickets.actions") }}</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for ticket in RecentTickets %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <a href="/customer/tickets/{{ ticket.id }}" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium">
-                                #{{ ticket.tn }}
-                            </a>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm text-gray-900 dark:text-white truncate max-w-xs" title="{{ ticket.title }}">
-                                {{ ticket.title }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                                {% if 'new' in ticket.state|lower %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% endif %}
-                                {% if 'open' in ticket.state|lower %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200{% endif %}
-                                {% if 'pending' in ticket.state|lower %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200{% endif %}
-                                {% if 'closed' in ticket.state|lower %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300{% endif %}">
-                                {{ ticket.state }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-sm font-medium" {% if ticket.priority_color %}style="color: {{ ticket.priority_color }}"{% endif %}>
-                                {{ ticket.priority }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                            {{ ticket.last_changed }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                            <div class="flex items-center">
-                                <span>{{ ticket.article_count }}</span>
-                                {% if ticket.unread_count > 0 %}
-                                <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                                    {{ ticket.unread_count }} {{ t("customer.tickets.new") }}
+        <div class="gk-card-body p-0">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead style="background: var(--gk-bg-elevated);">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-muted);">{{ t("customer.tickets.ticket_number") }}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-muted);">{{ t("customer.tickets.subject") }}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-muted);">{{ t("customer.tickets.status") }}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-muted);">{{ t("customer.tickets.priority") }}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-muted);">{{ t("customer.tickets.last_updated") }}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-muted);">{{ t("customer.tickets.messages") }}</th>
+                            <th class="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider" style="color: var(--gk-text-muted);">{{ t("customer.tickets.actions") }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y" style="border-color: var(--gk-border-default);">
+                        {% for ticket in RecentTickets %}
+                        <tr class="transition-colors duration-200" style="hover:background: var(--gk-bg-elevated);">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="/customer/tickets/{{ ticket.id }}" class="gk-link-neon font-medium">
+                                    #{{ ticket.tn }}
+                                </a>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm truncate max-w-xs" style="color: var(--gk-text-primary);" title="{{ ticket.title }}">
+                                    {{ ticket.title }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
+                                    {% if 'new' in ticket.state|lower %}style="background: var(--gk-success-subtle); color: var(--gk-success);"{% endif %}
+                                    {% if 'open' in ticket.state|lower %}style="background: var(--gk-primary-subtle); color: var(--gk-primary);"{% endif %}
+                                    {% if 'pending' in ticket.state|lower %}style="background: var(--gk-warning-subtle); color: var(--gk-warning);"{% endif %}
+                                    {% if 'closed' in ticket.state|lower %}style="background: var(--gk-bg-elevated); color: var(--gk-text-muted);"{% endif %}>
+                                    {{ ticket.state }}
                                 </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="text-sm font-medium" {% if ticket.priority_color %}style="color: {{ ticket.priority_color }}"{% else %}style="color: var(--gk-text-primary);"{% endif %}>
+                                    {{ ticket.priority }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--gk-text-secondary);">
+                                {{ ticket.last_changed }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm" style="color: var(--gk-text-primary);">
+                                <div class="flex items-center">
+                                    <span>{{ ticket.article_count }}</span>
+                                    {% if ticket.unread_count > 0 %}
+                                    <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full" style="background: var(--gk-error-subtle); color: var(--gk-error);">
+                                        {{ ticket.unread_count }} {{ t("customer.tickets.new") }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <a href="/customer/tickets/{{ ticket.id }}" class="gk-link-neon">
+                                    {{ t("customer.tickets.view") }}
+                                </a>
+                                {% if not ('closed' in ticket.state|lower) %}
+                                <span class="mx-2" style="color: var(--gk-border-default);">|</span>
+                                <a href="/customer/tickets/{{ ticket.id }}#reply" class="gk-link-neon" style="color: var(--gk-success);">
+                                    {{ t("customer.tickets.reply") }}
+                                </a>
                                 {% endif %}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <a href="/customer/tickets/{{ ticket.id }}" class="text-blue-600 hover:text-blue-700 dark:text-blue-400">
-                                {{ t("customer.tickets.view") }}
-                            </a>
-                            {% if not ('closed' in ticket.state|lower) %}
-                            <span class="mx-2 text-gray-300">|</span>
-                            <a href="/customer/tickets/{{ ticket.id }}#reply" class="text-green-600 hover:text-green-700 dark:text-green-400">
-                                {{ t("customer.tickets.reply") }}
-                            </a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                            <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                            </svg>
-                            <p class="text-lg font-medium">{{ t("customer.dashboard.no_tickets_yet") }}</p>
-                            <p class="mt-1">{{ t("customer.tickets.no_tickets_yet") }}</p>
-                            <a href="/customer/tickets/new" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                                {{ t("customer.tickets.create_new") }}
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-8 text-center" style="color: var(--gk-text-muted);">
+                                <svg class="mx-auto h-12 w-12 mb-4" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                </svg>
+                                <p class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("customer.dashboard.no_tickets_yet") }}</p>
+                                <p class="mt-1">{{ t("customer.tickets.no_tickets_yet") }}</p>
+                                <a href="/customer/tickets/new" class="gk-btn-neon mt-4 inline-flex items-center">
+                                    {{ t("customer.tickets.create_new") }}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

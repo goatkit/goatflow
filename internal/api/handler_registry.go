@@ -115,8 +115,16 @@ func ensureCoreHandlers() {
 		"HandleSetSessionTimeout":     HandleSetSessionTimeout,
 		"HandleGetLanguage":           HandleGetLanguage,
 		"HandleSetLanguage":           HandleSetLanguage,
+		"HandleGetAvailableLanguages": HandleGetAvailableLanguages,
+		"HandleSetPreLoginLanguage":   HandleSetPreLoginLanguage,
+		"HandleGetAvailableThemes":    HandleGetAvailableThemes,
+		"HandleSetPreLoginTheme":      HandleSetPreLoginTheme,
+		"HandleGetTheme":              HandleGetTheme,
+		"HandleSetTheme":              HandleSetTheme,
 		"HandleGetProfile":            HandleGetProfile,
 		"HandleUpdateProfile":         HandleUpdateProfile,
+		"HandleAgentPasswordForm":     HandleAgentPasswordForm,
+		"HandleAgentChangePassword":   HandleAgentChangePassword,
 		"handleAdminSettings":         handleAdminSettings,
 		"handleAdminTemplates":        handleAdminTemplates,
 		"handleAdminReports":          handleAdminReports,
@@ -128,23 +136,29 @@ func ensureCoreHandlers() {
 		"handleStaticFiles": HandleStaticFiles,
 		"handleLogout":      handleLogout,
 		"handleCustomerLogout": func(c *gin.Context) {
-			// Delete session record from database
-			if sessionID, err := c.Cookie("session_id"); err == nil && sessionID != "" {
+			// Delete session record from database (check customer-specific session cookie)
+			if sessionID, err := c.Cookie("customer_session_id"); err == nil && sessionID != "" {
 				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
 					_ = sessionSvc.KillSession(sessionID) // Best effort, don't fail logout
 				}
 			}
-			// clear all auth cookies and redirect to customer login
-			// Clear for root path
+			// Also check legacy session_id cookie for backwards compatibility
+			if sessionID, err := c.Cookie("session_id"); err == nil && sessionID != "" {
+				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+					_ = sessionSvc.KillSession(sessionID)
+				}
+			}
+			// Clear customer-specific auth cookies
+			c.SetCookie("customer_auth_token", "", -1, "/", "", false, true)
+			c.SetCookie("customer_access_token", "", -1, "/", "", false, true)
+			c.SetCookie("customer_session_id", "", -1, "/", "", false, true)
+			c.SetCookie("gotrs_customer_logged_in", "", -1, "/", "", false, false)
+			// Also clear legacy cookies for backwards compatibility
 			c.SetCookie("auth_token", "", -1, "/", "", false, true)
 			c.SetCookie("access_token", "", -1, "/", "", false, true)
 			c.SetCookie("token", "", -1, "/", "", false, true)
 			c.SetCookie("session_id", "", -1, "/", "", false, true)
-			// Also clear for /customer path in case proxy scoped cookies
-			c.SetCookie("auth_token", "", -1, "/customer", "", false, true)
-			c.SetCookie("access_token", "", -1, "/customer", "", false, true)
-			c.SetCookie("token", "", -1, "/customer", "", false, true)
-			c.SetCookie("session_id", "", -1, "/customer", "", false, true)
+			c.SetCookie("gotrs_logged_in", "", -1, "/", "", false, false)
 			c.Header("HX-Redirect", "/customer/login")
 			c.Redirect(http.StatusSeeOther, "/customer/login")
 		},
@@ -292,6 +306,42 @@ func ensureCoreHandlers() {
 				return
 			}
 			handleCustomerSetSessionTimeout(db)(c)
+		},
+		// Customer ticket attachment handlers
+		"handleCustomerGetAttachments": func(c *gin.Context) {
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
+			handleCustomerGetAttachments(db)(c)
+		},
+		"handleCustomerUploadAttachment": func(c *gin.Context) {
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
+			handleCustomerUploadAttachment(db)(c)
+		},
+		"handleCustomerDownloadAttachment": func(c *gin.Context) {
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
+			handleCustomerDownloadAttachment(db)(c)
+		},
+		"handleCustomerGetThumbnail": func(c *gin.Context) {
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
+			handleCustomerGetThumbnail(db)(c)
+		},
+		"handleCustomerViewAttachment": func(c *gin.Context) {
+			db, ok := mustGetDB(c)
+			if !ok {
+				return
+			}
+			handleCustomerViewAttachment(db)(c)
 		},
 		"handleLogoutRedirect": func(c *gin.Context) {
 			// clear tokens then redirect to login

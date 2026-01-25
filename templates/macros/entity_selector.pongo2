@@ -3,32 +3,35 @@
 <div id="{{ id }}" class="hidden fixed z-50 inset-0 overflow-y-auto">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <!-- Backdrop -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+        <div class="fixed inset-0 " style="background: rgba(0,0,0,0.75); transition-opacity"
              onclick="window.{{ id }}Selector.close()"></div>
 
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
 
         <!-- Modal Panel -->
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+        <div class="inline-block align-bottom gk-card-glow" style="background: var(--gk-bg-surface); rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
 
             <!-- Header -->
-            <div class="bg-white dark:bg-gray-800 px-4 pt-4 pb-2 sm:px-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="gk-card-glow" style="background: var(--gk-bg-surface); px-4 pt-4 pb-2 sm:px-6 border-b " style="border-color: var(--gk-border);">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         {% if icon %}
                         <i class="fas {{ icon }} text-blue-500"></i>
                         {% endif %}
                         <div>
-                            <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                            <h3 class="text-lg leading-6 font-medium " style="color: var(--gk-text-primary);">
                                 {{ title }}{% if title_suffix %}: <span id="{{ id }}-title" class="font-bold">{{ title_suffix }}</span>{% endif %}
                             </h3>
                             {% if description %}
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ description }}</p>
+                            <p class="mt-1 text-sm " style="color: var(--gk-text-muted);">{{ description }}</p>
                             {% endif %}
                         </div>
                     </div>
                     <button type="button" onclick="window.{{ id }}Selector.close()"
-                            class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-gotrs-500 rounded-md p-1"
+                            class="rounded-md p-1 focus:outline-none focus:ring-2 focus:ring-gotrs-500 transition-colors"
+                            style="color: var(--gk-text-muted);"
+                            onmouseover="this.style.color='var(--gk-text-primary)'"
+                            onmouseout="this.style.color='var(--gk-text-muted)'"
                             title="Close (Esc)">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -38,13 +41,13 @@
             </div>
 
             <!-- Body: Two Columns -->
-            <div class="bg-white dark:bg-gray-800 px-4 py-4 sm:p-6">
+            <div class="gk-card-glow" style="background: var(--gk-bg-surface); px-4 py-4 sm:p-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                     <!-- Current Members -->
                     <div>
                         <div class="flex items-center justify-between mb-2">
-                            <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <h4 class="text-sm font-medium " style="color: var(--gk-text-secondary);">
                                 Current Members <span id="{{ id }}-member-count" class="text-gray-500">(0)</span>
                             </h4>
                         </div>
@@ -53,17 +56,17 @@
                             <input type="text"
                                    id="{{ id }}-member-filter"
                                    placeholder="Filter..."
-                                   class="w-full px-3 py-2 pl-10 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gotrs-500"
+                                   class="w-full px-3 py-2 pl-10 text-sm border " style="border-color: var(--gk-border); rounded-md bg-white gk-input-neon " style="color: var(--gk-text-primary); focus:outline-none focus:ring-2 focus:ring-gotrs-500"
                                    autocomplete="off">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="h-4 w-4 " style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                                 </svg>
                             </div>
                         </div>
                         <!-- Members List -->
-                        <div class="border border-gray-300 dark:border-gray-600 rounded-md max-h-72 overflow-y-auto bg-gray-50 dark:bg-gray-900/50">
-                            <div id="{{ id }}-members-list" class="divide-y divide-gray-200 dark:divide-gray-700">
+                        <div class="border " style="border-color: var(--gk-border); rounded-md max-h-72 overflow-y-auto " style="background: var(--gk-bg-tertiary);">
+                            <div id="{{ id }}-members-list" class="divide-y divide-y" style="border-color: var(--gk-border);">
                                 <!-- Members populated by JavaScript -->
                             </div>
                         </div>
@@ -71,16 +74,16 @@
 
                     <!-- Add New Members -->
                     <div>
-                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{{ t("entity_selector.add_new")|default:"Add New" }}</h4>
+                        <h4 class="text-sm font-medium " style="color: var(--gk-text-secondary); mb-2">{{ t("entity_selector.add_new")|default:"Add New" }}</h4>
                         <!-- Search Input -->
                         <div class="relative mb-2">
                             <input type="text"
                                    id="{{ id }}-search"
                                    placeholder="Search..."
-                                   class="w-full px-3 py-2 pl-10 pr-10 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gotrs-500"
+                                   class="w-full px-3 py-2 pl-10 pr-10 text-sm border " style="border-color: var(--gk-border); rounded-md bg-white gk-input-neon " style="color: var(--gk-text-primary); focus:outline-none focus:ring-2 focus:ring-gotrs-500"
                                    autocomplete="off">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="h-4 w-4 " style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                 </svg>
                             </div>
@@ -92,18 +95,18 @@
                             </div>
                         </div>
                         <!-- Search Results -->
-                        <div class="border border-gray-300 dark:border-gray-600 rounded-md max-h-72 overflow-y-auto bg-gray-50 dark:bg-gray-900/50">
-                            <div id="{{ id }}-search-results" class="divide-y divide-gray-200 dark:divide-gray-700">
-                                <div class="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                                    <svg class="mx-auto h-8 w-8 text-gray-300 dark:text-gray-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="border " style="border-color: var(--gk-border); rounded-md max-h-72 overflow-y-auto " style="background: var(--gk-bg-tertiary);">
+                            <div id="{{ id }}-search-results" class="divide-y divide-y" style="border-color: var(--gk-border);">
+                                <div class="px-4 py-6 text-center text-sm " style="color: var(--gk-text-muted);">
+                                    <svg class="mx-auto h-8 w-8 mb-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                     Type at least {{ min_chars }} characters to search
                                 </div>
                             </div>
                         </div>
-                        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                            <kbd class="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">Enter</kbd>
+                        <p class="mt-2 text-xs " style="color: var(--gk-text-muted);">
+                            <kbd class="gk-kbd">Enter</kbd>
                             to add first result
                         </p>
                     </div>
@@ -111,13 +114,13 @@
             </div>
 
             <!-- Footer -->
-            <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 flex justify-between items-center">
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                    <kbd class="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600">Esc</kbd>
+            <div class="px-4 py-3 sm:px-6 flex justify-between items-center" style="background: var(--gk-bg-tertiary); border-top: 1px solid var(--gk-border);">
+                <p class="text-xs" style="color: var(--gk-text-muted);">
+                    <kbd class="gk-kbd">Esc</kbd>
                     to close
                 </p>
                 <button type="button" onclick="window.{{ id }}Selector.close()"
-                        class="inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-600 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500">
+                        class="gk-btn-secondary">
                     Done
                 </button>
             </div>
@@ -127,13 +130,13 @@
 
 <!-- Undo Toast -->
 <div id="{{ id }}-undo-toast" class="hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-    <div class="bg-gray-800 dark:bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-4">
+    <div class="gk-card-glow" style="background: var(--gk-bg-surface); text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-4">
         <span id="{{ id }}-undo-message" class="text-sm"></span>
         <button id="{{ id }}-undo-btn" class="text-gotrs-400 hover:text-gotrs-300 font-medium text-sm focus:outline-none">
             Undo
         </button>
         <button onclick="document.getElementById('{{ id }}-undo-toast').classList.add('hidden')"
-                class="text-gray-400 hover:text-gray-300 focus:outline-none">
+                class="" style="color: var(--gk-text-muted); hover:text-gray-300 focus:outline-none">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>

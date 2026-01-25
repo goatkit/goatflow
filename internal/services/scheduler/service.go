@@ -151,11 +151,31 @@ func (s *Service) Run(ctx context.Context) error {
 		s.rootCtx = ctx
 		s.scheduleAllJobs()
 		s.cron.Start()
+		s.runStartupJobs()
 	})
 
 	<-ctx.Done()
 	s.stopCron()
 	return nil
+}
+
+// runStartupJobs executes all jobs marked with RunOnStartup=true.
+func (s *Service) runStartupJobs() {
+	s.mu.RLock()
+	var startupJobs []string
+	for slug, job := range s.jobs {
+		if job != nil && job.RunOnStartup {
+			startupJobs = append(startupJobs, slug)
+		}
+	}
+	s.mu.RUnlock()
+
+	for _, slug := range startupJobs {
+		s.mu.RLock()
+		entryID := s.entries[slug]
+		s.mu.RUnlock()
+		go s.executeJob(slug, entryID)
+	}
 }
 
 func (s *Service) scheduleAllJobs() {

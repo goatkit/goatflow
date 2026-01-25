@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -681,6 +682,20 @@ func handleCustomerCreateTicket(db *sql.DB) gin.HandlerFunc {
 			}
 		}
 
+		// Process attachments from form
+		if err := c.Request.ParseMultipartForm(10 << 20); err == nil && c.Request.MultipartForm != nil {
+			files := getFormFiles(c.Request.MultipartForm)
+			if len(files) > 0 {
+				processFormAttachments(files, attachmentProcessParams{
+					ctx:       context.Background(),
+					db:        db,
+					ticketID:  int(ticketID),
+					articleID: int(articleID),
+					userID:    systemUserID,
+				})
+			}
+		}
+
 		// Redirect to ticket view
 		c.Redirect(http.StatusSeeOther, fmt.Sprintf("/customer/tickets/%d", ticketID))
 	}
@@ -954,6 +969,23 @@ func handleCustomerTicketReply(db *sql.DB) gin.HandlerFunc {
 		_ = c.Request.ParseForm() //nolint:errcheck // Form already parsed by handler
 		if dfErr := ProcessArticleDynamicFieldsFromForm(c.Request.PostForm, int(articleID), "CustomerArticleReply"); dfErr != nil {
 			log.Printf("Error saving article dynamic fields for customer reply: %v", dfErr)
+		}
+
+		// Process attachments from reply form
+		if err := c.Request.ParseMultipartForm(10 << 20); err == nil && c.Request.MultipartForm != nil {
+			files := getFormFiles(c.Request.MultipartForm)
+			if len(files) > 0 {
+				// Convert ticketID string to int for attachment processing
+				var ticketIDInt int
+				fmt.Sscanf(ticketID, "%d", &ticketIDInt)
+				processFormAttachments(files, attachmentProcessParams{
+					ctx:       context.Background(),
+					db:        db,
+					ticketID:  ticketIDInt,
+					articleID: int(articleID),
+					userID:    systemUserID,
+				})
+			}
 		}
 
 		// Update ticket state to open if it was pending

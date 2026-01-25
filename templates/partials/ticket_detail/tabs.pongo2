@@ -1,0 +1,28 @@
+{# Ticket Detail Tabs with Synthwave Styling #}
+
+<div class="mb-6">
+    <div style="border-bottom: 1px solid var(--gk-border-default);">
+        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+            <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150"
+               style="color: var(--gk-text-secondary);"
+               onmouseover="this.style.color='var(--gk-primary)'"
+               onmouseout="if(!this.classList.contains('active-tab')) this.style.color='var(--gk-text-secondary)'"
+               data-target="tab-comm" data-default-active="true">{{ t("tickets.communication")|default:"Communication" }}</a>
+            <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150"
+               style="color: var(--gk-text-secondary);"
+               onmouseover="this.style.color='var(--gk-primary)'"
+               onmouseout="if(!this.classList.contains('active-tab')) this.style.color='var(--gk-text-secondary)'"
+               data-target="tab-time">{{ t("tickets.time_accounting")|default:"Time Accounting" }}</a>
+            <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150"
+               style="color: var(--gk-text-secondary);"
+               onmouseover="this.style.color='var(--gk-primary)'"
+               onmouseout="if(!this.classList.contains('active-tab')) this.style.color='var(--gk-text-secondary)'"
+               data-target="tab-history">{{ t("tickets.history")|default:"History" }}</a>
+            <a href="#" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-150"
+               style="color: var(--gk-text-secondary);"
+               onmouseover="this.style.color='var(--gk-primary)'"
+               onmouseout="if(!this.classList.contains('active-tab')) this.style.color='var(--gk-text-secondary)'"
+               data-target="tab-links">{{ t("tickets.links")|default:"Links" }}</a>
+        </nav>
+    </div>
+</div>

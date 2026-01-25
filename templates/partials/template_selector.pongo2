@@ -6,7 +6,7 @@
 {# SelectID: optional - unique ID for the select element (default: "templateSelect") #}
 
 <div class="template-selector">
-    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+    <label class="block text-sm font-medium" style="color: var(--gk-text-secondary);">
         {{ t("templates.select_template")|default:"Template (optional)" }}
     </label>
     <div class="flex gap-2 mt-1">
@@ -16,18 +16,19 @@
                 data-template-type="{{ TemplateType|default:"" }}"
                 data-target-editor="{{ TargetEditorID }}"
                 data-loaded="false"
-                class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm">
+                class="gk-select-neon flex-1 text-sm">
             <option value="">-- {{ t("templates.select_placeholder")|default:"Select template" }} --</option>
         </select>
         <button type="button"
-                class="template-refresh-btn px-3 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                class="template-refresh-btn px-3 py-2 rounded-lg transition-colors hover:opacity-80"
+                style="color: var(--gk-text-muted);"
                 title="{{ t("templates.refresh")|default:"Refresh templates" }}">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
         </button>
     </div>
-    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+    <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">
         {{ t("templates.help_text")|default:"Select a template to insert pre-defined content." }}
     </p>
 </div>
@@ -239,30 +240,33 @@ if (typeof window.templateSelectorInit === 'undefined') {
 
         // Add header
         const header = document.createElement('div');
-        header.className = 'text-xs font-medium text-gray-600 dark:text-gray-400 mb-1';
+        header.className = 'text-xs font-medium mb-1';
+        header.style.color = 'var(--gk-text-muted)';
         header.textContent = 'Template Attachments (will be added with reply):';
         container.appendChild(header);
 
         // Add each attachment
         attachments.forEach(function(att) {
             const item = document.createElement('div');
-            item.className = 'flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded text-sm';
+            item.className = 'flex items-center justify-between px-2 py-1 rounded text-sm';
+            item.style.background = 'rgba(var(--gk-primary-rgb), 0.1)';
             item.dataset.attachmentId = att.id;
 
             const info = document.createElement('span');
             info.className = 'flex items-center';
             info.innerHTML = `
-                <svg class="w-4 h-4 mr-1 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 mr-1" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                 </svg>
-                <span class="text-gray-700 dark:text-gray-300">${att.filename}</span>
-                <span class="text-gray-400 ml-2">(${formatFileSize(att.content_size)})</span>
+                <span style="color: var(--gk-text-secondary);">${att.filename}</span>
+                <span style="color: var(--gk-text-muted);" class="ml-2">(${formatFileSize(att.content_size)})</span>
             `;
             item.appendChild(info);
 
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
-            removeBtn.className = 'text-red-500 hover:text-red-700 ml-2';
+            removeBtn.className = 'ml-2 hover:opacity-80 transition-opacity';
+            removeBtn.style.color = 'var(--gk-error)';
             removeBtn.innerHTML = '&times;';
             removeBtn.onclick = function() { item.remove(); };
             item.appendChild(removeBtn);

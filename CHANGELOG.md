@@ -6,12 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
 
 ## [Unreleased]
 
-### Changed
-- **Dynamic Theme Toggle Icon**: Theme toggle button now shows contextual icons - moon in light mode, sun in dark mode - using CSS-only swap via Tailwind's `dark:` variants
-  - Created reusable partial `templates/partials/theme_toggle.pongo2` for DRY code
-  - Updated `base.pongo2`, `login.pongo2`, and `customer/login.pongo2` to use the partial
-
 ### Added
+- **Multi-Theme System**: Pluggable theming architecture with three themes and light/dark mode support
+  - **Synthwave** (default): Neon cyan/magenta color scheme with grid background and glow effects
+  - **GOTRS Classic**: Professional blue theme with clean solid backgrounds, no visual patterns
+  - **Seventies Vibes**: Warm retro palette with orange/brown tones
+  - Theme switcher UI in settings and login pages with live preview
+  - CSS custom properties architecture (`--gk-*` variables) for consistent theming
+  - Theme-specific font loading via ThemeManager
+  - Preference persistence to database for authenticated users
+  - Files: `static/css/themes/*.css`, `static/js/theme-manager.js`, `templates/partials/theme_selector.pongo2`
+- **Vendored Fonts**: Self-hosted web fonts for offline/air-gapped deployments
+  - Inter (400, 500, 600, 700) - universal fallback
+  - Space Grotesk - synthwave headings
+  - Righteous - synthwave display
+  - Nunito - seventies vibes
+  - Dynamic font loading based on active theme
+  - Files: `static/fonts/`, `static/css/fonts-*.css`
+- **Ticket Detail Page Refactoring**: Modular partial architecture for ticket zoom view
+  - 17 reusable partials: header, description, notes, sidebar, tabs, meta_grid, alerts, attachments, note_form, priority_badge, status_badge, and 6 modal partials
+  - Consistent theming via CSS custom properties
+  - Improved maintainability and testability
+  - Files: `templates/partials/ticket_detail/*.pongo2`
+- **Bulk Ticket Actions**: Multi-select ticket operations on agent ticket list
+  - Floating action bar appears when tickets are selected
+  - Actions: bulk assign, bulk merge, bulk priority change, bulk queue transfer, bulk status change
+  - Modal dialogs for each action with confirmation
+  - Files: `templates/partials/agent/tickets/bulk_*.pongo2`, `internal/api/agent_ticket_bulk_actions.go`
+- **Language Selector Partial**: Reusable dropdown for language selection
+  - Shows all 15 supported languages with native names
+  - Used in settings, profile, and login pages
+  - File: `templates/partials/language_selector.pongo2`
+- **Customer Password Change**: Password change functionality for customer portal
+  - Accessible from customer profile page
+  - Current password verification required
+  - Files: `templates/pages/customer/password_form.pongo2`, `templates/pages/password_form.pongo2`
+- **Ticket List Pagination**: Server-side pagination for ticket lists
+  - Configurable page size
+  - Page navigation controls
+  - File: `templates/partials/tickets/pagination.pongo2`
 - **Customer Profile Page**: Full profile management interface at `/customer/profile` for customer users
   - View and edit personal information (first name, last name, title, phone, mobile)
   - Language preference selection with all 15 supported languages
@@ -35,7 +68,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
   - Full i18n support for all 15 languages
   - Files: `internal/services/ticketattributerelations/service.go`, `internal/api/admin_ticket_attribute_relations_handlers.go`, `templates/pages/admin/ticket_attribute_relations.pongo2`
 
+### Changed
+- **Separate Cookie Names for Agent/Customer Sessions**: Agent and customer portals now use distinct cookie names to allow simultaneous login in the same browser
+  - Agent cookies: `access_token`, `auth_token`, `session_id`, `gotrs_logged_in`
+  - Customer cookies: `customer_access_token`, `customer_auth_token`, `customer_session_id`, `gotrs_customer_logged_in`
+  - Theme manager updated to detect both login indicators for preference persistence
+  - Files: `internal/api/auth_customer.go`, `internal/api/auth_htmx_handlers.go`, `internal/api/handler_registry.go`, `internal/middleware/auth.go`, `internal/middleware/session.go`, `internal/routing/handlers.go`, `static/js/theme-manager.js`
+
 ### Fixed
+- **Guru Meditation HTMX Compatibility**: Fixed duplicate declaration errors when Guru Meditation component was loaded multiple times via HTMX
+  - Added initialization guard to prevent re-declaration of functions
+  - Changed local variables to window-scoped to avoid redeclaration errors
+  - Functions now attached to window object for global access
+  - File: `templates/components/guru_meditation.pongo2`
+- **Customer-Authored Content Badge**: Fixed ticket description and notes showing "Customer sees this" badge instead of "Customer wrote this" when customer authored the content
+  - Added `first_article_sender_type` field to ticket detail handler to track who wrote the initial description
+  - Updated `description.pongo2` and `notes.pongo2` templates to check sender type before visibility
+  - Added i18n translation key `tickets.customer_wrote_badge` to all 15 languages
+  - Files: `internal/api/ticket_detail_handlers.go`, `templates/partials/ticket_detail/description.pongo2`, `templates/partials/ticket_detail/notes.pongo2`
+- **Duplicate Attachment Upload in Customer Portal**: Removed duplicate file upload area from customer ticket view
+  - Was showing both "Add Attachments" section and "Attach Files" in reply form
+  - Now only shows attachment upload within the reply form (matching agent UI behavior)
+  - File: `templates/pages/customer/ticket_view.pongo2`
 - **Pending Reminder Snooze Toast Color**: Fixed snooze success showing red toast instead of green on admin/ticket-attribute-relations page
   - Page had local `showToast(type, message)` with reversed parameter order compared to global `showToast(message, type)` in common.js
   - Removed local function and updated all calls to use global signature

@@ -3,6 +3,7 @@ package scheduler
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/adapter"
 	"github.com/gotrs-io/gotrs-ce/internal/email/inbound/connector"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
@@ -25,6 +27,7 @@ func (s *Service) registerBuiltinHandlers() {
 	s.RegisterHandler("scheduler.housekeeping", s.handleHousekeeping)
 	s.RegisterHandler("genericAgent.execute", s.handleGenericAgentExecute)
 	s.RegisterHandler("escalation.check", s.handleEscalationCheck)
+	s.RegisterHandler("metrics.ticketActivity", s.handleMetricsTicketActivity)
 }
 
 func (s *Service) handleAutoClose(ctx context.Context, job *models.ScheduledJob) error {
@@ -308,6 +311,85 @@ func (s *Service) handleEscalationCheck(ctx context.Context, job *models.Schedul
 	return nil
 }
 
+// handleMetricsTicketActivity calculates ticket activity counts
+// for various time periods and caches them in Valkey.
+func (s *Service) handleMetricsTicketActivity(ctx context.Context, job *models.ScheduledJob) error {
+	if s.db == nil {
+		s.logger.Printf("scheduler: database unavailable, skipping ticket activity metrics")
+		return nil
+	}
+
+	metrics := calculateTicketActivityMetrics(s.db)
+
+	if s.valkey != nil {
+		if err := s.valkey.SetObject(ctx, "metrics:ticket_activity", metrics, 2*time.Minute); err != nil {
+			s.logger.Printf("scheduler: failed to cache ticket activity metrics: %v", err)
+		}
+	}
+
+	s.logger.Printf("scheduler: ticket activity updated: closed_day=%d closed_week=%d created_day=%d created_week=%d open=%d",
+		metrics["closed_day"], metrics["closed_week"], metrics["created_day"], metrics["created_week"], metrics["open"])
+	return nil
+}
+
+// calculateTicketActivityMetrics computes ticket counts for dashboard display.
+func calculateTicketActivityMetrics(db *sql.DB) map[string]int {
+	metrics := make(map[string]int)
+
+	// Tickets closed in last 24 hours
+	metrics["closed_day"] = getTicketCount(db, "closed", 1)
+	// Tickets closed in last 7 days
+	metrics["closed_week"] = getTicketCount(db, "closed", 7)
+	// Tickets closed in last 30 days
+	metrics["closed_month"] = getTicketCount(db, "closed", 30)
+
+	// Tickets created in last 24 hours
+	metrics["created_day"] = getTicketCount(db, "created", 1)
+	// Tickets created in last 7 days
+	metrics["created_week"] = getTicketCount(db, "created", 7)
+	// Tickets created in last 30 days
+	metrics["created_month"] = getTicketCount(db, "created", 30)
+
+	// Currently open tickets
+	metrics["open"] = getOpenTicketCount(db)
+
+	return metrics
+}
+
+// getTicketCount returns the count of tickets closed or created within the specified days.
+func getTicketCount(db *sql.DB, countType string, days int) int {
+	var query string
+	if countType == "closed" {
+		query = database.ConvertPlaceholders(`
+			SELECT COUNT(*)
+			FROM ticket
+			WHERE ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id = 3)
+			  AND change_time >= DATE_SUB(NOW(), INTERVAL ? DAY)
+		`)
+	} else {
+		query = database.ConvertPlaceholders(`
+			SELECT COUNT(*)
+			FROM ticket
+			WHERE create_time >= DATE_SUB(NOW(), INTERVAL ? DAY)
+		`)
+	}
+	var count int
+	_ = db.QueryRow(query, days).Scan(&count)
+	return count
+}
+
+// getOpenTicketCount returns the count of currently open tickets.
+func getOpenTicketCount(db *sql.DB) int {
+	query := `
+		SELECT COUNT(*)
+		FROM ticket
+		WHERE ticket_state_id IN (SELECT id FROM ticket_state WHERE type_id IN (1, 2, 4))
+	`
+	var count int
+	_ = db.QueryRow(query).Scan(&count)
+	return count
+}
+
 func defaultJobs() []*models.ScheduledJob {
 	return []*models.ScheduledJob{
 		{
@@ -372,6 +454,15 @@ func defaultJobs() []*models.ScheduledJob {
 			Config: map[string]any{
 				"decay_time_minutes": 0, // 0 = no decay, events triggered every run
 			},
+		},
+		{
+			Name:           "Ticket Activity Metrics",
+			Slug:           "metrics-ticket-activity",
+			Handler:        "metrics.ticketActivity",
+			Schedule:       "@every 1m",
+			TimeoutSeconds: 30,
+			RunOnStartup:   true, // Populate cache immediately so dashboard has data
+			Config:         map[string]any{},
 		},
 	}
 }

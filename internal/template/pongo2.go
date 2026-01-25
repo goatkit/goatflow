@@ -15,6 +15,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/models"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
+	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
 // Pongo2Renderer is a custom Gin renderer using Pongo2.
@@ -208,24 +209,16 @@ func (r *Pongo2Renderer) getUserFromContext(c *gin.Context) *models.User {
 	}
 
 	// Fall back to building user from individual context values
-	userID, hasID := c.Get("user_id")
-	if !hasID {
+	if _, hasID := c.Get("user_id"); !hasID {
 		return nil
 	}
 
-	user := &models.User{}
-
-	// Set ID from context
-	switch id := userID.(type) {
-	case uint:
-		user.ID = id
-	case int:
-		user.ID = uint(id)
-	case int64:
-		user.ID = uint(id)
-	default:
+	userID := shared.GetUserIDFromCtxUint(c, 0)
+	if userID == 0 {
 		return nil
 	}
+
+	user := &models.User{ID: userID}
 
 	// Set role
 	if role, ok := c.Get("user_role"); ok {

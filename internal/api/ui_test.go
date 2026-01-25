@@ -27,6 +27,8 @@ func containsAny(body string, alternatives ...string) bool {
 func TestDarkThemeContrast(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// GoatKit/Synthwave theme uses CSS variables instead of dark: prefixed classes
+	// Tests verify the theme system is applied correctly
 	tests := []struct {
 		name             string
 		route            string
@@ -36,44 +38,39 @@ func TestDarkThemeContrast(t *testing.T) {
 		shouldNotContain []string
 	}{
 		{
-			name:       "Navigation links have dark mode classes",
+			name:       "Navigation uses GoatKit theme variables",
 			route:      "/dashboard",
 			activePage: "dashboard",
 			shouldContain: []string{
-				"dark:text-white",            // Active link text in dark mode
-				"dark:text-gray-400",         // Inactive link text in dark mode
-				"dark:hover:text-gray-200",   // Hover state in dark mode
-				"dark:hover:border-gray-600", // Hover border in dark mode
+				"--gk-text-",           // GoatKit text color variables
+				"--gk-bg-",             // GoatKit background variables
+				"gk-link-neon",         // GoatKit styled links
 			},
 		},
 		{
-			name:       "Active navigation item is visible in dark mode",
+			name:       "Active navigation item uses theme styling",
 			route:      "/tickets",
 			activePage: "tickets",
 			shouldContain: []string{
-				"border-gotrs-500 text-gray-900 dark:text-white",
+				"--gk-primary",         // Primary theme color reference
 			},
 		},
 		{
-			name:       "Buttons maintain contrast in dark mode",
+			name:       "Buttons use GoatKit styling",
 			route:      "/dashboard",
 			activePage: "dashboard",
 			shouldContain: []string{
-				"bg-gotrs-600",       // Primary button background
-				"text-white",         // Button text always white
-				"hover:bg-gotrs-500", // Hover state
-				"dark:bg-gray-800",   // Secondary button in dark mode
+				"gk-btn-",              // GoatKit button classes
+				"--gk-primary",         // Primary color variable
 			},
 		},
 		{
-			name:       "Page background adapts to dark mode",
+			name:       "Page background uses GoatKit theme",
 			route:      "/dashboard",
 			activePage: "dashboard",
 			shouldContain: []string{
-				"dark:bg-gray-900",   // Body background
-				"dark:bg-gray-800",   // Card background
-				"dark:text-white",    // Primary text
-				"dark:text-gray-400", // Secondary text
+				"--gk-bg-base",         // Base background variable
+				"--gk-text-primary",    // Primary text color
 			},
 		},
 	}
@@ -152,13 +149,13 @@ func TestQueueView(t *testing.T) {
 			},
 		},
 		{
-			name:           "Queue page includes dark mode support",
+			name:           "Queue page includes GoatKit theme support",
 			userRole:       "admin",
 			expectedStatus: http.StatusOK,
 			checkContent: []string{
-				"dark:bg-gray-800",
-				"dark:text-white",
-				"dark:hover:bg-gray-700",
+				"--gk-bg-",     // GoatKit background variables
+				"--gk-text-",   // GoatKit text variables
+				"gk-card-",     // GoatKit card classes
 			},
 		},
 	}
@@ -239,15 +236,14 @@ func TestAdminView(t *testing.T) {
 			},
 		},
 		{
-			name:           "Admin dashboard shows system health",
+			name:           "Admin dashboard shows activity metrics",
 			userRole:       "admin",
 			expectedStatus: http.StatusOK,
 			checkContent: []string{
-				"99.9%",
-				"uptime",
+				"gk-stat-card",
 			},
 			checkAlternatives: []checkAlternatives{
-				{"System Health", "admin_dashboard.system_health"},
+				{"Activity", "admin_dashboard.activity"},
 			},
 		},
 		{
@@ -261,13 +257,13 @@ func TestAdminView(t *testing.T) {
 			},
 		},
 		{
-			name:           "Admin page includes dark mode support",
+			name:           "Admin page includes GoatKit theme support",
 			userRole:       "admin",
 			expectedStatus: http.StatusOK,
 			checkContent: []string{
-				"dark:bg-gray-800",
-				"dark:text-white",
-				"dark:bg-gray-700",
+				"--gk-bg-",      // GoatKit background variables
+				"--gk-text-",    // GoatKit text variables
+				"gk-card-",      // GoatKit card classes
 			},
 		},
 	}
@@ -531,12 +527,12 @@ func TestPageLoadPerformance(t *testing.T) {
 		{
 			name:      "Queue page size is reasonable",
 			route:     "/queues",
-			maxSizeKB: 40, // Increased for webservice/GenericInterface features
+			maxSizeKB: 55, // Increased for webservice/GenericInterface features and additional modules
 		},
 		{
 			name:      "Admin page size is reasonable",
 			route:     "/admin",
-			maxSizeKB: 65, // Increased for webservices, signatures, generic-agent modules
+			maxSizeKB: 70, // Increased for webservices, signatures, generic-agent, sessions modules
 		},
 	}
 

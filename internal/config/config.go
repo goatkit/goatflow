@@ -244,6 +244,7 @@ type RateLimitingConfig struct {
 
 type FeaturesConfig struct {
 	Registration            bool `mapstructure:"registration"`
+	LostPassword            bool `mapstructure:"lost_password"`
 	SocialLogin             bool `mapstructure:"social_login"`
 	TwoFactorAuth           bool `mapstructure:"two_factor_auth"`
 	APIKeys                 bool `mapstructure:"api_keys"`

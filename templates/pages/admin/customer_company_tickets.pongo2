@@ -1,10 +1,44 @@
 {% extends "layouts/base.pongo2" %}
-{% block title %}{{ t("customer_company_tickets.title")|default:"Customer Company Tickets" }} - Admin{% endblock %}
+
+{% block title %}{{ t("customer_company_tickets.title")|default:"Customer Company Tickets" }} - GOTRS Admin{% endblock %}
+
 {% block content %}
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-  <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">{{ t("customer_company_tickets.heading")|default:"Customer Company Tickets" }}</h1>
-  <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-    <p class="text-gray-600 dark:text-gray-300">This page is under construction.</p>
-  </div>
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Page header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div class="flex items-center">
+                <a href="/admin/customer-companies" class="gk-btn-secondary mr-4">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                    {{ t("common.back") }}
+                </a>
+                <div>
+                    <h1 class="text-3xl font-bold gk-heading">
+                        <span class="gk-text-gradient">{{ t("customer_company_tickets.heading")|default:"Customer Company Tickets" }}</span>
+                    </h1>
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("customer_company_tickets.description")|default:"View tickets associated with customer companies" }}</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Under Construction Notice -->
+    <div class="gk-card-glow rounded-lg overflow-hidden">
+        <div class="p-12 text-center">
+            <svg class="mx-auto h-16 w-16 mb-4" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+            </svg>
+            <h3 class="text-lg font-medium mb-2" style="color: var(--gk-text-primary);">{{ t("customer_company_tickets.under_construction")|default:"Under Construction" }}</h3>
+            <p class="text-sm mb-6" style="color: var(--gk-text-muted);">{{ t("customer_company_tickets.under_construction_message")|default:"This feature is currently being developed. Please check back soon." }}</p>
+            <a href="/admin/customer-companies" class="gk-btn-neon">
+                <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                {{ t("common.back_to_list")|default:"Back to Customer Companies" }}
+            </a>
+        </div>
+    </div>
 </div>
 {% endblock %}

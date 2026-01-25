@@ -217,16 +217,15 @@ func handleAddTicketMessage(c *gin.Context) {
 
 // getCurrentUser extracts user info from gin context.
 func getCurrentUser(c *gin.Context) (uint, string, string, bool) {
-	userID, idExists := c.Get("user_id")
 	email, emailExists := c.Get("user_email")
 	role, roleExists := c.Get("user_role")
 
-	if !idExists || !emailExists || !roleExists {
+	if !emailExists || !roleExists {
 		return 0, "", "", false
 	}
 
-	id, ok := userID.(uint)
-	if !ok {
+	id := GetUserIDFromCtxUint(c, 0)
+	if id == 0 {
 		return 0, "", "", false
 	}
 

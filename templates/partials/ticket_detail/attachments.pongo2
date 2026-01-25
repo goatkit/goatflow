@@ -1,0 +1,21 @@
+{# Ticket Attachments Section with Synthwave Styling #}
+{# Required variables: Ticket #}
+
+<div class="gk-card p-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("ticket.attachments")|default:"Attachments" }}</h2>
+        <form id="attachmentUploadForm" hx-post="/api/tickets/{{ Ticket.tn }}/attachments" hx-trigger="change from:#attachment-upload" hx-swap="none" enctype="multipart/form-data" hx-encoding="multipart/form-data">
+            <input id="attachment-upload" type="file" name="file" class="hidden" />
+            <button type="button" onclick="document.getElementById('attachment-upload').click()" class="gk-btn-outline text-sm">
+                Upload
+            </button>
+        </form>
+    </div>
+    <div id="attachments-list"
+         hx-get="/api/tickets/{{ Ticket.tn }}/attachments"
+         hx-trigger="load, attachments-updated from:#attachmentUploadForm, changed from:#attachment-uploaded"
+         hx-swap="innerHTML">
+        <div class="text-center py-4 text-sm" style="color: var(--gk-text-muted);">{{ t("labels.loading")|default:"Loading..." }}</div>
+    </div>
+    <input type="hidden" id="attachment-uploaded" />
+</div>

@@ -309,3 +309,133 @@ func TestSomething(t *testing.T) {
 - Designed so sqlx can be swapped in later
 - `ConvertReturning()` handles RETURNING clause differences
 - `GetAdapter()` for complex operations like InsertWithReturning
+
+---
+
+## ADDING NEW THEMES - STEP BY STEP (Jan 24, 2026)
+
+The theme system uses CSS custom properties with dynamic theme selection from `ThemeManager.AVAILABLE_THEMES`.
+
+### Step 1: Create Theme CSS File
+
+Create `static/css/themes/{theme-name}.css` with both dark and light mode variants:
+
+```css
+/* Dark mode (default) */
+:root,
+:root.dark,
+.dark {
+  --gk-theme-name: 'theme-name';
+  --gk-theme-mode: 'dark';
+
+  /* Required variables - see _base.css for full list */
+  --gk-primary: #COLOR;
+  --gk-primary-hover: #COLOR;
+  --gk-secondary: #COLOR;
+  --gk-bg-base: #COLOR;
+  --gk-bg-surface: #COLOR;
+  --gk-text-primary: #COLOR;
+  /* ... etc */
+}
+
+/* Light mode */
+:root.light,
+.light {
+  --gk-theme-mode: 'light';
+  /* Override colors for light backgrounds */
+}
+```
+
+Reference: `static/css/themes/synthwave.css` or `static/css/themes/seventies-vibes.css`
+
+### Step 2: Register Theme in ThemeManager
+
+Edit `static/js/theme-manager.js`:
+
+```javascript
+const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'your-new-theme'];
+```
+
+### Step 3: Vendor Theme Fonts (MANDATORY)
+
+**All theme fonts MUST be vendored locally for air-gapped deployment.**
+
+1. **Download WOFF2 files** to `static/fonts/{font-name}/`:
+   - Source: https://gwfh.mranftl.com/fonts or font's GitHub repo
+   - Get Latin + Latin-ext subsets minimum
+
+2. **Create font CSS file** `static/css/fonts-{theme-name}.css`:
+```css
+@font-face {
+  font-family: 'YourFont';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/static/fonts/your-font/your-font-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, ...;
+}
+```
+
+3. **Register in THEME_FONT_CSS** in `static/js/theme-manager.js`:
+```javascript
+const THEME_FONT_CSS = {
+  'synthwave': '/static/css/fonts-synthwave.css',
+  'gotrs-classic': '/static/css/fonts-synthwave.css',
+  'seventies-vibes': '/static/css/fonts-seventies.css',
+  'your-new-theme': '/static/css/fonts-your-theme.css'  // ADD THIS
+};
+```
+
+4. **Update THIRD_PARTY_NOTICES.md** with font license info
+
+**Font Architecture:**
+- `fonts.css` - Only Inter (universal fallback), loaded globally
+- `fonts-{theme}.css` - Theme-specific fonts, loaded dynamically on theme switch
+- This minimizes bandwidth - users only download fonts for themes they use
+
+### Step 4: Add Theme Metadata to Selector
+
+Edit `templates/partials/theme_selector.pongo2`, add to `THEME_METADATA` object:
+
+```javascript
+const THEME_METADATA = {
+    // ... existing themes ...
+    'your-new-theme': {
+        name: '{{ t("theme.your_theme")|default:"Your Theme" }}',
+        description: '{{ t("theme.your_theme_desc")|default:"Theme description" }}',
+        gradient: 'linear-gradient(135deg, #PRIMARY_COLOR, #SECONDARY_COLOR)'
+    }
+};
+```
+
+### Step 5: Add i18n Translations
+
+Add to ALL 15 language files in `internal/i18n/translations/*.json`:
+
+```json
+"theme": {
+    "your_theme": "Theme Name",
+    "your_theme_desc": "Short description"
+}
+```
+
+Languages: en, de, es, fr, pt, pl, ru, zh, ja, ar, he, fa, ur, uk, tlh
+
+### Quick Reference: Required CSS Variables
+
+| Category | Variables |
+|----------|-----------|
+| Primary | `--gk-primary`, `--gk-primary-hover`, `--gk-primary-active`, `--gk-primary-subtle` |
+| Secondary | `--gk-secondary`, `--gk-secondary-hover`, `--gk-secondary-subtle` |
+| Backgrounds | `--gk-bg-base`, `--gk-bg-surface`, `--gk-bg-elevated`, `--gk-bg-overlay` |
+| Text | `--gk-text-primary`, `--gk-text-secondary`, `--gk-text-muted`, `--gk-text-inverse` |
+| Borders | `--gk-border-default`, `--gk-border-strong` |
+| Status | `--gk-success`, `--gk-warning`, `--gk-error`, `--gk-info` (+ `-subtle` variants) |
+| Effects | `--gk-glow-primary`, `--gk-shadow-sm/md/lg/xl`, `--gk-focus-ring` |
+
+### Files Modified When Adding a Theme
+
+1. `static/css/themes/{name}.css` - Theme CSS (NEW)
+2. `static/js/theme-manager.js` - Add to AVAILABLE_THEMES array
+3. `templates/partials/theme_selector.pongo2` - Add to THEME_METADATA object
+4. `internal/i18n/translations/*.json` - Add translations (15 files)

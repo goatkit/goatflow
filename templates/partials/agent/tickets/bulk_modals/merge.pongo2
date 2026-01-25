@@ -1,0 +1,38 @@
+{# Bulk Merge Modal with Synthwave Styling #}
+
+<div id="bulk-merge-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 transition-opacity" style="background: rgba(0, 0, 0, 0.8);" onclick="closeModal('bulk-merge-modal')"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="inline-block align-bottom rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-strong);">
+            <form id="bulk-merge-form" onsubmit="submitBulkMerge(event)">
+                <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("bulk_actions.merge_title") }}</h3>
+                    <p class="text-sm mb-4" style="color: var(--gk-text-muted);">
+                        <span id="merge-ticket-count">0</span> {{ t("bulk_actions.tickets_selected") }}
+                    </p>
+                    <div class="rounded-lg p-3 mb-4" style="background: var(--gk-warning-subtle); border: 1px solid var(--gk-warning);">
+                        <p class="text-sm" style="color: var(--gk-warning);">
+                            {{ t("bulk_actions.merge_warning") }}
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("bulk_actions.merge_into") }}</label>
+                        <select id="bulk-merge-target" name="target_ticket_id" required class="gk-select-neon w-full">
+                            <option value="">{{ t("bulk_actions.select_target") }}</option>
+                        </select>
+                        <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("bulk_actions.merge_target_hint") }}</p>
+                    </div>
+                </div>
+                <div class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse" style="background: var(--gk-bg-elevated); border-top: 1px solid var(--gk-border-default);">
+                    <button type="submit" class="w-full sm:w-auto sm:ml-3 inline-flex justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors" style="background: var(--gk-secondary); color: var(--gk-text-inverse);" onmouseover="this.style.boxShadow='var(--gk-glow-secondary)'" onmouseout="this.style.boxShadow='none'">
+                        {{ t("bulk_actions.merge") }}
+                    </button>
+                    <button type="button" onclick="closeModal('bulk-merge-modal')" class="gk-btn-secondary mt-3 w-full sm:mt-0 sm:w-auto">
+                        {{ t("common.cancel") }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

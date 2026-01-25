@@ -84,10 +84,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6">
+<div class="container mx-auto px-4 py-6 min-h-screen">
     <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">{{ module.Plural }} Management</h1>
-        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ module.Description }}</p>
+        <h1 class="text-2xl font-semibold gk-heading"><span class="gk-text-gradient">{{ module.Plural }} Management</span></h1>
+        <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ module.Description }}</p>
     </div>
 
     <!-- Action Bar -->
@@ -101,7 +101,7 @@
 
             <!-- Bulk Actions (hidden by default) -->
             <div id="bulkActions" class="hidden flex gap-2">
-                <span class="self-center text-sm text-gray-600 dark:text-gray-400">
+                <span class="self-center text-sm " style="color: var(--gk-text-muted);">
                     <span id="selectedCount">0</span> selected
                 </span>
                 {% if features.StatusToggle %}
@@ -142,9 +142,9 @@
     </div>
 
     <!-- Data Table -->
-        <div class="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div class="gk-card-glow rounded-lg">
         {% if features.Search %}
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div class="p-4 border-b" style="border-color: var(--gk-border);">
             <div class="flex flex-col sm:flex-row gap-4">
                 <div class="flex-1 relative">
                     <!-- Magnifying glass icon -->
@@ -156,11 +156,11 @@
                            placeholder="Search by name, login, email, group..."
                            value="{{ currentFilters.search|default:'' }}"
                            onkeyup="filterTable()"
-                           class="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
+                           class="w-full pl-10 pr-10 py-2 border" style="border-color: var(--gk-border); rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); text-sm">
                     <!-- Clear button (X icon) -->
                     <button id="clearSearchBtn"
                             onclick="clearSearch()"
-                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center " style="color: var(--gk-text-muted); hover:opacity-80"
                             style="display: none;">
                         <i class="fas fa-times icon-sm"></i>
                     </button>
@@ -170,56 +170,56 @@
                     <!-- Quick filter presets -->
                     <div class="relative" x-data="{ open: false }">
                         <button @click="open = !open"
-                                class="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 text-sm flex items-center gap-1">
+                                class="px-3 py-2 " style="background: var(--gk-bg-surface); " style="color: var(--gk-text-secondary); rounded-md hover:bg-white/10 text-sm flex items-center gap-1">
                             <i class="fas fa-filter icon-sm"></i>
                             Quick Filters
                             <i class="fas fa-chevron-down icon-xs"></i>
                         </button>
                         <div x-show="open" @click.away="open = false"
-                             class="absolute z-10 mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg min-w-[150px]">
+                             class="absolute z-10 mt-1 " style="background: var(--gk-bg-surface); rounded-md shadow-lg min-w-[150px]">
                             {% if module.Name == "state" %}
                             <button onclick="applyQuickFilter('active')"
-                                    class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    class="block w-full text-left px-3 py-2 text-sm " style="color: var(--gk-text-secondary); hover:bg-white/10">
                                 Active States
                             </button>
                             <button onclick="applyQuickFilter('open')"
-                                    class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    class="block w-full text-left px-3 py-2 text-sm " style="color: var(--gk-text-secondary); hover:bg-white/10">
                                 Open States
                             </button>
                             <button onclick="applyQuickFilter('closed')"
-                                    class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    class="block w-full text-left px-3 py-2 text-sm " style="color: var(--gk-text-secondary); hover:bg-white/10">
                                 Closed States
                             </button>
                             <button onclick="applyQuickFilter('pending')"
-                                    class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    class="block w-full text-left px-3 py-2 text-sm " style="color: var(--gk-text-secondary); hover:bg-white/10">
                                 Pending States
                             </button>
                             {% elif module.Name == "users" %}
                             <button onclick="applyQuickFilter('active_users')"
-                                    class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    class="block w-full text-left px-3 py-2 text-sm " style="color: var(--gk-text-secondary); hover:bg-white/10">
                                 Active Users
                             </button>
                             <button onclick="applyQuickFilter('inactive_users')"
-                                    class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    class="block w-full text-left px-3 py-2 text-sm " style="color: var(--gk-text-secondary); hover:bg-white/10">
                                 Inactive Users
                             </button>
                             <button onclick="applyQuickFilter('agents')"
-                                    class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    class="block w-full text-left px-3 py-2 text-sm " style="color: var(--gk-text-secondary); hover:bg-white/10">
                                 Agents Only
                             </button>
                             {% elif module.Name == "queue" %}
                             <button onclick="applyQuickFilter('active_queues')"
-                                    class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    class="block w-full text-left px-3 py-2 text-sm " style="color: var(--gk-text-secondary); hover:bg-white/10">
                                 Active Queues
                             </button>
                             <button onclick="applyQuickFilter('email_queues')"
-                                    class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    class="block w-full text-left px-3 py-2 text-sm " style="color: var(--gk-text-secondary); hover:bg-white/10">
                                 Email Queues
                             </button>
                             {% endif %}
-                            <hr class="my-1 border-gray-200 dark:border-gray-700">
+                            <hr class="my-1 " style="border-color: var(--gk-border);">
                             <button onclick="clearAllFilters()"
-                                    class="block w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    class="block w-full text-left px-3 py-2 text-sm " style="color: var(--gk-text-secondary); hover:bg-white/10">
                                 Clear All
                             </button>
                         </div>
@@ -229,16 +229,16 @@
                     <!-- Saved Filter Sets -->
                     <div class="relative">
                         <button onclick="toggleSavedFiltersMenu()"
-                                class="flex items-center gap-2 px-3 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors text-sm">
+                                class="flex items-center gap-2 px-3 py-2 " style="background: rgba(var(--gk-accent-rgb), 0.2); color: var(--gk-accent); rounded-md hover:bg-white/10 transition-colors text-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
                             </svg>
                             Saved Filters
                         </button>
-                        <div id="savedFiltersMenu" class="hidden absolute left-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-700">
+                        <div id="savedFiltersMenu" class="hidden absolute left-0 mt-2 w-72 " style="background: var(--gk-bg-surface); rounded-md shadow-lg z-10 border" style="border-color: var(--gk-border);">
                             <div class="p-3">
                                 <div class="flex items-center justify-between mb-3">
-                                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ t("admin.common.saved_filter_sets")|default:"Saved Filter Sets" }}</h3>
+                                    <h3 class="text-sm font-semibold " style="color: var(--gk-text-secondary);">{{ t("admin.common.saved_filter_sets")|default:"Saved Filter Sets" }}</h3>
                                     <button onclick="saveCurrentFilters()"
                                             class="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
                                         Save Current
@@ -251,11 +251,11 @@
                                 </div>
 
                                 <!-- Save new filter form -->
-                                <div id="saveFilterForm" class="hidden border-t border-gray-200 dark:border-gray-700 pt-3">
+                                <div id="saveFilterForm" class="hidden border-t " style="border-color: var(--gk-border); pt-3">
                                     <input type="text"
                                            id="filterSetName"
                                            placeholder="Enter filter set name..."
-                                           class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white mb-2">
+                                           class="w-full px-2 py-1 text-sm border" style="border-color: var(--gk-border); rounded " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); mb-2">
                                     <div class="flex gap-2">
                                         <button onclick="confirmSaveFilters()"
                                                 class="flex-1 px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600">
@@ -268,11 +268,11 @@
                                     </div>
                                 </div>
 
-                                <div class="pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                                <div class="pt-3 border-t " style="border-color: var(--gk-border); text-xs " style="color: var(--gk-text-muted);">
                                     <div class="flex items-center justify-between">
                                         <span id="filterSetCount">0 saved filter sets</span>
                                         <button onclick="clearAllFilterSets()"
-                                                class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300">
+                                                class="" style="color: var(--gk-error); hover:opacity-80">
                                             Clear All
                                         </button>
                                     </div>
@@ -284,25 +284,25 @@
                     <!-- Column Visibility Toggle -->
                     <div class="relative">
                         <button onclick="toggleColumnMenu()"
-                                class="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm">
+                                class="flex items-center gap-2 px-3 py-2 " style="background: var(--gk-bg-surface); " style="color: var(--gk-text-secondary); rounded-md hover:bg-white/10 transition-colors text-sm">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                             </svg>
                             Columns
                         </button>
-                        <div id="columnMenu" class="hidden absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-200 dark:border-gray-700">
+                        <div id="columnMenu" class="hidden absolute right-0 mt-2 w-64 " style="background: var(--gk-bg-surface); rounded-md shadow-lg z-10 border" style="border-color: var(--gk-border);">
                             <div class="p-3">
-                                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">{{ t("admin.common.show_hide_columns")|default:"Show/Hide Columns" }}</h3>
+                                <h3 class="text-sm font-semibold " style="color: var(--gk-text-secondary); mb-2">{{ t("admin.common.show_hide_columns")|default:"Show/Hide Columns" }}</h3>
                                 <div class="space-y-2 max-h-64 overflow-y-auto">
                                     {% for field in fields %}
                                     {% if field.ShowInList %}
                                     <label class="flex items-center">
                                         <input type="checkbox"
-                                               class="column-toggle rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                                               class="column-toggle h-4 w-4 rounded focus:ring-2" style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
                                                data-column="{{ field.Name }}"
                                                checked
                                                onchange="toggleColumn('{{ field.Name }}')">
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ field.Label }}</span>
+                                        <span class="ml-2 text-sm " style="color: var(--gk-text-secondary);">{{ field.Label }}</span>
                                     </label>
                                     {% endif %}
                                     {% endfor %}
@@ -310,16 +310,16 @@
                                     {% if field.ShowInList %}
                                     <label class="flex items-center">
                                         <input type="checkbox"
-                                               class="column-toggle rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                                               class="column-toggle h-4 w-4 rounded focus:ring-2" style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
                                                data-column="{{ field.Name }}"
                                                checked
                                                onchange="toggleColumn('{{ field.Name }}')">
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ field.Label }}</span>
+                                        <span class="ml-2 text-sm " style="color: var(--gk-text-secondary);">{{ field.Label }}</span>
                                     </label>
                                     {% endif %}
                                     {% endfor %}
                                 </div>
-                                <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex gap-2">
+                                <div class="mt-3 pt-3 border-t " style="border-color: var(--gk-border); flex gap-2">
                                     <button onclick="showAllColumns()"
                                             class="flex-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
                                         Show All
@@ -342,20 +342,20 @@
                         {% if filter.Type == "date_range" %}
                             <!-- Date range filter -->
                             <div class="flex gap-1 items-center">
-                                <label class="text-xs text-gray-600 dark:text-gray-400">{{ filter.Label }}:</label>
+                                <label class="text-xs " style="color: var(--gk-text-muted);">{{ filter.Label }}:</label>
                                 {% set from_key = "filter_" + filter.Field + "_from" %}
                                 {% set to_key = "filter_" + filter.Field + "_to" %}
                                 <input type="date"
                                        id="{{ filter.Field }}FilterFrom"
                                        value="{{ currentFilters[from_key]|default:'' }}"
                                        onchange="filterTable()"
-                                       class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
-                                <span class="text-xs text-gray-600 dark:text-gray-400">to</span>
+                                       class="px-2 py-1 border" style="border-color: var(--gk-border); rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); text-sm">
+                                <span class="text-xs " style="color: var(--gk-text-muted);">to</span>
                                 <input type="date"
                                        id="{{ filter.Field }}FilterTo"
                                        value="{{ currentFilters[to_key]|default:'' }}"
                                        onchange="filterTable()"
-                                       class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
+                                       class="px-2 py-1 border" style="border-color: var(--gk-border); rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); text-sm">
                             </div>
                         {% elif filter.Type == "multi_select" %}
                             <!-- Multi-select filter -->
@@ -364,7 +364,7 @@
                             <select id="{{ filter.Field|lower }}Filter"
                                     multiple
                                     onchange="filterTable()"
-                                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm min-w-[150px]">
+                                    class="px-3 py-2 border" style="border-color: var(--gk-border); rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); text-sm min-w-[150px]">
                                 {% if filter.Options %}
                                     {% for option in filter.Options %}
                                     <option value="{{ option.Value }}" {% if option.Value in current_value %}selected{% endif %}>{{ option.Label }}</option>
@@ -379,7 +379,7 @@
                             {% set current_value = currentFilters[filter_key]|default:"" %}
                             <select id="{{ filter.Field|lower }}Filter"
                                     onchange="filterTable()"
-                                    class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
+                                    class="px-3 py-2 border" style="border-color: var(--gk-border); rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); text-sm">
                                 {% if filter.Options %}
                                     {% for option in filter.Options %}
                                     <option value="{{ option.Value }}" {% if option.Value == current_value or (option.Value == "" and current_value == "") %}selected{% endif %}>{{ option.Label }}</option>
@@ -393,18 +393,18 @@
                         {% endfor %}
                     {% elif module.Name == "users" %}
                     <!-- Fallback for users module if no filters defined -->
-                    <select id="statusFilter" onchange="filterTable()" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
+                    <select id="statusFilter" onchange="filterTable()" class="px-3 py-2 border" style="border-color: var(--gk-border); rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); text-sm">
                         <option value="">All Status</option>
                         <option value="1">Active</option>
                         <option value="2">Inactive</option>
                     </select>
-                    <select id="groupFilter" onchange="filterTable()" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm">
+                    <select id="groupFilter" onchange="filterTable()" class="px-3 py-2 border" style="border-color: var(--gk-border); rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); text-sm">
                         <option value="">All Groups</option>
                         <!-- Groups will be populated dynamically -->
                     </select>
                     {% endif %}
                 </div>
-                <span class="text-sm text-gray-600 dark:text-gray-400 self-center">
+                <span class="text-sm " style="color: var(--gk-text-muted); self-center">
                     <span id="filteredCount">{{ items|length }}</span> items
                 </span>
             </div>
@@ -412,91 +412,91 @@
         {% endif %}
 
         <div class="overflow-x-auto">
-            <table id="dataTable" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead class="bg-gray-50 dark:bg-gray-700">
+            <table id="dataTable" class="min-w-full divide-y" style="border-color: var(--gk-border);">
+                <thead class="" style="background: var(--gk-bg-tertiary);">
                     <tr>
                         <th class="px-3 py-3 text-left">
                             <input type="checkbox" id="selectAll" onclick="toggleSelectAll()"
-                                   class="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500">
+                                   class="h-4 w-4 rounded focus:ring-2" style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
                         </th>
                         {% if allFields %}
                             {% for field in allFields %}
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            <th class="px-6 py-3 text-left text-xs font-medium " style="color: var(--gk-text-muted); uppercase tracking-wider">
                                 {{ field.Label }}
                             </th>
                             {% endfor %}
                         {% else %}
                             {% for field in fields %}
                             {% if field.ShowInList %}
-                            <th data-column="{{ field.Name }}" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider column-header">
+                            <th data-column="{{ field.Name }}" class="px-6 py-3 text-left text-xs font-medium " style="color: var(--gk-text-muted); uppercase tracking-wider column-header">
                                 {{ field.Label }}
                             </th>
                             {% endif %}
                             {% endfor %}
                             {% for field in computedFields %}
                             {% if field.ShowInList %}
-                            <th data-column="{{ field.Name }}" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider column-header">
+                            <th data-column="{{ field.Name }}" class="px-6 py-3 text-left text-xs font-medium " style="color: var(--gk-text-muted); uppercase tracking-wider column-header">
                                 {{ field.Label }}
                             </th>
                             {% endif %}
                             {% endfor %}
                             {% if module.Name == "users" %}
-                            <th data-column="groups" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider column-header">
+                            <th data-column="groups" class="px-6 py-3 text-left text-xs font-medium " style="color: var(--gk-text-muted); uppercase tracking-wider column-header">
                                 Groups
                             </th>
                             {% endif %}
                         {% endif %}
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <th class="px-6 py-3 text-right text-xs font-medium " style="color: var(--gk-text-muted); uppercase tracking-wider">
                             Actions
                         </th>
                     </tr>
                 </thead>
-                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody class="" style="background: var(--gk-bg-surface); divide-y" style="border-color: var(--gk-border);">
                     {% for item in items %}
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors {% if module.Name == 'mail_account' %}cursor-pointer{% endif %}"
+                    <tr class="hover:bg-white/5 transition-colors {% if module.Name == 'mail_account' %}cursor-pointer{% endif %}"
                         data-id="{{ item.id }}"
                         data-valid_id="{{ item.valid_id|default:'1' }}"
                         data-group_id="{{ item.group_id|default:'' }}"
                         {% if module.Name == 'mail_account' %}onclick="handleMailAccountRowSelect('{{ item.id }}', this, event)"{% endif %}>
                         <td class="px-3 py-4">
-                            <input type="checkbox" class="item-checkbox rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                            <input type="checkbox" class="item-checkbox h-4 w-4 rounded focus:ring-2" style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
                                    value="{{ item.id }}" onchange="updateBulkActions()">
                         </td>
                         {% if allFields %}
                             {% for field in allFields %}
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm " style="color: var(--gk-text-primary);">
                                 {% set chip_key = field.Name + "_chip" %}
                                 {% set display_key = field.Name + "_display" %}
                                 {% set chip_type = field.Name + "_chip_type" %}
                                 {% if item[chip_key] %}
                                     <!-- Display as chip if configured -->
                                     {% if field.Name == "group_id" %}
-                                    <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100">
+                                    <span class="px-2 py-1 text-xs rounded-full " style="background: rgba(var(--gk-accent-rgb), 0.2); color: var(--gk-accent);">
                                         {{ item[display_key]|default:item[field.Name] }}
                                     </span>
                                     {% elif field.Name == "valid_id" %}
                                     {% if item[field.Name] == 1 %}
-                                    <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                    <span class="px-2 py-1 text-xs rounded-full gk-badge-success">
                                         {{ item[display_key]|default:"Valid" }}
                                     </span>
                                     {% else %}
-                                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                                    <span class="px-2 py-1 text-xs rounded-full gk-badge-muted">
                                         {{ item[display_key]|default:"Invalid" }}
                                     </span>
                                     {% endif %}
                                     {% else %}
-                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    <span class="px-2 py-1 text-xs rounded-full gk-badge-accent">
                                         {{ item[display_key]|default:item[field.Name] }}
                                     </span>
                                     {% endif %}
                                 {% elif field.Name == "valid_id" %}
                                     {% if item[field.Name] == 1 %}
-                                    <span class="status-badge px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>
+                                    <span class="status-badge px-2 py-1 text-xs rounded-full gk-badge-success">Active</span>
                                     {% else %}
-                                    <span class="status-badge px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Inactive</span>
+                                    <span class="status-badge px-2 py-1 text-xs rounded-full gk-badge-muted">Inactive</span>
                                     {% endif %}
                                 {% elif field.Type == "password" %}
-                                    <span class="text-gray-400 dark:text-gray-500">••••••••</span>
+                                    <span class="" style="color: var(--gk-text-muted);">••••••••</span>
                                 {% elif field.Type == "color" %}
                                     <div class="flex items-center">
                                         <div class="w-6 h-6 rounded" style="background-color: {{ item[field.Name] }}"></div>
@@ -506,7 +506,7 @@
                                     {% if item.Groups %}
                                     <div class="flex flex-wrap gap-1">
                                         {% for group in item.Groups %}
-                                        <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ group }}</span>
+                                        <span class="px-2 py-1 text-xs rounded gk-badge-accent">{{ group }}</span>
                                         {% endfor %}
                                     </div>
                                     {% else %}
@@ -527,7 +527,7 @@
                                             {{ item[field.Name]|default:"-" }}
                                         </span>
                                         <input type="text"
-                                               class="inline-edit-input hidden px-2 py-1 border border-blue-400 rounded text-sm dark:bg-gray-700 dark:text-white"
+                                               class="inline-edit-input hidden px-2 py-1 border border-blue-400 rounded text-sm " style="background: var(--gk-bg-surface); color: var(--gk-text-primary);"
                                                value="{{ item[field.Name]|default:'' }}"
                                                onblur="saveInlineEdit(this)"
                                                onkeydown="handleInlineEditKey(event, this)">
@@ -542,39 +542,39 @@
                         {% else %}
                             {% for field in fields %}
                             {% if field.ShowInList %}
-                            <td data-column="{{ field.Name }}" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 column-cell">
+                            <td data-column="{{ field.Name }}" class="px-6 py-4 whitespace-nowrap text-sm " style="color: var(--gk-text-primary); column-cell">
                                 {% set chip_key = field.Name + "_chip" %}
                                 {% set display_key = field.Name + "_display" %}
                                 {% set chip_type = field.Name + "_chip_type" %}
                                 {% if item[chip_key] %}
                                     <!-- Display as chip if configured -->
                                     {% if field.Name == "group_id" %}
-                                    <span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100">
+                                    <span class="px-2 py-1 text-xs rounded-full " style="background: rgba(var(--gk-accent-rgb), 0.2); color: var(--gk-accent);">
                                         {{ item[display_key]|default:item[field.Name] }}
                                     </span>
                                     {% elif field.Name == "valid_id" %}
                                     {% if item[field.Name] == 1 %}
-                                    <span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                    <span class="px-2 py-1 text-xs rounded-full gk-badge-success">
                                         {{ item[display_key]|default:"Valid" }}
                                     </span>
                                     {% else %}
-                                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                                    <span class="px-2 py-1 text-xs rounded-full gk-badge-muted">
                                         {{ item[display_key]|default:"Invalid" }}
                                     </span>
                                     {% endif %}
                                     {% else %}
-                                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    <span class="px-2 py-1 text-xs rounded-full gk-badge-accent">
                                         {{ item[display_key]|default:item[field.Name] }}
                                     </span>
                                     {% endif %}
                                 {% elif field.Name == "valid_id" %}
                                     {% if item[field.Name] == 1 %}
-                                    <span class="status-badge px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Active</span>
+                                    <span class="status-badge px-2 py-1 text-xs rounded-full gk-badge-success">Active</span>
                                     {% else %}
-                                    <span class="status-badge px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">Inactive</span>
+                                    <span class="status-badge px-2 py-1 text-xs rounded-full gk-badge-muted">Inactive</span>
                                     {% endif %}
                                 {% elif field.Type == "password" %}
-                                    <span class="text-gray-400 dark:text-gray-500">••••••••</span>
+                                    <span class="" style="color: var(--gk-text-muted);">••••••••</span>
                                 {% elif field.Type == "color" %}
                                     <div class="flex items-center">
                                         <div class="w-6 h-6 rounded" style="background-color: {{ item[field.Name] }}"></div>
@@ -595,7 +595,7 @@
                                             {{ item[field.Name]|default:"-" }}
                                         </span>
                                         <input type="text"
-                                               class="inline-edit-input hidden px-2 py-1 border border-blue-400 rounded text-sm dark:bg-gray-700 dark:text-white"
+                                               class="inline-edit-input hidden px-2 py-1 border border-blue-400 rounded text-sm " style="background: var(--gk-bg-surface); color: var(--gk-text-primary);"
                                                value="{{ item[field.Name]|default:'' }}"
                                                onblur="saveInlineEdit(this)"
                                                onkeydown="handleInlineEditKey(event, this)">
@@ -610,17 +610,17 @@
                             {% endfor %}
                             {% for field in computedFields %}
                             {% if field.ShowInList %}
-                            <td data-column="{{ field.Name }}" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 column-cell">
+                            <td data-column="{{ field.Name }}" class="px-6 py-4 whitespace-nowrap text-sm " style="color: var(--gk-text-primary); column-cell">
                                 {{ item[field.Name]|default:"-"|safe }}
                             </td>
                             {% endif %}
                             {% endfor %}
                             {% if module.Name == "users" %}
-                            <td data-column="groups" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 column-cell">
+                            <td data-column="groups" class="px-6 py-4 whitespace-nowrap text-sm " style="color: var(--gk-text-primary); column-cell">
                                 {% if item.Groups %}
                                 <div class="flex flex-wrap gap-1">
                                     {% for group in item.Groups %}
-                                    <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">{{ group }}</span>
+                                    <span class="px-2 py-1 text-xs rounded gk-badge-accent">{{ group }}</span>
                                     {% endfor %}
                                 </div>
                                 {% else %}
@@ -632,27 +632,27 @@
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <button onclick="editItem('{{ item.id }}')"
                                     title="{{ t("admin.common.tooltips.edit")|default:"Edit" }}"
-                                    class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-2">
+                                    class="transition-colors" style="color: var(--gk-primary); mr-2">
                                 <i class="fas fa-edit icon-sm"></i>
                             </button>
                             {% if features.SoftDelete %}
                                 {% if item.valid_id == 1 %}
                                 <button onclick="toggleStatus('{{ item.id }}', '{{ item.valid_id }}')"
                                         title="{{ t("admin.common.tooltips.disable")|default:"Disable" }}"
-                                        class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300">
+                                        class="transition-colors" style="color: var(--gk-warning);">
                                     <i class="fas fa-times-circle icon-sm"></i>
                                 </button>
                                 {% else %}
                                 <button onclick="toggleStatus('{{ item.id }}', '{{ item.valid_id }}')"
                                         title="{{ t("admin.common.tooltips.enable")|default:"Enable" }}"
-                                        class="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">
+                                        class="transition-colors" style="color: var(--gk-success);">
                                     <i class="fas fa-check-circle icon-sm"></i>
                                 </button>
                                 {% endif %}
                             {% else %}
                                 <button onclick="deleteItem('{{ item.id }}')"
                                         title="{{ t("admin.common.tooltips.delete")|default:"Delete" }}"
-                                        class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">
+                                        class="transition-colors" style="color: var(--gk-error);">
                                     <i class="fas fa-trash icon-sm"></i>
                                 </button>
                             {% endif %}
@@ -660,7 +660,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="100%" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                        <td colspan="100%" class="px-6 py-12 text-center " style="color: var(--gk-text-muted);">
                             {{ t("admin.common.no_data_available")|default:"No data available" }}
                         </td>
                     </tr>
@@ -674,29 +674,29 @@
         {% set mailStatusLastPollLabel = t("admin.modules.mail_account.status.last_poll") %}
         {% set mailStatusMessagesLabel = t("admin.modules.mail_account.status.messages_fetched") %}
         {% set mailStatusNextPollLabel = t("admin.modules.mail_account.status.next_poll") %}
-        <div id="mailStatusPane" class="hidden mt-4 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+        <div id="mailStatusPane" class="hidden mt-4 rounded border" style="border-color: var(--gk-border); " style="background: var(--gk-bg-tertiary); p-3">
             <div class="flex items-center justify-between">
                 <div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusStatusLabel == "admin.modules.mail_account.status.status" %}Status{% else %}{{ mailStatusStatusLabel }}{% endif %}</div>
-                    <div id="mailStatusPaneBadge" class="text-sm font-semibold text-gray-900 dark:text-gray-50">--</div>
+                    <div class="text-xs " style="color: var(--gk-text-muted);">{% if mailStatusStatusLabel == "admin.modules.mail_account.status.status" %}Status{% else %}{{ mailStatusStatusLabel }}{% endif %}</div>
+                    <div id="mailStatusPaneBadge" class="text-sm font-semibold " style="color: var(--gk-text-primary);">--</div>
                 </div>
                 <div class="text-right">
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusLastPollLabel == "admin.modules.mail_account.status.last_poll" %}Last poll{% else %}{{ mailStatusLastPollLabel }}{% endif %}</div>
-                    <div id="mailStatusPaneLastPoll" class="text-sm text-gray-900 dark:text-gray-50">--</div>
+                    <div class="text-xs " style="color: var(--gk-text-muted);">{% if mailStatusLastPollLabel == "admin.modules.mail_account.status.last_poll" %}Last poll{% else %}{{ mailStatusLastPollLabel }}{% endif %}</div>
+                    <div id="mailStatusPaneLastPoll" class="text-sm " style="color: var(--gk-text-primary);">--</div>
                 </div>
             </div>
             <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
                 <div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusMessagesLabel == "admin.modules.mail_account.status.messages_fetched" %}Messages fetched{% else %}{{ mailStatusMessagesLabel }}{% endif %}</div>
-                    <div id="mailStatusPaneMessages" class="text-gray-900 dark:text-gray-50">--</div>
+                    <div class="text-xs " style="color: var(--gk-text-muted);">{% if mailStatusMessagesLabel == "admin.modules.mail_account.status.messages_fetched" %}Messages fetched{% else %}{{ mailStatusMessagesLabel }}{% endif %}</div>
+                    <div id="mailStatusPaneMessages" class="" style="color: var(--gk-text-primary);">--</div>
                 </div>
                 <div class="text-right">
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusNextPollLabel == "admin.modules.mail_account.status.next_poll" %}Next poll{% else %}{{ mailStatusNextPollLabel }}{% endif %}</div>
-                    <div id="mailStatusPaneNextPoll" class="text-gray-900 dark:text-gray-50">--</div>
+                    <div class="text-xs " style="color: var(--gk-text-muted);">{% if mailStatusNextPollLabel == "admin.modules.mail_account.status.next_poll" %}Next poll{% else %}{{ mailStatusNextPollLabel }}{% endif %}</div>
+                    <div id="mailStatusPaneNextPoll" class="" style="color: var(--gk-text-primary);">--</div>
                 </div>
             </div>
-            <div class="mt-2 text-xs text-red-600 dark:text-red-400" id="mailStatusPaneError"></div>
-            <div class="mt-1 text-xs text-amber-600 dark:text-amber-400" id="mailStatusPaneStale"></div>
+            <div class="mt-2 text-xs " style="color: var(--gk-error);" id="mailStatusPaneError"></div>
+            <div class="mt-1 text-xs " style="color: var(--gk-warning);" id="mailStatusPaneStale"></div>
         </div>
         {% endif %}
 
@@ -704,7 +704,7 @@
         {% if pagination and pagination.totalPages > 1 %}
         <div class="mt-4 flex items-center justify-between">
             <div class="flex items-center gap-4">
-                <div class="text-sm text-gray-700 dark:text-gray-300">
+                <div class="text-sm " style="color: var(--gk-text-secondary);">
                     Showing
                     <span class="font-medium">{{ (pagination.page - 1) * pagination.pageSize + 1 }}</span>
                     to
@@ -716,15 +716,15 @@
 
                 <!-- Page size selector -->
                 <div class="flex items-center gap-2">
-                    <label for="pageSize" class="text-sm text-gray-700 dark:text-gray-300">{{ t("admin.common.pagination.show") }}</label>
+                    <label for="pageSize" class="text-sm " style="color: var(--gk-text-secondary);">{{ t("admin.common.pagination.show") }}</label>
                     <select id="pageSize" onchange="changePageSize(this.value)"
-                            class="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+                            class="px-2 py-1 text-sm border" style="border-color: var(--gk-border); rounded-md " style="background: var(--gk-bg-surface); " style="color: var(--gk-text-primary);">
                         <option value="10" {% if pagination.pageSize == 10 %}selected{% endif %}>10</option>
                         <option value="25" {% if pagination.pageSize == 25 %}selected{% endif %}>25</option>
                         <option value="50" {% if pagination.pageSize == 50 %}selected{% endif %}>50</option>
                         <option value="100" {% if pagination.pageSize == 100 %}selected{% endif %}>100</option>
                     </select>
-                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ t("admin.common.pagination.per_page") }}</span>
+                    <span class="text-sm " style="color: var(--gk-text-secondary);">{{ t("admin.common.pagination.per_page") }}</span>
                 </div>
             </div>
 
@@ -732,12 +732,12 @@
                 <!-- Previous button -->
                 {% if pagination.hasPrev %}
                 <button onclick="goToPage({{ pagination.page - 1 }})"
-                        class="px-3 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-l-md hover:bg-gray-50 dark:hover:bg-gray-600">
+                        class="px-3 py-1 text-sm " style="background: var(--gk-bg-surface); border" style="border-color: var(--gk-border); rounded-l-md hover:bg-white/10">
                     {{ t("admin.common.pagination.previous") }}
                 </button>
                 {% else %}
                 <button disabled
-                        class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded-l-md cursor-not-allowed">
+                        class="px-3 py-1 text-sm " style="background: var(--gk-bg-tertiary); " style="color: var(--gk-text-muted); border" style="border-color: var(--gk-border); rounded-l-md cursor-not-allowed">
                     {{ t("admin.common.pagination.previous") }}
                 </button>
                 {% endif %}
@@ -750,7 +750,7 @@
                     </button>
                     {% else %}
                     <button onclick="goToPage({{ pageNum }})"
-                            class="px-3 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600">
+                            class="px-3 py-1 text-sm " style="background: var(--gk-bg-surface); border" style="border-color: var(--gk-border); hover:bg-white/10">
                         {{ pageNum }}
                     </button>
                     {% endif %}
@@ -759,12 +759,12 @@
                 <!-- Next button -->
                 {% if pagination.hasNext %}
                 <button onclick="goToPage({{ pagination.page + 1 }})"
-                        class="px-3 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-r-md hover:bg-gray-50 dark:hover:bg-gray-600">
+                        class="px-3 py-1 text-sm " style="background: var(--gk-bg-surface); border" style="border-color: var(--gk-border); rounded-r-md hover:bg-white/10">
                     {{ t("admin.common.pagination.next") }}
                 </button>
                 {% else %}
                 <button disabled
-                        class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 rounded-r-md cursor-not-allowed">
+                        class="px-3 py-1 text-sm " style="background: var(--gk-bg-tertiary); " style="color: var(--gk-text-muted); border" style="border-color: var(--gk-border); rounded-r-md cursor-not-allowed">
                     {{ t("admin.common.pagination.next") }}
                 </button>
                 {% endif %}
@@ -778,14 +778,14 @@
 <div id="moduleModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 transition-opacity" aria-hidden="true">
-            <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
+            <div class="absolute inset-0 gk-modal-backdrop"></div>
         </div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle {% if module.Name == 'auto_response' %}sm:max-w-5xl{% else %}sm:max-w-lg{% endif %} sm:w-full">
+        <div class="inline-block align-bottom " style="background: var(--gk-bg-surface); rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle {% if module.Name == 'auto_response' %}sm:max-w-5xl{% else %}sm:max-w-lg{% endif %} sm:w-full">
             <form id="moduleForm" onsubmit="saveItem(event)">
-                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 id="modalTitle" class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100 mb-4">
+                <div class="" style="background: var(--gk-bg-surface); px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <h3 id="modalTitle" class="text-lg leading-6 font-medium " style="color: var(--gk-text-primary); mb-4">
                         New {{ module.Singular }}
                     </h3>
 
@@ -796,36 +796,36 @@
                         <div class="flex-1 min-w-0">
                     {% endif %}
                     {% if module.Name == "mail_account" %}
-                    <div id="mailStatusCard" class="hidden mb-4 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                    <div id="mailStatusCard" class="hidden mb-4 rounded border" style="border-color: var(--gk-border); " style="background: var(--gk-bg-tertiary); p-3">
                         <div class="flex items-center justify-between">
                             <div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusStatusLabel == "admin.modules.mail_account.status.status" %}Status{% else %}{{ mailStatusStatusLabel }}{% endif %}</div>
-                                <div id="mailStatusBadge" class="text-sm font-semibold text-gray-900 dark:text-gray-50">--</div>
+                                <div class="text-xs " style="color: var(--gk-text-muted);">{% if mailStatusStatusLabel == "admin.modules.mail_account.status.status" %}Status{% else %}{{ mailStatusStatusLabel }}{% endif %}</div>
+                                <div id="mailStatusBadge" class="text-sm font-semibold " style="color: var(--gk-text-primary);">--</div>
                             </div>
                             <div class="text-right">
-                                <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusLastPollLabel == "admin.modules.mail_account.status.last_poll" %}Last poll{% else %}{{ mailStatusLastPollLabel }}{% endif %}</div>
-                                <div id="mailStatusLastPoll" class="text-sm text-gray-900 dark:text-gray-50">--</div>
+                                <div class="text-xs " style="color: var(--gk-text-muted);">{% if mailStatusLastPollLabel == "admin.modules.mail_account.status.last_poll" %}Last poll{% else %}{{ mailStatusLastPollLabel }}{% endif %}</div>
+                                <div id="mailStatusLastPoll" class="text-sm " style="color: var(--gk-text-primary);">--</div>
                             </div>
                         </div>
                         <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
                             <div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusMessagesLabel == "admin.modules.mail_account.status.messages_fetched" %}Messages fetched{% else %}{{ mailStatusMessagesLabel }}{% endif %}</div>
-                                <div id="mailStatusMessages" class="text-gray-900 dark:text-gray-50">--</div>
+                                <div class="text-xs " style="color: var(--gk-text-muted);">{% if mailStatusMessagesLabel == "admin.modules.mail_account.status.messages_fetched" %}Messages fetched{% else %}{{ mailStatusMessagesLabel }}{% endif %}</div>
+                                <div id="mailStatusMessages" class="" style="color: var(--gk-text-primary);">--</div>
                             </div>
                             <div class="text-right">
-                                <div class="text-xs text-gray-500 dark:text-gray-400">{% if mailStatusNextPollLabel == "admin.modules.mail_account.status.next_poll" %}Next poll{% else %}{{ mailStatusNextPollLabel }}{% endif %}</div>
-                                <div id="mailStatusNextPoll" class="text-gray-900 dark:text-gray-50">--</div>
+                                <div class="text-xs " style="color: var(--gk-text-muted);">{% if mailStatusNextPollLabel == "admin.modules.mail_account.status.next_poll" %}Next poll{% else %}{{ mailStatusNextPollLabel }}{% endif %}</div>
+                                <div id="mailStatusNextPoll" class="" style="color: var(--gk-text-primary);">--</div>
                             </div>
                         </div>
-                        <div class="mt-2 text-xs text-red-600 dark:text-red-400" id="mailStatusError"></div>
-                        <div class="mt-1 text-xs text-amber-600 dark:text-amber-400" id="mailStatusStale"></div>
+                        <div class="mt-2 text-xs " style="color: var(--gk-error);" id="mailStatusError"></div>
+                        <div class="mt-1 text-xs " style="color: var(--gk-warning);" id="mailStatusStale"></div>
                     </div>
                     {% endif %}
                     <div class="mt-4 space-y-4">
                         {% for field in fields %}
                         {% if field.ShowInForm %}
                         <div id="field_{{ field.Name }}" data-field-name="{{ field.Name }}">
-                            <label for="{{ field.Name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label for="{{ field.Name }}" class="block text-sm font-medium " style="color: var(--gk-text-secondary);">
                                 {{ field.Label }}
                                 {% if field.Required %}<span class="text-red-500">*</span>{% endif %}
                             </label>
@@ -834,12 +834,12 @@
                                 {% if module.Name == "auto_response" and field.Name == "text1" %}
                                 <!-- TipTap editor for Response Body -->
                                 <div id="text1_editor"
-                                     class="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white sm:text-sm p-3 prose prose-sm dark:prose-invert max-w-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
+                                     class="mt-1 block w-full rounded-md border" style="border-color: var(--gk-border); shadow-sm " style="background: var(--gk-bg-surface); " style="color: var(--gk-text-primary); sm:text-sm p-3 prose prose-sm prose-invert max-w-none focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
                                      style="min-height: 150px;"></div>
                                 <textarea id="{{ field.Name }}" name="{{ field.Name }}" class="hidden" {% if field.Required %}required{% endif %}></textarea>
                                 {% else %}
                                 <textarea id="{{ field.Name }}" name="{{ field.Name }}" rows="{{ field.Rows|default:3 }}" {% if field.Required %}required{% endif %}
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                                    class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm"
                                     placeholder="{{ field.Placeholder|default:'' }}"></textarea>
                                 {% endif %}
                             {% elif field.Type == "select" %}
@@ -848,7 +848,7 @@
                                         <input type="hidden" id="{{ field.Name }}" name="{{ field.Name }}" value="{{ field.Default|default:'' }}" {% if field.Required %}required{% endif %}>
                                         <input type="text" id="{{ field.Name }}_typeahead" list="{{ field.Name }}_options"
                                             placeholder="{{ field.Placeholder|default:'Start typing to search' }}"
-                                            class="block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                            class="block w-full border" style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                                         <datalist id="{{ field.Name }}_options">
                                             {% for option in field.Options %}
                                             <option value="{{ option.Label }}" data-value="{{ option.Value }}"></option>
@@ -858,7 +858,7 @@
                                 {% else %}
                                     {% set current_group = "" %}
                                     <select id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
-                                        class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                        class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                                         <option value="">-- Select --</option>
                                         {% for option in field.Options %}
                                             {% if option.Group %}
@@ -878,14 +878,14 @@
                                 {% endif %}
                             {% elif field.Type == "color" %}
                                 <input type="color" id="{{ field.Name }}" name="{{ field.Name }}" value="{{ field.Default|default:'#000000' }}"
-                                    class="mt-1 block h-10 w-20 border-gray-300 dark:border-gray-600 rounded-md shadow-sm">
+                                    class="mt-1 block h-10 w-20 " style="border-color: var(--gk-border); rounded-md shadow-sm">
                             {% elif field.Type == "password" %}
                                 <div class="relative">
                                     <input type="password" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
                                         placeholder="{{ field.Placeholder|default:'' }}"
-                                        class="mt-1 block w-full pr-10 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                        class="mt-1 block w-full pr-10 " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                                     <button type="button" onclick="togglePassword('{{ field.Name }}')"
-                                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                        class="absolute inset-y-0 right-0 pr-3 flex items-center " style="color: var(--gk-text-muted); hover:opacity-80">
                                         <i id="{{ field.Name }}_eye_toggle" class="fas fa-eye icon-sm"></i>
                                     </button>
                                 </div>
@@ -894,8 +894,8 @@
                                     {% for option in field.Options %}
                                     <label class="inline-flex items-center mr-4">
                                         <input type="radio" id="{{ field.Name }}_{{ option.Value }}" name="{{ field.Name }}" value="{{ option.Value }}" {% if field.Required %}required{% endif %}
-                                            class="rounded-full border-gray-300 dark:border-gray-600 text-blue-600 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">{{ option.Label }}</span>
+                                            class="rounded-full " style="border-color: var(--gk-border); text-blue-600 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
+                                        <span class="ml-2 text-sm " style="color: var(--gk-text-secondary);">{{ option.Label }}</span>
                                     </label>
                                     {% endfor %}
                                 </div>
@@ -903,77 +903,77 @@
                                 <input type="file" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
                                     {% if field.Accept %}accept="{{ field.Accept }}"{% endif %}
                                     {% if field.Multiple %}multiple{% endif %}
-                                    class="mt-1 block w-full text-sm text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer focus:outline-none focus:border-blue-500 dark:bg-gray-700">
-                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ field.Help|default:"Max file size: 10MB" }}</p>
+                                    class="mt-1 block w-full text-sm " style="color: var(--gk-text-primary); border" style="border-color: var(--gk-border); rounded-md cursor-pointer focus:outline-none focus:border-blue-500" style="background: var(--gk-bg-surface);">
+                                <p class="mt-1 text-xs " style="color: var(--gk-text-muted);">{{ field.Help|default:"Max file size: 10MB" }}</p>
                             {% elif field.Type == "files" or field.Type == "filelist" %}
                                 <div class="mt-1">
                                     <input type="file" id="{{ field.Name }}" name="{{ field.Name }}[]" multiple {% if field.Required %}required{% endif %}
                                         {% if field.Accept %}accept="{{ field.Accept }}"{% endif %}
-                                        class="block w-full text-sm text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer focus:outline-none focus:border-blue-500 dark:bg-gray-700">
+                                        class="block w-full text-sm " style="color: var(--gk-text-primary); border" style="border-color: var(--gk-border); rounded-md cursor-pointer focus:outline-none focus:border-blue-500" style="background: var(--gk-bg-surface);">
                                     <div id="{{ field.Name }}_list" class="mt-2 space-y-1"></div>
                                 </div>
                             {% elif field.Type == "date" %}
                                 <input type="date" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
                                     min="{{ field.Min|default:'' }}" max="{{ field.Max|default:'' }}"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                    class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                             {% elif field.Type == "datetime" or field.Type == "datetime-local" %}
                                 <input type="datetime-local" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
                                     min="{{ field.Min|default:'' }}" max="{{ field.Max|default:'' }}"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                    class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                             {% elif field.Type == "time" %}
                                 <input type="time" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                    class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                             {% elif field.Type == "email" %}
                                 <input type="email" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
                                     placeholder="{{ field.Placeholder|default:'user@example.com' }}"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                    class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                             {% elif field.Type == "url" %}
                                 <input type="url" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
                                     placeholder="{{ field.Placeholder|default:'https://example.com' }}"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                    class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                             {% elif field.Type == "tel" or field.Type == "phone" %}
                                 <input type="tel" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
                                     pattern="{{ field.Pattern|default:'[0-9]{3}-[0-9]{3}-[0-9]{4}' }}"
                                     placeholder="{{ field.Placeholder|default:'123-456-7890' }}"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                    class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                             {% elif field.Type == "range" %}
                                 <div class="mt-1">
                                     <input type="range" id="{{ field.Name }}" name="{{ field.Name }}"
                                         min="{{ field.Min|default:0 }}" max="{{ field.Max|default:100 }}" step="{{ field.Step|default:1 }}"
                                         value="{{ field.Default|default:50 }}"
                                         oninput="document.getElementById('{{ field.Name }}_value').textContent = this.value"
-                                        class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
-                                    <span id="{{ field.Name }}_value" class="text-sm text-gray-600 dark:text-gray-400">{{ field.Default|default:50 }}</span>
+                                        class="w-full h-2 rounded-lg appearance-none cursor-pointer" style="background: var(--gk-bg-tertiary);">
+                                    <span id="{{ field.Name }}_value" class="text-sm " style="color: var(--gk-text-muted);">{{ field.Default|default:50 }}</span>
                                 </div>
                             {% elif field.Type == "bool" or field.Type == "boolean" or field.Type == "checkbox" %}
                                 {% if field.Name == "allow_trusted_headers" %}
                                     {% set help_inline = true %}
                                     <div class="mt-2 flex items-center justify-between gap-3">
-                                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ field.Help|default:"Accept queue overrides from X-OTRS-Queue / X-GOTRS headers for this mailbox." }}</span>
+                                        <span class="text-sm " style="color: var(--gk-text-secondary);">{{ field.Help|default:"Accept queue overrides from X-OTRS-Queue / X-GOTRS headers for this mailbox." }}</span>
                                         <input type="checkbox" id="{{ field.Name }}" name="{{ field.Name }}" value="1"
-                                            class="h-5 w-5 rounded border-gray-300 dark:border-gray-600 text-blue-600 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
+                                            class="h-5 w-5 rounded " style="border-color: var(--gk-border); text-blue-600 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
                                     </div>
                                 {% else %}
                                     <input type="checkbox" id="{{ field.Name }}" name="{{ field.Name }}" value="1"
-                                        class="mt-1 rounded border-gray-300 dark:border-gray-600 text-blue-600 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
+                                        class="mt-1 rounded " style="border-color: var(--gk-border); text-blue-600 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
                                 {% endif %}
                             {% elif field.Type == "int" or field.Type == "integer" or field.Type == "number" %}
                                 <input type="number" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
                                     min="{{ field.Min|default:'' }}" max="{{ field.Max|default:'' }}" step="{{ field.Step|default:1 }}"
                                     placeholder="{{ field.Placeholder|default:'' }}"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                    class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                             {% elif field.Type == "float" or field.Type == "decimal" %}
                                 <input type="number" id="{{ field.Name }}" name="{{ field.Name }}" step="0.01" {% if field.Required %}required{% endif %}
                                     min="{{ field.Min|default:'' }}" max="{{ field.Max|default:'' }}"
                                     placeholder="{{ field.Placeholder|default:'' }}"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                    class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                             {% else %}
                                 <input type="text" id="{{ field.Name }}" name="{{ field.Name }}" {% if field.Required %}required{% endif %}
                                     placeholder="{{ field.Placeholder|default:'' }}"
-                                    class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                    class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                             {% endif %}
                             {% if field.Help and not help_inline %}
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ field.Help }}</p>
+                            <p class="mt-1 text-sm " style="color: var(--gk-text-muted);">{{ field.Help }}</p>
                             {% endif %}
                         </div>
                         {% endif %}
@@ -982,14 +982,14 @@
                         {% if module.Name == "users" %}
                         <!-- Groups assignment for users -->
                         <div>
-                            <label for="groups" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label for="groups" class="block text-sm font-medium " style="color: var(--gk-text-secondary);">
                                 Groups
                             </label>
                             <select id="groups" name="groups" multiple size="6"
-                                class="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm">
+                                class="mt-1 block w-full " style="border-color: var(--gk-border); rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 " style="background: var(--gk-bg-surface); color: var(--gk-text-primary); sm:text-sm">
                                 <!-- Groups will be populated dynamically -->
                             </select>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Hold Ctrl/Cmd to select multiple groups</p>
+                            <p class="mt-1 text-sm " style="color: var(--gk-text-muted);">Hold Ctrl/Cmd to select multiple groups</p>
                         </div>
                         {% endif %}
                     </div>
@@ -997,13 +997,13 @@
                         </div><!-- Close left column (form fields) -->
 
                         <!-- Right column: OTRS Variables Help Pane -->
-                        <div class="w-80 flex-shrink-0 border-l border-gray-200 dark:border-gray-600 pl-4">
+                        <div class="w-80 flex-shrink-0 border-l " style="border-color: var(--gk-border); pl-4">
                             <div class="sticky top-0">
-                                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+                                <h4 class="text-sm font-semibold " style="color: var(--gk-text-secondary); mb-3 flex items-center gap-2">
                                     <i class="fas fa-code text-blue-500"></i>
                                     Template Variables
                                 </h4>
-                                <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                                <p class="text-xs " style="color: var(--gk-text-muted); mb-3">
                                     Click a variable to insert it at cursor position in Subject or Body.
                                 </p>
 
@@ -1011,24 +1011,24 @@
                                 <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                                     <!-- Ticket Variables -->
                                     <div>
-                                        <h5 class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">{{ t("admin.variables.ticket")|default:"Ticket" }}</h5>
+                                        <h5 class="text-xs font-semibold " style="color: var(--gk-text-secondary); uppercase tracking-wide mb-1.5">{{ t("admin.variables.ticket")|default:"Ticket" }}</h5>
                                         <div class="space-y-1">
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_TICKET_TicketNumber')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_TICKET_TicketNumber')">
                                                 <code>&lt;OTRS_TICKET_TicketNumber&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_TICKET_Title')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_TICKET_Title')">
                                                 <code>&lt;OTRS_TICKET_Title&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_TICKET_Queue')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_TICKET_Queue')">
                                                 <code>&lt;OTRS_TICKET_Queue&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_TICKET_State')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_TICKET_State')">
                                                 <code>&lt;OTRS_TICKET_State&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_TICKET_Priority')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_TICKET_Priority')">
                                                 <code>&lt;OTRS_TICKET_Priority&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_TICKET_Created')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_TICKET_Created')">
                                                 <code>&lt;OTRS_TICKET_Created&gt;</code>
                                             </button>
                                         </div>
@@ -1036,18 +1036,18 @@
 
                                     <!-- Customer Variables -->
                                     <div>
-                                        <h5 class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">{{ t("admin.variables.customer")|default:"Customer" }}</h5>
+                                        <h5 class="text-xs font-semibold " style="color: var(--gk-text-secondary); uppercase tracking-wide mb-1.5">{{ t("admin.variables.customer")|default:"Customer" }}</h5>
                                         <div class="space-y-1">
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_CUSTOMER_UserFirstname')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_CUSTOMER_UserFirstname')">
                                                 <code>&lt;OTRS_CUSTOMER_UserFirstname&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_CUSTOMER_UserLastname')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_CUSTOMER_UserLastname')">
                                                 <code>&lt;OTRS_CUSTOMER_UserLastname&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_CUSTOMER_UserEmail')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_CUSTOMER_UserEmail')">
                                                 <code>&lt;OTRS_CUSTOMER_UserEmail&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_CUSTOMER_UserCustomerID')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_CUSTOMER_UserCustomerID')">
                                                 <code>&lt;OTRS_CUSTOMER_UserCustomerID&gt;</code>
                                             </button>
                                         </div>
@@ -1055,18 +1055,18 @@
 
                                     <!-- Agent Variables -->
                                     <div>
-                                        <h5 class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">{{ t("admin.variables.agent")|default:"Agent" }}</h5>
+                                        <h5 class="text-xs font-semibold " style="color: var(--gk-text-secondary); uppercase tracking-wide mb-1.5">{{ t("admin.variables.agent")|default:"Agent" }}</h5>
                                         <div class="space-y-1">
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_OWNER_UserFirstname')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_OWNER_UserFirstname')">
                                                 <code>&lt;OTRS_OWNER_UserFirstname&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_OWNER_UserLastname')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_OWNER_UserLastname')">
                                                 <code>&lt;OTRS_OWNER_UserLastname&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_OWNER_UserEmail')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_OWNER_UserEmail')">
                                                 <code>&lt;OTRS_OWNER_UserEmail&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_RESPONSIBLE_UserFirstname')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_RESPONSIBLE_UserFirstname')">
                                                 <code>&lt;OTRS_RESPONSIBLE_UserFirstname&gt;</code>
                                             </button>
                                         </div>
@@ -1074,12 +1074,12 @@
 
                                     <!-- System Variables -->
                                     <div>
-                                        <h5 class="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1.5">{{ t("admin.variables.system")|default:"System" }}</h5>
+                                        <h5 class="text-xs font-semibold " style="color: var(--gk-text-secondary); uppercase tracking-wide mb-1.5">{{ t("admin.variables.system")|default:"System" }}</h5>
                                         <div class="space-y-1">
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_CONFIG_FQDN')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_CONFIG_FQDN')">
                                                 <code>&lt;OTRS_CONFIG_FQDN&gt;</code>
                                             </button>
-                                            <button type="button" class="otrs-var-btn text-gray-700 dark:text-sky-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-blue-900 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-700 dark:hover:text-white" onclick="insertVariable('OTRS_CONFIG_HttpType')">
+                                            <button type="button" class="otrs-var-btn border rounded transition-colors" style="color: var(--gk-text-secondary); background: var(--gk-bg-surface); border-color: var(--gk-border);" onclick="insertVariable('OTRS_CONFIG_HttpType')">
                                                 <code>&lt;OTRS_CONFIG_HttpType&gt;</code>
                                             </button>
                                         </div>
@@ -1090,11 +1090,11 @@
                     </div><!-- Close flex container (two-column layout) -->
                     {% endif %}
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <div class="" style="background: var(--gk-bg-tertiary); px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
                         Save
                     </button>
-                    <button type="button" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    <button type="button" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-md border" style="border-color: var(--gk-border); shadow-sm px-4 py-2 " style="background: var(--gk-bg-surface); text-base font-medium " style="color: var(--gk-text-secondary); hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
                         Cancel
                     </button>
                 </div>
@@ -1107,33 +1107,33 @@
 <div id="confirmModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
     <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         <div class="fixed inset-0 transition-opacity" aria-hidden="true">
-            <div class="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
+            <div class="absolute inset-0 gk-modal-backdrop"></div>
         </div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="inline-block align-bottom " style="background: var(--gk-bg-surface); rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="" style="background: var(--gk-bg-surface); px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
-                    <div id="confirmIcon" class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 sm:mx-0 sm:h-10 sm:w-10">
-                        <i class="fas fa-exclamation-triangle icon-lg text-yellow-600 dark:text-yellow-400"></i>
+                    <div id="confirmIcon" class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full " style="background: rgba(var(--gk-warning-rgb), 0.2); sm:mx-0 sm:h-10 sm:w-10">
+                        <i class="fas fa-exclamation-triangle icon-lg " style="color: var(--gk-warning);"></i>
                     </div>
                     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                        <h3 id="confirmTitle" class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
+                        <h3 id="confirmTitle" class="text-lg leading-6 font-medium " style="color: var(--gk-text-primary);">
                             Confirm Action
                         </h3>
                         <div class="mt-2">
-                            <p id="confirmMessage" class="text-sm text-gray-500 dark:text-gray-400">
+                            <p id="confirmMessage" class="text-sm " style="color: var(--gk-text-muted);">
                                 {{ t("messages.confirm.proceed_action")|default:"Are you sure you want to proceed with this action?" }}
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <div class="" style="background: var(--gk-bg-tertiary); px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                 <button type="button" id="confirmButton" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-yellow-600 text-base font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:ml-3 sm:w-auto sm:text-sm">
                     Confirm
                 </button>
-                <button type="button" onclick="closeConfirmModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                <button type="button" onclick="closeConfirmModal()" class="mt-3 w-full inline-flex justify-center rounded-md border" style="border-color: var(--gk-border); shadow-sm px-4 py-2 " style="background: var(--gk-bg-surface); text-base font-medium " style="color: var(--gk-text-secondary); hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
                     Cancel
                 </button>
             </div>
@@ -1584,10 +1584,10 @@ function toggleStatus(id, currentStatus) {
                     const statusBadge = row.querySelector('.status-badge');
                     if (statusBadge) {
                         if (newStatus == 1) {
-                            statusBadge.className = 'status-badge px-2 py-1 text-xs rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+                            statusBadge.className = 'status-badge px-2 py-1 text-xs rounded-full gk-badge-success';
                             statusBadge.textContent = 'Active';
                         } else {
-                            statusBadge.className = 'status-badge px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+                            statusBadge.className = 'status-badge px-2 py-1 text-xs rounded-full gk-badge-muted';
                             statusBadge.textContent = 'Inactive';
                         }
                     }
@@ -1605,7 +1605,7 @@ function toggleStatus(id, currentStatus) {
                     if (toggleBtn) {
                         toggleBtn.setAttribute('onclick', `toggleStatus('${id}', ${newStatus})`);
                         if (newStatus == 1) {
-                            toggleBtn.className = 'text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300';
+                            toggleBtn.className = 'transition-colors" style="color: var(--gk-warning);';
                             toggleBtn.title = 'Disable';
                             // Update the icon - check for both Font Awesome <i> and SVG
                             const icon = toggleBtn.querySelector('i');
@@ -1618,7 +1618,7 @@ function toggleStatus(id, currentStatus) {
                                 }
                             }
                         } else {
-                            toggleBtn.className = 'text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300';
+                            toggleBtn.className = 'transition-colors" style="color: var(--gk-success);';
                             toggleBtn.title = 'Enable';
                             // Update the icon - check for both Font Awesome <i> and SVG
                             const icon = toggleBtn.querySelector('i');
@@ -1915,7 +1915,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 listEl.innerHTML = '';
                 Array.from(this.files).forEach(file => {
                     const div = document.createElement('div');
-                    div.className = 'text-sm text-gray-600 dark:text-gray-400';
+                    div.className = 'text-sm " style="color: var(--gk-text-muted);';
                     div.innerHTML = `
                         <i class="fas fa-file icon-sm mr-1"></i>
                         ${file.name} (${formatFileSize(file.size)})
@@ -1985,14 +1985,14 @@ function viewConfigDetails(configName) {
             const details = data.data;
             const html = `
                 <div class="space-y-4">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">${details.name}</h3>
+                    <h3 class="text-lg font-medium " style="color: var(--gk-text-primary);">${details.name}</h3>
                     <div class="grid grid-cols-2 gap-4 text-sm">
                         <div><strong>Category:</strong> ${details.navigation || 'N/A'}</div>
                         <div><strong>Type:</strong> ${details.type || 'string'}</div>
-                        <div><strong>Current Value:</strong> <code class="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">${details.effective_value || ''}</code></div>
-                        <div><strong>Default Value:</strong> <code class="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">${details.default_value || details.effective_value || ''}</code></div>
+                        <div><strong>Current Value:</strong> <code class="" style="background: var(--gk-bg-tertiary); px-2 py-1 rounded">${details.effective_value || ''}</code></div>
+                        <div><strong>Default Value:</strong> <code class="" style="background: var(--gk-bg-tertiary); px-2 py-1 rounded">${details.default_value || details.effective_value || ''}</code></div>
                         <div class="col-span-2"><strong>Description:</strong> ${details.description || 'No description available'}</div>
-                        ${details.validation ? `<div class="col-span-2"><strong>Validation:</strong> <code class="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">${details.validation}</code></div>` : ''}
+                        ${details.validation ? `<div class="col-span-2"><strong>Validation:</strong> <code class="" style="background: var(--gk-bg-tertiary); px-2 py-1 rounded">${details.validation}</code></div>` : ''}
                         <div><strong>User Modifiable:</strong> ${details.user_modification_possible ? 'Yes' : 'No'}</div>
                         <div><strong>Read Only:</strong> ${details.is_readonly ? 'Yes' : 'No'}</div>
                     </div>
@@ -2178,7 +2178,7 @@ function bulkToggleStatus() {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json'
                     }
-                }).then(r => r.json()).then(data => {
+                }).then(response => response.json()).then(data => {
                     if (data.success) {
                         const newStatus = data.data.valid_id == 1 ? 2 : 1;
                         return fetch(`${API_BASE}/${id}`, {
@@ -2573,19 +2573,19 @@ function updateSavedFiltersList() {
     if (!listContainer) return;
 
     if (savedFilterSets.length === 0) {
-        listContainer.innerHTML = '<div class="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No saved filter sets</div>';
+        listContainer.innerHTML = '<div class="text-sm " style="color: var(--gk-text-muted); text-center py-2">No saved filter sets</div>';
     } else {
         listContainer.innerHTML = savedFilterSets.map(set => `
-            <div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-600 group">
+            <div class="flex items-center justify-between p-2 " style="background: var(--gk-bg-tertiary); rounded hover:bg-white/10 group">
                 <button onclick="applyFilterSet('${set.name.replace(/'/g, "\\'")}')"
-                        class="flex-1 text-left text-sm text-gray-700 dark:text-gray-300">
+                        class="flex-1 text-left text-sm " style="color: var(--gk-text-secondary);">
                     <div class="font-medium">${set.name}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                    <div class="text-xs " style="color: var(--gk-text-muted);">
                         ${new Date(set.created).toLocaleDateString()}
                     </div>
                 </button>
                 <button onclick="deleteFilterSet('${set.name.replace(/'/g, "\\'")}')"
-                        class="ml-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                        class="ml-2 " style="color: var(--gk-error); hover:opacity-80 opacity-0 group-hover:opacity-100 transition-opacity">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                     </svg>
@@ -2956,7 +2956,7 @@ function renderMailAccountStatus(status, errored, scope = 'modal') {
     if (errored) {
         if (els.badge) {
             els.badge.textContent = translateMailStatusLabel('unavailable');
-            els.badge.className = 'text-sm font-semibold text-amber-700 dark:text-amber-400';
+            els.badge.className = 'text-sm font-semibold '; els.badge.style.color = 'var(--gk-warning)';
         }
         if (els.errEl) {
             els.errEl.textContent = translateMailStatusLabel('error');
@@ -2967,7 +2967,7 @@ function renderMailAccountStatus(status, errored, scope = 'modal') {
     if (!status) {
         if (els.badge) {
             els.badge.textContent = translateMailStatusLabel('no_data');
-            els.badge.className = 'text-sm font-semibold text-gray-600 dark:text-gray-300';
+            els.badge.className = 'text-sm font-semibold " style="color: var(--gk-text-secondary);';
         }
         if (els.lastPoll) els.lastPoll.textContent = '--';
         if (els.messages) els.messages.textContent = '--';
@@ -2978,7 +2978,7 @@ function renderMailAccountStatus(status, errored, scope = 'modal') {
     const ok = status.last_status === 'ok';
     if (els.badge) {
         els.badge.textContent = translateMailStatusLabel(ok ? 'ok' : 'error');
-        els.badge.className = ok ? 'text-sm font-semibold text-green-700 dark:text-green-400' : 'text-sm font-semibold text-red-700 dark:text-red-400';
+        els.badge.className = ok ? 'text-sm font-semibold '; els.badge.style.color = 'var(--gk-success)' : 'text-sm font-semibold '; els.badge.style.color = 'var(--gk-error)';
     }
 
     if (els.lastPoll && status.last_poll_at) {

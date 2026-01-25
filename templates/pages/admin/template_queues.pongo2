@@ -3,68 +3,66 @@
 {% block title %}{{ t("admin.modules.template.queues.title") }}: {{ Template.Name }} - GOTRS Admin{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8" data-testid="template-queues-page">
+<div class="container mx-auto px-4 py-8 min-h-screen" data-testid="template-queues-page">
     <!-- Page header -->
-    <div class="mb-8">
+    <header class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white" data-testid="page-title">{{ t("admin.modules.template.queues.title") }}</h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    {{ t("admin.modules.template.queues.assign_to") }} "<span class="font-semibold">{{ Template.Name }}</span>"
-                </p>
-            </div>
-            <div class="mt-4 sm:mt-0">
-                <a href="/admin/templates"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                >
+            <div class="flex items-center">
+                <a href="/admin/templates" class="gk-btn-secondary mr-4">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                     {{ t("admin.modules.template.queues.back_to_templates") }}
                 </a>
+                <div>
+                    <h1 class="text-3xl font-bold gk-heading" data-testid="page-title">
+                        <span class="gk-text-gradient">{{ t("admin.modules.template.queues.title") }}</span>
+                    </h1>
+                    <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                        {{ t("admin.modules.template.queues.assign_to") }} "<span class="font-semibold" style="color: var(--gk-text-primary);">{{ Template.Name }}</span>"
+                    </p>
+                </div>
             </div>
         </div>
-    </div>
+    </header>
 
     <!-- Template Info Card -->
-    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg mb-6 p-4">
-        <div class="flex items-center justify-between">
-            <div>
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ Template.Name }}</h3>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ Template.Comments }}</p>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div class="flex flex-wrap gap-1">
-                    {% for type in Template.TemplateType|split:"," %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
-                        {% if type == 'Answer' %}bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-100{% endif %}
-                        {% if type == 'Create' %}bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100{% endif %}
-                        {% if type == 'Email' %}bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-100{% endif %}
-                        {% if type == 'Forward' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100{% endif %}
-                        {% if type == 'Note' %}bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100{% endif %}
-                        {% if type == 'PhoneCall' %}bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100{% endif %}
-                        {% if type == 'ProcessManagement' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-800 dark:text-indigo-100{% endif %}
-                        {% if type == 'Snippet' %}bg-pink-100 text-pink-800 dark:bg-pink-800 dark:text-pink-100{% endif %}
-                    ">
-                        {{ type }}
-                    </span>
-                    {% endfor %}
+    <div class="gk-card-glow rounded-lg overflow-hidden mb-6">
+        <div class="p-4">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                    <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ Template.Name }}</h3>
+                    <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ Template.Comments }}</p>
                 </div>
-                {% if Template.ValidID == 1 %}
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100">
-                    {{ t("admin.modules.template.fields.valid") }}
-                </span>
-                {% else %}
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100">
-                    {{ t("admin.modules.template.fields.invalid") }}
-                </span>
-                {% endif %}
+                <div class="flex items-center space-x-4">
+                    <div class="flex flex-wrap gap-1">
+                        {% for type in Template.TemplateType|split:"," %}
+                        <span class="gk-badge
+                            {% if type == 'Answer' %}gk-badge-accent{% endif %}
+                            {% if type == 'Create' %}gk-badge-success{% endif %}
+                            {% if type == 'Email' %}gk-badge-purple{% endif %}
+                            {% if type == 'Forward' %}gk-badge-warning{% endif %}
+                            {% if type == 'Note' %}gk-badge-muted{% endif %}
+                            {% if type == 'PhoneCall' %}gk-badge-orange{% endif %}
+                            {% if type == 'ProcessManagement' %}gk-badge-indigo{% endif %}
+                            {% if type == 'Snippet' %}gk-badge-pink{% endif %}
+                        ">
+                            {{ type }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% if Template.ValidID == 1 %}
+                    <span class="gk-badge gk-badge-success">{{ t("admin.modules.template.fields.valid") }}</span>
+                    {% else %}
+                    <span class="gk-badge gk-badge-error">{{ t("admin.modules.template.fields.invalid") }}</span>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Queue Assignment Form -->
-    <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
+    <div class="gk-card-glow rounded-lg overflow-hidden">
         <form
             id="queueAssignmentForm"
             method="POST"
@@ -75,46 +73,43 @@
         >
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ t("admin.modules.template.queues.select_queues") }}</h3>
+                    <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.modules.template.queues.select_queues") }}</h3>
                     <div class="flex space-x-2">
-                        <button type="button" onclick="selectAll()"
-                            class="text-sm text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300"
-                        >
+                        <button type="button" onclick="selectAll()" class="text-sm transition-colors" style="color: var(--gk-primary);">
                             {{ t("admin.modules.template.queues.select_all") }}
                         </button>
-                        <span class="text-gray-300 dark:text-gray-600">|</span>
-                        <button type="button" onclick="selectNone()"
-                            class="text-sm text-gotrs-600 hover:text-gotrs-800 dark:text-gotrs-400 dark:hover:text-gotrs-300"
-                        >
+                        <span style="color: var(--gk-border);">|</span>
+                        <button type="button" onclick="selectNone()" class="text-sm transition-colors" style="color: var(--gk-primary);">
                             {{ t("admin.modules.template.queues.select_none") }}
                         </button>
                     </div>
                 </div>
-                
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+
+                <p class="text-sm mb-4" style="color: var(--gk-text-muted);">
                     {{ t("admin.modules.template.queues.help") }}
                 </p>
 
                 {% if Queues %}
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-2 border border-gray-200 dark:border-gray-700 rounded-md">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto p-2 rounded-md" style="border: 1px solid var(--gk-border); background: var(--gk-bg-surface);">
                     {% for queue in Queues %}
-                    <label class="relative flex items-start py-2 px-3 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                    <label class="relative flex items-start py-2 px-3 rounded-md cursor-pointer transition-colors hover:bg-white/5">
                         <div class="min-w-0 flex-1 text-sm">
                             <input
                                 type="checkbox"
                                 name="queue_ids"
                                 value="{{ queue.ID }}"
                                 {% if queue.Selected %}checked{% endif %}
-                                class="queue-checkbox focus:ring-gotrs-500 h-4 w-4 text-gotrs-600 border-gray-300 rounded dark:border-gray-600 dark:bg-gray-700"
+                                class="queue-checkbox rounded h-4 w-4"
+                                style="border-color: var(--gk-border); background: var(--gk-bg-surface); accent-color: var(--gk-primary);"
                             >
-                            <span class="ml-2 font-medium text-gray-700 dark:text-gray-300">{{ queue.Name }}</span>
+                            <span class="ml-2 font-medium" style="color: var(--gk-text-secondary);">{{ queue.Name }}</span>
                         </div>
                     </label>
                     {% endfor %}
                 </div>
                 {% else %}
-                <div class="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="text-center py-8" style="color: var(--gk-text-muted);">
+                    <svg class="mx-auto h-12 w-12 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                     <p class="mt-2">{{ t("admin.modules.template.queues.no_queues") }}</p>
@@ -122,21 +117,17 @@
                 {% endif %}
 
                 <!-- Selection Counter -->
-                <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                <div class="mt-4 text-sm" style="color: var(--gk-text-muted);">
                     <span id="selectedCount">0</span> {{ t("admin.modules.template.queues.queues_selected") }}
                 </div>
             </div>
 
             <!-- Form Actions -->
-            <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <a href="/admin/templates"
-                    class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-600"
-                >
+            <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: var(--gk-border);">
+                <a href="/admin/templates" class="gk-btn-secondary">
                     {{ t("admin.modules.template.actions.cancel") }}
                 </a>
-                <button type="submit"
-                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
-                >
+                <button type="submit" class="gk-btn-neon">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                     </svg>
@@ -176,11 +167,22 @@
         if (event.detail.xhr.status >= 400) {
             try {
                 const response = JSON.parse(event.detail.xhr.responseText);
-                alert('Error: ' + (response.error || 'Unknown error'));
+                showToast('Error: ' + (response.error || 'Unknown error'), 'error');
             } catch (e) {
-                alert('Error: ' + event.detail.xhr.statusText);
+                showToast('Error: ' + event.detail.xhr.statusText, 'error');
             }
+        } else {
+            showToast('Queue assignments saved successfully', 'success');
         }
     });
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50';
+        toast.style.background = type === 'error' ? 'var(--gk-error)' : type === 'success' ? 'var(--gk-success)' : 'var(--gk-primary)';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
 </script>
 {% endblock %}

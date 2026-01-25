@@ -3,38 +3,40 @@
 {% block title %}{{ t("admin.users") }} - {{ t("app.name") }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="container mx-auto px-4 py-8 min-h-screen">
     <!-- Page header -->
-    <div class="mb-8">
+    <header class="mb-8">
         <div class="sm:flex sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ t("admin.users") }}</h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{{ t("admin.users_description") }}</p>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("admin.users") }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.users_description") }}</p>
             </div>
             <div class="mt-4 sm:mt-0">
                 <button
                     type="button"
                     onclick="showAddUserModal()"
                     title="{{ t("admin.add_user_tooltip") }}"
-                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gotrs-600 hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500"
+                    class="gk-btn-neon"
                 >
-                    <svg class="icon-sm -ml-1 mr-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="icon-sm -ml-1 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
                     {{ t("admin.add_user") }}
                 </button>
             </div>
         </div>
-    </div>
+    </header>
 
     <!-- Search and Filter Bar -->
-    <div class="mb-6 bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+    <div class="mb-6 gk-card p-4">
         <div class="flex flex-col sm:flex-row gap-4">
             <div class="flex-1">
                 <label for="userSearch" class="sr-only">Search users</label>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="icon-md icon-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="icon-md" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                     </div>
@@ -42,7 +44,7 @@
                         type="text"
                         id="userSearch"
                         name="search"
-                        class="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gotrs-500 focus:border-gotrs-500 sm:text-sm"
+                        class="gk-input-neon pl-10 pr-10"
                         placeholder="{{ t('admin.user_search_placeholder') }}"
                         onkeyup="handleSearchInput()"
                     >
@@ -54,19 +56,19 @@
                         style="display: none;"
                         title="{{ t("admin.clear_search") }}"
                     >
-                        <svg class="icon-md icon-secondary hover:text-gray-600 dark:hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="icon-md" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
             </div>
             <div class="flex gap-2">
-                <select id="statusFilter" onchange="filterUsers()" class="block rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                <select id="statusFilter" onchange="filterUsers()" class="gk-select-neon">
                     <option value="">{{ t('common.all_statuses') }}</option>
                     <option value="1">{{ t('admin.active') }}</option>
                     <option value="2">{{ t('admin.inactive') }}</option>
                 </select>
-                <select id="groupFilter" onchange="filterUsers()" class="block rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm">
+                <select id="groupFilter" onchange="filterUsers()" class="gk-select-neon">
                     <option value="">{{ t('admin.filters.all_groups') }}</option>
                     {% for group in Groups %}
                     <option value="{{ group.ID }}">{{ group.Name }}</option>
@@ -74,7 +76,7 @@
                 </select>
             </div>
             <div id="search-indicator" class="htmx-indicator flex items-center">
-                <svg class="animate-spin icon-md text-gotrs-600" fill="none" viewBox="0 0 24 24">
+                <svg class="animate-spin icon-md" style="color: var(--gk-primary);" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -83,55 +85,55 @@
     </div>
 
     <!-- Users table -->
-    <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700" id="usersTable">
-            <thead class="bg-gray-50 dark:bg-gray-900">
+    <div class="gk-card-glow overflow-hidden rounded-lg">
+        <table class="gk-table" id="usersTable">
+            <thead>
                 <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onclick="sortTable('name')">
+                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('name')">
                         <div class="flex items-center gap-1">
                             {{ t("admin.user_name") }}
                             <span class="sort-icon" data-column="name">
-                                <svg class="icon-xs icon-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="icon-xs" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                                 </svg>
                             </span>
                         </div>
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onclick="sortTable('login')">
+                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('login')">
                         <div class="flex items-center gap-1">
                             {{ t("admin.login") }}
                             <span class="sort-icon" data-column="login">
-                                <svg class="icon-xs icon-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="icon-xs" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                                 </svg>
                             </span>
                         </div>
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onclick="sortTable('groups')">
+                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('groups')">
                         <div class="flex items-center gap-1">
                             {{ t("admin.groups") }}
                             <span class="sort-icon" data-column="groups">
-                                <svg class="icon-xs icon-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="icon-xs" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                                 </svg>
                             </span>
                         </div>
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onclick="sortTable('status')">
+                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('status')">
                         <div class="flex items-center gap-1">
                             {{ t("admin.status") }}
                             <span class="sort-icon" data-column="status">
-                                <svg class="icon-xs icon-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="icon-xs" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                                 </svg>
                             </span>
                         </div>
                     </th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800" onclick="sortTable('lastLogin')">
+                    <th scope="col" class="cursor-pointer hover:text-[var(--gk-primary)]" onclick="sortTable('lastLogin')">
                         <div class="flex items-center gap-1">
                             {{ t("admin.last_login") }}
                             <span class="sort-icon" data-column="lastLogin">
-                                <svg class="icon-xs icon-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="icon-xs" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                                 </svg>
                             </span>
@@ -142,67 +144,68 @@
                     </th>
                 </tr>
             </thead>
-            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700" id="users-tbody">
+            <tbody id="users-tbody">
                 {% for user in Users %}
-                <tr id="user-row-{{ user.ID }}" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td class="px-6 py-4 whitespace-nowrap">
+                <tr id="user-row-{{ user.ID }}">
+                    <td class="px-4 py-3 whitespace-nowrap">
                         <div class="flex items-center">
                             <div class="flex-shrink-0 h-10 w-10">
-                                <div class="h-10 w-10 rounded-full bg-gotrs-500 flex items-center justify-center">
-                                    <span class="text-white font-medium">
+                                <div class="gk-avatar h-10 w-10">
+                                    <span class="gk-avatar-text">
                                         {{ user.FirstName|first|upper }}{{ user.LastName|first|upper }}
                                     </span>
                                 </div>
                             </div>
                             <div class="ml-4">
-                                <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                <div class="text-sm font-medium" style="color: var(--gk-text-primary);">
                                     {% if user.Title %}{{ user.Title }} {% endif %}{{ user.FirstName }} {{ user.LastName }}
                                 </div>
                             </div>
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900 dark:text-white">{{ user.Login }}</div>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="text-sm" style="color: var(--gk-text-primary);">{{ user.Login }}</div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-4 py-3 whitespace-nowrap">
                         <div class="flex flex-wrap gap-1">
                             {% for group in user.Groups %}
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            <span class="gk-badge gk-badge-primary">
                                 {{ group }}
                             </span>
                             {% endfor %}
                         </div>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
+                    <td class="px-4 py-3 whitespace-nowrap">
                         {% if user.ValidID == 1 %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                            <svg class="-ml-0.5 mr-1.5 w-2 h-2 text-green-400" fill="currentColor" viewBox="0 0 8 8">
+                        <span class="gk-badge gk-badge-success">
+                            <svg class="-ml-0.5 mr-1.5 w-2 h-2" style="color: var(--gk-success);" fill="currentColor" viewBox="0 0 8 8">
                                 <circle cx="4" cy="4" r="3" />
                             </svg>
                             {{ t("admin.active") }}
                         </span>
                         {% else %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-                            <svg class="-ml-0.5 mr-1.5 w-2 h-2 text-gray-400" fill="currentColor" viewBox="0 0 8 8">
+                        <span class="gk-badge gk-badge-muted">
+                            <svg class="-ml-0.5 mr-1.5 w-2 h-2" style="color: var(--gk-text-muted);" fill="currentColor" viewBox="0 0 8 8">
                                 <circle cx="4" cy="4" r="3" />
                             </svg>
                             {{ t("admin.inactive") }}
                         </span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm" style="color: var(--gk-text-muted);">
                         {% if user.LastLogin %}
                             {{ user.LastLogin|date:"Jan 2, 2006 15:04" }}
                         {% else %}
                             {{ t("admin.never") }}
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                         <div class="flex justify-end gap-2">
                             <button
                                 onclick="editUser({{ user.ID }})"
                                 title="{{ t("admin.edit_user_tooltip") }}"
-                                class="text-gotrs-600 hover:text-gotrs-900 dark:text-gotrs-400 dark:hover:text-gotrs-300"
+                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-primary-subtle)]"
+                                style="color: var(--gk-primary);"
                             >
                                 <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -211,7 +214,8 @@
                             <button
                                 onclick="toggleUserStatus({{ user.ID }}, {{ user.ValidID }})"
                                 title="{% if user.ValidID == 1 %}{{ t("admin.deactivate_user") }}{% else %}{{ t("admin.activate_user") }}{% endif %}"
-                                class="text-yellow-600 hover:text-yellow-900 dark:text-yellow-400 dark:hover:text-yellow-300"
+                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-warning-subtle)]"
+                                style="color: var(--gk-warning);"
                             >
                                 {% if user.ValidID == 1 %}
                                 <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,7 +230,8 @@
                             <button
                                 onclick="resetPassword({{ user.ID }})"
                                 title="{{ t("admin.reset_password") }}"
-                                class="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-info-subtle)]"
+                                style="color: var(--gk-info);"
                             >
                                 <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
@@ -244,95 +249,100 @@
 <!-- Add/Edit User Modal -->
 <div id="userModal" class="hidden fixed z-10 inset-0 overflow-y-auto">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+        <div class="gk-modal-backdrop fixed inset-0 transition-opacity"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <form id="userForm" onsubmit="submitUserForm(event); return false;" onkeypress="if(event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') { event.preventDefault(); submitUserForm(event); return false; }">
-                <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100" id="modalTitle">
+                <div class="gk-modal-header">
+                    <h3 class="gk-modal-title" id="modalTitle">
                         {{ t("admin.add_user") }}
                     </h3>
-                    <div class="mt-4 space-y-4">
-                        <input type="hidden" id="userId" name="id" value="">
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ t("admin.title") }}
-                                </label>
-                                <select id="title" name="title" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm px-3 py-2">
-                                    <option value="">--</option>
-                                    <option value="Mr.">{{ t("admin.title_mr") }}</option>
-                                    <option value="Ms.">{{ t("admin.title_ms") }}</option>
-                                    <option value="Mrs.">{{ t("admin.title_mrs") }}</option>
-                                    <option value="Dr.">{{ t("admin.title_dr") }}</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="login" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ t("admin.login") }} *
-                                </label>
-                                <input type="text" id="login" name="login" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm px-3 py-2">
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="firstName" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ t("admin.first_name") }} *
-                                </label>
-                                <input type="text" id="firstName" name="first_name" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm px-3 py-2">
-                            </div>
-                            <div>
-                                <label for="lastName" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ t("admin.last_name") }} *
-                                </label>
-                                <input type="text" id="lastName" name="last_name" required class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm px-3 py-2">
-                            </div>
-                        </div>
-                        
+                    <button type="button" onclick="closeUserModal()" class="gk-modal-close">
+                        <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="gk-modal-body space-y-4 max-h-[70vh] overflow-y-auto">
+                    <input type="hidden" id="userId" name="id" value="">
+
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                {{ t("admin.password") }} <span id="passwordHint" class="text-xs text-gray-500">({{ t("admin.leave_blank_to_keep") }})</span>
+                            <label for="title" class="form-label">
+                                {{ t("admin.title") }}
                             </label>
-                            <input type="password" id="password" name="password" autocomplete="new-password" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm px-3 py-2">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                {{ t("admin.groups") }}
-                            </label>
-                            <div class="mt-1 flex items-center gap-2">
-                                <button type="button" onclick="selectAllGroups(true)" class="text-xs px-2 py-1 border rounded-md text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">{{ t("labels.select_all") }}</button>
-                                <button type="button" onclick="selectAllGroups(false)" class="text-xs px-2 py-1 border rounded-md text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">{{ t("buttons.clear") }}</button>
-                            </div>
-                            <div id="groupsList" class="mt-2 max-h-64 overflow-y-auto rounded-md border border-gray-300 dark:border-gray-600 divide-y divide-gray-100 dark:divide-gray-700">
-                                {% for group in Groups %}
-                                <label class="flex items-center gap-2 px-3 py-2 cursor-pointer select-none">
-                                    <input type="checkbox" name="groups" value="{{ group.Name }}" data-group-id="{{ group.ID }}" class="rounded border-gray-300 dark:border-gray-600 text-gotrs-600 focus:ring-gotrs-500">
-                                    <span class="text-sm text-gray-800 dark:text-gray-100">{{ group.Name }}</span>
-                                </label>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label for="validId" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                {{ t("admin.status") }}
-                            </label>
-                            <select id="validId" name="valid_id" class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm px-3 py-2">
-                                <option value="1">{{ t("admin.active") }}</option>
-                                <option value="2">{{ t("admin.inactive") }}</option>
+                            <select id="title" name="title" class="gk-select-neon w-full">
+                                <option value="">--</option>
+                                <option value="Mr.">{{ t("admin.title_mr") }}</option>
+                                <option value="Ms.">{{ t("admin.title_ms") }}</option>
+                                <option value="Mrs.">{{ t("admin.title_mrs") }}</option>
+                                <option value="Dr.">{{ t("admin.title_dr") }}</option>
                             </select>
                         </div>
+                        <div>
+                            <label for="login" class="form-label">
+                                {{ t("admin.login") }} *
+                            </label>
+                            <input type="text" id="login" name="login" required class="gk-input-neon w-full">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="firstName" class="form-label">
+                                {{ t("admin.first_name") }} *
+                            </label>
+                            <input type="text" id="firstName" name="first_name" required class="gk-input-neon w-full">
+                        </div>
+                        <div>
+                            <label for="lastName" class="form-label">
+                                {{ t("admin.last_name") }} *
+                            </label>
+                            <input type="text" id="lastName" name="last_name" required class="gk-input-neon w-full">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="password" class="form-label">
+                            {{ t("admin.password") }} <span id="passwordHint" class="text-xs" style="color: var(--gk-text-muted);">({{ t("admin.leave_blank_to_keep") }})</span>
+                        </label>
+                        <input type="password" id="password" name="password" autocomplete="new-password" class="gk-input-neon w-full">
+                    </div>
+
+                    <div>
+                        <label class="form-label">
+                            {{ t("admin.groups") }}
+                        </label>
+                        <div class="mt-1 flex items-center gap-2">
+                            <button type="button" onclick="selectAllGroups(true)" class="gk-btn-secondary text-xs px-2 py-1">{{ t("labels.select_all") }}</button>
+                            <button type="button" onclick="selectAllGroups(false)" class="gk-btn-secondary text-xs px-2 py-1">{{ t("buttons.clear") }}</button>
+                        </div>
+                        <div id="groupsList" class="mt-2 max-h-64 overflow-y-auto rounded-md divide-y" style="background: var(--gk-bg-elevated); border: 1px solid var(--gk-border-default); border-color: var(--gk-border-default);">
+                            {% for group in Groups %}
+                            <label class="flex items-center gap-2 px-3 py-2 cursor-pointer select-none hover:bg-[var(--gk-primary-subtle)] transition-colors">
+                                <input type="checkbox" name="groups" value="{{ group.Name }}" data-group-id="{{ group.ID }}" class="rounded" style="accent-color: var(--gk-primary);">
+                                <span class="text-sm" style="color: var(--gk-text-primary);">{{ group.Name }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="validId" class="form-label">
+                            {{ t("admin.status") }}
+                        </label>
+                        <select id="validId" name="valid_id" class="gk-select-neon w-full">
+                            <option value="1">{{ t("admin.active") }}</option>
+                            <option value="2">{{ t("admin.inactive") }}</option>
+                        </select>
                     </div>
                 </div>
-                <div class="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm">
-                        {{ t("admin.save") }}
-                    </button>
-                    <button type="button" onclick="closeUserModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                <div class="gk-modal-footer">
+                    <button type="button" onclick="closeUserModal()" class="gk-btn-secondary">
                         {{ t("admin.cancel") }}
+                    </button>
+                    <button type="submit" class="gk-btn-neon">
+                        {{ t("admin.save") }}
                     </button>
                 </div>
             </form>
@@ -378,14 +388,14 @@ const i18nMessages = {
 function handleSearchInput() {
     const searchInput = document.getElementById('userSearch');
     const clearBtn = document.getElementById('clearSearchBtn');
-    
+
     // Show/hide clear button based on input
     if (searchInput.value.length > 0) {
         clearBtn.style.display = 'flex';
     } else {
         clearBtn.style.display = 'none';
     }
-    
+
     // Run filter
     filterUsers();
 }
@@ -400,7 +410,7 @@ function clearSearch() {
 function sortTable(column) {
     const tbody = document.getElementById('users-tbody');
     const rows = Array.from(tbody.querySelectorAll('tr'));
-    
+
     // Toggle sort direction
     if (currentSort.column === column) {
         currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
@@ -408,13 +418,12 @@ function sortTable(column) {
         currentSort.column = column;
         currentSort.direction = 'asc';
     }
-    
+
     // Update sort icons
     document.querySelectorAll('.sort-icon').forEach(icon => {
         const svg = icon.querySelector('svg');
         if (icon.dataset.column === column) {
-            svg.classList.remove('text-gray-400');
-            svg.classList.add('text-gotrs-600', 'dark:text-gotrs-400');
+            svg.style.color = 'var(--gk-primary)';
             // Update arrow direction
             if (currentSort.direction === 'desc') {
                 svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />';
@@ -422,16 +431,15 @@ function sortTable(column) {
                 svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />';
             }
         } else {
-            svg.classList.add('text-gray-400');
-            svg.classList.remove('text-gotrs-600', 'dark:text-gotrs-400');
+            svg.style.color = 'var(--gk-text-muted)';
             svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />';
         }
     });
-    
+
     // Sort rows
     rows.sort((a, b) => {
         let aValue, bValue;
-        
+
         switch(column) {
             case 'name':
                 aValue = a.querySelector('td:nth-child(1) .text-sm.font-medium').textContent.trim().toLowerCase();
@@ -459,12 +467,12 @@ function sortTable(column) {
             default:
                 return 0;
         }
-        
+
         if (aValue < bValue) return currentSort.direction === 'asc' ? -1 : 1;
         if (aValue > bValue) return currentSort.direction === 'asc' ? 1 : -1;
         return 0;
     });
-    
+
     // Re-append sorted rows
     rows.forEach(row => tbody.appendChild(row));
 }
@@ -476,9 +484,9 @@ function filterUsers() {
     const groupFilter = document.getElementById('groupFilter').value.toLowerCase();
     const tbody = document.getElementById('users-tbody');
     const rows = tbody.querySelectorAll('tr');
-    
+
     let visibleCount = 0;
-    
+
     rows.forEach(row => {
         const name = row.querySelector('td:nth-child(1) .text-sm.font-medium')?.textContent.toLowerCase() || '';
         const login = row.querySelector('td:nth-child(2) .text-sm')?.textContent.toLowerCase() || '';
@@ -486,16 +494,16 @@ function filterUsers() {
         const groups = groupsElement?.textContent.toLowerCase() || '';
         const statusElement = row.querySelector('td:nth-child(4) span');
         const isActive = statusElement?.textContent.includes('Active') || false;
-        
-        let matchesSearch = !searchTerm || 
-            name.includes(searchTerm) || 
+
+        let matchesSearch = !searchTerm ||
+            name.includes(searchTerm) ||
             login.includes(searchTerm) ||
             groups.includes(searchTerm);
-            
-        let matchesStatus = !statusFilter || 
-            (statusFilter === '1' && isActive) || 
+
+        let matchesStatus = !statusFilter ||
+            (statusFilter === '1' && isActive) ||
             (statusFilter === '2' && !isActive);
-            
+
         // For group filter, check each group badge
         let matchesGroup = true;
         if (groupFilter) {
@@ -509,7 +517,7 @@ function filterUsers() {
                 });
             }
         }
-        
+
         if (matchesSearch && matchesStatus && matchesGroup) {
             row.style.display = '';
             visibleCount++;
@@ -517,7 +525,7 @@ function filterUsers() {
             row.style.display = 'none';
         }
     });
-    
+
     // Show "no results" message if needed
     const noResultsRow = document.getElementById('no-results-row');
     if (visibleCount === 0) {
@@ -525,11 +533,11 @@ function filterUsers() {
             const newNoResultsRow = document.createElement('tr');
             newNoResultsRow.id = 'no-results-row';
             newNoResultsRow.innerHTML = `
-                <td colspan="6" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <td colspan="6" class="px-6 py-8 text-center" style="color: var(--gk-text-muted);">
+                    <svg class="mx-auto h-12 w-12" style="color: var(--gk-text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p class="mt-2 text-sm">{{ t("admin.users_no_results") }}</p>
+                    <p class="mt-2 text-sm">${i18nMessages.usersNoResults}</p>
                 </td>
             `;
             tbody.appendChild(newNoResultsRow);
@@ -544,14 +552,14 @@ function filterUsers() {
 // Form submission handler
 function submitUserForm(event) {
     event.preventDefault();
-    
+
     const form = event.target;
     const formData = new FormData(form);
     const userId = document.getElementById('userId').value;
-    
+
     // Get selected groups - from checkbox list; send group names
     const selectedGroups = Array.from(document.querySelectorAll('#groupsList input[name="groups"]:checked')).map(cb => cb.value);
-    
+
     // Clear existing groups in formData and add selected ones
     formData.delete('groups');
     selectedGroups.forEach(groupName => {
@@ -559,10 +567,10 @@ function submitUserForm(event) {
     });
     // Signal that the groups field was intentionally submitted
     formData.set('groups_submitted', '1');
-    
+
     const url = userId ? `/admin/users/${userId}` : '/admin/users';
     const method = userId ? 'PUT' : 'POST';
-    
+
     // Convert FormData to URL encoded for PUT requests
     let body;
     if (method === 'PUT') {
@@ -574,7 +582,7 @@ function submitUserForm(event) {
     } else {
         body = new URLSearchParams(formData).toString();
     }
-    
+
     fetch(url, {
         method: method,
         headers: {
@@ -590,12 +598,12 @@ function submitUserForm(event) {
             const searchValue = document.getElementById('userSearch').value;
             const statusValue = document.getElementById('statusFilter').value;
             const groupValue = document.getElementById('groupFilter').value;
-            
+
             // Store in session storage
             sessionStorage.setItem('userSearchValue', searchValue);
             sessionStorage.setItem('userStatusFilter', statusValue);
             sessionStorage.setItem('userGroupFilter', groupValue);
-            
+
             location.reload();
         } else {
             // Check if this is a duplicate username error
@@ -626,10 +634,10 @@ function showAddUserModal() {
     document.getElementById('userId').value = '';
     document.getElementById('passwordHint').style.display = 'none';
     document.getElementById('password').setAttribute('required', 'required');
-    
+
     // Clear all group selections
     document.querySelectorAll('#groupsList input[name="groups"]').forEach(cb => cb.checked = false);
-    
+
     document.getElementById('userModal').classList.remove('hidden');
 }
 
@@ -638,12 +646,12 @@ function editUser(userId) {
     fetch(`/admin/users/${userId}`, {
         credentials: 'include'
     })
-        .then(response => response.json())
-        .then(data => {
+    .then(response => response.json())
+    .then(data => {
             if (data.success) {
                 const user = data.data;
                 document.getElementById('modalTitle').textContent = '{{ t("admin.edit_user") }}';
-                
+
                 // Populate form fields
                 document.getElementById('userId').value = user.id;
                 document.getElementById('title').value = user.title || '';
@@ -654,12 +662,12 @@ function editUser(userId) {
                 document.getElementById('passwordHint').style.display = 'inline';
                 document.getElementById('password').removeAttribute('required');
                 document.getElementById('password').value = ''; // Clear password field
-                
+
                 // Set selected groups - match by name in checkbox list
                 document.querySelectorAll('#groupsList input[name="groups"]').forEach(cb => {
                     cb.checked = (user.groups || []).includes(cb.value);
                 });
-                
+
                 document.getElementById('userModal').classList.remove('hidden');
             }
         })
@@ -685,22 +693,22 @@ function showError(message) {
         showGuruMeditation('Database Constraint Violation', message);
         return;
     }
-    
+
     // Create error alert
     const errorDiv = document.createElement('div');
-    errorDiv.className = 'mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md';
+    errorDiv.className = 'mt-3 p-3 rounded-md gk-alert gk-alert-error';
     errorDiv.innerHTML = `
-        <p class="text-sm text-red-800 dark:text-red-200">${message}</p>
+        <p class="text-sm">${message}</p>
     `;
-    
+
     // Insert after the form fields, before the buttons
-    const formContent = document.querySelector('#userForm .bg-white.dark\\:bg-gray-800');
-    const existingError = formContent.querySelector('.bg-red-50');
+    const formContent = document.querySelector('#userForm .gk-modal-body');
+    const existingError = formContent.querySelector('.gk-alert-error');
     if (existingError) {
         existingError.remove();
     }
     formContent.appendChild(errorDiv);
-    
+
     // Auto-remove after 5 seconds
     setTimeout(() => {
         if (errorDiv.parentNode) {
@@ -712,14 +720,15 @@ function showError(message) {
 function showGuruMeditation(title, message) {
     // Create Guru Meditation screen (Amiga-style error)
     const guru = document.createElement('div');
-    guru.className = 'fixed inset-0 z-50 bg-black flex items-center justify-center';
+    guru.className = 'fixed inset-0 z-50 flex items-center justify-center';
+    guru.style.background = 'var(--gk-bg-base)';
     guru.innerHTML = `
-        <div class="text-red-500 font-mono text-center p-8 border-4 border-red-500 bg-black max-w-2xl">
-            <div class="text-4xl mb-4 animate-pulse">Software Failure. Press left mouse button to continue.</div>
-            <div class="text-2xl mb-4">Guru Meditation #00000025.65045338</div>
+        <div class="text-center p-8 max-w-2xl" style="color: var(--gk-error); border: 4px solid var(--gk-error); background: var(--gk-bg-base);">
+            <div class="text-4xl mb-4 animate-pulse font-mono">Software Failure. Press left mouse button to continue.</div>
+            <div class="text-2xl mb-4 font-mono">Guru Meditation #00000025.65045338</div>
             <div class="text-xl mb-4">${title}</div>
-            <div class="text-sm mb-6 text-red-400">${message}</div>
-            <button onclick="this.closest('.fixed').remove()" class="px-6 py-2 bg-red-500 text-white dark:text-gray-900 font-bold hover:bg-red-600">
+            <div class="text-sm mb-6" style="color: var(--gk-error);">${message}</div>
+            <button onclick="this.closest('.fixed').remove()" class="gk-btn-danger px-6 py-2 font-bold">
                 LEFT MOUSE BUTTON
             </button>
         </div>
@@ -731,34 +740,32 @@ function showGuruMeditation(title, message) {
 <!-- Confirmation Modal -->
 <div id="confirmModal" class="hidden fixed z-20 inset-0 overflow-y-auto">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+        <div class="gk-modal-backdrop fixed inset-0 transition-opacity"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="p-6">
                 <div class="sm:flex sm:items-start">
                     <div id="confirmIcon" class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10">
                         <!-- Icon will be set dynamically -->
                     </div>
                     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100" id="confirmTitle">
+                        <h3 class="text-lg leading-6 font-medium" style="color: var(--gk-text-primary);" id="confirmTitle">
                             {{ t("buttons.confirm_action") }}
                         </h3>
                         <div class="mt-2">
-                            <p class="text-sm text-gray-500 dark:text-gray-400" id="confirmMessage">
+                            <p class="text-sm" style="color: var(--gk-text-muted);" id="confirmMessage">
                                 {{ t("messages.confirm_action") }}
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" id="confirmButton" onclick="executeConfirmAction()" 
-                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm">
-                    {{ t("buttons.confirm") }}
-                </button>
-                <button type="button" onclick="closeConfirmModal()" 
-                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+            <div class="gk-modal-footer">
+                <button type="button" onclick="closeConfirmModal()" class="gk-btn-secondary">
                     {{ t("buttons.cancel") }}
+                </button>
+                <button type="button" id="confirmButton" onclick="executeConfirmAction()" class="gk-btn-neon">
+                    {{ t("buttons.confirm") }}
                 </button>
             </div>
         </div>
@@ -768,97 +775,98 @@ function showGuruMeditation(title, message) {
 <!-- Password Reset Modal -->
 <div id="passwordResetModal" class="hidden fixed z-20 inset-0 overflow-y-auto">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+        <div class="gk-modal-backdrop fixed inset-0 transition-opacity"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-        <div class="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 sm:mx-0 sm:h-10 sm:w-10">
-                        <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="gk-modal-header">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full" style="background: var(--gk-info-subtle);">
+                        <svg class="h-6 w-6" style="color: var(--gk-info);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                         </svg>
                     </div>
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
-                            {{ t("admin.reset_password_title") }}
-                        </h3>
-                        <div class="mt-2">
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                {{ t("admin.reset_password_message") }}
-                            </p>
-                            <div class="mt-4 space-y-4">
-                                <div>
-                                    <label for="newPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                        {{ t("admin.new_password") }}
-                                    </label>
-                                    <div class="mt-1 relative">
-                                        <input type="password" id="newPassword" name="new_password" autocomplete="new-password"
-                                            class="block w-full pr-20 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm px-3 py-2"
-                                            oninput="validatePassword()"
-                                            onkeypress="if(event.key === 'Enter' && passwordsValid()) { confirmPasswordReset(); return false; }">
-                                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 space-x-1">
-                                            <button type="button" onclick="togglePasswordVisibility('newPassword')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                                                <svg id="newPassword-show" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                                </svg>
-                                                <svg id="newPassword-hide" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
-                                                </svg>
-                                            </button>
-                                            <button type="button" onclick="clearPasswordField('newPassword')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                        {{ t("admin.confirm_password") }}
-                                    </label>
-                                    <input type="password" id="confirmPassword" name="confirm_password" autocomplete="new-password"
-                                        class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 shadow-sm focus:border-gotrs-500 focus:ring-gotrs-500 sm:text-sm px-3 py-2"
-                                        oninput="validatePassword()"
-                                        onkeypress="if(event.key === 'Enter' && passwordsValid()) { confirmPasswordReset(); return false; }">
-                                </div>
-                                
-                                <!-- Password validation feedback -->
-                                <div id="passwordFeedback" class="space-y-2">
-                                    <div id="lengthCheck" class="flex items-center text-sm">
-                                        <svg id="lengthIcon" class="h-4 w-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                        <span class="text-gray-600 dark:text-gray-400">{{ t("admin.password_requirement_length_initial") }}</span>
-                                    </div>
-                                    <div id="matchCheck" class="flex items-center text-sm">
-                                        <svg id="matchIcon" class="h-4 w-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                        <span class="text-gray-600 dark:text-gray-400">{{ t("admin.password_requirement_match") }}</span>
-                                    </div>
-                                    <div id="strengthCheck" class="flex items-center text-sm">
-                                        <svg id="strengthIcon" class="h-4 w-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                        <span class="text-gray-600 dark:text-gray-400">{{ t("admin.password_requirement_contains_default") }}</span>
-                                    </div>
-                                </div>
+                    <h3 class="ml-3 gk-modal-title">
+                        {{ t("admin.reset_password_title") }}
+                    </h3>
+                </div>
+                <button type="button" onclick="closePasswordResetModal()" class="gk-modal-close">
+                    <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="gk-modal-body">
+                <p class="text-sm mb-4" style="color: var(--gk-text-muted);">
+                    {{ t("admin.reset_password_message") }}
+                </p>
+                <div class="space-y-4">
+                    <div>
+                        <label for="newPassword" class="form-label">
+                            {{ t("admin.new_password") }}
+                        </label>
+                        <div class="mt-1 relative">
+                            <input type="password" id="newPassword" name="new_password" autocomplete="new-password"
+                                class="gk-input-neon w-full pr-20"
+                                oninput="validatePassword()"
+                                onkeypress="if(event.key === 'Enter' && passwordsValid()) { confirmPasswordReset(); return false; }">
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 space-x-1">
+                                <button type="button" onclick="togglePasswordVisibility('newPassword')" style="color: var(--gk-text-muted);" class="hover:text-[var(--gk-primary)]">
+                                    <svg id="newPassword-show" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
+                                    <svg id="newPassword-hide" class="h-5 w-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
+                                    </svg>
+                                </button>
+                                <button type="button" onclick="clearPasswordField('newPassword')" style="color: var(--gk-text-muted);" class="hover:text-[var(--gk-primary)]">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
                             </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="confirmPassword" class="form-label">
+                            {{ t("admin.confirm_password") }}
+                        </label>
+                        <input type="password" id="confirmPassword" name="confirm_password" autocomplete="new-password"
+                            class="gk-input-neon w-full"
+                            oninput="validatePassword()"
+                            onkeypress="if(event.key === 'Enter' && passwordsValid()) { confirmPasswordReset(); return false; }">
+                    </div>
+
+                    <!-- Password validation feedback -->
+                    <div id="passwordFeedback" class="space-y-2">
+                        <div id="lengthCheck" class="flex items-center text-sm">
+                            <svg id="lengthIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <span style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_length_initial") }}</span>
+                        </div>
+                        <div id="matchCheck" class="flex items-center text-sm">
+                            <svg id="matchIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <span style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_match") }}</span>
+                        </div>
+                        <div id="strengthCheck" class="flex items-center text-sm">
+                            <svg id="strengthIcon" class="h-4 w-4 mr-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <span style="color: var(--gk-text-muted);">{{ t("admin.password_requirement_contains_default") }}</span>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-50 dark:bg-gray-900 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" onclick="confirmPasswordReset()" 
-                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
-                    {{ t("admin.reset_password") }}
-                </button>
-                <button type="button" onclick="closePasswordResetModal()" 
-                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+            <div class="gk-modal-footer">
+                <button type="button" onclick="closePasswordResetModal()" class="gk-btn-secondary">
                     {{ t("buttons.cancel") }}
+                </button>
+                <button type="button" onclick="confirmPasswordReset()" class="gk-btn-neon">
+                    {{ t("admin.reset_password") }}
                 </button>
             </div>
         </div>
@@ -880,8 +888,8 @@ let passwordPolicy = {
 fetch('/admin/password-policy', {
     credentials: 'include'
 })
-    .then(response => response.json())
-    .then(data => {
+.then(response => response.json())
+.then(data => {
         if (data.success && data.policy) {
             passwordPolicy = { ...passwordPolicy, ...data.policy };
             // Update the UI with the actual policy
@@ -895,7 +903,7 @@ function showConfirmModal(title, message, action, type = 'warning') {
     const icon = document.getElementById('confirmIcon');
     const button = document.getElementById('confirmButton');
     const cancelBtn = document.querySelector('#confirmModal button[onclick="closeConfirmModal()"]');
-    
+
     document.getElementById('confirmTitle').textContent = title || i18nMessages.confirmTitle;
     document.getElementById('confirmMessage').textContent = message || i18nMessages.confirmMessage;
     currentConfirmAction = action;
@@ -903,22 +911,23 @@ function showConfirmModal(title, message, action, type = 'warning') {
     if (cancelBtn) {
         cancelBtn.textContent = i18nMessages.cancelButton;
     }
-    
+
     // Set icon and button style based on type
     if (type === 'danger') {
-        icon.className = 'mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 sm:mx-0 sm:h-10 sm:w-10';
-        icon.innerHTML = '<svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>';
-        button.className = 'w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm';
+        icon.style.background = 'var(--gk-error-subtle)';
+        icon.innerHTML = '<svg class="h-6 w-6" style="color: var(--gk-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>';
+        button.className = 'gk-btn-danger';
     } else if (type === 'warning') {
-        icon.className = 'mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900 sm:mx-0 sm:h-10 sm:w-10';
-        icon.innerHTML = '<svg class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
-        button.className = 'w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-yellow-600 text-base font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:ml-3 sm:w-auto sm:text-sm';
+        icon.style.background = 'var(--gk-warning-subtle)';
+        icon.innerHTML = '<svg class="h-6 w-6" style="color: var(--gk-warning);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
+        button.className = 'gk-btn-neon';
+        button.style.background = 'var(--gk-warning)';
     } else {
-        icon.className = 'mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-gotrs-100 dark:bg-gotrs-900 sm:mx-0 sm:h-10 sm:w-10';
-        icon.innerHTML = '<svg class="h-6 w-6 text-gotrs-600 dark:text-gotrs-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
-        button.className = 'w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-gotrs-600 text-base font-medium text-white hover:bg-gotrs-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gotrs-500 sm:ml-3 sm:w-auto sm:text-sm';
+        icon.style.background = 'var(--gk-primary-subtle)';
+        icon.innerHTML = '<svg class="h-6 w-6" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
+        button.className = 'gk-btn-neon';
     }
-    
+
     modal.classList.remove('hidden');
 }
 
@@ -938,12 +947,12 @@ function executeConfirmAction() {
 function toggleUserStatus(userId, currentStatus) {
     const newStatus = currentStatus === 1 ? 2 : 1;
     const title = newStatus === 1 ? i18nMessages.activateUserTitle : i18nMessages.deactivateUserTitle;
-    const message = newStatus === 1 ? 
-        i18nMessages.activateUserMessage : 
+    const message = newStatus === 1 ?
+        i18nMessages.activateUserMessage :
         i18nMessages.deactivateUserMessage;
-    
+
     showConfirmModal(
-        title, 
+        title,
         message,
         () => {
             fetch(`/admin/users/${userId}/status`, {
@@ -987,10 +996,8 @@ function resetPassword(userId) {
         const parent = icon.parentElement;
         const text = parent.querySelector('span');
         icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>';
-        icon.classList.remove('text-green-500', 'text-red-500');
-        icon.classList.add('text-gray-400');
-        text.classList.remove('text-green-600', 'dark:text-green-400', 'text-red-600', 'dark:text-red-400');
-        text.classList.add('text-gray-600', 'dark:text-gray-400');
+        icon.style.color = 'var(--gk-text-muted)';
+        text.style.color = 'var(--gk-text-muted)';
     });
     document.getElementById('passwordResetModal').classList.remove('hidden');
 }
@@ -1004,7 +1011,7 @@ function togglePasswordVisibility(fieldId) {
     const field = document.getElementById(fieldId);
     const showIcon = document.getElementById(fieldId + '-show');
     const hideIcon = document.getElementById(fieldId + '-hide');
-    
+
     if (field.type === 'password') {
         field.type = 'text';
         showIcon.classList.add('hidden');
@@ -1028,7 +1035,7 @@ function updatePasswordPolicyDisplay() {
     if (lengthText) {
         lengthText.textContent = i18nMessages.lengthTemplate.replace('{min}', passwordPolicy.minLength);
     }
-    
+
     // Update the strength requirement text
     const strengthText = document.querySelector('#strengthCheck span');
     if (strengthText) {
@@ -1049,18 +1056,18 @@ function updatePasswordPolicyDisplay() {
 function validatePassword() {
     const password = document.getElementById('newPassword').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
-    
+
     // Check length
     const lengthValid = password.length >= passwordPolicy.minLength;
     updateValidationIcon('lengthIcon', lengthValid);
-    
+
     // Check if passwords match
     const matchValid = password !== '' && password === confirmPassword;
     updateValidationIcon('matchIcon', matchValid);
-    
+
     // Check strength requirements based on policy
     let strengthValid = true;
-    
+
     if (passwordPolicy.requireUppercase) {
         strengthValid = strengthValid && /[A-Z]/.test(password);
     }
@@ -1073,9 +1080,9 @@ function validatePassword() {
     if (passwordPolicy.requireSpecial) {
         strengthValid = strengthValid && /[!@#$%^&*(),.?":{}|<>]/.test(password);
     }
-    
+
     updateValidationIcon('strengthIcon', strengthValid);
-    
+
     return lengthValid && matchValid && strengthValid;
 }
 
@@ -1083,25 +1090,19 @@ function updateValidationIcon(iconId, isValid) {
     const icon = document.getElementById(iconId);
     const parent = icon.parentElement;
     const text = parent.querySelector('span');
-    
+
     if (isValid) {
         icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>';
-        icon.classList.remove('text-gray-400', 'text-red-500');
-        icon.classList.add('text-green-500');
-        text.classList.remove('text-gray-600', 'dark:text-gray-400', 'text-red-600', 'dark:text-red-400');
-        text.classList.add('text-green-600', 'dark:text-green-400');
+        icon.style.color = 'var(--gk-success)';
+        text.style.color = 'var(--gk-success)';
     } else if (document.getElementById('newPassword').value !== '') {
         icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>';
-        icon.classList.remove('text-gray-400', 'text-green-500');
-        icon.classList.add('text-red-500');
-        text.classList.remove('text-gray-600', 'dark:text-gray-400', 'text-green-600', 'dark:text-green-400');
-        text.classList.add('text-red-600', 'dark:text-red-400');
+        icon.style.color = 'var(--gk-error)';
+        text.style.color = 'var(--gk-error)';
     } else {
         icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>';
-        icon.classList.remove('text-green-500', 'text-red-500');
-        icon.classList.add('text-gray-400');
-        text.classList.remove('text-green-600', 'dark:text-green-400', 'text-red-600', 'dark:text-red-400');
-        text.classList.add('text-gray-600', 'dark:text-gray-400');
+        icon.style.color = 'var(--gk-text-muted)';
+        text.style.color = 'var(--gk-text-muted)';
     }
 }
 
@@ -1114,9 +1115,9 @@ function confirmPasswordReset() {
         showError(i18nMessages.passwordRequirementsIncomplete);
         return;
     }
-    
+
     const newPassword = document.getElementById('newPassword').value;
-    
+
     fetch(`/admin/users/${currentUserId}/reset-password`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -1143,7 +1144,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchValue = sessionStorage.getItem('userSearchValue');
     const statusValue = sessionStorage.getItem('userStatusFilter');
     const groupValue = sessionStorage.getItem('userGroupFilter');
-    
+
     if (searchValue) {
         document.getElementById('userSearch').value = searchValue;
         handleSearchInput();
@@ -1154,12 +1155,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (groupValue) {
         document.getElementById('groupFilter').value = groupValue;
     }
-    
+
     // Clear session storage
     sessionStorage.removeItem('userSearchValue');
     sessionStorage.removeItem('userStatusFilter');
     sessionStorage.removeItem('userGroupFilter');
-    
+
     // Apply filters if any were restored
     if (searchValue || statusValue || groupValue) {
         filterUsers();
@@ -1168,16 +1169,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-0`;
-    
+    notification.className = 'fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-0';
+
     if (type === 'success') {
-        notification.className += ' bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200';
+        notification.style.background = 'var(--gk-success-subtle)';
+        notification.style.color = 'var(--gk-success)';
+        notification.style.border = '1px solid var(--gk-success)';
     } else if (type === 'error') {
-        notification.className += ' bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200';
+        notification.style.background = 'var(--gk-error-subtle)';
+        notification.style.color = 'var(--gk-error)';
+        notification.style.border = '1px solid var(--gk-error)';
     } else {
-        notification.className += ' bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200';
+        notification.style.background = 'var(--gk-info-subtle)';
+        notification.style.color = 'var(--gk-info)';
+        notification.style.border = '1px solid var(--gk-info)';
     }
-    
+
     notification.innerHTML = `
         <div class="flex items-center">
             <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1186,11 +1193,12 @@ function showNotification(message, type = 'info') {
             <span>${message}</span>
         </div>
     `;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
-        notification.classList.add('translate-x-full', 'opacity-0');
+        notification.style.transform = 'translateX(100%)';
+        notification.style.opacity = '0';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }

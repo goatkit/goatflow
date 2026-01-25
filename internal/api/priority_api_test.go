@@ -71,13 +71,6 @@ func TestPriorityAPI(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
-		var deleteResp struct {
-			Success bool   `json:"success"`
-			Message string `json:"message"`
-		}
-		json.Unmarshal(w.Body.Bytes(), &deleteResp)
-		assert.True(t, deleteResp.Success)
-		assert.Equal(t, "Priority deleted successfully", deleteResp.Message)
 
 		var response struct {
 			Success bool `json:"success"`

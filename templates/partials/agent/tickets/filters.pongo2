@@ -1,0 +1,132 @@
+{# Ticket Filters Partial with Synthwave Styling #}
+{# Required variables: CurrentFilters, AvailableQueues, SearchableDynamicFields, CurrentDFFilters #}
+
+<div class="gk-card-glow mb-6">
+    <div class="p-4">
+        <form method="get" action="/agent/tickets" class="space-y-4 sm:space-y-0 sm:flex sm:items-center sm:space-x-4">
+            <!-- Search -->
+            <div class="flex-1">
+                <input id="search-input" type="text" name="search" value="{{ CurrentFilters.search }}"
+                       placeholder="{{ t("tickets.search_placeholder")|default:"Search by ticket number, title, or customer..." }}"
+                       class="gk-input-neon w-full">
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+                <select name="status" class="gk-select-neon">
+                    <option value="all" {% if CurrentFilters.status == "all" %}selected{% endif %}>{{ t("tickets.all_statuses") }}</option>
+                    <option value="not_closed" {% if CurrentFilters.status == "not_closed" %}selected{% endif %}>{{ t("common.not_closed") }}</option>
+                    <option value="open" {% if CurrentFilters.status == "open" %}selected{% endif %}>{{ t("status.open") }}</option>
+                    <option value="pending" {% if CurrentFilters.status == "pending" %}selected{% endif %}>{{ t("status.pending") }}</option>
+                    <option value="closed" {% if CurrentFilters.status == "closed" %}selected{% endif %}>{{ t("status.closed") }}</option>
+                </select>
+            </div>
+
+            <!-- Queue Filter -->
+            <div>
+                <select name="queue" class="gk-select-neon">
+                    <option value="all">{{ t("tickets.all_queues")|default:"All Queues" }}</option>
+                    {% for queue in AvailableQueues %}
+                    <option value="{{ queue.id }}" {% if CurrentFilters.queue == queue.id %}selected{% endif %}>
+                        {{ queue.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Assignee Filter -->
+            <div>
+                <select name="assignee" class="gk-select-neon">
+                    <option value="all" {% if CurrentFilters.assignee == "all" %}selected{% endif %}>{{ t("tickets.all_tickets")|default:"All Tickets" }}</option>
+                    <option value="me" {% if CurrentFilters.assignee == "me" %}selected{% endif %}>{{ t("tickets.my_tickets")|default:"My Tickets" }}</option>
+                    <option value="unassigned" {% if CurrentFilters.assignee == "unassigned" %}selected{% endif %}>{{ t("tickets.unassigned")|default:"Unassigned" }}</option>
+                </select>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex space-x-2">
+                <button id="search-btn" type="submit" class="gk-btn-neon">
+                    {{ t("tickets.filter")|default:"Filter" }}
+                </button>
+                <a href="/agent/tickets" class="gk-btn-secondary">
+                    {{ t("buttons.clear")|default:"Clear" }}
+                </a>
+            </div>
+        </form>
+
+        <!-- Dynamic Field Filters (Collapsible) -->
+        {% if SearchableDynamicFields|length > 0 %}
+        {% set hasActiveDF = CurrentDFFilters|length > 0 %}
+        <details class="mt-4 pt-4" style="border-top: 1px solid var(--gk-border-default);" {% if hasActiveDF %}open{% endif %}>
+            <summary class="flex items-center cursor-pointer text-sm font-medium transition-colors list-none" style="color: var(--gk-text-secondary);" onmouseover="this.style.color='var(--gk-primary)'" onmouseout="this.style.color='var(--gk-text-secondary)'">
+                <svg class="w-4 h-4 mr-2 transition-transform details-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+                {{ t("tickets.dynamic_field_filters")|default:"Dynamic Field Filters" }}
+                {% if CurrentDFFilters|length > 0 %}
+                <span class="ml-2 gk-badge gk-badge-primary">
+                    {{ CurrentDFFilters|length }} active
+                </span>
+                {% endif %}
+            </summary>
+            <div class="mt-4">
+                <form method="get" action="/agent/tickets" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Preserve existing filters as hidden fields -->
+                    {% if CurrentFilters.search %}<input type="hidden" name="search" value="{{ CurrentFilters.search }}">{% endif %}
+                    {% if CurrentFilters.status %}<input type="hidden" name="status" value="{{ CurrentFilters.status }}">{% endif %}
+                    {% if CurrentFilters.queue %}<input type="hidden" name="queue" value="{{ CurrentFilters.queue }}">{% endif %}
+                    {% if CurrentFilters.assignee %}<input type="hidden" name="assignee" value="{{ CurrentFilters.assignee }}">{% endif %}
+                    {% if CurrentFilters.sort %}<input type="hidden" name="sort" value="{{ CurrentFilters.sort }}">{% endif %}
+                    {% if CurrentFilters.order %}<input type="hidden" name="order" value="{{ CurrentFilters.order }}">{% endif %}
+
+                    {% for field in SearchableDynamicFields %}
+                    <div>
+                        <label class="block text-xs font-medium mb-1" style="color: var(--gk-text-muted);">
+                            {{ field.Label }}
+                        </label>
+                        {% if field.FieldType == "Dropdown" or field.FieldType == "Multiselect" %}
+                        <select name="df_{{ field.Name }}" class="gk-select-neon w-full text-sm">
+                            <option value="">-- Any --</option>
+                            {% for option in field.Options %}
+                            <option value="{{ option.key }}" {% if CurrentDFFilters["df_" + field.Name] == option.key %}selected{% endif %}>
+                                {{ option.value }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% elif field.FieldType == "Checkbox" %}
+                        <select name="df_{{ field.Name }}" class="gk-select-neon w-full text-sm">
+                            <option value="">-- Any --</option>
+                            <option value="1" {% if CurrentDFFilters["df_" + field.Name] == "1" %}selected{% endif %}>Yes</option>
+                            <option value="0" {% if CurrentDFFilters["df_" + field.Name] == "0" %}selected{% endif %}>No</option>
+                        </select>
+                        {% elif field.FieldType == "Date" or field.FieldType == "DateTime" %}
+                        <div class="flex space-x-2">
+                            <input type="date" name="df_{{ field.Name }}_gte"
+                                   value="{{ CurrentDFFilters['df_' + field.Name + '_gte'] }}"
+                                   placeholder="From"
+                                   class="gk-input-neon flex-1 text-sm">
+                            <input type="date" name="df_{{ field.Name }}_lte"
+                                   value="{{ CurrentDFFilters['df_' + field.Name + '_lte'] }}"
+                                   placeholder="To"
+                                   class="gk-input-neon flex-1 text-sm">
+                        </div>
+                        {% else %}
+                        <input type="text" name="df_{{ field.Name }}_contains"
+                               value="{{ CurrentDFFilters['df_' + field.Name + '_contains'] }}"
+                               placeholder="{{ t("placeholders.contains")|default:"Contains..." }}"
+                               class="gk-input-neon w-full text-sm">
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <div class="sm:col-span-2 lg:col-span-3 flex space-x-2">
+                        <button type="submit" class="gk-btn-neon text-sm">
+                            {{ t("tickets.apply_df_filters")|default:"Apply DF Filters" }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </details>
+        {% endif %}
+    </div>
+</div>

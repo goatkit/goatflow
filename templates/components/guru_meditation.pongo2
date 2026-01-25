@@ -109,8 +109,12 @@
 </style>
 
 <script>
+// Guard against double-initialization (prevents HTMX duplicate declaration errors)
+if (typeof window._guruMeditationInitialized === 'undefined') {
+window._guruMeditationInitialized = true;
+
 // Guru Meditation error handler
-function showGuruMeditation(errorCode, message, details) {
+window.showGuruMeditation = function(errorCode, message, details) {
     const guru = document.getElementById('guru-meditation');
     if (!guru) return;
 
@@ -158,16 +162,16 @@ function showGuruMeditation(errorCode, message, details) {
     } catch(e) {}
 }
 
-function dismissGuruMeditation() {
+window.dismissGuruMeditation = function() {
     const guru = document.getElementById('guru-meditation');
     if (guru) {
         guru.style.display = 'none';
     }
     // Force a page reload to try to recover from the error
     window.location.reload();
-}
+};
 
-function copyGuruMeditation() {
+window.copyGuruMeditation = function() {
     const code = (document.getElementById('guru-code') || {}).textContent || '';
     const msg = (document.getElementById('guru-message') || {}).textContent || '';
     const task = (document.getElementById('guru-task') || {}).textContent || '';
@@ -193,7 +197,7 @@ function copyGuruMeditation() {
             navigator.clipboard.writeText(text).catch(function() {});
         }
     }
-}
+};
 
 // Listen for custom HTMX trigger
 document.addEventListener('htmx:trigger', function(evt) {
@@ -206,9 +210,9 @@ document.addEventListener('htmx:trigger', function(evt) {
     }
 });
 
-// Auto-recovery state
-let autoRecoveryActive = false;
-let recoveryCheckInterval = null;
+// Auto-recovery state (use window to avoid duplicate declaration errors)
+window._guruAutoRecoveryActive = window._guruAutoRecoveryActive || false;
+window._guruRecoveryCheckInterval = window._guruRecoveryCheckInterval || null;
 
 // Auto-show on HTMX errors with auto-recovery for server restarts
 document.addEventListener('htmx:responseError', function(evt) {
@@ -221,7 +225,7 @@ document.addEventListener('htmx:responseError', function(evt) {
                         response.includes('Database') || response.includes('database') ||
                         response.includes('connection refused') || response.includes('connect:');
 
-    if (isServerDown && !autoRecoveryActive) {
+    if (isServerDown && !window._guruAutoRecoveryActive) {
         // Start auto-recovery instead of showing Guru Meditation
         startAutoRecovery();
         return;
@@ -270,14 +274,14 @@ document.addEventListener('htmx:responseError', function(evt) {
 });
 
 function startAutoRecovery() {
-    if (autoRecoveryActive) return;
-    autoRecoveryActive = true;
+    if (window._guruAutoRecoveryActive) return;
+    window._guruAutoRecoveryActive = true;
 
     // Show subtle recovery indicator
     showRecoveryIndicator();
 
     // Check server status every 5 seconds
-    recoveryCheckInterval = setInterval(async () => {
+    window._guruRecoveryCheckInterval = setInterval(async () => {
         try {
             const response = await fetch(window.location.href, {
                 method: 'HEAD',
@@ -295,10 +299,10 @@ function startAutoRecovery() {
 }
 
 function stopAutoRecovery() {
-    autoRecoveryActive = false;
-    if (recoveryCheckInterval) {
-        clearInterval(recoveryCheckInterval);
-        recoveryCheckInterval = null;
+    window._guruAutoRecoveryActive = false;
+    if (window._guruRecoveryCheckInterval) {
+        clearInterval(window._guruRecoveryCheckInterval);
+        window._guruRecoveryCheckInterval = null;
     }
     hideRecoveryIndicator();
 }
@@ -336,6 +340,8 @@ function hideRecoveryIndicator() {
 
 // Also catch unhandled errors
 window.addEventListener('error', function(e) {
-    showGuruMeditation('DEADBEEF.CAFEBABE', e.message || 'Unhandled JavaScript error');
+    window.showGuruMeditation('DEADBEEF.CAFEBABE', e.message || 'Unhandled JavaScript error');
 });
+
+} // End of guard: if (typeof window._guruMeditationInitialized === 'undefined')
 </script>

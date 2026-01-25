@@ -24,7 +24,7 @@ func HandleListPrioritiesAPI(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {
 		if allowPriorityFixture() {
-			c.JSON(http.StatusOK, gin.H{"success": true, "message": "Priority deleted successfully", "data": priorityFixture()})
+			c.JSON(http.StatusOK, gin.H{"success": true, "data": priorityFixture()})
 			return
 		}
 		c.Header("X-Guru-Error", "Priorities lookup failed: database unavailable")
@@ -81,7 +81,7 @@ func HandleListPrioritiesAPI(c *gin.Context) {
 		items = filterByTicketAttributeRelations(c, db, items, "Priority", filterAttr, filterValue)
 	}
 
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Priority deleted successfully", "data": items})
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": items})
 }
 
 func allowPriorityFixture() bool {

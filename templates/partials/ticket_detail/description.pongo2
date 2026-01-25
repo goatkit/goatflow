@@ -1,0 +1,49 @@
+{# Ticket Description Card with Synthwave Styling #}
+{# Required variables: Ticket #}
+
+{# Determine badge and styling based on who wrote the first article #}
+{% set is_from_customer = Ticket.first_article_sender_type == "customer" %}
+{% if is_from_customer %}
+    {# Customer wrote this - initial ticket description #}
+    {% set description_card_classes = "gk-card p-6 border-l-4" %}
+    {% set description_card_style = "border-left-color: var(--gk-secondary);" %}
+    {% set description_badge_classes = "gk-badge gk-badge-secondary" %}
+    {% set description_badge_text = t("tickets.customer_wrote_badge")|default:"Customer wrote this" %}
+{% elif Ticket.first_article_visible_for_customer %}
+    {# Agent wrote this, visible to customer #}
+    {% set description_card_classes = "gk-card p-6 border-l-4" %}
+    {% set description_card_style = "border-left-color: var(--gk-success);" %}
+    {% set description_badge_classes = "gk-badge gk-badge-success" %}
+    {% set description_badge_text = t("tickets.customer_visible_badge")|default:"Customer sees this" %}
+{% else %}
+    {# Agent wrote this, internal only #}
+    {% set description_card_classes = "gk-card p-6 border-l-4" %}
+    {% set description_card_style = "border-left-color: var(--gk-border-strong);" %}
+    {% set description_badge_classes = "gk-badge gk-badge-muted" %}
+    {% set description_badge_text = t("tickets.internal_only_badge")|default:"Internal only" %}
+{% endif %}
+
+<div class="{{ description_card_classes }}" style="{{ description_card_style }}{% if Ticket.first_article_sender_color %} border-left-color: {{ Ticket.first_article_sender_color }};{% endif %}">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("tickets.description") }}</h2>
+        <span class="{{ description_badge_classes }}">
+            {{ description_badge_text }}
+        </span>
+    </div>
+    <div class="relative"{% if Ticket.first_article_id %} id="note-{{ Ticket.first_article_id }}"{% endif %}>
+        {% if Ticket.description_is_html %}
+        <div id="descriptionViewer" class="prose prose-invert max-w-none" style="color: var(--gk-text-secondary);">
+            {{ Ticket.description|safe }}
+        </div>
+        {% else %}
+        <div id="descriptionViewer" data-plain="1" class="text-sm leading-5 whitespace-pre-wrap break-words p-0 m-0 font-normal" style="color: var(--gk-text-secondary); line-height: 1.25;">
+{{ Ticket.description }}
+        </div>
+        {% endif %}
+        {% if Ticket.first_article_id and Ticket.time_by_article and Ticket.time_by_article[Ticket.first_article_id] and Ticket.time_by_article[Ticket.first_article_id] > 0 %}
+        <span class="absolute bottom-2 right-2 gk-badge gk-badge-primary">
+            &#9201; {{ Ticket.time_by_article[Ticket.first_article_id] }} {{ t("tickets.minutes")|default:"minutes" }}
+        </span>
+        {% endif %}
+    </div>
+</div>
