@@ -72,11 +72,11 @@
 - ❌ Breach notifications (TODO)
 
 ### Workflow Automation
-- ⚠️ Trigger system (models complete, execution engine TODO)
-- ❌ Time-based triggers (TODO)
-- ❌ Event-based triggers (TODO)
-- ❌ Automated actions (TODO)
-- ⚠️ Conditional logic (models exist, engine TODO)
+- ✅ GenericAgent execution engine (scheduled ticket processing)
+- ✅ Time-based triggers (via GenericAgent schedules)
+- ✅ Event-based triggers (via GenericAgent conditions)
+- ✅ Automated actions (GenericAgent actions)
+- ✅ Conditional logic (GenericAgent conditions)
 - ⚠️ Workflow templates (models exist, UI TODO)
 - ❌ Round-robin assignment (TODO)
 - ❌ Load balancing (TODO)
@@ -264,7 +264,7 @@
 ### Extension Framework
 - ❌ Plugin architecture (TODO)
 - ❌ Plugin marketplace (TODO)
-- ❌ Theme system (TODO)
+- ✅ Theme system (4 built-in themes, package structure, dark/light modes)
 - ❌ Custom widgets (TODO)
 - ❌ Hook system (TODO)
 - ❌ Event bus (TODO)
@@ -327,7 +327,7 @@
 ## Localization
 
 ### Multi-Language Support
-- ✅ Interface translation (12 languages complete with 100% coverage)
+- ✅ Interface translation (15 languages with RTL support)
 - ✅ Right-to-left (RTL) support (Arabic, Hebrew, Persian, Urdu)
 - ✅ Date/time localization (per-language formats in rtl.go)
 - ✅ Number formatting (decimal/thousands separators, locale digits)
@@ -337,24 +337,22 @@
 - ❌ Language detection (TODO)
 - ✅ User language preference (stored in user_preferences table)
 
-### Supported Languages (100% Complete)
+### Supported Languages
 - ✅ English (en) - Base language
 - ✅ Arabic (ar) - RTL, Arabic-Indic numerals
-- ✅ German (de) - Complete
-- ✅ Spanish (es) - Complete
-- ✅ French (fr) - Complete
-- ✅ Japanese (ja) - Complete
-- ✅ Polish (pl) - Complete
-- ✅ Portuguese (pt) - Complete
-- ✅ Russian (ru) - Complete
-- ✅ Ukrainian (uk) - Complete
-- ✅ Urdu (ur) - RTL, Complete
-- ✅ Klingon (tlh) - Complete (Qapla'!)
-
-### Partial Translation Coverage
-- ⚠️ Hebrew (he) - RTL, 99.4% coverage
-- ⚠️ Chinese (zh) - 98.4% coverage
-- ⚠️ Persian (fa) - RTL, Persian numerals, 91.3% coverage
+- ✅ German (de)
+- ✅ Spanish (es)
+- ✅ French (fr)
+- ✅ Japanese (ja)
+- ✅ Polish (pl)
+- ✅ Portuguese (pt)
+- ✅ Russian (ru)
+- ✅ Ukrainian (uk)
+- ✅ Urdu (ur) - RTL
+- ✅ Hebrew (he) - RTL
+- ✅ Chinese (zh)
+- ✅ Persian (fa) - RTL, Persian numerals
+- ✅ Klingon (tlh) (Qapla'!)
 
 ## Performance Features
 
@@ -378,30 +376,31 @@
 - ✅ Rate limiting (login rate limiter implemented)
 - ❌ Circuit breakers (TODO)
 
-## Comparison Matrix as of v0.5.0
+## Comparison Matrix as of v0.6.2
 
-| Feature Category | GOTRS CE | GOTRS EE | OTRS | Zendesk | ServiceNow |
-|-----------------|----------|----------|------|---------|------------|
-| Core Ticketing | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Email Integration | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Knowledge Base | ✅ | ✅ | ✅ | ✅ | ✅ |
-| SLA Management | ⚠️ | ✅ | ✅ | ✅ | ✅ |
-| Workflow Automation | ❌ | ✅ | ✅ | ✅ | ✅ |
-| API Access | ✅ | ✅ | ⚠️ | ✅ | ✅ |
-| Multi-Channel | ⚠️ | ✅ | ⚠️ | ✅ | ✅ |
-| ITSM Suite | ❌ | ✅ | ✅ | ❌ | ✅ |
-| AI/ML Features | ❌ | ✅ | ❌ | ✅ | ✅ |
-| Multi-Tenancy | ❌ | ✅ | ❌ | ✅ | ✅ |
-| High Availability | ❌ | ✅ | ⚠️ | ✅ | ✅ |
-| Source Code Access | ✅ | ✅ | ✅ | ❌ | ❌ |
-| Self-Hosted | ✅ | ✅ | ✅ | ❌ | ✅ |
-| Cloud Native | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Modern UI | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Localization | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Feature Category | GOTRS | OTRS | Zendesk | ServiceNow |
+|-----------------|-------|------|---------|------------|
+| Core Ticketing | ✅ | ✅ | ✅ | ✅ |
+| Email Integration | ✅ | ✅ | ✅ | ✅ |
+| Knowledge Base | ✅ | ✅ | ✅ | ✅ |
+| SLA Management | ⚠️ | ✅ | ✅ | ✅ |
+| Workflow Automation | ⚠️ | ✅ | ✅ | ✅ |
+| Theme Engine | ✅ | ❌ | ⚠️ | ⚠️ |
+| Dark Mode | ✅ | ❌ | ⚠️ | ⚠️ |
+| API Access | ✅ | ⚠️ | ✅ | ✅ |
+| Multi-Channel | ⚠️ | ⚠️ | ✅ | ✅ |
+| ITSM Suite | ❌ | ✅ | ❌ | ✅ |
+| AI/ML Features | ❌ | ❌ | ✅ | ✅ |
+| Multi-Tenancy | ❌ | ❌ | ✅ | ✅ |
+| High Availability | ❌ | ⚠️ | ✅ | ✅ |
+| Source Code Access | ✅ | ✅ | ❌ | ❌ |
+| Self-Hosted | ✅ | ✅ | ❌ | ✅ |
+| Cloud Native | ✅ | ❌ | ✅ | ✅ |
+| Air-Gapped Deploy | ✅ | ⚠️ | ❌ | ⚠️ |
+| Modern UI | ✅ | ❌ | ✅ | ✅ |
+| Localization | ✅ | ✅ | ✅ | ✅ |
 
 Legend:
 - ✅ Full support
 - ⚠️ Partial support
 - ❌ Not available
-- CE: Community Edition
-- EE: Enterprise Edition

@@ -1,0 +1,245 @@
+/*
+ * GoatKit 70s Vibes Theme
+ * Retro Earth Tones & Warm Aesthetics
+ *
+ * Inspired by the iconic color palettes of the 1970s:
+ * Burnt orange, harvest gold, avocado green, and chocolate brown.
+ * Features the classic 70s "ogee" wave pattern.
+ */
+
+/* ============================================
+   DARK MODE (Chocolate & Earth)
+   Rich, warm tones against deep brown backgrounds
+   ============================================ */
+:root,
+:root.dark,
+.dark {
+  --gk-theme-name: 'seventies-vibes';
+  --gk-theme-mode: 'dark';
+
+  /* Primary: Burnt Orange/Rust */
+  --gk-primary: #D35400;
+  --gk-primary-hover: #E67E22;
+  --gk-primary-active: #BA4A00;
+  --gk-primary-subtle: rgba(211, 84, 0, 0.15);
+
+  /* Secondary: Harvest Gold */
+  --gk-secondary: #F5A623;
+  --gk-secondary-hover: #F7B84B;
+  --gk-secondary-subtle: rgba(245, 166, 35, 0.15);
+
+  /* Tertiary: Avocado Green */
+  --gk-tertiary: #8B8B32;
+
+  /* Backgrounds: Deep chocolate and coffee tones */
+  --gk-bg-base: #1A120B;
+  --gk-bg-surface: #2D1F14;
+  --gk-bg-elevated: #3D2B1F;
+  --gk-bg-overlay: rgba(26, 18, 11, 0.88);
+  --gk-bg-hover: rgba(211, 84, 0, 0.08);
+
+  /* 70s Wave Pattern - Subtle ogee design for dark mode */
+  --gk-bg-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='160' viewBox='0 0 80 160'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23D35400' fill-opacity='0.06'%3E%3Cpath d='M0 0c20 0 20 20 40 20s20-20 40-20v20c-20 0-20 20-40 20S20 20 0 20V0zm0 80c20 0 20 20 40 20s20-20 40-20v20c-20 0-20 20-40 20S20 100 0 100V80z'/%3E%3C/g%3E%3Cg fill='%23F5A623' fill-opacity='0.04'%3E%3Cpath d='M0 40c20 0 20 20 40 20s20-20 40-20v20c-20 0-20 20-40 20S20 60 0 60V40zm0 80c20 0 20 20 40 20s20-20 40-20v20c-20 0-20 20-40 20S20 140 0 140v-20z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+
+  /* Text: Warm off-whites */
+  --gk-text-primary: #FAF3E0;
+  --gk-text-secondary: rgba(250, 243, 224, 0.75);
+  --gk-text-muted: rgba(250, 243, 224, 0.5);
+  --gk-text-inverse: #1A120B;
+
+  /* Borders: Subtle warm tones */
+  --gk-border: rgba(250, 243, 224, 0.12);
+  --gk-border-default: rgba(250, 243, 224, 0.12);
+  --gk-border-strong: rgba(250, 243, 224, 0.22);
+
+  /* Status: 70s-inspired variants */
+  --gk-success: #6B8E23;
+  --gk-success-subtle: rgba(107, 142, 35, 0.18);
+  --gk-warning: #F5A623;
+  --gk-warning-subtle: rgba(245, 166, 35, 0.18);
+  --gk-error: #C0392B;
+  --gk-error-subtle: rgba(192, 57, 43, 0.18);
+  --gk-info: #D35400;
+  --gk-info-subtle: rgba(211, 84, 0, 0.15);
+
+  /* Gradients - Warm sunset vibes */
+  --gk-gradient-primary: linear-gradient(135deg, #D35400 0%, #F5A623 100%);
+  --gk-gradient-sunset: linear-gradient(135deg, #C0392B 0%, #F5A623 100%);
+  --gk-gradient-hero: linear-gradient(180deg, #2D1F14 0%, #1A120B 100%);
+  --gk-gradient-earth: linear-gradient(135deg,
+    #5D3827 0%,
+    #9A5D42 25%,
+    #C48860 50%,
+    #F5A623 75%,
+    #8B8B32 100%
+  );
+
+  /* Glow Effects - Subtle warm glows */
+  --gk-glow-primary: 0 0 15px rgba(211, 84, 0, 0.4), 0 0 30px rgba(211, 84, 0, 0.15);
+  --gk-glow-secondary: 0 0 15px rgba(245, 166, 35, 0.4), 0 0 30px rgba(245, 166, 35, 0.15);
+  --gk-glow-success: 0 0 12px rgba(107, 142, 35, 0.4);
+  --gk-glow-warning: 0 0 12px rgba(245, 166, 35, 0.4);
+  --gk-glow-error: 0 0 12px rgba(192, 57, 43, 0.4);
+
+  /* Shadows with warm tint */
+  --gk-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --gk-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.45);
+  --gk-shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 30px rgba(211, 84, 0, 0.05);
+  --gk-shadow-xl: 0 20px 30px rgba(0, 0, 0, 0.55), 0 0 50px rgba(211, 84, 0, 0.08);
+
+  /* Focus ring with warm glow */
+  --gk-focus-ring: 0 0 0 2px var(--gk-bg-base), 0 0 0 4px var(--gk-primary), var(--gk-glow-primary);
+
+  /* Typography - Authentic 70s fonts (loaded dynamically) */
+  --gk-font-heading: 'Righteous', 'Inter', system-ui, sans-serif;
+  --gk-font-body: 'Nunito', 'Inter', system-ui, sans-serif;
+  --gk-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  /* Transitions */
+  --gk-transition-fast: 150ms ease;
+  --gk-transition-normal: 200ms ease;
+  --gk-transition-slow: 300ms ease-out;
+
+  /* Border radius - Slightly rounded, 70s softer aesthetic */
+  --gk-radius-sm: 0.25rem;
+  --gk-radius-md: 0.5rem;
+  --gk-radius-lg: 0.625rem;
+  --gk-radius-xl: 0.875rem;
+  --gk-radius-full: 9999px;
+}
+
+/* ============================================
+   LIGHT MODE (Cream & Terracotta)
+   Warm, sunlit tones for comfortable reading
+   ============================================ */
+:root.light,
+.light {
+  --gk-theme-mode: 'light';
+
+  /* Backgrounds: Warm cream and ivory */
+  --gk-bg-base: #FAF6F0;
+  --gk-bg-surface: #FFFFFF;
+  --gk-bg-elevated: #FFFFFF;
+  --gk-bg-overlay: rgba(250, 246, 240, 0.92);
+  --gk-bg-hover: rgba(211, 84, 0, 0.06);
+
+  /* 70s Wave Pattern - Warmer, more visible for light mode */
+  --gk-bg-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='160' viewBox='0 0 80 160'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%23D35400' fill-opacity='0.05'%3E%3Cpath d='M0 0c20 0 20 20 40 20s20-20 40-20v20c-20 0-20 20-40 20S20 20 0 20V0zm0 80c20 0 20 20 40 20s20-20 40-20v20c-20 0-20 20-40 20S20 100 0 100V80z'/%3E%3C/g%3E%3Cg fill='%23F5A623' fill-opacity='0.04'%3E%3Cpath d='M0 40c20 0 20 20 40 20s20-20 40-20v20c-20 0-20 20-40 20S20 60 0 60V40zm0 80c20 0 20 20 40 20s20-20 40-20v20c-20 0-20 20-40 20S20 140 0 140v-20z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+
+  /* Text: Deep chocolate for contrast */
+  --gk-text-primary: #2D1F14;
+  --gk-text-secondary: rgba(45, 31, 20, 0.75);
+  --gk-text-muted: rgba(45, 31, 20, 0.5);
+  --gk-text-inverse: #FAF3E0;
+
+  /* Borders */
+  --gk-border: rgba(45, 31, 20, 0.12);
+  --gk-border-default: rgba(45, 31, 20, 0.12);
+  --gk-border-strong: rgba(45, 31, 20, 0.22);
+
+  /* Primary: Deeper burnt orange for contrast */
+  --gk-primary: #BA4A00;
+  --gk-primary-hover: #D35400;
+  --gk-primary-active: #A04000;
+  --gk-primary-subtle: rgba(186, 74, 0, 0.1);
+
+  /* Secondary: Deeper gold */
+  --gk-secondary: #D68910;
+  --gk-secondary-hover: #F5A623;
+  --gk-secondary-subtle: rgba(214, 137, 16, 0.12);
+
+  /* Tertiary: Deeper olive */
+  --gk-tertiary: #6B8E23;
+
+  /* Status: Adjusted for light backgrounds */
+  --gk-success: #4A7023;
+  --gk-success-subtle: rgba(74, 112, 35, 0.12);
+  --gk-warning: #D68910;
+  --gk-warning-subtle: rgba(214, 137, 16, 0.12);
+  --gk-error: #A93226;
+  --gk-error-subtle: rgba(169, 50, 38, 0.12);
+  --gk-info: #BA4A00;
+  --gk-info-subtle: rgba(186, 74, 0, 0.1);
+
+  /* Gradients adjusted for light mode */
+  --gk-gradient-primary: linear-gradient(135deg, #BA4A00 0%, #D68910 100%);
+  --gk-gradient-sunset: linear-gradient(135deg, #A93226 0%, #D68910 100%);
+  --gk-gradient-hero: linear-gradient(180deg, #FFFFFF 0%, #FAF6F0 100%);
+
+  /* Reduced glows for light mode */
+  --gk-glow-primary: 0 0 10px rgba(186, 74, 0, 0.25);
+  --gk-glow-secondary: 0 0 10px rgba(214, 137, 16, 0.25);
+  --gk-glow-success: 0 0 8px rgba(74, 112, 35, 0.25);
+  --gk-glow-warning: 0 0 8px rgba(214, 137, 16, 0.25);
+  --gk-glow-error: 0 0 8px rgba(169, 50, 38, 0.25);
+
+  /* Standard shadows for light mode */
+  --gk-shadow-sm: 0 1px 2px rgba(45, 31, 20, 0.06);
+  --gk-shadow-md: 0 4px 6px rgba(45, 31, 20, 0.08);
+  --gk-shadow-lg: 0 10px 15px rgba(45, 31, 20, 0.1);
+  --gk-shadow-xl: 0 20px 25px rgba(45, 31, 20, 0.12);
+
+  /* Focus ring for light mode */
+  --gk-focus-ring: 0 0 0 2px var(--gk-bg-surface), 0 0 0 4px var(--gk-primary);
+}
+
+/* ============================================
+   70s WAVE PATTERN APPLICATION
+   Apply the retro flowing pattern to backgrounds
+   ============================================ */
+
+/* Apply pattern to the page body when seventies-vibes theme is active */
+[data-theme="seventies-vibes"] body,
+[data-theme="seventies-vibes"].dark body,
+[data-theme="seventies-vibes"].light body {
+  background-image: var(--gk-bg-pattern) !important;
+  background-color: var(--gk-bg-base) !important;
+  background-attachment: scroll !important;
+  background-size: 80px 160px !important;
+}
+
+/* Optional: More prominent pattern on login/auth pages */
+[data-theme="seventies-vibes"] .auth-background,
+[data-theme="seventies-vibes"] .login-background {
+  background-image:
+    var(--gk-bg-pattern),
+    linear-gradient(180deg, var(--gk-bg-surface) 0%, var(--gk-bg-base) 100%);
+  background-attachment: scroll, scroll;
+  background-size: 80px 160px, 100% 100%;
+}
+
+/* Sidebar - solid background, no pattern (avoids interference with body pattern) */
+[data-theme="seventies-vibes"] aside,
+[data-theme="seventies-vibes"] .sidebar,
+[data-theme="seventies-vibes"] .gk-sidebar {
+  background-image: none;
+  background-color: var(--gk-bg-surface);
+}
+
+/* Cards and tiles - solid earthy brown backgrounds */
+[data-theme="seventies-vibes"] .gk-card,
+[data-theme="seventies-vibes"] .gk-stat-card,
+[data-theme="seventies-vibes"] .gk-admin-card,
+[data-theme="seventies-vibes"] .gk-panel,
+[data-theme="seventies-vibes"] .gk-modal,
+[data-theme="seventies-vibes"] .gk-login-card {
+  background-image: none !important;
+  background-color: var(--gk-bg-surface) !important;
+}
+
+/* Main content area - no pattern inheritance */
+[data-theme="seventies-vibes"] main,
+[data-theme="seventies-vibes"] .main-content {
+  background-image: none;
+  background-color: transparent;
+}
+
+/* Hero gradient - warm 70s sunset feel */
+[data-theme="seventies-vibes"] .gk-hero-gradient {
+  background: linear-gradient(
+    180deg,
+    var(--gk-bg-base) 0%,
+    var(--gk-bg-surface) 50%,
+    rgba(211, 84, 0, 0.08) 100%
+  );
+}

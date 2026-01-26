@@ -312,88 +312,120 @@ func TestSomething(t *testing.T) {
 
 ---
 
-## ADDING NEW THEMES - STEP BY STEP (Jan 25, 2026)
+## ADDING NEW THEMES - THEME PACKAGE STRUCTURE (Jan 25, 2026)
 
-The theme system uses `ThemeManager.THEME_METADATA` as the **single source of truth** for all theme configuration. Template selectors automatically read from it.
+Themes are self-contained packages in `static/themes/builtin/`. Each theme has its own directory with all assets.
 
-### Step 1: Create Theme CSS File
+### Theme Package Structure
 
-Create `static/css/themes/{theme-name}.css` with both dark and light mode variants:
+```
+static/themes/builtin/{theme-name}/
+├── theme.yaml          # Theme metadata (name, description, features)
+├── theme.css           # Main stylesheet with CSS variables
+├── fonts/              # Theme-specific fonts (optional)
+│   ├── fonts.css       # @font-face declarations with relative paths
+│   └── {font-name}/    # Font files (woff2, ttf)
+└── images/             # Theme-specific images (optional)
+```
+
+### Step 1: Create Theme Directory and theme.yaml
+
+Create `static/themes/builtin/{theme-name}/theme.yaml`:
+
+```yaml
+name: Your Theme
+id: your-theme-name
+description: Short description of your theme
+version: 1.0.0
+author: Your Name
+license: MIT
+
+preview:
+  gradient: "linear-gradient(135deg, #COLOR1, #COLOR2)"
+
+modes:
+  dark: true
+  light: true
+  default: dark
+
+assets:
+  fonts:
+    enabled: true       # or false if using system fonts
+    css: fonts/fonts.css
+    license: SIL-OFL-1.1
+
+features:
+  glowEffects: false
+  gridBackground: false
+  animations: true
+  bevels3d: false
+  terminalMode: false
+
+compatibility:
+  minVersion: "1.0.0"
+```
+
+### Step 2: Create theme.css
+
+Create `static/themes/builtin/{theme-name}/theme.css`:
 
 ```css
 /* Dark mode (default) */
-:root,
-:root.dark,
-.dark {
-  --gk-theme-name: 'theme-name';
+:root, :root.dark, .dark {
+  --gk-theme-name: 'your-theme-name';
   --gk-theme-mode: 'dark';
-
-  /* Required variables - see _base.css for full list */
   --gk-primary: #COLOR;
-  --gk-primary-hover: #COLOR;
-  --gk-secondary: #COLOR;
   --gk-bg-base: #COLOR;
-  --gk-bg-surface: #COLOR;
-  --gk-text-primary: #COLOR;
-  /* ... etc */
+  /* ... see existing themes for full list */
 }
 
 /* Light mode */
-:root.light,
-.light {
+:root.light, .light {
   --gk-theme-mode: 'light';
   /* Override colors for light backgrounds */
 }
 ```
 
-Reference: `static/css/themes/synthwave.css` or `static/css/themes/nineties-vibe.css`
+Reference: `static/themes/builtin/synthwave/theme.css`
 
-### Step 2: Vendor Theme Fonts (if custom fonts needed)
+### Step 3: Add Fonts (if custom fonts needed)
 
-**All theme fonts MUST be vendored locally for air-gapped deployment.**
+1. **Download WOFF2 files** to `static/themes/builtin/{theme-name}/fonts/{font-name}/`
+2. **Create fonts.css** with RELATIVE paths:
 
-1. **Download WOFF2 files** to `static/fonts/{font-name}/`:
-   - Source: https://gwfh.mranftl.com/fonts or font's GitHub repo
-   - Get Latin + Latin-ext subsets minimum
-
-2. **Create font CSS file** `static/css/fonts-{theme-name}.css`:
 ```css
 @font-face {
   font-family: 'YourFont';
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('/static/fonts/your-font/your-font-latin.woff2') format('woff2');
-  unicode-range: U+0000-00FF, ...;
+  src: url('your-font/your-font-latin.woff2') format('woff2');
 }
 ```
 
 3. **Update THIRD_PARTY_NOTICES.md** with font license info
 
-### Step 3: Register Theme in THEME_METADATA (Single Source of Truth)
+### Step 4: Register in ThemeManager
 
-Edit `static/js/theme-manager.js` - add to both `AVAILABLE_THEMES` array AND `THEME_METADATA` object:
+Edit `static/js/theme-manager.js`:
 
 ```javascript
-const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'your-new-theme'];
+const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe', 'your-new-theme'];
+const BUILTIN_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe', 'your-new-theme'];
 
 const THEME_METADATA = {
-  // ... existing themes ...
   'your-new-theme': {
-    name: 'Your Theme',              // Default English name
-    nameKey: 'theme.your_theme',     // i18n translation key
-    description: 'Theme description', // Default English description
-    descriptionKey: 'theme.your_theme_desc', // i18n translation key
-    gradient: 'linear-gradient(135deg, #COLOR1, #COLOR2)', // Preview gradient
-    fontCss: '/static/css/fonts-your-theme.css' // or null if using default fonts
+    name: 'Your Theme',
+    nameKey: 'theme.your_theme',
+    description: 'Theme description',
+    descriptionKey: 'theme.your_theme_desc',
+    gradient: 'linear-gradient(135deg, #COLOR1, #COLOR2)',
+    hasFonts: true  // or false if using system fonts
   }
 };
 ```
 
-**Backend auto-discovers themes** from `static/css/themes/*.css` - no Go code changes needed!
-**Template selectors automatically read from THEME_METADATA** - no template changes needed!
-
-### Step 4: Add i18n Translations
+### Step 5: Add i18n Translations
 
 Add to ALL 15 language files in `internal/i18n/translations/*.json`:
 
@@ -418,14 +450,14 @@ Languages: en, de, es, fr, pt, pl, ru, zh, ja, ar, he, fa, ur, uk, tlh
 | Status | `--gk-success`, `--gk-warning`, `--gk-error`, `--gk-info` (+ `-subtle` variants) |
 | Effects | `--gk-glow-primary`, `--gk-shadow-sm/md/lg/xl`, `--gk-focus-ring` |
 
-### Files Modified When Adding a Theme
+### Files Created/Modified When Adding a Theme
 
-1. `static/css/themes/{name}.css` - Theme CSS (NEW) - **Backend auto-discovers this**
-2. `static/css/fonts-{name}.css` - Font CSS (NEW, if custom fonts)
-3. `static/fonts/{font-name}/` - Font files (NEW, if custom fonts)
-4. `static/js/theme-manager.js` - Add to AVAILABLE_THEMES + THEME_METADATA
+1. `static/themes/builtin/{name}/theme.yaml` - Theme metadata (NEW)
+2. `static/themes/builtin/{name}/theme.css` - Theme CSS (NEW)
+3. `static/themes/builtin/{name}/fonts/` - Fonts directory (NEW, if custom fonts)
+4. `static/js/theme-manager.js` - Add to AVAILABLE_THEMES, BUILTIN_THEMES, THEME_METADATA
 5. `internal/i18n/translations/*.json` - Add translations (15 files)
+6. `THIRD_PARTY_NOTICES.md` - Add font attribution (if custom fonts)
 
-**No Go backend changes needed** - `getAvailableThemes()` in `internal/api/preferences_handler.go` scans the themes directory automatically.
-
-**Note:** Template selectors (`theme_selector.pongo2`, `login_theme_selector.pongo2`) do NOT need changes - they read from `ThemeManager.THEME_METADATA` automatically.
+**Backend auto-discovers themes** from `static/themes/builtin/` directories.
+**Template selectors read from `ThemeManager.THEME_METADATA`** - no template changes needed.

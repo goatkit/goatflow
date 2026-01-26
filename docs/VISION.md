@@ -23,16 +23,16 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 
 ## Long-Term Vision (5-Year Horizon)
 
-### Year 1 (2025-2026): Foundation & Adoption
+### Year 1 (2025-2027): Foundation & Adoption
 **Goal**: Establish GOTRS as a viable OTRS alternative
 
-- Launch production-ready version 1.0 (Q3 2026)
+- Launch production-ready version 1.0 (April 2027)
 - Achieve 100+ production deployments
 - Build active community of 1,000+ members
 - Complete feature parity with OTRS core functionality
 - Establish partnerships with hosting providers
 
-### Year 2 (2026-2027): Market Position
+### Year 2 (2027-2028): Market Position
 **Goal**: Become the preferred open-source ticketing solution
 
 - Expand to 1,000+ active installations
@@ -41,7 +41,7 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 - Establish global presence with multi-language support
 - Build ecosystem of 100+ plugins
 
-### Year 3 (2027-2028): Industry Leadership
+### Year 3 (2028-2029): Industry Leadership
 **Goal**: Set new standards for service management platforms
 
 - Introduce AI-powered automation suite
@@ -50,7 +50,7 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 - Establish GOTRS certification program
 - Partner with major cloud providers (AWS, Azure, GCP)
 
-### Year 4 (2028-2029): Platform Evolution
+### Year 4 (2029-2030): Platform Evolution
 **Goal**: Transform from ticketing to complete service platform
 
 - Integrate IoT device management
@@ -59,7 +59,7 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 - Expand to 50,000+ installations
 - Establish regional data centers
 
-### Year 5 (2029-2030): Global Standard
+### Year 5 (2030-2031): Global Standard
 **Goal**: Become the de facto standard for open-source service management
 
 - Power 100,000+ organizations worldwide
@@ -129,12 +129,11 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 
 ### Architecture Evolution
 ```
-2025:    Modular Monolith (MVP)
-2026:    Microservices
-2027:    Event-Driven Architecture
-2028:    Serverless Components
-2029:    Edge Computing
-2030:    Quantum-Ready Encryption
+2025-2027:  Modular Monolith (Core Platform)
+2027-2028:  Microservices + Event-Driven
+2028-2029:  Serverless Components
+2029-2030:  Edge Computing
+2030+:      Quantum-Ready Encryption
 ```
 
 ### AI/ML Integration
@@ -145,11 +144,10 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 - **Phase 5**: Fully autonomous support tier
 
 ### Platform Capabilities
-- **2025**: Core ticketing system
-- **2026**: Service management platform
-- **2027**: Customer experience platform
-- **2028**: Business process automation
-- **2030**: Intelligent service ecosystem
+- **2025-2027**: Core ticketing system + Service management
+- **2027-2028**: Customer experience platform
+- **2028-2029**: Business process automation
+- **2030+**: Intelligent service ecosystem
 
 ## Community Vision
 
@@ -174,12 +172,6 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 - < 100ms average response time
 - 1M+ tickets processed daily
 - Zero critical security incidents
-
-### Business Success
-- 100,000+ organizations using GOTRS
-- $10M+ annual revenue (Enterprise Edition)
-- 90% customer retention rate
-- 4.5+ star average rating
 
 ### Community Success
 - 10,000+ GitHub stars

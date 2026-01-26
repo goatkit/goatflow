@@ -18,8 +18,8 @@ GOTRS (Go Open Ticket Request System) is a modern, secure, cloud-native ticketin
 - 📱 **Responsive UI** - Modern HTMX-powered interface with progressive enhancement
 - 🔄 **OTRS Compatible** - Database schema superset enables seamless migration
   - ⚠️ **Unicode Support**: Configure with `UNICODE_SUPPORT=true` for full Unicode support (requires utf8mb4 migration)
-- 🌍 **Multi-Language** - Full i18n with 12 languages at 100% coverage including RTL support, even supports Klingon! 🖖
-- 🎨 **Themeable** - Customizable UI with dark/light modes and branding options
+- 🌍 **Multi-Language** - Full i18n with 15 languages at 100% coverage including RTL support, even supports Klingon! 🖖
+- 🎨 **Theme Engine** - 4 distinct themes (Synthwave, Classic, 70s Vibes, 90s Vibe) with dark/light modes and custom fonts
 - 🔌 **Extensible** - Plugin framework for custom modules and integrations
 
 ## Screenshot
@@ -317,18 +317,12 @@ See [i18n Contributing Guide](docs/i18n/CONTRIBUTING.md) for detailed instructio
 
 ## Features Comparison
 
-| Feature | GOTRS | OTRS | Zendesk | ServiceNow |
-|---------|-------|------|---------|------------|
-| Open Source | ✅ (Apache 2.0) | ✅ (GPL) | ❌ | ❌ |
-| Self-Hosted | ✅ | ✅ | ❌ | ✅ |
-| Cloud Native | ✅ | ❌ | ✅ | ✅ |
-| Modern UI | ✅ | ❌ | ✅ | ✅ |
-| REST API | ✅ | ✅ | ✅ | ✅ |
-| GraphQL API | 📋 (Future)  | ❌ | ❌ | ✅ |
-| Microservices | 📋 (Future) | ❌ | ✅ | ✅ |
-| Plugin System | 📋 (Future) | ✅ | ✅ | ✅ |
-| ITSM Modules | 📋 (Future) | ✅ | ❌ | ✅ |
-| Multi-Language | ✅ (15 languages) | ✅ | ✅ | ✅ |
+See [FEATURES.md](docs/FEATURES.md) for a comprehensive comparison matrix of GOTRS vs OTRS, Zendesk, and ServiceNow across 19 feature categories including:
+
+- ✅ Core ticketing, email integration, knowledge base
+- ✅ Theme engine with 4 built-in themes and dark mode
+- ✅ Cloud native, air-gapped deployment, 15 languages
+- ✅ REST API, source code access, self-hosted
 
 ## Roadmap
 

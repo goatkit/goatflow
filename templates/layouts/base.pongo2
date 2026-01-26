@@ -11,10 +11,19 @@
     <!-- GoatKit Theme initialization (must be inline to prevent flash) -->
     <script>
         (function() {
+            // Built-in themes - community themes go to .cache/
+            var BUILTIN = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe'];
+
             // Helper to get cookie value
             function getCookie(name) {
                 var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
                 return match ? match[2] : null;
+            }
+
+            // Get theme base path (builtin vs community)
+            function getThemePath(themeId) {
+                var base = BUILTIN.indexOf(themeId) !== -1 ? '/static/themes/builtin/' : '/static/themes/.cache/';
+                return base + themeId;
             }
 
             // Check cookies first (server-side user preferences take precedence)
@@ -43,11 +52,11 @@
             document.documentElement.setAttribute('data-theme', theme);
 
             // Write the correct theme stylesheet link dynamically
-            document.write('<link id="gk-theme-stylesheet" rel="stylesheet" href="/static/css/themes/' + theme + '.css">');
+            document.write('<link id="gk-theme-stylesheet" rel="stylesheet" href="' + getThemePath(theme) + '/theme.css">');
         })();
     </script>
     <noscript>
-        <link id="gk-theme-stylesheet" rel="stylesheet" href="/static/css/themes/synthwave.css">
+        <link id="gk-theme-stylesheet" rel="stylesheet" href="/static/themes/builtin/synthwave/theme.css">
     </noscript>
 
     <!-- Vendored Fonts (Inter, Space Grotesk) - theme-specific fonts loaded dynamically -->

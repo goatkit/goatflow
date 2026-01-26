@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/flosch/pongo2/v6"
@@ -465,29 +464,45 @@ func HandleUpdateProfile(c *gin.Context) {
 	})
 }
 
-// getAvailableThemes discovers themes by scanning static/css/themes/ directory.
-// This eliminates the need to maintain a hardcoded list - just add a CSS file.
+// getAvailableThemes discovers themes by scanning theme package directories.
+// Checks both builtin/ (shipped themes) and .cache/ (extracted community themes).
 func getAvailableThemes() []string {
-	themesDir := "static/css/themes"
-	entries, err := os.ReadDir(themesDir)
-	if err != nil {
-		log.Printf("Warning: could not read themes directory: %v", err)
-		// Fallback to known themes if directory read fails
-		return []string{"synthwave", "gotrs-classic", "seventies-vibes", "nineties-vibe"}
+	var themes []string
+
+	// Scan builtin themes (shipped with GOTRS)
+	builtinDir := "static/themes/builtin"
+	if entries, err := os.ReadDir(builtinDir); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				// Check for theme.css or theme.yaml to validate it's a theme
+				themePath := builtinDir + "/" + entry.Name()
+				if _, err := os.Stat(themePath + "/theme.css"); err == nil {
+					themes = append(themes, entry.Name())
+				}
+			}
+		}
+	} else {
+		log.Printf("Warning: could not read builtin themes directory: %v", err)
 	}
 
-	var themes []string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
+	// Scan community themes (extracted from ZIP packages)
+	cacheDir := "static/themes/.cache"
+	if entries, err := os.ReadDir(cacheDir); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				themePath := cacheDir + "/" + entry.Name()
+				if _, err := os.Stat(themePath + "/theme.css"); err == nil {
+					themes = append(themes, entry.Name())
+				}
+			}
 		}
-		name := entry.Name()
-		// Only include .css files, exclude partials (starting with _)
-		if strings.HasSuffix(name, ".css") && !strings.HasPrefix(name, "_") {
-			// Remove .css extension to get theme name
-			themeName := strings.TrimSuffix(name, ".css")
-			themes = append(themes, themeName)
-		}
+	}
+	// No warning for .cache - it may not exist yet
+
+	// Fallback to known themes if nothing found
+	if len(themes) == 0 {
+		log.Printf("Warning: no themes found in theme directories, using defaults")
+		return []string{"synthwave", "gotrs-classic", "seventies-vibes", "nineties-vibe"}
 	}
 
 	// Sort for consistent ordering

@@ -481,7 +481,7 @@ func renderAttachmentViewerHTML(filename, contentType, downloadURL string) strin
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>%s - GOTRS</title>
 	<link rel="stylesheet" href="/static/css/output.css">
-	<link rel="stylesheet" href="/static/css/themes/synthwave.css">
+	<link rel="stylesheet" href="/static/themes/builtin/synthwave/theme.css">
 	<style>
 		body {
 			margin: 0;

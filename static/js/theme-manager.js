@@ -19,6 +19,23 @@ const ThemeManager = (function() {
   const AVAILABLE_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe'];
   const DEFAULT_THEME = 'synthwave';
 
+  // Built-in themes are in /static/themes/builtin/
+  // Community themes are in /static/themes/.cache/ (extracted from ZIP packages)
+  const BUILTIN_THEMES = ['synthwave', 'gotrs-classic', 'seventies-vibes', 'nineties-vibe'];
+
+  /**
+   * Get the base path for a theme
+   * @param {string} themeId - Theme identifier
+   * @returns {string} Base path to theme directory
+   */
+  function getThemeBasePath(themeId) {
+    if (BUILTIN_THEMES.includes(themeId)) {
+      return '/static/themes/builtin/' + themeId;
+    }
+    // Community themes are extracted to .cache/
+    return '/static/themes/.cache/' + themeId;
+  }
+
   // Theme metadata - SINGLE SOURCE OF TRUTH for all theme display info
   // Used by theme selectors throughout the app
   const THEME_METADATA = {
@@ -28,7 +45,7 @@ const ThemeManager = (function() {
       description: 'Neon retro vibes',
       descriptionKey: 'theme.synthwave_desc',
       gradient: 'linear-gradient(135deg, #00E5FF, #FF2FD4)',
-      fontCss: '/static/css/fonts-synthwave.css'
+      hasFonts: true
     },
     'gotrs-classic': {
       name: 'Classic',
@@ -36,7 +53,7 @@ const ThemeManager = (function() {
       description: 'Clean & professional',
       descriptionKey: 'theme.classic_desc',
       gradient: 'linear-gradient(135deg, #3b82f6, #4f46e5)',
-      fontCss: '/static/css/fonts-synthwave.css'
+      hasFonts: false  // Uses system fonts
     },
     'seventies-vibes': {
       name: '70s Vibes',
@@ -44,7 +61,7 @@ const ThemeManager = (function() {
       description: 'Warm earth tones',
       descriptionKey: 'theme.seventies_desc',
       gradient: 'linear-gradient(135deg, #D35400, #F5A623)',
-      fontCss: '/static/css/fonts-seventies.css'
+      hasFonts: true
     },
     'nineties-vibe': {
       name: '90s Vibe',
@@ -52,7 +69,7 @@ const ThemeManager = (function() {
       description: 'Retro desktop (light) / Terminal (dark)',
       descriptionKey: 'theme.nineties_desc',
       gradient: 'linear-gradient(180deg, #808080, #333333)',
-      fontCss: '/static/css/fonts-nineties.css'
+      hasFonts: true
     }
   };
 
@@ -67,10 +84,12 @@ const ThemeManager = (function() {
     });
 
     var meta = THEME_METADATA[themeName];
-    if (!meta || !meta.fontCss) {
+    if (!meta || !meta.hasFonts) {
       return;
     }
-    var fontCss = meta.fontCss;
+
+    // Build font CSS path from theme package structure
+    var fontCss = getThemeBasePath(themeName) + '/fonts/fonts.css';
 
     // Inject link element for vendored font CSS
     var link = document.createElement('link');
@@ -198,7 +217,7 @@ const ThemeManager = (function() {
     // Update the theme stylesheet link if it exists
     const themeLink = document.getElementById('gk-theme-stylesheet');
     if (themeLink) {
-      themeLink.href = `/static/css/themes/${themeName}.css`;
+      themeLink.href = getThemeBasePath(themeName) + '/theme.css';
     }
 
     // Set data attribute for CSS selectors
