@@ -123,6 +123,13 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 - Calendar sharing between agents
 - iCal export/subscription
 
+**Self-Service Authentication**
+- Password recovery UI for customers (forgot password flow)
+- Password recovery UI for agents (forgot password flow)
+- Customer sign-up/registration UI
+- Email verification for new accounts
+- CAPTCHA integration option
+
 **Enhancements**
 - Mobile-responsive improvements
 - Keyboard navigation accessibility (WCAG 2.1 AA)
