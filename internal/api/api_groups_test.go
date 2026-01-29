@@ -10,7 +10,6 @@ import (
 
 func TestAPIV1GroupsRouteRequiresAuth(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	t.Setenv("GOTRS_DISABLE_TEST_AUTH_BYPASS", "1")
 	router := NewSimpleRouter()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups", nil)
