@@ -18,8 +18,9 @@ func BuildRenderContext(ctx context.Context, db *sql.DB, customerLogin string, a
 	rc := &RenderContext{}
 
 	if strings.TrimSpace(customerLogin) != "" {
+		// Match on login OR email since customer_user_id could contain either
 		var first, last sql.NullString
-		if err := db.QueryRowContext(ctx, database.ConvertPlaceholders(`SELECT first_name, last_name FROM customer_user WHERE login = ?`), customerLogin).Scan(&first, &last); err == nil {
+		if err := db.QueryRowContext(ctx, database.ConvertPlaceholders(`SELECT first_name, last_name FROM customer_user WHERE login = ? OR email = ?`), customerLogin, customerLogin).Scan(&first, &last); err == nil {
 			rc.CustomerFullName = strings.TrimSpace(strings.TrimSpace(first.String + " " + last.String))
 		}
 		if rc.CustomerFullName == "" {

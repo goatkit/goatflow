@@ -20,7 +20,7 @@ GOTRS (Go Open Ticket Request System) is a modern, secure, cloud-native ticketin
   - ⚠️ **Unicode Support**: Configure with `UNICODE_SUPPORT=true` for full Unicode support (requires utf8mb4 migration)
 - 🌍 **Multi-Language** - Full i18n with 15 languages at 100% coverage including RTL support, even supports Klingon! 🖖
 - 🎨 **Theme Engine** - 4 distinct themes (Synthwave, Classic, 70s Vibes, 90s Vibe) with dark/light modes and custom fonts
-- 🔌 **Extensible** - Plugin framework for custom modules and integrations
+- 🔌 **Extensible** - REST/SOAP APIs, webhooks, and theme customization
 
 ## Screenshot
 
@@ -115,21 +115,19 @@ Demo credentials are shown on the demo instance login page.
 
 *Note: Demo data resets daily at 2 AM UTC*
 
-### Browser E2E (Go + Playwright)
+### Testing
 
-We separate backend/API tests from full browser automation:
-
-- Toolbox targets (`make toolbox-test`, `make toolbox-test-api`) intentionally skip heavy browser tests.
-- Browser-driven Go tests are tagged with `playwright` (see `//go:build playwright`).
-- Run them in a dedicated Playwright image (Ubuntu base) to avoid glibc/musl issues:
+GOTRS has comprehensive test coverage across multiple layers:
 
 ```bash
-make test-e2e-playwright-go        # Builds Dockerfile.playwright-go and runs go test -tags playwright ./tests/e2e
+# Fast unit/integration tests (Alpine toolbox, ~30s)
+make toolbox-test
+
+# Full browser E2E tests (Ubuntu + Chromium, ~5min)
+make test-e2e-playwright-go
 ```
 
-Standard JavaScript-based Playwright tests (if present) continue to use `make test-e2e-playwright` which wraps `docker-compose.playwright.yml`.
-
-Rationale: the lightweight Alpine toolbox keeps feedback fast; heavyweight Chromium dependencies stay isolated.
+Browser tests use Go + Playwright with the `//go:build playwright` tag and run in a dedicated Ubuntu container with Chromium. This separation keeps developer feedback fast while maintaining thorough browser coverage.
 
 ## Architecture
 
@@ -254,26 +252,25 @@ For production deployments, see our comprehensive guides:
 
 ## Migration from OTRS
 
-GOTRS provides comprehensive migration tools for OTRS users:
+GOTRS maintains database schema compatibility with OTRS, enabling migration from existing installations. The `gotrs-migrate` tool handles database import from OTRS 5.x and 6.x SQL dumps.
 
 ```bash
-# Run the migration tool in a container
-docker-compose exec backend /app/tools/otrs-migration/migrate \
-  --source-db "postgres://otrs_user:pass@old-server/otrs" \
-  --target-db "postgres://postgres:5432/gotrs" \
-  --validate
+# Analyze your OTRS dump
+make migrate-analyze SQL=/path/to/otrs_dump.sql
 
-# Or using a dedicated migration container
-docker run --rm \
-  --network gotrs-network \
-  -v ./data:/data:Z \
-  gotrs/migration-tool:latest \
-  --source-db "postgres://otrs_user:pass@old-server/otrs" \
-  --target-db "postgres://postgres:5432/gotrs" \
-  --validate
+# Test import (dry run)
+make migrate-import SQL=/path/to/otrs_dump.sql DRY_RUN=true
+
+# Execute import
+make migrate-import SQL=/path/to/otrs_dump.sql DRY_RUN=false
+
+# Validate migrated data
+make migrate-validate
 ```
 
-See [Migration Guide](docs/MIGRATION.md) for detailed instructions.
+The migration tool imports tickets, articles, users, customers, queues, and configuration data. Article attachments require a separate filesystem copy.
+
+See [docs/MIGRATION.md](docs/MIGRATION.md) for the complete migration guide.
 
 ## Internationalization (i18n)
 
@@ -390,4 +387,4 @@ GOTRS builds upon decades of open source ticketing system innovation. We acknowl
 
 **GOTRS** - Enterprise Ticketing, Community Driven
 
-Copyright © 2025 Gibbsoft Ltd and Contributors
+Copyright © 2025-2026 Gibbsoft Ltd and Contributors

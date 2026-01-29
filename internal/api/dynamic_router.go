@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/gotrs-io/gotrs-ce/internal/routing"
 )
 
 // dynamicEngine holds only YAML routes (selective mode) and can be swapped without impacting static routes.
@@ -41,13 +43,15 @@ func mountDynamicEngine(r *gin.Engine) {
 }
 
 // rebuildDynamicEngine rebuilds the dynamic engine with fresh YAML routes only.
-func rebuildDynamicEngine(authMW interface{}) {
+func rebuildDynamicEngine(_ interface{}) {
 	if !useDynamicSubEngine() {
 		return
 	}
 	eng := gin.New()
 	eng.Use(gin.Recovery())
-	registerYAMLRoutes(eng, authMW)
+	if err := routing.LoadYAMLRoutesForTesting(eng); err != nil {
+		log.Printf("[routes-selective] failed to load YAML routes: %v", err)
+	}
 	dynamicEngine.Store(eng)
 	log.Println("[routes-selective] dynamic engine rebuilt")
 }

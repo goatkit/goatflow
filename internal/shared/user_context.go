@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/convert"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
@@ -134,23 +135,7 @@ func GetUserIDFromCtx(c *gin.Context, fallback int) int {
 	if !ok {
 		return fallback
 	}
-	switch id := v.(type) {
-	case int:
-		return id
-	case int64:
-		return int(id)
-	case uint:
-		return int(id)
-	case uint64:
-		return int(id)
-	case float64:
-		return int(id)
-	case string:
-		if n, err := strconv.Atoi(id); err == nil {
-			return n
-		}
-	}
-	return fallback
+	return convert.ToInt(v, fallback)
 }
 
 // GetUserIDFromCtxUint is like GetUserIDFromCtx but returns uint.
@@ -159,21 +144,20 @@ func GetUserIDFromCtxUint(c *gin.Context, fallback uint) uint {
 	if !ok {
 		return fallback
 	}
-	switch id := v.(type) {
-	case int:
-		return uint(id)
-	case int64:
-		return uint(id)
-	case uint:
-		return id
-	case uint64:
-		return uint(id)
-	case float64:
-		return uint(id)
-	case string:
-		if n, err := strconv.Atoi(id); err == nil {
-			return uint(n)
-		}
-	}
-	return fallback
+	return convert.ToUint(v, fallback)
+}
+
+// ToInt delegates to convert.ToInt for backward compatibility.
+func ToInt(v interface{}, fallback int) int {
+	return convert.ToInt(v, fallback)
+}
+
+// ToUint delegates to convert.ToUint for backward compatibility.
+func ToUint(v interface{}, fallback uint) uint {
+	return convert.ToUint(v, fallback)
+}
+
+// ToString delegates to convert.ToString for backward compatibility.
+func ToString(v interface{}, fallback string) string {
+	return convert.ToString(v, fallback)
 }

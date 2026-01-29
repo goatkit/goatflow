@@ -25,6 +25,8 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/ticketnumber"
 )
 
+// Note: Uses centralized GetTestAuthToken() and AddTestAuthCookie() from test_helpers.go
+
 type attachmentTicketNumberGenerator struct {
 	mu  sync.Mutex
 	seq int64
@@ -47,11 +49,22 @@ func (attachmentCounterStore) Add(ctx context.Context, dateScoped bool, offset i
 }
 
 func TestAttachmentDisplayInTicketDetail(t *testing.T) {
-	// Get database connection
+	// Check if database is available first
 	db, err := database.GetDB()
 	if err != nil || db == nil {
 		t.Skip("Database not available, skipping integration test")
 	}
+
+	// Reset database to canonical state to ensure proper permissions
+	// This must be called BEFORE getting the db connection we'll use for queries
+	WithCleanDB(t)
+
+	// Get fresh db connection AFTER WithCleanDB
+	db, err = database.GetDB()
+	if err != nil || db == nil {
+		t.Skip("Database not available after reset")
+	}
+
 	repository.SetTicketNumberGenerator(&attachmentTicketNumberGenerator{}, attachmentCounterStore{})
 	t.Cleanup(func() { repository.SetTicketNumberGenerator(nil, nil) })
 
@@ -61,6 +74,8 @@ func TestAttachmentDisplayInTicketDetail(t *testing.T) {
 	t.Setenv("APP_ENV", "integration")
 	t.Setenv("HTMX_HANDLER_TEST_MODE", "0")
 	SetupHTMXRoutes(router)
+
+	token := GetTestAuthToken(t)
 
 	// Test creating a ticket with attachment
 	t.Run("Create ticket with attachment and verify display", func(t *testing.T) {
@@ -92,7 +107,7 @@ func TestAttachmentDisplayInTicketDetail(t *testing.T) {
 		// Create the request
 		req := httptest.NewRequest("POST", "/api/tickets", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
-		req.Header.Set("Cookie", "token=test-token")
+		AddTestAuthCookie(req, token)
 
 		// Record the response
 		w := httptest.NewRecorder()
@@ -117,7 +132,7 @@ func TestAttachmentDisplayInTicketDetail(t *testing.T) {
 		// Now fetch the ticket messages to verify attachment is included
 		messagesURL := fmt.Sprintf("/api/tickets/%d/messages", created.ID)
 		req2 := httptest.NewRequest("GET", messagesURL, nil)
-		req2.Header.Set("Cookie", "token=test-token")
+		AddTestAuthCookie(req2, token)
 		req2.Header.Set("HX-Request", "true") // Request as HTMX
 
 		w2 := httptest.NewRecorder()
@@ -169,6 +184,8 @@ func TestAttachmentDownloadHandler(t *testing.T) {
 	router := gin.New()
 	SetupHTMXRoutes(router)
 
+	token := GetTestAuthToken(t)
+
 	t.Run("Download existing attachment", func(t *testing.T) {
 		// First, we need to create an attachment record in the database
 		db, err := database.GetDB()
@@ -198,7 +215,7 @@ func TestAttachmentDownloadHandler(t *testing.T) {
 
 		// Request the attachment download
 		req := httptest.NewRequest("GET", fmt.Sprintf("/api/attachments/%d/download", attachmentID), nil)
-		req.Header.Set("Cookie", "token=test-token")
+		AddTestAuthCookie(req, token)
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -215,7 +232,7 @@ func TestAttachmentDownloadHandler(t *testing.T) {
 
 	t.Run("Download non-existent attachment", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/api/attachments/99999/download", nil)
-		req.Header.Set("Cookie", "token=test-token")
+		AddTestAuthCookie(req, token)
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)

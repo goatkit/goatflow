@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.3]
+
+### Added
+- **Type Conversion Package**: New `internal/convert` package consolidating duplicate type conversion functions
+  - `ToInt()`, `ToUint()`, `ToString()` functions with fallback values
+  - Handles all numeric types (int8-64, uint8-64, float32/64) and string parsing
+  - Breaks circular dependency between shared and middleware packages
+  - Files: `internal/convert/convert.go`, `internal/convert/convert_test.go`
+
+### Changed
+- **Single YAML Route Loader**: Consolidated to one route loader for both production and tests
+  - Tests now authenticate the same way production does (no test auth bypass)
+  - `internal/routing/loader.go` is the single source of truth
+  - `internal/api/yaml_router_loader.go` only used for manifest generation tooling
+- **Test Database Setup**: Enhanced `resetTestDatabase()` with proper OTRS-compatible permissions
+  - Creates canonical groups (users, admin, stats, support)
+  - Grants user 1 'rw' permission via group_user table for queue access middleware
+  - Sets queue group_id for proper queue access checks
+- **Test Authentication**: All API tests now use centralized auth helpers
+  - `GetTestAuthToken(t)` generates valid JWT tokens
+  - `AddTestAuthCookie(req, token)` adds auth cookie to requests
+  - Middleware files updated to use `convert` package instead of inline type switches
+
+### Fixed
+- **Customer User Lookup by Login or Email**: Fixed "Customer user not found" errors in ticket zoom when `customer_user_id` contains email instead of login
+  - Customer user queries now match on `login = ? OR email = ?` since tickets may store either value
+  - Updated 4 files: `ticket_detail_handlers.go`, `notifications/context.go`, `agent_ticket_actions.go`, `ticket_create_with_attachments.go`
+- **Queue Access in Tests**: Fixed "You do not have access to any queues" errors
+  - Test user now has proper group_user records with 'rw' permission
+  - Queue records include group_id for permission checks
+- **Test Database Connection**: Fixed "sql: database is closed" errors in attachment tests
+  - Get fresh DB connection after `WithCleanDB(t)` call
+- **UI Tests**: Fixed TestNavigationVisibility, TestAccessibility, TestErrorPages
+  - Added proper authentication to all tests
+  - Corrected route paths (`/ticket/new` not `/tickets/new`)
+  - Simplified navigation test to focus on admin portal
+
 ## [0.6.2] - 2026-01-25
 
 ### Added

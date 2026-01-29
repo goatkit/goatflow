@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/gotrs-io/gotrs-ce/internal/routing"
 )
 
 // hotReloadableEngine holds an *gin.Engine atomically swapped during hot reload.
@@ -74,7 +76,9 @@ func startRoutesWatcher() {
 					newEngine.Use(gin.Recovery())
 					// Basic 404 placeholder; full middleware stack not replicated (dev only)
 					newEngine.NoRoute(func(c *gin.Context) { c.JSON(http.StatusNotFound, gin.H{"error": "not found"}) })
-					registerYAMLRoutes(newEngine, nil)
+					if err := routing.LoadYAMLRoutesForTesting(newEngine); err != nil {
+						log.Printf("[routes-watcher] failed to load YAML routes: %v", err)
+					}
 					hotReloadableEngine.Store(newEngine)
 					log.Println("[routes-watcher] engine swapped")
 				} else {

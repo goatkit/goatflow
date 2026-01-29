@@ -11,8 +11,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// helper to perform requests.
-func performRequest(r http.Handler, method, path string, body *strings.Reader, headers map[string]string) *httptest.ResponseRecorder {
+// Note: Uses centralized GetTestAuthToken() and AddTestAuthCookie() from test_helpers.go
+
+// helper to perform requests with optional auth token.
+func performRequest(r http.Handler, method, path string, body *strings.Reader, headers map[string]string, token string) *httptest.ResponseRecorder {
 	if body == nil {
 		empty := strings.NewReader("")
 		body = empty
@@ -20,6 +22,9 @@ func performRequest(r http.Handler, method, path string, body *strings.Reader, h
 	req := httptest.NewRequest(method, path, body)
 	for k, v := range headers {
 		req.Header.Set(k, v)
+	}
+	if token != "" {
+		AddTestAuthCookie(req, token)
 	}
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -38,8 +43,9 @@ func TestTicketCreationModes_NewTicketForm(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 	WithCleanDB(t)
 	r := setupTicketCreationTestRouter(t)
+	token := GetTestAuthToken(t)
 
-	w := performRequest(r, http.MethodGet, "/ticket/new", nil, nil)
+	w := performRequest(r, http.MethodGet, "/ticket/new", nil, nil, token)
 	// With DB available, /ticket/new renders the full form directly (200 OK)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", w.Code, w.Body.String())
@@ -55,8 +61,9 @@ func TestTicketCreationModes_GetEmailForm(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 	WithCleanDB(t)
 	r := setupTicketCreationTestRouter(t)
+	token := GetTestAuthToken(t)
 
-	w := performRequest(r, http.MethodGet, "/ticket/new/email", nil, nil)
+	w := performRequest(r, http.MethodGet, "/ticket/new/email", nil, nil, token)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 got %d body=%s", w.Code, w.Body.String())
 	}
@@ -71,8 +78,9 @@ func TestTicketCreationModes_GetPhoneForm(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 	WithCleanDB(t)
 	r := setupTicketCreationTestRouter(t)
+	token := GetTestAuthToken(t)
 
-	w := performRequest(r, http.MethodGet, "/ticket/new/phone", nil, nil)
+	w := performRequest(r, http.MethodGet, "/ticket/new/phone", nil, nil, token)
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200 got %d body=%s", w.Code, w.Body.String())
 	}
@@ -87,6 +95,7 @@ func TestTicketCreationModes_CreateEmailTicket(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 	WithCleanDB(t)
 	r := setupTicketCreationTestRouter(t)
+	token := GetTestAuthToken(t)
 
 	form := url.Values{}
 	form.Set("subject", "Email subject")
@@ -96,7 +105,7 @@ func TestTicketCreationModes_CreateEmailTicket(t *testing.T) {
 
 	w := performRequest(r, http.MethodPost, "/api/tickets", strings.NewReader(form.Encode()), map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
-	})
+	}, token)
 	if w.Code != http.StatusCreated {
 		t.Fatalf("expected 201 got %d body=%s", w.Code, w.Body.String())
 	}
@@ -111,6 +120,7 @@ func TestTicketCreationModes_RequiresCustomerEmail(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 	WithCleanDB(t)
 	r := setupTicketCreationTestRouter(t)
+	token := GetTestAuthToken(t)
 
 	// Missing customer_email should fail
 	form := url.Values{}
@@ -120,7 +130,7 @@ func TestTicketCreationModes_RequiresCustomerEmail(t *testing.T) {
 
 	w := performRequest(r, http.MethodPost, "/api/tickets", strings.NewReader(form.Encode()), map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
-	})
+	}, token)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 got %d body=%s", w.Code, w.Body.String())
 	}

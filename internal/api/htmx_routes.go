@@ -14,6 +14,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/ldap"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
+	"github.com/gotrs-io/gotrs-ce/internal/routing"
 	"github.com/gotrs-io/gotrs-ce/internal/shared"
 )
 
@@ -48,8 +49,9 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 	// Optional routes watcher (dev only)
 	startRoutesWatcher()
 
-	// Create auth middleware for YAML routes
-	authMiddleware := middleware.NewAuthMiddleware(jwtManager)
+	// Note: Auth middleware is now handled by the routing package's RegisterExistingHandlers
+	// which sets up all middleware including auth with proper test bypass support
+	_ = middleware.NewAuthMiddleware(jwtManager) // Keep for compatibility, actual auth handled by routing
 
 	// Initialize Dynamic Module System (requires database)
 	initDynamicModules()
@@ -64,7 +66,10 @@ func setupHTMXRoutesWithAuth(r *gin.Engine, jwtManager *auth.JWTManager, ldapPro
 
 	// Register YAML-based routes - ALL routes are now defined in YAML files
 	// See routes/*.yaml for route definitions
-	registerYAMLRoutes(r, authMiddleware)
+	// Use the consolidated routing package instead of the duplicate yaml_router_loader
+	if err := routing.LoadYAMLRoutesForTesting(r); err != nil {
+		log.Printf("Warning: Failed to load YAML routes: %v", err)
+	}
 
 	// Selective sub-engine mode (keeps static + YAML separated for targeted reload)
 	if useDynamicSubEngine() {
