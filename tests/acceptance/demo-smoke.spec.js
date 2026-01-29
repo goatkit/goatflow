@@ -1,0 +1,52 @@
+/**
+ * Demo Site Smoke Test
+ *
+ * Verifies the demo deployment is working by:
+ * 1. Logging in with demo credentials
+ * 2. Checking the tickets page loads with data
+ *
+ * Run against production demo:
+ *   PLAYWRIGHT_SKIP_WEBSERVER=1 BASE_URL=https://gotrs-demo.gibbsoft.com npx playwright test demo-smoke
+ */
+import { test, expect } from '@playwright/test';
+
+// Demo credentials are public - shown on gotrs.io demo page
+const DEMO_EMAIL = process.env.DEMO_EMAIL || 'Saul';
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD || 'Saul';
+const DEMO_URL = process.env.DEMO_URL || process.env.BASE_URL || 'https://gotrs-demo.gibbsoft.com';
+
+test.describe('Demo Site Smoke Test', () => {
+  test('can login and view tickets', async ({ page }) => {
+    // Navigate to login page
+    await page.goto(`${DEMO_URL}/login`);
+
+    // Take screenshot of login page
+    await page.screenshot({ path: 'test-results/demo-login.png', fullPage: true });
+
+    // Fill login form
+    await page.fill('input[name="email"], input[name="username"], input[type="email"], input[type="text"]', DEMO_EMAIL);
+    await page.fill('input[name="password"], input[type="password"]', DEMO_PASSWORD);
+
+    // Submit login
+    await page.click('button[type="submit"]');
+
+    // Wait for navigation to complete
+    await page.waitForLoadState('networkidle');
+
+    // Should be redirected to dashboard or tickets
+    await expect(page).not.toHaveURL(/\/login/);
+
+    // Navigate to tickets if not already there
+    if (!page.url().includes('/tickets')) {
+      await page.goto(`${DEMO_URL}/tickets`);
+    }
+
+    // Verify tickets page loaded
+    await expect(page.locator('body')).toContainText(/ticket/i);
+
+    // Take screenshot of tickets page
+    await page.screenshot({ path: 'test-results/demo-tickets.png', fullPage: true });
+
+    console.log('✅ Demo site verified successfully!');
+  });
+});
