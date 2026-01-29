@@ -565,3 +565,59 @@ func LoadYAMLRoutesFromGlobalMap(router *gin.Engine, routesPath string) error {
 
 	return loader.LoadRoutes()
 }
+
+// LoadYAMLRoutesForTesting loads YAML routes for test/development scenarios.
+// This function auto-discovers the routes directory and uses the standard middleware.
+// Tests MUST authenticate properly - there is NO auth bypass.
+// This is the ONLY function that should be used for loading YAML routes in tests -
+// do not use internal/api/yaml_router_loader.go directly (it's only for manifest generation).
+func LoadYAMLRoutesForTesting(router *gin.Engine) error {
+	// Try to find routes directory
+	routesPath, err := resolveRoutesDir("./routes")
+	if err != nil {
+		return fmt.Errorf("failed to resolve routes directory: %w", err)
+	}
+
+	return LoadYAMLRoutesFromGlobalMap(router, routesPath)
+}
+
+// resolveRoutesDir finds the routes directory by checking multiple locations.
+func resolveRoutesDir(initial string) (string, error) {
+	candidates := []string{initial}
+
+	// Check environment variable
+	if env := os.Getenv("GOTRS_ROUTES_DIR"); env != "" {
+		candidates = append([]string{env}, candidates...)
+	}
+
+	// Walk up directory tree looking for routes/
+	if wd, err := os.Getwd(); err == nil {
+		dir := wd
+		for i := 0; i < 6; i++ {
+			candidates = append(candidates, filepath.Join(dir, "routes"))
+			parent := filepath.Dir(dir)
+			if parent == dir {
+				break
+			}
+			dir = parent
+		}
+	}
+
+	// Check each candidate
+	seen := map[string]struct{}{}
+	for _, c := range candidates {
+		if c == "" {
+			continue
+		}
+		path := filepath.Clean(c)
+		if _, ok := seen[path]; ok {
+			continue
+		}
+		seen[path] = struct{}{}
+		if st, err := os.Stat(path); err == nil && st.IsDir() {
+			return path, nil
+		}
+	}
+
+	return "", fmt.Errorf("routes directory not found (checked %q)", initial)
+}

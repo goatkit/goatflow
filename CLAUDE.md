@@ -199,6 +199,91 @@ document.addEventListener('keydown', (e) => {
 
 **The test database EXISTS. Use it.**
 
+---
+
+## YAML ROUTING - SINGLE SOURCE OF TRUTH (Jan 27, 2026)
+
+**There is ONE YAML route loader. Tests use the same router as production.**
+
+### The Single Router
+
+All YAML route loading goes through `internal/routing/loader.go`:
+
+```go
+// For production (main.go)
+routing.LoadYAMLRoutesFromGlobalMap(router, routesPath)
+
+// For tests and dev scenarios
+routing.LoadYAMLRoutesForTesting(router)
+```
+
+Both use the SAME middleware registration in `RegisterExistingHandlers()`.
+
+### NO Test Auth Bypass
+
+**Tests MUST authenticate the same way production does.**
+
+There is NO test auth bypass. The auth middleware:
+1. Checks for JWT token in cookie or Authorization header
+2. Validates the token
+3. Returns 401 Unauthorized if missing/invalid
+
+Tests that need authenticated endpoints must:
+1. Call the login endpoint to get a token
+2. Include the token in subsequent requests
+
+```go
+// Example: Get a token for tests
+func getTestToken(t *testing.T, router *gin.Engine) string {
+    resp := httptest.NewRecorder()
+    body := `{"login":"test@example.com","password":"testpass"}`
+    req := httptest.NewRequest("POST", "/api/v1/auth/login", strings.NewReader(body))
+    req.Header.Set("Content-Type", "application/json")
+    router.ServeHTTP(resp, req)
+
+    var result map[string]interface{}
+    json.Unmarshal(resp.Body.Bytes(), &result)
+    return result["access_token"].(string)
+}
+
+// Use the token
+req.Header.Set("Authorization", "Bearer " + token)
+```
+
+### Why No Bypass?
+
+1. **Tests verify real auth** - If auth is broken, tests fail
+2. **No security risk** - No bypass code that could leak to production
+3. **Prevents "tests pass, production fails"** - Same code path everywhere
+
+### The Incident (Jan 27, 2026)
+
+We had TWO separate YAML loaders:
+- `internal/routing/loader.go` - Used by production
+- `internal/api/yaml_router_loader.go` - Used by tests (with auth bypass)
+
+Result: Tests passed but production returned 401 because the loaders handled middleware differently.
+
+**Fix**: Consolidated to single loader, removed all auth bypass code.
+
+### NEVER DO THIS
+
+- Don't create a separate route loader for tests
+- Don't add "test mode" auth bypass
+- Don't inject fake user context in tests
+- Don't use `APP_ENV=test` to skip authentication
+- Don't check `gin.Mode() == gin.TestMode` to bypass auth
+
+### Files
+
+- `internal/routing/loader.go` - THE router (production + tests)
+- `internal/routing/handlers.go` - Middleware registration (auth, admin, etc.)
+- `internal/api/yaml_router_loader.go` - ONLY for manifest generation tooling
+
+**One router. Real auth. No exceptions.**
+
+---
+
 ## RUNNING GO TESTS - MANDATORY METHOD (Jan 22, 2026)
 
 **ALWAYS use these Makefile targets to run Go tests:**

@@ -74,10 +74,11 @@ func queueCustomerNoteNotification(params noteNotificationParams) {
 }
 
 func lookupCustomerEmail(db *sql.DB, customerUserID string) string {
+	// Match on login OR email since customer_user_id could contain either
 	var email string
 	err := db.QueryRow(database.ConvertPlaceholders(`
-		SELECT cu.email FROM customer_user cu WHERE cu.login = ?
-	`), customerUserID).Scan(&email)
+		SELECT cu.email FROM customer_user cu WHERE cu.login = ? OR cu.email = ?
+	`), customerUserID, customerUserID).Scan(&email)
 	if err != nil || email == "" {
 		log.Printf("Failed to find email for customer user %s: %v", customerUserID, err)
 		return ""

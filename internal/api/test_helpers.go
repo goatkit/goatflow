@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -96,4 +97,69 @@ func getEnvOrDefault(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// TestAuthConfig holds configuration for test authentication.
+type TestAuthConfig struct {
+	UserID  uint
+	Email   string
+	Role    string
+	IsAdmin bool
+}
+
+// GetTestAuthConfig returns auth configuration from environment variables with defaults.
+// Environment variables:
+//   - TEST_AUTH_USER_ID: User ID for test token (default: 1)
+//   - TEST_AUTH_EMAIL: Email for test token (default: root@localhost)
+//   - TEST_AUTH_ROLE: Role for test token (default: Admin)
+//   - TEST_AUTH_IS_ADMIN: Whether user is admin (default: true)
+func GetTestAuthConfig() TestAuthConfig {
+	userID := shared.ToUint(os.Getenv("TEST_AUTH_USER_ID"), 1)
+
+	isAdmin := true
+	if admin := os.Getenv("TEST_AUTH_IS_ADMIN"); admin != "" {
+		isAdmin = admin == "true" || admin == "1"
+	}
+
+	return TestAuthConfig{
+		UserID:  userID,
+		Email:   getEnvOrDefault("TEST_AUTH_EMAIL", "root@localhost"),
+		Role:    getEnvOrDefault("TEST_AUTH_ROLE", "Admin"),
+		IsAdmin: isAdmin,
+	}
+}
+
+// GetTestAuthToken generates a valid JWT token for testing authenticated routes.
+// Uses environment variables for configuration (see GetTestAuthConfig).
+// This is the single source of truth for test authentication - all tests should use this.
+func GetTestAuthToken(t *testing.T) string {
+	t.Helper()
+
+	jwtManager := shared.GetJWTManager()
+	if jwtManager == nil {
+		t.Fatal("JWT manager not available - ensure shared.InitJWTManager() was called")
+	}
+
+	config := GetTestAuthConfig()
+	token, err := jwtManager.GenerateTokenWithAdmin(
+		config.UserID,
+		config.Email,
+		config.Role,
+		config.IsAdmin,
+		0, // tenantID
+	)
+	if err != nil {
+		t.Fatalf("Failed to generate test auth token: %v", err)
+	}
+
+	return token
+}
+
+// AddTestAuthCookie adds the authentication cookie to a request.
+// This is the standard way to add auth to test requests.
+func AddTestAuthCookie(req *http.Request, token string) {
+	req.AddCookie(&http.Cookie{
+		Name:  "auth_token",
+		Value: token,
+	})
 }

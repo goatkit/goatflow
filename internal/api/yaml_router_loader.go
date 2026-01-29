@@ -428,114 +428,12 @@ func registerOneWithChain(g *gin.RouterGroup, method, path string, handlers ...g
 	}
 }
 
-// fallbackAuthGuard provides a minimal auth gate when full middleware unavailable.
+// fallbackAuthGuard is a no-op placeholder used only for manifest generation.
+// Actual auth is handled by the routing package's RegisterExistingHandlers.
 func fallbackAuthGuard() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if _, ok := c.Get("user_id"); ok {
-			c.Next()
-			return
-		}
-
-		allowBypass := testAuthBypassAllowed()
-
-		if allowBypass && ensureTestAuthContext(c) {
-			c.Next()
-			return
-		}
-
-		if allowBypass && hasCookieToken(c) {
-			setDefaultUserContext(c)
-			c.Next()
-			return
-		}
-
-		handleUnauthenticatedRequest(c)
+		c.Next()
 	}
-}
-
-func hasCookieToken(c *gin.Context) bool {
-	_, err := c.Cookie("access_token")
-	return err == nil
-}
-
-func setDefaultUserContext(c *gin.Context) {
-	if _, exists := c.Get("user_id"); !exists {
-		c.Set("user_id", uint(1))
-	}
-	if _, exists := c.Get("user_email"); !exists {
-		c.Set("user_email", "demo@example.com")
-	}
-	if _, exists := c.Get("user_role"); !exists {
-		c.Set("user_role", "Admin")
-	}
-	if _, exists := c.Get("user_name"); !exists {
-		c.Set("user_name", "Demo User")
-	}
-}
-
-func handleUnauthenticatedRequest(c *gin.Context) {
-	accept := c.GetHeader("Accept")
-	if strings.Contains(accept, "text/html") {
-		p := c.Request.URL.Path
-		if p == "/login" || p == "/" {
-			if getPongo2Renderer() != nil {
-				handleLoginPage(c)
-			} else {
-				c.String(http.StatusOK, "login")
-			}
-		} else {
-			c.Redirect(http.StatusFound, "/login")
-		}
-	} else {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-	}
-	c.Abort()
-}
-
-func ensureTestAuthContext(c *gin.Context) bool {
-	if !testAuthBypassAllowed() {
-		return false
-	}
-	if gin.Mode() == gin.TestMode || isTestLikeEnvironment() {
-		setDefaultUserContext(c)
-		return true
-	}
-	return false
-}
-
-func isTestLikeEnvironment() bool {
-	env := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
-	switch env {
-	case "", "test", "testing", "unit", "unit-test", "unit_real", "unit-real":
-		return true
-	default:
-		return false
-	}
-}
-
-func testAuthBypassAllowed() bool {
-	disable := strings.ToLower(strings.TrimSpace(os.Getenv("GOTRS_DISABLE_TEST_AUTH_BYPASS")))
-	switch disable {
-	case "1", "true", "yes", "on":
-		return false
-	}
-
-	env := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
-	switch env {
-	case "production", "prod":
-		return false
-	}
-
-	if gin.Mode() == gin.TestMode {
-		return true
-	}
-
-	switch env {
-	case "", "test", "testing", "unit", "unit-test", "unit_real", "unit-real":
-		return true
-	}
-
-	return false
 }
 
 // Integrate with existing setup in setupHTMXRoutesWithAuth AFTER static/auth/basic have been initialized.

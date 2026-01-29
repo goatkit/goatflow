@@ -20,8 +20,11 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 )
 
+// Note: Uses centralized GetTestAuthToken() and AddTestAuthCookie() from test_helpers.go
+
 func TestAdminGroupManagement(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("ListGroups_ShowsAllGroups", func(t *testing.T) {
 		if err := database.InitTestDB(); err != nil {
@@ -32,6 +35,7 @@ func TestAdminGroupManagement(t *testing.T) {
 		SetupHTMXRoutes(router)
 
 		req, _ := http.NewRequest("GET", "/admin/groups", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -49,6 +53,7 @@ func TestAdminGroupManagement(t *testing.T) {
 		SetupHTMXRoutes(router)
 
 		req, _ := http.NewRequest("GET", "/admin/groups?search=admin", nil)
+		AddTestAuthCookie(req, token)
 		req.Header.Set("HX-Request", "true")
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -74,6 +79,7 @@ func TestAdminGroupManagement(t *testing.T) {
 		form.Add("valid_id", "1")
 
 		req, _ := http.NewRequest("POST", "/admin/groups", strings.NewReader(form.Encode()))
+		AddTestAuthCookie(req, token)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -109,6 +115,7 @@ func TestAdminGroupManagement(t *testing.T) {
 		form.Add("valid_id", "1")
 
 		req, _ := http.NewRequest("POST", "/admin/groups", strings.NewReader(form.Encode()))
+		AddTestAuthCookie(req, token)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -166,6 +173,7 @@ func TestAdminGroupManagement(t *testing.T) {
 			t.Skip("Unknown group ID type; skipping")
 		}
 		req, _ := http.NewRequest("PUT", "/admin/groups/"+idStr, strings.NewReader(form.Encode()))
+		AddTestAuthCookie(req, token)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 		w := httptest.NewRecorder()
@@ -220,6 +228,7 @@ func TestAdminGroupManagement(t *testing.T) {
 			t.Skip("Unknown group ID type; skipping")
 		}
 		req, _ := http.NewRequest("DELETE", "/admin/groups/"+idStr2, nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -236,6 +245,7 @@ func TestAdminGroupManagement(t *testing.T) {
 		SetupHTMXRoutes(router)
 
 		req, _ := http.NewRequest("GET", "/admin/groups/1/permissions", nil)
+		AddTestAuthCookie(req, token)
 		req.Header.Set("Accept", "application/json")
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -275,6 +285,7 @@ func TestAdminGroupManagement(t *testing.T) {
 
 		jsonBody, _ := json.Marshal(payload)
 		req, _ := http.NewRequest("POST", "/admin/groups/1/permissions", bytes.NewBuffer(jsonBody))
+		AddTestAuthCookie(req, token)
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
@@ -314,6 +325,8 @@ func TestGroupValidation(t *testing.T) {
 }
 
 func TestGroupFiltering(t *testing.T) {
+	token := GetTestAuthToken(t)
+
 	t.Run("FilterByStatus", func(t *testing.T) {
 		if err := database.InitTestDB(); err != nil {
 			t.Skip("Database not available")
@@ -324,6 +337,7 @@ func TestGroupFiltering(t *testing.T) {
 
 		// Test active groups
 		req, _ := http.NewRequest("GET", "/admin/groups?status=active", nil)
+		AddTestAuthCookie(req, token)
 		req.Header.Set("HX-Request", "true")
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -332,6 +346,7 @@ func TestGroupFiltering(t *testing.T) {
 
 		// Test inactive groups
 		req, _ = http.NewRequest("GET", "/admin/groups?status=inactive", nil)
+		AddTestAuthCookie(req, token)
 		req.Header.Set("HX-Request", "true")
 		w = httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -349,6 +364,7 @@ func TestGroupFiltering(t *testing.T) {
 
 		// Sort by name ascending
 		req, _ := http.NewRequest("GET", "/admin/groups?sort=name&order=asc", nil)
+		AddTestAuthCookie(req, token)
 		req.Header.Set("HX-Request", "true")
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -357,6 +373,7 @@ func TestGroupFiltering(t *testing.T) {
 
 		// Sort by created date descending
 		req, _ = http.NewRequest("GET", "/admin/groups?sort=created&order=desc", nil)
+		AddTestAuthCookie(req, token)
 		req.Header.Set("HX-Request", "true")
 		w = httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -370,11 +387,14 @@ func TestGroupMembership(t *testing.T) {
 		t.Skip("Database not available")
 	}
 	defer database.CloseTestDB()
+	token := GetTestAuthToken(t)
+
 	t.Run("ListGroupMembers", func(t *testing.T) {
 		router := gin.New()
 		SetupHTMXRoutes(router)
 
 		req, _ := http.NewRequest("GET", "/admin/groups/1/members", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -395,6 +415,7 @@ func TestGroupMembership(t *testing.T) {
 
 		jsonBody, _ := json.Marshal(member)
 		req, _ := http.NewRequest("POST", "/admin/groups/1/members", bytes.NewBuffer(jsonBody))
+		AddTestAuthCookie(req, token)
 		req.Header.Set("Content-Type", "application/json")
 
 		w := httptest.NewRecorder()
@@ -414,6 +435,7 @@ func TestGroupMembership(t *testing.T) {
 		SetupHTMXRoutes(router)
 
 		req, _ := http.NewRequest("DELETE", "/admin/groups/1/members/2", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -424,6 +446,8 @@ func TestGroupMembership(t *testing.T) {
 }
 
 func TestGroupSessionState(t *testing.T) {
+	token := GetTestAuthToken(t)
+
 	t.Run("PreserveSearchState", func(t *testing.T) {
 		if err := database.InitTestDB(); err != nil {
 			t.Skip("Database not available")
@@ -434,6 +458,7 @@ func TestGroupSessionState(t *testing.T) {
 
 		// Set search state
 		req, _ := http.NewRequest("GET", "/admin/groups?search=test&save_state=true", nil)
+		AddTestAuthCookie(req, token)
 		req.Header.Set("HX-Request", "true")
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -453,6 +478,7 @@ func TestGroupSessionState(t *testing.T) {
 
 		// Load page without parameters - should restore from session
 		req, _ := http.NewRequest("GET", "/admin/groups", nil)
+		AddTestAuthCookie(req, token)
 		encoded := url.QueryEscape(`{"search":"test","status":"active"}`)
 		req.AddCookie(&http.Cookie{
 			Name:  "group_filters",

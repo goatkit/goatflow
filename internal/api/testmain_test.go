@@ -345,7 +345,8 @@ func resetTestDatabase() error {
 		db.Exec("UPDATE ticket_priority SET name = ? WHERE id = ?", name, id)
 	}
 
-	// Restore canonical queue names and valid_id (from migrations)
+	// Restore canonical queue names, valid_id, and group_id (from migrations)
+	// group_id = 1 (users group) for all canonical queues
 	canonicalQueues := map[int]string{
 		1: "Postmaster",
 		2: "Raw",
@@ -353,7 +354,8 @@ func resetTestDatabase() error {
 		4: "Misc",
 	}
 	for id, name := range canonicalQueues {
-		db.Exec("UPDATE queue SET name = ?, valid_id = 1 WHERE id = ?", name, id)
+		db.Exec("INSERT IGNORE INTO queue (id, name, group_id, valid_id, create_time, create_by, change_time, change_by) VALUES (?, ?, 1, 1, NOW(), 1, NOW(), 1)", id, name)
+		db.Exec("UPDATE queue SET name = ?, group_id = 1, valid_id = 1 WHERE id = ?", name, id)
 	}
 
 	// Seed canonical test tickets
@@ -394,6 +396,26 @@ func resetTestDatabase() error {
 	// Seed testuser (id=15) for admin user tests
 	db.Exec(`INSERT IGNORE INTO users (id, login, pw, valid_id, create_time, create_by, change_time, change_by)
 		VALUES (15, 'testuser', 'test', 1, NOW(), 1, NOW(), 1)`)
+
+	// Ensure canonical groups exist (users=1, admin=2, stats=3, support=4)
+	db.Exec(`INSERT IGNORE INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (1, 'users', 1, NOW(), 1, NOW(), 1)`)
+	db.Exec(`INSERT IGNORE INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (2, 'admin', 1, NOW(), 1, NOW(), 1)`)
+	db.Exec(`INSERT IGNORE INTO groups (id, name, valid_id, create_time, create_by, change_time, change_by)
+		VALUES (3, 'stats', 1, NOW(), 1, NOW(), 1)`)
+
+	// CRITICAL: Grant user 1 (root) full permissions for queue access middleware
+	// The queue_access middleware checks group_user for permission_key
+	// 'rw' supersedes all other permissions (ro, create, move_into, etc.)
+	db.Exec(`INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+		VALUES (1, 1, 'rw', NOW(), 1, NOW(), 1)`)
+	db.Exec(`INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+		VALUES (1, 2, 'rw', NOW(), 1, NOW(), 1)`)
+	db.Exec(`INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+		VALUES (1, 3, 'rw', NOW(), 1, NOW(), 1)`)
+	db.Exec(`INSERT IGNORE INTO group_user (user_id, group_id, permission_key, create_time, create_by, change_time, change_by)
+		VALUES (1, 4, 'rw', NOW(), 1, NOW(), 1)`)
 
 	// Re-initialize the ticket number generator in case a previous test set it to nil
 	if err := initTestTicketNumberGenerator(); err != nil {
