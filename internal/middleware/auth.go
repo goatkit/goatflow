@@ -4,13 +4,13 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/gotrs-io/gotrs-ce/internal/convert"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
@@ -339,29 +339,12 @@ func (m *AuthMiddleware) GetUserID(c *gin.Context) (uint, bool) {
 }
 
 // getUserIDFromCtxUint extracts the authenticated user's ID from gin context as uint.
-// Local helper to avoid circular import with shared package.
 func getUserIDFromCtxUint(c *gin.Context, fallback uint) uint {
 	v, ok := c.Get("user_id")
 	if !ok {
 		return fallback
 	}
-	switch id := v.(type) {
-	case int:
-		return uint(id)
-	case int64:
-		return uint(id)
-	case uint:
-		return id
-	case uint64:
-		return uint(id)
-	case float64:
-		return uint(id)
-	case string:
-		if n, err := strconv.Atoi(id); err == nil {
-			return uint(n)
-		}
-	}
-	return fallback
+	return convert.ToUint(v, fallback)
 }
 
 func (m *AuthMiddleware) GetUserRole(c *gin.Context) (string, bool) {

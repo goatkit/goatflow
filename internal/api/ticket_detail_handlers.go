@@ -264,11 +264,12 @@ func handleTicketDetail(c *gin.Context) {
 	// Get customer information
 	var customerName, customerEmail, customerPhone string
 	if ticket.CustomerUserID != nil && *ticket.CustomerUserID != "" {
+		// Match on login OR email since customer_user_id could contain either
 		customerRow := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT CONCAT(first_name, ' ', last_name), email, phone
 			FROM customer_user
-			WHERE login = ? AND valid_id = 1
-		`), *ticket.CustomerUserID)
+			WHERE (login = ? OR email = ?) AND valid_id = 1
+		`), *ticket.CustomerUserID, *ticket.CustomerUserID)
 		err = customerRow.Scan(&customerName, &customerEmail, &customerPhone)
 		if err != nil {
 			// Fallback if customer not found
@@ -576,14 +577,15 @@ func handleTicketDetail(c *gin.Context) {
 	panelOpen := 0
 	if ticket.CustomerUserID != nil && *ticket.CustomerUserID != "" {
 		// Fetch customer user + company in one query
+		// Match on login OR email since customer_user_id could contain either
 		var title, firstName, lastName, login, email, phone, mobile, customerID, compName, street, zip, city, country, url sql.NullString
 		err := db.QueryRow(database.ConvertPlaceholders(`
 			SELECT cu.title, cu.first_name, cu.last_name, cu.login, cu.email, cu.phone, cu.mobile, cu.customer_id,
 				   cc.name, cc.street, cc.zip, cc.city, cc.country, cc.url
 			FROM customer_user cu
 			LEFT JOIN customer_company cc ON cu.customer_id = cc.customer_id
-			WHERE cu.login = ?
-		`), *ticket.CustomerUserID).Scan(
+			WHERE cu.login = ? OR cu.email = ?
+		`), *ticket.CustomerUserID, *ticket.CustomerUserID).Scan(
 			&title, &firstName, &lastName, &login, &email, &phone, &mobile, &customerID,
 			&compName, &street, &zip, &city, &country, &url)
 		if err == nil {

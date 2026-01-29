@@ -31,6 +31,8 @@ func getTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
+// Note: Uses centralized GetTestAuthToken() and AddTestAuthCookie() from test_helpers.go
+
 // Helper function to create a test customer company.
 func createTestCustomerCompany(t *testing.T, db *sql.DB, customerID string) {
 	name := "Test Company " + customerID
@@ -103,11 +105,13 @@ func verifyCustomerCompanyStatus(t *testing.T, db *sql.DB, customerID string, ex
 
 func TestAdminCustomerCompaniesPage(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("GET /admin/customer/companies renders page", func(t *testing.T) {
 		router := NewSimpleRouter()
 
 		req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -125,6 +129,7 @@ func TestAdminCustomerCompaniesPage(t *testing.T) {
 		router := NewSimpleRouter()
 
 		req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies?search=acme", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -137,6 +142,7 @@ func TestAdminCustomerCompaniesPage(t *testing.T) {
 		router := NewSimpleRouter()
 
 		req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies?status=valid", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -147,11 +153,13 @@ func TestAdminCustomerCompaniesPage(t *testing.T) {
 
 func TestAdminCustomerCompanyNew(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("GET /admin/customer/companies/new renders form", func(t *testing.T) {
 		router := NewSimpleRouter()
 
 		req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies/new", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -166,6 +174,7 @@ func TestAdminCustomerCompanyNew(t *testing.T) {
 
 func TestAdminCustomerCompanyCreate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("POST /admin/customer/companies creates company", func(t *testing.T) {
 		db := getTestDB(t)
@@ -195,6 +204,7 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 			bytes.NewBufferString(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Accept", "application/json")
+		AddTestAuthCookie(req, token)
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -205,8 +215,8 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 		// Verify the data was written to the database
 		var dbName, dbStreet, dbCity, dbCountry string
 		err := db.QueryRow(database.ConvertPlaceholders(`
-			SELECT name, street, city, country 
-			FROM customer_company 
+			SELECT name, street, city, country
+			FROM customer_company
 			WHERE customer_id = ?
 		`), customerID).Scan(&dbName, &dbStreet, &dbCity, &dbCountry)
 		require.NoError(t, err, "Company should exist in database")
@@ -234,6 +244,7 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies",
 			bytes.NewBufferString(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		AddTestAuthCookie(req, token)
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -261,6 +272,7 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies",
 			bytes.NewBufferString(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		AddTestAuthCookie(req, token)
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -272,6 +284,7 @@ func TestAdminCustomerCompanyCreate(t *testing.T) {
 
 func TestAdminCustomerCompanyEdit(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("GET /admin/customer/companies/:id/edit renders form", func(t *testing.T) {
 		db := getTestDB(t)
@@ -286,6 +299,7 @@ func TestAdminCustomerCompanyEdit(t *testing.T) {
 		router := NewSimpleRouterWithDB(db)
 
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/customer/companies/%s/edit", customerID), nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -304,6 +318,7 @@ func TestAdminCustomerCompanyEdit(t *testing.T) {
 		router := NewSimpleRouterWithDB(db)
 
 		req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies/NONEXISTENT/edit", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -314,6 +329,7 @@ func TestAdminCustomerCompanyEdit(t *testing.T) {
 
 func TestAdminCustomerCompanyUpdate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("POST /admin/customer/companies/:id/edit updates company", func(t *testing.T) {
 		db := getTestDB(t)
@@ -344,6 +360,7 @@ func TestAdminCustomerCompanyUpdate(t *testing.T) {
 			bytes.NewBufferString(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Accept", "application/json")
+		AddTestAuthCookie(req, token)
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -386,6 +403,7 @@ func TestAdminCustomerCompanyUpdate(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/TEST001/edit",
 			bytes.NewBufferString(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		AddTestAuthCookie(req, token)
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -423,6 +441,7 @@ func TestAdminCustomerCompanyUpdate(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/NONEXISTENT/edit",
 			bytes.NewBufferString(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		AddTestAuthCookie(req, token)
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -449,6 +468,7 @@ func TestAdminCustomerCompanyUpdate(t *testing.T) {
 
 func TestAdminCustomerCompanyDelete(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("POST /admin/customer/companies/:id/delete deletes company", func(t *testing.T) {
 		db := getTestDB(t)
@@ -464,6 +484,7 @@ func TestAdminCustomerCompanyDelete(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/customer/companies/%s/delete", customerID), nil)
 		req.Header.Set("Accept", "application/json")
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -495,6 +516,7 @@ func TestAdminCustomerCompanyDelete(t *testing.T) {
 		router := NewSimpleRouterWithDB(db)
 
 		req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/NONEXISTENT/delete", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -520,6 +542,7 @@ func TestAdminCustomerCompanyDelete(t *testing.T) {
 
 func TestAdminCustomerCompanyActivate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("POST /admin/customer/companies/:id/activate activates company", func(t *testing.T) {
 		db := getTestDB(t)
@@ -539,6 +562,7 @@ func TestAdminCustomerCompanyActivate(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/customer/companies/%s/activate", customerID), nil)
 		req.Header.Set("Accept", "application/json")
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -557,6 +581,7 @@ func TestAdminCustomerCompanyActivate(t *testing.T) {
 		router := NewSimpleRouterWithDB(db)
 
 		req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/NONEXISTENT/activate", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -567,6 +592,7 @@ func TestAdminCustomerCompanyActivate(t *testing.T) {
 
 func TestAdminCustomerCompanyPortalSettings(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("POST /admin/customer/companies/:id/portal-settings updates portal settings", func(t *testing.T) {
 		db := getTestDB(t)
@@ -583,6 +609,7 @@ func TestAdminCustomerCompanyPortalSettings(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/TEST001/portal-settings",
 			bytes.NewBufferString(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		AddTestAuthCookie(req, token)
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -593,6 +620,7 @@ func TestAdminCustomerCompanyPortalSettings(t *testing.T) {
 
 func TestAdminCustomerCompanyServices(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("POST /admin/customer/companies/:id/services assigns services", func(t *testing.T) {
 		db := getTestDB(t)
@@ -613,6 +641,7 @@ func TestAdminCustomerCompanyServices(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/customer/companies/%s/services", customerID),
 			bytes.NewBufferString(formData.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		AddTestAuthCookie(req, token)
 
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -631,6 +660,7 @@ func TestAdminCustomerCompanyServices(t *testing.T) {
 		router := NewSimpleRouterWithDB(db)
 
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/customer/companies/%s/services", customerID), nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -641,6 +671,7 @@ func TestAdminCustomerCompanyServices(t *testing.T) {
 
 func TestAdminCustomerCompanyUsers(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("GET /admin/customer/companies/:id/users returns company users", func(t *testing.T) {
 		db := getTestDB(t)
@@ -653,6 +684,7 @@ func TestAdminCustomerCompanyUsers(t *testing.T) {
 		router := NewSimpleRouterWithDB(db)
 
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/customer/companies/%s/users", customerID), nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -663,6 +695,7 @@ func TestAdminCustomerCompanyUsers(t *testing.T) {
 
 func TestAdminCustomerCompanyTickets(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("GET /admin/customer/companies/:id/tickets returns company tickets", func(t *testing.T) {
 		db := getTestDB(t)
@@ -675,6 +708,7 @@ func TestAdminCustomerCompanyTickets(t *testing.T) {
 		router := NewSimpleRouterWithDB(db)
 
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/customer/companies/%s/tickets", customerID), nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -685,11 +719,13 @@ func TestAdminCustomerCompanyTickets(t *testing.T) {
 
 func TestAdminCustomerCompanySearch(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("search functionality with valid query", func(t *testing.T) {
 		router := NewSimpleRouter()
 
 		req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies?search=acme&status=valid&limit=10&offset=0", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -705,6 +741,7 @@ func TestAdminCustomerCompanySearch(t *testing.T) {
 		router := NewSimpleRouter()
 
 		req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies?search=&limit=-1&offset=abc", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -716,11 +753,13 @@ func TestAdminCustomerCompanySearch(t *testing.T) {
 
 func TestAdminCustomerCompanyPagination(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("pagination with valid parameters", func(t *testing.T) {
 		router := NewSimpleRouter()
 
 		req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies?limit=20&offset=40", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -732,6 +771,7 @@ func TestAdminCustomerCompanyPagination(t *testing.T) {
 		router := NewSimpleRouter()
 
 		req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, req)
@@ -742,24 +782,28 @@ func TestAdminCustomerCompanyPagination(t *testing.T) {
 
 func TestAdminCustomerCompanySorting(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("sorting by different columns", func(t *testing.T) {
 		router := NewSimpleRouter()
 
 		// Test sorting by name
 		req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies?sort=name&order=asc", nil)
+		AddTestAuthCookie(req, token)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		// Test sorting by customer_id
 		req = httptest.NewRequest(http.MethodGet, "/admin/customer/companies?sort=customer_id&order=desc", nil)
+		AddTestAuthCookie(req, token)
 		w = httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		// Test invalid sort column
 		req = httptest.NewRequest(http.MethodGet, "/admin/customer/companies?sort=invalid_column", nil)
+		AddTestAuthCookie(req, token)
 		w = httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusBadRequest)
@@ -768,6 +812,7 @@ func TestAdminCustomerCompanySorting(t *testing.T) {
 
 func TestAdminCustomerCompanyCRUD(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	t.Run("complete CRUD operations", func(t *testing.T) {
 		db := getTestDB(t)
@@ -793,6 +838,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 				bytes.NewBufferString(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			req.Header.Set("Accept", "application/json")
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -811,6 +857,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 		// READ: Test reading company list
 		t.Run("read company list", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies", nil)
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -820,6 +867,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 		// READ: Test reading specific company
 		t.Run("read specific company", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/admin/customer/companies/%s/edit", customerID), nil)
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -845,6 +893,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 				bytes.NewBufferString(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			req.Header.Set("Accept", "application/json")
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -871,6 +920,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 		t.Run("delete company", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/admin/customer/companies/%s/delete", customerID), nil)
 			req.Header.Set("Accept", "application/json")
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -895,6 +945,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 		// Test non-existent company
 		t.Run("read non-existent company", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies/NONEXISTENT/edit", nil)
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -908,6 +959,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/NONEXISTENT/edit",
 				bytes.NewBufferString(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -916,6 +968,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 
 		t.Run("delete non-existent company", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/NONEXISTENT/delete", nil)
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -930,6 +983,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/new",
 				bytes.NewBufferString(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -943,6 +997,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/INVALID/edit",
 				bytes.NewBufferString(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -960,6 +1015,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 
 		t.Run("activate company", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/RELTEST001/activate", nil)
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -969,6 +1025,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 
 		t.Run("view company users", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies/RELTEST001/users", nil)
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -977,6 +1034,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 
 		t.Run("view company tickets", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies/RELTEST001/tickets", nil)
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -985,6 +1043,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 
 		t.Run("view company services", func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/admin/customer/companies/RELTEST001/services", nil)
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -999,6 +1058,7 @@ func TestAdminCustomerCompanyCRUD(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/RELTEST001/services",
 				bytes.NewBufferString(formData.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 

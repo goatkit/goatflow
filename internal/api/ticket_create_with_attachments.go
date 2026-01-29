@@ -84,10 +84,11 @@ func handleCreateTicketWithAttachments(c *gin.Context) {
 				log.Printf("CreateTicketWithAttachments: filled CustomerEmail from customer_user_id='%s'", candidate)
 			} else {
 				// Try to look up email from customer_user table
+				// Match on login OR email since customer_user_id could contain either
 				db, err := database.GetDB()
 				if err == nil {
 					var foundEmail sql.NullString
-					err := db.QueryRow(`SELECT email FROM customer_user WHERE login = ? AND valid_id = 1`, candidate).Scan(&foundEmail)
+					err := db.QueryRow(database.ConvertPlaceholders(`SELECT email FROM customer_user WHERE (login = ? OR email = ?) AND valid_id = 1`), candidate, candidate).Scan(&foundEmail)
 					if err == nil && foundEmail.Valid && foundEmail.String != "" {
 						req.CustomerEmail = foundEmail.String
 						log.Printf("CreateTicketWithAttachments: found customer email '%s' for user '%s'", req.CustomerEmail, candidate)

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/shared"
 	"github.com/rickar/cal/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -290,17 +291,5 @@ func (s *CalendarService) IsWorkingTime(calendarName string, t time.Time) bool {
 
 // toInt converts various types to int.
 func toInt(v interface{}) int {
-	switch val := v.(type) {
-	case int:
-		return val
-	case int64:
-		return int(val)
-	case float64:
-		return int(val)
-	case string:
-		if i, err := strconv.Atoi(val); err == nil {
-			return i
-		}
-	}
-	return 0
+	return shared.ToInt(v, 0)
 }

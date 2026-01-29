@@ -496,18 +496,7 @@ func isAdminRole(role string) bool {
 }
 
 func toUintID(v interface{}) uint {
-	switch x := v.(type) {
-	case uint:
-		return x
-	case int:
-		return uint(x)
-	case float64:
-		return uint(x)
-	case int64:
-		return uint(x)
-	default:
-		return 0
-	}
+	return shared.ToUint(v, 0)
 }
 
 func isUserInAdminGroup(db *sql.DB, userID uint) bool {

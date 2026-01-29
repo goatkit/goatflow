@@ -18,8 +18,11 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/sysconfig"
 )
 
+// Note: Uses centralized GetTestAuthToken() and AddTestAuthCookie() from test_helpers.go
+
 func TestAdminCustomerPortalSettingsUpdate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	db := getTestDB(t)
 	// Note: Do not close singleton DB connection
@@ -45,6 +48,7 @@ func TestAdminCustomerPortalSettingsUpdate(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/admin/customer/portal/settings", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
+	AddTestAuthCookie(req, token)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -67,6 +71,7 @@ func TestAdminCustomerPortalSettingsUpdate(t *testing.T) {
 
 func TestAdminCustomerCompanyPortalSettingsUpdate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	token := GetTestAuthToken(t)
 
 	db := getTestDB(t)
 	// Note: Do not close singleton DB connection
@@ -97,6 +102,7 @@ func TestAdminCustomerCompanyPortalSettingsUpdate(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/admin/customer/companies/"+customerID+"/portal-settings", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
+	AddTestAuthCookie(req, token)
 
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)

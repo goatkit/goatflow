@@ -175,127 +175,187 @@ spec:
         - path: /priorities
           method: GET
           handler: HandleListPrioritiesAPI
+          middleware:
+              - auth
           description: "List priorities"
         - path: /priorities/:id
           method: GET
           handler: HandleGetPriorityAPI
+          middleware:
+              - auth
           description: "Get priority by ID"
         # Types, states, and services
         - path: /types
           method: GET
           handler: HandleListTypesAPI
+          middleware:
+              - auth
           description: "List ticket types"
         - path: /states
           method: GET
           handler: HandleListStatesAPI
+          middleware:
+              - auth
           description: "List ticket states"
         - path: /services
           method: GET
           handler: HandleListServicesAPI
+          middleware:
+              - auth
           description: "List services"
         # Ticket attribute relations evaluation (for form filtering)
         - path: /ticket-attribute-relations/evaluate
           method: GET
           handler: handleAPITicketAttributeRelationsEvaluate
+          middleware:
+              - auth
           description: "Evaluate ticket attribute relations for filtering dropdowns"
         # Search endpoints
         - path: /search
           method: POST
           handler: HandleSearchAPI
+          middleware:
+              - auth
           description: "Search tickets"
         - path: /search/suggestions
           method: GET
           handler: HandleSearchSuggestionsAPI
+          middleware:
+              - auth
           description: "Search suggestions"
         - path: /search/reindex
           method: POST
           handler: HandleReindexAPI
+          middleware:
+              - auth
           description: "Trigger search reindex"
         - path: /search/health
           method: GET
           handler: HandleSearchHealthAPI
+          middleware:
+              - auth
           description: "Search health"
         # User mutations
         - path: /users
           method: POST
           handler: HandleCreateUserAPI
+          middleware:
+              - auth
           description: "Create user"
         - path: /users/:id
           method: PUT
           handler: HandleUpdateUserAPI
+          middleware:
+              - auth
           description: "Update user"
         - path: /users/:id
           method: DELETE
           handler: HandleDeleteUserAPI
+          middleware:
+              - auth
           description: "Delete user"
         # Article mutations
         - path: /tickets/:id/articles/:article_id
           method: PUT
           handler: HandleUpdateArticleAPI
+          middleware:
+              - auth
           description: "Update article"
         - path: /tickets/:id/articles/:article_id
           method: DELETE
           handler: HandleDeleteArticleAPI
+          middleware:
+              - auth
           description: "Delete article"
         # Queue mutations and extras
         - path: /queues
           method: POST
           handler: HandleCreateQueueAPI
+          middleware:
+              - auth
           description: "Create queue"
         - path: /queues/:id
           method: PUT
           handler: HandleUpdateQueueAPI
+          middleware:
+              - auth
           description: "Update queue"
         - path: /queues/:id
           method: DELETE
           handler: HandleDeleteQueueAPI
+          middleware:
+              - auth
           description: "Delete queue"
         - path: /queues/:id/stats
           method: GET
           handler: HandleGetQueueStatsAPI
+          middleware:
+              - auth
           description: "Queue ticket statistics"
         - path: /queues/:id/groups
           method: POST
           handler: HandleAssignQueueGroupAPI
+          middleware:
+              - auth
           description: "Assign group to queue"
         - path: /queues/:id/groups/:group_id
           method: DELETE
           handler: HandleRemoveQueueGroupAPI
+          middleware:
+              - auth
           description: "Remove group from queue"
         # Email identity endpoints
         - path: /system-addresses
           method: GET
           handler: HandleListSystemAddressesAPI
+          middleware:
+              - auth
           description: "List system addresses"
         - path: /system-addresses
           method: POST
           handler: HandleCreateSystemAddressAPI
+          middleware:
+              - auth
           description: "Create system address"
         - path: /system-addresses/:id
           method: PUT
           handler: HandleUpdateSystemAddressAPI
+          middleware:
+              - auth
           description: "Update system address"
         - path: /salutations
           method: GET
           handler: HandleListSalutationsAPI
+          middleware:
+              - auth
           description: "List salutations"
         - path: /salutations
           method: POST
           handler: HandleCreateSalutationAPI
+          middleware:
+              - auth
           description: "Create salutation"
         - path: /salutations/:id
           method: PUT
           handler: HandleUpdateSalutationAPI
+          middleware:
+              - auth
           description: "Update salutation"
         - path: /signatures
           method: GET
           handler: HandleListSignaturesAPI
+          middleware:
+              - auth
           description: "List signatures"
         - path: /signatures
           method: POST
           handler: HandleCreateSignatureAPI
+          middleware:
+              - auth
           description: "Create signature"
         - path: /signatures/:id
           method: PUT
           handler: HandleUpdateSignatureAPI
+          middleware:
+              - auth
           description: "Update signature"

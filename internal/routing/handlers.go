@@ -59,23 +59,6 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 	// Register middleware only - all route handlers are now in YAML
 	middlewares := map[string]gin.HandlerFunc{
 		"auth": func(c *gin.Context) {
-			if testAuthBypassAllowed() {
-				if _, exists := c.Get("user_id"); !exists {
-					c.Set("user_id", uint(1))
-				}
-				if _, exists := c.Get("user_email"); !exists {
-					c.Set("user_email", "demo@example.com")
-				}
-				if _, exists := c.Get("user_role"); !exists {
-					c.Set("user_role", "Admin")
-				}
-				if _, exists := c.Get("user_name"); !exists {
-					c.Set("user_name", "Demo User")
-				}
-				c.Next()
-				return
-			}
-
 			// Public (unauthenticated) paths bypass auth
 			path := c.Request.URL.Path
 			if path == "/login" || path == "/api/auth/login" || path == "/api/auth/customer/login" || path == "/health" || path == "/metrics" || path == "/favicon.ico" || strings.HasPrefix(path, "/static/") || path == "/customer/login" || path == "/auth/customer" || path == "/api/languages" || path == "/api/themes" {
@@ -342,31 +325,6 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 	if !registry.HandlerExists("HandleAgentNewTicket") {
 		registry.Override("HandleAgentNewTicket", HandleAgentNewTicket)
 	}
-}
-
-func testAuthBypassAllowed() bool {
-	disable := strings.ToLower(strings.TrimSpace(os.Getenv("GOTRS_DISABLE_TEST_AUTH_BYPASS")))
-	switch disable {
-	case "1", "true", "yes", "on":
-		return false
-	}
-
-	env := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
-	switch env {
-	case "production", "prod":
-		return false
-	}
-
-	if gin.Mode() == gin.TestMode {
-		return true
-	}
-
-	switch env {
-	case "", "test", "testing", "unit", "unit-test", "unit_real", "unit-real":
-		return true
-	}
-
-	return false
 }
 
 // RegisterAPIHandlers registers API handlers with the registry.

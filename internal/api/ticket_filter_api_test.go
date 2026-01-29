@@ -13,11 +13,14 @@ import (
 
 // Test ticket filtering via the JSON API
 // These tests validate that /api/tickets properly filters tickets
+// Note: Uses centralized GetTestAuthToken() and AddTestAuthCookie() from test_helpers.go
 
 func TestTicketFilterByStatus(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 	WithCleanDB(t)
 	gin.SetMode(gin.TestMode)
+
+	token := GetTestAuthToken(t)
 
 	tests := []struct {
 		name        string
@@ -48,7 +51,7 @@ func TestTicketFilterByStatus(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", "/api/tickets?"+tt.queryParams, nil)
-			req.Header.Set("X-Test-Mode", "true")
+			AddTestAuthCookie(req, token)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -68,6 +71,8 @@ func TestTicketFilterByPriority(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 	WithCleanDB(t)
 	gin.SetMode(gin.TestMode)
+
+	token := GetTestAuthToken(t)
 
 	tests := []struct {
 		name        string
@@ -94,7 +99,7 @@ func TestTicketFilterByPriority(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", "/api/tickets?"+tt.queryParams, nil)
-			req.Header.Set("X-Test-Mode", "true")
+			AddTestAuthCookie(req, token)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -110,6 +115,8 @@ func TestTicketFilterByQueue(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 	WithCleanDB(t)
 	gin.SetMode(gin.TestMode)
+
+	token := GetTestAuthToken(t)
 
 	tests := []struct {
 		name        string
@@ -136,7 +143,7 @@ func TestTicketFilterByQueue(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", "/api/tickets?"+tt.queryParams, nil)
-			req.Header.Set("X-Test-Mode", "true")
+			AddTestAuthCookie(req, token)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -152,6 +159,8 @@ func TestTicketFilterByAssignee(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 	WithCleanDB(t)
 	gin.SetMode(gin.TestMode)
+
+	token := GetTestAuthToken(t)
 
 	tests := []struct {
 		name        string
@@ -178,7 +187,7 @@ func TestTicketFilterByAssignee(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", "/api/tickets?"+tt.queryParams, nil)
-			req.Header.Set("X-Test-Mode", "true")
+			AddTestAuthCookie(req, token)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -194,6 +203,8 @@ func TestCombinedFilters(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 	WithCleanDB(t)
 	gin.SetMode(gin.TestMode)
+
+	token := GetTestAuthToken(t)
 
 	tests := []struct {
 		name        string
@@ -220,7 +231,7 @@ func TestCombinedFilters(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", "/api/tickets?"+tt.queryParams, nil)
-			req.Header.Set("X-Test-Mode", "true")
+			AddTestAuthCookie(req, token)
 			router.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -237,6 +248,8 @@ func TestFilterReset(t *testing.T) {
 	WithCleanDB(t)
 	gin.SetMode(gin.TestMode)
 
+	token := GetTestAuthToken(t)
+
 	t.Run("Clear filters button removes all filters", func(t *testing.T) {
 		router := gin.New()
 		SetupHTMXRoutes(router)
@@ -244,7 +257,7 @@ func TestFilterReset(t *testing.T) {
 		// Request with no filters should return all tickets
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/tickets", nil)
-		req.Header.Set("X-Test-Mode", "true")
+		AddTestAuthCookie(req, token)
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -259,6 +272,8 @@ func TestFilterValidation(t *testing.T) {
 	t.Setenv("APP_ENV", "test")
 	WithCleanDB(t)
 	gin.SetMode(gin.TestMode)
+
+	token := GetTestAuthToken(t)
 
 	tests := []struct {
 		name        string
@@ -289,7 +304,7 @@ func TestFilterValidation(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("GET", "/api/tickets?"+tt.queryParams, nil)
-			req.Header.Set("X-Test-Mode", "true")
+			AddTestAuthCookie(req, token)
 			router.ServeHTTP(w, req)
 
 			// Should still return valid response (200 or graceful error)
