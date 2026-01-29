@@ -9,7 +9,6 @@ import (
 func TestTicketsNewSkipsDatabaseWhenDbWaitDisabled(t *testing.T) {
 	t.Setenv("SKIP_DB_WAIT", "1")
 	t.Setenv("APP_ENV", "integration")
-	t.Setenv("GOTRS_DISABLE_TEST_AUTH_BYPASS", "0")
 
 	router := NewSimpleRouter()
 
@@ -17,6 +16,7 @@ func TestTicketsNewSkipsDatabaseWhenDbWaitDisabled(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
+	// Without database, we expect auth to fail (401) or redirect (302), but not crash (500+)
 	if w.Code >= http.StatusInternalServerError {
 		t.Fatalf("expected graceful response, got %d: %s", w.Code, w.Body.String())
 	}
@@ -25,7 +25,6 @@ func TestTicketsNewSkipsDatabaseWhenDbWaitDisabled(t *testing.T) {
 func TestTicketsNewAfterDashboardSkipsDatabase(t *testing.T) {
 	t.Setenv("SKIP_DB_WAIT", "1")
 	t.Setenv("APP_ENV", "integration")
-	t.Setenv("GOTRS_DISABLE_TEST_AUTH_BYPASS", "0")
 
 	router := NewSimpleRouter()
 
@@ -39,6 +38,7 @@ func TestTicketsNewAfterDashboardSkipsDatabase(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
+	// Without database, we expect auth to fail (401) or redirect (302), but not crash (500+)
 	if w.Code >= http.StatusInternalServerError {
 		t.Fatalf("expected graceful response after dashboard, got %d: %s", w.Code, w.Body.String())
 	}

@@ -11,6 +11,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Note: Uses centralized GetTestAuthToken() from test_helpers.go
+
 // TestAllPagesSSR performs a minimal SSR smoke test over all GET routes that declare a template in YAML.
 // It ensures the server can render each page without a 5xx error. Routes without a registered handler
 // (e.g., stubs) are skipped. Auth-protected pages are accessed with a dummy access_token cookie.
@@ -90,7 +92,19 @@ func TestAllPagesSSR(t *testing.T) {
 	srv := httptest.NewServer(r)
 	defer srv.Close()
 
-	client := &http.Client{}
+	// Generate a valid JWT token for auth
+	authToken := GetTestAuthToken(t)
+
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// Allow up to 10 redirects, but re-add auth cookie on each redirect
+			if len(via) >= 10 {
+				return http.ErrUseLastResponse
+			}
+			req.AddCookie(&http.Cookie{Name: "auth_token", Value: authToken})
+			return nil
+		},
+	}
 	for _, pg := range pages {
 		url := srv.URL + normalizePath(pg.path)
 		req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -98,7 +112,7 @@ func TestAllPagesSSR(t *testing.T) {
 			t.Fatalf("build request %s: %v", pg.path, err)
 		}
 		// Satisfy auth guards and force HTML response path
-		req.AddCookie(&http.Cookie{Name: "access_token", Value: "demo_session_test"})
+		req.AddCookie(&http.Cookie{Name: "auth_token", Value: authToken})
 		req.Header.Set("Accept", "text/html")
 
 		resp, err := client.Do(req)

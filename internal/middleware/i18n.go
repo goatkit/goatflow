@@ -2,11 +2,11 @@ package middleware
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/convert"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/i18n"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
@@ -150,29 +150,12 @@ func (m *I18nMiddleware) getUserLanguage(c *gin.Context) string {
 }
 
 // getI18nUserIDFromCtx extracts the authenticated user's ID from gin context as int.
-// Local helper to avoid circular import with shared package.
 func getI18nUserIDFromCtx(c *gin.Context, fallback int) int {
 	v, ok := c.Get("user_id")
 	if !ok {
 		return fallback
 	}
-	switch id := v.(type) {
-	case int:
-		return id
-	case int64:
-		return int(id)
-	case uint:
-		return int(id)
-	case uint64:
-		return int(id)
-	case float64:
-		return int(id)
-	case string:
-		if n, err := strconv.Atoi(id); err == nil {
-			return n
-		}
-	}
-	return fallback
+	return convert.ToInt(v, fallback)
 }
 
 // isSupported checks if a language is supported.

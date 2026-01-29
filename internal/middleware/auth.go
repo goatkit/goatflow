@@ -4,13 +4,13 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/auth"
+	"github.com/gotrs-io/gotrs-ce/internal/convert"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
@@ -50,40 +50,17 @@ func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := m.extractToken(c)
 		if token == "" {
-			if allowTestBypass() {
-				m.setTestContext(c, "test@gotrs.local", "Admin")
-				c.Next()
-				return
-			}
 			m.unauthorizedResponse(c, "Missing authorization token")
 			return
 		}
 
 		if m.jwtManager == nil {
-			if allowTestBypass() {
-				m.setTestContext(c, "test@gotrs.local", "Admin")
-				c.Next()
-				return
-			}
 			m.unauthorizedResponse(c, "Authentication is not configured")
 			return
 		}
 
-		if allowTestBypass() {
-			if token == "test-token" || strings.HasPrefix(token, "demo_session_") || strings.HasPrefix(token, "demo_customer_") {
-				m.setTestContext(c, "test@gotrs.local", "Admin")
-				c.Next()
-				return
-			}
-		}
-
 		claims, err := m.jwtManager.ValidateToken(token)
 		if err != nil {
-			if allowTestBypass() {
-				m.setTestContext(c, "test@gotrs.local", "Admin")
-				c.Next()
-				return
-			}
 			m.unauthorizedResponse(c, "Invalid or expired token")
 			return
 		}
@@ -287,45 +264,6 @@ func (m *AuthMiddleware) unauthorizedResponse(c *gin.Context, message string) {
 	c.Abort()
 }
 
-func allowTestBypass() bool {
-	disable := strings.ToLower(strings.TrimSpace(os.Getenv("GOTRS_DISABLE_TEST_AUTH_BYPASS")))
-	switch disable {
-	case "1", "true", "yes", "on":
-		return false
-	}
-
-	env := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
-	switch env {
-	case "production", "prod":
-		return false
-	}
-
-	if gin.Mode() == gin.TestMode {
-		return true
-	}
-
-	switch env {
-	case "", "test", "testing", "unit", "unit-test", "unit_real", "unit-real":
-		return true
-	}
-
-	return false
-}
-
-//nolint:unparam // email is constant by design for test setup
-func (m *AuthMiddleware) setTestContext(c *gin.Context, email, role string) {
-	claims := &auth.Claims{
-		UserID: 1,
-		Email:  email,
-		Role:   role,
-	}
-	c.Set("user_id", uint(1))
-	c.Set("user_email", claims.Email)
-	c.Set("user_role", claims.Role)
-	c.Set("tenant_id", uint(0))
-	c.Set("claims", claims)
-}
-
 func (m *AuthMiddleware) IsAuthenticated(c *gin.Context) bool {
 	_, exists := c.Get("user_id")
 	return exists
@@ -339,29 +277,12 @@ func (m *AuthMiddleware) GetUserID(c *gin.Context) (uint, bool) {
 }
 
 // getUserIDFromCtxUint extracts the authenticated user's ID from gin context as uint.
-// Local helper to avoid circular import with shared package.
 func getUserIDFromCtxUint(c *gin.Context, fallback uint) uint {
 	v, ok := c.Get("user_id")
 	if !ok {
 		return fallback
 	}
-	switch id := v.(type) {
-	case int:
-		return uint(id)
-	case int64:
-		return uint(id)
-	case uint:
-		return id
-	case uint64:
-		return uint(id)
-	case float64:
-		return uint(id)
-	case string:
-		if n, err := strconv.Atoi(id); err == nil {
-			return uint(n)
-		}
-	}
-	return fallback
+	return convert.ToUint(v, fallback)
 }
 
 func (m *AuthMiddleware) GetUserRole(c *gin.Context) (string, bool) {

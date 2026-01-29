@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Note: Uses centralized GetTestAuthToken() and AddTestAuthCookie() from test_helpers.go
+
 func TestNewRouter(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -22,54 +24,65 @@ func TestSetupRoutes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	router := NewSimpleRouter()
+	token := GetTestAuthToken(t)
 
 	tests := []struct {
 		name       string
 		method     string
 		path       string
 		statusCode int
+		needsAuth  bool
 	}{
 		{
 			name:       "Health check endpoint",
 			method:     "GET",
 			path:       "/health",
 			statusCode: http.StatusOK,
+			needsAuth:  false,
 		},
 		{
 			name:       "Login page endpoint",
 			method:     "GET",
 			path:       "/login",
 			statusCode: http.StatusOK,
+			needsAuth:  false,
 		},
 		{
 			name:       "Dashboard page endpoint",
 			method:     "GET",
 			path:       "/dashboard",
 			statusCode: http.StatusOK,
+			needsAuth:  true,
 		},
 		{
 			name:       "HTMX login endpoint exists",
 			method:     "POST",
 			path:       "/api/auth/login",
 			statusCode: http.StatusBadRequest, // Will fail due to no body
+			needsAuth:  false,
 		},
 		{
 			name:       "HTMX dashboard stats endpoint",
 			method:     "GET",
 			path:       "/api/dashboard/stats",
 			statusCode: http.StatusOK,
+			needsAuth:  true,
 		},
 		{
 			name:       "Non-existent route returns 404",
 			method:     "GET",
 			path:       "/nonexistent",
 			statusCode: http.StatusNotFound,
+			needsAuth:  false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.path, nil)
+			if tt.needsAuth {
+				AddTestAuthCookie(req, token)
+			}
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, req)
@@ -83,6 +96,7 @@ func TestHTMXEndpoints(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	router := NewSimpleRouter()
+	token := GetTestAuthToken(t)
 
 	tests := []struct {
 		name       string
@@ -119,6 +133,7 @@ func TestHTMXEndpoints(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, tt.path, nil)
+			AddTestAuthCookie(req, token)
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, req)

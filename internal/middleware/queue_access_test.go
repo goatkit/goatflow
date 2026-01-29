@@ -143,6 +143,7 @@ func TestRequireAnyQueueAccess(t *testing.T) {
 
 func TestUserIDConversion(t *testing.T) {
 	// Test that various user ID types are handled correctly
+	// The convert package parses valid numeric strings
 	testCases := []struct {
 		name     string
 		userID   interface{}
@@ -152,7 +153,8 @@ func TestUserIDConversion(t *testing.T) {
 		{"int64", int64(1), true},
 		{"uint", uint(1), true},
 		{"uint64", uint64(1), true},
-		{"string", "1", false}, // Should fail - invalid type
+		{"string", "1", true},            // Valid numeric string is parsed
+		{"string_invalid", "abc", false}, // Invalid string fails
 	}
 
 	for _, tc := range testCases {

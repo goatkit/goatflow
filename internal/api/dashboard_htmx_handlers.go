@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,6 +19,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
+	"github.com/gotrs-io/gotrs-ce/internal/shared"
 
 	"github.com/xeonx/timeago"
 	"golang.org/x/text/cases"
@@ -763,40 +762,7 @@ func handlePendingReminderFeed(c *gin.Context) {
 }
 
 func normalizeUserID(value interface{}) int {
-	switch v := value.(type) {
-	case uint:
-		return int(v)
-	case uint32:
-		return int(v)
-	case uint64:
-		if v > uint64(math.MaxInt) {
-			return 0
-		}
-		return int(v)
-	case int:
-		return v
-	case int32:
-		return int(v)
-	case int64:
-		if v > int64(math.MaxInt) || v < int64(math.MinInt) {
-			return 0
-		}
-		return int(v)
-	case float64:
-		if v > float64(math.MaxInt) || v < float64(math.MinInt) {
-			return 0
-		}
-		return int(v)
-	case string:
-		if id, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
-			return id
-		}
-	case fmt.Stringer:
-		if id, err := strconv.Atoi(strings.TrimSpace(v.String())); err == nil {
-			return id
-		}
-	}
-	return 0
+	return shared.ToInt(value, 0)
 }
 
 // handleQuickActions returns quick action items.

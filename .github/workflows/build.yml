@@ -286,6 +286,9 @@ jobs:
         run: |
           mkdir -p dist
           helm package charts/gotrs -d dist
+          # Rename to make it clear this is a Helm chart (for GitHub release assets)
+          mv dist/gotrs-${{ steps.chart.outputs.version }}.tgz \
+             dist/gotrs-helm-chart-${{ steps.chart.outputs.version }}.tgz
 
       - name: Push chart to OCI registry
         if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
@@ -293,15 +296,21 @@ jobs:
           # Push chart - version is embedded in the package from Chart.yaml
           # For branches: 0.1.0-main, 0.1.0-dev
           # For releases: 0.5.0, 1.0.0
-          helm push dist/gotrs-${{ steps.chart.outputs.version }}.tgz \
+          helm push dist/gotrs-helm-chart-${{ steps.chart.outputs.version }}.tgz \
             oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
           echo "Pushed chart version: ${{ steps.chart.outputs.version }}"
+
+      - name: Create latest symlink for permalink
+        run: |
+          # Create a copy with stable name for permalink access
+          cp dist/gotrs-helm-chart-${{ steps.chart.outputs.version }}.tgz \
+             dist/gotrs-helm-chart-latest.tgz
 
       - name: Upload chart artifact
         uses: actions/upload-artifact@v4
         with:
           name: helm-chart
-          path: dist/gotrs-*.tgz
+          path: dist/gotrs-helm-chart-*.tgz
           retention-days: 30
 
   create-release:
@@ -343,11 +352,15 @@ jobs:
 
           ### Helm Chart
           ```bash
-          # Install from OCI registry
+          # Install from OCI registry (recommended)
           helm install gotrs oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/gotrs --version ${{ needs.helm-chart.outputs.chart_version }}
 
-          # Or download from this release
-          helm install gotrs ./gotrs-${{ needs.helm-chart.outputs.chart_version }}.tgz
+          # Or download this specific version
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/gotrs-helm-chart-${{ needs.helm-chart.outputs.chart_version }}.tgz
+          helm install gotrs ./gotrs-helm-chart-${{ needs.helm-chart.outputs.chart_version }}.tgz
+
+          # Permalink to latest release
+          curl -LO https://github.com/${{ github.repository }}/releases/latest/download/gotrs-helm-chart-latest.tgz
           ```
 
           ### Security
@@ -372,6 +385,15 @@ jobs:
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com
           ```
 
+          ### Air-Gapped Deployment
+          Download the air-gapped bundle for offline deployments:
+          \`\`\`bash
+          curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/gotrs-airgap-container-bundle-${{ needs.helm-chart.outputs.chart_version }}.tar.gz
+          tar -xzf gotrs-airgap-container-bundle-*.tar.gz
+          ./load-images.sh
+          \`\`\`
+          See bundle README.md for Kubernetes deployment with local registry.
+
           ### Deployment
           See [charts/gotrs/README.md](charts/gotrs/README.md) for installation instructions.
           EOF
@@ -382,10 +404,233 @@ jobs:
           tag_name: ${{ steps.version.outputs.VERSION }}
           name: GOTRS ${{ steps.version.outputs.VERSION }}
           body_path: release_notes.md
-          files: dist/gotrs-*.tgz
+          files: dist/gotrs-helm-chart-*.tgz
           draft: false
           prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}
           generate_release_notes: true
+
+  airgap-bundle:
+    name: Create Air-Gapped Bundle
+    runs-on: ubuntu-latest
+    needs: [build, build-runner, helm-chart]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+      packages: read
+    environment: Development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get release version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION_NUM=${VERSION#v}" >> $GITHUB_OUTPUT
+
+      - name: Download Helm chart artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: helm-chart
+          path: bundle/helm
+
+      - name: Pull and save container images
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}
+          RUNNER_IMAGE: ${{ needs.build-runner.outputs.image }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          mkdir -p bundle/images
+
+          # Pull and save images for each architecture
+          for ARCH in amd64 arm64; do
+            echo "Pulling $IMAGE:$VERSION for $ARCH..."
+            docker pull --platform linux/$ARCH $IMAGE:$VERSION
+            docker save $IMAGE:$VERSION | gzip > bundle/images/gotrs-${{ steps.version.outputs.VERSION_NUM }}-${ARCH}.tar.gz
+
+            echo "Pulling $RUNNER_IMAGE:$VERSION for $ARCH..."
+            docker pull --platform linux/$ARCH $RUNNER_IMAGE:$VERSION
+            docker save $RUNNER_IMAGE:$VERSION | gzip > bundle/images/gotrs-runner-${{ steps.version.outputs.VERSION_NUM }}-${ARCH}.tar.gz
+          done
+
+          ls -lh bundle/images/
+
+      - name: Create load-images.sh script
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION_NUM }}
+        run: |
+          cat > bundle/load-images.sh << 'SCRIPT'
+          #!/bin/bash
+          # GOTRS Air-Gapped Image Loader
+          # Detects container runtime and loads images for your architecture
+
+          set -e
+
+          VERSION="__VERSION__"
+          SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+          # Detect container runtime
+          if command -v podman &>/dev/null; then
+              RUNTIME="podman"
+          elif command -v docker &>/dev/null; then
+              RUNTIME="docker"
+          elif command -v nerdctl &>/dev/null; then
+              RUNTIME="nerdctl"
+          else
+              echo "Error: No container runtime found (docker, podman, or nerdctl required)"
+              exit 1
+          fi
+
+          # Detect architecture
+          ARCH=$(uname -m)
+          case $ARCH in
+              x86_64)  ARCH="amd64" ;;
+              aarch64) ARCH="arm64" ;;
+              arm64)   ARCH="arm64" ;;
+              *)
+                  echo "Error: Unsupported architecture: $ARCH"
+                  exit 1
+                  ;;
+          esac
+
+          echo "Using $RUNTIME on $ARCH architecture"
+          echo ""
+
+          # Load images
+          for IMAGE in gotrs gotrs-runner; do
+              FILE="$SCRIPT_DIR/images/${IMAGE}-${VERSION}-${ARCH}.tar.gz"
+              if [[ -f "$FILE" ]]; then
+                  echo "Loading $IMAGE..."
+                  gunzip -c "$FILE" | $RUNTIME load
+              else
+                  echo "Warning: $FILE not found, skipping"
+              fi
+          done
+
+          echo ""
+          echo "Done. Loaded images:"
+          $RUNTIME images | grep -E "gotrs|REPOSITORY" | head -5
+          SCRIPT
+
+          sed -i "s/__VERSION__/$VERSION/" bundle/load-images.sh
+          chmod +x bundle/load-images.sh
+
+      - name: Create README
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          IMAGE: ${{ needs.build.outputs.image }}
+          RUNNER_IMAGE: ${{ needs.build-runner.outputs.image }}
+        run: |
+          cat > bundle/README.md << EOF
+          # GOTRS Air-Gapped Container Bundle
+
+          Version: $VERSION
+
+          This bundle contains everything needed to deploy GOTRS in an air-gapped environment.
+
+          ## Contents
+
+          \`\`\`
+          gotrs-airgap-container-bundle-${VERSION#v}/
+          ├── images/
+          │   ├── gotrs-${VERSION#v}-amd64.tar.gz
+          │   ├── gotrs-${VERSION#v}-arm64.tar.gz
+          │   ├── gotrs-runner-${VERSION#v}-amd64.tar.gz
+          │   └── gotrs-runner-${VERSION#v}-arm64.tar.gz
+          ├── helm/
+          │   └── gotrs-helm-chart-*.tgz
+          ├── load-images.sh
+          ├── SHA256SUMS
+          └── README.md
+          \`\`\`
+
+          ## Quick Start
+
+          ### 1. Load Container Images
+
+          The \`load-images.sh\` script auto-detects your container runtime and architecture:
+
+          \`\`\`bash
+          ./load-images.sh
+          \`\`\`
+
+          Supported runtimes: Docker, Podman, nerdctl (containerd)
+
+          ### 2. Manual Loading (Alternative)
+
+          \`\`\`bash
+          # Docker
+          gunzip -c images/gotrs-${VERSION#v}-amd64.tar.gz | docker load
+          gunzip -c images/gotrs-runner-${VERSION#v}-amd64.tar.gz | docker load
+
+          # Podman
+          gunzip -c images/gotrs-${VERSION#v}-amd64.tar.gz | podman load
+
+          # containerd (k3s, etc.)
+          gunzip -c images/gotrs-${VERSION#v}-amd64.tar.gz | nerdctl load
+          \`\`\`
+
+          ### 3. Push to Local Registry (Kubernetes)
+
+          \`\`\`bash
+          # Tag and push to your local registry
+          docker tag $IMAGE:$VERSION my-registry.local/gotrs:$VERSION
+          docker push my-registry.local/gotrs:$VERSION
+
+          docker tag $RUNNER_IMAGE:$VERSION my-registry.local/gotrs-runner:$VERSION
+          docker push my-registry.local/gotrs-runner:$VERSION
+          \`\`\`
+
+          ### 4. Install with Helm
+
+          \`\`\`bash
+          helm install gotrs helm/gotrs-helm-chart-*.tgz \\
+            --set image.repository=my-registry.local/gotrs \\
+            --set image.tag=$VERSION \\
+            --set runner.image.repository=my-registry.local/gotrs-runner \\
+            --set runner.image.tag=$VERSION
+          \`\`\`
+
+          ## Verification
+
+          Verify bundle integrity with SHA256 checksums:
+
+          \`\`\`bash
+          sha256sum -c SHA256SUMS
+          \`\`\`
+
+          ## Support
+
+          Documentation: https://github.com/gotrs-io/gotrs-ce
+          Issues: https://github.com/gotrs-io/gotrs-ce/issues
+          EOF
+
+      - name: Generate checksums
+        run: |
+          cd bundle
+          find . -type f \( -name "*.tar.gz" -o -name "*.tgz" \) -exec sha256sum {} \; > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create bundle archive
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION_NUM }}
+        run: |
+          tar -czvf gotrs-airgap-container-bundle-${VERSION}.tar.gz -C bundle .
+          ls -lh gotrs-airgap-container-bundle-${VERSION}.tar.gz
+
+      - name: Upload bundle to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          files: gotrs-airgap-container-bundle-*.tar.gz
 
   build-summary:
     name: Build Summary
@@ -419,7 +664,7 @@ jobs:
             echo "| Runner | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           fi
           if [[ "$HELM_RESULT" == "success" ]]; then
-            echo "| Helm Chart | ✅ Success | \`gotrs-$CHART_VERSION.tgz\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| Helm Chart | ✅ Success | \`gotrs-helm-chart-$CHART_VERSION.tgz\` |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Helm Chart | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           fi

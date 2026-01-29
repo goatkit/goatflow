@@ -346,10 +346,7 @@ func TestAuthMiddleware(t *testing.T) {
 		assert.Contains(t, w3.Body.String(), `"can_access":false`)
 	})
 
-	t.Run("RequireAuth without JWT manager respects bypass flag", func(t *testing.T) {
-		t.Setenv("APP_ENV", "test")
-		t.Setenv("GOTRS_DISABLE_TEST_AUTH_BYPASS", "1")
-
+	t.Run("RequireAuth without JWT manager returns 401", func(t *testing.T) {
 		router := gin.New()
 		router.Use(NewAuthMiddleware(nil).RequireAuth())
 		router.GET("/protected", func(c *gin.Context) {
@@ -358,30 +355,10 @@ func TestAuthMiddleware(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Accept", "application/json")
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
-	})
-
-	t.Run("RequireAuth without JWT manager allows bypass when enabled", func(t *testing.T) {
-		t.Setenv("APP_ENV", "test")
-		t.Setenv("GOTRS_DISABLE_TEST_AUTH_BYPASS", "0")
-
-		router := gin.New()
-		router.Use(NewAuthMiddleware(nil).RequireAuth())
-		router.GET("/protected", func(c *gin.Context) {
-			role, _ := c.Get("user_role")
-			email, _ := c.Get("user_email")
-			c.JSON(http.StatusOK, gin.H{"role": role, "email": email})
-		})
-
-		w := httptest.NewRecorder()
-		req, _ := http.NewRequest("GET", "/protected", nil)
-		router.ServeHTTP(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Contains(t, w.Body.String(), `"role":"Admin"`)
-		assert.Contains(t, w.Body.String(), "test@gotrs.local")
 	})
 
 	t.Run("unauthorizedResponse returns JSON for Accept: application/json", func(t *testing.T) {

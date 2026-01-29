@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/gotrs-io/gotrs-ce/internal/convert"
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
 )
@@ -315,26 +316,10 @@ func RequireAnyQueueAccess(permType string) gin.HandlerFunc {
 }
 
 // getQueueAccessUserIDFromCtxUint extracts the authenticated user's ID from gin context as uint.
-// Local helper to avoid circular import with shared package.
 func getQueueAccessUserIDFromCtxUint(c *gin.Context, fallback uint) uint {
 	v, ok := c.Get("user_id")
 	if !ok {
 		return fallback
 	}
-	switch id := v.(type) {
-	case int:
-		return uint(id)
-	case int64:
-		return uint(id)
-	case uint:
-		return id
-	case uint64:
-		return uint(id)
-	case float64:
-		return uint(id)
-	case string:
-		// Don't parse strings as user IDs - they should be numeric types
-		return fallback
-	}
-	return fallback
+	return convert.ToUint(v, fallback)
 }
