@@ -690,6 +690,7 @@ jobs:
           BUILD_RESULT: ${{ needs.build.result }}
           RUNNER_RESULT: ${{ needs.build-runner.result }}
           HELM_RESULT: ${{ needs.helm-chart.result }}
+          DEPLOY_RESULT: ${{ needs.deploy-demo.result }}
           IMAGE: ${{ needs.build.outputs.image }}
           RUNNER_IMAGE: ${{ needs.build-runner.outputs.image }}
           CHART_VERSION: ${{ needs.helm-chart.outputs.chart_version }}
@@ -713,6 +714,13 @@ jobs:
             echo "| Helm Chart | ✅ Success | \`gotrs-helm-chart-$CHART_VERSION.tgz\` |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Helm Chart | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [[ "$DEPLOY_RESULT" == "success" ]]; then
+            echo "| Demo Deploy | ✅ Success | gotrs-demo.gibbsoft.com |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$DEPLOY_RESULT" == "skipped" ]]; then
+            echo "| Demo Deploy | ⏭️ Skipped | (not a version tag) |" >> $GITHUB_STEP_SUMMARY
+          elif [[ -n "$DEPLOY_RESULT" ]]; then
+            echo "| Demo Deploy | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
