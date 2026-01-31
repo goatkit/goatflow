@@ -287,9 +287,9 @@ If secrets are exposed:
    - Enable secret scanning in CI/CD
    - Regular security training for team
 
-## Integration with CLAUDE.md
+## Integration with AGENT_GUIDE.md
 
-The synthesize command respects settings in CLAUDE.md:
+The synthesize command respects settings in AGENT_GUIDE.md:
 - Follows project-specific secret patterns
 - Applies custom validation rules
 - Integrates with project workflows

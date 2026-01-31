@@ -64,8 +64,8 @@ helm install gotrs gotrs/gotrs --namespace gotrs --create-namespace
 ## See Also
 
 - [Docker Deployment](docker.md)
-- [Architecture Overview](../../ARCHITECTURE.md)
+- [Architecture Overview](../ARCHITECTURE.md)
 
 ---
 
-*Full documentation coming soon. For architecture details, see [ARCHITECTURE.md](../../ARCHITECTURE.md)*
+*Full documentation coming soon. For architecture details, see [ARCHITECTURE.md](../ARCHITECTURE.md)*
