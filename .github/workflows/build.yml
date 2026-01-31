@@ -632,10 +632,79 @@ jobs:
           tag_name: ${{ steps.version.outputs.VERSION }}
           files: gotrs-airgap-container-bundle-*.tar.gz
 
+  deploy-demo:
+    name: Deploy to Demo Site
+    runs-on: ubuntu-latest
+    needs: [build, build-runner]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    environment: Production
+    steps:
+      - name: Deploy to demo server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: gotrs-demo.gibbsoft.com
+          username: ubuntu
+          key: ${{ secrets.DEMO_SSH_KEY }}
+          script: |
+            cd ~/gotrs-ce
+            docker compose pull
+            docker compose down
+            docker compose up -d --force-recreate
+            source .env
+            zcat gotrs_demo.sql.gz | docker compose exec -T mariadb \
+              mysql -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME"
+
+      - name: Checkout for smoke test
+        uses: actions/checkout@v4
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for demo site to be ready..."
+          max_attempts=30
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            attempt=$((attempt + 1))
+            echo "Health check attempt $attempt of $max_attempts..."
+            
+            http_code=$(curl -sL -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 https://gotrs-demo.gibbsoft.com 2>/dev/null || echo "000")
+            if [ "$http_code" = "200" ]; then
+              echo "✓ Demo site is healthy and responding (HTTP $http_code)"
+              exit 0
+            else
+              echo "Site returned HTTP $http_code"
+            fi
+            
+            if [ $attempt -lt $max_attempts ]; then
+              echo "Site not ready yet, waiting 2 seconds..."
+              sleep 2
+            fi
+          done
+          
+          echo "✗ Demo site failed to become healthy after $max_attempts attempts"
+          exit 1
+
+      - name: Run demo smoke test
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e PLAYWRIGHT_SKIP_WEBSERVER=1 \
+            -e DEMO_URL=https://gotrs-demo.gibbsoft.com \
+            mcr.microsoft.com/playwright:v1.57.0-jammy \
+            sh -c "npm ci && npx playwright test demo-smoke --project=chromium"
+
+      - name: Upload smoke test screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-smoke-screenshots
+          path: test-results/demo-*.png
+          retention-days: 7
+
   build-summary:
     name: Build Summary
     runs-on: ubuntu-latest
-    needs: [build, build-runner, helm-chart]
+    needs: [build, build-runner, helm-chart, deploy-demo]
     if: always()
     environment: Development
     steps:
@@ -644,6 +713,7 @@ jobs:
           BUILD_RESULT: ${{ needs.build.result }}
           RUNNER_RESULT: ${{ needs.build-runner.result }}
           HELM_RESULT: ${{ needs.helm-chart.result }}
+          DEPLOY_RESULT: ${{ needs.deploy-demo.result }}
           IMAGE: ${{ needs.build.outputs.image }}
           RUNNER_IMAGE: ${{ needs.build-runner.outputs.image }}
           CHART_VERSION: ${{ needs.helm-chart.outputs.chart_version }}
@@ -667,6 +737,13 @@ jobs:
             echo "| Helm Chart | ✅ Success | \`gotrs-helm-chart-$CHART_VERSION.tgz\` |" >> $GITHUB_STEP_SUMMARY
           else
             echo "| Helm Chart | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [[ "$DEPLOY_RESULT" == "success" ]]; then
+            echo "| Demo Deploy | ✅ Success | gotrs-demo.gibbsoft.com |" >> $GITHUB_STEP_SUMMARY
+          elif [[ "$DEPLOY_RESULT" == "skipped" ]]; then
+            echo "| Demo Deploy | ⏭️ Skipped | (not a version tag) |" >> $GITHUB_STEP_SUMMARY
+          elif [[ -n "$DEPLOY_RESULT" ]]; then
+            echo "| Demo Deploy | ❌ Failed | - |" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
