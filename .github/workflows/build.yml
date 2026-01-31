@@ -666,9 +666,12 @@ jobs:
             attempt=$((attempt + 1))
             echo "Health check attempt $attempt of $max_attempts..."
             
-            if curl -f -s -o /dev/null -w "%{http_code}" https://gotrs-demo.gibbsoft.com | grep -q "200"; then
-              echo "✓ Demo site is healthy and responding"
+            http_code=$(curl -s -o /dev/null -w "%{http_code}" https://gotrs-demo.gibbsoft.com 2>/dev/null || echo "000")
+            if [ "$http_code" = "200" ]; then
+              echo "✓ Demo site is healthy and responding (HTTP $http_code)"
               exit 0
+            else
+              echo "Site returned HTTP $http_code"
             fi
             
             if [ $attempt -lt $max_attempts ]; then
