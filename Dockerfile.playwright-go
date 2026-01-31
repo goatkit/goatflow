@@ -1,18 +1,25 @@
 # Go + Playwright runner for Go e2e tests
+# Multi-arch: supports both amd64 and arm64
 FROM mcr.microsoft.com/playwright:v1.52.0-jammy
 
 # Install Go toolchain (match project toolchain if needed)
+# Detects architecture automatically (amd64 or arm64)
 ARG GO_VERSION=1.24.6
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates git build-essential && rm -rf /var/lib/apt/lists/* \
-    && curl -fsSL https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz -o /tmp/go.tgz \
+    && GOARCH=$(dpkg --print-architecture) \
+    && echo "Detected architecture: ${GOARCH}" \
+    && curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH}.tar.gz" -o /tmp/go.tgz \
     && tar -C /usr/local -xzf /tmp/go.tgz \
     && rm /tmp/go.tgz \
     && ln -s /usr/local/go/bin/go /usr/local/bin/go
 
+# Create shared playwright cache directory accessible by all users
+RUN mkdir -p /opt/playwright-cache && chmod 777 /opt/playwright-cache
+
 ENV PATH=/usr/local/go/bin:$PATH \
     PLAYWRIGHT_PREINSTALLED=1 \
-    PLAYWRIGHT_BROWSERS_PATH=/workspace/.cache/ms-playwright \
-    XDG_CACHE_HOME=/workspace/.cache/xdg \
+    PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-cache/browsers \
+    XDG_CACHE_HOME=/opt/playwright-cache/xdg \
     CGO_ENABLED=0
 
 # Create non-root user for running tests (ignore if exists)
@@ -21,6 +28,17 @@ RUN useradd -m -u 1000 pwuser 2>/dev/null || true
 WORKDIR /workspace
 COPY --chown=pwuser:pwuser go.mod go.sum ./
 RUN go mod download && go mod verify
+
+# Install playwright-go driver to shared location (as root, then make accessible)
+# The driver goes to ~/.cache/ms-playwright-go by default
+RUN go run github.com/playwright-community/playwright-go/cmd/playwright@v0.5200.0 install --with-deps chromium \
+    && cp -r /root/.cache/ms-playwright-go /opt/playwright-cache/ \
+    && cp -r /root/.cache/ms-playwright/* /opt/playwright-cache/browsers/ 2>/dev/null || true \
+    && chmod -R 755 /opt/playwright-cache
+
+# Set driver path for playwright-go to find at runtime
+ENV PLAYWRIGHT_DRIVER_PATH=/opt/playwright-cache/ms-playwright-go/1.52.0
+
 COPY --chown=pwuser:pwuser . .
 
 # Ensure cache directories are writable by non-root user
