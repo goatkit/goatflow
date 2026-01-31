@@ -24,8 +24,9 @@ test.describe('Demo Site Smoke Test', () => {
     await page.screenshot({ path: 'test-results/demo-login.png', fullPage: true });
 
     // Fill login form
-    await page.fill('input[name="email"], input[name="username"], input[type="email"], input[type="text"]', DEMO_EMAIL);
-    await page.fill('input[name="password"], input[type="password"]', DEMO_PASSWORD);
+    const loginForm = page.locator('form').first();
+    await loginForm.locator('input[name="email"], input[name="username"], input[type="email"]').fill(DEMO_EMAIL);
+    await loginForm.locator('input[name="password"], input[type="password"]').fill(DEMO_PASSWORD);
 
     // Submit login
     await page.click('button[type="submit"]');
