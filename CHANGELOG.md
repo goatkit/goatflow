@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **90s Theme Button Contrast**: Fixed poor text contrast on bright-colored buttons in dark mode
+  - Buttons with ANSI bright backgrounds (green, yellow, cyan, red) now use dark text instead of white
+  - Affects: `.gk-btn-success`, `.gk-btn-danger`, bulk action buttons, and any button with inline bright color styles
+  - Improves readability across ticket actions, admin modals, and bulk operations
+
 ## [0.6.3]
 
 ### Added
