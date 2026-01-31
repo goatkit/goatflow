@@ -658,7 +658,27 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Wait for services to be ready
-        run: sleep 20
+        run: |
+          echo "Waiting for demo site to be ready..."
+          max_attempts=30
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            attempt=$((attempt + 1))
+            echo "Health check attempt $attempt of $max_attempts..."
+            
+            if curl -f -s -o /dev/null -w "%{http_code}" https://gotrs-demo.gibbsoft.com | grep -q "200"; then
+              echo "✓ Demo site is healthy and responding"
+              exit 0
+            fi
+            
+            if [ $attempt -lt $max_attempts ]; then
+              echo "Site not ready yet, waiting 2 seconds..."
+              sleep 2
+            fi
+          done
+          
+          echo "✗ Demo site failed to become healthy after $max_attempts attempts"
+          exit 1
 
       - name: Run demo smoke test
         run: |
