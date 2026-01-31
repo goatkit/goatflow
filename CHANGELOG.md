@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
 ## [Unreleased]
 
 ### Fixed
+- **Handler Registry Dual Registration**: `RegisterHandler()` now registers to both local `handlerRegistry` and `routing.GlobalHandlerMap`
+  - Fixes "Handler not found" warnings for handlers like `HandleListServicesAPI` that used `RegisterHandler()` in their `init()` functions
+  - YAML route loader looks in `GlobalHandlerMap`, so handlers must be in both registries
+  - Prevents future handler wiring issues when adding new API endpoints
 - **90s Theme Button Contrast**: Fixed poor text contrast on bright-colored buttons in dark mode
   - Buttons with ANSI bright backgrounds (green, yellow, cyan, red) now use dark text instead of white
   - Affects: `.gk-btn-success`, `.gk-btn-danger`, bulk action buttons, and any button with inline bright color styles
