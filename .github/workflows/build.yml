@@ -667,7 +667,7 @@ jobs:
             -w /workspace \
             -e PLAYWRIGHT_SKIP_WEBSERVER=1 \
             -e DEMO_URL=https://gotrs-demo.gibbsoft.com \
-            mcr.microsoft.com/playwright:v1.55.1-jammy \
+            mcr.microsoft.com/playwright:v1.57.0-jammy \
             sh -c "npm ci && npx playwright test demo-smoke --project=chromium"
 
       - name: Upload smoke test screenshots
