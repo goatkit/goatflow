@@ -649,10 +649,10 @@ jobs:
             cd ~/gotrs-ce
             docker compose pull
             docker compose down
+            docker compose up -d --force-recreate
             source .env
             zcat gotrs_demo.sql.gz | docker compose exec -T mariadb \
               mysql -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME"
-            docker compose up -d --force-recreate
 
       - name: Checkout for smoke test
         uses: actions/checkout@v4
