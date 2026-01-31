@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/) and this 
 ## [0.6.3]
 
 ### Added
+- **Multi-arch Playwright E2E Tests**: E2E tests now run on both amd64 and arm64 (e.g., DGX Spark, Apple Silicon)
+  - `Dockerfile.playwright-go` auto-detects architecture for Go toolchain and browser downloads
+  - Playwright driver and browsers installed to shared location (`/opt/playwright-cache`) accessible by all users
+  - Makefile uses `NATIVE_PLATFORM` detection for `docker build/run` commands
+  - Files: `Dockerfile.playwright-go`, `Makefile`
 - **Type Conversion Package**: New `internal/convert` package consolidating duplicate type conversion functions
   - `ToInt()`, `ToUint()`, `ToString()` functions with fallback values
   - Handles all numeric types (int8-64, uint8-64, float32/64) and string parsing
