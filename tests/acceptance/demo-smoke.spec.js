@@ -41,8 +41,8 @@ test.describe('Demo Site Smoke Test', () => {
       await page.goto(`${DEMO_URL}/tickets`);
     }
 
-    // Verify tickets page loaded
-    await expect(page.locator('body')).toContainText(/ticket/i);
+    // Verify tickets page loaded by checking for Tickets heading
+    await expect(page.getByRole('heading', { name: /tickets/i })).toBeVisible();
 
     // Take screenshot of tickets page
     await page.screenshot({ path: 'test-results/demo-tickets.png', fullPage: true });
