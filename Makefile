@@ -2178,18 +2178,32 @@ playwright-build:
 	@printf "Building Playwright test container...\n"
 	@$(COMPOSE_CMD) -f docker-compose.playwright.yml build playwright
 
+# Detect native platform for multi-arch Playwright builds
+UNAME_M := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+    NATIVE_PLATFORM := linux/amd64
+else ifeq ($(UNAME_M),aarch64)
+    NATIVE_PLATFORM := linux/arm64
+else ifeq ($(UNAME_M),arm64)
+    NATIVE_PLATFORM := linux/arm64
+else
+    NATIVE_PLATFORM := linux/$(UNAME_M)
+endif
+
 .PHONY: test-e2e-playwright-go
 test-e2e-playwright-go:
 	@printf "\n🎭 Running Go Playwright-tagged e2e tests in dedicated container...\n"
-	$(CONTAINER_CMD) build -f Dockerfile.playwright-go -t gotrs-playwright-go:latest . >/dev/null
+	@printf "   Platform: $(NATIVE_PLATFORM)\n"
+	$(CONTAINER_CMD) build --platform $(NATIVE_PLATFORM) -f Dockerfile.playwright-go -t gotrs-playwright-go:latest . >/dev/null
 	@# Ensure cache volume directories exist with correct ownership
 	@HOST_UID=$$(id -u); HOST_GID=$$(id -g); \
-	$(CONTAINER_CMD) run --rm -u 0:0 -e HOST_UID=$$HOST_UID -e HOST_GID=$$HOST_GID -v gotrs_cache:/cache alpine sh -c "mkdir -p /cache/xdg /cache/go-build /cache/go-mod /cache/ms-playwright && chown -R $$HOST_UID:$$HOST_GID /cache"
+	$(CONTAINER_CMD) run --rm --platform $(NATIVE_PLATFORM) -u 0:0 -e HOST_UID=$$HOST_UID -e HOST_GID=$$HOST_GID -v gotrs_cache:/cache alpine sh -c "mkdir -p /cache/xdg /cache/go-build /cache/go-mod /cache/ms-playwright && chown -R $$HOST_UID:$$HOST_GID /cache"
 	# Prefer explicit BASE_URL provided on invocation; ignore .env for this target
 	@if [ -n "$(BASE_URL)" ]; then echo "[playwright-go] (explicit) BASE_URL=$(BASE_URL)"; else echo "[playwright-go] (default) BASE_URL=$${BASE_URL:-http://localhost:8080}"; fi
 	# Allow overriding network (e.g. PLAYWRIGHT_NETWORK=gotrs-ce_default) to access compose service DNS
 	@if [ -n "$(PLAYWRIGHT_NETWORK)" ]; then echo "[playwright-go] Using network '$(PLAYWRIGHT_NETWORK)'"; else echo "[playwright-go] Using host network (override with PLAYWRIGHT_NETWORK=...)"; fi
 	$(CONTAINER_CMD) run --rm \
+		--platform $(NATIVE_PLATFORM) \
 		--security-opt label=disable \
 		-u "$$(id -u):$$(id -g)" \
 		-v "$$PWD:/workspace" \
@@ -2203,7 +2217,7 @@ test-e2e-playwright-go:
 		-e TEST_PASSWORD=$(TEST_PASSWORD) \
 		-e DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
 		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
-		-e PLAYWRIGHT_BROWSERS_PATH=/cache/ms-playwright \
+		-e PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-cache/browsers \
 		-e XDG_CACHE_HOME=/cache/xdg \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
@@ -2212,10 +2226,12 @@ test-e2e-playwright-go:
 .PHONY: test-e2e-go
 test-e2e-go:
 	@printf "\n🎭 Running Go E2E tests (Playwright) via dedicated container...\n"
-	$(CONTAINER_CMD) build -f Dockerfile.playwright-go -t gotrs-playwright-go:latest . >/dev/null
+	@printf "   Platform: $(NATIVE_PLATFORM)\n"
+	$(CONTAINER_CMD) build --platform $(NATIVE_PLATFORM) -f Dockerfile.playwright-go -t gotrs-playwright-go:latest . >/dev/null
 	@if [ -n "$(BASE_URL)" ]; then echo "[e2e-go] (explicit) BASE_URL=$(BASE_URL)"; else echo "[e2e-go] (default) BASE_URL=$${BASE_URL:-http://localhost:8080}"; fi
 	@TEST_PATTERN=$${TEST:-CustomerTicket}; echo "[e2e-go] Running pattern: $$TEST_PATTERN";
 	$(CONTAINER_CMD) run --rm \
+		--platform $(NATIVE_PLATFORM) \
 		--security-opt label=disable \
 		-u "$$UID:$$GID" \
 		-v "$$PWD:/workspace" \
@@ -2229,7 +2245,7 @@ test-e2e-go:
 		-e TEST_PASSWORD=$(TEST_PASSWORD) \
 		-e DEMO_ADMIN_EMAIL=$(DEMO_ADMIN_EMAIL) \
 		-e DEMO_ADMIN_PASSWORD=$(DEMO_ADMIN_PASSWORD) \
-		-e PLAYWRIGHT_BROWSERS_PATH=/cache/ms-playwright \
+		-e PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-cache/browsers \
 		-e XDG_CACHE_HOME=/cache/xdg \
 		-e GOCACHE=/cache/go-build \
 		-e GOMODCACHE=/cache/go-mod \
