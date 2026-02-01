@@ -333,7 +333,10 @@ jobs:
 
       - name: Get release version
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION_NUM=${VERSION#v}" >> $GITHUB_OUTPUT
 
       - name: Generate release notes
         id: release_notes
@@ -344,10 +347,10 @@ jobs:
           ### Container Images
           ```bash
           # Main application
-          docker pull ${{ needs.build.outputs.image }}:${{ steps.version.outputs.VERSION }}
+          docker pull ${{ needs.build.outputs.image }}:${{ steps.version.outputs.VERSION_NUM }}
 
           # Temporal runner
-          docker pull ${{ needs.build-runner.outputs.image }}:${{ steps.version.outputs.VERSION }}
+          docker pull ${{ needs.build-runner.outputs.image }}:${{ steps.version.outputs.VERSION_NUM }}
           ```
 
           ### Helm Chart
@@ -375,12 +378,12 @@ jobs:
           go install github.com/sigstore/cosign/v2/cmd/cosign@latest
 
           # Verify main image
-          cosign verify ${{ needs.build.outputs.image }}:${{ steps.version.outputs.VERSION }} \
+          cosign verify ${{ needs.build.outputs.image }}:${{ steps.version.outputs.VERSION_NUM }} \
             --certificate-identity=https://github.com/${{ github.repository }}/.github/workflows/build.yml@refs/tags/${{ steps.version.outputs.VERSION }} \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com
 
           # Verify runner image
-          cosign verify ${{ needs.build-runner.outputs.image }}:${{ steps.version.outputs.VERSION }} \
+          cosign verify ${{ needs.build-runner.outputs.image }}:${{ steps.version.outputs.VERSION_NUM }} \
             --certificate-identity=https://github.com/${{ github.repository }}/.github/workflows/build.yml@refs/tags/${{ steps.version.outputs.VERSION }} \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com
           ```
@@ -446,7 +449,7 @@ jobs:
         env:
           IMAGE: ${{ needs.build.outputs.image }}
           RUNNER_IMAGE: ${{ needs.build-runner.outputs.image }}
-          VERSION: ${{ steps.version.outputs.VERSION }}
+          VERSION: ${{ steps.version.outputs.VERSION_NUM }}
         run: |
           mkdir -p bundle/images
 
@@ -526,6 +529,7 @@ jobs:
       - name: Create README
         env:
           VERSION: ${{ steps.version.outputs.VERSION }}
+          VERSION_NUM: ${{ steps.version.outputs.VERSION_NUM }}
           IMAGE: ${{ needs.build.outputs.image }}
           RUNNER_IMAGE: ${{ needs.build-runner.outputs.image }}
         run: |
@@ -582,11 +586,11 @@ jobs:
 
           \`\`\`bash
           # Tag and push to your local registry
-          docker tag $IMAGE:$VERSION my-registry.local/gotrs:$VERSION
-          docker push my-registry.local/gotrs:$VERSION
+          docker tag $IMAGE:$VERSION_NUM my-registry.local/gotrs:$VERSION_NUM
+          docker push my-registry.local/gotrs:$VERSION_NUM
 
-          docker tag $RUNNER_IMAGE:$VERSION my-registry.local/gotrs-runner:$VERSION
-          docker push my-registry.local/gotrs-runner:$VERSION
+          docker tag $RUNNER_IMAGE:$VERSION_NUM my-registry.local/gotrs-runner:$VERSION_NUM
+          docker push my-registry.local/gotrs-runner:$VERSION_NUM
           \`\`\`
 
           ### 4. Install with Helm
@@ -594,9 +598,9 @@ jobs:
           \`\`\`bash
           helm install gotrs helm/gotrs-helm-chart-*.tgz \\
             --set image.repository=my-registry.local/gotrs \\
-            --set image.tag=$VERSION \\
+            --set image.tag=$VERSION_NUM \\
             --set runner.image.repository=my-registry.local/gotrs-runner \\
-            --set runner.image.tag=$VERSION
+            --set runner.image.tag=$VERSION_NUM
           \`\`\`
 
           ## Verification
