@@ -1,12 +1,14 @@
 # GoatKit Plugin Platform
 
-> **Status**: Roadmap (planned for v0.7.0, May 2026)
+> **Status**: Design Document (planned for v0.7.0, May 2026)
 >
-> This document describes the planned plugin architecture. It is not yet implemented.
+> This document describes the **planned** plugin architecture for GoatKit. 
+> The features described here are **not yet implemented** — this is a design specification
+> that will guide development of the 0.7.0 release.
 
 ## Overview
 
-GoatKit evolves from a modular monolith to a true plugin platform, enabling third-party developers to extend GOTRS without modifying core code.
+GoatKit will evolve from a modular monolith to a true plugin platform, enabling third-party developers to extend GOTRS without modifying core code.
 
 ## Architecture
 
@@ -33,29 +35,29 @@ GoatKit evolves from a modular monolith to a true plugin platform, enabling thir
 └───────────────┘   └───────────────┘   └───────────────┘
 ```
 
-## Dual Runtime Support
+## Planned Dual Runtime Support
 
 ### WASM Plugins (Default)
 
-For portable, sandboxed plugins using [wazero](https://wazero.io/) (pure Go, no CGO):
+Portable, sandboxed plugins will use [wazero](https://wazero.io/) (pure Go, no CGO):
 
-- **Single binary distribution** — one `.wasm` file runs everywhere
+- **Single binary distribution** — one `.wasm` file will run everywhere
 - **Sandboxed execution** — memory limits, timeouts, no direct I/O
-- **Cross-platform** — no OS/arch-specific builds
+- **Cross-platform** — no OS/arch-specific builds required
 - **Best for**: Most plugins, especially UI extensions and business logic
 
 ### gRPC Plugins (Power Users)
 
-For native integrations using [go-plugin](https://github.com/hashicorp/go-plugin) (HashiCorp pattern):
+Native integrations will use [go-plugin](https://github.com/hashicorp/go-plugin) (HashiCorp pattern):
 
 - **Full I/O access** — native libraries, hardware, network
 - **Language agnostic** — write in any language with gRPC support
-- **Process isolation** — plugin crashes don't affect core
+- **Process isolation** — plugin crashes won't affect core
 - **Best for**: Heavy integrations, existing gRPC services, native dependencies
 
-## Plugin Package Format
+## Planned Plugin Package Format
 
-Plugins are distributed as ZIP files:
+Plugins will be distributed as ZIP files:
 
 ```
 my-plugin.zip
@@ -71,9 +73,9 @@ my-plugin.zip
     └── de.yaml
 ```
 
-## Self-Describing Registration
+## Planned Self-Describing Registration
 
-Plugins export a `gk_register()` function that returns their capabilities:
+Plugins will export a `gk_register()` function that returns their capabilities:
 
 ```json
 {
@@ -96,9 +98,9 @@ Plugins export a `gk_register()` function that returns their capabilities:
 }
 ```
 
-## Host Function API
+## Planned Host Function API
 
-Plugins access core capabilities through host functions:
+Plugins will access core capabilities through host functions:
 
 | Function | Description |
 |----------|-------------|
@@ -110,9 +112,9 @@ Plugins access core capabilities through host functions:
 | `schedule_job(cron, callback)` | Register scheduled tasks |
 | `log(level, message)` | Structured logging |
 
-## Template Integration
+## Planned Template Integration
 
-Plugin functions are callable from templates using the `use` directive:
+Plugin functions will be callable from templates using the `use` directive:
 
 ```html
 {% use my_plugin %}
@@ -124,28 +126,28 @@ Plugin functions are callable from templates using the `use` directive:
 </div>
 ```
 
-The `use` directive is idempotent: first encounter loads the plugin; subsequent `use` calls are no-ops. Plugins are lazy-loaded on demand, not at startup.
+The `use` directive will be idempotent: first encounter loads the plugin; subsequent `use` calls will be no-ops. Plugins will be lazy-loaded on demand, not at startup.
 
-## Lifecycle
+## Planned Lifecycle
 
-1. **Discover**: Core scans `plugins/` directory on startup, reads manifests
+1. **Discover**: Core will scan `plugins/` directory on startup, reading manifests
 2. **Lazy Load**: Plugin loaded on first `{% use %}` in a template
 3. **Register**: Plugin's `gk_register()` called, routes/menus/permissions activated
-4. **Run**: Plugin functions available to templates and handlers
-5. **Hot Reload**: File watcher triggers reload on plugin changes
+4. **Run**: Plugin functions become available to templates and handlers
+5. **Hot Reload**: File watcher will trigger reload on plugin changes
 6. **Unload**: Managed by platform, not templates:
    - Admin UI: manual unload/reload controls
    - Idle timeout: auto-unload after configurable inactivity
    - Memory pressure: LRU eviction when nearing limits
    - Graceful shutdown: clean release on process exit
 
-## Security
+## Planned Security Model
 
-- **Sandboxing**: WASM plugins run in isolated memory space
+- **Sandboxing**: WASM plugins will run in isolated memory space
 - **Timeouts**: Maximum execution time per function call
 - **Memory limits**: Configurable per-plugin memory cap
 - **Signed plugins**: Optional verification for marketplace plugins
-- **Permission system**: Plugins declare required permissions
+- **Permission system**: Plugins will declare required permissions
 
 ## First-Party Plugins (Roadmap)
 
@@ -156,12 +158,12 @@ The `use` directive is idempotent: first encounter loads the plugin; subsequent 
 | Calendar & Appointments | 0.8.0 | WASM | Scheduling, iCal, reminders |
 | Process Management | 0.9.0 | WASM | Visual workflow designer |
 
-## Developer Experience
+## Planned Developer Experience
 
 - **Admin UI**: Enable/disable/inspect plugins, view logs
 - **SDK**: Example plugins for both WASM and gRPC
-- **CLI**: `gk plugin init` scaffolds new plugins
-- **Hot reload**: Changes apply without restart
+- **CLI**: `gk plugin init` will scaffold new plugins
+- **Hot reload**: Changes will apply without restart
 - **Local dev mode**: Test plugins against running instance
 
 ## Current Foundation
