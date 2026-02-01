@@ -655,8 +655,8 @@ jobs:
             docker compose down
             docker compose up -d --force-recreate
             source .env
-            zcat gotrs_demo.sql.gz | docker compose exec -T mariadb \
-              mariadb --user="$DB_USER" --password="$DB_PASSWORD" "$DB_NAME"
+            zcat gotrs_demo.sql.gz | docker compose exec -T -e MYSQL_PWD="$DB_PASSWORD" mariadb \
+              mariadb -u "$DB_USER" "$DB_NAME"
 
       - name: Checkout for smoke test
         uses: actions/checkout@v4
