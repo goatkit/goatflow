@@ -207,13 +207,6 @@ spec:
           template: pages/agent/queues.pongo2
           description: "Display agent queues"
 
-        # Agent dashboard
-        - path: /dashboard
-          method: GET
-          handler: handleAgentDashboard
-          template: pages/agent/dashboard.pongo2
-          description: "Display agent dashboard with assigned tickets"
-
         # Agent templates API - for template selection in ticket forms
         - path: /api/templates
           method: GET

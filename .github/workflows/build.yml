@@ -655,7 +655,8 @@ jobs:
             docker compose down
             docker compose up -d --force-recreate
             source .env
-            zcat gotrs_demo.sql.gz | docker compose exec -T -e MYSQL_PWD="$DB_PASSWORD" mariadb \
+            # Skip line 1 which has MariaDB sandbox comment that breaks import
+            zcat gotrs_demo.sql.gz | tail -n +2 | docker compose exec -T -e MYSQL_PWD="$DB_PASSWORD" mariadb \
               mariadb -u "$DB_USER" "$DB_NAME"
 
       - name: Checkout for smoke test
