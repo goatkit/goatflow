@@ -656,7 +656,8 @@ jobs:
             docker compose up -d --force-recreate
             source .env
             # Restore full dump using root (dump includes all databases)
-            zcat gotrs_demo.sql.gz | docker compose exec -T mariadb \
+            # Skip line 1 (MariaDB sandbox comment that breaks import)
+            zcat gotrs_demo.sql.gz | tail -n +2 | docker compose exec -T mariadb \
               mariadb -uroot -p"$DB_ROOT_PASSWORD"
 
       - name: Checkout for smoke test
