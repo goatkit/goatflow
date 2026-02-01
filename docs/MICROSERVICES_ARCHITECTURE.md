@@ -1,8 +1,14 @@
 # GOTRS Microservices Architecture
 
+> **Status**: Design Document (Future Consideration)
+>
+> This document describes a potential microservices evolution for enterprise-scale deployments.
+> The current architecture is a modular monolith. For the near-term extensibility roadmap,
+> see [Plugin Platform](PLUGIN_PLATFORM.md) (v0.7.0+).
+
 ## Overview
 
-GOTRS is transitioning from a monolithic architecture to a microservices-based architecture for improved scalability, maintainability, and deployment flexibility. This document outlines the microservices architecture, service boundaries, and communication patterns.
+This document outlines a microservices architecture for scenarios requiring independent scaling of individual services. For most deployments, the modular monolith with plugin support provides sufficient flexibility.
 
 ## Architecture Principles
 

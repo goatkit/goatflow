@@ -199,6 +199,28 @@
   text-shadow: none !important;
 }
 
+/* Buttons with bright ANSI color backgrounds need dark text for contrast.
+   The general button rule forces white, but bright backgrounds need black text.
+   Covers both CSS classes (.gk-btn-*) and inline styles (style="...gk-*..."). */
+[data-theme="nineties-vibe"].dark .gk-btn-success,
+[data-theme="nineties-vibe"] .dark .gk-btn-success,
+[data-theme="nineties-vibe"].dark .gk-btn-danger,
+[data-theme="nineties-vibe"] .dark .gk-btn-danger,
+[data-theme="nineties-vibe"].dark button[style*="gk-success"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-success"],
+[data-theme="nineties-vibe"].dark button[style*="gk-warning"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-warning"],
+[data-theme="nineties-vibe"].dark button[style*="gk-error"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-error"],
+[data-theme="nineties-vibe"].dark button[style*="gk-tertiary"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-tertiary"],
+[data-theme="nineties-vibe"].dark button[style*="gk-secondary"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-secondary"],
+[data-theme="nineties-vibe"].dark button[style*="gk-info"],
+[data-theme="nineties-vibe"] .dark button[style*="gk-info"] {
+  color: #000000 !important;
+}
+
 /* Primary action buttons - cyan accent, no glow */
 [data-theme="nineties-vibe"].dark .gk-btn-primary,
 [data-theme="nineties-vibe"] .dark .gk-btn-primary,

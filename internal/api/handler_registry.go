@@ -26,6 +26,8 @@ var (
 )
 
 // RegisterHandler adds/overwrites a handler under a given name.
+// Registers to both the local handlerRegistry AND routing.GlobalHandlerMap
+// so that YAML route loader can find all handlers regardless of where they're registered.
 func RegisterHandler(name string, h gin.HandlerFunc) {
 	if name == "" || h == nil {
 		return
@@ -33,6 +35,9 @@ func RegisterHandler(name string, h gin.HandlerFunc) {
 	handlerRegistryMu.Lock()
 	handlerRegistry[name] = h
 	handlerRegistryMu.Unlock()
+
+	// Also register to GlobalHandlerMap for YAML route loading
+	routing.GlobalHandlerMap[name] = h
 }
 
 // GetHandler retrieves a registered handler.
