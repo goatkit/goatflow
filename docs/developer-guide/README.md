@@ -13,7 +13,7 @@ GOTRS is container-first and primarily server-rendered (HTMX). This guide is the
 
 ## Helpful references
 
-- Architecture: [ARCHITECTURE.md](../../ARCHITECTURE.md)
+- Architecture: [ARCHITECTURE.md](../ARCHITECTURE.md)
 - Contributing: [CONTRIBUTING.md](../../CONTRIBUTING.md)
 - Demo notes: [docs/DEMO.md](../DEMO.md)
 - MVP status: [docs/development/MVP.md](../development/MVP.md)

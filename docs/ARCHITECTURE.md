@@ -249,10 +249,24 @@ make down            # Stop services
 make clean           # Reset everything
 ```
 
-## Future (Post-MVP)
+## Platform Roadmap
 
-- SLA engine (auto-close, reminder timers)
-- Workflow automation
-- Knowledge base
-- Enterprise integrations (Salesforce, ServiceNow)
-- 1.0 production release
+### Current: Modular Monolith (v0.5-0.6)
+
+- Single `goats` binary with all features
+- YAML-based dynamic modules
+- Lambda functions (V8 JavaScript) for computed fields
+- Theme engine with hot reload
+
+### Next: GoatKit Plugin Platform (v0.7.0+)
+
+GOTRS evolves into a true platform with plugin extensibility:
+
+- **Dual Runtime**: WASM (wazero) + gRPC (go-plugin)
+- **Plugin Packaging**: ZIP with templates, assets, i18n
+- **Host Function API**: Database, HTTP, email, cache, scheduler
+- **First-Party Plugins**: Statistics, FAQ, Calendar, Process Management
+
+Core becomes platform infrastructure; features become plugins. Third-party developers can extend GOTRS without modifying core code.
+
+See [Plugin Platform](PLUGIN_PLATFORM.md) for detailed design.

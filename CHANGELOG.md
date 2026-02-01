@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.4] - 2026-02-01
+
+### Added
+- **GoatKit Plugin Platform Documentation**: New `docs/PLUGIN_PLATFORM.md` describing the planned plugin architecture for v0.7.0
+  - WASM runtime (wazero) for portable, sandboxed plugins
+  - gRPC runtime (go-plugin) for native integrations
+  - Host function API specification
+  - Plugin packaging and lifecycle documentation
+
+### Changed
+- **Roadmap Update**: 0.7.0 now focused on GoatKit Plugin Platform
+  - Dual runtime support (WASM + gRPC)
+  - Statistics & Reporting ships as first WASM plugin
+  - FAQ, Calendar, Process Management planned as subsequent plugins
+- **Architecture Documentation**: Updated to reflect plugin platform vision
+  - `docs/ARCHITECTURE.md`: Added Platform Roadmap section
+  - `docs/DYNAMIC_MODULES.md`: Links to plugin platform evolution
+  - `docs/MICROSERVICES_ARCHITECTURE.md`: Marked as design document for future consideration
+  - `docs/VISION.md`: Aligned architecture evolution with plugin roadmap
+
+### Fixed
+- **Handler Registry Dual Registration**: `RegisterHandler()` now registers to both local `handlerRegistry` and `routing.GlobalHandlerMap`
+  - Fixes "Handler not found" warnings for handlers like `HandleListServicesAPI` that used `RegisterHandler()` in their `init()` functions
+  - YAML route loader looks in `GlobalHandlerMap`, so handlers must be in both registries
+  - Prevents future handler wiring issues when adding new API endpoints
+- **90s Theme Button Contrast**: Fixed poor text contrast on bright-colored buttons in dark mode
+  - Buttons with ANSI bright backgrounds (green, yellow, cyan, red) now use dark text instead of white
+  - Affects: `.gk-btn-success`, `.gk-btn-danger`, bulk action buttons, and any button with inline bright color styles
+  - Improves readability across ticket actions, admin modals, and bulk operations
+
 ## [0.6.3]
 
 ### Added

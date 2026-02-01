@@ -338,17 +338,25 @@ See the `modules/` directory for examples:
 - `state.yaml` - Ticket states with type selection
 - `service.yaml` - Service catalog
 
-## The Future
+## The Future: GoatKit Plugin Platform
 
-This dynamic system is just the beginning. Planned enhancements:
+Dynamic Modules are the foundation for the GoatKit Plugin Platform (v0.7.0+). The plugin system extends this YAML + templates approach with:
 
-- **Visual Module Builder** - Drag-and-drop interface
-- **Schema Discovery** - Auto-generate from database
-- **Advanced Relationships** - Many-to-many, has-many
-- **Custom Actions** - Beyond CRUD operations
-- **Webhooks** - Trigger events on changes
-- **Version Control** - Track YAML changes
-- **Multi-tenancy** - Per-customer modules
+- **WASM & gRPC Runtimes** - Custom logic beyond YAML capabilities
+- **Plugin Packaging** - ZIP distribution with templates, assets, translations
+- **Self-Registration** - Plugins declare their functions, routes, and permissions
+- **Host Function API** - Database, HTTP, email, cache access from plugins
+- **Marketplace** - Browse, install, and update third-party plugins
+
+The graduated complexity model:
+
+| Need | Solution |
+|------|----------|
+| Simple CRUD | Dynamic Modules (YAML) |
+| Computed fields | Lambda Functions (JavaScript) |
+| Custom logic | Plugin Platform (WASM/gRPC) |
+
+See [Plugin Platform](PLUGIN_PLATFORM.md) for the full roadmap.
 
 ## Conclusion
 

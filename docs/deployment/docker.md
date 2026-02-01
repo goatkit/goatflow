@@ -173,5 +173,5 @@ export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
 ## See Also
 
 - [Kubernetes Deployment](kubernetes.md)
-- [Architecture Overview](../../ARCHITECTURE.md)
+- [Architecture Overview](../ARCHITECTURE.md)
 - [Migration Guide](../MIGRATION.md)

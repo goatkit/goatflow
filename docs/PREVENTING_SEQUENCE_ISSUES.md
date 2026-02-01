@@ -1,6 +1,6 @@
 # Preventing PostgreSQL Sequence Issues
 
-> **Note**: This document applies only to PostgreSQL deployments. For MySQL compatibility patterns, see `../DATABASE_ACCESS_PATTERNS.md`.
+> **Note**: This document applies only to PostgreSQL deployments. For MySQL compatibility patterns, see [development/DATABASE_ACCESS_PATTERNS.md](development/DATABASE_ACCESS_PATTERNS.md).
 
 ## Problem
 After importing data (especially from OTRS dumps), PostgreSQL sequences can become out of sync with the actual table data. This causes "duplicate key value violates unique constraint" errors when trying to insert new records.

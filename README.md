@@ -16,8 +16,7 @@ GOTRS (Go Open Ticket Request System) is a modern, secure, cloud-native ticketin
 - 🚀 **High Performance** - Go-based backend with optimized database queries and caching
 - 🌐 **Cloud Native** - Containerized deployment supporting Docker, Podman, and Kubernetes
 - 📱 **Responsive UI** - Modern HTMX-powered interface with progressive enhancement
-- 🔄 **OTRS Compatible** - Database schema superset enables seamless migration
-  - ⚠️ **Unicode Support**: Configure with `UNICODE_SUPPORT=true` for full Unicode support (requires utf8mb4 migration)
+- 🔄 **OTRS Compatible** - Database schema superset enables seamless migration from OTRS 5.x and 6.x
 - 🌍 **Multi-Language** - Full i18n with 15 languages at 100% coverage including RTL support, even supports Klingon! 🖖
 - 🎨 **Theme Engine** - 4 distinct themes (Synthwave, Classic, 70s Vibes, 90s Vibe) with dark/light modes and custom fonts
 - 🔌 **Extensible** - REST/SOAP APIs, webhooks, and theme customization
@@ -34,13 +33,20 @@ GOTRS (Go Open Ticket Request System) is a modern, secure, cloud-native ticketin
 - 4GB RAM minimum
 - Modern web browser with JavaScript enabled
 
-**Container Runtime Support:**
-- ✅ Docker with `docker compose` plugin (v2) - Recommended
-- ✅ `docker-compose` standalone (v1) - Legacy support
-- ✅ Podman with `podman compose` plugin
-- ✅ `podman-compose` standalone
-- ✅ Full rootless container support
-- ✅ SELinux labels configured for Fedora/RHEL systems
+### Container Runtime Support
+
+GOTRS is designed for container-first workflows and supports the following runtimes:
+
+- **Docker Engine**
+  - Docker Compose v1 (`docker-compose`) and v2 (Compose plugin: `docker compose`)
+- **Podman**
+  - Podman with Docker-compatible Compose (e.g. `podman compose` / `podman-docker`)
+- **Rootless containers**
+  - Supported for both Docker and Podman; may require additional host configuration for ports and volumes
+- **SELinux-enabled hosts**
+  - Volumes and bind mounts are compatible; use standard SELinux options/labels as required by your distribution
+
+All `make` targets (for example, `make up`, `make down`, `make restart`) automatically detect whether Docker or Podman is available and choose the appropriate Compose command.
 
 ### Using Containers (Auto-detected)
 
@@ -111,20 +117,21 @@ make podman-systemd
 
 Try GOTRS without installation at [https://try.gotrs.io](https://try.gotrs.io)
 
-Demo credentials are shown on the demo instance login page.
-
-*Note: Demo data resets daily at 2 AM UTC*
+*Demo data resets daily*
 
 ### Testing
 
 GOTRS has comprehensive test coverage across multiple layers:
 
 ```bash
-# Fast unit/integration tests (Alpine toolbox, ~30s)
+# Fast unit/integration tests (Alpine toolbox, ~1 minute)
 make toolbox-test
 
-# Full browser E2E tests (Ubuntu + Chromium, ~5min)
+# Full browser E2E tests (Ubuntu + Chromium, ~3-5 minutes)
 make test-e2e-playwright-go
+
+# Run all 1,200+ tests (5-8 minutes)
+make test
 ```
 
 Browser tests use Go + Playwright with the `//go:build playwright` tag and run in a dedicated Ubuntu container with Chromium. This separation keeps developer feedback fast while maintaining thorough browser coverage.
@@ -141,7 +148,7 @@ GOTRS uses a modern, hypermedia-driven architecture that scales from single-serv
 - **Real-time**: Server-Sent Events (SSE) for live updates
 - **Search**: Zinc with Elasticsearch compatibility for full-text search
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation.
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed technical documentation.
 
 ### Pluggable Authentication
 
@@ -168,7 +175,7 @@ Implementation note: the `Auth::Providers` list is read at startup via the unifi
 
 ### Development Policies
 
-- Database access: This project uses `database/sql` with a thin `database.ConvertPlaceholders` wrapper to support PostgreSQL and MySQL. All SQL must be wrapped. See `DATABASE_ACCESS_PATTERNS.md`.
+- Database access: This project uses `database/sql` with a thin `database.ConvertPlaceholders` wrapper to support PostgreSQL and MySQL. All SQL must be wrapped. See [docs/development/DATABASE_ACCESS_PATTERNS.md](docs/development/DATABASE_ACCESS_PATTERNS.md).
 - Templating: Use Pongo2 templates exclusively. Do not use Go's `html/template`. Render user-facing views via Pongo2 with `layouts/base.pongo2` and proper context.
 - Routing: Define all HTTP routes in YAML under `routes/*.yaml` using the YAML router. Do not register routes directly in Go code.
   - YAML is the single source of truth for routes; hardcoded Gin registrations are prohibited.
@@ -205,11 +212,9 @@ GOTRS maintains high code quality and security standards through comprehensive a
 - **Manual Builds**: On-demand builds without registry pushing
 
 ### 📊 Quality Metrics
-- All pipelines complete in under 10 minutes
-- Zero-cost (GitHub Actions free tier + open source tools)
 - Comprehensive security scanning (8+ tools)
 - SLSA Level 2 compliant build process
-- Coverage reporting via Codecov
+- Automated test coverage reporting via Codecov
 
 ## Installation
 
@@ -232,22 +237,30 @@ GOTRS maintains high code quality and security standards through comprehensive a
 ### Production Deployment
 
 For production deployments, see our comprehensive guides:
-- [Docker Deployment](docs/deployment/docker.md)
-- [Kubernetes Deployment](docs/deployment/kubernetes.md)
+- [Docker Deployment Guide](docs/deployment/docker.md)
+- [Kubernetes Deployment Guide](docs/deployment/kubernetes.md)
+
+> 💡 **Tip**: Start with Docker deployment for single-server setups, then scale to Kubernetes as your needs grow.
 
 ## Documentation
 
-- Configuration System: `docs/configuration.md`
-- Ticket Number Generators: `docs/ticket_number_generators.md`
-- YAML Platform: `docs/YAML_PLATFORM.md`
-- Architecture: `ARCHITECTURE.md`
-- Roadmap: `ROADMAP.md`
-
+### User Guides
 - [Getting Started Guide](docs/getting-started/quickstart.md)
 - [Administrator Manual](docs/admin-guide/README.md)
 - [Agent Manual](docs/agent-manual/README.md)
-- [Developer Guide](docs/developer-guide/README.md)
+
+### Technical Documentation
+- [Architecture Overview](docs/ARCHITECTURE.md)
 - [API Reference](docs/api/README.md)
+- [Developer Guide](docs/developer-guide/README.md)
+- [Configuration System](docs/configuration.md)
+- [YAML Platform](docs/YAML_PLATFORM.md)
+- [Ticket Number Generators](docs/ticket_number_generators.md)
+
+### Additional Resources
+- [Roadmap](ROADMAP.md)
+- [Testing Guide](docs/development/TESTING.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [i18n Contributing Guide](docs/i18n/CONTRIBUTING.md)
 
 ## Migration from OTRS
@@ -327,38 +340,30 @@ See [ROADMAP.md](ROADMAP.md) for the development timeline and planned features.
 
 ## Contributing
 
-Engineering assistants: See [AGENT.md](AGENT.md) for the canonical operating manual.
-Developers: See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution process and standards.
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+See our [Contributing Guide](CONTRIBUTING.md) for details on:
 - Code of Conduct
 - Development setup
 - Coding standards
 - Pull request process
 - Issue reporting
 
+**For AI/Agent Contributors**: See [docs/development/AGENT_GUIDE.md](docs/development/AGENT_GUIDE.md) for the canonical operating manual.
+
 ## Community
 
-- 💬 [Discord Community](https://discord.gg/gotrs)
-- 📧 [Mailing List](https://groups.google.com/g/gotrs-users)
-- 🐛 [Issue Tracker](https://github.com/gotrs-io/gotrs-ce/issues)
-- 📖 [Wiki](https://github.com/gotrs-io/gotrs-ce/wiki)
+- 💬 [Discord Community](https://discord.gg/kE4XVyX9gF)
+-  [Issue Tracker](https://github.com/gotrs-io/gotrs-ce/issues)
 
 ## License
 
-GOTRS is dual-licensed:
+GOTRS Community Edition is licensed under the [Apache License 2.0](LICENSE).
 
-- **Community Edition**: [Apache License 2.0](LICENSE)
-- **Enterprise Edition**: [Commercial License](LICENSE-ENTERPRISE)
-
-See [LICENSING.md](docs/LICENSING.md) for details on our dual licensing model.
+For enterprise licensing options, see [LICENSING.md](docs/LICENSING.md).
 
 ## Support
 
 ### Community Support
-- GitHub Issues
-- Discord Community
-- Community Forums
+See the [Community](#community) section above for forums, chat, and issue tracking.
 
 ### Commercial Support
 - Professional support contracts

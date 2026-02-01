@@ -2,11 +2,11 @@
 
 ## Overview
 
-GOTRS uses a **100% OTRS-compatible database schema** to ensure seamless migration and interoperability. The schema is frozen (see [SCHEMA_FREEZE.md](../../SCHEMA_FREEZE.md)) and uses the exact OTRS table structures with integer primary keys, not UUIDs.
+GOTRS uses a **100% OTRS-compatible database schema** to ensure seamless migration and interoperability. The schema is frozen (see [SCHEMA_FREEZE.md](../architecture/SCHEMA_FREEZE.md)) and uses the exact OTRS table structures with integer primary keys, not UUIDs.
 
 ## Database Access Policy
 
-All SQL must use the mandatory `database.ConvertPlaceholders` wrapper to support both PostgreSQL and MySQL. See `../../DATABASE_ACCESS_PATTERNS.md`.
+All SQL must use the mandatory `database.ConvertPlaceholders` wrapper to support both PostgreSQL and MySQL. See [DATABASE_ACCESS_PATTERNS.md](DATABASE_ACCESS_PATTERNS.md).
 
 ## Password Reset Utilities
 
@@ -368,4 +368,4 @@ make otrs-import DUMP=path/to/otrs_backup.sql
 - NO renaming fields
 - New features must use separate tables or JSONB columns
 
-See [SCHEMA_FREEZE.md](../../SCHEMA_FREEZE.md) for detailed policy.
+See [SCHEMA_FREEZE.md](../architecture/SCHEMA_FREEZE.md) for detailed policy.

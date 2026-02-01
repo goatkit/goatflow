@@ -1,6 +1,6 @@
 # Contributing to GOTRS
 
-Engineering assistants: See [AGENT.md](AGENT.md) for the canonical operating manual and workflow.
+Engineering assistants: See [docs/development/AGENT_GUIDE.md](docs/development/AGENT_GUIDE.md) for the canonical operating manual and workflow.
 
 ## Coming Soon
 
