@@ -161,11 +161,16 @@ func handleDashboard(c *gin.Context) {
 		}
 	}
 
+	// Get plugin widgets for dashboard
+	pluginWidgets := GetPluginWidgets(c.Request.Context(), "dashboard")
+	fmt.Printf("🔌 Dashboard: found %d plugin widgets\n", len(pluginWidgets))
+
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/dashboard.pongo2", pongo2.Context{
 		"Stats":         stats,
 		"RecentTickets": recentTickets,
 		"User":          getUserMapForTemplate(c),
 		"ActivePage":    "dashboard",
+		"PluginWidgets": pluginWidgets,
 	})
 }
 

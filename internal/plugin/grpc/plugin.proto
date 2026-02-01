@@ -1,0 +1,214 @@
+syntax = "proto3";
+
+package goatkit.plugin.v1;
+
+option go_package = "github.com/gotrs-io/gotrs-ce/internal/plugin/grpc";
+
+// GKPlugin is the main plugin service interface.
+// Implemented by plugin processes, called by the host.
+service GKPlugin {
+  // GKRegister returns the plugin's registration/manifest.
+  rpc GKRegister(Empty) returns (GKRegistration);
+  
+  // Init initializes the plugin with host configuration.
+  rpc Init(InitRequest) returns (Empty);
+  
+  // Call invokes a plugin function.
+  rpc Call(CallRequest) returns (CallResponse);
+  
+  // Shutdown gracefully stops the plugin.
+  rpc Shutdown(Empty) returns (Empty);
+}
+
+// GKHost is the host service interface.
+// Implemented by the host, called by plugins for host services.
+service GKHost {
+  // Database operations
+  rpc DBQuery(DBQueryRequest) returns (DBQueryResponse);
+  rpc DBExec(DBExecRequest) returns (DBExecResponse);
+  
+  // Cache operations
+  rpc CacheGet(CacheGetRequest) returns (CacheGetResponse);
+  rpc CacheSet(CacheSetRequest) returns (Empty);
+  rpc CacheDelete(CacheDeleteRequest) returns (Empty);
+  
+  // HTTP operations
+  rpc HTTPRequest(HTTPRequestMsg) returns (HTTPResponseMsg);
+  
+  // Email
+  rpc SendEmail(SendEmailRequest) returns (Empty);
+  
+  // Logging
+  rpc Log(LogRequest) returns (Empty);
+  
+  // Config
+  rpc ConfigGet(ConfigGetRequest) returns (ConfigGetResponse);
+  
+  // i18n
+  rpc Translate(TranslateRequest) returns (TranslateResponse);
+}
+
+message Empty {}
+
+message GKRegistration {
+  string name = 1;
+  string version = 2;
+  string description = 3;
+  string author = 4;
+  string license = 5;
+  string homepage = 6;
+  
+  repeated RouteSpec routes = 10;
+  repeated MenuItemSpec menu_items = 11;
+  repeated WidgetSpec widgets = 12;
+  repeated JobSpec jobs = 13;
+  repeated TemplateSpec templates = 14;
+  
+  string min_host_version = 20;
+  repeated string permissions = 21;
+}
+
+message RouteSpec {
+  string method = 1;
+  string path = 2;
+  string handler = 3;
+  repeated string middleware = 4;
+  string description = 5;
+}
+
+message MenuItemSpec {
+  string id = 1;
+  string label = 2;
+  string icon = 3;
+  string path = 4;
+  string location = 5;
+  string parent = 6;
+  int32 order = 7;
+  repeated MenuItemSpec children = 8;
+}
+
+message WidgetSpec {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string handler = 4;
+  string location = 5;
+  string size = 6;
+  int32 order = 7;
+  bool refreshable = 8;
+  int32 refresh_sec = 9;
+}
+
+message JobSpec {
+  string id = 1;
+  string handler = 2;
+  string schedule = 3;
+  string description = 4;
+  bool enabled = 5;
+  string timeout = 6;
+}
+
+message TemplateSpec {
+  string name = 1;
+  string path = 2;
+  bool override = 3;
+}
+
+message InitRequest {
+  map<string, string> config = 1;
+}
+
+message CallRequest {
+  string function = 1;
+  bytes args_json = 2;
+}
+
+message CallResponse {
+  bytes result_json = 1;
+  string error = 2;
+}
+
+// Host service messages
+message DBQueryRequest {
+  string query = 1;
+  repeated bytes args = 2;
+}
+
+message DBQueryResponse {
+  repeated bytes rows_json = 1; // Each row as JSON
+  string error = 2;
+}
+
+message DBExecRequest {
+  string query = 1;
+  repeated bytes args = 2;
+}
+
+message DBExecResponse {
+  int64 affected_rows = 1;
+  string error = 2;
+}
+
+message CacheGetRequest {
+  string key = 1;
+}
+
+message CacheGetResponse {
+  bytes value = 1;
+  bool found = 2;
+  string error = 3;
+}
+
+message CacheSetRequest {
+  string key = 1;
+  bytes value = 2;
+  int32 ttl_seconds = 3;
+}
+
+message CacheDeleteRequest {
+  string key = 1;
+}
+
+message HTTPRequestMsg {
+  string method = 1;
+  string url = 2;
+  map<string, string> headers = 3;
+  bytes body = 4;
+}
+
+message HTTPResponseMsg {
+  int32 status_code = 1;
+  bytes body = 2;
+  string error = 3;
+}
+
+message SendEmailRequest {
+  string to = 1;
+  string subject = 2;
+  string body = 3;
+  bool html = 4;
+}
+
+message LogRequest {
+  string level = 1;
+  string message = 2;
+  map<string, string> fields = 3;
+}
+
+message ConfigGetRequest {
+  string key = 1;
+}
+
+message ConfigGetResponse {
+  string value = 1;
+  string error = 2;
+}
+
+message TranslateRequest {
+  string key = 1;
+  repeated string args = 2;
+}
+
+message TranslateResponse {
+  string text = 1;
+}

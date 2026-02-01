@@ -103,5 +103,27 @@
             </div>
         </div>
     </div>
+
+    <!-- Plugin Widgets -->
+    {% if PluginWidgets %}
+    <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {% for widget in PluginWidgets %}
+        <div class="gk-card-glow plugin-widget" 
+             data-plugin="{{ widget.PluginName }}" 
+             data-widget-id="{{ widget.ID }}"
+             {% if widget.Refreshable %}data-refresh-sec="{{ widget.RefreshSec }}"{% endif %}>
+            <div class="gk-card-header flex items-center justify-between">
+                <h3 class="gk-card-title">{{ widget.Title }}</h3>
+                <span class="text-xs px-2 py-1 rounded" style="background: var(--gk-primary); color: white;">
+                    {{ widget.PluginName }}
+                </span>
+            </div>
+            <div class="gk-card-body plugin-widget-content">
+                {{ widget.HTML|safe }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

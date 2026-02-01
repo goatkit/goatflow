@@ -624,10 +624,6 @@ func ensureCoreHandlers() {
 			}
 			AgentHandlerExports.HandleAgentQueues(c)
 		},
-		"handleAgentDashboard": func(c *gin.Context) {
-			// Simple placeholder for SSR tests
-			c.Data(http.StatusOK, "text/html; charset=utf-8", []byte("<main>Agent Dashboard</main>"))
-		},
 		"handleAgentSearch": AgentHandlerExports.HandleAgentSearch,
 		// Ticket action APIs (YAML routes)
 		"handleAddTicketTime":        handleAddTicketTime,

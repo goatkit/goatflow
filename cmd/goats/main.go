@@ -27,6 +27,8 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/lookups"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
+	"github.com/gotrs-io/gotrs-ce/internal/plugin"
+	"github.com/gotrs-io/gotrs-ce/internal/plugin/example"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 	"github.com/gotrs-io/gotrs-ce/internal/runner"
@@ -296,6 +298,20 @@ func main() {
 	} else {
 		shared.SetGlobalRenderer(renderer)
 		log.Printf("✅ Template renderer initialized (dir=%s)", templateDir)
+	}
+
+	// Initialize plugin system
+	log.Println("🔌 Initializing plugin system...")
+	pluginHost := plugin.NewDefaultHostAPI()
+	pluginMgr := plugin.NewManager(pluginHost)
+	api.SetPluginManager(pluginMgr)
+
+	// Register built-in example plugin (for development/testing)
+	helloPlugin := example.NewHelloPlugin()
+	if err := pluginMgr.Register(context.Background(), helloPlugin); err != nil {
+		log.Printf("⚠️  Failed to register hello plugin: %v", err)
+	} else {
+		log.Printf("✅ Plugin registered: %s v%s", helloPlugin.GKRegister().Name, helloPlugin.GKRegister().Version)
 	}
 
 	// Load YAML routes using GlobalHandlerMap (handlers self-register via init())
