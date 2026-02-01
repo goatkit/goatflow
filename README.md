@@ -33,6 +33,21 @@ GOTRS (Go Open Ticket Request System) is a modern, secure, cloud-native ticketin
 - 4GB RAM minimum
 - Modern web browser with JavaScript enabled
 
+### Container Runtime Support
+
+GOTRS is designed for container-first workflows and supports the following runtimes:
+
+- **Docker Engine**
+  - Docker Compose v1 (`docker-compose`) and v2 (Compose plugin: `docker compose`)
+- **Podman**
+  - Podman with Docker-compatible Compose (e.g. `podman compose` / `podman-docker`)
+- **Rootless containers**
+  - Supported for both Docker and Podman; may require additional host configuration for ports and volumes
+- **SELinux-enabled hosts**
+  - Volumes and bind mounts are compatible; use standard SELinux options/labels as required by your distribution
+
+All `make` targets (for example, `make up`, `make down`, `make restart`) automatically detect whether Docker or Podman is available and choose the appropriate Compose command.
+
 ### Using Containers (Auto-detected)
 
 ```bash
