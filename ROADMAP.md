@@ -4,7 +4,7 @@ Current status, past releases, and future plans for GOTRS.
 
 ## 🚀 Current Status
 
-**Version**: 0.6.3 (January 2026) - Stability & Theming
+**Version**: 0.6.4 (February 2026) - GoatKit Plugin Platform Roadmap
 
 GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed as an OTRS-compatible replacement.
 
@@ -23,6 +23,16 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 ---
 
 ## 📜 Past Releases
+
+### [0.6.4] - February 1, 2026
+
+**GoatKit Plugin Platform Roadmap**
+
+- GoatKit Plugin Platform documentation (`docs/PLUGIN_PLATFORM.md`)
+- Roadmap updated: 0.7.0 focused on WASM + gRPC plugin system
+- Architecture docs aligned with plugin platform vision
+- Handler registry dual registration fix
+- 90s theme button contrast fix
 
 ### [0.6.3] - January 31, 2026
 
@@ -238,13 +248,6 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 - SLA integration with process steps and deadlines
 - Process analytics and bottleneck identification
 
-**Goat Tables (IPAM) Plugin** *(first-party plugin)*
-- RackTables-compatible IPAM module
-- Hierarchical IPv4/IPv6 network views
-- Usage visualization and free space detection
-- Rack layouts and object inventory
-- Migrated from standalone to GoatKit plugin
-
 **Theme & UX Enhancements**
 - Sound event support (notifications, alerts, ticket actions)
 - Custom CSS injection per theme
@@ -277,7 +280,6 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
   - FAQ/Knowledge Base (articles, search, portal)
   - Calendar & Appointments (scheduling, iCal)
   - Process Management (workflows, designer)
-  - Goat Tables IPAM (networks, racks, assets)
 
 *Security*
 - Third-party security audit completed
@@ -324,9 +326,10 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 | Version | Date | Status | Theme |
 |---------|------|--------|-------|
 | 1.0.0 | Apr 2027 | 🔮 Future | Production Release |
-| 0.9.0 | Jan 2027 | 🔮 Future | Process Management & Goat Tables Plugins |
+| 0.9.0 | Jan 2027 | 🔮 Future | Process Management Plugin |
 | 0.8.0 | Sep 2026 | 🔮 Future | Plugin Marketplace, FAQ & Calendar Plugins |
 | 0.7.0 | May 2026 | 🔮 Future | GoatKit Plugin Platform, Stats Plugin, API v2, Mobile |
+| 0.6.4 | Feb 2026 | ✅ Released | Plugin Platform Roadmap |
 | 0.6.3 | Jan 2026 | ✅ Released | Stability & Testing |
 | 0.6.2 | Jan 2026 | ✅ Released | Multi-Theme System |
 | 0.6.1 | Jan 2026 | ✅ Released | Automation & ACLs |

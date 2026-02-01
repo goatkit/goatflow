@@ -129,12 +129,14 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 
 ### Architecture Evolution
 ```
-2025-2027:  Modular Monolith (Core Platform)
-2027-2028:  Microservices + Event-Driven
-2028-2029:  Serverless Components
-2029-2030:  Edge Computing
-2030+:      Quantum-Ready Encryption
+2025-2026:  Modular Monolith (Core Platform)
+2026:       GoatKit Plugin Platform (WASM + gRPC)
+2026-2027:  First-Party Plugins (Stats, FAQ, Calendar, Process)
+2027:       Plugin Marketplace + Third-Party Ecosystem
+2028+:      Enterprise Scale (optional microservices)
 ```
+
+The GoatKit Plugin Platform (v0.7.0) transforms GOTRS from an application into an extensible platform. Core provides infrastructure (routing, auth, templates, plugin runtime); features ship as plugins. This enables a thriving third-party ecosystem while keeping the core stable and secure.
 
 ### AI/ML Integration
 - **Phase 1**: Basic categorization and routing
@@ -144,10 +146,11 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 - **Phase 5**: Fully autonomous support tier
 
 ### Platform Capabilities
-- **2025-2027**: Core ticketing system + Service management
-- **2027-2028**: Customer experience platform
-- **2028-2029**: Business process automation
-- **2030+**: Intelligent service ecosystem
+- **2025-2026**: Core ticketing system + Dynamic modules
+- **2026**: GoatKit Plugin Platform + Statistics & Reporting
+- **2026-2027**: FAQ, Calendar, Process Management plugins
+- **2027**: 1.0 GA + Plugin Marketplace
+- **2028+**: AI-powered automation, enterprise integrations
 
 ## Community Vision
 

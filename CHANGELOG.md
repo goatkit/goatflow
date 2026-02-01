@@ -4,7 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.6.4] - 2026-02-01
+
+### Added
+- **GoatKit Plugin Platform Documentation**: New `docs/PLUGIN_PLATFORM.md` describing the planned plugin architecture for v0.7.0
+  - WASM runtime (wazero) for portable, sandboxed plugins
+  - gRPC runtime (go-plugin) for native integrations
+  - Host function API specification
+  - Plugin packaging and lifecycle documentation
+
+### Changed
+- **Roadmap Update**: 0.7.0 now focused on GoatKit Plugin Platform
+  - Dual runtime support (WASM + gRPC)
+  - Statistics & Reporting ships as first WASM plugin
+  - FAQ, Calendar, Process Management planned as subsequent plugins
+- **Architecture Documentation**: Updated to reflect plugin platform vision
+  - `docs/ARCHITECTURE.md`: Added Platform Roadmap section
+  - `docs/DYNAMIC_MODULES.md`: Links to plugin platform evolution
+  - `docs/MICROSERVICES_ARCHITECTURE.md`: Marked as design document for future consideration
+  - `docs/VISION.md`: Aligned architecture evolution with plugin roadmap
 
 ### Fixed
 - **Handler Registry Dual Registration**: `RegisterHandler()` now registers to both local `handlerRegistry` and `routing.GlobalHandlerMap`
