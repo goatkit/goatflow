@@ -123,13 +123,42 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 
 ### 0.7.0 - May 2026
 
-**Statistics & Reporting**
+**GoatKit Plugin Platform**
+
+*Dual Runtime Support*
+- WASM runtime via wazero (pure Go, no CGO) — for portable, sandboxed plugins
+- gRPC runtime via go-plugin (HashiCorp pattern) — for native, I/O-heavy plugins
+- Unified `Plugin` interface: core doesn't care which runtime
+- Self-describing plugins via `gk_register()` protocol
+
+*Host Function API*
+- `db_query` / `db_exec` — database access
+- `http_request` — outbound HTTP calls
+- `send_email` — SMTP integration
+- `cache_get` / `cache_set` — shared cache
+- `schedule_job` — cron/timer registration
+- `log` — structured logging
+
+*Plugin Packaging*
+- ZIP distribution: manifest.yaml + wasm/binary + templates + assets + i18n
+- Plugin lifecycle: load, register, hot-reload, unload
+- Plugin isolation: memory limits, timeouts, sandboxing
+- Signed plugin verification (optional)
+
+*Developer Experience*
+- Admin UI for plugin management (enable/disable/inspect/logs)
+- Plugin development SDK with example plugins (WASM + gRPC)
+- `gk plugin init` scaffolding CLI
+- Local development mode with hot reload
+
+**Statistics & Reporting Plugin** *(first-party, dogfooding)*
 - Dashboard widgets with ticket metrics
 - Built-in report templates (tickets by queue, agent, SLA compliance)
 - Chart visualizations (line, bar, pie)
 - CSV/Excel export
 - Scheduled report delivery via email
 - Time tracking reports and analytics
+- *Ships as WASM plugin — proves the platform*
 
 **REST API v2**
 - OpenAPI 3.0 specification
@@ -148,13 +177,20 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 **Quality**
 - 70% test coverage target
 - Performance benchmarks established
+- Plugin SDK documentation
 - API documentation site
 
 ---
 
 ### 0.8.0 - September 2026
 
-**FAQ / Knowledge Base**
+**Plugin Ecosystem Expansion**
+- Plugin marketplace integration (browse, install, update)
+- Plugin dependency resolution
+- Theme-as-plugin support (themes distributed via plugin system)
+- Plugin update notifications and auto-update
+
+**FAQ / Knowledge Base Plugin** *(first-party plugin)*
 - Public and internal article categories with permissions
 - Rich text articles with attachments and images
 - Search with relevance ranking and filters
@@ -163,7 +199,7 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 - Customer portal FAQ integration with search
 - Article approval workflow
 
-**Calendar & Appointments**
+**Calendar & Appointments Plugin** *(first-party plugin)*
 - Agent calendar view (day/week/month)
 - Ticket-linked appointments with reminders
 - Recurring events (daily, weekly, monthly)
@@ -181,7 +217,6 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 - Two-factor authentication (TOTP)
 
 **Enhancements**
-- Mobile-responsive improvements across all pages
 - Keyboard navigation accessibility (WCAG 2.1 AA compliance)
 - Drag-and-drop file uploads
 - Real-time collaborative ticket editing indicators
@@ -194,7 +229,7 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 
 ### 0.9.0 - January 2027
 
-**Process Management**
+**Process Management Plugin** *(first-party plugin)*
 - Visual process designer with drag-and-drop
 - Multi-step ticket workflows with validation
 - Conditional transitions based on ticket data
@@ -203,20 +238,17 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 - SLA integration with process steps and deadlines
 - Process analytics and bottleneck identification
 
-**Theme Engine Enhancements**
-- ZIP package upload and extraction for custom themes
-- Admin theme management module (enable/disable/preview)
-- Sound event support (notifications, alerts, ticket actions)
-- Theme marketplace integration
-- Custom CSS injection per theme
-- Theme versioning and updates
+**Goat Tables (IPAM) Plugin** *(first-party plugin)*
+- RackTables-compatible IPAM module
+- Hierarchical IPv4/IPv6 network views
+- Usage visualization and free space detection
+- Rack layouts and object inventory
+- Migrated from standalone to GoatKit plugin
 
-**Plugin System**
-- Plugin architecture with hooks and filters
-- Plugin marketplace and discovery
-- Safe plugin sandboxing
-- Hot plugin reload without restart
-- Plugin development SDK and docs
+**Theme & UX Enhancements**
+- Sound event support (notifications, alerts, ticket actions)
+- Custom CSS injection per theme
+- Theme preview in admin
 
 **Production Preparation**
 - Prometheus metrics endpoint with custom metrics
@@ -238,11 +270,14 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 **Production Release**
 
 *Feature Complete*
+- GoatKit plugin platform GA (WASM + gRPC runtimes)
 - All OTRS core modules operational
-- Process Management GA with production workflows
-- FAQ/Knowledge Base GA with full-text search
-- Statistics & Reporting GA with custom dashboards
-- Calendar & Appointments GA with team scheduling
+- First-party plugins shipped:
+  - Statistics & Reporting (dashboards, reports, charts)
+  - FAQ/Knowledge Base (articles, search, portal)
+  - Calendar & Appointments (scheduling, iCal)
+  - Process Management (workflows, designer)
+  - Goat Tables IPAM (networks, racks, assets)
 
 *Security*
 - Third-party security audit completed
@@ -289,9 +324,9 @@ GOTRS is a modern, open-source ticketing system built with Go and HTMX, designed
 | Version | Date | Status | Theme |
 |---------|------|--------|-------|
 | 1.0.0 | Apr 2027 | 🔮 Future | Production Release |
-| 0.9.0 | Jan 2027 | 🔮 Future | Process Management & Plugins |
-| 0.8.0 | Sep 2026 | 🔮 Future | FAQ & Calendar |
-| 0.7.0 | May 2026 | 🔮 Future | Statistics & API v2 |
+| 0.9.0 | Jan 2027 | 🔮 Future | Process Management & Goat Tables Plugins |
+| 0.8.0 | Sep 2026 | 🔮 Future | Plugin Marketplace, FAQ & Calendar Plugins |
+| 0.7.0 | May 2026 | 🔮 Future | GoatKit Plugin Platform, Stats Plugin, API v2, Mobile |
 | 0.6.3 | Jan 2026 | ✅ Released | Stability & Testing |
 | 0.6.2 | Jan 2026 | ✅ Released | Multi-Theme System |
 | 0.6.1 | Jan 2026 | ✅ Released | Automation & ACLs |
