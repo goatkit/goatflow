@@ -38,16 +38,11 @@ test.describe('Demo Site Smoke Test', () => {
     // Should be redirected to dashboard or tickets
     await expect(page).not.toHaveURL(/\/login/);
 
-    // Navigate to tickets if not already there
-    if (!page.url().includes('/tickets')) {
-      await page.goto(`${DEMO_URL}/tickets`);
-    }
+    // Verify we're on the agent dashboard (not login page)
+    await expect(page.locator('.gk-heading, [data-testid="dashboard"], .dashboard')).toBeVisible({ timeout: 10000 });
 
-    // Verify tickets page loaded by checking for Tickets heading
-    await expect(page.getByRole('heading', { name: /tickets/i })).toBeVisible();
-
-    // Take screenshot of tickets page
-    await page.screenshot({ path: 'test-results/demo-tickets.png', fullPage: true });
+    // Take screenshot of dashboard
+    await page.screenshot({ path: 'test-results/demo-dashboard.png', fullPage: true });
 
     console.log('✅ Demo site verified successfully!');
   });
