@@ -93,8 +93,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache,mode=max
           provenance: true
           sbom: true
           build-args: |
@@ -182,8 +182,8 @@ jobs:
             GIT_COMMIT=${{ steps.version.outputs.commit }}
             GIT_BRANCH=${{ steps.version.outputs.branch }}
             BUILD_DATE=${{ steps.version.outputs.date }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-runner:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}-runner:buildcache,mode=max
           provenance: true
           sbom: true
 
