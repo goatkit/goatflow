@@ -4,7 +4,7 @@
 {% macro data_table(id, columns, data, searchable=true, actions=true) %}
 <div class="gk-card-glow rounded-lg overflow-hidden">
     {% if searchable %}
-    <div class="p-4" style="border-bottom: 1px solid var(--gk-border);">
+    <div class="p-4" style="border-bottom: 1px solid var(--gk-border-default);">
         <div class="flex justify-between items-center">
             <div class="flex items-center space-x-2">
                 <input type="text"
@@ -228,7 +228,7 @@ function filterTable(tableId, searchTerm) {
 {# Pagination Controls #}
 {% macro pagination(current_page, total_pages, base_url) %}
 {% if total_pages > 1 %}
-<div class="flex items-center justify-between px-4 py-3 sm:px-6" style="border-top: 1px solid var(--gk-border); background: var(--gk-bg-surface);">
+<div class="flex items-center justify-between px-4 py-3 sm:px-6" style="border-top: 1px solid var(--gk-border-default); background: var(--gk-bg-surface);">
     <div class="flex-1 flex justify-between sm:hidden">
         {% if current_page > 1 %}
         <a href="{{ base_url }}?page={{ current_page - 1 }}"
@@ -254,7 +254,7 @@ function filterTable(tableId, searchTerm) {
                 {% if current_page > 1 %}
                 <a href="{{ base_url }}?page={{ current_page - 1 }}"
                    class="relative inline-flex items-center px-2 py-2 rounded-l-md text-sm font-medium transition-colors hover:bg-white/10"
-                   style="border: 1px solid var(--gk-border); background: var(--gk-bg-surface); color: var(--gk-text-muted);">
+                   style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-surface); color: var(--gk-text-muted);">
                     <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd"/>
                     </svg>
@@ -270,7 +270,7 @@ function filterTable(tableId, searchTerm) {
                     {% else %}
                     <a href="{{ base_url }}?page={{ page }}"
                        class="relative inline-flex items-center px-4 py-2 text-sm font-medium transition-colors hover:bg-white/10"
-                       style="border: 1px solid var(--gk-border); background: var(--gk-bg-surface); color: var(--gk-text-muted);">
+                       style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-surface); color: var(--gk-text-muted);">
                         {{ page }}
                     </a>
                     {% endif %}
@@ -279,7 +279,7 @@ function filterTable(tableId, searchTerm) {
                 {% if current_page < total_pages %}
                 <a href="{{ base_url }}?page={{ current_page + 1 }}"
                    class="relative inline-flex items-center px-2 py-2 rounded-r-md text-sm font-medium transition-colors hover:bg-white/10"
-                   style="border: 1px solid var(--gk-border); background: var(--gk-bg-surface); color: var(--gk-text-muted);">
+                   style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-surface); color: var(--gk-text-muted);">
                     <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
                     </svg>

@@ -1,0 +1,60 @@
+# {{.NameTitle}} Plugin
+
+{{.Description}}
+
+## Building
+
+```bash
+./build.sh
+```
+
+Requires TinyGo or Docker.
+
+## Installation
+
+Copy the compiled WASM file to your GOTRS plugins directory:
+
+```bash
+cp {{.Name}}.wasm /path/to/gotrs/config/plugins/
+```
+
+GOTRS will automatically load the plugin on startup.
+
+## API
+
+### Routes
+
+| Method | Path | Handler | Description |
+|--------|------|---------|-------------|
+| GET | `/api/plugins/{{.Name}}` | `hello` | Returns a greeting |
+
+### Widgets
+
+| ID | Location | Description |
+|----|----------|-------------|
+| `{{.NameSnake}}_widget` | `dashboard` | Main widget |
+
+## Development
+
+Edit `main.go` to add your plugin logic:
+
+1. Update the `manifestJSON` to define routes, widgets, and jobs
+2. Implement handlers in the `gk_call` switch
+3. Build and test
+
+### Host API
+
+Plugins can call host functions via `gk_host_call`:
+
+- `db_query` - Execute SELECT queries
+- `db_exec` - Execute INSERT/UPDATE/DELETE
+- `cache_get` / `cache_set` - Cache operations
+- `http_request` - Outbound HTTP
+- `send_email` - Send emails
+- `translate` - i18n translations
+- `config_get` - Read configuration
+- `log` - Structured logging
+
+## License
+
+Apache-2.0

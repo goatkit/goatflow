@@ -2,7 +2,9 @@
 
 ## Mission Statement
 
-To create the world's most advanced open-source ticketing and service management platform that empowers organizations of all sizes to deliver exceptional customer support while maintaining complete control over their data and infrastructure.
+To build the world's most powerful open-source platform for service management, workflow automation, and customer support—empowering organizations of all sizes to create exceptional experiences while maintaining complete control over their data and infrastructure.
+
+GOTRS is the flagship product built on the **GoatKit platform**. GoatKit provides the foundation—authentication, database abstraction, plugin runtime, scheduling, and UI framework—while GOTRS delivers enterprise-grade ITSM capabilities on top of it.
 
 ## Core Values
 
@@ -50,31 +52,33 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 - Establish GOTRS certification program
 - Partner with major cloud providers (AWS, Azure, GCP)
 
-### Year 4 (2029-2030): Platform Evolution
-**Goal**: Transform from ticketing to complete service platform
+### Year 4 (2029-2030): Platform Expansion
+**Goal**: GoatKit powers multiple products beyond ITSM
 
+- Launch additional products on GoatKit platform
+- Third-party developers building commercial products
 - Integrate IoT device management
 - Launch predictive maintenance capabilities
-- Introduce blockchain-based audit trails
 - Expand to 50,000+ installations
-- Establish regional data centers
 
-### Year 5 (2030-2031): Global Standard
-**Goal**: Become the de facto standard for open-source service management
+### Year 5 (2030-2031): Platform Standard
+**Goal**: GoatKit becomes the de facto standard for open-source service platforms
 
 - Power 100,000+ organizations worldwide
+- Multiple products in the GoatKit ecosystem
 - Complete AI-driven autonomous support capabilities
-- Establish GOTRS Foundation for governance
+- Establish GoatKit Foundation for governance
 - Achieve $100M+ ecosystem economy
-- Define industry standards for service management
+- Define industry standards for service platforms
 
 ## Strategic Differentiators
 
 ### vs. Legacy Systems (OTRS, RT)
-- **Modern Architecture**: Microservices vs. monolithic Perl
+- **Modern Architecture**: Go-based platform vs. monolithic Perl
 - **Performance**: 10x faster response times
 - **User Experience**: Intuitive, modern interface
 - **Cloud Native**: Built for containerized deployment
+- **Platform Extensibility**: Plugin ecosystem vs. core modifications
 - **Active Development**: Rapid feature delivery
 
 ### vs. Commercial Solutions (Zendesk, ServiceNow)
@@ -127,16 +131,47 @@ Your data belongs to you. Self-hosted deployment ensures complete control over s
 
 ## Technology Vision
 
-### Architecture Evolution
+### Platform Architecture
+
+GoatKit is a **platform**, not just an application framework. GOTRS is the first product built on GoatKit, but the architecture supports multiple products and third-party extensions.
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  GoatKit Platform                   │
+├─────────────────────────────────────────────────────┤
+│  Core Infrastructure                                │
+│  • Auth system (users, agents, API keys)            │
+│  • Database abstraction (PostgreSQL, MySQL)         │
+│  • Email integration (SMTP, IMAP, POP3)             │
+│  • Scheduler & background jobs                      │
+│  • Admin UI framework                               │
+│  • Plugin runtime (WASM + gRPC)                     │
+├─────────────────────────────────────────────────────┤
+│  Modules (pluggable features)                       │
+│  • Statistics & Reporting                           │
+│  • FAQ & Knowledge Base                             │
+│  • Calendar & Scheduling                            │
+│  • Process Management                               │
+│  • Third-party plugins                              │
+├─────────────────────────────────────────────────────┤
+│  Products (built on GoatKit)                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
+│  │   GOTRS     │  │   Future    │  │  3rd Party  │ │
+│  │   (ITSM)    │  │  Products   │  │  Products   │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘ │
+└─────────────────────────────────────────────────────┘
+```
+
+### Evolution Roadmap
 ```
 2025-2026:  Modular Monolith (Core Platform)
 2026:       GoatKit Plugin Platform (WASM + gRPC)
 2026-2027:  First-Party Plugins (Stats, FAQ, Calendar, Process)
 2027:       Plugin Marketplace + Third-Party Ecosystem
-2028+:      Enterprise Scale (optional microservices)
+2028+:      Multi-Product Platform + Enterprise Scale
 ```
 
-The GoatKit Plugin Platform (v0.7.0) transforms GOTRS from an application into an extensible platform. Core provides infrastructure (routing, auth, templates, plugin runtime); features ship as plugins. This enables a thriving third-party ecosystem while keeping the core stable and secure.
+The GoatKit Plugin Platform transforms GOTRS from an application into an extensible platform. Core provides infrastructure (routing, auth, templates, plugin runtime); features ship as plugins. This enables a thriving third-party ecosystem while keeping the platform stable and secure—and opens the door to entirely new products built on the same foundation.
 
 ### AI/ML Integration
 - **Phase 1**: Basic categorization and routing

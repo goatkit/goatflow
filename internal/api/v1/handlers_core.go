@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 
+	"github.com/gotrs-io/gotrs-ce/internal/database"
 	"github.com/gotrs-io/gotrs-ce/internal/middleware"
 )
 
@@ -103,13 +105,38 @@ func (router *APIRouter) handleUpdateCurrentUser(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual user update
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	now := time.Now()
+	query := database.ConvertQuery(`
+		UPDATE users SET
+			first_name = COALESCE(NULLIF(?, ''), first_name),
+			last_name = COALESCE(NULLIF(?, ''), last_name),
+			change_time = ?,
+			change_by = ?
+		WHERE id = ?
+	`)
+
+	result, err := db.Exec(query, updateRequest.FirstName, updateRequest.LastName, now, userID, userID)
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to update profile")
+		return
+	}
+
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		sendError(c, http.StatusNotFound, "User not found")
+		return
+	}
+
 	sendSuccess(c, gin.H{
 		"id":         userID,
 		"first_name": updateRequest.FirstName,
 		"last_name":  updateRequest.LastName,
-		"phone":      updateRequest.Phone,
-		"updated_at": time.Now().UTC(),
+		"updated_at": now,
 	})
 }
 
@@ -121,33 +148,54 @@ func (router *APIRouter) handleGetUserPreferences(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual preferences retrieval
-	sendSuccess(c, gin.H{
-		"user_id":  userID,
-		"language": "en",
-		"timezone": "UTC",
-		"theme":    "light",
-		"notifications": gin.H{
-			"email":   true,
-			"browser": true,
-			"mobile":  false,
-		},
-		"dashboard": gin.H{
-			"default_view":   "tickets",
-			"items_per_page": 25,
-		},
-	})
+	db, err := database.GetDB()
+	if err != nil {
+		// Return defaults if DB unavailable
+		sendSuccess(c, gin.H{
+			"user_id":  userID,
+			"language": "en",
+			"timezone": "UTC",
+			"theme":    "light",
+		})
+		return
+	}
+
+	// Get preferences from user_preferences table
+	query := database.ConvertQuery(`
+		SELECT preferences_key, preferences_value
+		FROM user_preferences
+		WHERE user_id = ?
+	`)
+
+	rows, err := db.Query(query, userID)
+	prefs := gin.H{"user_id": userID}
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var key, value string
+			if rows.Scan(&key, &value) == nil {
+				prefs[key] = value
+			}
+		}
+	}
+
+	// Add defaults for missing keys
+	if _, ok := prefs["language"]; !ok {
+		prefs["language"] = "en"
+	}
+	if _, ok := prefs["timezone"]; !ok {
+		prefs["timezone"] = "UTC"
+	}
+	if _, ok := prefs["theme"]; !ok {
+		prefs["theme"] = "light"
+	}
+
+	sendSuccess(c, prefs)
 }
 
 // handleUpdateUserPreferences updates user preferences.
 func (router *APIRouter) handleUpdateUserPreferences(c *gin.Context) {
-	var prefsRequest struct {
-		Language      string `json:"language"`
-		Timezone      string `json:"timezone"`
-		Theme         string `json:"theme"`
-		Notifications gin.H  `json:"notifications"`
-		Dashboard     gin.H  `json:"dashboard"`
-	}
+	var prefsRequest map[string]interface{}
 
 	if err := c.ShouldBindJSON(&prefsRequest); err != nil {
 		sendError(c, http.StatusBadRequest, "Invalid preferences request: "+err.Error())
@@ -160,15 +208,41 @@ func (router *APIRouter) handleUpdateUserPreferences(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual preferences update
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	now := time.Now()
+
+	// Update each preference using REPLACE (upsert)
+	for key, value := range prefsRequest {
+		valueStr := ""
+		switch v := value.(type) {
+		case string:
+			valueStr = v
+		case bool:
+			if v {
+				valueStr = "1"
+			} else {
+				valueStr = "0"
+			}
+		default:
+			continue // Skip complex types
+		}
+
+		query := database.ConvertQuery(`
+			REPLACE INTO user_preferences (user_id, preferences_key, preferences_value)
+			VALUES (?, ?, ?)
+		`)
+		db.Exec(query, userID, key, valueStr)
+	}
+
 	sendSuccess(c, gin.H{
-		"user_id":       userID,
-		"language":      prefsRequest.Language,
-		"timezone":      prefsRequest.Timezone,
-		"theme":         prefsRequest.Theme,
-		"notifications": prefsRequest.Notifications,
-		"dashboard":     prefsRequest.Dashboard,
-		"updated_at":    time.Now().UTC(),
+		"user_id":    userID,
+		"updated_at": now,
+		"message":    "Preferences updated",
 	})
 }
 
@@ -190,14 +264,44 @@ func (router *APIRouter) handleChangePassword(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual password change
-	// - Verify current password
-	// - Hash new password
-	// - Update database
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	// Get current password hash
+	var currentHash string
+	query := database.ConvertQuery(`SELECT pw FROM users WHERE id = ?`)
+	if err := db.QueryRow(query, userID).Scan(&currentHash); err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to verify user")
+		return
+	}
+
+	// Verify current password
+	if err := bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(passwordRequest.CurrentPassword)); err != nil {
+		sendError(c, http.StatusUnauthorized, "Current password is incorrect")
+		return
+	}
+
+	// Hash new password
+	newHash, err := bcrypt.GenerateFromPassword([]byte(passwordRequest.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to process new password")
+		return
+	}
+
+	// Update password
+	updateQuery := database.ConvertQuery(`UPDATE users SET pw = ?, change_time = ?, change_by = ? WHERE id = ?`)
+	now := time.Now()
+	if _, err := db.Exec(updateQuery, string(newHash), now, userID, userID); err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to update password")
+		return
+	}
+
 	sendSuccess(c, gin.H{
-		"user_id":    userID,
 		"message":    "Password changed successfully",
-		"changed_at": time.Now().UTC(),
+		"changed_at": now,
 	})
 }
 
@@ -209,18 +313,50 @@ func (router *APIRouter) handleGetUserSessions(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual session retrieval
-	sendSuccess(c, []gin.H{
-		{
-			"id":         "session_1",
-			"user_id":    userID,
-			"device":     "Chrome on Windows",
-			"ip_address": c.ClientIP(),
-			"current":    true,
-			"created_at": time.Now().Add(-2 * time.Hour).UTC(),
-			"last_seen":  time.Now().UTC(),
-		},
-	})
+	db, err := database.GetDB()
+	if err != nil {
+		sendSuccess(c, []interface{}{})
+		return
+	}
+
+	// Get unique session IDs for this user from sessions table
+	query := database.ConvertQuery(`
+		SELECT DISTINCT s1.session_id,
+			MAX(CASE WHEN s1.data_key = 'UserRemoteAddr' THEN s1.data_value END) as ip,
+			MAX(CASE WHEN s1.data_key = 'UserRemoteUserAgent' THEN s1.data_value END) as agent,
+			MAX(CASE WHEN s1.data_key = 'CreateTime' THEN s1.data_value END) as created,
+			MAX(CASE WHEN s1.data_key = 'LastRequest' THEN s1.data_value END) as last_request
+		FROM sessions s1
+		WHERE s1.session_id IN (
+			SELECT session_id FROM sessions 
+			WHERE data_key = 'UserID' AND data_value = ?
+		)
+		GROUP BY s1.session_id
+	`)
+
+	rows, err := db.Query(query, userID)
+	sessions := []gin.H{}
+	currentSessionID := c.GetString("session_id")
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var sessionID string
+			var ip, agent, created, lastRequest *string
+			if rows.Scan(&sessionID, &ip, &agent, &created, &lastRequest) == nil {
+				sessions = append(sessions, gin.H{
+					"id":          sessionID,
+					"user_id":     userID,
+					"ip_address":  ip,
+					"user_agent":  agent,
+					"created_at":  created,
+					"last_seen":   lastRequest,
+					"current":     sessionID == currentSessionID,
+				})
+			}
+		}
+	}
+
+	sendSuccess(c, sessions)
 }
 
 // handleRevokeSession revokes a user session.
@@ -237,11 +373,39 @@ func (router *APIRouter) handleRevokeSession(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual session revocation
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	// Verify the session belongs to the current user
+	verifyQuery := database.ConvertQuery(`
+		SELECT 1 FROM sessions 
+		WHERE session_id = ? AND data_key = 'UserID' AND data_value = ?
+	`)
+	var exists2 int
+	if err := db.QueryRow(verifyQuery, sessionID, userID).Scan(&exists2); err != nil {
+		sendError(c, http.StatusNotFound, "Session not found or not owned by user")
+		return
+	}
+
+	// Delete all session data
+	deleteQuery := database.ConvertQuery(`DELETE FROM sessions WHERE session_id = ?`)
+	result, err := db.Exec(deleteQuery, sessionID)
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to revoke session")
+		return
+	}
+
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		sendError(c, http.StatusNotFound, "Session not found")
+		return
+	}
+
 	sendSuccess(c, gin.H{
-		"user_id":    userID,
 		"session_id": sessionID,
 		"message":    "Session revoked successfully",
-		"revoked_at": time.Now().UTC(),
+		"revoked_at": time.Now(),
 	})
 }

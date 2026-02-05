@@ -10,6 +10,18 @@ import (
 )
 
 // HandleGetTicketStateAPI handles GET /api/v1/ticket-states/:id.
+//
+//	@Summary		Get ticket state
+//	@Description	Get a ticket state by ID
+//	@Tags			States
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"State ID"
+//	@Success		200	{object}	map[string]interface{}	"State details"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"State not found"
+//	@Security		BearerAuth
+//	@Router			/ticket-states/{id} [get]
 func HandleGetTicketStateAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -61,6 +73,18 @@ func HandleGetTicketStateAPI(c *gin.Context) {
 }
 
 // HandleCreateTicketStateAPI handles POST /api/v1/ticket-states.
+//
+//	@Summary		Create ticket state
+//	@Description	Create a new ticket state
+//	@Tags			States
+//	@Accept			json
+//	@Produce		json
+//	@Param			state	body		object	true	"State data"
+//	@Success		201		{object}	map[string]interface{}	"Created state"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/ticket-states [post]
 func HandleCreateTicketStateAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -121,6 +145,20 @@ func HandleCreateTicketStateAPI(c *gin.Context) {
 }
 
 // HandleUpdateTicketStateAPI handles PUT /api/v1/ticket-states/:id.
+//
+//	@Summary		Update ticket state
+//	@Description	Update a ticket state
+//	@Tags			States
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int		true	"State ID"
+//	@Param			state	body		object	true	"State update data"
+//	@Success		200		{object}	map[string]interface{}	"Updated state"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404		{object}	map[string]interface{}	"State not found"
+//	@Security		BearerAuth
+//	@Router			/ticket-states/{id} [put]
 func HandleUpdateTicketStateAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -193,6 +231,18 @@ func HandleUpdateTicketStateAPI(c *gin.Context) {
 }
 
 // HandleDeleteTicketStateAPI handles DELETE /api/v1/ticket-states/:id.
+//
+//	@Summary		Delete ticket state
+//	@Description	Delete a ticket state
+//	@Tags			States
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"State ID"
+//	@Success		200	{object}	map[string]interface{}	"State deleted"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"State not found"
+//	@Security		BearerAuth
+//	@Router			/ticket-states/{id} [delete]
 func HandleDeleteTicketStateAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -280,6 +330,16 @@ func HandleDeleteTicketStateAPI(c *gin.Context) {
 }
 
 // HandleTicketStateStatisticsAPI handles GET /api/v1/ticket-states/statistics.
+//
+//	@Summary		Get state statistics
+//	@Description	Get ticket counts by state
+//	@Tags			States
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"State statistics"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/ticket-states/statistics [get]
 func HandleTicketStateStatisticsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

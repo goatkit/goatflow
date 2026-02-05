@@ -13,6 +13,20 @@ import (
 )
 
 // HandleListUsersAPI handles GET /api/v1/users.
+//
+//	@Summary		List users
+//	@Description	Retrieve a paginated list of users (agents)
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			page		query		int		false	"Page number"		default(1)
+//	@Param			per_page	query		int		false	"Items per page"	default(20)
+//	@Param			search		query		string	false	"Search in login, name, email"
+//	@Param			group_id	query		int		false	"Filter by group membership"
+//	@Success		200			{object}	map[string]interface{}	"List of users"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/users [get]
 func HandleListUsersAPI(c *gin.Context) {
 	// Check authentication
 	_, exists := c.Get("user_id")

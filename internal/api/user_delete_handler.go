@@ -10,7 +10,20 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/database"
 )
 
+// HandleDeleteUserAPI handles DELETE /api/v1/users/:id.
 // This performs a soft delete by setting valid_id = 2 (OTRS pattern).
+//
+//	@Summary		Delete user
+//	@Description	Soft delete a user (deactivate)
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"User ID"
+//	@Success		200	{object}	map[string]interface{}	"User deleted"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"User not found"
+//	@Security		BearerAuth
+//	@Router			/users/{id} [delete]
 func HandleDeleteUserAPI(c *gin.Context) {
 	// Check authentication
 	currentUserID, exists := c.Get("user_id")
@@ -117,6 +130,18 @@ func HandleDeleteUserAPI(c *gin.Context) {
 // Additional helper handlers for user groups
 
 // HandleGetUserGroupsAPI handles GET /api/v1/users/:id/groups.
+//
+//	@Summary		Get user groups
+//	@Description	List groups a user belongs to
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"User ID"
+//	@Success		200	{object}	map[string]interface{}	"List of groups"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"User not found"
+//	@Security		BearerAuth
+//	@Router			/users/{id}/groups [get]
 func HandleGetUserGroupsAPI(c *gin.Context) {
 	// Check authentication
 	_, exists := c.Get("user_id")
@@ -205,6 +230,19 @@ func HandleGetUserGroupsAPI(c *gin.Context) {
 }
 
 // HandleAddUserToGroupAPI handles POST /api/v1/users/:id/groups.
+//
+//	@Summary		Add user to group
+//	@Description	Add a user to a group
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int		true	"User ID"
+//	@Param			group	body		object	true	"Group data (group_id, permission)"
+//	@Success		200		{object}	map[string]interface{}	"User added to group"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/users/{id}/groups [post]
 func HandleAddUserToGroupAPI(c *gin.Context) {
 	// Check authentication
 	currentUserID, exists := c.Get("user_id")
@@ -304,6 +342,19 @@ func HandleAddUserToGroupAPI(c *gin.Context) {
 }
 
 // HandleRemoveUserFromGroupAPI handles DELETE /api/v1/users/:id/groups/:group_id.
+//
+//	@Summary		Remove user from group
+//	@Description	Remove a user from a group
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path		int	true	"User ID"
+//	@Param			group_id	path		int	true	"Group ID"
+//	@Success		200			{object}	map[string]interface{}	"User removed from group"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404			{object}	map[string]interface{}	"Not found"
+//	@Security		BearerAuth
+//	@Router			/users/{id}/groups/{group_id} [delete]
 func HandleRemoveUserFromGroupAPI(c *gin.Context) {
 	// Check authentication
 	_, exists := c.Get("user_id")

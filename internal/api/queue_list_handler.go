@@ -12,6 +12,18 @@ import (
 )
 
 // HandleListQueuesAPI handles GET /api/v1/queues.
+//
+//	@Summary		List queues
+//	@Description	Retrieve all queues
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			page		query		int		false	"Page number"		default(1)
+//	@Param			per_page	query		int		false	"Items per page"	default(20)
+//	@Success		200			{object}	map[string]interface{}	"List of queues"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/queues [get]
 func HandleListQueuesAPI(c *gin.Context) {
 	// Check authentication
 	_, exists := c.Get("user_id")

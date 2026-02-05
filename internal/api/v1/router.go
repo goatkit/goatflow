@@ -42,7 +42,7 @@ func (router *APIRouter) SetupV1Routes(r *gin.Engine) {
 	v1 := r.Group("/api/v1")
 
 	// Add rate limiting middleware
-	// v1.Use(middleware.RateLimit())
+	v1.Use(middleware.RateLimitMiddleware())
 
 	// Add request ID middleware
 	v1.Use(middleware.RequestID())
@@ -60,8 +60,8 @@ func (router *APIRouter) SetupV1Routes(r *gin.Engine) {
 
 	// Protected endpoints (authentication required) - bypass auth routes
 	protected := v1.Group("")
-	// Attach session middleware (JWT manager lazily initialized above on first login)
-	protected.Use(middleware.SessionMiddleware(router.jwtManager))
+	// Unified auth: supports both JWT (browser sessions) and API tokens (gf_*)
+	protected.Use(middleware.UnifiedAuthMiddleware(router.jwtManager))
 
 	// User endpoints
 	router.setupUserRoutes(protected)
@@ -71,6 +71,9 @@ func (router *APIRouter) SetupV1Routes(r *gin.Engine) {
 
 	// Queue endpoints
 	router.setupQueueRoutes(protected)
+
+	// SLA endpoints
+	router.setupSLARoutes(protected)
 
 	// Priority endpoints
 	router.setupPriorityRoutes(protected)
@@ -185,26 +188,29 @@ func (router *APIRouter) setupTicketRoutes(protected *gin.RouterGroup) {
 	tickets.POST("/:id/articles", router.handleAddTicketArticle) // Simplified for testing
 	tickets.GET("/:id/articles/:article_id", router.handleGetTicketArticle)
 
-	// TODO: Implement attachment handlers
-	// tickets.GET("/:id/attachments", router.handleGetTicketAttachments)
-	// tickets.POST("/:id/attachments",
-	//     middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate),
-	//     router.handleUploadTicketAttachment)
-	// tickets.GET("/:id/attachments/:attachment_id", router.handleDownloadTicketAttachment)
-	// tickets.DELETE("/:id/attachments/:attachment_id",
-	//     middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate),
-	//     router.handleDeleteTicketAttachment)
+	// Attachment handlers
+	tickets.GET("/:id/attachments", router.handleGetTicketAttachments)
+	tickets.POST("/:id/attachments",
+		middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate),
+		router.handleUploadTicketAttachment)
+	tickets.GET("/:id/attachments/:attachment_id", router.handleDownloadTicketAttachment)
+	tickets.DELETE("/:id/attachments/:attachment_id",
+		middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate),
+		router.handleDeleteTicketAttachment)
+	// Article-specific attachment listing
+	tickets.GET("/:id/articles/:article_id/attachments", router.handleGetArticleAttachments)
 
-	// TODO: Implement history/timeline handler
-	// tickets.GET("/:id/history", router.handleGetTicketHistory)
+	// History and links
+	tickets.GET("/:id/history", router.handleGetTicketHistory)
+	tickets.GET("/:id/links", router.handleGetTicketLinks)
 
-	// TODO: Implement SLA and escalation handlers
-	// tickets.GET("/:id/sla", router.handleGetTicketSLA)
-	// tickets.POST("/:id/escalate", middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate), router.handleEscalateTicket)
+	// SLA status for ticket
+	tickets.GET("/:id/sla", router.handleGetTicketSLA)
 
-	// TODO: Implement merge/split operations
-	// tickets.POST("/:id/merge", middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate), router.handleMergeTickets)
-	// tickets.POST("/:id/split", middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate), router.handleSplitTicket)
+	// Merge/split operations
+	tickets.POST("/:id/merge", middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate), router.handleMergeTickets)
+	tickets.POST("/:id/split", middleware.RequirePermission(router.rbac, auth.PermissionTicketUpdate), router.handleSplitTicket)
+	tickets.GET("/:id/merge-history", router.handleGetMergeHistory)
 
 	// Bulk operations
 	tickets.POST("/bulk/assign", middleware.RequirePermission(router.rbac, auth.PermissionTicketAssign), router.handleBulkAssignTickets)
@@ -227,6 +233,16 @@ func (router *APIRouter) setupQueueRoutes(protected *gin.RouterGroup) {
 		// Queue tickets
 		queues.GET("/:id/tickets", router.handleGetQueueTickets)
 		queues.GET("/:id/stats", router.handleGetQueueStats)
+	}
+}
+
+// setupSLARoutes configures SLA-related endpoints.
+func (router *APIRouter) setupSLARoutes(protected *gin.RouterGroup) {
+	slas := protected.Group("/slas")
+	slas.Use(middleware.RequireAgentAccess(router.rbac))
+	{
+		slas.GET("", router.handleListSLAs)
+		slas.GET("/:sla_id", router.handleGetSLA)
 	}
 }
 

@@ -22,10 +22,23 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/service"
+	"github.com/gotrs-io/gotrs-ce/internal/services"
 	"github.com/gotrs-io/gotrs-ce/internal/utils"
 )
 
 // HandleCreateTicketAPI handles ticket creation via API.
+//
+//	@Summary		Create ticket
+//	@Description	Create a new ticket with optional initial article
+//	@Tags			Tickets
+//	@Accept			json
+//	@Produce		json
+//	@Param			ticket	body		object	true	"Ticket data (title, queue_id, priority_id, customer_user_id, article)"
+//	@Success		201		{object}	map[string]interface{}	"Created ticket"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/tickets [post]
 func HandleCreateTicketAPI(c *gin.Context) {
 	// Require authentication
 	if _, exists := c.Get("user_id"); !exists {
@@ -126,6 +139,27 @@ func HandleCreateTicketAPI(c *gin.Context) {
 	if err != nil || db == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"success": false, "error": "Database connection failed"})
 		return
+	}
+
+	// Check if user has 'create' permission on the target queue
+	// Customers can create tickets (handled separately), agents need 'create' or 'rw'
+	isCustomer := false
+	if ic, _ := c.Get("is_customer"); ic == true {
+		isCustomer = true
+	} else if role, _ := c.Get("user_role"); role == "Customer" {
+		isCustomer = true
+	}
+	if !isCustomer {
+		permSvc := services.NewPermissionService(db)
+		canCreate, err := permSvc.CanCreate(userID, ticketRequest.QueueID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to check permissions"})
+			return
+		}
+		if !canCreate {
+			c.JSON(http.StatusForbidden, gin.H{"success": false, "error": "No permission to create tickets in this queue"})
+			return
+		}
 	}
 
 	repo := repository.NewTicketRepository(db)

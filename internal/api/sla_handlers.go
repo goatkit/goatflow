@@ -21,6 +21,18 @@ func resolveUserID(raw interface{}) int {
 // Supports optional filtering via ticket attribute relations:
 //   - filter_attribute: The attribute to filter by (e.g., "Queue", "Service")
 //   - filter_value: The value of that attribute (e.g., "Sales", "Gold Support")
+//
+// HandleListSLAsAPI handles GET /api/v1/slas.
+//
+//	@Summary		List SLAs
+//	@Description	Retrieve all SLA definitions
+//	@Tags			SLAs
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"List of SLAs"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/slas [get]
 func HandleListSLAsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -130,6 +142,18 @@ func HandleListSLAsAPI(c *gin.Context) {
 }
 
 // HandleGetSLAAPI handles GET /api/v1/slas/:id.
+//
+//	@Summary		Get SLA by ID
+//	@Description	Retrieve a single SLA definition
+//	@Tags			SLAs
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"SLA ID"
+//	@Success		200	{object}	map[string]interface{}	"SLA details"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"SLA not found"
+//	@Security		BearerAuth
+//	@Router			/slas/{id} [get]
 func HandleGetSLAAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -214,6 +238,18 @@ func HandleGetSLAAPI(c *gin.Context) {
 }
 
 // HandleCreateSLAAPI handles POST /api/v1/slas.
+//
+//	@Summary		Create SLA
+//	@Description	Create a new SLA definition
+//	@Tags			SLAs
+//	@Accept			json
+//	@Produce		json
+//	@Param			sla	body		object	true	"SLA data"
+//	@Success		201	{object}	map[string]interface{}	"Created SLA"
+//	@Failure		400	{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/slas [post]
 func HandleCreateSLAAPI(c *gin.Context) {
 	// Check authentication
 	rawUserID, exists := c.Get("user_id")
@@ -331,6 +367,20 @@ func HandleCreateSLAAPI(c *gin.Context) {
 }
 
 // HandleUpdateSLAAPI handles PUT /api/v1/slas/:id.
+//
+//	@Summary		Update SLA
+//	@Description	Update an existing SLA definition
+//	@Tags			SLAs
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int		true	"SLA ID"
+//	@Param			sla	body		object	true	"SLA update data"
+//	@Success		200	{object}	map[string]interface{}	"Updated SLA"
+//	@Failure		400	{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"SLA not found"
+//	@Security		BearerAuth
+//	@Router			/slas/{id} [put]
 func HandleUpdateSLAAPI(c *gin.Context) {
 	// Check authentication
 	rawUserID, exists := c.Get("user_id")
@@ -441,6 +491,18 @@ func HandleUpdateSLAAPI(c *gin.Context) {
 }
 
 // HandleDeleteSLAAPI handles DELETE /api/v1/slas/:id.
+//
+//	@Summary		Delete SLA
+//	@Description	Delete an SLA definition
+//	@Tags			SLAs
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"SLA ID"
+//	@Success		200	{object}	map[string]interface{}	"SLA deleted"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"SLA not found"
+//	@Security		BearerAuth
+//	@Router			/slas/{id} [delete]
 func HandleDeleteSLAAPI(c *gin.Context) {
 	// Check authentication
 	rawUserID, exists := c.Get("user_id")
@@ -519,6 +581,18 @@ func HandleDeleteSLAAPI(c *gin.Context) {
 }
 
 // HandleSLAMetricsAPI handles GET /api/v1/slas/:id/metrics.
+//
+//	@Summary		Get SLA metrics
+//	@Description	Retrieve performance metrics for an SLA
+//	@Tags			SLAs
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"SLA ID"
+//	@Success		200	{object}	map[string]interface{}	"SLA metrics"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"SLA not found"
+//	@Security		BearerAuth
+//	@Router			/slas/{id}/metrics [get]
 func HandleSLAMetricsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

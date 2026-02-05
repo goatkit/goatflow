@@ -513,3 +513,4 @@ go/
 !deploy/docker-compose.yml
 !deploy/.env.example
 !deploy/README.md
+*.wasm

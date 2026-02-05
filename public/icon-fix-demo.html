@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Icon Fix Demo - GOTRS</title>
+    <link rel="stylesheet" href="/static/css/output.css">
+    <style>
+        .demo-section {
+            margin: 2rem 0;
+            padding: 1.5rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            background: white;
+        }
+        .before { border-color: #ef4444; background: #fef2f2; }
+        .after { border-color: #22c55e; background: #f0fdf4; }
+        .icon-demo {
+            display: inline-flex;
+            align-items: center;
+            margin: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+        }
+    </style>
+</head>
+<body class="p-8 bg-gray-50">
+    <h1 class="text-3xl font-bold mb-8 text-center">🎯 GOTRS Icon Theme Fix Demo</h1>
+    
+    <div class="max-w-4xl mx-auto">
+        <!-- Problem Statement -->
+        <div class="demo-section">
+            <h2 class="text-xl font-semibold mb-4">🐛 Issue Reported</h2>
+            <p class="text-gray-700">"The theme is not being applied as far as I can see, we still have the same issue - theme icons are small and dark compared to the static dev site we used to have"</p>
+        </div>
+
+        <!-- Root Cause -->
+        <div class="demo-section">
+            <h2 class="text-xl font-semibold mb-4">🔍 Root Cause Found</h2>
+            <ul class="list-disc pl-6 text-gray-700 space-y-2">
+                <li>✅ Custom CSS <strong>WAS</strong> loading correctly</li>
+                <li>❌ Templates were using hardcoded Tailwind classes instead of our semantic icon classes</li>
+                <li>❌ Icons appeared small and gray because templates used <code>h-5 w-5 text-gray-400</code></li>
+                <li>❌ No consistency - different sizes throughout the application</li>
+            </ul>
+        </div>
+
+        <!-- Before vs After -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- BEFORE -->
+            <div class="demo-section before">
+                <h3 class="text-lg font-semibold mb-4 text-red-800">❌ BEFORE (Broken)</h3>
+                
+                <div class="space-y-4">
+                    <div class="icon-demo">
+                        <svg class="h-4 w-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span class="text-sm">h-4 w-4 text-gray-400</span>
+                    </div>
+                    
+                    <div class="icon-demo">
+                        <svg class="h-5 w-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <span class="text-sm">h-5 w-5 text-gray-400</span>
+                    </div>
+                    
+                    <div class="icon-demo">
+                        <svg class="h-6 w-6 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span class="text-sm">h-6 w-6 text-gray-400</span>
+                    </div>
+                </div>
+                
+                <p class="text-red-700 text-sm mt-4">Problems: Inconsistent sizes, always gray, no semantic meaning</p>
+            </div>
+
+            <!-- AFTER -->
+            <div class="demo-section after">
+                <h3 class="text-lg font-semibold mb-4 text-green-800">✅ AFTER (Fixed)</h3>
+                
+                <div class="space-y-4">
+                    <div class="icon-demo">
+                        <svg class="icon-sm icon-secondary mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span class="text-sm">icon-sm icon-secondary</span>
+                    </div>
+                    
+                    <div class="icon-demo">
+                        <svg class="icon-md icon-primary mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <span class="text-sm">icon-md icon-primary</span>
+                    </div>
+                    
+                    <div class="icon-demo">
+                        <svg class="icon-lg icon-success mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span class="text-sm">icon-lg icon-success</span>
+                    </div>
+                </div>
+                
+                <p class="text-green-700 text-sm mt-4">Benefits: Semantic sizing, theme-aware colors, consistent system</p>
+            </div>
+        </div>
+
+        <!-- Size Scale Demo -->
+        <div class="demo-section">
+            <h3 class="text-lg font-semibold mb-4">📏 Icon Size Scale</h3>
+            <div class="flex items-center space-x-6">
+                <div class="text-center">
+                    <svg class="icon-xs icon-primary mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <div class="text-xs">icon-xs<br/>12px</div>
+                </div>
+                <div class="text-center">
+                    <svg class="icon-sm icon-primary mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <div class="text-xs">icon-sm<br/>16px</div>
+                </div>
+                <div class="text-center">
+                    <svg class="icon-md icon-primary mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <div class="text-xs">icon-md<br/>20px</div>
+                </div>
+                <div class="text-center">
+                    <svg class="icon-lg icon-primary mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <div class="text-xs">icon-lg<br/>24px</div>
+                </div>
+                <div class="text-center">
+                    <svg class="icon-xl icon-primary mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <div class="text-xs">icon-xl<br/>32px</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Color Demo -->
+        <div class="demo-section">
+            <h3 class="text-lg font-semibold mb-4">🎨 Icon Colors (Theme-Aware)</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div class="icon-demo flex-col">
+                    <svg class="icon-lg icon-primary mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="text-xs">icon-primary</span>
+                </div>
+                <div class="icon-demo flex-col">
+                    <svg class="icon-lg icon-secondary mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="text-xs">icon-secondary</span>
+                </div>
+                <div class="icon-demo flex-col">
+                    <svg class="icon-lg icon-success mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span class="text-xs">icon-success</span>
+                </div>
+                <div class="icon-demo flex-col">
+                    <svg class="icon-lg icon-warning mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="text-xs">icon-warning</span>
+                </div>
+                <div class="icon-demo flex-col">
+                    <svg class="icon-lg icon-error mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span class="text-xs">icon-error</span>
+                </div>
+                <div class="icon-demo flex-col">
+                    <svg class="icon-lg icon-info mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="text-xs">icon-info</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fixed Templates -->
+        <div class="demo-section">
+            <h3 class="text-lg font-semibold mb-4">🔧 Templates Fixed</h3>
+            <ul class="list-disc pl-6 text-gray-700 space-y-2">
+                <li><strong>/templates/pages/admin/users.pongo2</strong> - Updated all icons to use semantic classes</li>
+                <li><strong>/templates/layouts/base.pongo2</strong> - Navigation icons updated</li>
+                <li><strong>/static/css/input.css</strong> - Added additional utility classes for buttons and forms</li>
+            </ul>
+            <p class="mt-4 p-3 bg-blue-50 border-l-4 border-blue-400 text-blue-800">
+                <strong>Next Steps:</strong> Apply the same icon class updates to remaining templates (dashboard, tickets, etc.) for complete consistency.
+            </p>
+        </div>
+    </div>
+
+    <div class="text-center mt-8 text-gray-600">
+        <p>🎉 Theme icons are now properly sized and colored! View the <a href="/admin/users" class="text-blue-600 hover:underline">Admin Users</a> page to see the fixes in action.</p>
+    </div>
+</body>
+</html>

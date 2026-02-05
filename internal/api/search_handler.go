@@ -55,6 +55,18 @@ func init() {
 }
 
 // HandleSearchAPI handles POST /api/v1/search.
+//
+//	@Summary		Search tickets
+//	@Description	Full-text search across tickets
+//	@Tags			Search
+//	@Accept			json
+//	@Produce		json
+//	@Param			query	body		object	true	"Search query"
+//	@Success		200		{object}	map[string]interface{}	"Search results"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/search [post]
 func HandleSearchAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -119,6 +131,17 @@ func HandleSearchAPI(c *gin.Context) {
 }
 
 // HandleSearchSuggestionsAPI handles GET /api/v1/search/suggestions.
+//
+//	@Summary		Get search suggestions
+//	@Description	Get autocomplete suggestions for search
+//	@Tags			Search
+//	@Accept			json
+//	@Produce		json
+//	@Param			q	query		string	true	"Search query prefix"
+//	@Success		200	{object}	map[string]interface{}	"Suggestions"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/search/suggestions [get]
 func HandleSearchSuggestionsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -154,6 +177,16 @@ func HandleSearchSuggestionsAPI(c *gin.Context) {
 }
 
 // HandleReindexAPI handles POST /api/v1/search/reindex.
+//
+//	@Summary		Reindex search
+//	@Description	Trigger a search index rebuild
+//	@Tags			Search
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"Reindex started"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/search/reindex [post]
 func HandleReindexAPI(c *gin.Context) {
 	// Check authentication and admin permissions
 	userID, exists := c.Get("user_id")
@@ -205,6 +238,16 @@ func HandleReindexAPI(c *gin.Context) {
 }
 
 // HandleSearchHealthAPI handles GET /api/v1/search/health.
+//
+//	@Summary		Search health
+//	@Description	Check search engine health status
+//	@Tags			Search
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"Search health status"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/search/health [get]
 func HandleSearchHealthAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

@@ -10,6 +10,18 @@ import (
 )
 
 // HandleGetPriorityAPI handles GET /api/v1/priorities/:id.
+//
+//	@Summary		Get priority by ID
+//	@Description	Retrieve a single priority
+//	@Tags			Priorities
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Priority ID"
+//	@Success		200	{object}	map[string]interface{}	"Priority details"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Priority not found"
+//	@Security		BearerAuth
+//	@Router			/priorities/{id} [get]
 func HandleGetPriorityAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

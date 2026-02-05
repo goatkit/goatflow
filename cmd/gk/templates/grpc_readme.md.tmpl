@@ -1,0 +1,56 @@
+# {{.NameTitle}} Plugin (gRPC)
+
+{{.Description}}
+
+## Building
+
+```bash
+go build -o {{.Name}} .
+```
+
+## Installation
+
+Configure GOTRS to load the plugin binary:
+
+```yaml
+plugins:
+  {{.Name}}:
+    type: grpc
+    path: /path/to/{{.Name}}
+```
+
+## API
+
+### Routes
+
+| Method | Path | Handler | Description |
+|--------|------|---------|-------------|
+| GET | `/api/plugins/{{.Name}}` | `hello` | Returns a greeting |
+
+### Widgets
+
+| ID | Location | Description |
+|----|----------|-------------|
+| `{{.NameSnake}}_widget` | `dashboard` | Main widget |
+
+## Development
+
+Edit `main.go` to add your plugin logic:
+
+1. Update `GKRegister()` to define routes, widgets, and jobs
+2. Implement handlers in the `Call()` method
+3. Build and test
+
+### Why gRPC?
+
+gRPC plugins are better for:
+- Heavy I/O operations (direct filesystem, network access)
+- Using native Go libraries
+- Debugging (can attach debugger to separate process)
+- Complex integrations with external services
+
+For most plugins, WASM is recommended (portable, sandboxed).
+
+## License
+
+Apache-2.0

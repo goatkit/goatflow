@@ -301,7 +301,7 @@ function showPDFViewer(url, filename) {
     modal.innerHTML = `
         <div class="absolute inset-0" style="background: rgba(0,0,0,0.85);" onclick="this.parentElement.remove()"></div>
         <div class="absolute inset-4 gk-card-glow rounded-lg flex flex-col" style="background: var(--gk-bg-surface);">
-            <div class="flex justify-between items-center p-4" style="border-bottom: 1px solid var(--gk-border);">
+            <div class="flex justify-between items-center p-4" style="border-bottom: 1px solid var(--gk-border-default);">
                 <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">${filename}</h3>
                 <div class="flex items-center space-x-2">
                     <a href="${url}" download="${filename}" class="gk-btn-neon text-sm">
@@ -345,7 +345,7 @@ function showCodeViewer(url, filename, contentType) {
             modal.innerHTML = `
                 <div class="absolute inset-0" style="background: rgba(0,0,0,0.85);" onclick="this.parentElement.remove()"></div>
                 <div class="absolute inset-4 gk-card-glow rounded-lg flex flex-col" style="background: var(--gk-bg-tertiary);">
-                    <div class="flex justify-between items-center p-4" style="border-bottom: 1px solid var(--gk-border);">
+                    <div class="flex justify-between items-center p-4" style="border-bottom: 1px solid var(--gk-border-default);">
                         <div class="flex items-center space-x-3">
                             <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">${filename}</h3>
                             <span class="gk-badge gk-badge-muted text-xs">${language}</span>
@@ -453,7 +453,7 @@ function showOfficeViewer(url, filename, contentType) {
     modal.innerHTML = `
         <div class="absolute inset-0" style="background: rgba(0,0,0,0.85);" onclick="this.parentElement.remove()"></div>
         <div class="absolute inset-4 gk-card-glow rounded-lg flex flex-col" style="background: var(--gk-bg-surface);">
-            <div class="flex justify-between items-center p-4" style="border-bottom: 1px solid var(--gk-border);">
+            <div class="flex justify-between items-center p-4" style="border-bottom: 1px solid var(--gk-border-default);">
                 <h3 class="text-lg font-semibold" style="color: var(--gk-text-primary);">${filename}</h3>
                 <div class="flex items-center space-x-2">
                     <a href="${url}" download="${filename}" class="gk-btn-neon text-sm">

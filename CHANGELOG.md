@@ -2,11 +2,94 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/) and this project adheres to [Semantic Versioning](https://semver.org/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/) and this
+project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.6.5-dev]
 
-
+### Added
+- **GoatKit Plugin Platform**: Complete plugin system with dual runtime support
+  - **WASM Runtime** (wazero): Portable, sandboxed plugins for cross-platform distribution
+    - Plugin loader with automatic discovery from `plugins/` directory
+    - Production HostAPI: DB queries (multi-DB), cache, HTTP requests, email, i18n
+    - Template tag: `{% use "plugin_name" %}` Pongo2 directive for plugin widgets
+    - Scheduler integration for plugin cron jobs
+    - Example WASM plugin (`plugins/hello-wasm/`) with routes, widgets, i18n
+  - **gRPC Runtime** (HashiCorp go-plugin): Native Go plugins for I/O-heavy workloads
+    - Separate process execution with gRPC communication
+    - Full HostAPI access with native performance
+    - Example gRPC plugin in `internal/plugin/grpc/example/`
+  - Admin UI for plugin management (`/admin/plugins`) with enable/disable, logs viewer
+  - Plugin state persistence via sysconfig tables (not separate state.json)
+  - JWT auth for plugin API endpoints with admin-only enable/disable
+  - Files: `internal/plugin/`, `internal/plugin/grpc/`, `internal/plugin/wasm/`
+- **Plugin CLI Tooling**: `cmd/gk/` GoatKit CLI for plugin development
+  - `gk init` scaffolding for WASM and gRPC plugins
+  - `make plugin-init NAME=x RUNTIME=wasm|grpc` Makefile integration
+  - Container-first model (TinyGo via Docker for WASM)
+  - Templates: `grpc_build.sh.tmpl`, `grpc_main.go.tmpl`, `wasm_build.sh.tmpl`, `wasm_main.go.tmpl`
+- **Plugin Documentation**: Comprehensive developer guides (2,469 lines total)
+  - `docs/plugins/AUTHOR_GUIDE.md` - Plugin creation and packaging
+  - `docs/plugins/HOST_API.md` - Host function reference
+  - `docs/plugins/WASM_TUTORIAL.md` - Step-by-step WASM plugin tutorial
+  - `docs/plugins/GRPC_TUTORIAL.md` - Step-by-step gRPC plugin tutorial
+- **Plugin E2E Tests**: Enable/disable UI and API test coverage
+- **API Tokens (Personal Access Tokens)**: Programmatic API access for agents AND customers
+  - Token management UI at `/settings/api-tokens` (agent) and `/customer/settings/api-tokens` (customer)
+  - CRUD endpoints: `POST/GET/DELETE /api/v1/tokens`, `GET /api/v1/tokens/:id`
+  - Scoped permissions (e.g., `tickets:read`, `tickets:write`, `admin:*`) with RBAC inheritance
+  - Configurable expiration (30d, 90d, 1yr, never)
+  - Secure token format: `gf_` prefix with 32-byte random + SHA256 hash storage
+  - Middleware integration: Bearer token auth alongside session cookies
+  - Rate limiting per token (configurable, generous defaults)
+  - Database migrations for `api_token` table (MySQL + PostgreSQL)
+  - Enables MCP/AI integrations, automation scripts, CI/CD pipelines
+  - 572 lines of handler tests + 350 lines of integration tests
+  - Files: `internal/api/api_token_handlers.go`, `internal/service/api_token_service.go`, `internal/middleware/api_token.go`
+  - Design spec: `docs/design/API_TOKENS.md`
+- **OpenAPI 3.0 Documentation**: Comprehensive API specification
+  - Expanded from ~2,500 to 4,845 lines covering 94 endpoints (71.2% coverage)
+  - Swagger UI integration at `/swagger/` with interactive API explorer
+  - Generated specs: `docs/api/swagger.json`, `docs/api/swagger.yaml`, `docs/api/docs.go`
+  - All endpoints documented with request/response schemas, authentication, and examples
+  - Files: `api/openapi.yaml`, `internal/api/swagger.go`
+- **Structured API Error System**: Namespaced error codes for consistent error handling
+  - Error registry pattern: `apierrors.Registry.Register(ErrorCode{...})`
+  - Namespaced codes: `core:unauthorized`, `core:rate_limited`, `stats:export_failed`, etc.
+  - Standard HTTP status mapping with customizable messages
+  - Plugin-extensible: plugins can register their own error namespaces
+  - Files: `internal/apierrors/codes.go`, `internal/apierrors/registry.go`, `internal/apierrors/response.go`
+  - Design spec: `docs/design/API_ERRORS.md`
+- **Granular RBAC Permission Service**: OTRS-compatible queue/ticket permissions
+  - Permission methods: `CanReadQueue`, `CanWriteQueue`, `CanCreate`, `CanAddNote`, `CanChangePriority`, `CanBeOwner`, `CanMoveInto`
+  - `rw` permission supersedes all others (OTRS behavior)
+  - Integrated with all ticket/article handlers for authorization checks
+  - Returns 404 (not 403) for unauthorized access (security: don't reveal ticket existence)
+  - 1,305-line authorization test suite with 5 fixture agents (AgentNoteOnly, AgentCreateOnly, etc.)
+  - Files: `internal/services/permission_service.go`, `internal/api/v1/authorization_test.go`
+- **Statistics API**: Dashboard and reporting endpoints
+  - `GET /api/v1/statistics/dashboard` - Ticket counts, trends, queue metrics
+  - CSV/Excel export support
+  - Chart-ready data structures for frontend visualization
+  - Files: `internal/api/statistics_handlers.go`
+- **Rate Limiting Middleware**: Request throttling per user/token
+  - Configurable limits per endpoint
+  - Token bucket algorithm with burst allowance
+  - `X-RateLimit-*` response headers
+  - Files: `internal/middleware/rate_limit.go`, `internal/middleware/rate_limit_test.go`
+- **Behaviour Test Suite**: API contract verification tests
+  - 356-line test suite validating API behaviour consistency
+  - Tests response formats, error codes, pagination, filtering
+  - Files: `internal/api/v1/behaviour_test.go`
+- **Email Identity Handlers**: Email sender identity management
+  - CRUD endpoints for email identities
+  - Files: `internal/api/email_identity_handlers.go`
+- **SLA Handlers**: Service Level Agreement management API
+  - CRUD endpoints for SLA configuration
+  - Files: `internal/api/sla_handlers.go`
+- **User Delete Handler**: Soft delete for user accounts
+  - Files: `internal/api/user_delete_handler.go`
+- **i18n**: Added `common.year` translation key to all 15 languages
 
 ## [0.6.4] - 2026-02-01
 

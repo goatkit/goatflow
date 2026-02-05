@@ -258,6 +258,15 @@ func RequireAnyQueueAccess(permType string) gin.HandlerFunc {
 			return
 		}
 
+		// Customers bypass queue checks - they access tickets via customer_user_id
+		if role, exists := c.Get("user_role"); exists {
+			if r, ok := role.(string); ok && r == "Customer" {
+				c.Set("is_customer", true)
+				c.Next()
+				return
+			}
+		}
+
 		userIDUint := getQueueAccessUserIDFromCtxUint(c, 0)
 		if userIDUint == 0 {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})

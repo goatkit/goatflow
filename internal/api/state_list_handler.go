@@ -13,6 +13,18 @@ import (
 // Supports optional filtering via ticket attribute relations:
 //   - filter_attribute: The attribute to filter by (e.g., "Queue", "Priority")
 //   - filter_value: The value of that attribute (e.g., "Sales", "new")
+//
+// HandleListStatesAPI handles GET /api/v1/states.
+//
+//	@Summary		List states
+//	@Description	Retrieve all ticket states
+//	@Tags			States
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"List of states"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/states [get]
 func HandleListStatesAPI(c *gin.Context) {
 	db, err := database.GetDB()
 	if err != nil || db == nil {

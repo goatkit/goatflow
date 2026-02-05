@@ -51,7 +51,7 @@
                     class="space-y-6 p-6"
                 >
                     <!-- Basic Information -->
-                    <div class="border-b pb-6" style="border-color: var(--gk-border);">
+                    <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
                         <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.modules.signature.form.basic_info") }}</h3>
 
                         <div class="grid grid-cols-1 gap-6">
@@ -134,13 +134,13 @@
                             <p class="text-xs mb-3" style="color: var(--gk-text-muted);">{{ t("admin.modules.signature.form.text_help") }}</p>
 
                             <!-- TipTap Editor -->
-                            <div id="signatureEditor" class="tiptap-editor rounded-md min-h-[200px]" style="border: 1px solid var(--gk-border);" data-mode="{% if signature.ContentType == "text/html" %}richtext{% else %}markdown{% endif %}" aria-labelledby="signatureEditorLabel" role="textbox" aria-multiline="true"></div>
+                            <div id="signatureEditor" class="tiptap-editor rounded-md min-h-[200px]" style="border: 1px solid var(--gk-border-default);" data-mode="{% if signature.ContentType == "text/html" %}richtext{% else %}markdown{% endif %}" aria-labelledby="signatureEditorLabel" role="textbox" aria-multiline="true"></div>
                             <input type="hidden" name="text" id="text" value="{{ signature.Text }}">
                         </div>
                     </div>
 
                     <!-- Submit Buttons -->
-                    <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: var(--gk-border);">
+                    <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: var(--gk-border-default);">
                         <a href="/admin/signatures" class="gk-btn-secondary">
                             {{ t("admin.modules.signature.actions.cancel") }}
                         </a>
@@ -257,7 +257,7 @@
 
                 {% if not isNew and queues %}
                 <!-- Queues using this signature -->
-                <div class="mt-6 pt-6 border-t" style="border-color: var(--gk-border);">
+                <div class="mt-6 pt-6 border-t" style="border-color: var(--gk-border-default);">
                     <h4 class="text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">{{ t("admin.modules.signature.form.queues_using") }}</h4>
                     {% if queues|length > 0 %}
                     <ul class="text-sm space-y-1" style="color: var(--gk-text-muted);">

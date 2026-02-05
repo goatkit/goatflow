@@ -178,6 +178,33 @@ override TEST_CUSTOMER_FE_PORT := 18082
 endif
 TEST_COMPOSE_FILE := $(CURDIR)/docker-compose.yml:$(CURDIR)/docker-compose.testdb.yml:$(CURDIR)/docker-compose.test.yaml
 
+#########################################
+# PLUGIN DEVELOPMENT
+#########################################
+
+## gk: Run GoatKit plugin CLI (e.g., make gk ARGS="plugin init my-plugin wasm")
+gk: toolbox-build
+	@$(MAKE) toolbox-exec ARGS='go run ./cmd/gk $(ARGS)'
+
+## plugin-init: Create a new plugin (e.g., make plugin-init NAME=my-stats RUNTIME=wasm)
+plugin-init: toolbox-build
+	@$(MAKE) toolbox-exec ARGS='go run ./cmd/gk plugin init $(NAME) $(RUNTIME)'
+
+## plugin-build-wasm: Build all WASM plugins using TinyGo Docker image
+.PHONY: plugin-build-wasm
+plugin-build-wasm:
+	@printf "\n🔌 Building WASM plugins...\n"
+	@for dir in plugins/*/; do \
+		if [ -f "$$dir/main.go" ] && grep -q "tinygo.wasm" "$$dir/main.go" 2>/dev/null; then \
+			name=$$(basename $$dir); \
+			wasm_name=$$(echo $$name | sed 's/-wasm$$//'); \
+			echo "  Building $$name -> $${wasm_name}.wasm..."; \
+			$(CONTAINER_CMD) run --rm -v "$$PWD/$$dir:/src" -w /src tinygo/tinygo:0.32.0 \
+				tinygo build -o $${wasm_name}.wasm -target wasi -scheduler=none main.go; \
+		fi; \
+	done
+	@printf "✅ WASM plugins built\n"
+
 help:
 	@python3 scripts/tools/make_help.py
 
@@ -726,6 +753,15 @@ openapi-bundle:
 		-e BUN_INSTALL_CACHE_DIR=/cache/bun \
 		oven/bun:1.1-alpine \
 		sh -lc 'bun add -g @redocly/cli >/dev/null 2>&1 && redocly bundle /spec/openapi.yaml -o /spec/openapi.bundle.yaml'
+
+.PHONY: openapi-generate
+openapi-generate: toolbox-build
+	@echo "📝 Generating OpenAPI spec from code annotations (swag)..."
+	@$(MAKE) toolbox-exec ARGS="swag init -g cmd/goats/main.go -o docs/api --parseDependency --parseInternal"
+	@echo "✅ OpenAPI spec generated in docs/api/"
+	@echo "   - docs/api/swagger.json"
+	@echo "   - docs/api/swagger.yaml"
+	@echo "   - docs/api/docs.go"
 
 # Run almost-all tests (excludes heavyweight e2e/integration and unstable lambda tests)
 toolbox-test-all:
@@ -2847,4 +2883,4 @@ check-i18n:
 #########################################
 
 # Main test target
-test: check-i18n test-comprehensive
+test: check-i18n plugin-build-wasm test-comprehensive

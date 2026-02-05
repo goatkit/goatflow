@@ -2,51 +2,75 @@
 
 ## Overview
 
-GOTRS (Go Open Ticket Request System) is a modern, open-source ticketing system built on the GoatKit platform. It employs a modular monolith architecture with server-side rendering and hypermedia-driven design using HTMX.
+GOTRS (Go Open Ticket Request System) is a modern, open-source ITSM solution built on the **GoatKit platform**. It employs a modular monolith architecture with server-side rendering and hypermedia-driven design using HTMX.
 
 ## GoatKit Platform
 
-GoatKit is the underlying platform that powers GOTRS:
+GoatKit is the **platform layer** that powers GOTRS—and can power other products. Think of GoatKit as the engine and GOTRS as the first vehicle built on it.
+
+### Platform vs Product
+
+| Layer | What It Is | Examples |
+|-------|------------|----------|
+| **GoatKit Core** | Shared infrastructure | Auth, DB, Email, Scheduler, Admin UI, Plugin Runtime |
+| **Modules** | Pluggable features | Stats, FAQ, Calendar, Process Management |
+| **Products** | Complete applications | GOTRS (ITSM), future products |
+
+This separation enables:
+- **Third-party developers** to build plugins without touching core
+- **New products** to leverage the same infrastructure
+- **Core stability** while features evolve independently
+
+### Platform Capabilities
 
 - **YAML-First Configuration**: All routing in YAML files
 - **Dynamic Route Loading**: Hot-reload with manifest governance
 - **Unified Binary**: Single `goats` binary runs everything
 - **Template Engine**: Pongo2 (Django-like syntax)
+- **Plugin Runtime**: WASM (wazero) + gRPC (go-plugin)
 - **Container Optimization**: Multi-stage builds (~45MB images)
 
 ## System Architecture
 
 ```
-┌──────────────────────────────────────────┐
-│             Nginx (Port 80)              │
-└───────────────────┬──────────────────────┘
-                    │
-┌───────────────────▼──────────────────────┐
-│      GOTRS Application (goats binary)    │
-│  ┌────────────────────────────────────┐  │
-│  │    Web Server (Gin Framework)      │  │
-│  │    - HTMX endpoints (HTML)         │  │
-│  │    - REST API (JSON)               │  │
-│  │    - SSE for real-time             │  │
-│  └────────────────┬───────────────────┘  │
-│  ┌────────────────▼───────────────────┐  │
-│  │    YAML Route Configuration        │  │
-│  └────────────────┬───────────────────┘  │
-│  ┌────────────────▼───────────────────┐  │
-│  │    Template Engine (Pongo2)        │  │
-│  └────────────────┬───────────────────┘  │
-│  ┌────────────────▼───────────────────┐  │
-│  │         Service Layer              │  │
-│  └────────────────┬───────────────────┘  │
-│  ┌────────────────▼───────────────────┐  │
-│  │      Repository Layer              │  │
-│  └────────────────────────────────────┘  │
-└──────────┬─────────────────┬─────────────┘
-           │                 │
-    ┌──────▼────────┐  ┌─────▼─────┐
-    │ PgSQL/MariaDB │  │   Valkey  │
-    │  (5432/3306)  │  │   (6388)  │
-    └───────────────┘  └───────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                       Proxy (Port 80)                        │
+└─────────────────────────────┬────────────────────────────────┘
+                              │
+┌─────────────────────────────▼────────────────────────────────┐
+│                    goats binary                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  GOTRS Product Layer                                   │  │
+│  │  • Ticket management, queues, SLAs                     │  │
+│  │  • Agent & customer interfaces                         │  │
+│  │  • ITSM-specific business logic                        │  │
+│  └────────────────────────┬───────────────────────────────┘  │
+│  ┌────────────────────────▼───────────────────────────────┐  │
+│  │  Modules (Plugins)                                     │  │
+│  │  • Stats, FAQ, Calendar, Process Management            │  │
+│  │  • Third-party plugins (WASM + gRPC)                   │  │
+│  └────────────────────────┬───────────────────────────────┘  │
+│  ┌────────────────────────▼───────────────────────────────┐  │
+│  │  GoatKit Platform Core                                 │  │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌────────────────┐  │  │
+│  │  │ Web Server   │ │ Auth System  │ │ Plugin Runtime │  │  │
+│  │  │ (Gin + HTMX) │ │ (JWT, LDAP)  │ │ (WASM, gRPC)   │  │  │
+│  │  └──────────────┘ └──────────────┘ └────────────────┘  │  │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌────────────────┐  │  │
+│  │  │ YAML Router  │ │ Templates   │ │ Email System   │  │  │
+│  │  │              │ │ (Pongo2)     │ │ (SMTP/IMAP)    │  │  │
+│  │  └──────────────┘ └──────────────┘ └────────────────┘  │  │
+│  │  ┌──────────────┐ ┌──────────────┐ ┌────────────────┐  │  │
+│  │  │ DB Abstraction│ │ Scheduler   │ │ Cache Layer    │  │  │
+│  │  │ (PG + MySQL) │ │              │ │ (Valkey)       │  │  │
+│  │  └──────────────┘ └──────────────┘ └────────────────┘  │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────┬─────────────────────────────────┬─────────────────┘
+           │                                 │
+    ┌──────▼────────┐                 ┌──────▼──────┐
+    │ PgSQL/MariaDB │                 │   Valkey    │
+    │  (5432/3306)  │                 │   (6388)    │
+    └───────────────┘                 └─────────────┘
 ```
 
 ## Core Components
@@ -260,13 +284,24 @@ make clean           # Reset everything
 
 ### Next: GoatKit Plugin Platform (v0.7.0+)
 
-GOTRS evolves into a true platform with plugin extensibility:
+GoatKit evolves into a true platform with plugin extensibility:
 
 - **Dual Runtime**: WASM (wazero) + gRPC (go-plugin)
 - **Plugin Packaging**: ZIP with templates, assets, i18n
 - **Host Function API**: Database, HTTP, email, cache, scheduler
 - **First-Party Plugins**: Statistics, FAQ, Calendar, Process Management
 
-Core becomes platform infrastructure; features become plugins. Third-party developers can extend GOTRS without modifying core code.
+Core becomes platform infrastructure; features become plugins. Third-party developers can extend the platform without modifying core code.
+
+### Future: Multi-Product Platform (v1.0+)
+
+The GoatKit architecture enables multiple products on the same foundation:
+
+- **Shared infrastructure**: Auth, DB, email, scheduling—built once, used everywhere
+- **Product-specific logic**: Each product owns its domain (ITSM, asset management, etc.)
+- **Unified deployment**: Single stack, multiple capabilities
+- **Third-party products**: External developers can build entire products on GoatKit
+
+This isn't just an application—it's a platform for building service management products.
 
 See [Plugin Platform](PLUGIN_PLATFORM.md) for detailed design.

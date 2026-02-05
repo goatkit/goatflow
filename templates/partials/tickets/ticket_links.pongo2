@@ -1,5 +1,5 @@
 <div id="ticket-links-fragment">
-    <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+    <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
         <h3 class="text-sm font-semibold" style="color: var(--gk-text-primary);">{{ t("ticket_detail.links")|default:"Links" }}</h3>
     </div>
     <div class="p-6 text-sm" style="color: var(--gk-text-secondary);">

@@ -44,6 +44,18 @@ func deleteQueueInTransaction(tx *sql.Tx, queueID int, userID interface{}) error
 }
 
 // HandleDeleteQueueAPI handles DELETE /api/v1/queues/:id.
+//
+//	@Summary		Delete queue
+//	@Description	Delete a queue (soft delete)
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Queue ID"
+//	@Success		200	{object}	map[string]interface{}	"Queue deleted"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Queue not found"
+//	@Security		BearerAuth
+//	@Router			/queues/{id} [delete]
 func HandleDeleteQueueAPI(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {

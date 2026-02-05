@@ -10,7 +10,7 @@ metadata:
 spec:
   prefix: /api/files
   middleware:
-    - auth
+    - unified_auth
   routes:
     - path: /*path
       method: GET

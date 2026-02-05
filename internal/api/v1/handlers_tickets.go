@@ -131,7 +131,19 @@ func (router *APIRouter) handleListTickets(c *gin.Context) {
 
 		if t.UserID != nil {
 			ticket["assigned_to"] = *t.UserID
-			ticket["assigned_name"] = fmt.Sprintf("User %d", *t.UserID) // TODO: Get actual user name
+			// Get user name from database
+			assignedName := fmt.Sprintf("User %d", *t.UserID)
+			if db != nil {
+				var firstName, lastName string
+				err := db.QueryRow(database.ConvertPlaceholders("SELECT COALESCE(first_name, ''), COALESCE(last_name, '') FROM users WHERE id = ?"), *t.UserID).Scan(&firstName, &lastName)
+				if err == nil {
+					assignedName = strings.TrimSpace(firstName + " " + lastName)
+					if assignedName == "" {
+						assignedName = fmt.Sprintf("User %d", *t.UserID)
+					}
+				}
+			}
+			ticket["assigned_name"] = assignedName
 		}
 
 		tickets = append(tickets, ticket)
@@ -396,32 +408,74 @@ func (router *APIRouter) HandleCreateTicket(c *gin.Context) {
 
 // handleGetTicket returns a specific ticket by ID.
 func (router *APIRouter) handleGetTicket(c *gin.Context) {
-	ticketID := c.Param("id")
-	if ticketID == "" {
-		sendError(c, http.StatusBadRequest, "Ticket ID required")
+	ticketIDStr := c.Param("id")
+	ticketID, err := strconv.Atoi(ticketIDStr)
+	if err != nil {
+		sendError(c, http.StatusBadRequest, "Invalid ticket ID")
 		return
 	}
 
-	// TODO: Implement actual ticket retrieval
-	ticket := gin.H{
-		"id":               ticketID,
-		"number":           "T-2025-" + ticketID,
-		"title":            "Sample ticket details",
-		"description":      "This is a detailed description of the ticket.",
-		"status":           "open",
-		"priority":         "normal",
-		"queue_id":         1,
-		"queue_name":       "General",
-		"assigned_to":      1,
-		"assigned_name":    "John Doe",
-		"customer_email":   "customer@example.com",
-		"created_at":       time.Now().Add(-2 * time.Hour).UTC(),
-		"updated_at":       time.Now().Add(-30 * time.Minute).UTC(),
-		"sla_due":          time.Now().Add(4 * time.Hour).UTC(),
-		"tags":             []string{"urgent", "billing"},
-		"article_count":    3,
-		"attachment_count": 2,
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
 	}
+
+	query := database.ConvertQuery(`
+		SELECT t.id, t.tn, t.title, t.queue_id, t.ticket_state_id, t.ticket_priority_id,
+			t.user_id, t.customer_user_id, t.create_time, t.change_time,
+			q.name as queue_name, ts.name as state_name, tp.name as priority_name
+		FROM ticket t
+		LEFT JOIN queue q ON q.id = t.queue_id
+		LEFT JOIN ticket_state ts ON ts.id = t.ticket_state_id
+		LEFT JOIN ticket_priority tp ON tp.id = t.ticket_priority_id
+		WHERE t.id = ? AND t.archive_flag = 0
+	`)
+
+	var id int
+	var tn, title, queueName, stateName, priorityName string
+	var queueID, stateID, priorityID int
+	var userID *int
+	var customerUserID *string
+	var createTime, changeTime time.Time
+
+	err = db.QueryRow(query, ticketID).Scan(&id, &tn, &title, &queueID, &stateID, &priorityID,
+		&userID, &customerUserID, &createTime, &changeTime, &queueName, &stateName, &priorityName)
+	if err != nil {
+		sendError(c, http.StatusNotFound, "Ticket not found")
+		return
+	}
+
+	ticket := gin.H{
+		"id":             id,
+		"number":         tn,
+		"title":          title,
+		"status":         stateName,
+		"status_id":      stateID,
+		"priority":       priorityName,
+		"priority_id":    priorityID,
+		"queue_id":       queueID,
+		"queue_name":     queueName,
+		"customer_email": customerUserID,
+		"created_at":     createTime,
+		"updated_at":     changeTime,
+	}
+
+	if userID != nil {
+		ticket["assigned_to"] = *userID
+		// Get assigned user name
+		var firstName, lastName string
+		nameQuery := database.ConvertQuery(`SELECT COALESCE(first_name, ''), COALESCE(last_name, '') FROM users WHERE id = ?`)
+		if db.QueryRow(nameQuery, *userID).Scan(&firstName, &lastName) == nil {
+			ticket["assigned_name"] = strings.TrimSpace(firstName + " " + lastName)
+		}
+	}
+
+	// Get article count
+	var articleCount int
+	countQuery := database.ConvertQuery(`SELECT COUNT(*) FROM article WHERE ticket_id = ?`)
+	db.QueryRow(countQuery, ticketID).Scan(&articleCount)
+	ticket["article_count"] = articleCount
 
 	sendSuccess(c, ticket)
 }
@@ -1229,15 +1283,16 @@ func (router *APIRouter) HandleReopenTicket(c *gin.Context) {
 
 // handleUpdateTicketPriority updates ticket priority.
 func (router *APIRouter) handleUpdateTicketPriority(c *gin.Context) {
-	ticketID := c.Param("id")
-	if ticketID == "" {
-		sendError(c, http.StatusBadRequest, "Ticket ID required")
+	ticketIDStr := c.Param("id")
+	ticketID, err := strconv.Atoi(ticketIDStr)
+	if err != nil {
+		sendError(c, http.StatusBadRequest, "Invalid ticket ID")
 		return
 	}
 
 	var priorityRequest struct {
-		Priority string `json:"priority" binding:"required"`
-		Comment  string `json:"comment"`
+		PriorityID int    `json:"priority_id" binding:"required"`
+		Comment    string `json:"comment"`
 	}
 
 	if err := c.ShouldBindJSON(&priorityRequest); err != nil {
@@ -1245,20 +1300,50 @@ func (router *APIRouter) handleUpdateTicketPriority(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual priority update
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	userID := 1
+	if id, exists := c.Get("user_id"); exists {
+		if idInt, ok := id.(int); ok && idInt > 0 {
+			userID = idInt
+		}
+	}
+
+	now := time.Now()
+	query := database.ConvertQuery(`
+		UPDATE ticket SET ticket_priority_id = ?, change_time = ?, change_by = ?
+		WHERE id = ? AND archive_flag = 0
+	`)
+
+	result, err := db.Exec(query, priorityRequest.PriorityID, now, userID, ticketID)
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to update priority")
+		return
+	}
+
+	affected, _ := result.RowsAffected()
+	if affected == 0 {
+		sendError(c, http.StatusNotFound, "Ticket not found")
+		return
+	}
+
 	sendSuccess(c, gin.H{
-		"id":         ticketID,
-		"priority":   priorityRequest.Priority,
-		"comment":    priorityRequest.Comment,
-		"updated_at": time.Now().UTC(),
+		"id":          ticketID,
+		"priority_id": priorityRequest.PriorityID,
+		"updated_at":  now,
 	})
 }
 
 // handleMoveTicketQueue moves ticket to a different queue.
 func (router *APIRouter) handleMoveTicketQueue(c *gin.Context) {
-	ticketID := c.Param("id")
-	if ticketID == "" {
-		sendError(c, http.StatusBadRequest, "Ticket ID required")
+	ticketIDStr := c.Param("id")
+	ticketID, err := strconv.Atoi(ticketIDStr)
+	if err != nil {
+		sendError(c, http.StatusBadRequest, "Invalid ticket ID")
 		return
 	}
 
@@ -1272,45 +1357,102 @@ func (router *APIRouter) handleMoveTicketQueue(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual queue move
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	userID := 1
+	if id, exists := c.Get("user_id"); exists {
+		if idInt, ok := id.(int); ok && idInt > 0 {
+			userID = idInt
+		}
+	}
+
+	now := time.Now()
+	query := database.ConvertQuery(`
+		UPDATE ticket SET queue_id = ?, change_time = ?, change_by = ?
+		WHERE id = ? AND archive_flag = 0
+	`)
+
+	result, err := db.Exec(query, queueRequest.QueueID, now, userID, ticketID)
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Failed to move ticket")
+		return
+	}
+
+	affected, _ := result.RowsAffected()
+	if affected == 0 {
+		sendError(c, http.StatusNotFound, "Ticket not found")
+		return
+	}
+
 	sendSuccess(c, gin.H{
 		"id":       ticketID,
 		"queue_id": queueRequest.QueueID,
-		"comment":  queueRequest.Comment,
-		"moved_at": time.Now().UTC(),
+		"moved_at": now,
 	})
 }
 
 // handleGetTicketArticles returns ticket articles/messages.
 func (router *APIRouter) handleGetTicketArticles(c *gin.Context) {
-	ticketID := c.Param("id")
-	if ticketID == "" {
-		sendError(c, http.StatusBadRequest, "Ticket ID required")
+	ticketIDStr := c.Param("id")
+	ticketID, err := strconv.Atoi(ticketIDStr)
+	if err != nil {
+		sendError(c, http.StatusBadRequest, "Invalid ticket ID")
 		return
 	}
 
-	// TODO: Implement actual article retrieval
-	articles := []gin.H{
-		{
-			"id":         1,
-			"ticket_id":  ticketID,
-			"from":       "customer@example.com",
-			"to":         "support@company.com",
-			"subject":    "Initial inquiry",
-			"body":       "This is the original ticket content.",
-			"type":       "email",
-			"created_at": time.Now().Add(-2 * time.Hour).UTC(),
-		},
-		{
-			"id":         2,
-			"ticket_id":  ticketID,
-			"from":       "agent@company.com",
-			"to":         "customer@example.com",
-			"subject":    "Re: Initial inquiry",
-			"body":       "Thank you for contacting us. We are investigating.",
-			"type":       "email",
-			"created_at": time.Now().Add(-1 * time.Hour).UTC(),
-		},
+	db, err := database.GetDB()
+	if err != nil {
+		sendSuccess(c, []interface{}{})
+		return
+	}
+
+	query := database.ConvertQuery(`
+		SELECT a.id, a.ticket_id, 
+			adm.a_from, adm.a_to, adm.a_subject, adm.a_body,
+			ast.name as sender_type, acc.name as channel,
+			a.is_visible_for_customer, a.create_time
+		FROM article a
+		LEFT JOIN article_data_mime adm ON adm.article_id = a.id
+		LEFT JOIN article_sender_type ast ON ast.id = a.article_sender_type_id
+		LEFT JOIN communication_channel acc ON acc.id = a.communication_channel_id
+		WHERE a.ticket_id = ?
+		ORDER BY a.create_time ASC
+	`)
+
+	rows, err := db.Query(query, ticketID)
+	if err != nil {
+		sendSuccess(c, []interface{}{})
+		return
+	}
+	defer rows.Close()
+
+	articles := []gin.H{}
+	for rows.Next() {
+		var id, tktID int
+		var from, to, subject, body, senderType, channel *string
+		var visibleForCustomer int
+		var createdAt time.Time
+
+		if err := rows.Scan(&id, &tktID, &from, &to, &subject, &body, &senderType, &channel, &visibleForCustomer, &createdAt); err != nil {
+			continue
+		}
+
+		articles = append(articles, gin.H{
+			"id":          id,
+			"ticket_id":   tktID,
+			"from":        from,
+			"to":          to,
+			"subject":     subject,
+			"body":        body,
+			"sender_type": senderType,
+			"channel":     channel,
+			"visible":     visibleForCustomer == 1,
+			"created_at":  createdAt,
+		})
 	}
 
 	sendSuccess(c, articles)
@@ -1321,36 +1463,62 @@ func (router *APIRouter) handleAddTicketArticle(c *gin.Context) { api.HandleCrea
 
 // handleGetTicketArticle returns a specific article.
 func (router *APIRouter) handleGetTicketArticle(c *gin.Context) {
-	ticketID := c.Param("id")
-	articleID := c.Param("article_id")
+	ticketIDStr := c.Param("id")
+	articleIDStr := c.Param("article_id")
 
-	if ticketID == "" || articleID == "" {
-		sendError(c, http.StatusBadRequest, "Ticket ID and Article ID required")
+	ticketID, err := strconv.Atoi(ticketIDStr)
+	if err != nil {
+		sendError(c, http.StatusBadRequest, "Invalid ticket ID")
 		return
 	}
 
-	// TODO: Implement actual article retrieval
-	article := gin.H{
-		"id":         articleID,
-		"ticket_id":  ticketID,
-		"from":       "agent@company.com",
-		"to":         "customer@example.com",
-		"subject":    "Ticket update",
-		"body":       "Here is the detailed response to your inquiry.",
-		"type":       "email",
-		"visible":    true,
-		"created_at": time.Now().Add(-30 * time.Minute).UTC(),
-		"attachments": []gin.H{
-			{
-				"id":       1,
-				"filename": "response.pdf",
-				"size":     12345,
-				"type":     "application/pdf",
-			},
-		},
+	articleID, err := strconv.Atoi(articleIDStr)
+	if err != nil {
+		sendError(c, http.StatusBadRequest, "Invalid article ID")
+		return
 	}
 
-	sendSuccess(c, article)
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	query := database.ConvertQuery(`
+		SELECT a.id, a.ticket_id, 
+			adm.a_from, adm.a_to, adm.a_subject, adm.a_body,
+			ast.name as sender_type, acc.name as channel,
+			a.is_visible_for_customer, a.create_time
+		FROM article a
+		LEFT JOIN article_data_mime adm ON adm.article_id = a.id
+		LEFT JOIN article_sender_type ast ON ast.id = a.article_sender_type_id
+		LEFT JOIN communication_channel acc ON acc.id = a.communication_channel_id
+		WHERE a.id = ? AND a.ticket_id = ?
+	`)
+
+	var id, tktID int
+	var from, to, subject, body, senderType, channel *string
+	var visibleForCustomer int
+	var createdAt time.Time
+
+	err = db.QueryRow(query, articleID, ticketID).Scan(&id, &tktID, &from, &to, &subject, &body, &senderType, &channel, &visibleForCustomer, &createdAt)
+	if err != nil {
+		sendError(c, http.StatusNotFound, "Article not found")
+		return
+	}
+
+	sendSuccess(c, gin.H{
+		"id":          id,
+		"ticket_id":   tktID,
+		"from":        from,
+		"to":          to,
+		"subject":     subject,
+		"body":        body,
+		"sender_type": senderType,
+		"channel":     channel,
+		"visible":     visibleForCustomer == 1,
+		"created_at":  createdAt,
+	})
 }
 
 // Bulk operations
@@ -1368,13 +1536,40 @@ func (router *APIRouter) handleBulkAssignTickets(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual bulk assignment
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	userID := 1
+	if id, exists := c.Get("user_id"); exists {
+		if idInt, ok := id.(int); ok && idInt > 0 {
+			userID = idInt
+		}
+	}
+
+	now := time.Now()
+	updated := 0
+
+	for _, ticketID := range bulkRequest.TicketIDs {
+		query := database.ConvertQuery(`
+			UPDATE ticket SET user_id = ?, change_time = ?, change_by = ?
+			WHERE id = ? AND archive_flag = 0
+		`)
+		result, err := db.Exec(query, bulkRequest.AssignedTo, now, userID, ticketID)
+		if err == nil {
+			if affected, _ := result.RowsAffected(); affected > 0 {
+				updated++
+			}
+		}
+	}
+
 	sendSuccess(c, gin.H{
 		"ticket_ids":  bulkRequest.TicketIDs,
 		"assigned_to": bulkRequest.AssignedTo,
-		"comment":     bulkRequest.Comment,
-		"assigned_at": time.Now().UTC(),
-		"count":       len(bulkRequest.TicketIDs),
+		"updated":     updated,
+		"assigned_at": now,
 	})
 }
 
@@ -1391,22 +1586,56 @@ func (router *APIRouter) handleBulkCloseTickets(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual bulk closing
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	userID := 1
+	if id, exists := c.Get("user_id"); exists {
+		if idInt, ok := id.(int); ok && idInt > 0 {
+			userID = idInt
+		}
+	}
+
+	// Get closed state ID
+	var closedStateID int
+	stateQuery := database.ConvertQuery(`SELECT id FROM ticket_state WHERE name = 'closed successful' OR name = 'closed' LIMIT 1`)
+	if err := db.QueryRow(stateQuery).Scan(&closedStateID); err != nil {
+		closedStateID = 2 // Fallback
+	}
+
+	now := time.Now()
+	closed := 0
+
+	for _, ticketID := range bulkRequest.TicketIDs {
+		query := database.ConvertQuery(`
+			UPDATE ticket SET ticket_state_id = ?, change_time = ?, change_by = ?
+			WHERE id = ? AND archive_flag = 0
+		`)
+		result, err := db.Exec(query, closedStateID, now, userID, ticketID)
+		if err == nil {
+			if affected, _ := result.RowsAffected(); affected > 0 {
+				closed++
+			}
+		}
+	}
+
 	sendSuccess(c, gin.H{
 		"ticket_ids": bulkRequest.TicketIDs,
 		"resolution": bulkRequest.Resolution,
-		"comment":    bulkRequest.Comment,
-		"closed_at":  time.Now().UTC(),
-		"count":      len(bulkRequest.TicketIDs),
+		"closed":     closed,
+		"closed_at":  now,
 	})
 }
 
 // handleBulkUpdatePriority updates priority for multiple tickets.
 func (router *APIRouter) handleBulkUpdatePriority(c *gin.Context) {
 	var bulkRequest struct {
-		TicketIDs []int  `json:"ticket_ids" binding:"required"`
-		Priority  string `json:"priority" binding:"required"`
-		Comment   string `json:"comment"`
+		TicketIDs  []int `json:"ticket_ids" binding:"required"`
+		PriorityID int   `json:"priority_id" binding:"required"`
+		Comment    string `json:"comment"`
 	}
 
 	if err := c.ShouldBindJSON(&bulkRequest); err != nil {
@@ -1414,13 +1643,40 @@ func (router *APIRouter) handleBulkUpdatePriority(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual bulk priority update
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	userID := 1
+	if id, exists := c.Get("user_id"); exists {
+		if idInt, ok := id.(int); ok && idInt > 0 {
+			userID = idInt
+		}
+	}
+
+	now := time.Now()
+	updated := 0
+
+	for _, ticketID := range bulkRequest.TicketIDs {
+		query := database.ConvertQuery(`
+			UPDATE ticket SET ticket_priority_id = ?, change_time = ?, change_by = ?
+			WHERE id = ? AND archive_flag = 0
+		`)
+		result, err := db.Exec(query, bulkRequest.PriorityID, now, userID, ticketID)
+		if err == nil {
+			if affected, _ := result.RowsAffected(); affected > 0 {
+				updated++
+			}
+		}
+	}
+
 	sendSuccess(c, gin.H{
-		"ticket_ids": bulkRequest.TicketIDs,
-		"priority":   bulkRequest.Priority,
-		"comment":    bulkRequest.Comment,
-		"updated_at": time.Now().UTC(),
-		"count":      len(bulkRequest.TicketIDs),
+		"ticket_ids":  bulkRequest.TicketIDs,
+		"priority_id": bulkRequest.PriorityID,
+		"updated":     updated,
+		"updated_at":  now,
 	})
 }
 
@@ -1437,13 +1693,40 @@ func (router *APIRouter) handleBulkMoveQueue(c *gin.Context) {
 		return
 	}
 
-	// TODO: Implement actual bulk queue move
+	db, err := database.GetDB()
+	if err != nil {
+		sendError(c, http.StatusInternalServerError, "Database unavailable")
+		return
+	}
+
+	userID := 1
+	if id, exists := c.Get("user_id"); exists {
+		if idInt, ok := id.(int); ok && idInt > 0 {
+			userID = idInt
+		}
+	}
+
+	now := time.Now()
+	moved := 0
+
+	for _, ticketID := range bulkRequest.TicketIDs {
+		query := database.ConvertQuery(`
+			UPDATE ticket SET queue_id = ?, change_time = ?, change_by = ?
+			WHERE id = ? AND archive_flag = 0
+		`)
+		result, err := db.Exec(query, bulkRequest.QueueID, now, userID, ticketID)
+		if err == nil {
+			if affected, _ := result.RowsAffected(); affected > 0 {
+				moved++
+			}
+		}
+	}
+
 	sendSuccess(c, gin.H{
 		"ticket_ids": bulkRequest.TicketIDs,
 		"queue_id":   bulkRequest.QueueID,
-		"comment":    bulkRequest.Comment,
-		"moved_at":   time.Now().UTC(),
-		"count":      len(bulkRequest.TicketIDs),
+		"moved":      moved,
+		"moved_at":   now,
 	})
 }
 

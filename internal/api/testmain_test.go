@@ -288,6 +288,9 @@ func resetTestDatabase() error {
 	db.Exec("DELETE FROM article")
 	db.Exec("DELETE FROM ticket")
 
+	// Clean API tokens (all test tokens)
+	db.Exec("DELETE FROM user_api_tokens")
+
 	// Clean test states (preserve IDs 1-5)
 	db.Exec("DELETE FROM ticket_state WHERE id > 5")
 

@@ -1,0 +1,57 @@
+# =============================================================================
+# 90s Vibe Theme - Dual Personality
+# Light: Classic 90s desktop (Redmond aesthetic, 3D bevels)
+# Dark: Linux terminal (ANSI colors, phosphor glow)
+# =============================================================================
+name: 90s Vibe
+id: nineties-vibe
+description: Retro desktop (light) / Terminal (dark)
+version: 1.0.0
+author: GOTRS Team
+license: MIT
+
+# =============================================================================
+# Theme Selector Preview
+# =============================================================================
+preview:
+  gradient: "linear-gradient(180deg, #808080, #333333)"
+
+# =============================================================================
+# Mode Support
+# =============================================================================
+modes:
+  dark: true
+  light: true
+  default: dark
+
+# =============================================================================
+# Assets Configuration
+# =============================================================================
+assets:
+  fonts:
+    enabled: true
+    css: fonts/fonts.css
+    license: SIL-OFL-1.1
+
+  images:
+    enabled: false
+
+  sounds:
+    enabled: false
+
+# =============================================================================
+# Feature Flags
+# =============================================================================
+features:
+  glowEffects: false      # Dark mode has phosphor glow via CSS
+  gridBackground: false
+  animations: false
+  bevels3d: true          # Light mode has 3D beveled effects
+  terminalMode: true      # Dark mode is terminal-style
+
+# =============================================================================
+# Compatibility
+# =============================================================================
+compatibility:
+  minVersion: "1.0.0"
+  maxVersion: null

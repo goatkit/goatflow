@@ -10,6 +10,19 @@ import (
 )
 
 // HandleGetArticleAPI handles GET /api/v1/tickets/:ticket_id/articles/:id.
+//
+//	@Summary		Get article by ID
+//	@Description	Retrieve a single article by its ID
+//	@Tags			Articles
+//	@Accept			json
+//	@Produce		json
+//	@Param			ticket_id	path		int	true	"Ticket ID"
+//	@Param			id			path		int	true	"Article ID"
+//	@Success		200			{object}	map[string]interface{}	"Article details"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404			{object}	map[string]interface{}	"Article not found"
+//	@Security		BearerAuth
+//	@Router			/tickets/{ticket_id}/articles/{id} [get]
 func HandleGetArticleAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

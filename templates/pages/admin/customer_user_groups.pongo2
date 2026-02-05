@@ -82,7 +82,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Customer Users Column -->
         <div class="gk-card-glow overflow-hidden rounded-lg">
-            <div class="px-6 py-4 border-b" style="border-color: var(--gk-border);">
+            <div class="px-6 py-4 border-b" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">
                     <svg class="inline-block h-5 w-5 mr-2" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
@@ -91,10 +91,10 @@
                 </h3>
                 <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.customer_user_groups.click_user_to_edit") }}</p>
             </div>
-            <ul class="divide-y max-h-96 overflow-y-auto" style="border-color: var(--gk-border);">
+            <ul class="divide-y max-h-96 overflow-y-auto" style="border-color: var(--gk-border-default);">
                 {% if CustomerUsers %}
                     {% for cu in CustomerUsers %}
-                    <li style="border-color: var(--gk-border);">
+                    <li style="border-color: var(--gk-border-default);">
                         <a href="/admin/customer-user-groups/user/{{ cu.Login }}" class="block px-4 py-4 transition-colors hover:bg-white/5">
                             <div class="flex items-center justify-between">
                                 <div class="flex-1 min-w-0">
@@ -132,7 +132,7 @@
 
         <!-- Groups Column -->
         <div class="gk-card-glow overflow-hidden rounded-lg">
-            <div class="px-6 py-4 border-b" style="border-color: var(--gk-border);">
+            <div class="px-6 py-4 border-b" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">
                     <svg class="inline-block h-5 w-5 mr-2" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -141,10 +141,10 @@
                 </h3>
                 <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.customer_user_groups.click_group_to_edit") }}</p>
             </div>
-            <ul id="groups-list" class="divide-y max-h-96 overflow-y-auto" style="border-color: var(--gk-border);">
+            <ul id="groups-list" class="divide-y max-h-96 overflow-y-auto" style="border-color: var(--gk-border-default);">
                 {% if Groups %}
                     {% for group in Groups %}
-                    <li data-group-name="{{ group.Name }}" style="border-color: var(--gk-border);">
+                    <li data-group-name="{{ group.Name }}" style="border-color: var(--gk-border-default);">
                         <a href="/admin/customer-user-groups/group/{{ group.ID }}" class="block px-4 py-4 transition-colors hover:bg-white/5">
                             <div class="flex items-center justify-between">
                                 <div class="flex-1 min-w-0">

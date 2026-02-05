@@ -10,7 +10,7 @@ metadata:
 spec:
   prefix: /api
   middleware:
-    - auth
+    - unified_auth
   routes:
     - path: /tickets/:id/attachments
       method: GET

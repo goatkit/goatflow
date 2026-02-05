@@ -1237,3 +1237,16 @@ spec:
           method: DELETE
           handler: handleDeleteSystemMaintenance
           description: "Delete maintenance record"
+
+        # Plugin Management
+        - path: /plugins
+          method: GET
+          handler: HandleAdminPlugins
+          template: pages/admin/plugins.pongo2
+          description: "Display plugin management page"
+
+        - path: /plugins/logs
+          method: GET
+          handler: HandleAdminPluginLogs
+          template: pages/admin/plugin_logs.pongo2
+          description: "Display plugin logs viewer"

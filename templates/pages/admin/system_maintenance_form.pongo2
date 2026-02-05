@@ -32,7 +32,7 @@
             <div class="gk-card-glow rounded-lg">
                 <form id="maintenanceForm" class="space-y-6 p-6">
                     <!-- Time Period -->
-                    <div class="border-b pb-6" style="border-color: var(--gk-border);">
+                    <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
                         <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.system_maintenance.time_period") }}</h3>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -69,7 +69,7 @@
                     </div>
 
                     <!-- Comments -->
-                    <div class="border-b pb-6" style="border-color: var(--gk-border);">
+                    <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
                         <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.system_maintenance.details") }}</h3>
 
                         <div>
@@ -90,7 +90,7 @@
                     </div>
 
                     <!-- Notification Messages -->
-                    <div class="border-b pb-6" style="border-color: var(--gk-border);">
+                    <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
                         <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.system_maintenance.notifications") }}</h3>
 
                         <div class="space-y-4">
@@ -134,7 +134,7 @@
                                     value="1"
                                     {% if not IsNew and Maintenance.ShowLoginMessage == 1 %}checked{% endif %}
                                     class="h-4 w-4 rounded focus:ring-2"
-                                    style="color: var(--gk-primary); border-color: var(--gk-border);"
+                                    style="color: var(--gk-primary); border-color: var(--gk-border-default);"
                                 >
                                 <label for="show_login_message" class="ml-2 text-sm" style="color: var(--gk-text-secondary);">
                                     {{ t("admin.system_maintenance.show_login_message") }}
@@ -159,7 +159,7 @@
                     </div>
 
                     <!-- Form Actions -->
-                    <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: var(--gk-border);">
+                    <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: var(--gk-border-default);">
                         <a href="/admin/system-maintenance" class="gk-btn-secondary">
                             {{ t("common.cancel") }}
                         </a>
@@ -217,7 +217,7 @@
 
                     <!-- Session List -->
                     {% if Sessions %}
-                    <div class="border-t pt-4" style="border-color: var(--gk-border);">
+                    <div class="border-t pt-4" style="border-color: var(--gk-border-default);">
                         <h4 class="text-sm font-medium mb-3" style="color: var(--gk-text-primary);">{{ t("admin.sessions.active_sessions") }}</h4>
                         <div class="space-y-2 max-h-64 overflow-y-auto">
                             {% for session in Sessions %}

@@ -29,6 +29,20 @@ type queueUpdateRequest struct {
 }
 
 // HandleUpdateQueueAPI handles PUT /api/v1/queues/:id.
+//
+//	@Summary		Update queue
+//	@Description	Update an existing queue
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int		true	"Queue ID"
+//	@Param			queue	body		object	true	"Queue update data"
+//	@Success		200		{object}	map[string]interface{}	"Updated queue"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404		{object}	map[string]interface{}	"Queue not found"
+//	@Security		BearerAuth
+//	@Router			/queues/{id} [put]
 func HandleUpdateQueueAPI(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {

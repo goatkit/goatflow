@@ -422,7 +422,7 @@
         </main>
 
         {% if Portal and Portal.FooterText %}
-        <footer class="mt-10 py-6 text-center text-sm" style="border-top: 1px solid var(--gk-border); color: var(--gk-text-muted);">
+        <footer class="mt-10 py-6 text-center text-sm" style="border-top: 1px solid var(--gk-border-default); color: var(--gk-text-muted);">
             {{ Portal.FooterText }}
         </footer>
         {% endif %}

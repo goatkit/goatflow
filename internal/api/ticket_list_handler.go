@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/services"
 )
 
 // TicketListResponse represents the response for ticket list API.
@@ -30,6 +31,30 @@ type PaginationInfo struct {
 }
 
 // HandleListTicketsAPI handles GET /api/v1/tickets.
+//
+//	@Summary		List tickets
+//	@Description	Retrieve a paginated list of tickets with optional filtering, sorting, and search
+//	@Tags			Tickets
+//	@Accept			json
+//	@Produce		json
+//	@Param			page				query		int		false	"Page number"						default(1)
+//	@Param			per_page			query		int		false	"Items per page (max 100)"			default(20)
+//	@Param			limit				query		int		false	"Alias for per_page (max 100)"		default(20)
+//	@Param			offset				query		int		false	"Offset for pagination (alternative to page)"
+//	@Param			status				query		string	false	"Filter by status"					Enums(open, closed, pending)
+//	@Param			queue_id			query		int		false	"Filter by queue ID"
+//	@Param			priority_id			query		int		false	"Filter by priority ID"
+//	@Param			customer_user_id	query		string	false	"Filter by customer user ID/login"
+//	@Param			assigned_user_id	query		int		false	"Filter by assigned agent user ID"
+//	@Param			search				query		string	false	"Search in ticket number, title, customer"
+//	@Param			sort				query		string	false	"Sort field"						Enums(created, updated, priority, tn)	default(created)
+//	@Param			order				query		string	false	"Sort order"						Enums(asc, desc)						default(desc)
+//	@Param			include				query		string	false	"Include related data (comma-separated: article_count, last_article)"
+//	@Success		200					{object}	map[string]interface{}	"List of tickets with pagination"
+//	@Failure		401					{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		500					{object}	map[string]interface{}	"Internal server error"
+//	@Security		BearerAuth
+//	@Router			/tickets [get]
 func HandleListTicketsAPI(c *gin.Context) {
 	// Check authentication (temporarily relaxed for testing)
 	_, exists := c.Get("user_id")
@@ -63,6 +88,24 @@ func HandleListTicketsAPI(c *gin.Context) {
 			if perPage > 100 {
 				perPage = 100
 			}
+		}
+	}
+
+	// Support 'limit' as alias for 'per_page'
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if lim, err := strconv.Atoi(limitStr); err == nil && lim > 0 {
+			perPage = lim
+			if perPage > 100 {
+				perPage = 100
+			}
+		}
+	}
+
+	// Support 'offset' - converts to page number
+	if offsetStr := c.Query("offset"); offsetStr != "" {
+		if off, err := strconv.Atoi(offsetStr); err == nil && off >= 0 {
+			// Convert offset to page: page = (offset / perPage) + 1
+			page = (off / perPage) + 1
 		}
 	}
 
@@ -133,12 +176,37 @@ func HandleListTicketsAPI(c *gin.Context) {
 	}
 
 	// Check if user is a customer (limit to their tickets only)
-	isCustomer, _ := c.Get("is_customer") //nolint:errcheck // Boolean defaults to false
-	if isCustomer == true {
+	// Handles both JWT auth (is_customer) and API token auth (user_role = "Customer")
+	isCustomer := false
+	if ic, exists := c.Get("is_customer"); exists {
+		if b, ok := ic.(bool); ok && b {
+			isCustomer = true
+		}
+	}
+	if role, exists := c.Get("user_role"); exists {
+		if r, ok := role.(string); ok && r == "Customer" {
+			isCustomer = true
+		}
+	}
+
+	if isCustomer {
 		// Customers can only see their own tickets
+		// Try user_email first (JWT auth), then look up by customer_user_id (API token auth)
 		if email, exists := c.Get("user_email"); exists {
 			if emailStr, ok := email.(string); ok {
 				filters["customer_user_id"] = emailStr
+			}
+		} else if custID, exists := c.Get("customer_user_id"); exists {
+			// API token auth - need to look up customer login from numeric ID
+			if custIDInt, ok := custID.(int); ok {
+				// Query customer_user table to get login
+				if db, err := database.GetDB(); err == nil && db != nil {
+					var login string
+					row := db.QueryRow(database.ConvertPlaceholders(`SELECT login FROM customer_user WHERE id = ?`), custIDInt)
+					if err := row.Scan(&login); err == nil && login != "" {
+						filters["customer_user_id"] = login
+					}
+				}
 			}
 		}
 	}
@@ -203,7 +271,7 @@ func HandleListTicketsAPI(c *gin.Context) {
 
 	// Queue permission filtering - use context values from middleware
 	// Customers are already restricted to their own tickets above
-	if isCustomer != true {
+	if !isCustomer {
 		isQueueAdmin := false
 		if val, exists := c.Get("is_queue_admin"); exists {
 			if admin, ok := val.(bool); ok {
@@ -215,6 +283,30 @@ func HandleListTicketsAPI(c *gin.Context) {
 			if accessibleQueueIDs, exists := c.Get("accessible_queue_ids"); exists {
 				if queueIDs, ok := accessibleQueueIDs.([]uint); ok && len(queueIDs) > 0 {
 					filters["accessible_queue_ids"] = queueIDs
+				}
+			} else {
+				// Fallback for API token auth: get accessible queues from PermissionService
+				userID := 0
+				if ctxUserID, exists := c.Get("user_id"); exists {
+					switch v := ctxUserID.(type) {
+					case int:
+						userID = v
+					case int64:
+						userID = int(v)
+					case uint:
+						userID = int(v)
+					}
+				}
+				if userID > 0 {
+					permSvc := services.NewPermissionService(db)
+					queuePerms, err := permSvc.GetUserQueuePermissions(userID)
+					if err == nil && len(queuePerms) > 0 {
+						queueIDs := make([]uint, 0, len(queuePerms))
+						for qid := range queuePerms {
+							queueIDs = append(queueIDs, uint(qid))
+						}
+						filters["accessible_queue_ids"] = queueIDs
+					}
 				}
 			}
 		}

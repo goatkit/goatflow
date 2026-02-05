@@ -49,7 +49,7 @@
             class="space-y-6 p-6"
         >
             <!-- Basic Information -->
-            <div class="border-b pb-6" style="border-color: var(--gk-border);">
+            <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin.modules.template.form.basic_info") }}</h3>
 
                 <div class="grid grid-cols-1 gap-6">
@@ -86,7 +86,7 @@
                                     value="{{ tt.Key }}"
                                     {% if tt.Key in Template.TemplateType %}checked{% endif %}
                                     class="rounded text-gotrs-600 focus:ring-gotrs-500 h-4 w-4"
-                                    style="border-color: var(--gk-border); background: var(--gk-bg-surface);"
+                                    style="border-color: var(--gk-border-default); background: var(--gk-bg-surface);"
                                 >
                                 <span class="ml-2 text-sm font-medium" style="color: var(--gk-text-secondary);">{{ tt.Label }}</span>
                             </label>
@@ -154,7 +154,7 @@
                     </label>
 
                     <!-- Available placeholders -->
-                    <div class="mb-4 p-4 rounded-lg" style="background: var(--gk-bg-tertiary); border: 1px solid var(--gk-border);">
+                    <div class="mb-4 p-4 rounded-lg" style="background: var(--gk-bg-tertiary); border: 1px solid var(--gk-border-default);">
                         <p class="text-sm mb-2" style="color: var(--gk-text-secondary);">{{ t("admin.modules.template.form.available_placeholders") }}:</p>
                         <p class="text-xs mb-3" style="color: var(--gk-primary);">Both <code class="px-1 rounded" style="background: var(--gk-bg-surface);">&lt;GOTRS_*&gt;</code> and <code class="px-1 rounded" style="background: var(--gk-bg-surface);">&lt;OTRS_*&gt;</code> prefixes are supported.</p>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -179,7 +179,7 @@
             </div>
 
             <!-- Form Actions -->
-            <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: var(--gk-border);">
+            <div class="flex justify-end space-x-3 pt-4 border-t" style="border-color: var(--gk-border-default);">
                 <a href="/admin/templates" class="gk-btn-secondary">
                     {{ t("admin.modules.template.actions.cancel") }}
                 </a>

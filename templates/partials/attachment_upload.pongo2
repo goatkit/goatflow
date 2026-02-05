@@ -27,7 +27,7 @@
          ondrop="handleDrop(event, '{{ inputId }}')">
         <label for="{{ inputId }}"
                class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all duration-200"
-               style="border-color: var(--gk-border); background: var(--gk-bg-tertiary);">
+               style="border-color: var(--gk-border-default); background: var(--gk-bg-tertiary);">
             <div class="flex flex-col items-center justify-center pt-5 pb-6">
                 <svg class="w-10 h-10 mb-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
@@ -84,7 +84,7 @@
         e.stopPropagation();
         const dropzone = document.getElementById(inputId + '-dropzone');
         const label = dropzone.querySelector('label');
-        label.style.borderColor = 'var(--gk-border)';
+        label.style.borderColor = 'var(--gk-border-default)';
         label.style.background = 'var(--gk-bg-tertiary)';
     };
 
@@ -93,7 +93,7 @@
         e.stopPropagation();
         const dropzone = document.getElementById(inputId + '-dropzone');
         const label = dropzone.querySelector('label');
-        label.style.borderColor = 'var(--gk-border)';
+        label.style.borderColor = 'var(--gk-border-default)';
         label.style.background = 'var(--gk-bg-tertiary)';
 
         const input = document.getElementById(inputId);
@@ -131,7 +131,7 @@
             const item = document.createElement('div');
             item.className = 'flex items-center justify-between p-3 rounded-lg';
             item.style.background = isTooLarge ? 'var(--gk-error-subtle)' : 'var(--gk-bg-surface)';
-            item.style.border = '1px solid ' + (isTooLarge ? 'var(--gk-error)' : 'var(--gk-border)');
+            item.style.border = '1px solid ' + (isTooLarge ? 'var(--gk-error)' : 'var(--gk-border-default)');
 
             // Thumbnail or icon
             let thumbnailHTML = '';
@@ -143,7 +143,7 @@
                     if (img) img.src = ev.target.result;
                 };
                 reader.readAsDataURL(file);
-                thumbnailHTML = `<img id="${imgId}" class="w-10 h-10 rounded object-cover" style="border: 1px solid var(--gk-border);" src="" alt="Preview">`;
+                thumbnailHTML = `<img id="${imgId}" class="w-10 h-10 rounded object-cover" style="border: 1px solid var(--gk-border-default);" src="" alt="Preview">`;
             } else if (file.type === 'application/pdf') {
                 thumbnailHTML = `<div class="w-10 h-10 rounded flex items-center justify-center" style="background: var(--gk-error-subtle);"><svg class="w-5 h-5" style="color: var(--gk-error);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg></div>`;
             } else {

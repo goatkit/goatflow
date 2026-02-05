@@ -72,6 +72,45 @@ func TestListTickets_Pagination(t *testing.T) {
 				assert.Equal(t, float64(100), pagination["per_page"])
 			},
 		},
+		{
+			name:       "limit as alias for per_page",
+			query:      "?limit=5",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body map[string]interface{}) {
+				pagination := body["pagination"].(map[string]interface{})
+				assert.Equal(t, float64(5), pagination["per_page"])
+			},
+		},
+		{
+			name:       "limit capped at 100",
+			query:      "?limit=500",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body map[string]interface{}) {
+				pagination := body["pagination"].(map[string]interface{})
+				// Should be capped at 100
+				assert.Equal(t, float64(100), pagination["per_page"])
+			},
+		},
+		{
+			name:       "offset converts to page",
+			query:      "?limit=10&offset=20",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body map[string]interface{}) {
+				pagination := body["pagination"].(map[string]interface{})
+				// offset=20 with limit=10 means page 3
+				assert.Equal(t, float64(3), pagination["page"])
+				assert.Equal(t, float64(10), pagination["per_page"])
+			},
+		},
+		{
+			name:       "offset zero means page 1",
+			query:      "?limit=10&offset=0",
+			wantStatus: http.StatusOK,
+			checkBody: func(t *testing.T, body map[string]interface{}) {
+				pagination := body["pagination"].(map[string]interface{})
+				assert.Equal(t, float64(1), pagination["page"])
+			},
+		},
 	}
 
 	for _, tt := range tests {

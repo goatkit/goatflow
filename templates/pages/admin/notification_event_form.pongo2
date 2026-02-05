@@ -31,7 +31,7 @@
         <form id="notificationForm" class="p-6 space-y-6">
             <!-- Basic Information -->
             <div class="space-y-4">
-                <h3 class="text-lg font-medium border-b pb-2" style="color: var(--gk-text-primary); border-color: var(--gk-border);">
+                <h3 class="text-lg font-medium border-b pb-2" style="color: var(--gk-text-primary); border-color: var(--gk-border-default);">
                     {{ t("admin.modules.notification_event.sections.basic") }}
                 </h3>
 
@@ -70,21 +70,21 @@
             </div>
 
             <!-- Events Section -->
-            <div class="space-y-4 border-t pt-6" style="border-color: var(--gk-border);">
-                <h3 class="text-lg font-medium border-b pb-2" style="color: var(--gk-text-primary); border-color: var(--gk-border);">
+            <div class="space-y-4 border-t pt-6" style="border-color: var(--gk-border-default);">
+                <h3 class="text-lg font-medium border-b pb-2" style="color: var(--gk-text-primary); border-color: var(--gk-border-default);">
                     {{ t("admin.modules.notification_event.sections.events") }}
                 </h3>
                 <p class="text-sm" style="color: var(--gk-text-muted);">
                     {{ t("admin.modules.notification_event.help.events") }}
                 </p>
 
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto rounded-lg p-3" style="border: 1px solid var(--gk-border); background: var(--gk-bg-tertiary);">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto rounded-lg p-3" style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-tertiary);">
                     <div class="col-span-full text-xs font-medium uppercase mb-2" style="color: var(--gk-text-muted);">Ticket Events</div>
                     {% for event in TicketEvents %}
                     <label class="flex items-center space-x-2 text-sm cursor-pointer">
                         <input type="checkbox" name="events" value="{{ event }}"
                                {% if Event and event in Event.Events %}checked{% endif %}
-                               class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border);">
+                               class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
                         <span style="color: var(--gk-text-secondary);">{{ event }}</span>
                     </label>
                     {% endfor %}
@@ -93,7 +93,7 @@
                     <label class="flex items-center space-x-2 text-sm cursor-pointer">
                         <input type="checkbox" name="events" value="{{ event }}"
                                {% if Event and event in Event.Events %}checked{% endif %}
-                               class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border);">
+                               class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
                         <span style="color: var(--gk-text-secondary);">{{ event }}</span>
                     </label>
                     {% endfor %}
@@ -101,8 +101,8 @@
             </div>
 
             <!-- Ticket Filters Section -->
-            <div class="space-y-4 border-t pt-6" style="border-color: var(--gk-border);">
-                <h3 class="text-lg font-medium border-b pb-2" style="color: var(--gk-text-primary); border-color: var(--gk-border);">
+            <div class="space-y-4 border-t pt-6" style="border-color: var(--gk-border-default);">
+                <h3 class="text-lg font-medium border-b pb-2" style="color: var(--gk-text-primary); border-color: var(--gk-border-default);">
                     {{ t("admin.modules.notification_event.sections.filters") }}
                 </h3>
                 <p class="text-sm" style="color: var(--gk-text-muted);">
@@ -161,8 +161,8 @@
             </div>
 
             <!-- Recipients Section -->
-            <div class="space-y-4 border-t pt-6" style="border-color: var(--gk-border);">
-                <h3 class="text-lg font-medium border-b pb-2" style="color: var(--gk-text-primary); border-color: var(--gk-border);">
+            <div class="space-y-4 border-t pt-6" style="border-color: var(--gk-border-default);">
+                <h3 class="text-lg font-medium border-b pb-2" style="color: var(--gk-text-primary); border-color: var(--gk-border-default);">
                     {{ t("admin.modules.notification_event.sections.recipients") }}
                 </h3>
                 <p class="text-sm" style="color: var(--gk-text-muted);">
@@ -215,25 +215,25 @@
                             <label class="flex items-center space-x-2 text-sm cursor-pointer">
                                 <input type="checkbox" name="recipient_Recipients" value="AgentOwner"
                                        {% if Event and "AgentOwner" in Event.Recipients.Recipients %}checked{% endif %}
-                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border);">
+                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
                                 <span style="color: var(--gk-text-secondary);">{{ t("admin.modules.notification_event.recipients.owner") }}</span>
                             </label>
                             <label class="flex items-center space-x-2 text-sm cursor-pointer">
                                 <input type="checkbox" name="recipient_Recipients" value="AgentResponsible"
                                        {% if Event and "AgentResponsible" in Event.Recipients.Recipients %}checked{% endif %}
-                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border);">
+                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
                                 <span style="color: var(--gk-text-secondary);">{{ t("admin.modules.notification_event.recipients.responsible") }}</span>
                             </label>
                             <label class="flex items-center space-x-2 text-sm cursor-pointer">
                                 <input type="checkbox" name="recipient_Recipients" value="AgentWatcher"
                                        {% if Event and "AgentWatcher" in Event.Recipients.Recipients %}checked{% endif %}
-                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border);">
+                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
                                 <span style="color: var(--gk-text-secondary);">{{ t("admin.modules.notification_event.recipients.watcher") }}</span>
                             </label>
                             <label class="flex items-center space-x-2 text-sm cursor-pointer">
                                 <input type="checkbox" name="recipient_Recipients" value="Customer"
                                        {% if Event and "Customer" in Event.Recipients.Recipients %}checked{% endif %}
-                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border);">
+                                       class="rounded" style="color: var(--gk-primary); border-color: var(--gk-border-default);">
                                 <span style="color: var(--gk-text-secondary);">{{ t("admin.modules.notification_event.recipients.customer") }}</span>
                             </label>
                         </div>
@@ -242,8 +242,8 @@
             </div>
 
             <!-- Notification Message Section -->
-            <div class="space-y-4 border-t pt-6" style="border-color: var(--gk-border);">
-                <h3 class="text-lg font-medium border-b pb-2" style="color: var(--gk-text-primary); border-color: var(--gk-border);">
+            <div class="space-y-4 border-t pt-6" style="border-color: var(--gk-border-default);">
+                <h3 class="text-lg font-medium border-b pb-2" style="color: var(--gk-text-primary); border-color: var(--gk-border-default);">
                     {{ t("admin.modules.notification_event.sections.message") }}
                 </h3>
                 <p class="text-sm" style="color: var(--gk-text-muted);">
@@ -251,8 +251,8 @@
                 </p>
 
                 <!-- Language Tabs -->
-                <div class="rounded-lg overflow-hidden" style="border: 1px solid var(--gk-border);">
-                    <div class="flex border-b" style="border-color: var(--gk-border); background: var(--gk-bg-tertiary);">
+                <div class="rounded-lg overflow-hidden" style="border: 1px solid var(--gk-border-default);">
+                    <div class="flex border-b" style="border-color: var(--gk-border-default); background: var(--gk-bg-tertiary);">
                         {% for lang in Languages %}
                         <button type="button" onclick="showLanguageTab('{{ lang.Name }}')"
                                 id="tab-{{ lang.Name }}"

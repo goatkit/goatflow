@@ -1,0 +1,155 @@
+/*
+ * GoatKit Classic Theme
+ * Original GOTRS Blue Styling
+ *
+ * This theme preserves the original GOTRS appearance for backwards compatibility
+ * and users who prefer a more traditional look.
+ */
+
+/* ============================================
+   LIGHT MODE (Default for Classic)
+   ============================================ */
+:root,
+:root.light,
+.light {
+  --gk-theme-name: 'gotrs-classic';
+  --gk-theme-mode: 'light';
+
+  /* Primary: GOTRS Blue */
+  --gk-primary: #3b82f6;
+  --gk-primary-hover: #2563eb;
+  --gk-primary-active: #1d4ed8;
+  --gk-primary-subtle: rgba(59, 130, 246, 0.1);
+
+  /* Secondary: Indigo */
+  --gk-secondary: #4f46e5;
+  --gk-secondary-hover: #4338ca;
+  --gk-secondary-subtle: rgba(79, 70, 229, 0.1);
+
+  /* Tertiary: Purple */
+  --gk-tertiary: #7c3aed;
+
+  /* Light mode backgrounds */
+  --gk-bg-base: #f9fafb;
+  --gk-bg-surface: #ffffff;
+  --gk-bg-elevated: #ffffff;
+  --gk-bg-overlay: rgba(249, 250, 251, 0.9);
+
+  /* Text */
+  --gk-text-primary: #111827;
+  --gk-text-secondary: #4b5563;
+  --gk-text-muted: #9ca3af;
+  --gk-text-inverse: #ffffff;
+
+  /* Borders */
+  --gk-border-default: #e5e7eb;
+  --gk-border-strong: #d1d5db;
+
+  /* Status: Standard Tailwind colors */
+  --gk-success: #22c55e;
+  --gk-success-subtle: rgba(34, 197, 94, 0.1);
+  --gk-warning: #f59e0b;
+  --gk-warning-subtle: rgba(245, 158, 11, 0.1);
+  --gk-error: #ef4444;
+  --gk-error-subtle: rgba(239, 68, 68, 0.1);
+  --gk-info: #3b82f6;
+  --gk-info-subtle: rgba(59, 130, 246, 0.1);
+
+  /* Gradients - subtle for classic theme */
+  --gk-gradient-primary: linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%);
+  --gk-gradient-hero: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+
+  /* No glows for classic theme - clean and professional */
+  --gk-glow-primary: none;
+  --gk-glow-secondary: none;
+  --gk-glow-success: none;
+  --gk-glow-warning: none;
+  --gk-glow-error: none;
+
+  /* Standard shadows */
+  --gk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --gk-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --gk-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --gk-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+
+  /* Focus ring */
+  --gk-focus-ring: 0 0 0 2px var(--gk-bg-surface), 0 0 0 4px var(--gk-primary);
+
+  /* Typography - system fonts for classic */
+  --gk-font-heading: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --gk-font-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --gk-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+
+  /* Transitions */
+  --gk-transition-fast: 150ms ease;
+  --gk-transition-normal: 200ms ease;
+  --gk-transition-slow: 300ms ease;
+
+  /* Border radius */
+  --gk-radius-sm: 0.25rem;
+  --gk-radius-md: 0.375rem;
+  --gk-radius-lg: 0.5rem;
+  --gk-radius-xl: 0.75rem;
+  --gk-radius-full: 9999px;
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+:root.dark,
+.dark {
+  --gk-theme-mode: 'dark';
+
+  /* Dark mode backgrounds - standard gray scale */
+  --gk-bg-base: #111827;
+  --gk-bg-surface: #1f2937;
+  --gk-bg-elevated: #374151;
+  --gk-bg-overlay: rgba(17, 24, 39, 0.9);
+
+  /* Text */
+  --gk-text-primary: #f9fafb;
+  --gk-text-secondary: #d1d5db;
+  --gk-text-muted: #6b7280;
+  --gk-text-inverse: #111827;
+
+  /* Borders */
+  --gk-border-default: #374151;
+  --gk-border-strong: #4b5563;
+
+  /* Primary colors stay the same but with adjusted subtle */
+  --gk-primary-subtle: rgba(59, 130, 246, 0.2);
+  --gk-secondary-subtle: rgba(79, 70, 229, 0.2);
+
+  /* Status subtle backgrounds for dark */
+  --gk-success-subtle: rgba(34, 197, 94, 0.2);
+  --gk-warning-subtle: rgba(245, 158, 11, 0.2);
+  --gk-error-subtle: rgba(239, 68, 68, 0.2);
+  --gk-info-subtle: rgba(59, 130, 246, 0.2);
+
+  /* Shadows adjusted for dark mode */
+  --gk-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --gk-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --gk-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --gk-shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+}
+
+/* ============================================
+   CLEAN SOLID BACKGROUND
+   No patterns for classic theme - easy on the eyes
+   ============================================ */
+
+/* Solid background only */
+[data-theme="gotrs-classic"] body {
+  background-color: var(--gk-bg-base);
+  background-image: none;
+}
+
+/* Logo visibility in dark mode - invert to white for contrast */
+[data-theme="gotrs-classic"].dark .gk-logo,
+[data-theme="gotrs-classic"] .dark .gk-logo,
+[data-theme="gotrs-classic"].dark img[alt*="logo" i],
+[data-theme="gotrs-classic"] .dark img[alt*="logo" i],
+[data-theme="gotrs-classic"].dark .logo,
+[data-theme="gotrs-classic"] .dark .logo {
+  filter: brightness(0) invert(1);
+}

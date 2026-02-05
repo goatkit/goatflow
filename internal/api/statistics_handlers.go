@@ -18,6 +18,16 @@ import (
 )
 
 // HandleDashboardStatisticsAPI handles GET /api/v1/statistics/dashboard.
+//
+//	@Summary		Get dashboard statistics
+//	@Description	Retrieve dashboard statistics (ticket counts, trends)
+//	@Tags			Statistics
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"Dashboard statistics"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/statistics/dashboard [get]
 func HandleDashboardStatisticsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -180,6 +190,17 @@ func HandleDashboardStatisticsAPI(c *gin.Context) {
 }
 
 // HandleTicketTrendsAPI handles GET /api/v1/statistics/trends.
+//
+//	@Summary		Get ticket trends
+//	@Description	Retrieve ticket creation/resolution trends over time
+//	@Tags			Statistics
+//	@Accept			json
+//	@Produce		json
+//	@Param			period	query		string	false	"Time period (day, week, month)"
+//	@Success		200		{object}	map[string]interface{}	"Trend data"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/statistics/trends [get]
 func HandleTicketTrendsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -403,6 +424,16 @@ func HandleTicketTrendsAPI(c *gin.Context) {
 }
 
 // HandleAgentPerformanceAPI handles GET /api/v1/statistics/agents.
+//
+//	@Summary		Get agent performance
+//	@Description	Get agent performance statistics
+//	@Tags			Statistics
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"Agent performance data"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/statistics/agents [get]
 func HandleAgentPerformanceAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -581,6 +612,16 @@ func HandleAgentPerformanceAPI(c *gin.Context) {
 }
 
 // HandleQueueMetricsAPI handles GET /api/v1/statistics/queues.
+//
+//	@Summary		Get queue metrics
+//	@Description	Get queue performance metrics
+//	@Tags			Statistics
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"Queue metrics"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/statistics/queues [get]
 func HandleQueueMetricsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -705,6 +746,17 @@ func HandleQueueMetricsAPI(c *gin.Context) {
 }
 
 // HandleTimeBasedAnalyticsAPI handles GET /api/v1/statistics/analytics.
+//
+//	@Summary		Get time-based analytics
+//	@Description	Get time-based ticket analytics
+//	@Tags			Statistics
+//	@Accept			json
+//	@Produce		json
+//	@Param			period	query		string	false	"Time period"
+//	@Success		200		{object}	map[string]interface{}	"Analytics data"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/statistics/analytics [get]
 func HandleTimeBasedAnalyticsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -787,6 +839,16 @@ func HandleTimeBasedAnalyticsAPI(c *gin.Context) {
 }
 
 // HandleCustomerStatisticsAPI handles GET /api/v1/statistics/customers.
+//
+//	@Summary		Get customer statistics
+//	@Description	Get customer-related statistics
+//	@Tags			Statistics
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"Customer statistics"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/statistics/customers [get]
 func HandleCustomerStatisticsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -953,6 +1015,17 @@ func HandleCustomerStatisticsAPI(c *gin.Context) {
 }
 
 // HandleExportStatisticsAPI handles GET /api/v1/statistics/export.
+//
+//	@Summary		Export statistics
+//	@Description	Export statistics data
+//	@Tags			Statistics
+//	@Accept			json
+//	@Produce		json
+//	@Param			format	query		string	false	"Export format (csv, json)"
+//	@Success		200		{object}	map[string]interface{}	"Exported data"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/statistics/export [get]
 func HandleExportStatisticsAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

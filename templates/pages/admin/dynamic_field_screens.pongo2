@@ -26,7 +26,7 @@
 
     <!-- Object Type Tabs -->
     <div class="mb-6">
-        <div style="border-bottom: 1px solid var(--gk-border);">
+        <div style="border-bottom: 1px solid var(--gk-border-default);">
             <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                 {% for objectType in ObjectTypes %}
                 <a href="/admin/dynamic-fields/screens?object_type={{ objectType }}"
@@ -63,7 +63,7 @@
                 <tbody>
                     {% for row in Rows %}
                     <tr class="transition-colors hover:bg-white/5">
-                        <td class="sticky left-0 whitespace-nowrap" style="background: var(--gk-bg-surface); border-right: 1px solid var(--gk-border); z-index: 10;">
+                        <td class="sticky left-0 whitespace-nowrap" style="background: var(--gk-bg-surface); border-right: 1px solid var(--gk-border-default); z-index: 10;">
                             <div class="flex flex-col">
                                 <span style="color: var(--gk-text-primary);">{{ row.Field.Label }}</span>
                                 <span class="text-xs" style="color: var(--gk-text-muted);">DynamicField_{{ row.Field.Name }}</span>
@@ -101,7 +101,7 @@
     <!-- Legend -->
     <div class="mt-4 flex items-center gap-6 text-sm" style="color: var(--gk-text-muted);">
         <div class="flex items-center gap-2">
-            <span class="w-4 h-4 rounded" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border);"></span>
+            <span class="w-4 h-4 rounded" style="background: var(--gk-bg-surface); border: 1px solid var(--gk-border-default);"></span>
             <span>Disabled</span>
         </div>
         <div class="flex items-center gap-2">

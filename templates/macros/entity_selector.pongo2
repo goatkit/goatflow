@@ -12,7 +12,7 @@
         <div class="inline-block align-bottom gk-card-glow" style="background: var(--gk-bg-surface); rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
 
             <!-- Header -->
-            <div class="gk-card-glow" style="background: var(--gk-bg-surface); px-4 pt-4 pb-2 sm:px-6 border-b " style="border-color: var(--gk-border);">
+            <div class="gk-card-glow" style="background: var(--gk-bg-surface); px-4 pt-4 pb-2 sm:px-6 border-b " style="border-color: var(--gk-border-default);">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         {% if icon %}
@@ -56,7 +56,7 @@
                             <input type="text"
                                    id="{{ id }}-member-filter"
                                    placeholder="Filter..."
-                                   class="w-full px-3 py-2 pl-10 text-sm border " style="border-color: var(--gk-border); rounded-md bg-white gk-input-neon " style="color: var(--gk-text-primary); focus:outline-none focus:ring-2 focus:ring-gotrs-500"
+                                   class="w-full px-3 py-2 pl-10 text-sm border " style="border-color: var(--gk-border-default); rounded-md bg-white gk-input-neon " style="color: var(--gk-text-primary); focus:outline-none focus:ring-2 focus:ring-gotrs-500"
                                    autocomplete="off">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="h-4 w-4 " style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,8 +65,8 @@
                             </div>
                         </div>
                         <!-- Members List -->
-                        <div class="border " style="border-color: var(--gk-border); rounded-md max-h-72 overflow-y-auto " style="background: var(--gk-bg-tertiary);">
-                            <div id="{{ id }}-members-list" class="divide-y divide-y" style="border-color: var(--gk-border);">
+                        <div class="border " style="border-color: var(--gk-border-default); rounded-md max-h-72 overflow-y-auto " style="background: var(--gk-bg-tertiary);">
+                            <div id="{{ id }}-members-list" class="divide-y divide-y" style="border-color: var(--gk-border-default);">
                                 <!-- Members populated by JavaScript -->
                             </div>
                         </div>
@@ -80,7 +80,7 @@
                             <input type="text"
                                    id="{{ id }}-search"
                                    placeholder="Search..."
-                                   class="w-full px-3 py-2 pl-10 pr-10 text-sm border " style="border-color: var(--gk-border); rounded-md bg-white gk-input-neon " style="color: var(--gk-text-primary); focus:outline-none focus:ring-2 focus:ring-gotrs-500"
+                                   class="w-full px-3 py-2 pl-10 pr-10 text-sm border " style="border-color: var(--gk-border-default); rounded-md bg-white gk-input-neon " style="color: var(--gk-text-primary); focus:outline-none focus:ring-2 focus:ring-gotrs-500"
                                    autocomplete="off">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="h-4 w-4 " style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,8 +95,8 @@
                             </div>
                         </div>
                         <!-- Search Results -->
-                        <div class="border " style="border-color: var(--gk-border); rounded-md max-h-72 overflow-y-auto " style="background: var(--gk-bg-tertiary);">
-                            <div id="{{ id }}-search-results" class="divide-y divide-y" style="border-color: var(--gk-border);">
+                        <div class="border " style="border-color: var(--gk-border-default); rounded-md max-h-72 overflow-y-auto " style="background: var(--gk-bg-tertiary);">
+                            <div id="{{ id }}-search-results" class="divide-y divide-y" style="border-color: var(--gk-border-default);">
                                 <div class="px-4 py-6 text-center text-sm " style="color: var(--gk-text-muted);">
                                     <svg class="mx-auto h-8 w-8 mb-2" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -114,7 +114,7 @@
             </div>
 
             <!-- Footer -->
-            <div class="px-4 py-3 sm:px-6 flex justify-between items-center" style="background: var(--gk-bg-tertiary); border-top: 1px solid var(--gk-border);">
+            <div class="px-4 py-3 sm:px-6 flex justify-between items-center" style="background: var(--gk-bg-tertiary); border-top: 1px solid var(--gk-border-default);">
                 <p class="text-xs" style="color: var(--gk-text-muted);">
                     <kbd class="gk-kbd">Esc</kbd>
                     to close

@@ -349,11 +349,20 @@ func registerExistingMiddleware(registry *HandlerRegistry, jwtManager interface{
 			c.Next()
 		},
 
-		// Rate limiting middleware (placeholder)
-		"rateLimit": func(c *gin.Context) {
-			// Implement rate limiting logic here
-			c.Next()
-		},
+		// Rate limiting middleware
+		"rateLimit": middleware.RateLimitMiddleware(),
+
+		// Note: api_token and unified_auth are registered in handlers.go
+
+		// API token scope middleware - restricts API token access
+		"scope_tickets_read":   middleware.RequireScope("tickets:read"),
+		"scope_tickets_write":  middleware.RequireScope("tickets:write"),
+		"scope_tickets_delete": middleware.RequireScope("tickets:delete"),
+		"scope_articles_read":  middleware.RequireScope("articles:read"),
+		"scope_articles_write": middleware.RequireScope("articles:write"),
+		"scope_users_read":     middleware.RequireScope("users:read"),
+		"scope_queues_read":    middleware.RequireScope("queues:read"),
+		"scope_admin":          middleware.RequireScope("admin:*"),
 	}
 
 	return registry.RegisterMiddlewareBatch(middlewares)

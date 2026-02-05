@@ -133,7 +133,7 @@
                         <button type="button" onclick="selectAll()" class="text-sm transition-colors hover:opacity-80" style="color: var(--gk-primary);">
                             {{ t("admin.modules.template.attachments.select_all") }}
                         </button>
-                        <span style="color: var(--gk-border);">|</span>
+                        <span style="color: var(--gk-border-default);">|</span>
                         <button type="button" onclick="selectNone()" class="text-sm transition-colors hover:opacity-80" style="color: var(--gk-primary);">
                             {{ t("admin.modules.template.attachments.select_none") }}
                         </button>
@@ -145,9 +145,9 @@
                 </p>
 
                 {% if Attachments %}
-                <div class="space-y-2 max-h-96 overflow-y-auto p-2 border rounded-md" style="border-color: var(--gk-border);">
+                <div class="space-y-2 max-h-96 overflow-y-auto p-2 border rounded-md" style="border-color: var(--gk-border-default);">
                     {% for attachment in Attachments %}
-                    <label class="relative flex items-start py-3 px-4 rounded-md cursor-pointer transition-colors hover:bg-white/5" style="border: 1px solid var(--gk-border);">
+                    <label class="relative flex items-start py-3 px-4 rounded-md cursor-pointer transition-colors hover:bg-white/5" style="border: 1px solid var(--gk-border-default);">
                         <div class="flex items-center h-5">
                             <input
                                 type="checkbox"
@@ -155,7 +155,7 @@
                                 value="{{ attachment.ID }}"
                                 {% if attachment.Selected %}checked{% endif %}
                                 class="attachment-checkbox h-4 w-4 rounded focus:ring-2"
-                                style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                             >
                         </div>
                         <div class="ml-3 flex-1">
@@ -195,7 +195,7 @@
             </div>
 
             <!-- Form Actions -->
-            <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: var(--gk-border);">
+            <div class="flex justify-end space-x-3 pt-6 border-t" style="border-color: var(--gk-border-default);">
                 <a href="/admin/templates" class="gk-btn-secondary">
                     {{ t("admin.modules.template.actions.cancel") }}
                 </a>

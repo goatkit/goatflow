@@ -14,6 +14,19 @@ import (
 )
 
 // HandleCloseTicketAPI handles ticket closure via API.
+//
+//	@Summary		Close ticket
+//	@Description	Close a ticket with a specific close state
+//	@Tags			Ticket Actions
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int		true	"Ticket ID"
+//	@Param			close	body		object	false	"Close data (state_id, note)"
+//	@Success		200		{object}	map[string]interface{}	"Ticket closed"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404		{object}	map[string]interface{}	"Ticket not found"
+//	@Security		BearerAuth
+//	@Router			/tickets/{id}/close [post]
 func HandleCloseTicketAPI(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -211,6 +224,18 @@ func HandleCloseTicketAPI(c *gin.Context) {
 }
 
 // HandleReopenTicketAPI handles ticket reopening via API.
+//
+//	@Summary		Reopen ticket
+//	@Description	Reopen a closed ticket
+//	@Tags			Ticket Actions
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Ticket ID"
+//	@Success		200	{object}	map[string]interface{}	"Ticket reopened"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Ticket not found"
+//	@Security		BearerAuth
+//	@Router			/tickets/{id}/reopen [post]
 func HandleReopenTicketAPI(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {
@@ -385,6 +410,20 @@ func HandleReopenTicketAPI(c *gin.Context) {
 }
 
 // HandleAssignTicketAPI handles ticket assignment via API.
+//
+//	@Summary		Assign ticket
+//	@Description	Assign a ticket to an agent
+//	@Tags			Ticket Actions
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int		true	"Ticket ID"
+//	@Param			assign	body		object	true	"Assignment data (user_id)"
+//	@Success		200		{object}	map[string]interface{}	"Ticket assigned"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404		{object}	map[string]interface{}	"Ticket not found"
+//	@Security		BearerAuth
+//	@Router			/tickets/{id}/assign [post]
 func HandleAssignTicketAPI(c *gin.Context) {
 	ticketIDStr := c.Param("id")
 	if ticketIDStr == "" {

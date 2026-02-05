@@ -42,6 +42,9 @@ server:
             - Authorization
             - Content-Type
             - X-Request-ID
+    swagger:
+        enabled: true   # Serve Swagger UI at /swagger/
+        public: true    # If false, requires login to view API docs
 
 database:
     host: postgres

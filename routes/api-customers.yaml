@@ -10,7 +10,7 @@ metadata:
 spec:
   prefix: /api/customers
   middleware:
-    - auth
+    - unified_auth
   routes:
     - path: /search
       method: GET

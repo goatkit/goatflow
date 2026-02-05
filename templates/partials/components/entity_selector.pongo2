@@ -11,7 +11,7 @@
         <div class="inline-block align-bottom gk-card-glow rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full" style="background: var(--gk-bg-surface);">
 
             <!-- Header -->
-            <div class="px-4 pt-4 pb-2 sm:px-6" style="border-bottom: 1px solid var(--gk-border);">
+            <div class="px-4 pt-4 pb-2 sm:px-6" style="border-bottom: 1px solid var(--gk-border-default);">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         {% if es_icon %}
@@ -59,8 +59,8 @@
                             </div>
                         </div>
                         <!-- Members List -->
-                        <div class="rounded-md max-h-72 overflow-y-auto" style="border: 1px solid var(--gk-border); background: var(--gk-bg-tertiary);">
-                            <div id="{{ es_id }}-members-list" class="divide-y" style="border-color: var(--gk-border);">
+                        <div class="rounded-md max-h-72 overflow-y-auto" style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-tertiary);">
+                            <div id="{{ es_id }}-members-list" class="divide-y" style="border-color: var(--gk-border-default);">
                             </div>
                         </div>
                     </div>
@@ -88,10 +88,10 @@
                             </div>
                         </div>
                         <!-- Search Results -->
-                        <div class="rounded-md max-h-72 overflow-y-auto" style="border: 1px solid var(--gk-border); background: var(--gk-bg-tertiary);">
-                            <div id="{{ es_id }}-search-results" class="divide-y" style="border-color: var(--gk-border);">
+                        <div class="rounded-md max-h-72 overflow-y-auto" style="border: 1px solid var(--gk-border-default); background: var(--gk-bg-tertiary);">
+                            <div id="{{ es_id }}-search-results" class="divide-y" style="border-color: var(--gk-border-default);">
                                 <div class="px-4 py-6 text-center text-sm" style="color: var(--gk-text-muted);">
-                                    <svg class="mx-auto h-8 w-8 mb-2" style="color: var(--gk-border);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="mx-auto h-8 w-8 mb-2" style="color: var(--gk-border-default);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                     {{ t("entity_selector.type_to_search_hint")|default:"Type at least 2 characters to search" }}

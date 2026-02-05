@@ -1,4 +1,25 @@
 // Package main provides the GOATS CLI tool.
+//
+//	@title			GOTRS API
+//	@version		1.0
+//	@description	GOTRS Ticket System REST API
+//	@termsOfService	https://gotrs.io/terms/
+//
+//	@contact.name	GOTRS Support
+//	@contact.url	https://gotrs.io/support
+//	@contact.email	support@gotrs.io
+//
+//	@license.name	AGPL-3.0
+//	@license.url	https://www.gnu.org/licenses/agpl-3.0.html
+//
+//	@host		localhost:8080
+//	@BasePath	/api/v1
+//
+//	@securityDefinitions.apikey	BearerAuth
+//	@in							header
+//	@name						Authorization
+//	@description				API token (Bearer gf_xxx) or JWT token
+
 package main
 
 import (
@@ -29,6 +50,7 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/notifications"
 	"github.com/gotrs-io/gotrs-ce/internal/plugin"
 	"github.com/gotrs-io/gotrs-ce/internal/plugin/example"
+	pluginloader "github.com/gotrs-io/gotrs-ce/internal/plugin/loader"
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/routing"
 	"github.com/gotrs-io/gotrs-ce/internal/runner"
@@ -122,6 +144,9 @@ func main() {
 		} else {
 			log.Println("✅ Database schema is up to date")
 		}
+
+		// Initialize API token service (enables gf_* token authentication)
+		api.InitAPITokenService(db)
 	}
 
 	// Handle runner mode
@@ -302,9 +327,22 @@ func main() {
 
 	// Initialize plugin system
 	log.Println("🔌 Initializing plugin system...")
-	pluginHost := plugin.NewDefaultHostAPI()
+	pluginHostOpts := []plugin.ProdHostAPIOption{}
+	if db != nil {
+		pluginHostOpts = append(pluginHostOpts, plugin.WithDB("default", db))
+	}
+	if valkeyCache != nil {
+		pluginHostOpts = append(pluginHostOpts, plugin.WithCache(valkeyCache))
+	}
+	pluginHost := plugin.NewProdHostAPI(pluginHostOpts...)
 	pluginMgr := plugin.NewManager(pluginHost)
+	// Wire PluginManager back to HostAPI for plugin-to-plugin calls
+	pluginHost.PluginManager = pluginMgr
 	api.SetPluginManager(pluginMgr)
+	plugin.SetTemplatePluginManager(pluginMgr) // Enable {% use %} template tag
+	templateOverrides := plugin.NewTemplateOverrideRegistry(pluginMgr)
+	plugin.SetTemplateOverrides(templateOverrides)
+	shared.SetTemplateOverrideProvider(templateOverrides) // Enable template overrides
 
 	// Register built-in example plugin (for development/testing)
 	helloPlugin := example.NewHelloPlugin()
@@ -313,6 +351,44 @@ func main() {
 	} else {
 		log.Printf("✅ Plugin registered: %s v%s", helloPlugin.GKRegister().Name, helloPlugin.GKRegister().Version)
 	}
+
+	// Load WASM plugins from plugins directory
+	pluginDir := os.Getenv("PLUGIN_DIR")
+	if pluginDir == "" {
+		pluginDir = filepath.Join(configDir, "plugins")
+	}
+	api.SetPluginDir(pluginDir) // Enable plugin uploads
+
+	// Configure loader options
+	var loaderOpts []pluginloader.LoaderOption
+	if os.Getenv("GOTRS_PLUGIN_LAZY_LOAD") == "true" {
+		loaderOpts = append(loaderOpts, pluginloader.WithLazyLoading())
+	}
+
+	pluginLoader := pluginloader.NewLoader(pluginDir, pluginMgr, nil, loaderOpts...)
+	loadedCount, loadErrs := pluginLoader.LoadAll(context.Background())
+
+	// Wire lazy loader to manager for on-demand loading
+	pluginMgr.SetLazyLoader(pluginLoader)
+
+	if os.Getenv("GOTRS_PLUGIN_LAZY_LOAD") == "true" {
+		log.Printf("🔌 Discovered %d WASM plugin(s) (lazy loading enabled)", loadedCount)
+	} else if loadedCount > 0 {
+		log.Printf("✅ Loaded %d WASM plugin(s) from %s", loadedCount, pluginDir)
+	}
+	for _, err := range loadErrs {
+		log.Printf("⚠️  Plugin load error: %v", err)
+	}
+
+	// Enable hot reload for plugins in development mode
+	if os.Getenv("GOTRS_PLUGIN_HOT_RELOAD") == "true" || os.Getenv("GOTRS_ENV") == "development" {
+		if err := pluginLoader.WatchDir(context.Background()); err != nil {
+			log.Printf("⚠️  Plugin hot reload disabled: %v", err)
+		}
+	}
+
+	// Register plugin-defined routes with the router
+	// (done later after router is created)
 
 	// Load YAML routes using GlobalHandlerMap (handlers self-register via init())
 	routesDir := os.Getenv("ROUTES_DIR")
@@ -326,6 +402,11 @@ func main() {
 	}
 
 	log.Println("✅ YAML routes loaded successfully")
+
+	// Register plugin-defined routes
+	if pluginRouteCount := api.RegisterPluginRoutes(r); pluginRouteCount > 0 {
+		log.Printf("✅ Registered %d plugin route(s)", pluginRouteCount)
+	}
 
 	if dbErr == nil && db != nil {
 		if err := api.SetupDynamicModules(db); err != nil {
@@ -426,6 +507,12 @@ func main() {
 			options = append(options, scheduler.WithJobs(jobs))
 		}
 		sched := scheduler.NewService(db, options...)
+
+		// Register plugin jobs with the scheduler
+		if pluginJobCount := plugin.RegisterPluginJobs(pluginMgr, sched); pluginJobCount > 0 {
+			log.Printf("✅ Registered %d plugin job(s) with scheduler", pluginJobCount)
+		}
+
 		ctx, cancel := context.WithCancel(context.Background())
 		schedulerCancel = cancel
 		go func() {
@@ -439,6 +526,9 @@ func main() {
 	v1Group := r.Group("/api/v1")
 	i18nHandlers := api.NewI18nHandlers()
 	i18nHandlers.RegisterRoutes(v1Group)
+
+	// Register plugin management API routes
+	api.RegisterPluginAPIRoutes(v1Group)
 
 	// Direct debug route for ticket number generator introspection
 	r.GET("/admin/debug/ticket-number", api.HandleDebugTicketNumber)
@@ -474,10 +564,22 @@ func main() {
 		if schedulerCancel != nil {
 			schedulerCancel()
 		}
+		// Stop plugin hot reload watcher
+		pluginLoader.StopWatch()
+		// Shutdown plugins gracefully
+		if err := pluginMgr.ShutdownAll(context.Background()); err != nil {
+			log.Printf("⚠️  Plugin shutdown error: %v", err)
+		}
 		log.Fatalf("server failed: %v", err)
 	}
 	if schedulerCancel != nil {
 		schedulerCancel()
+	}
+	// Stop plugin hot reload watcher
+	pluginLoader.StopWatch()
+	// Shutdown plugins gracefully
+	if err := pluginMgr.ShutdownAll(context.Background()); err != nil {
+		log.Printf("⚠️  Plugin shutdown error: %v", err)
 	}
 }
 

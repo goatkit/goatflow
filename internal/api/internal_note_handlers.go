@@ -17,6 +17,43 @@ type InternalNoteHandlers struct {
 	service *service.InternalNoteService
 }
 
+// getAuthUserInfo extracts user info from the gin context (set by auth middleware).
+// Returns userID, userName, userEmail with sensible defaults if not authenticated.
+func getAuthUserInfo(c *gin.Context) (uint, string, string) {
+	userID := uint(1)   // Default system user
+	userName := "System"
+	userEmail := "system@localhost"
+
+	// Try to get full user object first
+	if userCtx, ok := c.Get("user"); ok {
+		if user, ok := userCtx.(*models.User); ok && user.ID > 0 {
+			userID = uint(user.ID)
+			if user.Login != "" {
+				userName = user.Login
+			}
+			if user.Email != "" {
+				userEmail = user.Email
+			}
+			return userID, userName, userEmail
+		}
+	}
+
+	// Fall back to individual context values
+	if id, exists := c.Get("user_id"); exists {
+		if idInt, ok := id.(int); ok && idInt > 0 {
+			userID = uint(idInt)
+		}
+	}
+	if email, exists := c.Get("user_email"); exists {
+		if emailStr, ok := email.(string); ok && emailStr != "" {
+			userEmail = emailStr
+			userName = emailStr // Use email as name fallback
+		}
+	}
+
+	return userID, userName, userEmail
+}
+
 // NewInternalNoteHandlers creates a new internal note handlers instance.
 func NewInternalNoteHandlers() *InternalNoteHandlers {
 	repo := repository.NewMemoryInternalNoteRepository()
@@ -94,10 +131,8 @@ func (h *InternalNoteHandlers) CreateNote(c *gin.Context) {
 
 	note.TicketID = uint(ticketID)
 
-	// TODO: Get author info from session/auth
-	note.AuthorID = 1
-	note.AuthorName = "Agent Name"
-	note.AuthorEmail = "agent@example.com"
+	// Get author info from auth context
+	note.AuthorID, note.AuthorName, note.AuthorEmail = getAuthUserInfo(c)
 
 	if err := h.service.CreateNote(c.Request.Context(), &note); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -125,8 +160,8 @@ func (h *InternalNoteHandlers) CreateNoteFromTemplate(c *gin.Context) {
 		return
 	}
 
-	// TODO: Get author ID from session/auth
-	authorID := uint(1)
+	// Get author ID from auth context
+	authorID, _, _ := getAuthUserInfo(c)
 
 	note, err := h.service.CreateNoteFromTemplate(
 		c.Request.Context(),
@@ -252,7 +287,8 @@ func (h *InternalNoteHandlers) UpdateNote(c *gin.Context) {
 
 	// Update content
 	note.Content = req.Content
-	note.EditedBy = 1 // TODO: Get from current user
+	editorID, _, _ := getAuthUserInfo(c)
+	note.EditedBy = editorID
 
 	if err := h.service.UpdateNote(c.Request.Context(), note, req.EditReason); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -270,8 +306,8 @@ func (h *InternalNoteHandlers) DeleteNote(c *gin.Context) {
 		return
 	}
 
-	// TODO: Check permissions
-	deletedBy := uint(1) // TODO: Get from current user
+	// Get current user from auth context
+	deletedBy, _, _ := getAuthUserInfo(c)
 
 	if err := h.service.DeleteNote(c.Request.Context(), uint(noteID), deletedBy); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -289,8 +325,8 @@ func (h *InternalNoteHandlers) PinNote(c *gin.Context) {
 		return
 	}
 
-	// TODO: Get user ID from session/auth
-	userID := uint(1)
+	// Get user ID from auth context
+	userID, _, _ := getAuthUserInfo(c)
 
 	if err := h.service.PinNote(c.Request.Context(), uint(noteID), userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -317,8 +353,8 @@ func (h *InternalNoteHandlers) MarkImportant(c *gin.Context) {
 		return
 	}
 
-	// TODO: Get user ID from session/auth
-	userID := uint(1)
+	// Get user ID from auth context
+	userID, _, _ := getAuthUserInfo(c)
 
 	if err := h.service.MarkImportant(c.Request.Context(), uint(noteID), req.Important, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -443,8 +479,8 @@ func (h *InternalNoteHandlers) ExportNotes(c *gin.Context) {
 		format = "json"
 	}
 
-	// TODO: Get user email from session/auth
-	exportedBy := "user@example.com"
+	// Get user email from auth context
+	_, _, exportedBy := getAuthUserInfo(c)
 
 	data, err := h.service.ExportNotes(c.Request.Context(), uint(ticketID), format, exportedBy)
 	if err != nil {
@@ -484,8 +520,9 @@ func (h *InternalNoteHandlers) CreateTemplate(c *gin.Context) {
 		return
 	}
 
-	// TODO: Get creator from session/auth
-	template.CreatedBy = 1
+	// Get creator from auth context
+	creatorID, _, _ := getAuthUserInfo(c)
+	template.CreatedBy = creatorID
 
 	if err := h.service.CreateTemplate(c.Request.Context(), &template); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

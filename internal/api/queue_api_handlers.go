@@ -11,6 +11,19 @@ import (
 )
 
 // HandleAPIQueueGet handles GET /api/queues/:id.
+//
+//	@Summary		Get queue (legacy)
+//	@Description	Get queue by ID (legacy endpoint)
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Queue ID"
+//	@Success		200	{object}	map[string]interface{}	"Queue details"
+//	@Failure		400	{object}	map[string]interface{}	"Invalid ID"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Queue not found"
+//	@Security		BearerAuth
+//	@Router			/queues/{id} [get]
 func HandleAPIQueueGet(c *gin.Context) {
 	queueID := c.Param("id")
 	id, err := strconv.Atoi(queueID)
@@ -110,6 +123,18 @@ func HandleAPIQueueGet(c *gin.Context) {
 }
 
 // HandleAPIQueueDetails handles GET /api/queues/:id/details.
+//
+//	@Summary		Get queue details
+//	@Description	Get detailed queue information including ticket counts
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Queue ID"
+//	@Success		200	{object}	map[string]interface{}	"Queue details with stats"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Queue not found"
+//	@Security		BearerAuth
+//	@Router			/queues/{id}/details [get]
 func HandleAPIQueueDetails(c *gin.Context) {
 	queueID := c.Param("id")
 	id, err := strconv.Atoi(queueID)
@@ -192,6 +217,20 @@ func HandleAPIQueueDetails(c *gin.Context) {
 }
 
 // HandleAPIQueueStatus handles PUT /api/queues/:id/status.
+//
+// HandleAPIQueueStatus handles GET /api/queues/:id/status.
+//
+//	@Summary		Get queue status
+//	@Description	Get queue status and metrics
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Queue ID"
+//	@Success		200	{object}	map[string]interface{}	"Queue status"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Queue not found"
+//	@Security		BearerAuth
+//	@Router			/queues/{id}/status [get]
 //
 //nolint:dupl // Similar boilerplate to admin_crud_handlers.HandleAdminGroupsAddUser but different logic
 func HandleAPIQueueStatus(c *gin.Context) {

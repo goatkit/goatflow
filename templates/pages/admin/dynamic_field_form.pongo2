@@ -44,7 +44,7 @@
             class="space-y-6 p-6"
         >
             <!-- Basic Information -->
-            <div class="border-b pb-6" style="border-color: var(--gk-border);">
+            <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("dynamic_field_form.basic_information")|default:"Basic Information" }}</h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -170,7 +170,7 @@
                             value="1"
                             x-model="autoConfig"
                             class="rounded text-gotrs-600 focus:ring-gotrs-500"
-                            style="border-color: var(--gk-border); background: var(--gk-bg-surface);"
+                            style="border-color: var(--gk-border-default); background: var(--gk-bg-surface);"
                         >
                         <span class="ml-2 text-sm font-medium" style="color: var(--gk-text-secondary);">{{ t("admin.dynamic_fields.use_auto_config")|default:"Use default configuration" }}</span>
                     </label>
@@ -179,7 +179,7 @@
             </div>
 
             <!-- Type-Specific Configuration -->
-            <div class="border-b pb-6" style="border-color: var(--gk-border);">
+            <div class="border-b pb-6" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("dynamic_field_form.field_configuration")|default:"Field Configuration" }}</h3>
 
                 <!-- Auto-config info message -->
@@ -233,7 +233,7 @@
                                     value="1"
                                     {% if Field.Config and Field.Config.PossibleNone == 1 %}checked{% endif %}
                                     class="rounded text-gotrs-600 focus:ring-gotrs-500"
-                                    style="border-color: var(--gk-border); background: var(--gk-bg-surface);"
+                                    style="border-color: var(--gk-border-default); background: var(--gk-bg-surface);"
                                 >
                                 <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.dynamic_fields.allow_empty")|default:"Allow empty selection" }}</span>
                             </label>
@@ -245,7 +245,7 @@
                                     value="1"
                                     {% if Field.Config and Field.Config.TranslatableValues == 1 %}checked{% endif %}
                                     class="rounded text-gotrs-600 focus:ring-gotrs-500"
-                                    style="border-color: var(--gk-border); background: var(--gk-bg-surface);"
+                                    style="border-color: var(--gk-border-default); background: var(--gk-bg-surface);"
                                 >
                                 <span class="ml-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.dynamic_fields.translatable")|default:"Values are translatable" }}</span>
                             </label>

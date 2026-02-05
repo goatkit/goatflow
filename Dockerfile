@@ -184,6 +184,7 @@ COPY --chown=appuser:appgroup routes ./routes/
 COPY --chown=appuser:appgroup modules ./modules/
 COPY --chown=appuser:appgroup migrations ./migrations/
 COPY --chown=appuser:appgroup config ./config/
+COPY --chown=appuser:appgroup plugins ./config/plugins/
 
 # Overlay downloaded third-party assets
 COPY --from=assets --chown=appuser:appgroup /assets/js/*.js ./static/js/
@@ -210,6 +211,7 @@ COPY --chown=appuser:appgroup routes ./routes/
 COPY --chown=appuser:appgroup modules ./modules/
 COPY --chown=appuser:appgroup migrations ./migrations/
 COPY --chown=appuser:appgroup config ./config/
+COPY --chown=appuser:appgroup plugins ./config/plugins/
 
 # Overlay downloaded third-party assets
 COPY --from=assets --chown=appuser:appgroup /assets/js/*.js ./static/js/
@@ -219,6 +221,10 @@ COPY --from=assets --chown=appuser:appgroup /assets/css/webfonts/ ./static/css/w
 # Overlay built frontend assets (CSS + TipTap bundle)
 COPY --from=frontend --chown=appuser:appgroup /build/static/css/output.css ./static/css/
 COPY --from=frontend --chown=appuser:appgroup /build/static/js/tiptap.min.js ./static/js/
+
+# Plugin system defaults (can be overridden in compose.yml)
+ENV GOTRS_PLUGIN_LAZY_LOAD=true
+ENV GOTRS_PLUGIN_HOT_RELOAD=false
 
 # Expose port
 EXPOSE 8080

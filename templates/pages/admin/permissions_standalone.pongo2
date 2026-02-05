@@ -41,7 +41,7 @@
 
     <!-- Permission Matrix Card -->
     <div class="gk-card-glow rounded-lg overflow-hidden">
-        <div class="px-6 py-4 border-b" style="border-color: var(--gk-border);">
+        <div class="px-6 py-4 border-b" style="border-color: var(--gk-border-default);">
             <h2 class="text-lg font-semibold" style="color: var(--gk-text-primary);">{{ t("permissions.matrix_heading")|default:"Permission Matrix" }}</h2>
         </div>
         <div class="p-6">

@@ -9,7 +9,7 @@ metadata:
 spec:
   prefix: /api
   middleware:
-    - auth
+    - unified_auth
   routes:
     - path: /notifications/pending
       method: GET

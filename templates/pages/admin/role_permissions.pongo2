@@ -106,43 +106,43 @@
                             <input type="checkbox" name="perm_{{ group.GroupID }}_ro" value="1"
                                    {% if group.Permissions.ro %}checked{% endif %}
                                    class="h-4 w-4 rounded focus:ring-2"
-                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                         </td>
                         <td class="text-center">
                             <input type="checkbox" name="perm_{{ group.GroupID }}_move_into" value="1"
                                    {% if group.Permissions.move_into %}checked{% endif %}
                                    class="h-4 w-4 rounded focus:ring-2"
-                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                         </td>
                         <td class="text-center">
                             <input type="checkbox" name="perm_{{ group.GroupID }}_create" value="1"
                                    {% if group.Permissions.create %}checked{% endif %}
                                    class="h-4 w-4 rounded focus:ring-2"
-                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                         </td>
                         <td class="text-center">
                             <input type="checkbox" name="perm_{{ group.GroupID }}_owner" value="1"
                                    {% if group.Permissions.owner %}checked{% endif %}
                                    class="h-4 w-4 rounded focus:ring-2"
-                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                         </td>
                         <td class="text-center">
                             <input type="checkbox" name="perm_{{ group.GroupID }}_priority" value="1"
                                    {% if group.Permissions.priority %}checked{% endif %}
                                    class="h-4 w-4 rounded focus:ring-2"
-                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                         </td>
                         <td class="text-center">
                             <input type="checkbox" name="perm_{{ group.GroupID }}_rw" value="1"
                                    {% if group.Permissions.rw %}checked{% endif %}
                                    class="h-4 w-4 rounded focus:ring-2"
-                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                         </td>
                         <td class="text-center">
                             <input type="checkbox" name="perm_{{ group.GroupID }}_note" value="1"
                                    {% if group.Permissions.note %}checked{% endif %}
                                    class="h-4 w-4 rounded focus:ring-2"
-                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border);">
+                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);">
                         </td>
                         <td class="text-center">
                             <div class="flex justify-center space-x-1">
@@ -180,8 +180,8 @@
     <!-- Keyboard Shortcut Hint -->
     <div class="mt-4 text-center">
         <p class="text-xs" style="color: var(--gk-text-muted);">
-            <kbd class="px-2 py-1 rounded" style="background: var(--gk-bg-tertiary); border: 1px solid var(--gk-border);">Ctrl</kbd> +
-            <kbd class="px-2 py-1 rounded" style="background: var(--gk-bg-tertiary); border: 1px solid var(--gk-border);">S</kbd>
+            <kbd class="px-2 py-1 rounded" style="background: var(--gk-bg-tertiary); border: 1px solid var(--gk-border-default);">Ctrl</kbd> +
+            <kbd class="px-2 py-1 rounded" style="background: var(--gk-bg-tertiary); border: 1px solid var(--gk-border-default);">S</kbd>
             {{ t("role_permissions.save_shortcut")|default:"to save permissions" }}
         </p>
     </div>

@@ -84,6 +84,11 @@ func (p *HelloPlugin) GKRegister() plugin.GKRegistration {
 
 		MinHostVersion: "0.7.0",
 		Permissions:    []string{"db:read", "log"},
+
+		ErrorCodes: []plugin.ErrorCodeSpec{
+			{Code: "name_required", Message: "Name parameter is required", HTTPStatus: 400},
+			{Code: "greeting_failed", Message: "Failed to generate greeting", HTTPStatus: 500},
+		},
 	}
 }
 

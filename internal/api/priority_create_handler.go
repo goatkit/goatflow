@@ -9,6 +9,18 @@ import (
 )
 
 // HandleCreatePriorityAPI handles POST /api/v1/priorities.
+//
+//	@Summary		Create priority
+//	@Description	Create a new ticket priority
+//	@Tags			Priorities
+//	@Accept			json
+//	@Produce		json
+//	@Param			priority	body		object	true	"Priority data"
+//	@Success		201			{object}	map[string]interface{}	"Created priority"
+//	@Failure		400			{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401			{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/priorities [post]
 func HandleCreatePriorityAPI(c *gin.Context) {
 	// Check authentication and admin permissions
 	userIDRaw, exists := c.Get("user_id")

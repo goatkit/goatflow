@@ -10,6 +10,18 @@ import (
 )
 
 // HandleCreateQueueAPI handles POST /api/v1/queues.
+//
+//	@Summary		Create queue
+//	@Description	Create a new queue
+//	@Tags			Queues
+//	@Accept			json
+//	@Produce		json
+//	@Param			queue	body		object	true	"Queue data (name, group_id, etc.)"
+//	@Success		201		{object}	map[string]interface{}	"Created queue"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/queues [post]
 func HandleCreateQueueAPI(c *gin.Context) {
 	// Check authentication and admin permissions
 	userID, exists := c.Get("user_id")

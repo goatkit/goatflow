@@ -52,3 +52,10 @@ spec:
       method: POST
       handler: HandleSetTheme
       description: "Update theme preference (persists to database)"
+
+    # API Tokens management page
+    - path: /settings/tokens
+      method: GET
+      handler: handleApiTokensPage
+      template: pages/settings/api_tokens.pongo2
+      description: "Manage personal API tokens"

@@ -62,7 +62,7 @@
 
     <!-- Quick Stats Summary -->
     <div class="gk-card-glow rounded-lg overflow-hidden">
-        <div class="px-6 py-4 border-b" style="border-color: var(--gk-border);">
+        <div class="px-6 py-4 border-b" style="border-color: var(--gk-border-default);">
             <h2 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("roadmap.quick_navigation")|default:"Quick Navigation" }}</h2>
         </div>
         <div class="p-6">
@@ -105,7 +105,7 @@
 }
 
 .gk-prose h1 { font-size: 2rem; margin-top: 2rem; margin-bottom: 1rem; }
-.gk-prose h2 { font-size: 1.5rem; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--gk-border); padding-bottom: 0.5rem; }
+.gk-prose h2 { font-size: 1.5rem; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--gk-border-default); padding-bottom: 0.5rem; }
 .gk-prose h3 { font-size: 1.25rem; margin-top: 1.25rem; margin-bottom: 0.5rem; }
 .gk-prose h4 { font-size: 1.125rem; margin-top: 1rem; margin-bottom: 0.5rem; }
 
@@ -144,7 +144,7 @@
 
 .gk-prose pre {
     background: var(--gk-bg-surface);
-    border: 1px solid var(--gk-border);
+    border: 1px solid var(--gk-border-default);
     border-radius: 0.5rem;
     padding: 1rem;
     overflow-x: auto;
@@ -173,7 +173,7 @@
 
 .gk-prose th,
 .gk-prose td {
-    border: 1px solid var(--gk-border);
+    border: 1px solid var(--gk-border-default);
     padding: 0.5rem 0.75rem;
     text-align: left;
 }

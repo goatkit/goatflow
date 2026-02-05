@@ -59,7 +59,7 @@
     <div class="mt-8 gk-card-glow rounded-lg">
         <div class="px-4 py-5 sm:p-6">
             <div class="flow-root">
-                <ul role="list" class="-my-5 divide-y" style="border-color: var(--gk-border);">
+                <ul role="list" class="-my-5 divide-y" style="border-color: var(--gk-border-default);">
                     {% for ticket in Tickets %}
                     <li class="py-4">
                         <div class="flex items-center space-x-4">

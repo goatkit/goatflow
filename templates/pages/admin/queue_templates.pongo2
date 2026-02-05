@@ -30,15 +30,15 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Queues Column -->
         <div class="gk-card-glow rounded-lg overflow-hidden">
-            <div class="px-4 py-5 sm:px-6 border-b" style="border-color: var(--gk-border);">
+            <div class="px-4 py-5 sm:px-6 border-b" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.modules.queue_templates.queues") }}</h3>
                 <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.modules.queue_templates.queues_description") }}</p>
             </div>
             <div class="max-h-[500px] overflow-y-auto">
                 {% if Queues %}
-                <ul class="divide-y" style="border-color: var(--gk-border);">
+                <ul class="divide-y" style="border-color: var(--gk-border-default);">
                     {% for queue in Queues %}
-                    <li class="px-4 py-4 transition-colors hover:bg-white/5" style="border-color: var(--gk-border);">
+                    <li class="px-4 py-4 transition-colors hover:bg-white/5" style="border-color: var(--gk-border-default);">
                         <a href="/admin/queues/{{ queue.ID }}/templates" class="flex items-center justify-between">
                             <div class="flex items-center">
                                 <svg class="h-5 w-5 mr-3" style="color: var(--gk-text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,15 +71,15 @@
 
         <!-- Templates Column -->
         <div class="gk-card-glow rounded-lg overflow-hidden">
-            <div class="px-4 py-5 sm:px-6 border-b" style="border-color: var(--gk-border);">
+            <div class="px-4 py-5 sm:px-6 border-b" style="border-color: var(--gk-border-default);">
                 <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin.modules.queue_templates.templates") }}</h3>
                 <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.modules.queue_templates.templates_description") }}</p>
             </div>
             <div class="max-h-[500px] overflow-y-auto">
                 {% if Templates %}
-                <ul class="divide-y" style="border-color: var(--gk-border);">
+                <ul class="divide-y" style="border-color: var(--gk-border-default);">
                     {% for template in Templates %}
-                    <li class="px-4 py-4 transition-colors hover:bg-white/5" style="border-color: var(--gk-border);">
+                    <li class="px-4 py-4 transition-colors hover:bg-white/5" style="border-color: var(--gk-border-default);">
                         <a href="/admin/templates/{{ template.ID }}/queues" class="flex items-center justify-between">
                             <div class="flex items-center flex-wrap gap-1">
                                 {% for ttype in template.TemplateType|split:"," %}

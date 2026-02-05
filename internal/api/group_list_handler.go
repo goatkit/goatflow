@@ -12,6 +12,16 @@ import (
 )
 
 // HandleListGroupsAPI handles GET /api/v1/groups.
+//
+//	@Summary		List groups
+//	@Description	Retrieve all groups
+//	@Tags			Groups
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"List of groups"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/groups [get]
 func HandleListGroupsAPI(c *gin.Context) {
 	if _, ok := c.Get("user_id"); !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "Unauthorized"})

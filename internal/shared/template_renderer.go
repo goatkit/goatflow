@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -20,6 +21,18 @@ import (
 	"github.com/gotrs-io/gotrs-ce/internal/repository"
 	"github.com/gotrs-io/gotrs-ce/internal/version"
 )
+
+// TemplateOverrideProvider allows plugins to override templates without import cycles.
+type TemplateOverrideProvider interface {
+	RenderOverride(ctx context.Context, templateName string, data map[string]any) (string, bool)
+}
+
+var globalTemplateOverrideProvider TemplateOverrideProvider
+
+// SetTemplateOverrideProvider sets the global template override provider.
+func SetTemplateOverrideProvider(p TemplateOverrideProvider) {
+	globalTemplateOverrideProvider = p
+}
 
 // TemplateRenderer handles template rendering with pongo2.
 type TemplateRenderer struct {
@@ -113,6 +126,20 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 
 	// Check for active/upcoming maintenance and add to context
 	addMaintenanceContext(ctx)
+
+	// Check for plugin template override
+	if globalTemplateOverrideProvider != nil {
+		// Convert pongo2.Context to map for plugin
+		dataMap := make(map[string]any, len(ctx))
+		for k, v := range ctx {
+			dataMap[k] = v
+		}
+		if html, ok := globalTemplateOverrideProvider.RenderOverride(c.Request.Context(), name, dataMap); ok {
+			c.Header("Content-Type", "text/html; charset=utf-8")
+			c.String(code, html)
+			return
+		}
+	}
 
 	// Get the template (fallback for tests when templates missing)
 	if r == nil || r.templateSet == nil {

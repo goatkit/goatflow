@@ -1,0 +1,246 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("admin.plugin_logs")|default:"Plugin Logs" }} - {{ t("app.name") }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <header class="mb-8 flex justify-between items-start">
+        <div>
+            <h1 class="text-3xl font-bold gk-heading">
+                <span class="gk-text-gradient">{{ t("admin.plugin_logs")|default:"Plugin Logs" }}</span>
+            </h1>
+            <p class="mt-2 text-sm" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_logs_description")|default:"View plugin activity and errors" }}</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="/admin/plugins" class="btn btn-ghost">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                {{ t("admin.back_to_plugins")|default:"Back to Plugins" }}
+            </a>
+            <button class="btn btn-error btn-outline" onclick="clearLogs()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                {{ t("admin.clear_logs")|default:"Clear Logs" }}
+            </button>
+            <button class="btn btn-primary" onclick="refreshLogs()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {{ t("admin.refresh")|default:"Refresh" }}
+            </button>
+        </div>
+    </header>
+
+    <!-- Filters -->
+    <section class="mb-6">
+        <div class="gk-card p-4">
+            <div class="flex flex-wrap gap-4 items-end">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">{{ t("admin.filter_plugin")|default:"Plugin" }}</span>
+                    </label>
+                    <select id="filter-plugin" class="select select-bordered" onchange="refreshLogs()">
+                        <option value="">{{ t("admin.all_plugins")|default:"All Plugins" }}</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">{{ t("admin.filter_level")|default:"Level" }}</span>
+                    </label>
+                    <select id="filter-level" class="select select-bordered" onchange="refreshLogs()">
+                        <option value="">{{ t("admin.all_levels")|default:"All Levels" }}</option>
+                        <option value="debug">Debug</option>
+                        <option value="info">Info</option>
+                        <option value="warn">Warning</option>
+                        <option value="error">Error</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">{{ t("admin.limit")|default:"Limit" }}</span>
+                    </label>
+                    <select id="filter-limit" class="select select-bordered" onchange="refreshLogs()">
+                        <option value="50">50</option>
+                        <option value="100" selected>100</option>
+                        <option value="250">250</option>
+                        <option value="500">500</option>
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label cursor-pointer gap-2">
+                        <input type="checkbox" id="auto-refresh" class="checkbox checkbox-sm" />
+                        <span class="label-text">{{ t("admin.auto_refresh")|default:"Auto-refresh (10s)" }}</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Log Entries -->
+    <section>
+        <div class="gk-card">
+            <div class="p-4 border-b border-base-300 flex justify-between items-center">
+                <span id="log-count" class="text-sm text-base-content/70">{{ t("common.loading")|default:"Loading..." }}</span>
+            </div>
+            <div class="overflow-x-auto max-h-[600px] overflow-y-auto" id="log-container">
+                <table class="table table-sm table-pin-rows">
+                    <thead>
+                        <tr>
+                            <th class="w-40">{{ t("admin.timestamp")|default:"Timestamp" }}</th>
+                            <th class="w-24">{{ t("admin.level")|default:"Level" }}</th>
+                            <th class="w-32">{{ t("admin.plugin")|default:"Plugin" }}</th>
+                            <th>{{ t("admin.message")|default:"Message" }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-tbody">
+                        <tr>
+                            <td colspan="4" class="text-center py-8 text-base-content/50" id="loading-text">
+                                {{ t("common.loading")|default:"Loading..." }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+let autoRefreshInterval = null;
+const i18n = {
+    confirmClearLogs: "{{ t('admin.confirm_clear_logs')|default:'Are you sure you want to clear all plugin logs?' }}",
+    clearLogsFailed: "{{ t('admin.clear_logs_failed')|default:'Failed to clear logs' }}",
+    showing: "{{ t('admin.showing_entries')|default:'Showing {count} of {total} entries' }}",
+    noLogs: "{{ t('admin.no_log_entries')|default:'No log entries found' }}",
+    allPlugins: "{{ t('admin.all_plugins')|default:'All Plugins' }}"
+};
+
+async function refreshLogs() {
+    const plugin = document.getElementById('filter-plugin').value;
+    const level = document.getElementById('filter-level').value;
+    const limit = document.getElementById('filter-limit').value;
+    
+    const params = new URLSearchParams();
+    if (plugin) params.set('plugin', plugin);
+    if (level) params.set('level', level);
+    params.set('limit', limit);
+    
+    try {
+        const response = await fetch(`/api/v1/plugins/logs?${params}`);
+        const data = await response.json();
+        
+        document.getElementById('log-count').textContent = 
+            i18n.showing.replace('{count}', data.count).replace('{total}', data.total);
+        
+        const tbody = document.getElementById('log-tbody');
+        
+        if (data.logs && data.logs.length > 0) {
+            tbody.innerHTML = data.logs.map(log => `
+                <tr class="hover ${getLevelClass(log.level)}">
+                    <td class="font-mono text-xs whitespace-nowrap">${formatTimestamp(log.timestamp)}</td>
+                    <td>${getLevelBadge(log.level)}</td>
+                    <td class="font-medium">${log.plugin || '<span class="opacity-40">-</span>'}</td>
+                    <td>
+                        <span class="break-all ${getMessageClass(log.level)}">${escapeHtml(log.message)}</span>
+                        ${log.fields ? `<pre class="text-xs mt-1 p-2 rounded bg-base-200/50 overflow-x-auto">${JSON.stringify(log.fields, null, 2)}</pre>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+            
+            // Update plugin filter options
+            const plugins = [...new Set(data.logs.map(l => l.plugin).filter(Boolean))];
+            updatePluginFilter(plugins);
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center py-8 text-base-content/50">
+                        ${i18n.noLogs}
+                    </td>
+                </tr>
+            `;
+        }
+    } catch (err) {
+        console.error('Failed to fetch logs:', err);
+    }
+}
+
+function getLevelClass(level) {
+    switch (level) {
+        case 'error': return 'bg-error/20 border-l-4 border-error';
+        case 'warn': return 'bg-warning/20 border-l-4 border-warning';
+        case 'info': return 'border-l-4 border-info';
+        case 'debug': return 'opacity-50 border-l-4 border-base-300';
+        default: return '';
+    }
+}
+
+function getLevelBadge(level) {
+    const badges = {
+        debug: '<span class="badge badge-ghost badge-sm font-mono">DEBUG</span>',
+        info: '<span class="badge badge-info badge-sm font-mono">INFO</span>',
+        warn: '<span class="badge badge-warning badge-sm font-mono text-warning-content">WARN</span>',
+        error: '<span class="badge badge-error badge-sm font-mono text-error-content">ERROR</span>'
+    };
+    return badges[level] || `<span class="badge badge-sm font-mono">${level.toUpperCase()}</span>`;
+}
+
+function getMessageClass(level) {
+    switch (level) {
+        case 'error': return 'text-error font-medium';
+        case 'warn': return 'text-warning';
+        default: return '';
+    }
+}
+
+function formatTimestamp(ts) {
+    if (!ts) return '-';
+    const d = new Date(ts);
+    return d.toLocaleString();
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function updatePluginFilter(plugins) {
+    const select = document.getElementById('filter-plugin');
+    const currentValue = select.value;
+    
+    // Keep "All Plugins" option
+    const options = [`<option value="">${i18n.allPlugins}</option>`];
+    plugins.sort().forEach(p => {
+        options.push(`<option value="${p}" ${p === currentValue ? 'selected' : ''}>${p}</option>`);
+    });
+    
+    select.innerHTML = options.join('');
+}
+
+async function clearLogs() {
+    if (!confirm(i18n.confirmClearLogs)) return;
+    
+    try {
+        await fetch('/api/v1/plugins/logs', { method: 'DELETE' });
+        refreshLogs();
+    } catch (err) {
+        alert(i18n.clearLogsFailed + ': ' + err.message);
+    }
+}
+
+// Auto-refresh toggle
+document.getElementById('auto-refresh').addEventListener('change', function() {
+    if (this.checked) {
+        autoRefreshInterval = setInterval(refreshLogs, 10000);
+    } else {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+    }
+});
+
+// Initial load
+refreshLogs();
+</script>
+{% endblock %}

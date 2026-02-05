@@ -10,6 +10,16 @@ import (
 )
 
 // HandleUserMeAPI returns the current authenticated user's information.
+//
+//	@Summary		Get current user
+//	@Description	Get the authenticated user's profile
+//	@Tags			Users
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"User profile"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/users/me [get]
 func HandleUserMeAPI(c *gin.Context) {
 	// Get user ID from context (set by auth middleware)
 	userIDValue, exists := c.Get("user_id")

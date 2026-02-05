@@ -149,6 +149,8 @@ for file in $(find "$TEMPLATES_DIR" -name "*.pongo2" -type f); do
             if [[ "$phrase" == "Dynamic Field" ]] && echo "$match" | grep -qv "Dynamic Field"; then continue; fi
             # Skip JavaScript ternary fallbacks (e.g., textSpan ? textSpan.dataset.singular : 'ticket selected')
             if echo "$match" | grep -qE "\?[^:]+:[[:space:]]*['\"][^'\"]+['\"]"; then continue; fi
+            # Skip camelCase variable names (e.g., tokensLoading.classList, isLoading, setLoading())
+            if echo "$match" | grep -qE '[a-z][A-Z][a-zA-Z]*\.(classList|style|innerHTML|textContent|dataset|remove|add|toggle)|[a-z][A-Z][a-zA-Z]*\('; then continue; fi
             line_num=$(echo "$match" | cut -d: -f1)
             echo "PHRASE|$file|$line_num|$phrase" >> "$RESULTS_FILE"
         done

@@ -21,6 +21,18 @@ import (
 )
 
 // HandleRegisterWebhookAPI handles POST /api/v1/webhooks.
+//
+//	@Summary		Register webhook
+//	@Description	Register a new webhook endpoint
+//	@Tags			Webhooks
+//	@Accept			json
+//	@Produce		json
+//	@Param			webhook	body		object	true	"Webhook data (url, events, secret)"
+//	@Success		201		{object}	map[string]interface{}	"Webhook registered"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/webhooks [post]
 func HandleRegisterWebhookAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -108,6 +120,16 @@ func HandleRegisterWebhookAPI(c *gin.Context) {
 }
 
 // HandleListWebhooksAPI handles GET /api/v1/webhooks.
+//
+//	@Summary		List webhooks
+//	@Description	List all registered webhooks
+//	@Tags			Webhooks
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	map[string]interface{}	"List of webhooks"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Security		BearerAuth
+//	@Router			/webhooks [get]
 func HandleListWebhooksAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -198,6 +220,18 @@ func HandleListWebhooksAPI(c *gin.Context) {
 }
 
 // HandleGetWebhookAPI handles GET /api/v1/webhooks/:id.
+//
+//	@Summary		Get webhook
+//	@Description	Get webhook by ID
+//	@Tags			Webhooks
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Webhook ID"
+//	@Success		200	{object}	map[string]interface{}	"Webhook details"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Webhook not found"
+//	@Security		BearerAuth
+//	@Router			/webhooks/{id} [get]
 func HandleGetWebhookAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -279,6 +313,20 @@ func HandleGetWebhookAPI(c *gin.Context) {
 }
 
 // HandleUpdateWebhookAPI handles PUT /api/v1/webhooks/:id.
+//
+//	@Summary		Update webhook
+//	@Description	Update a webhook
+//	@Tags			Webhooks
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int		true	"Webhook ID"
+//	@Param			webhook	body		object	true	"Webhook update data"
+//	@Success		200		{object}	map[string]interface{}	"Updated webhook"
+//	@Failure		400		{object}	map[string]interface{}	"Invalid request"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404		{object}	map[string]interface{}	"Webhook not found"
+//	@Security		BearerAuth
+//	@Router			/webhooks/{id} [put]
 func HandleUpdateWebhookAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -395,6 +443,18 @@ func HandleUpdateWebhookAPI(c *gin.Context) {
 }
 
 // HandleDeleteWebhookAPI handles DELETE /api/v1/webhooks/:id.
+//
+//	@Summary		Delete webhook
+//	@Description	Delete a webhook
+//	@Tags			Webhooks
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Webhook ID"
+//	@Success		200	{object}	map[string]interface{}	"Webhook deleted"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Webhook not found"
+//	@Security		BearerAuth
+//	@Router			/webhooks/{id} [delete]
 func HandleDeleteWebhookAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -460,6 +520,18 @@ func HandleDeleteWebhookAPI(c *gin.Context) {
 }
 
 // HandleTestWebhookAPI handles POST /api/v1/webhooks/:id/test.
+//
+//	@Summary		Test webhook
+//	@Description	Send a test event to a webhook
+//	@Tags			Webhooks
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Webhook ID"
+//	@Success		200	{object}	map[string]interface{}	"Test result"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Webhook not found"
+//	@Security		BearerAuth
+//	@Router			/webhooks/{id}/test [post]
 func HandleTestWebhookAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -605,6 +677,18 @@ func HandleTestWebhookAPI(c *gin.Context) {
 }
 
 // HandleWebhookDeliveriesAPI handles GET /api/v1/webhooks/:id/deliveries.
+//
+//	@Summary		List webhook deliveries
+//	@Description	List delivery history for a webhook
+//	@Tags			Webhooks
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Webhook ID"
+//	@Success		200	{object}	map[string]interface{}	"List of deliveries"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Webhook not found"
+//	@Security		BearerAuth
+//	@Router			/webhooks/{id}/deliveries [get]
 func HandleWebhookDeliveriesAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")
@@ -686,6 +770,18 @@ func HandleWebhookDeliveriesAPI(c *gin.Context) {
 }
 
 // HandleRetryWebhookDeliveryAPI handles POST /api/v1/webhooks/deliveries/:id/retry.
+//
+//	@Summary		Retry webhook delivery
+//	@Description	Retry a failed webhook delivery
+//	@Tags			Webhooks
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"Delivery ID"
+//	@Success		200	{object}	map[string]interface{}	"Retry result"
+//	@Failure		401	{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404	{object}	map[string]interface{}	"Delivery not found"
+//	@Security		BearerAuth
+//	@Router			/webhooks/deliveries/{id}/retry [post]
 func HandleRetryWebhookDeliveryAPI(c *gin.Context) {
 	// Check authentication
 	userID, exists := c.Get("user_id")

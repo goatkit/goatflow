@@ -11,9 +11,23 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/gotrs-io/gotrs-ce/internal/database"
+	"github.com/gotrs-io/gotrs-ce/internal/services"
 )
 
 // HandleGetTicketAPI handles GET /api/v1/tickets/:id.
+//
+//	@Summary		Get ticket by ID
+//	@Description	Retrieve a single ticket by its ID with optional related data
+//	@Tags			Tickets
+//	@Accept			json
+//	@Produce		json
+//	@Param			id		path		int		true	"Ticket ID"
+//	@Param			include	query		string	false	"Include related data (comma-separated: articles, customer, queue)"
+//	@Success		200		{object}	map[string]interface{}	"Ticket details"
+//	@Failure		401		{object}	map[string]interface{}	"Unauthorized"
+//	@Failure		404		{object}	map[string]interface{}	"Ticket not found"
+//	@Security		BearerAuth
+//	@Router			/tickets/{id} [get]
 func HandleGetTicketAPI(c *gin.Context) {
 	// Test-mode lightweight path: still enforce auth semantics and basic validation
 	if os.Getenv("APP_ENV") == "test" {
@@ -28,8 +42,9 @@ func HandleGetTicketAPI(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Invalid ticket ID"})
 			return
 		}
-		// In test mode without DB, treat very large IDs as not found (tests use 99999)
-		if n > 10000 {
+		// In test mode without DB, treat very large IDs as not found
+		// Note: authorization tests use IDs 90001-90003, so threshold must be higher
+		if n > 100000 {
 			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Ticket not found"})
 			return
 		}
@@ -47,20 +62,25 @@ func HandleGetTicketAPI(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Ticket not found"})
 			return
 		}
-		// Minimal happy-path payload
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"data": gin.H{
-				"id":            idStr,
-				"ticket_number": time.Now().Format("20060102150405") + "1",
-				"title":         "Sample Ticket",
-				"queue":         "Raw",
-				"state":         "new",
-				"priority":      "normal",
-				"articles":      []interface{}{map[string]interface{}{"id": 1, "subject": "Initial", "body": "Initial body"}},
-			},
-		})
-		return
+		// If database is available, use real path for proper authorization testing
+		if db, err := database.GetDB(); err == nil && db != nil {
+			// Fall through to real database path below
+		} else {
+			// No database - return minimal happy-path payload for basic tests
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"data": gin.H{
+					"id":            idStr,
+					"ticket_number": time.Now().Format("20060102150405") + "1",
+					"title":         "Sample Ticket",
+					"queue":         "Raw",
+					"state":         "new",
+					"priority":      "normal",
+					"articles":      []interface{}{map[string]interface{}{"id": 1, "subject": "Initial", "body": "Initial body"}},
+				},
+			})
+			return
+		}
 	}
 	// Handle special 'new' case for new ticket form
 	ticketIDStr := c.Param("id")
@@ -205,6 +225,70 @@ func HandleGetTicketAPI(c *gin.Context) {
 			"error":   "Failed to retrieve ticket",
 		})
 		return
+	}
+
+	// Check queue access permissions for agents
+	// Customers have separate isolation logic (company isolation)
+	userRole, _ := c.Get("user_role")
+	isCustomer := userRole == "Customer"
+	if !isCustomer {
+		userID := 1
+		if ctxUserID, exists := c.Get("user_id"); exists {
+			switch v := ctxUserID.(type) {
+			case int:
+				userID = v
+			case int64:
+				userID = int(v)
+			case uint:
+				userID = int(v)
+			}
+		}
+
+		permSvc := services.NewPermissionService(db)
+		canRead, err := permSvc.CanReadQueue(userID, ticket.QueueID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error":   "Failed to check permissions",
+			})
+			return
+		}
+		// Security: return 404 (not 403) to avoid revealing ticket existence
+		if !canRead {
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"error":   "Ticket not found",
+			})
+			return
+		}
+	} else {
+		// Customer company isolation: customers can only see tickets from their company
+		customerLogin, _ := c.Get("customer_login")
+		if loginStr, ok := customerLogin.(string); ok && loginStr != "" {
+			// Look up customer's company
+			var customerCompany string
+			err := db.QueryRow(database.ConvertPlaceholders(
+				"SELECT customer_id FROM customer_user WHERE login = ?",
+			), loginStr).Scan(&customerCompany)
+
+			if err != nil {
+				c.JSON(http.StatusForbidden, gin.H{
+					"success": false,
+					"error":   "Access denied - customer not found",
+				})
+				return
+			}
+
+			// Check if ticket belongs to customer's company
+			// Security: return 404 (not 403) to avoid revealing ticket existence
+			if !ticket.CustomerID.Valid || ticket.CustomerID.String != customerCompany {
+				c.JSON(http.StatusNotFound, gin.H{
+					"success": false,
+					"error":   "Ticket not found",
+				})
+				return
+			}
+		}
 	}
 
 	// Build response with formatted data

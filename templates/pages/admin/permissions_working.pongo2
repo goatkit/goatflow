@@ -36,7 +36,7 @@
     <!-- Permission Matrix -->
     {% if PermissionMatrix %}
     <div class="gk-card-glow rounded-lg overflow-hidden">
-        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border);">
+        <div class="px-6 py-4" style="border-bottom: 1px solid var(--gk-border-default);">
             <h2 class="text-lg font-medium" style="color: var(--gk-text-primary);">
                 Permissions for: <span style="color: var(--gk-primary);">{{ PermissionMatrix.User.FirstName }} {{ PermissionMatrix.User.LastName }}</span>
             </h2>
@@ -65,7 +65,7 @@
                         <td class="whitespace-nowrap text-center">
                             <input type="checkbox"
                                    class="h-4 w-4 rounded focus:ring-2"
-                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border);"
+                                   style="accent-color: var(--gk-primary); border-color: var(--gk-border-default);"
                                    {% if groupPerm.Permissions[key] %}checked{% endif %}>
                         </td>
                         {% endfor %}
